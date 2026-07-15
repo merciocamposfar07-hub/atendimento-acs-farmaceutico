@@ -53,27 +53,29 @@
         </div>
         <div class="summary-box" id="summary"><div><span>Resumo</span><strong id="summaryTitle"></strong><small id="summaryTopic"></small></div><b id="summaryPrice"></b></div>
         <label class="consent-row"><input type="checkbox" id="consent"><span>Entendi que o pagamento é pela avaliação profissional e não garante prescrição ou alteração de tratamento.</span></label>
-        <button class="primary-button green-button" id="continuePayment" type="button" disabled>Continuar — demonstração <span aria-hidden="true">→</span></button>
-        <p class="prototype-note">Demonstração: os links reais da InfinitePay serão conectados após você fornecê-los.</p>
+        <button class="primary-button green-button" id="continuePayment" type="button" disabled>Pagar na InfinitePay <span aria-hidden="true">→</span></button>
+        <p class="prototype-note">As formas de pagamento disponíveis aparecerão na tela segura da InfinitePay. A confirmação será conferida pelo profissional no aplicativo.</p>
       </section>
 
       <section class="screen panel success-panel" id="success" aria-labelledby="successTitle">
-        <div class="success-mark" aria-hidden="true">✓</div><span class="kicker">Demonstração concluída</span><h1 id="successTitle">Tudo certo para continuar</h1><p>Na versão final, a InfinitePay confirmará o pagamento no aplicativo do profissional. Depois, o paciente retornará ao WhatsApp para iniciar ou agendar o atendimento.</p>
+        <div class="success-mark" aria-hidden="true">↗</div><span class="kicker">Pagamento aberto</span><h1 id="successTitle">Finalize na InfinitePay</h1><p>A cobrança foi aberta em outra aba. Conclua o pagamento e depois volte aqui para iniciar ou agendar o atendimento pelo WhatsApp.</p>
         <div class="receipt-card"><span id="receiptTitle"></span><strong id="receiptPrice"></strong><small id="receiptTopic"></small></div>
-        <button class="primary-button green-button" id="returnWhatsapp" type="button">Voltar ao WhatsApp <span aria-hidden="true">→</span></button><button class="text-button goHome" type="button">Voltar ao início</button>
+        <button class="primary-button green-button" id="returnWhatsapp" type="button">Já paguei — iniciar pelo WhatsApp <span aria-hidden="true">→</span></button><button class="text-button" id="openPaymentAgain" type="button">Abrir pagamento novamente</button><button class="text-button goHome" type="button">Voltar ao início</button>
       </section>
-      <footer><span>Atendimento com organização e respeito aos seus horários.</span><span>Protótipo • dados profissionais e pagamentos serão inseridos na versão final.</span></footer>
+      <footer><span>Atendimento com organização e respeito aos seus horários.</span><span>Pagamentos processados pela InfinitePay.</span></footer>
     </div>
   </main>
   <script>
     (function(){
       'use strict';
-      var WHATSAPP_NUMBER='';
+      var WHATSAPP_NUMBER='5581989613130';
+      var PAYMENT_LINKS={regular:'https://link.infinitepay.io/mercio-jose-campos-423/VC1D-8QgMNFEbrV-50,00',priority:'https://link.infinitepay.io/mercio-jose-campos-423/VC1D-4YspMP6IkC-80,00',consultation:'https://link.infinitepay.io/mercio-jose-campos-423/VC1D-iY43Iujiqc-200,00'};
       var selected=null;
       var screens=document.querySelectorAll('.screen');
       function show(id){for(var i=0;i<screens.length;i++)screens[i].classList.toggle('active',screens[i].id===id);window.scrollTo(0,0)}
       function money(value){return 'R$ '+Number(value).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}
       function openWhatsApp(message){var base=WHATSAPP_NUMBER?'https://wa.me/'+WHATSAPP_NUMBER:'https://wa.me/';window.location.href=base+'?text='+encodeURIComponent(message)}
+      function openPayment(){if(!selected)return;var url=PAYMENT_LINKS[selected.id];if(!url)return;var paymentWindow=window.open(url,'_blank');if(paymentWindow){try{paymentWindow.opener=null}catch(error){}}else{window.location.href=url}}
       function schedule(){var parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());var values={};for(var i=0;i<parts.length;i++)values[parts[i].type]=parts[i].value;var weekday=values.weekday!=='Sat'&&values.weekday!=='Sun';var minutes=Number(values.hour)*60+Number(values.minute);var acsOpen=weekday&&minutes>=480&&minutes<960;var pharmaOpen=weekday&&minutes>=540&&minutes<780;var acs=document.getElementById('acsSchedule');if(!acsOpen){acs.className='info-strip amber-strip';acs.innerHTML='<strong>Você está escrevendo fora do horário do ACS.</strong> Sua mensagem será respondida no próximo expediente, das 08h às 16h.'}document.getElementById('pharmaSchedule').hidden=pharmaOpen}
       function reset(){selected=null;document.getElementById('topic').value='';document.getElementById('consent').checked=false;var cards=document.querySelectorAll('.service-card');for(var i=0;i<cards.length;i++){cards[i].classList.remove('selected');cards[i].setAttribute('aria-checked','false')}document.getElementById('summary').classList.remove('visible');updatePayment();show('home')}
       function updateAcs(){document.getElementById('sendAcs').disabled=!(document.getElementById('acsName').value.trim()&&document.getElementById('acsLocality').value.trim()&&document.getElementById('acsSubject').value.trim())}
@@ -83,7 +85,8 @@
       document.getElementById('sendAcs').addEventListener('click',function(){openWhatsApp('Olá! Escolhi atendimento de ACS.\n\nNome: '+document.getElementById('acsName').value+'\nLocalidade: '+document.getElementById('acsLocality').value+'\nAssunto: '+document.getElementById('acsSubject').value)});
       var cards=document.querySelectorAll('.service-card');for(var c=0;c<cards.length;c++)cards[c].addEventListener('click',function(){for(var j=0;j<cards.length;j++){cards[j].classList.remove('selected');cards[j].setAttribute('aria-checked','false')}this.classList.add('selected');this.setAttribute('aria-checked','true');selected={id:this.getAttribute('data-id'),title:this.getAttribute('data-title'),price:Number(this.getAttribute('data-price'))};updatePayment()});
       document.getElementById('topic').addEventListener('change',updatePayment);document.getElementById('consent').addEventListener('change',updatePayment);
-      document.getElementById('continuePayment').addEventListener('click',function(){if(!selected)return;var topic=document.getElementById('topic').value;document.getElementById('receiptTitle').textContent=selected.title;document.getElementById('receiptPrice').textContent=money(selected.price);document.getElementById('receiptTopic').textContent=topic;show('success')});
+      document.getElementById('continuePayment').addEventListener('click',function(){if(!selected)return;var topic=document.getElementById('topic').value;document.getElementById('receiptTitle').textContent=selected.title;document.getElementById('receiptPrice').textContent=money(selected.price);document.getElementById('receiptTopic').textContent=topic;show('success');openPayment()});
+      document.getElementById('openPaymentAgain').addEventListener('click',openPayment);
       document.getElementById('returnWhatsapp').addEventListener('click',function(){var topic=document.getElementById('topic').value;var message=selected.id==='consultation'?'Olá! Desejo realizar ou agendar uma consulta farmacêutica presencial ou online no valor de '+money(selected.price)+'.\nAssunto: '+topic:'Olá! Escolhi '+selected.title+' no valor de '+money(selected.price)+'.\nAssunto: '+topic;openWhatsApp(message)});
       schedule();
     }());
