@@ -13,6 +13,7 @@
     @media(max-width:680px){.payment-actions,.pix-payment-box{grid-template-columns:1fr}.pix-payment-box{gap:16px}.pix-qr{width:min(72vw,240px);margin:0 auto}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   </style>
   <style>
+    .choice-meta-detail{display:block;margin-top:4px;color:var(--muted);font-weight:400;line-height:1.35}
     .acs-category{grid-column:1/-1}
     .routing-alert{display:none;margin-top:16px;padding:18px;border:1px solid #e3c18f;border-radius:16px;background:#fff8ed;color:#714812}
     .routing-alert.visible{display:block}
@@ -57,7 +58,7 @@
       <section class="screen hero active" id="home" aria-labelledby="pageTitle">
         <div class="hero-copy"><span class="kicker">Bem-vindo(a)</span><h1 id="pageTitle">Como posso ajudar você hoje?</h1><p>Escolha de acordo com o assunto. A página fará uma triagem antes de encaminhar sua solicitação.</p></div>
         <div class="choice-grid">
-          <button class="choice-card acs-card" id="openAcs" type="button"><span class="choice-icon acs-icon" aria-hidden="true">T</span><span class="choice-content"><span class="choice-meta"><b>Serviço de TACS</b> • 08h às 16h</span><strong>Assunto de TACS</strong><small>Unidade de saúde, dentista, nutricionista, agenda médica, visita, vacinação, cadastro ou serviço público.</small></span><span class="arrow" aria-hidden="true">→</span></button>
+          <button class="choice-card acs-card" id="openAcs" type="button"><span class="choice-icon acs-icon" aria-hidden="true">T</span><span class="choice-content"><span class="choice-meta"><b>Serviço de TACS</b><span class="choice-meta-detail">Técnico Agente Comunitário de Saúde • 08h às 16h</span></span><strong>Assunto de TACS</strong><small>Unidade de saúde, dentista, nutricionista, agenda médica, visita, vacinação, cadastro ou serviço público.</small></span><span class="arrow" aria-hidden="true">→</span></button>
           <button class="choice-card pharma-card" id="openPharma" type="button"><span class="choice-icon pharma-icon" aria-hidden="true">Rx</span><span class="choice-content"><span class="choice-meta"><b>Atendimento Particular</b> • a partir de R$ 50</span><strong>Assunto farmacêutico</strong><small>Dose, horários, efeitos, interações, receita, exames, suplementos ou manipulados.</small></span><span class="arrow" aria-hidden="true">→</span></button>
         </div>
         <div class="emergency-note" role="note"><span class="emergency-icon" aria-hidden="true">!</span><p><strong>Não é um canal de emergência.</strong> Em situação grave, procure uma unidade de urgência ou ligue para o SAMU 192.</p></div>
