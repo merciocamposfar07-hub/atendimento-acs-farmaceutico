@@ -98,6 +98,25 @@
     .brand strong { color: #fff; font-size: 21px; line-height: 1.2; letter-spacing: -.02em; }
     .brand span { margin-top: 7px; color: #d9e2da; font-size: 16px; line-height: 1.35; font-weight: 800; }
 
+    .service-tabs { display: flex; gap: 10px; padding: 14px 0 0; }
+    .service-tab {
+      min-height: 46px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border: 1px solid rgba(255,255,255,.20);
+      border-radius: 999px;
+      color: #e1e7e2;
+      background: rgba(8,11,13,.80);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 900;
+      text-shadow: 0 2px 12px #000;
+    }
+    .service-tab:hover, .service-tab:focus-visible { border-color: var(--green); outline: none; }
+    .service-tab.active { border-color: var(--green); color: #11150e; background: var(--green); text-shadow: none; }
+
     .hero {
       position: relative;
       overflow: hidden;
@@ -345,6 +364,7 @@
       .brand-mark { width: 54px; height: 54px; font-size: 19px; }
       .brand strong { font-size: 17px; }
       .brand span { margin-top: 6px; font-size: 15px; line-height: 1.4; }
+      .service-tabs { display: grid; grid-template-columns: 1fr; }
       .hero { padding: 30px 22px; }
       .hero h1 { font-size: 41px; }
       .hero p { font-size: 18px; }
@@ -378,6 +398,11 @@
         </div>
       </div>
     </header>
+
+    <nav class="wrap service-tabs" aria-label="Serviços de suplementação">
+      <a class="service-tab active" href="./" aria-current="page">Suplementação</a>
+      <a class="service-tab" href="./lumn-thermogenico/">LUMN Thermogênico SR</a>
+    </nav>
 
     <main class="wrap">
       <section class="hero" aria-labelledby="hero-title">
