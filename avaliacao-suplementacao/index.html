@@ -95,7 +95,9 @@
       bottom: -190px;
       border: 58px solid rgba(255,255,255,.07);
       border-radius: 50%;
+      pointer-events: none;
     }
+    .hero > * { position: relative; z-index: 1; }
     .eyebrow {
       display: inline-flex;
       align-items: center;
@@ -142,27 +144,8 @@
     }
     .hero-note { color: #c7e5dc; font-size: 14px; font-weight: 700; }
 
-    .trust-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin: 20px 0 0;
-    }
-    .trust-item {
-      min-height: 78px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px 18px;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: rgba(255,255,255,.82);
-      font-size: 15px;
-      font-weight: 800;
-    }
-    .trust-item b { width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; color: var(--green); background: var(--mint); }
-
     section { padding: 70px 0 0; }
+    #consulta { padding-top: 30px; }
     .section-kicker { margin: 0 0 8px; color: var(--green); font-size: 14px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
     .section-title { max-width: 780px; margin: 0; color: var(--forest); font-size: clamp(32px, 5vw, 48px); line-height: 1.08; letter-spacing: -.035em; }
     .section-lead { max-width: 720px; margin: 15px 0 0; color: var(--muted); font-size: 19px; }
@@ -194,30 +177,18 @@
     .wide-goal { grid-column: 1 / -1; min-height: 170px; }
 
     .consultation {
-      display: grid;
-      grid-template-columns: .92fr 1.08fr;
-      gap: 26px;
-      align-items: start;
-      margin-top: 30px;
+      width: min(100%, 780px);
+      margin: 0 auto;
     }
-    .offer-card, .form-card, .payment-card {
+    .form-card, .payment-card {
       border: 1px solid var(--line);
       border-radius: 26px;
       background: var(--paper);
       box-shadow: var(--shadow);
     }
-    .offer-card { position: sticky; top: 20px; overflow: hidden; }
-    .offer-head { padding: 28px; color: #fff; background: var(--forest); }
-    .offer-head span { color: #bceadd; font-size: 13px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
-    .offer-head h3 { margin: 8px 0 4px; font-size: 29px; line-height: 1.15; }
-    .price { margin-top: 18px; font-size: 42px; line-height: 1; font-weight: 900; }
-    .price small { display: block; margin-top: 8px; color: #cbe8df; font-size: 13px; line-height: 1.4; font-weight: 700; }
-    .offer-body { padding: 26px 28px 30px; }
-    .offer-body h4 { margin: 0 0 14px; font-size: 18px; }
     .included { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; }
-    .included li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; color: var(--muted); font-size: 15px; }
+    .included li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; color: var(--muted); font-size: 16px; }
     .included li::before { content: "✓"; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; color: var(--green); background: var(--mint); font-weight: 900; }
-    .offer-warning { margin: 20px 0 0; padding: 14px; border-radius: 14px; color: #6a5624; background: var(--gold-soft); font-size: 13px; line-height: 1.5; font-weight: 700; }
 
     .form-card { padding: clamp(24px, 4vw, 34px); }
     .step-label { color: var(--green); font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
@@ -243,9 +214,17 @@
     input:focus, textarea:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 4px rgba(7,134,110,.11); }
     input::placeholder, textarea::placeholder { color: #8ca09a; font-weight: 500; }
     .help { color: var(--muted); font-size: 12px; line-height: 1.45; }
-    .selected-goal-box { margin-bottom: 20px; padding: 16px; border: 2px solid #b9dfd3; border-radius: 16px; background: var(--mint-2); }
-    .selected-goal-box span { display: block; color: var(--green); font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
-    .selected-goal-box strong { display: block; margin-top: 3px; font-size: 18px; }
+    .choice-summary { margin: 22px 0; overflow: hidden; border: 3px solid var(--green); border-radius: 20px; background: var(--mint-2); }
+    .choice-summary-head { padding: 20px; color: #fff; background: var(--forest); }
+    .choice-summary-head > span { display: block; color: #bceadd; font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .choice-summary-head > strong { display: block; margin-top: 4px; font-size: 23px; line-height: 1.25; }
+    .choice-price { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.25); font-size: 14px; font-weight: 800; }
+    .choice-price b { font-size: 30px; line-height: 1; }
+    .choice-includes { padding: 20px; }
+    .choice-includes h4 { margin: 0 0 14px; color: var(--forest); font-size: 18px; }
+    .return-alert { margin: 0 0 22px; padding: 18px; border: 2px solid #e3bd4f; border-radius: 18px; color: #5d470d; background: var(--gold-soft); }
+    .return-alert strong { display: block; margin-bottom: 5px; font-size: 18px; letter-spacing: .04em; }
+    .return-alert p { margin: 0; font-size: 16px; line-height: 1.55; font-weight: 700; }
     .consent { display: grid; grid-template-columns: 24px 1fr; gap: 11px; margin-top: 20px; color: var(--muted); font-size: 13px; line-height: 1.5; cursor: pointer; }
     .consent input { width: 22px; height: 22px; min-height: 0; margin: 1px 0 0; padding: 0; accent-color: var(--green); }
     .primary-button, .secondary-button {
@@ -310,9 +289,8 @@
     @media (max-width: 780px) {
       .topbar { align-items: flex-start; padding: 18px 0; }
       .hero { border-radius: 26px; }
-      .trust-grid, .goal-grid, .consultation, .safety-grid { grid-template-columns: 1fr; }
+      .goal-grid, .safety-grid { grid-template-columns: 1fr; }
       .wide-goal { grid-column: auto; }
-      .offer-card { position: static; }
       .form-grid, .payment-options { grid-template-columns: 1fr; }
       .field.full { grid-column: auto; }
     }
@@ -333,7 +311,6 @@
       .goal-icon { width: 48px; height: 48px; border-radius: 14px; font-size: 21px; }
       .goal-card strong { font-size: 21px; }
       .goal-card small { font-size: 16px; }
-      .offer-head, .offer-body { padding: 23px; }
       .form-card, .payment-card { padding: 22px 17px; border-radius: 22px; }
       input, textarea, select { font-size: 17px; }
       .safety { padding: 22px 18px; }
@@ -361,16 +338,10 @@
         <h1 id="hero-title">Você está tomando o suplemento certo — ou apenas <em>gastando dinheiro?</em></h1>
         <p>Antes de escolher vitaminas, minerais ou manipulados, descubra o que realmente faz sentido para seus objetivos e sua rotina.</p>
         <div class="hero-actions">
-          <a class="cta" href="#objetivos">QUERO AVALIAR MEU CASO <span aria-hidden="true">↓</span></a>
+          <a class="cta" id="startAssessment" href="#objetivos">QUERO AVALIAR MEU CASO <span aria-hidden="true">↓</span></a>
           <span class="hero-note">Consulta particular • presencial ou online</span>
         </div>
       </section>
-
-      <div class="trust-grid" aria-label="Diferenciais do atendimento">
-        <div class="trust-item"><b aria-hidden="true">✓</b> Avaliação feita para uma pessoa</div>
-        <div class="trust-item"><b aria-hidden="true">✓</b> Conferência de riscos e interações</div>
-        <div class="trust-item"><b aria-hidden="true">✓</b> Orientação clara e profissional</div>
-      </div>
 
       <section id="objetivos" aria-labelledby="goals-title">
         <p class="section-kicker">Comece por aqui</p>
@@ -383,24 +354,6 @@
             <span>
               <strong>Eu treino e quero revisar meus suplementos</strong>
               <small>Para entender melhor o que você usa no treino, na força e na recuperação.</small>
-              <span class="tap-label"><span>Toque aqui para escolher</span><span aria-hidden="true">→</span></span>
-            </span>
-          </button>
-
-          <button class="goal-card" type="button" role="radio" aria-checked="false" data-goal="Controle do peso com acompanhamento">
-            <span class="goal-icon" aria-hidden="true">◎</span>
-            <span>
-              <strong>Quero cuidar do peso com acompanhamento</strong>
-              <small>Para revisar suplementos utilizados junto ao seu cuidado com alimentação e atividade física.</small>
-              <span class="tap-label"><span>Toque aqui para escolher</span><span aria-hidden="true">→</span></span>
-            </span>
-          </button>
-
-          <button class="goal-card" type="button" role="radio" aria-checked="false" data-goal="Saúde da mulher 40+">
-            <span class="goal-icon" aria-hidden="true">40+</span>
-            <span>
-              <strong>Sou mulher 40+ e quero cuidar da suplementação</strong>
-              <small>Para revisar vitaminas, minerais, medicamentos e suplementos nessa fase da vida.</small>
               <span class="tap-label"><span>Toque aqui para escolher</span><span aria-hidden="true">→</span></span>
             </span>
           </button>
@@ -427,40 +380,28 @@
       </section>
 
       <section id="consulta" hidden aria-labelledby="consultation-title">
-        <p class="section-kicker">Sua escolha foi registrada</p>
-        <h2 class="section-title" id="consultation-title">Agora conte um pouco sobre você</h2>
-        <p class="section-lead">O valor só aparece depois da escolha porque esta página oferece uma avaliação completa, não a venda automática de um protocolo.</p>
-
         <div class="consultation">
-          <aside class="offer-card" aria-label="O que está incluído na consulta">
-            <div class="offer-head">
-              <span>Consulta particular</span>
-              <h3>Avaliação farmacêutica em suplementação</h3>
-              <div class="price">R$ 200<small>Pagamento único por esta avaliação</small></div>
-            </div>
-            <div class="offer-body">
-              <h4>O que está incluído:</h4>
-              <ul class="included">
-                <li>Avaliação dos seus objetivos e do que você já utiliza.</li>
-                <li>Revisão de medicamentos, vitaminas e suplementos informados.</li>
-                <li>Conferência de possíveis interações, excessos e riscos.</li>
-                <li>Avaliação dos exames que você já possui, quando forem pertinentes.</li>
-                <li>Orientação profissional e proposta individualizada, somente se indicada.</li>
-                <li>Encaminhamento para outro profissional quando necessário.</li>
-              </ul>
-              <p class="offer-warning">A consulta não garante prescrição, protocolo ou resultado específico. A conduta depende da avaliação profissional.</p>
-            </div>
-          </aside>
-
           <div>
             <form class="form-card" id="assessmentForm" novalidate>
               <span class="step-label">Preencha para continuar</span>
-              <h3>Dados do paciente</h3>
+              <h3 id="consultation-title">Dados do paciente</h3>
               <p>Use os dados de quem receberá o atendimento.</p>
 
-              <div class="selected-goal-box">
-                <span>Necessidade escolhida</span>
-                <strong id="selectedGoalText">—</strong>
+              <div class="choice-summary" aria-live="polite">
+                <div class="choice-summary-head">
+                  <span>Atendimento escolhido</span>
+                  <strong id="selectedGoalText">—</strong>
+                  <div class="choice-price"><span>Valor selecionado</span><b>R$ 200</b></div>
+                </div>
+                <div class="choice-includes">
+                  <h4>Incluído nesta escolha:</h4>
+                  <ul class="included" id="selectedIncludes"></ul>
+                </div>
+              </div>
+
+              <div class="return-alert" role="note">
+                <strong>ATENÇÃO</strong>
+                <p>Retorno sem custo para avaliação dos exames e, se necessário, prescrição de protocolo de suplementação no prazo de 30 dias, a contar do início da primeira consulta.</p>
               </div>
 
               <div class="form-grid">
@@ -576,6 +517,26 @@
       var CARD_PAYMENT_LINK = 'https://link.infinitepay.io/mercio-jose-campos-423/VC1D-HIn4cbcXQc-200,00';
       var selectedGoal = '';
       var requestCode = '';
+      var INCLUDED_BY_GOAL = {
+        'Treino, força e recuperação': [
+          'Avaliação do seu objetivo e da rotina de treinos informada.',
+          'Revisão dos suplementos, rótulos, doses e horários informados.',
+          'Conferência de combinações, excessos e possíveis interações.',
+          'Orientação individualizada de acordo com a avaliação profissional.'
+        ],
+        'Dores, cansaço ou baixa disposição': [
+          'Avaliação das queixas, do histórico e do tempo dos sintomas informados.',
+          'Revisão dos exames, medicamentos e suplementos apresentados.',
+          'Análise da necessidade de suplementação ou de encaminhamento para outro profissional.',
+          'Orientação individualizada somente quando houver indicação e segurança.'
+        ],
+        'Revisão de vitaminas, minerais ou manipulados': [
+          'Revisão das vitaminas, minerais, suplementos e manipulados informados.',
+          'Conferência de doses, horários, combinações e tempo de uso.',
+          'Avaliação de duplicidades, excessos e possíveis interações.',
+          'Orientação para manter ou ajustar o uso, somente quando houver indicação profissional.'
+        ]
+      };
 
       var goalCards = Array.prototype.slice.call(document.querySelectorAll('.goal-card'));
       var consultationSection = document.getElementById('consulta');
@@ -647,6 +608,16 @@
 
       function updateFormState() { continueButton.disabled = !formIsValid(); }
 
+      function renderIncludedItems(goal) {
+        var list = document.getElementById('selectedIncludes');
+        list.textContent = '';
+        (INCLUDED_BY_GOAL[goal] || []).forEach(function (text) {
+          var item = document.createElement('li');
+          item.textContent = text;
+          list.appendChild(item);
+        });
+      }
+
       function selectGoal(card) {
         selectedGoal = card.getAttribute('data-goal');
         goalCards.forEach(function (item) {
@@ -655,6 +626,7 @@
           item.setAttribute('aria-checked', active ? 'true' : 'false');
         });
         document.getElementById('selectedGoalText').textContent = selectedGoal;
+        renderIncludedItems(selectedGoal);
         consultationSection.hidden = false;
         paymentCard.hidden = true;
         pixBox.hidden = true;
@@ -733,6 +705,10 @@
         window.location.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(message);
       }
 
+      document.getElementById('startAssessment').addEventListener('click', function (event) {
+        event.preventDefault();
+        document.getElementById('objetivos').scrollIntoView({behavior: 'smooth', block: 'start'});
+      });
       goalCards.forEach(function (card) { card.addEventListener('click', function () { selectGoal(card); }); });
       Array.prototype.slice.call(form.querySelectorAll('input, textarea, select')).forEach(function (field) {
         field.addEventListener('input', updateFormState);
