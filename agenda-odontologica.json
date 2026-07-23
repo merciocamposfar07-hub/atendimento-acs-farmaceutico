@@ -1,0 +1,26 @@
+{
+  "atualizadoEm": "2026-07-23T14:24:00-03:00",
+  "dias": [
+    {
+      "id": "segunda",
+      "dia": "Segunda-feira",
+      "data": "2026-07-27",
+      "vagasComuns": null,
+      "vagasEmergenciais": null
+    },
+    {
+      "id": "terca",
+      "dia": "Terça-feira",
+      "data": "2026-07-28",
+      "vagasComuns": null,
+      "vagasEmergenciais": null
+    },
+    {
+      "id": "quinta",
+      "dia": "Quinta-feira",
+      "data": "2026-07-30",
+      "vagasComuns": null,
+      "vagasEmergenciais": null
+    }
+  ]
+}

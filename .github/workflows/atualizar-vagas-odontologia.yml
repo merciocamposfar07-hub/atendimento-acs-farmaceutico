@@ -1,0 +1,77 @@
+name: Atualizar vagas da dentista
+
+on:
+  workflow_dispatch:
+    inputs:
+      data_segunda:
+        description: Data da segunda-feira (AAAA-MM-DD)
+        required: true
+        type: string
+      vagas_comuns_segunda:
+        description: Vagas comuns na segunda-feira
+        required: true
+        type: number
+      vagas_emergenciais_segunda:
+        description: Vagas emergenciais na segunda-feira
+        required: true
+        type: number
+      data_terca:
+        description: Data da terça-feira (AAAA-MM-DD)
+        required: true
+        type: string
+      vagas_comuns_terca:
+        description: Vagas comuns na terça-feira
+        required: true
+        type: number
+      vagas_emergenciais_terca:
+        description: Vagas emergenciais na terça-feira
+        required: true
+        type: number
+      data_quinta:
+        description: Data da quinta-feira (AAAA-MM-DD)
+        required: true
+        type: string
+      vagas_comuns_quinta:
+        description: Vagas comuns na quinta-feira
+        required: true
+        type: number
+      vagas_emergenciais_quinta:
+        description: Vagas emergenciais na quinta-feira
+        required: true
+        type: number
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    name: Publicar nova quantidade de vagas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o portal
+        uses: actions/checkout@v4
+
+      - name: Atualizar datas e vagas
+        run: >-
+          python scripts/atualizar_vagas_odontologia.py
+          --data-segunda "${{ inputs.data_segunda }}"
+          --vagas-comuns-segunda "${{ inputs.vagas_comuns_segunda }}"
+          --vagas-emergenciais-segunda "${{ inputs.vagas_emergenciais_segunda }}"
+          --data-terca "${{ inputs.data_terca }}"
+          --vagas-comuns-terca "${{ inputs.vagas_comuns_terca }}"
+          --vagas-emergenciais-terca "${{ inputs.vagas_emergenciais_terca }}"
+          --data-quinta "${{ inputs.data_quinta }}"
+          --vagas-comuns-quinta "${{ inputs.vagas_comuns_quinta }}"
+          --vagas-emergenciais-quinta "${{ inputs.vagas_emergenciais_quinta }}"
+
+      - name: Publicar a agenda
+        run: |
+          git config user.name "Agenda odontológica"
+          git config user.email "actions@users.noreply.github.com"
+          git add agenda-odontologica.json
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração para publicar."
+            exit 0
+          fi
+          git commit -m "Atualiza vagas da dentista"
+          git push
