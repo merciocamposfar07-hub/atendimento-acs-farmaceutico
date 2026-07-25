@@ -128,13 +128,107 @@ window.POSTO_MATIAS_AVISOS_API_URL = '';
     else bind();
   }
 
+  function installReliableDentalWhatsApp() {
+    var send = document.getElementById('send');
+    if (!send || send.dataset.dentalFix === '1') return;
+    send.dataset.dentalFix = '1';
+
+    function text(id) {
+      var field = document.getElementById(id);
+      return field ? String(field.value || '').trim() : '';
+    }
+
+    function makeCode() {
+      var now = new Date();
+      var d = String(now.getDate()).padStart(2, '0');
+      var m = String(now.getMonth() + 1).padStart(2, '0');
+      var y = String(now.getFullYear()).slice(-2);
+      return 'TACS-' + d + m + y + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    }
+
+    function submitReservation(date, type, requestId) {
+      if (!window.DENTAL_AGENDA_API_URL || !date) return;
+      var iframe = document.createElement('iframe');
+      iframe.name = 'reservaDentista' + Date.now();
+      iframe.hidden = true;
+      var form = document.createElement('form');
+      form.method = 'post';
+      form.action = window.DENTAL_AGENDA_API_URL;
+      form.target = iframe.name;
+      form.hidden = true;
+      [['action','reservar'],['requestId',requestId],['date',date],['type',type]].forEach(function (pair) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = pair[0];
+        input.value = pair[1];
+        form.appendChild(input);
+      });
+      document.body.appendChild(iframe);
+      document.body.appendChild(form);
+      form.submit();
+      setTimeout(function () {
+        if (form.parentNode) form.remove();
+        if (iframe.parentNode) iframe.remove();
+      }, 8000);
+    }
+
+    send.addEventListener('click', function (event) {
+      var category = text('category');
+      var isDental = category === 'Solicitar atendimento odontológico (dentista)' || category === 'Solicitar atendimento odontológico de emergência (dentista)';
+      if (!isDental) return;
+
+      var selected = document.querySelector('.slot.selected');
+      if (!selected) return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      if (!navigator.onLine) {
+        alert('Sem internet. Os dados permanecem preenchidos e poderão ser enviados quando a conexão voltar.');
+        return;
+      }
+
+      var parts = selected.querySelectorAll('strong, span');
+      var day = parts[0] ? parts[0].textContent.trim() : '';
+      var date = parts[1] ? parts[1].textContent.trim() : '';
+      var isoDate = date.replace(/^(\d{2})\/(\d{2})\/(\d{4})$/, '$3-$2-$1');
+      var type = category.indexOf('emergência') >= 0 ? 'emergencial' : 'comum';
+      var code = makeCode();
+      var birth = text('birth');
+      var ageStatus = document.getElementById('ageStatus');
+      var age = ageStatus ? ageStatus.textContent.replace(/^Idade:\s*/i, '') : '';
+      var subject = text('subject');
+
+      submitReservation(isoDate, type, code);
+
+      var message = '*SOLICITAÇÃO DE ATENDIMENTO DO TACS*\n\n' +
+        'Código: ' + code + '\n' +
+        'Data e horário do envio: ' + new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date()) + '\n' +
+        'Categoria: ' + category + '\n' +
+        '*Dia escolhido: ' + day + ' — ' + date + '*\n' +
+        'Tipo de vaga odontológica: ' + type + '\n' +
+        'Reserva automática: solicitada\n' +
+        'Nome completo: ' + text('name') + '\n' +
+        'Data de nascimento: ' + birth + '\n' +
+        'Idade: ' + age + '\n' +
+        'CPF: ' + text('cpf') + '\n' +
+        'Localidade: ' + text('locality') + '\n' +
+        'Assunto: ' + subject + '\n\n' +
+        'Este código é apenas uma referência para localizar a conversa.';
+
+      window.location.href = 'https://wa.me/5581989613130?text=' + encodeURIComponent(message);
+    }, true);
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       installOfflineBanner();
       installFormPersistence();
+      installReliableDentalWhatsApp();
     });
   } else {
     installOfflineBanner();
     installFormPersistence();
+    installReliableDentalWhatsApp();
   }
 }());
