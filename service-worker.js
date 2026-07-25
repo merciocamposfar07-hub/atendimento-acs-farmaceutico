@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tacs-posto-matias-v2';
+const CACHE_NAME = 'tacs-posto-matias-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -10,7 +10,7 @@ const APP_SHELL = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL.map(path => path + (path.includes('?') ? '&' : '?') + 'v=20260725-02')))
+      .then(cache => cache.addAll(APP_SHELL.map(path => path + (path.includes('?') ? '&' : '?') + 'v=20260725-03')))
       .then(() => self.skipWaiting())
   );
 });
