@@ -7,6 +7,3 @@
  */
 window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_sawD2X8K9O3hGjgCge3gao5S9FjajcqYxyO8e_0WTkrsoqjtBhC4kFhAFTl/exec';
 window.POSTO_MATIAS_AVISOS_API_URL = '';
-
-/* Compatibilidade da versão atual do formulário. */
-var IMPLAN = 'Implanon';
