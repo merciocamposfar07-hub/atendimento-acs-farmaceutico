@@ -20,9 +20,35 @@ window.POSTO_MATIAS_AVISOS_API_URL = '';
     document.head.appendChild(link);
   }
 
+  function installDentalTheme() {
+    if (document.getElementById('dental-theme-posto-matias')) return;
+    var style = document.createElement('style');
+    style.id = 'dental-theme-posto-matias';
+    style.textContent = [
+      '.dental{padding:24px!important;border:2px solid #0D5F8A!important;border-radius:20px!important;background:linear-gradient(145deg,#041F34 0%,#062C46 58%,#0A4265 100%)!important;color:#fff!important;box-shadow:0 18px 34px rgba(3,35,56,.22)!important}',
+      '.dental-head span{color:#70E39F!important;font-size:14px!important;font-weight:950!important;letter-spacing:.075em!important;line-height:1.45!important}',
+      '.dental-head h3{margin:10px 0 8px!important;color:#fff!important;font-size:clamp(30px,5vw,42px)!important;line-height:1.15!important;letter-spacing:-.025em!important}',
+      '.dental-head p{margin:0 0 20px!important;color:#D8E7EE!important;font-size:18px!important;font-weight:650!important;line-height:1.55!important}',
+      '.slots{gap:14px!important}',
+      '.slot{min-height:132px!important;padding:18px 20px!important;border:2px solid #6E9DB5!important;border-radius:17px!important;background:#fff!important;color:#102B3C!important;box-shadow:0 8px 18px rgba(0,0,0,.12)!important}',
+      '.slot:hover,.slot:focus-visible{border-color:#70E39F!important;box-shadow:0 0 0 4px rgba(112,227,159,.20),0 10px 22px rgba(0,0,0,.14)!important}',
+      '.slot.selected{border-color:#16A85D!important;background:#ECF9F1!important;box-shadow:0 0 0 4px rgba(22,168,93,.22),0 10px 22px rgba(0,0,0,.14)!important}',
+      '.slot strong{color:#102B3C!important;font-size:20px!important;line-height:1.3!important}',
+      '.slot span{color:#425B69!important;font-size:17px!important}',
+      '.slot b{color:#078940!important;font-size:17px!important;font-weight:950!important}',
+      '.slot:disabled{opacity:.72!important;background:#EEF3F5!important;border-color:#A9BDC7!important;box-shadow:none!important}',
+      '.slot:disabled strong,.slot:disabled span,.slot:disabled b{color:#718792!important}',
+      '.dental-status{margin:20px 0 0!important;padding-top:18px!important;border-top:1px solid #4C829D!important;color:#fff!important;font-size:17px!important;font-weight:850!important;line-height:1.55!important}',
+      '.dental-status.error{color:#FFD5D2!important}',
+      '@media(max-width:720px){.dental{padding:21px 17px!important}.dental-head h3{font-size:32px!important}.dental-head p{font-size:17px!important}.slot{min-height:116px!important}}'
+    ].join('');
+    document.head.appendChild(style);
+  }
+
   addLink('manifest', 'manifest.webmanifest');
   addLink('icon', 'icon-tacs.svg', { type: 'image/svg+xml' });
   addLink('apple-touch-icon', 'icon-tacs.svg');
+  installDentalTheme();
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
