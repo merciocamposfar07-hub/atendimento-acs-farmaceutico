@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#123f50">
-  <meta name="description" content="Canal do TACS - Técnico Agente Comunitário de Saúde vinculado à Unidade de Saúde Posto Matias para moradores do Sítio Japaranduba, Chã Grande/PE.">
+  <meta name="description" content="Canal do TACS - Técnico Agente Comunitário de Saúde Mércio José Campos dos Santos, vinculado à Unidade de Saúde Posto Matias, para moradores do Sítio Japaranduba, Chã Grande/PE.">
   <title>TACS - Técnico Agente Comunitário de Saúde | Unidade de Saúde Posto Matias</title>
   <style>
     :root{
@@ -25,6 +25,7 @@
     .brand{min-width:0}
     .brand strong{display:block;font-size:clamp(19px,3.4vw,28px);line-height:1.2;letter-spacing:-.025em}
     .brand span{display:block;margin-top:5px;color:var(--muted);font-size:clamp(14px,2.7vw,18px);font-weight:700;line-height:1.45}
+    .brand .professional-name{color:var(--blue-dark);font-size:clamp(15px,2.9vw,19px);font-weight:900}
     .unit-pill{display:inline-flex;margin-top:8px;padding:7px 11px;border:1px solid #a8ccd8;border-radius:999px;background:var(--blue-soft);color:var(--blue-dark);font-size:13px!important;font-weight:900!important}
     .panel{overflow:hidden;border:1px solid var(--line);border-radius:30px;background:rgba(255,255,255,.98);box-shadow:var(--shadow)}
     .hero{padding:clamp(26px,6vw,52px);background:linear-gradient(145deg,#ffffff 0%,#eef8fb 100%);border-bottom:1px solid var(--line)}
@@ -42,7 +43,7 @@
     .notice-card{padding:17px 18px;border:1px solid #c6dde5;border-left:6px solid var(--blue);border-radius:16px;background:#fff}
     .notice-card.important{border-left-color:#b66c13;background:#fffaf1}.notice-card.urgent{border-left-color:var(--danger);background:#fff6f5}
     .notice-card small{display:block;margin-bottom:5px;color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
-    .notice-card strong{display:block;font-size:20px;line-height:1.35}.notice-card p{margin:7px 0 0;color:var(--muted);font-size:16px;line-height:1.55}
+    .notice-card strong{display:block;font-size:20px;line-height:1.35}.notice-card p{margin:7px 0 0;color:var(--muted);font-size:16px;line-height:1.55;white-space:pre-line}
     .info{padding:18px 20px;border-radius:18px;font-size:17px;line-height:1.58}
     .info+ .info{margin-top:13px}
     .info.blue{border:1px solid #c8e0e9;background:var(--blue-soft);color:#214f64}
@@ -76,7 +77,7 @@
     .emergency b{font-size:18px}.emergency-icon{width:31px;height:31px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;background:#f2ddb7;font-weight:950}
     footer{padding:24px 8px 0;text-align:center;color:#5f777a;font-size:14px;line-height:1.55}
     .toast{position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom));z-index:9999;width:min(calc(100% - 28px),560px);transform:translateX(-50%);padding:16px 18px;border-radius:16px;background:var(--ink);color:#fff;box-shadow:0 18px 48px rgba(0,0,0,.28);font-size:16px;font-weight:850;line-height:1.45}
-    @media(max-width:720px){.shell{width:min(calc(100% - 18px),960px);padding-top:7px}.topbar{padding:12px 5px 17px}.mark{width:51px;height:51px;border-radius:16px}.panel{border-radius:23px}.hero{padding:27px 21px}.content{padding:22px 18px}.grid{grid-template-columns:1fr}.full{grid-column:auto}.slots{grid-template-columns:1fr}.slot{min-height:96px}.info{font-size:16px}.brand strong{font-size:19px}.brand span{font-size:14px}.unit-pill{font-size:12px!important}}
+    @media(max-width:720px){.shell{width:min(calc(100% - 18px),960px);padding-top:7px}.topbar{padding:12px 5px 17px}.mark{width:51px;height:51px;border-radius:16px}.panel{border-radius:23px}.hero{padding:27px 21px}.content{padding:22px 18px}.grid{grid-template-columns:1fr}.full{grid-column:auto}.slots{grid-template-columns:1fr}.slot{min-height:96px}.info{font-size:16px}.brand strong{font-size:19px}.brand span{font-size:14px}.brand .professional-name{font-size:15px}.unit-pill{font-size:12px!important}}
     @media(min-resolution:2dppx){.panel,.info,.notice-board,.notice-card,.dental,.slot,input,textarea,select{backface-visibility:hidden}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   </style>
@@ -87,6 +88,7 @@
       <div class="mark" aria-hidden="true">T</div>
       <div class="brand">
         <strong>TACS - Técnico Agente Comunitário de Saúde</strong>
+        <span class="professional-name">TACS - Mércio José Campos dos Santos</span>
         <span>Serviço vinculado à Unidade de Saúde Posto Matias</span>
         <span class="unit-pill">Sítio Japaranduba • Chã Grande/PE</span>
       </div>
@@ -98,7 +100,6 @@
         <h1>Solicite serviços da sua unidade de saúde</h1>
         <p>Este portal organiza a comunicação dos moradores do Sítio Japaranduba com o TACS - Técnico Agente Comunitário de Saúde da Unidade de Saúde Posto Matias.</p>
         <div class="hero-meta">
-          <span class="meta-card">Atendimento gratuito</span>
           <span class="meta-card">Segunda a sexta • 08h às 16h</span>
           <span class="meta-card">Envio pelo WhatsApp</span>
         </div>
@@ -116,17 +117,16 @@
           <label class="full">Serviço necessário na Unidade de Saúde Posto Matias
             <select id="category">
               <option value="">Toque para escolher</option>
-              <option>Informações sobre a Unidade de Saúde Posto Matias ou serviço do SUS</option>
+              <option>Informações sobre dias, horários e funcionamento da Unidade de Saúde Posto Matias</option>
               <option value="Implanon">Implanon — informações ou solicitação do implante</option>
               <option>Solicitar atendimento odontológico (dentista)</option>
               <option>Solicitar atendimento odontológico de emergência (dentista)</option>
               <option>Solicitar atendimento com nutricionista</option>
-              <option>Qual é o dia do atendimento médico na Unidade de Saúde Posto Matias?</option>
               <option>Visita domiciliar ou acompanhamento do TACS - Técnico Agente Comunitário de Saúde da Unidade de Saúde Posto Matias</option>
               <option>Vacinação ou campanha de saúde</option>
               <option>Acompanhamento de saúde do Bolsa Família</option>
               <option>Cadastro ou atualização da família</option>
-              <option>Encaminhamento ou orientação sobre serviço público</option>
+              <option>Encaminhamento ou orientação para outro serviço da rede pública</option>
               <option>Outro assunto comunitário relacionado à Unidade de Saúde Posto Matias</option>
             </select>
           </label>
@@ -186,10 +186,10 @@
       </div>
     </section>
 
-    <footer>TACS - Técnico Agente Comunitário de Saúde • Serviço da Unidade de Saúde Posto Matias • Sítio Japaranduba, Chã Grande/PE</footer>
+    <footer>TACS - Técnico Agente Comunitário de Saúde • TACS - Mércio José Campos dos Santos • Serviço da Unidade de Saúde Posto Matias • Sítio Japaranduba, Chã Grande/PE</footer>
   </main>
 
-  <script src="agenda-config.js?v=20260725-03"></script>
+  <script src="agenda-config.js?v=20260725-04"></script>
   <script>
   (function(){
     'use strict';
@@ -235,9 +235,9 @@
     function dentalLine(){if(!selectedDentalSlot)return '';var type=dentalType(el('category').value),v=vacancies(selectedDentalSlot,type);return '\nTipo de vaga odontológica: '+(type==='emergencial'?'emergencial':'comum')+'\nDia escolhido: '+selectedDentalSlot.dia+' — '+formatDate(selectedDentalSlot.data)+(selectedDentalSlot.reserved?'\nReserva automática: confirmada':v===null?'':'\nVagas exibidas no momento da escolha: '+v)}
     function updateIdentity(){var age=ageFromBirth(el('birth').value),ageStatus=el('ageStatus'),cpfOk=validCpf(el('cpf').value),birthComplete=el('birth').value.replace(/\D/g,'').length===8,cpfComplete=el('cpf').value.replace(/\D/g,'').length===11;if(age!==null){ageStatus.textContent='Idade: '+age+(age===1?' ano':' anos');ageStatus.className='help valid'}else{ageStatus.textContent=birthComplete?'Confira a data informada.':'Digite a data para calcular a idade.';ageStatus.className=birthComplete?'help invalid':'help'}if(cpfOk){el('cpfStatus').textContent='CPF conferido ✓';el('cpfStatus').className='help valid'}else{el('cpfStatus').textContent=cpfComplete?'Confira os números do CPF.':'Usado para identificação na Unidade de Saúde Posto Matias.';el('cpfStatus').className=cpfComplete?'help invalid':'help'}return age!==null&&cpfOk}
     function requestText(){return el('category').value===IMPLANON?el('implanonChoice').value.trim():el('subject').value.trim()}
-    function updateForm(){var category=el('category').value,isImplanon=category===IMPLAN,type=dentalType(category),isDental=Boolean(type),subject=requestText(),clinical=!isImplanon&&isClinicalSubject(subject),identity=updateIdentity(),dentalOk=!isDental||(dentalState==='ready'&&scheduleConfigured(type)&&Boolean(selectedDentalSlot));el('implanonField').hidden=!isImplanon;el('subjectField').hidden=isImplanon;el('dentalSchedule').hidden=!isDental;el('dentalEmergency').hidden=category!==DENTAL_EMERGENCY;if(!isImplanon)el('implanonChoice').value='';if((!isDental||selectedDentalType!==type)&&selectedDentalSlot){selectedDentalSlot=null;selectedDentalType=''}if(isDental)renderDental();el('routingAlert').hidden=!clinical;el('send').hidden=clinical;el('send').disabled=reservationPending||clinical||!(category&&el('name').value.trim().length>=3&&identity&&el('locality').value.trim()&&subject&&dentalOk)}
+    function updateForm(){var category=el('category').value,isImplanon=category===IMPLANON,type=dentalType(category),isDental=Boolean(type),subject=requestText(),clinical=!isImplanon&&isClinicalSubject(subject),identity=updateIdentity(),dentalOk=!isDental||(dentalState==='ready'&&scheduleConfigured(type)&&Boolean(selectedDentalSlot));el('implanonField').hidden=!isImplanon;el('subjectField').hidden=isImplanon;el('dentalSchedule').hidden=!isDental;el('dentalEmergency').hidden=category!==DENTAL_EMERGENCY;if(!isImplanon)el('implanonChoice').value='';if((!isDental||selectedDentalType!==type)&&selectedDentalSlot){selectedDentalSlot=null;selectedDentalType=''}if(isDental)renderDental();el('routingAlert').hidden=!clinical;el('send').hidden=clinical;el('send').disabled=reservationPending||clinical||!(category&&el('name').value.trim().length>=3&&identity&&el('locality').value.trim()&&subject&&dentalOk)}
     function openWhatsApp(message){window.location.href='https://wa.me/'+WHATSAPP_NUMBER+'?text='+encodeURIComponent(message)}
-    function sendMessage(){if(!requestCode)requestCode=makeRequestCode();var age=ageFromBirth(el('birth').value),category=el('category').value,label=category===IMPLANON?'Solicitação sobre o Implanon':'Descrição';var message='*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n*TACS - Técnico Agente Comunitário de Saúde*\n\nCódigo: '+requestCode+'\nData e horário do envio: '+recifeDateTime()+'\nCategoria: '+category+dentalLine()+'\nNome completo: '+el('name').value.trim()+'\nData de nascimento: '+formatDate(el('birth').value)+'\nIdade: '+age+(age===1?' ano':' anos')+'\nCPF: '+el('cpf').value+'\nOnde mora: '+el('locality').value.trim()+'\n'+label+': '+requestText()+'\n\nEste código é apenas uma referência para localizar a conversa.';openWhatsApp(message)}
+    function sendMessage(){if(!requestCode)requestCode=makeRequestCode();var age=ageFromBirth(el('birth').value),category=el('category').value,label=category===IMPLANON?'Solicitação sobre o Implanon':'Descrição';var message='*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n*TACS - Técnico Agente Comunitário de Saúde*\n*TACS responsável: Mércio José Campos dos Santos*\n\nCódigo: '+requestCode+'\nData e horário do envio: '+recifeDateTime()+'\nCategoria: '+category+dentalLine()+'\nNome completo: '+el('name').value.trim()+'\nData de nascimento: '+formatDate(el('birth').value)+'\nIdade: '+age+(age===1?' ano':' anos')+'\nCPF: '+el('cpf').value+'\nOnde mora: '+el('locality').value.trim()+'\n'+label+': '+requestText()+'\n\nEste código é apenas uma referência para localizar a conversa.';openWhatsApp(message)}
     function handleSend(){var category=el('category').value;if(category!==IMPLANON&&isClinicalSubject(requestText())){updateForm();return}if(!requestCode)requestCode=makeRequestCode();if(!dentalType(category)){sendMessage();return}var button=el('send'),original=button.textContent;reservationPending=true;button.disabled=true;button.textContent='Reservando a vaga...';reserveSlot().then(function(result){var type=dentalType(category);if(result&&result.alreadyReserved&&(result.date!==selectedDentalSlot.data||result.type!==type))throw new Error('Este formulário já reservou outra data. Reabra o portal e faça uma nova solicitação.');if(result&&Number.isFinite(Number(result.remaining))){if(type==='emergencial')selectedDentalSlot.vagasEmergenciais=Number(result.remaining);else selectedDentalSlot.vagasComuns=Number(result.remaining)}selectedDentalSlot.reserved=Boolean(result&&!result.skipped);reservationPending=false;button.textContent=original;sendMessage()}).catch(function(error){reservationPending=false;button.textContent=original;el('dentalStatus').textContent=error&&error.message?error.message:'Não foi possível reservar a vaga. Tente novamente.';el('dentalStatus').className='dental-status error';showToast(el('dentalStatus').textContent);loadDental()})}
     function scheduleMessage(){var parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),v={};for(var i=0;i<parts.length;i++)v[parts[i].type]=parts[i].value;var weekday=v.weekday!=='Sat'&&v.weekday!=='Sun',minutes=Number(v.hour)*60+Number(v.minute),open=weekday&&minutes>=480&&minutes<960;if(!open){el('scheduleInfo').hidden=false;el('scheduleInfo').innerHTML='<strong>Você está escrevendo fora do horário do TACS - Técnico Agente Comunitário de Saúde da Unidade de Saúde Posto Matias.</strong> A mensagem poderá ser enviada agora e será respondida no próximo expediente, das 08h às 16h.'}}
     function activeNoticeItems(data){var today=recifeToday(),items=Array.isArray(data.avisos)?data.avisos:[];return items.filter(function(item){return item&&item.ativo!==false&&(!item.validade||String(item.validade)>=today)})}
