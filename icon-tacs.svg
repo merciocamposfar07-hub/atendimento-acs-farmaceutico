@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TACS - Técnico Agente Comunitário de Saúde">
+  <rect width="512" height="512" rx="96" fill="#062c46"/>
+  <rect x="30" y="30" width="452" height="452" rx="76" fill="none" stroke="#16b86f" stroke-width="18"/>
+  <path d="M122 248 256 132l134 116v132H122z" fill="#ffffff"/>
+  <path d="M92 246 256 102l164 144" fill="none" stroke="#ffffff" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="226" y="274" width="60" height="106" rx="10" fill="#062c46"/>
+  <rect x="160" y="274" width="42" height="54" rx="8" fill="#0d5f8a"/>
+  <rect x="310" y="274" width="42" height="54" rx="8" fill="#0d5f8a"/>
+  <rect x="230" y="174" width="52" height="134" rx="12" fill="#079447"/>
+  <rect x="189" y="215" width="134" height="52" rx="12" fill="#079447"/>
+</svg>
