@@ -16,14 +16,16 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
   var ADMIN_EDIT_URL = 'https://github.com/merciocamposfar07-hub/atendimento-acs-farmaceutico/edit/main/avisos-config.js';
   var currentVersion = '';
   var refreshTimer = null;
+  var isAdminMode = false;
+
+  try {
+    isAdminMode = new URLSearchParams(window.location.search).get('modo') === 'tacs';
+  } catch (error) {
+    isAdminMode = /(?:^|[?&])modo=tacs(?:&|$)/.test(window.location.search || '');
+  }
 
   function adminMode() {
-    try {
-      var params = new URLSearchParams(window.location.search);
-      return params.get('modo') === 'tacs';
-    } catch (error) {
-      return false;
-    }
+    return isAdminMode;
   }
 
   function addStyles() {
