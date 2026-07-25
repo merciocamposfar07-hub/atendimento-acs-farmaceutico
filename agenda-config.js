@@ -6,16 +6,25 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
 
 /*
  * Mural de avisos do Serviço TACS.
- * Funciona somente com arquivos estáticos do GitHub Pages: não guarda dados
- * de moradores e não depende de banco de dados ou servidor pago.
+ * Usa somente arquivos estáticos do GitHub Pages.
  */
 (function () {
   'use strict';
 
   var CONFIG_FILE = 'avisos-config.js';
   var STORAGE_KEY = 'tacs-japaranduba-avisos-vistos';
+  var ADMIN_EDIT_URL = 'https://github.com/merciocamposfar07-hub/atendimento-acs-farmaceutico/edit/main/avisos-config.js';
   var currentVersion = '';
   var refreshTimer = null;
+
+  function adminMode() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      return params.get('modo') === 'tacs';
+    } catch (error) {
+      return false;
+    }
+  }
 
   function addStyles() {
     if (document.getElementById('tacsNoticeStyles')) return;
@@ -27,8 +36,11 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
       '.tacs-notice-kicker{display:block;color:#2a668a;font-size:10px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}',
       '.tacs-notice-head h2{margin:5px 0 3px;color:#15332d;font-size:21px;line-height:1.25}',
       '.tacs-notice-updated{margin:0;color:#657873;font-size:11px;line-height:1.45}',
-      '.tacs-refresh{flex:0 0 auto;min-height:38px;border:1px solid #a9cbdc;border-radius:12px;background:#fff;color:#2a668a;padding:8px 11px;font-size:12px;font-weight:800;cursor:pointer}',
+      '.tacs-head-actions{display:grid;gap:8px;flex:0 0 auto}',
+      '.tacs-refresh,.tacs-edit-link{min-height:38px;border:1px solid #a9cbdc;border-radius:12px;background:#fff;color:#2a668a;padding:8px 11px;font-size:12px;font-weight:800;cursor:pointer;text-align:center;text-decoration:none}',
+      '.tacs-edit-link{border-color:#86bfae;color:#087c68;background:#f3fbf8}',
       '.tacs-refresh:disabled{opacity:.55;cursor:wait}',
+      '.tacs-admin-note{margin:0 0 13px;padding:11px 12px;border:1px dashed #9fc9bb;border-radius:12px;background:#f2faf7;color:#285d50;font-size:11px;line-height:1.45}',
       '.tacs-medical-card{display:grid;grid-template-columns:42px 1fr;gap:13px;padding:16px;border-radius:16px;background:#fff;border:1px solid #c9dee8}',
       '.tacs-medical-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#eaf4fa;color:#2a668a;font-size:21px}',
       '.tacs-status{display:inline-flex;margin-bottom:5px;padding:4px 8px;border-radius:999px;background:#eaf4fa;color:#2a668a;font-size:9px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}',
@@ -46,7 +58,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
       '.tacs-notice-foot{margin:12px 2px 0;color:#657873;font-size:10px;line-height:1.45}',
       '.tacs-home-badge{position:absolute;top:15px;right:15px;z-index:2;padding:6px 9px;border-radius:999px;background:#a13c35;color:#fff;font-size:10px;font-weight:900;box-shadow:0 6px 14px rgba(161,60,53,.24)}',
       '.tacs-toast{position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom));z-index:9999;width:min(calc(100% - 28px),520px);transform:translateX(-50%);padding:15px 17px;border-radius:15px;background:#15332d;color:#fff;box-shadow:0 18px 45px rgba(0,0,0,.24);font-size:14px;font-weight:800;line-height:1.45}',
-      '@media(max-width:600px){.tacs-notice-board{padding:16px}.tacs-notice-head{display:block}.tacs-refresh{width:100%;margin-top:12px}.tacs-medical-card{grid-template-columns:38px 1fr}.tacs-medical-icon{width:38px;height:38px}.tacs-notice-head h2{font-size:20px}}'
+      '@media(max-width:600px){.tacs-notice-board{padding:16px}.tacs-notice-head{display:block}.tacs-head-actions{margin-top:12px}.tacs-refresh,.tacs-edit-link{width:100%;display:block}.tacs-medical-card{grid-template-columns:38px 1fr}.tacs-medical-icon{width:38px;height:38px}.tacs-notice-head h2{font-size:20px}}'
     ].join('');
     document.head.appendChild(style);
   }
@@ -152,7 +164,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
   }
 
   function render(config, announceChange) {
-    if (!config || typeof config !== 'object') return;
+    if (!config || typeof config !== 'object') return false;
     var seenVersion = '';
     try { seenVersion = localStorage.getItem(STORAGE_KEY) || ''; } catch (error) {}
     var version = safeText(config.versao || config.atualizadoEm || '1');
@@ -161,7 +173,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
     currentVersion = version;
 
     var board = document.getElementById('tacsNoticeBoard');
-    if (!board) return;
+    if (!board) return versionChangedWhileOpen;
     board.innerHTML = '';
 
     var head = createElement('div', 'tacs-notice-head');
@@ -170,22 +182,40 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
     heading.appendChild(createElement('h2', '', 'Avisos da unidade de saúde'));
     heading.appendChild(createElement('p', 'tacs-notice-updated', 'Área: ' + safeText(config.area || 'Sítio Japaranduba') + (config.atualizadoEm ? ' • Atualizado em ' + safeText(config.atualizadoEm) : '')));
     head.appendChild(heading);
-    var refresh = createElement('button', 'tacs-refresh', '↻ Atualizar avisos');
+
+    var actions = createElement('div', 'tacs-head-actions');
+    var refresh = createElement('button', 'tacs-refresh', '↻ Verificar novos avisos');
     refresh.type = 'button';
     refresh.addEventListener('click', function () { loadConfig(true, refresh); });
-    head.appendChild(refresh);
+    actions.appendChild(refresh);
+
+    if (adminMode()) {
+      var edit = createElement('a', 'tacs-edit-link', '✎ Editar avisos (TACS)');
+      edit.href = ADMIN_EDIT_URL;
+      edit.target = '_blank';
+      edit.rel = 'noopener noreferrer';
+      actions.appendChild(edit);
+    }
+
+    head.appendChild(actions);
     board.appendChild(head);
+
+    if (adminMode()) {
+      board.appendChild(createElement('p', 'tacs-admin-note', 'Modo TACS: o botão Editar avisos abre o arquivo oficial no GitHub. Depois de salvar a alteração, volte ao portal e toque em Verificar novos avisos.'));
+    }
 
     renderMedical(board, config.atendimentoMedico);
     renderNoticeList(board, activeNotices(config), isNew);
     board.appendChild(createElement('p', 'tacs-notice-foot', 'As informações são publicadas manualmente pelo TACS. Em caso de dúvida, envie sua solicitação pelo formulário abaixo.'));
     updateHomeBadge(isNew);
 
-    if (announceChange && versionChangedWhileOpen) showToast('Há uma nova atualização nos avisos do Serviço TACS.');
+    if (announceChange && versionChangedWhileOpen) showToast('Nova atualização carregada nos avisos do Serviço TACS.');
+    return versionChangedWhileOpen;
   }
 
   function loadConfig(announceChange, button) {
     if (button) button.disabled = true;
+    var beforeVersion = currentVersion;
     var old = document.getElementById('tacsNoticesConfigScript');
     if (old) old.remove();
     var script = document.createElement('script');
@@ -193,11 +223,14 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
     script.src = CONFIG_FILE + '?v=' + Date.now();
     script.onload = function () {
       if (button) button.disabled = false;
-      render(window.PORTAL_TACS_AVISOS || {}, announceChange);
+      var changed = render(window.PORTAL_TACS_AVISOS || {}, announceChange);
+      if (button && !changed && beforeVersion === currentVersion) {
+        showToast('Avisos verificados. Nenhuma atualização nova.');
+      }
     };
     script.onerror = function () {
       if (button) button.disabled = false;
-      showToast('Não foi possível atualizar os avisos agora. Tente novamente.');
+      showToast('Não foi possível verificar os avisos agora. Tente novamente.');
     };
     document.head.appendChild(script);
   }
