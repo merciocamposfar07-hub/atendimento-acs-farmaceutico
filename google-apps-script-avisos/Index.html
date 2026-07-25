@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1"
+  >
+
+  <title>Avisos TACS - Unidade de Saúde Posto Matias</title>
+
+  <style>
+    :root {
+      --azul: #062c46;
+      --azul-claro: #0d5f8a;
+      --verde: #078940;
+      --verde-claro: #e9f7ef;
+      --amarelo: #fff3d8;
+      --laranja: #a85b00;
+      --vermelho: #a3302b;
+      --vermelho-claro: #fdecea;
+      --fundo: #e9eff3;
+      --texto: #173042;
+      --cinza: #526a78;
+      --borda: #a9bdc8;
+      --branco: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--fundo);
+      color: var(--texto);
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    .cabecalho {
+      padding: 28px 18px;
+      background: linear-gradient(135deg, #041f34, var(--azul));
+      color: var(--branco);
+      text-align: center;
+    }
+
+    .cabecalho h1 {
+      margin: 0;
+      font-size: clamp(27px, 7vw, 42px);
+      line-height: 1.1;
+    }
+
+    .cabecalho p {
+      margin: 10px 0 0;
+      color: #d8e7ee;
+      font-size: 17px;
+      line-height: 1.45;
+    }
+
+    .cabecalho strong {
+      color: #70e39f;
+    }
+
+    .pagina {
+      width: min(calc(100% - 20px), 850px);
+      margin: 18px auto 40px;
+    }
+
+    .painel {
+      margin-bottom: 18px;
+      padding: 22px;
+      border: 1px solid var(--borda);
+      border-radius: 20px;
+      background: var(--branco);
+      box-shadow: 0 12px 30px rgba(3, 35, 56, 0.12);
+    }
+
+    .titulo-secao {
+      margin: 0 0 8px;
+      color: var(--azul);
+      font-size: 27px;
+      line-height: 1.2;
+    }
+
+    .subtitulo {
+      margin: 0 0 22px;
+      color: var(--cinza);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .servicos {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .servico {
+      min-height: 105px;
+      padding: 16px;
+      border: 2px solid var(--borda);
+      border-radius: 16px;
+      background: var(--branco);
+      color: var(--texto);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .servico strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 18px;
+    }
+
+    .servico span {
+      font-size: 27px;
+    }
+
+    .servico.selecionado {
+      border-color: var(--azul-claro);
+      background: #eaf3f7;
+      box-shadow: 0 0 0 4px rgba(13, 95, 138, 0.13);
+    }
+
+    .servico.urgente.selecionado {
+      border-color: var(--vermelho);
+      background: var(--vermelho-claro);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 17px;
+      color: var(--azul);
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      min-height: 58px;
+      margin-top: 8px;
+      padding: 14px 15px;
+      border: 2px solid var(--borda);
+      border-radius: 13px;
+      background: var(--branco);
+      color: var(--texto);
+      outline: none;
+      font-size: 18px;
+    }
+
+    textarea {
+      min-height: 125px;
+      resize: vertical;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--azul-claro);
+      box-shadow: 0 0 0 4px rgba(13, 95, 138, 0.14);
+    }
+
+    .linha {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .acoes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .botao {
+      min-height: 59px;
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 18px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .botao-publicar {
+      background: var(--verde);
+      color: var(--branco);
+    }
+
+    .botao-limpar {
+      border: 2px solid var(--borda);
+      background: var(--branco);
+      color: var(--azul);
+    }
+
+    .botao:disabled {
+      cursor: wait;
+      opacity: 0.55;
+    }
+
+    .mensagem-sistema {
+      display: none;
+      margin-top: 17px;
+      padding: 15px;
+      border-radius: 13px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .mensagem-sistema.sucesso {
+      display: block;
+      border: 1px solid #62af80;
+      background: var(--verde-claro);
+      color: #056b33;
+    }
+
+    .mensagem-sistema.erro {
+      display: block;
+      border: 1px solid #d69c98;
+      background: var(--vermelho-claro);
+      color: var(--vermelho);
+    }
+
+    .carregando {
+      padding: 20px;
+      color: var(--cinza);
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .lista {
+      display: grid;
+      gap: 13px;
+    }
+
+    .aviso {
+      overflow: hidden;
+      border: 1px solid var(--borda);
+      border-left: 7px solid var(--azul-claro);
+      border-radius: 15px;
+      background: var(--branco);
+    }
+
+    .aviso.importante {
+      border-left-color: var(--laranja);
+    }
+
+    .aviso.urgente {
+      border-left-color: var(--vermelho);
+    }
+
+    .aviso.inativo {
+      background: #f0f3f5;
+    }
+
+    .aviso.inativo .aviso-conteudo {
+      opacity: 0.62;
+    }
+
+    .aviso-conteudo {
+      padding: 17px;
+    }
+
+    .aviso-tipo {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--cinza);
+      font-size: 12px;
+      font-weight: 950;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .aviso h3 {
+      margin: 0;
+      color: var(--azul);
+      font-size: 21px;
+      line-height: 1.3;
+    }
+
+    .aviso p {
+      margin: 9px 0 0;
+      color: #314b59;
+      font-size: 16px;
+      line-height: 1.55;
+      white-space: pre-line;
+    }
+
+    .aviso-data {
+      margin-top: 11px;
+      color: var(--cinza);
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .aviso-acoes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+      padding: 11px 15px;
+      border-top: 1px solid #d5e0e5;
+      background: #f5f8f9;
+    }
+
+    .botao-status,
+    .botao-compartilhar {
+      min-height: 44px;
+      border-radius: 10px;
+      padding: 10px 15px;
+      font-weight: 850;
+      line-height: 1.25;
+      cursor: pointer;
+    }
+
+    .botao-status {
+      border: 0;
+      background: var(--vermelho);
+      color: var(--branco);
+    }
+
+    .botao-status.reativar {
+      background: var(--verde);
+    }
+
+    .botao-compartilhar {
+      border: 2px solid var(--verde);
+      background: #effbf4;
+      color: #056b33;
+    }
+
+    .botao-compartilhar.card {
+      border-color: var(--azul);
+      background: var(--azul);
+      color: var(--branco);
+    }
+
+    .botao-compartilhar:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .repostagem-info {
+      margin: 15px 0 0;
+      padding: 14px 15px;
+      border: 1px solid #8cb7cc;
+      border-radius: 13px;
+      background: #edf7fc;
+      color: #173f56;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .repostagem-info strong {
+      color: var(--azul);
+    }
+
+    .sem-avisos {
+      padding: 25px 17px;
+      border: 2px dashed var(--borda);
+      border-radius: 15px;
+      color: var(--cinza);
+      text-align: center;
+      font-size: 17px;
+      font-weight: 750;
+    }
+
+    .rodape {
+      padding: 19px;
+      background: var(--azul);
+      color: var(--branco);
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 650px) {
+      .pagina {
+        width: min(calc(100% - 12px), 850px);
+        margin-top: 8px;
+      }
+
+      .painel {
+        padding: 18px 14px;
+        border-radius: 17px;
+      }
+
+      .servicos,
+      .linha,
+      .acoes {
+        grid-template-columns: 1fr;
+      }
+
+      .servico {
+        min-height: 87px;
+      }
+
+      input,
+      textarea,
+      select {
+        font-size: 17px;
+      }
+
+      .aviso-acoes {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="cabecalho">
+    <h1>Painel de avisos</h1>
+    <p>
+      <strong>TACS - Técnico Agente Comunitário de Saúde</strong><br>
+      Unidade de Saúde Posto Matias
+    </p>
+  </header>
+
+  <main class="pagina">
+
+    <section class="painel">
+      <h2 class="titulo-secao">Publicar novo aviso</h2>
+
+      <p class="subtitulo">
+        Escolha o serviço, preencha as informações e toque em publicar.
+        O aviso aparecerá no portal.
+      </p>
+
+      <div class="servicos">
+
+        <button
+          class="servico"
+          type="button"
+          data-tipo="Atendimento médico"
+          data-titulo="Atendimento médico"
+        >
+          <span>🩺</span>
+          <strong>Atendimento médico</strong>
+        </button>
+
+        <button
+          class="servico"
+          type="button"
+          data-tipo="Nutricionista"
+          data-titulo="Atendimento com nutricionista"
+        >
+          <span>🥗</span>
+          <strong>Nutricionista</strong>
+        </button>
+
+        <button
+          class="servico"
+          type="button"
+          data-tipo="Vacinação"
+          data-titulo="Vacinação"
+        >
+          <span>💉</span>
+          <strong>Vacinação</strong>
+        </button>
+
+        <button
+          class="servico"
+          type="button"
+          data-tipo="Aviso geral"
+          data-titulo="Aviso da Unidade de Saúde Posto Matias"
+        >
+          <span>📢</span>
+          <strong>Aviso geral</strong>
+        </button>
+
+        <button
+          class="servico urgente"
+          type="button"
+          data-tipo="Alteração"
+          data-titulo="Alteração no atendimento"
+        >
+          <span>⚠️</span>
+          <strong>Alteração</strong>
+        </button>
+
+        <button
+          class="servico urgente"
+          type="button"
+          data-tipo="Cancelamento"
+          data-titulo="Atendimento cancelado"
+        >
+          <span>🚫</span>
+          <strong>Cancelamento</strong>
+        </button>
+
+      </div>
+
+      <form id="formulario">
+
+        <input id="tipo" type="hidden">
+
+        <label>
+          Título do aviso
+          <input
+            id="titulo"
+            type="text"
+            placeholder="Ex.: Atendimento médico confirmado"
+            required
+          >
+        </label>
+
+        <div class="linha">
+
+          <label>
+            Data
+            <input id="data" type="date">
+          </label>
+
+          <label>
+            Horário
+            <input id="horario" type="time">
+          </label>
+
+        </div>
+
+        <label>
+          Situação
+          <select id="situacao">
+            <option value="">Não informar situação</option>
+            <option value="Confirmado">Confirmado</option>
+            <option value="Aguardando confirmação">
+              Aguardando confirmação
+            </option>
+            <option value="Alterado">Alterado</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
+        </label>
+
+        <label>
+          Mensagem
+          <textarea
+            id="mensagem"
+            placeholder="Escreva aqui as informações que os moradores precisam saber."
+          ></textarea>
+        </label>
+
+        <div class="acoes">
+
+          <button
+            id="publicar"
+            class="botao botao-publicar"
+            type="submit"
+          >
+            Publicar aviso
+          </button>
+
+          <button
+            class="botao botao-limpar"
+            type="button"
+            onclick="limparFormulario()"
+          >
+            Limpar
+          </button>
+
+        </div>
+
+      </form>
+
+      <div
+        id="mensagemSistema"
+        class="mensagem-sistema"
+        role="status"
+      ></div>
+
+    </section>
+
+    <section class="painel">
+      <h2 class="titulo-secao">Avisos publicados</h2>
+
+      <p class="subtitulo">
+        Os avisos permanecem salvos, mesmo depois de desativados.
+      </p>
+
+      <div class="repostagem-info">
+        <strong>Reposte quando quiser.</strong>
+        O Status do WhatsApp desaparece após 24 horas, mas os botões
+        de texto e de card continuarão disponíveis neste painel.
+        Para publicar o card, confirme
+        <strong>WhatsApp → Meu status</strong>.
+      </div>
+
+      <div id="listaAvisos" class="carregando">
+        Carregando avisos...
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="rodape">
+    <strong>TACS - Técnico Agente Comunitário de Saúde</strong><br>
+    Mércio José Campos dos Santos<br>
+    Unidade de Saúde Posto Matias
+  </footer>
+
+  <script>
+    const formulario = document.getElementById('formulario');
+    const tipo = document.getElementById('tipo');
+    const titulo = document.getElementById('titulo');
+    const data = document.getElementById('data');
+    const horario = document.getElementById('horario');
+    const situacao = document.getElementById('situacao');
+    const mensagem = document.getElementById('mensagem');
+    const publicar = document.getElementById('publicar');
+    const listaAvisos = document.getElementById('listaAvisos');
+    const mensagemSistema =
+      document.getElementById('mensagemSistema');
+    const LINK_PORTAL =
+      'https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/';
+    const NOME_UNIDADE = 'Unidade de Saúde Posto Matias';
+    const NOME_PROFISSIONAL = 'Mércio José Campos dos Santos';
+
+    document
+      .querySelectorAll('.servico')
+      .forEach(function (botao) {
+        botao.addEventListener('click', function () {
+          document
+            .querySelectorAll('.servico')
+            .forEach(function (item) {
+              item.classList.remove('selecionado');
+            });
+
+          botao.classList.add('selecionado');
+
+          tipo.value = botao.dataset.tipo || '';
+          titulo.value = botao.dataset.titulo || '';
+
+          ajustarSituacao(tipo.value);
+          titulo.focus();
+        });
+      });
+
+    function ajustarSituacao(tipoSelecionado) {
+      if (tipoSelecionado === 'Cancelamento') {
+        situacao.value = 'Cancelado';
+      } else if (tipoSelecionado === 'Alteração') {
+        situacao.value = 'Alterado';
+      } else {
+        situacao.value = '';
+      }
+    }
+
+    formulario.addEventListener('submit', function (evento) {
+      evento.preventDefault();
+
+      if (!tipo.value) {
+        exibirMensagem(
+          'Escolha primeiro o tipo do aviso.',
+          'erro'
+        );
+        return;
+      }
+
+      if (!titulo.value.trim()) {
+        exibirMensagem(
+          'Informe o título do aviso.',
+          'erro'
+        );
+        titulo.focus();
+        return;
+      }
+
+      if (
+        !mensagem.value.trim() &&
+        !data.value &&
+        !horario.value
+      ) {
+        exibirMensagem(
+          'Informe pelo menos a mensagem, a data ou o horário.',
+          'erro'
+        );
+        return;
+      }
+
+      publicar.disabled = true;
+      publicar.textContent = 'Publicando...';
+
+      const dados = {
+        tipo: tipo.value.trim(),
+        titulo: titulo.value.trim(),
+        data: data.value,
+        horario: horario.value,
+        situacao: situacao.value,
+        mensagem: montarMensagem()
+      };
+
+      google.script.run
+        .withSuccessHandler(function () {
+          exibirMensagem(
+            'Aviso publicado com sucesso.',
+            'sucesso'
+          );
+
+          limparFormulario();
+          carregarAvisos();
+
+          publicar.disabled = false;
+          publicar.textContent = 'Publicar aviso';
+        })
+        .withFailureHandler(function (erro) {
+          exibirMensagem(
+            erro && erro.message
+              ? erro.message
+              : 'Não foi possível publicar o aviso.',
+            'erro'
+          );
+
+          publicar.disabled = false;
+          publicar.textContent = 'Publicar aviso';
+        })
+        .salvarAviso(dados);
+    });
+
+    function montarMensagem() {
+      const partes = [];
+
+      if (situacao.value) {
+        partes.push('Situação: ' + situacao.value + '.');
+      }
+
+      if (mensagem.value.trim()) {
+        partes.push(mensagem.value.trim());
+      }
+
+      return partes.join('\n');
+    }
+
+    function limparFormulario() {
+      formulario.reset();
+
+      tipo.value = '';
+
+      document
+        .querySelectorAll('.servico')
+        .forEach(function (item) {
+          item.classList.remove('selecionado');
+        });
+    }
+
+    function exibirMensagem(texto, classe) {
+      mensagemSistema.textContent = texto;
+      mensagemSistema.className =
+        'mensagem-sistema ' + classe;
+
+      mensagemSistema.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }
+
+    function carregarAvisos() {
+      listaAvisos.className = 'carregando';
+      listaAvisos.textContent = 'Carregando avisos...';
+
+      google.script.run
+        .withSuccessHandler(renderizarAvisos)
+        .withFailureHandler(function (erro) {
+          listaAvisos.className = 'sem-avisos';
+          listaAvisos.textContent =
+            erro && erro.message
+              ? erro.message
+              : 'Não foi possível carregar os avisos.';
+        })
+        .listarAvisos();
+    }
+
+    function renderizarAvisos(avisos) {
+      listaAvisos.className = 'lista';
+      listaAvisos.innerHTML = '';
+
+      if (!Array.isArray(avisos) || !avisos.length) {
+        listaAvisos.className = 'sem-avisos';
+        listaAvisos.textContent =
+          'Nenhum aviso foi publicado ainda.';
+        return;
+      }
+
+      avisos
+        .slice()
+        .reverse()
+        .forEach(function (aviso) {
+          const card = document.createElement('article');
+
+          const prioridade =
+            aviso.prioridade === 'urgente'
+              ? 'urgente'
+              : aviso.prioridade === 'importante'
+              ? 'importante'
+              : '';
+
+          card.className =
+            'aviso ' +
+            prioridade +
+            (aviso.ativo === false ? ' inativo' : '');
+
+          const conteudo = document.createElement('div');
+          conteudo.className = 'aviso-conteudo';
+
+          const tipoAviso = document.createElement('span');
+          tipoAviso.className = 'aviso-tipo';
+          tipoAviso.textContent =
+            aviso.tipo || 'Aviso geral';
+
+          const tituloAviso = document.createElement('h3');
+          tituloAviso.textContent =
+            aviso.titulo || 'Aviso';
+
+          const textoAviso = document.createElement('p');
+          textoAviso.textContent =
+            aviso.mensagem || '';
+
+          const informacoes = [];
+
+          if (aviso.data) {
+            informacoes.push('Data: ' + aviso.data);
+          }
+
+          if (aviso.horario) {
+            informacoes.push('Horário: ' + aviso.horario);
+          }
+
+          if (aviso.ativo === false) {
+            informacoes.push('Aviso desativado');
+          }
+
+          const rodapeAviso =
+            document.createElement('div');
+
+          rodapeAviso.className = 'aviso-data';
+          rodapeAviso.textContent = informacoes.join(' • ');
+
+          conteudo.appendChild(tipoAviso);
+          conteudo.appendChild(tituloAviso);
+
+          if (aviso.mensagem) {
+            conteudo.appendChild(textoAviso);
+          }
+
+          if (informacoes.length) {
+            conteudo.appendChild(rodapeAviso);
+          }
+
+          const acoes = document.createElement('div');
+          acoes.className = 'aviso-acoes';
+
+          const botaoTexto =
+            document.createElement('button');
+
+          botaoTexto.type = 'button';
+          botaoTexto.className = 'botao-compartilhar';
+          botaoTexto.textContent =
+            'Enviar texto no WhatsApp';
+
+          botaoTexto.addEventListener(
+            'click',
+            function () {
+              compartilharTextoAviso(aviso);
+            }
+          );
+
+          const botaoCard =
+            document.createElement('button');
+
+          botaoCard.type = 'button';
+          botaoCard.className =
+            'botao-compartilhar card';
+          botaoCard.textContent =
+            'Repostar card no Status';
+
+          botaoCard.addEventListener(
+            'click',
+            function () {
+              compartilharCardAviso(
+                aviso,
+                botaoCard
+              );
+            }
+          );
+
+          const botaoStatus =
+            document.createElement('button');
+
+          botaoStatus.type = 'button';
+          botaoStatus.className =
+            aviso.ativo === false
+              ? 'botao-status reativar'
+              : 'botao-status';
+
+          botaoStatus.textContent =
+            aviso.ativo === false
+              ? 'Reativar aviso'
+              : 'Desativar aviso';
+
+          botaoStatus.addEventListener(
+            'click',
+            function () {
+              alterarStatus(
+                aviso.id,
+                aviso.ativo === false
+              );
+            }
+          );
+
+          acoes.appendChild(botaoTexto);
+          acoes.appendChild(botaoCard);
+          acoes.appendChild(botaoStatus);
+          card.appendChild(conteudo);
+          card.appendChild(acoes);
+          listaAvisos.appendChild(card);
+        });
+    }
+
+    function formatarDataCompartilhamento(valor) {
+      if (!valor) {
+        return '';
+      }
+
+      const texto = String(valor).trim();
+      const resultado =
+        /^(\d{4})-(\d{2})-(\d{2})/.exec(texto);
+
+      if (!resultado) {
+        return texto;
+      }
+
+      return (
+        resultado[3] +
+        '/' +
+        resultado[2] +
+        '/' +
+        resultado[1]
+      );
+    }
+
+    function montarTextoCompartilhamento(aviso) {
+      const partes = [];
+      const tituloCompartilhamento =
+        aviso.titulo || 'Aviso da Unidade de Saúde';
+      const tipoCompartilhamento =
+        aviso.tipo || 'Aviso geral';
+      const informacoes = [];
+
+      partes.push('*' + tituloCompartilhamento + '*');
+      partes.push(tipoCompartilhamento);
+
+      if (aviso.data) {
+        informacoes.push(
+          'Data: ' +
+            formatarDataCompartilhamento(aviso.data)
+        );
+      }
+
+      if (aviso.horario) {
+        informacoes.push(
+          'Horário: ' + aviso.horario
+        );
+      }
+
+      if (informacoes.length) {
+        partes.push(informacoes.join(' • '));
+      }
+
+      if (aviso.mensagem) {
+        partes.push(String(aviso.mensagem).trim());
+      }
+
+      partes.push(NOME_UNIDADE);
+      partes.push(
+        'TACS — ' + NOME_PROFISSIONAL
+      );
+      partes.push('Acesse o portal:\n' + LINK_PORTAL);
+
+      return partes
+        .filter(function (parte) {
+          return Boolean(parte);
+        })
+        .join('\n\n');
+    }
+
+    function compartilharTextoAviso(aviso) {
+      const texto = montarTextoCompartilhamento(aviso);
+      const endereco =
+        'https://wa.me/?text=' +
+        encodeURIComponent(texto);
+      const janela = window.open(
+        endereco,
+        '_blank',
+        'noopener,noreferrer'
+      );
+
+      if (!janela) {
+        window.location.href = endereco;
+      }
+
+      exibirMensagem(
+        'O texto foi preparado. Escolha a conversa no WhatsApp.',
+        'sucesso'
+      );
+    }
+
+    function criarRetanguloArredondado(
+      contexto,
+      x,
+      y,
+      largura,
+      altura,
+      raio
+    ) {
+      const limite = Math.min(
+        raio,
+        largura / 2,
+        altura / 2
+      );
+
+      contexto.beginPath();
+      contexto.moveTo(x + limite, y);
+      contexto.lineTo(x + largura - limite, y);
+      contexto.quadraticCurveTo(
+        x + largura,
+        y,
+        x + largura,
+        y + limite
+      );
+      contexto.lineTo(
+        x + largura,
+        y + altura - limite
+      );
+      contexto.quadraticCurveTo(
+        x + largura,
+        y + altura,
+        x + largura - limite,
+        y + altura
+      );
+      contexto.lineTo(x + limite, y + altura);
+      contexto.quadraticCurveTo(
+        x,
+        y + altura,
+        x,
+        y + altura - limite
+      );
+      contexto.lineTo(x, y + limite);
+      contexto.quadraticCurveTo(
+        x,
+        y,
+        x + limite,
+        y
+      );
+      contexto.closePath();
+    }
+
+    function dividirTextoCanvas(
+      contexto,
+      texto,
+      larguraMaxima
+    ) {
+      const linhas = [];
+
+      String(texto || '')
+        .split(/\r?\n/)
+        .forEach(function (paragrafo) {
+          const palavras = paragrafo
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+
+          if (!palavras.length) {
+            linhas.push('');
+            return;
+          }
+
+          let linha = '';
+
+          palavras.forEach(function (palavra) {
+            const teste =
+              linha ? linha + ' ' + palavra : palavra;
+
+            if (
+              linha &&
+              contexto.measureText(teste).width >
+                larguraMaxima
+            ) {
+              linhas.push(linha);
+              linha = palavra;
+            } else {
+              linha = teste;
+            }
+          });
+
+          if (linha) {
+            linhas.push(linha);
+          }
+        });
+
+      return linhas;
+    }
+
+    function desenharLinhasCanvas(
+      contexto,
+      linhas,
+      x,
+      y,
+      alturaLinha,
+      maximoLinhas
+    ) {
+      const limite = Math.min(
+        linhas.length,
+        maximoLinhas
+      );
+
+      for (let indice = 0; indice < limite; indice += 1) {
+        let linha = linhas[indice];
+
+        if (
+          indice === maximoLinhas - 1 &&
+          linhas.length > maximoLinhas
+        ) {
+          linha = linha.replace(/[.,;:!?]?\s*$/, '') + '…';
+        }
+
+        contexto.fillText(
+          linha,
+          x,
+          y + indice * alturaLinha
+        );
+      }
+
+      return y + limite * alturaLinha;
+    }
+
+    function criarArquivoCardAviso(aviso) {
+      const canvas = document.createElement('canvas');
+      const contexto = canvas.getContext('2d');
+      const largura = 1080;
+      const altura = 1920;
+      const margem = 78;
+      const larguraConteudo = largura - margem * 2;
+      const prioridade =
+        aviso.prioridade === 'urgente'
+          ? '#b6322c'
+          : aviso.prioridade === 'importante'
+          ? '#d07a0c'
+          : '#078940';
+
+      canvas.width = largura;
+      canvas.height = altura;
+
+      const fundo = contexto.createLinearGradient(
+        0,
+        0,
+        largura,
+        altura
+      );
+
+      fundo.addColorStop(0, '#041f34');
+      fundo.addColorStop(0.55, '#062c46');
+      fundo.addColorStop(1, '#0d5f8a');
+      contexto.fillStyle = fundo;
+      contexto.fillRect(0, 0, largura, altura);
+
+      contexto.globalAlpha = 0.18;
+      contexto.fillStyle = '#ffffff';
+      contexto.beginPath();
+      contexto.arc(980, 190, 300, 0, Math.PI * 2);
+      contexto.fill();
+      contexto.beginPath();
+      contexto.arc(70, 1780, 360, 0, Math.PI * 2);
+      contexto.fill();
+      contexto.globalAlpha = 1;
+
+      contexto.fillStyle = prioridade;
+      contexto.fillRect(0, 0, largura, 26);
+
+      contexto.fillStyle = '#ffffff';
+      contexto.font =
+        '900 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial';
+      contexto.fillText(
+        'UNIDADE DE SAÚDE POSTO MATIAS',
+        margem,
+        115
+      );
+
+      contexto.fillStyle = '#cce2ed';
+      contexto.font =
+        '700 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial';
+      contexto.fillText(
+        'TACS • INFORMAÇÃO À COMUNIDADE',
+        margem,
+        165
+      );
+
+      criarRetanguloArredondado(
+        contexto,
+        margem,
+        235,
+        larguraConteudo,
+        1330,
+        42
+      );
+      contexto.fillStyle = '#ffffff';
+      contexto.fill();
+
+      criarRetanguloArredondado(
+        contexto,
+        margem + 58,
+        295,
+        520,
+        74,
+        37
+      );
+      contexto.fillStyle = prioridade;
+      contexto.fill();
+
+      contexto.fillStyle = '#ffffff';
+      contexto.font =
+        '900 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial';
+      contexto.fillText(
+        String(aviso.tipo || 'AVISO GERAL').toUpperCase(),
+        margem + 91,
+        344
+      );
+
+      const tituloCard =
+        aviso.titulo || 'Aviso da Unidade de Saúde';
+
+      contexto.fillStyle = '#062c46';
+      contexto.font =
+        '900 74px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial';
+
+      const linhasTitulo = dividirTextoCanvas(
+        contexto,
+        tituloCard,
+        larguraConteudo - 116
+      );
+
+      let posicaoY = desenharLinhasCanvas(
+        contexto,
+        linhasTitulo,
+        margem + 58,
+        480,
+        86,
+        4
+      );
+
+      const informacoesCard = [];
+
+      if (aviso.data) {
+        informacoesCard.push(
+          'DATA: ' +
+            formatarDataCompartilhamento(aviso.data)
+        );
+      }
+
+      if (aviso.horario) {
+        informacoesCard.push(
+          'HORÁRIO: ' + aviso.horario
+        );
+      }
+
+      if (informacoesCard.length) {
+        posicaoY += 18;
+        contexto.fillStyle = prioridade;
+        contexto.font =
+          '900 30px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial';
+        contexto.fillText(
+          informacoesCard.join('  •  '),
+          margem + 58,
+          posicaoY
+        );
+        posicaoY += 70;
+      } else {
+        posicaoY += 35;
+      }
+
+      contexto.strokeStyle = '#d7e3e8';
+      contexto.lineWidth = 4;
+      contexto.beginPath();
+      contexto.moveTo(margem + 58, posicaoY);
+      contexto.lineTo(
+        largura - margem - 58,
+        posicaoY
+      );
+      contexto.stroke();
+      posicaoY += 76;
+
+      const mensagemCard =
+        aviso.mensagem ||
+        'Consulte as informações atualizadas no portal.';
+      const tamanhoMensagem =
+        mensagemCard.length > 430
+          ? 36
+          : mensagemCard.length > 270
+          ? 42
+          : 48;
+      const alturaMensagem =
+        Math.round(tamanhoMensagem * 1.42);
+
+      contexto.fillStyle = '#173042';
+      contexto.font =
+        '650 ' +
+        tamanhoMensagem +
+        'px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial';
+
+      const linhasMensagem = dividirTextoCanvas(
+        contexto,
+        mensagemCard,
+        larguraConteudo - 116
+      );
+
+      desenharLinhasCanvas(
+        contexto,
+        linhasMensagem,
+        margem + 58,
+        posicaoY,
+        alturaMensagem,
+        13
+      );
+
+      criarRetanguloArredondado(
+        contexto,
+        margem,
+        1615,
+        larguraConteudo,
+        205,
+        34
+      );
+      contexto.fillStyle = 'rgba(3, 27, 45, 0.76)';
+      contexto.fill();
+
+      contexto.fillStyle = '#ffffff';
+      contexto.font =
+        '900 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial';
+      contexto.fillText(
+        'TACS — ' + NOME_PROFISSIONAL,
+        margem + 42,
+        1690
+      );
+
+      contexto.fillStyle = '#d3e7ef';
+      contexto.font =
+        '700 27px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial';
+      contexto.fillText(
+        'Informações e solicitações pelo portal de atendimento',
+        margem + 42,
+        1744
+      );
+      contexto.fillText(
+        'merciocamposfar07-hub.github.io',
+        margem + 42,
+        1790
+      );
+
+      const enderecoImagem = canvas.toDataURL(
+        'image/png',
+        1
+      );
+      const base64 = enderecoImagem.split(',')[1];
+      const binario = atob(base64);
+      const bytes = new Uint8Array(binario.length);
+
+      for (
+        let indice = 0;
+        indice < binario.length;
+        indice += 1
+      ) {
+        bytes[indice] = binario.charCodeAt(indice);
+      }
+
+      const nomeArquivo =
+        'aviso-posto-matias-' +
+        String(aviso.id || Date.now())
+          .replace(/[^a-zA-Z0-9_-]/g, '-') +
+        '.png';
+      const arquivo = new File(
+        [bytes],
+        nomeArquivo,
+        { type: 'image/png' }
+      );
+
+      return {
+        arquivo: arquivo,
+        enderecoImagem: enderecoImagem,
+        nomeArquivo: nomeArquivo
+      };
+    }
+
+    function baixarCard(resultado) {
+      const link = document.createElement('a');
+
+      link.href = resultado.enderecoImagem;
+      link.download = resultado.nomeArquivo;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      exibirMensagem(
+        'O card foi salvo. Abra a imagem e escolha Compartilhar → WhatsApp → Meu status.',
+        'sucesso'
+      );
+    }
+
+    function compartilharCardAviso(aviso, botao) {
+      const textoOriginal = botao.textContent;
+      let resultado;
+
+      botao.disabled = true;
+      botao.textContent = 'Preparando card...';
+
+      try {
+        resultado = criarArquivoCardAviso(aviso);
+      } catch (erro) {
+        botao.disabled = false;
+        botao.textContent = textoOriginal;
+        exibirMensagem(
+          'Não foi possível criar o card neste aparelho.',
+          'erro'
+        );
+        return;
+      }
+
+      if (
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({
+          files: [resultado.arquivo]
+        })
+      ) {
+        navigator
+          .share({
+            files: [resultado.arquivo],
+            title:
+              aviso.titulo ||
+              'Aviso da Unidade de Saúde',
+            text:
+              'Aviso da ' +
+              NOME_UNIDADE +
+              '. Para publicar, escolha WhatsApp → Meu status.'
+          })
+          .then(function () {
+            exibirMensagem(
+              'Card enviado ao compartilhamento.',
+              'sucesso'
+            );
+          })
+          .catch(function (erro) {
+            if (erro && erro.name === 'AbortError') {
+              return;
+            }
+
+            baixarCard(resultado);
+          })
+          .finally(function () {
+            botao.disabled = false;
+            botao.textContent = textoOriginal;
+          });
+
+        return;
+      }
+
+      baixarCard(resultado);
+      botao.disabled = false;
+      botao.textContent = textoOriginal;
+    }
+
+    function alterarStatus(id, novoStatus) {
+      listaAvisos.className = 'carregando';
+      listaAvisos.textContent = 'Atualizando aviso...';
+
+      google.script.run
+        .withSuccessHandler(function () {
+          exibirMensagem(
+            novoStatus
+              ? 'Aviso reativado.'
+              : 'Aviso desativado.',
+            'sucesso'
+          );
+
+          carregarAvisos();
+        })
+        .withFailureHandler(function (erro) {
+          exibirMensagem(
+            erro && erro.message
+              ? erro.message
+              : 'Não foi possível alterar o aviso.',
+            'erro'
+          );
+
+          carregarAvisos();
+        })
+        .alterarStatusAviso(id, novoStatus);
+    }
+
+    carregarAvisos();
+  </script>
+
+</body>
+</html>
