@@ -42,10 +42,33 @@ window.POSTO_MATIAS_AVISOS_API_URL = 'https://script.google.com/macros/s/AKfycby
     document.head.appendChild(style);
   }
 
+  function installNoticeTheme() {
+    if (document.getElementById('notice-theme-posto-matias')) return;
+    var style = document.createElement('style');
+    style.id = 'notice-theme-posto-matias';
+    style.textContent = [
+      '.notice-board{padding:clamp(21px,4vw,30px)!important;border:2px solid #0D5F8A!important;border-radius:22px!important;background:linear-gradient(145deg,#041F34 0%,#062C46 58%,#0A4265 100%)!important;color:#fff!important;box-shadow:0 18px 34px rgba(3,35,56,.22)!important}',
+      '.notice-board h2{margin:0 0 7px!important;color:#fff!important;font-size:clamp(29px,5vw,42px)!important;line-height:1.13!important;letter-spacing:-.025em!important}',
+      '.notice-updated{margin:0 0 20px!important;color:#D8E7EE!important;font-size:16px!important;font-weight:750!important;line-height:1.45!important}',
+      '.notice-list{gap:15px!important}',
+      '.notice-card{padding:20px 21px!important;border:2px solid #6E9DB5!important;border-left:8px solid #70E39F!important;border-radius:18px!important;background:#fff!important;color:#102B3C!important;box-shadow:0 9px 20px rgba(0,0,0,.14)!important}',
+      '.notice-card.important{border-color:#D7A351!important;border-left-color:#F2A000!important;background:#FFF9ED!important}',
+      '.notice-card.urgent{border-color:#D99C98!important;border-left-color:#C23B34!important;background:#FFF4F3!important}',
+      '.notice-card small{margin-bottom:8px!important;color:#0D5F8A!important;font-size:13px!important;font-weight:950!important;letter-spacing:.09em!important}',
+      '.notice-card.important small{color:#9A5600!important}',
+      '.notice-card.urgent small{color:#A3302B!important}',
+      '.notice-card strong{color:#102B3C!important;font-size:clamp(24px,4vw,32px)!important;line-height:1.23!important;letter-spacing:-.018em!important}',
+      '.notice-card p{margin:12px 0 0!important;color:#314B59!important;font-size:clamp(18px,3.2vw,22px)!important;line-height:1.55!important;font-weight:520!important}',
+      '@media(max-width:720px){.notice-board{padding:21px 16px!important}.notice-card{padding:18px 17px!important;border-radius:16px!important}.notice-card strong{font-size:27px!important}.notice-card p{font-size:19px!important}}'
+    ].join('');
+    document.head.appendChild(style);
+  }
+
   addLink('manifest', 'manifest.webmanifest');
   addLink('icon', 'icon-tacs.svg', { type: 'image/svg+xml' });
   addLink('apple-touch-icon', 'icon-tacs.svg');
   installDentalTheme();
+  installNoticeTheme();
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
