@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#062c46">
+  <title>Prévia — Portal TACS 2.0</title>
+  <style>
+    :root{
+      --petroleo:#062c46;--petroleo2:#0b4b6e;--fundo:#edf3f6;--texto:#173243;
+      --medico:#2463c7;--enfermagem:#8555b8;--dentista:#d97706;--nutri:#27864a;
+      --campanha:#c73572;--geral:#0d5f8a;--branco:#fff;--sombra:0 14px 38px rgba(6,44,70,.16)
+    }
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#dce7ed,var(--fundo));color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+    .pagina{width:min(100% - 20px,980px);margin:auto;padding:10px 0 34px}
+    .topo{overflow:hidden;border-radius:24px 24px 0 0;background:linear-gradient(135deg,#041f34,var(--petroleo) 55%,var(--petroleo2));color:#fff;padding:25px 20px 28px;box-shadow:var(--sombra)}
+    .marca{display:flex;gap:13px;align-items:center}.sigla{width:58px;height:58px;border:2px solid #41d083;border-radius:16px;display:grid;place-items:center;font-weight:950;font-size:18px;background:#061b2c}
+    .marca strong{display:block;font-size:20px}.marca span{display:block;margin-top:4px;color:#d7eaf2;line-height:1.4}
+    h1{font-size:clamp(34px,8vw,58px);line-height:1.02;margin:27px 0 10px;letter-spacing:-.045em}.sub{font-size:17px;line-height:1.55;margin:0}.responsavel{margin-top:16px;padding-top:15px;border-top:1px solid rgba(255,255,255,.25);font-size:16px;line-height:1.5}
+    main{background:#fff;padding:18px 14px 28px;border-radius:0 0 24px 24px;box-shadow:var(--sombra)}
+    .cabecalho-secao{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 2px 15px}.cabecalho-secao h2{margin:0;color:var(--petroleo);font-size:26px}.atualizado{font-size:13px;color:#56707d;font-weight:700}
+    .legenda{display:flex;gap:8px;overflow:auto;padding:0 0 14px;scrollbar-width:none}.legenda::-webkit-scrollbar{display:none}.filtro{white-space:nowrap;border:1px solid #b8cbd4;border-radius:999px;background:#fff;padding:9px 12px;font-weight:800;color:#284a5d}
+    .grade{display:grid;gap:14px}.aviso{position:relative;overflow:hidden;border:1px solid #bfd0d8;border-left:8px solid var(--cor);border-radius:18px;background:#fff;padding:16px 16px 17px;box-shadow:0 8px 22px rgba(6,44,70,.09)}
+    .aviso.ativo{animation:pulsar 2.8s ease-in-out infinite}.aviso::after{content:"";position:absolute;right:-28px;top:-36px;width:100px;height:100px;border-radius:50%;background:color-mix(in srgb,var(--cor) 10%,transparent)}
+    .tipo{position:relative;z-index:1;display:flex;align-items:center;gap:8px;color:var(--cor);font-weight:950;font-size:13px;text-transform:uppercase;letter-spacing:.06em}.icone{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--cor) 13%,white);font-size:17px}
+    .aviso h3{position:relative;z-index:1;margin:10px 0 8px;font-size:22px;line-height:1.2}.dados{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.dado{padding:10px 11px;border-radius:12px;background:#f3f7f9}.dado small{display:block;color:#657d89;font-weight:800}.dado strong{display:block;margin-top:3px;font-size:16px}.obs{position:relative;z-index:1;margin:12px 0 0;line-height:1.5;color:#365363}
+    .medico{--cor:var(--medico)}.enfermeira{--cor:var(--enfermagem)}.dentista{--cor:var(--dentista)}.nutricionista{--cor:var(--nutri)}.campanha{--cor:var(--campanha)}.geral{--cor:var(--geral)}
+    .campanha-faixa{margin:20px 0 14px;padding:18px;border-radius:19px;background:linear-gradient(135deg,#fff0f6,#fff);border:1px solid #e5a9c1}.campanha-faixa h2{margin:0;color:#a5265b;font-size:24px}.campanha-faixa p{margin:7px 0 0;line-height:1.5}
+    footer{margin-top:18px;padding:20px;border-radius:18px;background:var(--petroleo);color:#fff;text-align:center;line-height:1.55;font-size:14px}footer strong{display:block;font-size:16px}
+    @keyframes pulsar{0%,100%{transform:scale(1);box-shadow:0 8px 22px rgba(6,44,70,.09)}50%{transform:scale(1.006);box-shadow:0 12px 28px color-mix(in srgb,var(--cor) 19%,transparent)}}
+    @media(min-width:760px){main{padding:28px}.grade{grid-template-columns:1fr 1fr}.campanha{grid-column:1/-1}.topo{padding:36px 34px}.pagina{padding-top:18px}}
+    @media(prefers-reduced-motion:reduce){.aviso.ativo{animation:none}}
+  </style>
+</head>
+<body>
+  <div class="pagina">
+    <header class="topo">
+      <div class="marca">
+        <div class="sigla">TACS</div>
+        <div><strong>TACS — Técnico Agente Comunitário de Saúde</strong><span>Unidade de Saúde Posto Matias • Sítio Japaranduba • Chã Grande/PE</span></div>
+      </div>
+      <h1>Portal de avisos e atendimentos</h1>
+      <p class="sub">Informações organizadas para os moradores da zona rural acompanhados pelo Serviço TACS.</p>
+      <div class="responsavel"><b>Responsável:</b> Mércio José Campos dos Santos</div>
+    </header>
+
+    <main>
+      <div class="cabecalho-secao"><h2>Avisos ativos</h2><span class="atualizado">Atualizado hoje</span></div>
+      <div class="legenda" aria-label="Categorias">
+        <span class="filtro">Todos</span><span class="filtro">Médico</span><span class="filtro">Enfermeira</span><span class="filtro">Dentista</span><span class="filtro">Nutricionista</span><span class="filtro">Campanhas</span>
+      </div>
+
+      <section class="grade">
+        <article class="aviso medico ativo">
+          <div class="tipo"><span class="icone">🩺</span> Médico</div><h3>Atendimento médico</h3>
+          <div class="dados"><div class="dado"><small>Dia</small><strong>Segunda-feira</strong></div><div class="dado"><small>Data</small><strong>27/07/2026</strong></div><div class="dado"><small>Horário</small><strong>08h às 12h</strong></div><div class="dado"><small>Situação</small><strong>Confirmado</strong></div></div>
+          <p class="obs">Levar documento, cartão do SUS e receitas ou exames recentes.</p>
+        </article>
+
+        <article class="aviso enfermeira ativo">
+          <div class="tipo"><span class="icone">👩‍⚕️</span> Enfermeira</div><h3>Agenda da enfermeira</h3>
+          <div class="dados"><div class="dado"><small>Dia</small><strong>Terça-feira</strong></div><div class="dado"><small>Data</small><strong>28/07/2026</strong></div><div class="dado"><small>Horário</small><strong>08h às 13h</strong></div><div class="dado"><small>Situação</small><strong>Disponível</strong></div></div>
+          <p class="obs">Acolhimento, acompanhamento e orientações conforme programação da unidade.</p>
+        </article>
+
+        <article class="aviso dentista ativo">
+          <div class="tipo"><span class="icone">🦷</span> Dentista</div><h3>Avisos do dentista</h3>
+          <div class="dados"><div class="dado"><small>Dia</small><strong>Quarta-feira</strong></div><div class="dado"><small>Data</small><strong>29/07/2026</strong></div><div class="dado"><small>Horário</small><strong>08h</strong></div><div class="dado"><small>Situação</small><strong>Vagas limitadas</strong></div></div>
+          <p class="obs">A Agenda Odontológica continuará funcionando separadamente.</p>
+        </article>
+
+        <article class="aviso nutricionista ativo">
+          <div class="tipo"><span class="icone">🥗</span> Nutricionista</div><h3>Atendimento nutricional</h3>
+          <div class="dados"><div class="dado"><small>Dia</small><strong>Quinta-feira</strong></div><div class="dado"><small>Data</small><strong>30/07/2026</strong></div><div class="dado"><small>Horário</small><strong>09h às 12h</strong></div><div class="dado"><small>Situação</small><strong>Agendamento</strong></div></div>
+          <p class="obs">Informações ilustrativas para demonstrar a nova organização visual.</p>
+        </article>
+      </section>
+
+      <section class="campanha-faixa"><h2>Campanhas de Saúde</h2><p>Área própria para campanhas mensais e ações da unidade, como Outubro Rosa, Novembro Azul, Setembro Amarelo, vacinação e combate à dengue.</p></section>
+
+      <article class="aviso campanha ativo">
+        <div class="tipo"><span class="icone">🎗️</span> Campanha de saúde</div><h3>Outubro Rosa</h3>
+        <div class="dados"><div class="dado"><small>Período</small><strong>Durante outubro</strong></div><div class="dado"><small>Tema</small><strong>Saúde da mulher</strong></div><div class="dado"><small>Situação</small><strong>Campanha ativa</strong></div><div class="dado"><small>Local</small><strong>Posto Matias</strong></div></div>
+        <p class="obs">O conteúdo e a cor do card poderão mudar automaticamente conforme a campanha selecionada no painel administrativo.</p>
+      </article>
+
+      <footer><strong>TACS — Técnico Agente Comunitário de Saúde</strong>Mércio José Campos dos Santos<br>Portal desenvolvido pelo responsável pelo Serviço TACS<br>© 2026 — Todos os direitos reservados.</footer>
+    </main>
+  </div>
+</body>
+</html>
