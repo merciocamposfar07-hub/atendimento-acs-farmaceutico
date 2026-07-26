@@ -47,19 +47,32 @@ window.POSTO_MATIAS_AVISOS_API_URL = 'https://script.google.com/macros/s/AKfycbw
     var style = document.createElement('style');
     style.id = 'notice-theme-posto-matias';
     style.textContent = [
-      '.notice-board{padding:clamp(21px,4vw,30px)!important;border:2px solid #0D5F8A!important;border-radius:22px!important;background:linear-gradient(145deg,#041F34 0%,#062C46 58%,#0A4265 100%)!important;color:#fff!important;box-shadow:0 18px 34px rgba(3,35,56,.22)!important}',
-      '.notice-board h2{margin:0 0 7px!important;color:#fff!important;font-size:clamp(29px,5vw,42px)!important;line-height:1.13!important;letter-spacing:-.025em!important}',
-      '.notice-updated{margin:0 0 20px!important;color:#D8E7EE!important;font-size:16px!important;font-weight:750!important;line-height:1.45!important}',
-      '.notice-list{gap:15px!important}',
-      '.notice-card{padding:20px 21px!important;border:2px solid #6E9DB5!important;border-left:8px solid #70E39F!important;border-radius:18px!important;background:#fff!important;color:#102B3C!important;box-shadow:0 9px 20px rgba(0,0,0,.14)!important}',
-      '.notice-card.important{border-color:#D7A351!important;border-left-color:#F2A000!important;background:#FFF9ED!important}',
-      '.notice-card.urgent{border-color:#D99C98!important;border-left-color:#C23B34!important;background:#FFF4F3!important}',
-      '.notice-card small{margin-bottom:8px!important;color:#0D5F8A!important;font-size:13px!important;font-weight:950!important;letter-spacing:.09em!important}',
-      '.notice-card.important small{color:#9A5600!important}',
-      '.notice-card.urgent small{color:#A3302B!important}',
-      '.notice-card strong{color:#102B3C!important;font-size:clamp(24px,4vw,32px)!important;line-height:1.23!important;letter-spacing:-.018em!important}',
+      '.notice-board{position:relative!important;overflow:hidden!important;padding:clamp(21px,4vw,30px)!important;border:2px solid #0D5F8A!important;border-radius:24px!important;background:linear-gradient(145deg,#041F34 0%,#062C46 58%,#0A4265 100%)!important;color:#fff!important;box-shadow:0 18px 34px rgba(3,35,56,.22)!important}',
+      '.notice-board::before{content:""!important;position:absolute!important;right:-52px!important;bottom:-72px!important;width:220px!important;height:220px!important;border-radius:50%!important;background:rgba(112,227,159,.10)!important;pointer-events:none!important}',
+      '.notice-board h2{position:relative!important;z-index:1!important;margin:0 0 7px!important;color:#fff!important;font-size:clamp(29px,5vw,42px)!important;line-height:1.13!important;letter-spacing:-.025em!important}',
+      '.notice-updated{position:relative!important;z-index:1!important;margin:0 0 20px!important;color:#D8E7EE!important;font-size:16px!important;font-weight:750!important;line-height:1.45!important}',
+      '.notice-list{position:relative!important;z-index:1!important;display:grid!important;gap:16px!important}',
+      '.notice-card{position:relative!important;overflow:hidden!important;padding:20px 21px!important;border:2px solid #6E9DB5!important;border-left:8px solid #70E39F!important;border-radius:20px!important;background:linear-gradient(180deg,#F8FCFF 0%,#EEF6FB 100%)!important;color:#102B3C!important;box-shadow:0 12px 24px rgba(0,0,0,.14)!important}',
+      '.notice-card::after{content:""!important;position:absolute!important;right:-28px!important;top:-28px!important;width:120px!important;height:120px!important;border-radius:50%!important;background:rgba(13,95,138,.08)!important;pointer-events:none!important}',
+      '.notice-card.important{border-color:#D7A351!important;border-left-color:#F2A000!important;background:linear-gradient(180deg,#FFFDF6 0%,#FFF5DA 100%)!important}',
+      '.notice-card.urgent{border-color:#D99C98!important;border-left-color:#C23B34!important;background:linear-gradient(180deg,#FFF9F8 0%,#FFF0EF 100%)!important}',
+      '.notice-card small{display:inline-flex!important;align-items:center!important;max-width:100%!important;margin:0!important;padding:7px 12px!important;border-radius:999px!important;background:#E8F3FB!important;color:#0D5F8A!important;font-size:13px!important;font-weight:950!important;letter-spacing:.09em!important;text-transform:uppercase!important}',
+      '.notice-card.important small{background:#FFF0C8!important;color:#9A5600!important}',
+      '.notice-card.urgent small{background:#FBE0DE!important;color:#A3302B!important}',
+      '.notice-day{display:inline-flex!important;align-items:center!important;max-width:100%!important;margin:12px 0 0!important;padding:8px 13px!important;border-radius:999px!important;background:#EAF7EF!important;color:#06763A!important;font-size:13px!important;font-weight:950!important;letter-spacing:.08em!important;text-transform:uppercase!important}',
+      '.notice-card.important .notice-day{background:#FFF3D8!important;color:#A85B00!important}',
+      '.notice-card.urgent .notice-day{background:#FDECEA!important;color:#A3302B!important}',
+      '.notice-card strong{position:relative!important;display:block!important;margin-top:12px!important;color:#102B3C!important;font-size:clamp(24px,4vw,32px)!important;line-height:1.23!important;letter-spacing:-.018em!important}',
+      '.notice-meta{position:relative!important;display:flex!important;flex-wrap:wrap!important;gap:10px!important;margin-top:14px!important}',
+      '.notice-chip{display:inline-flex!important;align-items:center!important;gap:8px!important;padding:11px 15px!important;border-radius:999px!important;background:#0A4265!important;color:#fff!important;font-size:16px!important;font-weight:900!important;line-height:1.1!important;box-shadow:0 8px 18px rgba(10,66,101,.20)!important}',
+      '.notice-chip .icon{display:inline-block!important;font-size:17px!important;line-height:1!important}',
+      '.notice-chip.pulse{animation:tacsPulse 1.8s ease-in-out infinite!important}',
+      '.notice-card.important .notice-chip{background:#A85B00!important}',
+      '.notice-card.urgent .notice-chip{background:#A3302B!important}',
+      '.notice-copy{position:relative!important;margin:14px 0 0!important;color:#314B59!important;font-size:clamp(18px,3.2vw,22px)!important;line-height:1.55!important;font-weight:560!important;white-space:pre-line!important}',
       '.notice-card p{margin:12px 0 0!important;color:#314B59!important;font-size:clamp(18px,3.2vw,22px)!important;line-height:1.55!important;font-weight:520!important}',
-      '@media(max-width:720px){.notice-board{padding:21px 16px!important}.notice-card{padding:18px 17px!important;border-radius:16px!important}.notice-card strong{font-size:27px!important}.notice-card p{font-size:19px!important}}'
+      '@keyframes tacsPulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(13,95,138,.28)}70%{transform:scale(1.03);box-shadow:0 0 0 12px rgba(13,95,138,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(13,95,138,0)}}',
+      '@media(max-width:720px){.notice-board{padding:21px 16px!important}.notice-card{padding:18px 17px!important;border-radius:18px!important}.notice-card strong{font-size:27px!important}.notice-chip{font-size:15px!important;padding:10px 14px!important}.notice-copy{font-size:19px!important}}'
     ].join('');
     document.head.appendChild(style);
   }
@@ -229,15 +242,244 @@ window.POSTO_MATIAS_AVISOS_API_URL = 'https://script.google.com/macros/s/AKfycbw
     }, true);
   }
 
+  function installEnhancedNotices() {
+    var area = document.getElementById('noticeArea');
+    var api = String(window.POSTO_MATIAS_AVISOS_API_URL || '').trim();
+    if (!area || !api || area.dataset.noticeEnhancer === '1') return;
+    area.dataset.noticeEnhancer = '1';
+
+    function normalizeDate(value) {
+      var text = String(value || '').trim();
+      var match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      var y, m, d, date;
+      if (match) {
+        y = Number(match[1]);
+        m = Number(match[2]);
+        d = Number(match[3]);
+      } else {
+        match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!match) return '';
+        d = Number(match[1]);
+        m = Number(match[2]);
+        y = Number(match[3]);
+      }
+      date = new Date(Date.UTC(y, m - 1, d));
+      if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return '';
+      return String(y).padStart(4, '0') + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    }
+
+    function formatDate(value) {
+      var iso = normalizeDate(value);
+      if (!iso) return '';
+      var parts = iso.split('-');
+      return parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+
+    function weekdayUpper(value) {
+      var iso = normalizeDate(value);
+      if (!iso) return '';
+      var parts = iso.split('-').map(Number);
+      return new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: 'UTC' })
+        .format(new Date(Date.UTC(parts[0], parts[1] - 1, parts[2])))
+        .toUpperCase();
+    }
+
+    function cleanedText(value) {
+      var seen = {};
+      return String(value || '')
+        .split(/\n+/)
+        .map(function (line) { return line.trim(); })
+        .filter(Boolean)
+        .filter(function (line) {
+          var key = line.toLowerCase();
+          if (seen[key]) return false;
+          seen[key] = true;
+          return true;
+        })
+        .join('\n');
+    }
+
+    function capitalize(value) {
+      var text = String(value || '').trim();
+      return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
+    }
+
+    function priorityClass(priority) {
+      return priority === 'urgente' ? 'urgent' : priority === 'importante' ? 'important' : '';
+    }
+
+    function activeItems(data) {
+      var today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Recife' }).format(new Date());
+      var items = Array.isArray(data && data.avisos) ? data.avisos : [];
+      return items.filter(function (item) {
+        return item && item.ativo !== false && (!item.validade || String(item.validade) >= today);
+      });
+    }
+
+    function createChip(icon, label) {
+      var chip = document.createElement('span');
+      chip.className = 'notice-chip pulse';
+      var iconSpan = document.createElement('span');
+      iconSpan.className = 'icon';
+      iconSpan.textContent = icon;
+      var textSpan = document.createElement('span');
+      textSpan.textContent = label;
+      chip.append(iconSpan, textSpan);
+      return chip;
+    }
+
+    function createCard(kind, title, message, priority, date, horario, situacao) {
+      var card = document.createElement('article');
+      var level = priorityClass(priority);
+      card.className = 'notice-card' + (level ? ' ' + level : '');
+
+      var tag = document.createElement('small');
+      tag.textContent = String(kind || 'Informação').toUpperCase();
+      card.appendChild(tag);
+
+      var day = weekdayUpper(date);
+      if (day) {
+        var dayBadge = document.createElement('div');
+        dayBadge.className = 'notice-day';
+        dayBadge.textContent = day;
+        card.appendChild(dayBadge);
+      }
+
+      var heading = document.createElement('strong');
+      heading.textContent = title || 'Aviso';
+      card.appendChild(heading);
+
+      if (date || horario) {
+        var meta = document.createElement('div');
+        meta.className = 'notice-meta';
+        if (date) meta.appendChild(createChip('📅', formatDate(date)));
+        if (horario) meta.appendChild(createChip('🕗', String(horario).trim()));
+        card.appendChild(meta);
+      }
+
+      var copy = cleanedText(message);
+      if (situacao && !/situa[cç][aã]o/i.test(copy)) {
+        copy = (copy ? copy + '\n' : '') + 'Situação: ' + capitalize(situacao) + '.';
+      }
+      if (copy) {
+        var text = document.createElement('p');
+        text.className = 'notice-copy';
+        text.textContent = copy;
+        card.appendChild(text);
+      }
+
+      return card;
+    }
+
+    function render(data) {
+      var notices = activeItems(data || {});
+      var medical = data && data.atendimentoMedico;
+      var hasMedical = medical && medical.ativo !== false && (medical.titulo || medical.data || medical.horario || medical.observacao || medical.situacao);
+      if (!hasMedical && !notices.length) {
+        area.hidden = true;
+        area.innerHTML = '';
+        return;
+      }
+
+      var board = document.createElement('div');
+      board.className = 'notice-board';
+
+      var h2 = document.createElement('h2');
+      h2.textContent = 'Avisos da Unidade de Saúde Posto Matias';
+      board.appendChild(h2);
+
+      var updated = document.createElement('p');
+      updated.className = 'notice-updated';
+      updated.textContent = data && data.atualizadoEm ? 'Atualizado em ' + data.atualizadoEm : 'Informação atual da unidade';
+      board.appendChild(updated);
+
+      var list = document.createElement('div');
+      list.className = 'notice-list';
+      board.appendChild(list);
+
+      if (hasMedical) {
+        list.appendChild(
+          createCard(
+            'Atendimento médico',
+            medical.titulo || 'Atendimento médico',
+            medical.observacao || '',
+            medical.situacao === 'cancelado' ? 'urgente' : medical.situacao === 'alterado' ? 'importante' : 'informativo',
+            medical.data || '',
+            medical.horario || '',
+            medical.situacao || ''
+          )
+        );
+      }
+
+      notices.forEach(function (item) {
+        var kind = item.tipo || (item.prioridade === 'urgente' ? 'Aviso urgente' : item.prioridade === 'importante' ? 'Aviso importante' : 'Informação');
+        list.appendChild(
+          createCard(
+            kind,
+            item.titulo || 'Aviso',
+            item.mensagem || '',
+            item.prioridade || 'informativo',
+            item.data || '',
+            item.horario || '',
+            item.situacao || ''
+          )
+        );
+      });
+
+      area.innerHTML = '';
+      area.appendChild(board);
+      area.hidden = false;
+    }
+
+    function requestRender() {
+      var callbackName = 'tacsAvisosTheme' + Date.now() + Math.floor(Math.random() * 10000);
+      var script = document.createElement('script');
+      var done = false;
+
+      function cleanup() {
+        delete window[callbackName];
+        if (script.parentNode) script.remove();
+      }
+
+      window[callbackName] = function (data) {
+        if (done) return;
+        done = true;
+        cleanup();
+        if (data && data.ok !== false) render(data);
+      };
+
+      script.onerror = function () {
+        if (done) return;
+        done = true;
+        cleanup();
+      };
+
+      script.src = api + (api.indexOf('?') === -1 ? '?' : '&') + 'action=avisos&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
+      document.head.appendChild(script);
+    }
+
+    var observer = new MutationObserver(function () {
+      if (!area.hidden && !area.querySelector('.notice-day') && !area.querySelector('.notice-chip')) {
+        requestRender();
+      }
+    });
+    observer.observe(area, { childList: true, subtree: true });
+
+    setTimeout(requestRender, 350);
+    setTimeout(requestRender, 1200);
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       installOfflineBanner();
       installFormPersistence();
       installReliableDentalWhatsApp();
+      installEnhancedNotices();
     });
   } else {
     installOfflineBanner();
     installFormPersistence();
     installReliableDentalWhatsApp();
+    installEnhancedNotices();
   }
 }());
