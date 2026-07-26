@@ -2,7 +2,7 @@
  * Serviços externos gratuitos usados pelo portal.
  */
 window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_sawD2X8K9O3hGjgCge3gao5S9FjajcqYxyO8e_0WTkrsoqjtBhC4kFhAFTl/exec';
-window.POSTO_MATIAS_AVISOS_API_URL = 'https://script.google.com/macros/s/AKfycby-90dbbC-aMYEmSXxGUef6zshd1SNI85duivD18HJP6sFnkOmAZ9lYda2Cs7mZddpBcw/exec';
+window.POSTO_MATIAS_AVISOS_API_URL = 'https://script.google.com/macros/s/AKfycbwfcTFh7DR3eQa7pA1AQ_f1_aOEe_1W0uc_Z3og9mDYXBhjCH0ixLjZsQrT4SHNyQ5_GA/exec';
 
 (function () {
   'use strict';
