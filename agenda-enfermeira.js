@@ -2,7 +2,7 @@
   'use strict';
 
   var CATEGORY = 'Atendimento com a Enfermeira Chefe';
-  var API = String(window.TACS_ADMIN_API_URL || window.POSTO_MATIAS_AVISOS_API_URL || '').trim();
+  var API = 'https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec';
   var DEFAULT_SCHEDULE = [
     { day: 'Segunda-feira', service: 'Visita', icon: '🏠', available: true },
     { day: 'Terça-feira', service: 'Pré-natal', icon: '🤰', available: true },
@@ -52,7 +52,7 @@
 
     window[callback] = finish;
     script.onerror = function () { finish(); };
-    script.src = API + (API.indexOf('?') === -1 ? '?' : '&') + 'action=agenda_enfermeira&callback=' + encodeURIComponent(callback) + '&v=' + Date.now();
+    script.src = API + '?action=agenda_enfermeira&callback=' + encodeURIComponent(callback) + '&v=' + Date.now();
     document.head.appendChild(script);
   }
 
@@ -120,7 +120,11 @@
     category.addEventListener('change', update);
     render();
     update();
-    loadRemote(function () { render(); update(); });
+    loadRemote(function (data) {
+      render();
+      update();
+      if (!data || data.ok === false) status.textContent = 'Programação padrão exibida. Não foi possível atualizar a agenda agora.';
+    });
   }
 
   installStyle();
