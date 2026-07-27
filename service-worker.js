@@ -1,8 +1,9 @@
-const CACHE_NAME = 'tacs-posto-matias-v4';
+const CACHE_NAME = 'tacs-posto-matias-v5';
 const APP_SHELL = [
   './',
   './index.html',
   './agenda-config.js',
+  './agenda-enfermeira.js',
   './manifest.webmanifest',
   './icon-tacs.svg'
 ];
@@ -10,7 +11,7 @@ const APP_SHELL = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL.map(path => path + (path.includes('?') ? '&' : '?') + 'v=20260725-04')))
+      .then(cache => cache.addAll(APP_SHELL.map(path => path + (path.includes('?') ? '&' : '?') + 'v=20260727-05')))
       .then(() => self.skipWaiting())
   );
 });
