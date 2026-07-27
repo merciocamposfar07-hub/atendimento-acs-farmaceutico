@@ -173,22 +173,41 @@
       if (!(validCpf(doc) || isCns(doc)) || doc === lastDocument) return;
       lastDocument = doc;
       var currentToken = ++token;
+      var callbackName = 'moradorTacsCallback' + Date.now() + Math.floor(Math.random() * 100000);
+      var script = document.createElement('script');
+      var completed = false;
+      var timeout;
+
       status.textContent = 'Buscando seus dados na Unidade de Saúde...';
       status.className = 'help id-cns-note';
-      var url = API + '?action=buscar_morador&documento=' + encodeURIComponent(doc) + '&v=' + Date.now();
 
-      fetch(url, { method: 'GET', cache: 'no-store', redirect: 'follow' })
-        .then(function (response) {
-          if (!response.ok) throw new Error('HTTP ' + response.status);
-          return response.json();
-        })
-        .then(function (data) { finishLookup(data, currentToken); })
-        .catch(function () {
-          if (currentToken !== token) return;
-          status.textContent = 'Não foi possível consultar agora. Você pode preencher os dados manualmente.';
-          status.className = 'help id-cns-note invalid';
-          lastDocument = '';
-        });
+      function cleanup() {
+        clearTimeout(timeout);
+        try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      function fail() {
+        if (completed || currentToken !== token) return;
+        completed = true;
+        cleanup();
+        lastDocument = '';
+        status.textContent = 'Não foi possível consultar agora. Você pode preencher os dados manualmente.';
+        status.className = 'help id-cns-note invalid';
+      }
+
+      window[callbackName] = function (data) {
+        if (completed || currentToken !== token) return;
+        completed = true;
+        cleanup();
+        finishLookup(data, currentToken);
+      };
+
+      script.async = true;
+      script.onerror = fail;
+      script.src = API + '?action=buscar_morador&documento=' + encodeURIComponent(doc) + '&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
+      timeout = setTimeout(fail, 15000);
+      document.head.appendChild(script);
     }
 
     function refresh() {
