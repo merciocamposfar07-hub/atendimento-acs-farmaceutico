@@ -33,6 +33,69 @@
     document.head.appendChild(style);
   }
 
+  function recifeClock() {
+    var parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Recife',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date());
+    var values = {};
+    parts.forEach(function (part) { values[part.type] = part.value; });
+    return {
+      year: values.year,
+      month: values.month,
+      day: values.day,
+      minutes: Number(values.hour) * 60 + Number(values.minute)
+    };
+  }
+
+  function removeNutritionistOption() {
+    var category = document.getElementById('category');
+    if (!category) return;
+    var changed = false;
+    Array.prototype.slice.call(category.options).forEach(function (option) {
+      if (String(option.textContent || '').toLowerCase().indexOf('nutricionista') !== -1) {
+        if (category.value === option.value) category.value = '';
+        option.remove();
+        changed = true;
+      }
+    });
+    if (changed) category.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function expireTodayNoticesAtNoon() {
+    var clock = recifeClock();
+    if (clock.minutes < 720) return;
+    var area = document.getElementById('noticeArea');
+    if (!area) return;
+    var ddmmyyyy = clock.day + '/' + clock.month + '/' + clock.year;
+    var ddmm = clock.day + '/' + clock.month;
+    var iso = clock.year + '-' + clock.month + '-' + clock.day;
+    var cards = area.querySelectorAll('.notice-card');
+    Array.prototype.forEach.call(cards, function (card) {
+      var text = String(card.textContent || '').toLowerCase();
+      var isToday = text.indexOf(ddmmyyyy) !== -1 || text.indexOf(iso) !== -1 ||
+        new RegExp('(^|\\D)' + ddmm.replace('/', '\\/') + '(\\D|$)').test(text) ||
+        /\bhoje\b/.test(text);
+      if (isToday) card.remove();
+    });
+    var list = area.querySelector('.notice-list');
+    if (list && !list.querySelector('.notice-card')) {
+      area.innerHTML = '';
+      area.hidden = true;
+    }
+  }
+
+  function installNoticeExpiry() {
+    var area = document.getElementById('noticeArea');
+    if (!area || area.dataset.noonExpiry === '1') return;
+    area.dataset.noonExpiry = '1';
+    var observer = new MutationObserver(function () { expireTodayNoticesAtNoon(); });
+    observer.observe(area, { childList: true, subtree: true });
+    expireTodayNoticesAtNoon();
+    window.setInterval(expireTodayNoticesAtNoon, 30000);
+  }
+
   function loadRemote(onDone) {
     if (!API) { onDone(); return; }
     var callback = 'tacsNurseAgenda' + Date.now() + Math.floor(Math.random() * 9999);
@@ -62,6 +125,9 @@
     var subject = document.getElementById('subject');
     var subjectField = document.getElementById('subjectField');
     if (!category || !dental || !subject || !subjectField || document.getElementById('nurseSchedule')) return;
+
+    removeNutritionistOption();
+    installNoticeExpiry();
 
     var option = document.createElement('option');
     option.value = CATEGORY;
