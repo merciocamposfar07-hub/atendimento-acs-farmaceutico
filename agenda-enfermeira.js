@@ -2,13 +2,15 @@
   'use strict';
 
   var CATEGORY = 'Atendimento com a Enfermeira Chefe';
-  var schedule = [
+  var API = String(window.TACS_ADMIN_API_URL || window.POSTO_MATIAS_AVISOS_API_URL || '').trim();
+  var DEFAULT_SCHEDULE = [
     { day: 'Segunda-feira', service: 'Visita', icon: '🏠', available: true },
     { day: 'Terça-feira', service: 'Pré-natal', icon: '🤰', available: true },
     { day: 'Quarta-feira', service: 'Folga', icon: '❌', available: false },
     { day: 'Quinta-feira', service: 'Puericultura - acompanhamento de crianças e adolescentes', icon: '👶', available: true },
     { day: 'Sexta-feira', service: 'Preventivo', icon: '🌸', available: true }
   ];
+  var schedule = DEFAULT_SCHEDULE.slice();
 
   function installStyle() {
     if (document.getElementById('nurse-agenda-style')) return;
@@ -31,6 +33,29 @@
     document.head.appendChild(style);
   }
 
+  function loadRemote(onDone) {
+    if (!API) { onDone(); return; }
+    var callback = 'tacsNurseAgenda' + Date.now() + Math.floor(Math.random() * 9999);
+    var script = document.createElement('script');
+    var finished = false;
+    var timer = setTimeout(function () { finish(); }, 9000);
+
+    function finish(data) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      delete window[callback];
+      if (script.parentNode) script.remove();
+      if (data && data.ok !== false && Array.isArray(data.dias) && data.dias.length) schedule = data.dias;
+      onDone(data);
+    }
+
+    window[callback] = finish;
+    script.onerror = function () { finish(); };
+    script.src = API + (API.indexOf('?') === -1 ? '?' : '&') + 'action=agenda_enfermeira&callback=' + encodeURIComponent(callback) + '&v=' + Date.now();
+    document.head.appendChild(script);
+  }
+
   function install() {
     var category = document.getElementById('category');
     var dental = document.getElementById('dentalSchedule');
@@ -50,25 +75,31 @@
     section.className = 'nurse-agenda full';
     section.id = 'nurseSchedule';
     section.hidden = true;
-    section.innerHTML = '<small>Agenda da Enfermeira Chefe - Unidade de Saúde Posto Matias</small><h3>Escolha o atendimento</h3><p>Toque no dia correspondente ao atendimento que você precisa.</p><div class="nurse-days" id="nurseDays"></div><p class="nurse-status" id="nurseStatus">A programação poderá ser alterada pela Unidade de Saúde quando necessário.</p>';
+    section.innerHTML = '<small>Agenda da Enfermeira Chefe - Unidade de Saúde Posto Matias</small><h3>Escolha o atendimento</h3><p>Toque no dia correspondente ao atendimento que você precisa.</p><div class="nurse-days" id="nurseDays"></div><p class="nurse-status" id="nurseStatus">Carregando a programação vigente...</p>';
     dental.parentNode.insertBefore(section, dental.nextSibling);
 
     var list = document.getElementById('nurseDays');
-    schedule.forEach(function (item) {
-      var button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'nurse-day';
-      button.disabled = !item.available;
-      button.innerHTML = '<strong>' + item.day + '</strong><span aria-hidden="true">' + item.icon + '</span><b>' + item.service + '</b>';
-      button.addEventListener('click', function () {
-        Array.prototype.forEach.call(list.querySelectorAll('.nurse-day'), function (other) { other.classList.remove('selected'); });
-        button.classList.add('selected');
-        subject.value = 'Atendimento com a Enfermeira Chefe - ' + item.day + ': ' + item.service;
-        subject.dispatchEvent(new Event('input', { bubbles: true }));
-        document.getElementById('nurseStatus').textContent = 'Selecionado: ' + item.day + ' - ' + item.service + '.';
+    var status = document.getElementById('nurseStatus');
+
+    function render() {
+      list.innerHTML = '';
+      schedule.forEach(function (item) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'nurse-day';
+        button.disabled = !item.available;
+        button.innerHTML = '<strong>' + item.day + '</strong><span aria-hidden="true">' + (item.icon || '') + '</span><b>' + item.service + '</b>';
+        button.addEventListener('click', function () {
+          Array.prototype.forEach.call(list.querySelectorAll('.nurse-day'), function (other) { other.classList.remove('selected'); });
+          button.classList.add('selected');
+          subject.value = 'Atendimento com a Enfermeira Chefe - ' + item.day + ': ' + item.service;
+          subject.dispatchEvent(new Event('input', { bubbles: true }));
+          status.textContent = 'Selecionado: ' + item.day + ' - ' + item.service + '.';
+        });
+        list.appendChild(button);
       });
-      list.appendChild(button);
-    });
+      status.textContent = 'Programação vigente da Unidade de Saúde. Ela poderá ser alterada quando necessário.';
+    }
 
     function update() {
       var active = category.value === CATEGORY;
@@ -81,13 +112,15 @@
         subjectField.firstChild.textContent = 'Descrição da solicitação ';
         subject.placeholder = 'Descreva sua solicitação ou dúvida com detalhes';
         Array.prototype.forEach.call(list.querySelectorAll('.nurse-day'), function (button) { button.classList.remove('selected'); });
-        document.getElementById('nurseStatus').textContent = 'A programação poderá ser alterada pela Unidade de Saúde quando necessário.';
+        status.textContent = 'Programação vigente da Unidade de Saúde. Ela poderá ser alterada quando necessário.';
       }
       subject.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     category.addEventListener('change', update);
+    render();
     update();
+    loadRemote(function () { render(); update(); });
   }
 
   installStyle();
