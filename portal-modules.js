@@ -91,6 +91,38 @@
       card: { cor: 'azul-petroleo', titulo: 'Nova Solicitação à Enfermeira' }
     },
     {
+      id: 'visita-medica-domiciliar',
+      nome: 'Solicitação de Visita Médica Domiciliar',
+      icone: '🏠',
+      tipo: 'solicitacao',
+      ativo: true,
+      ordem: 45,
+      valorLegado: 'Solicitação de visita médica domiciliar',
+      agenda: { habilitada: false },
+      campos: [
+        {
+          id: 'pacienteVisita',
+          tipo: 'texto',
+          rotulo: 'Para quem é a visita médica?',
+          obrigatorio: true,
+          placeholder: 'Nome da pessoa que precisa da visita'
+        },
+        {
+          id: 'motivoVisita',
+          tipo: 'texto-longo',
+          rotulo: 'Explique resumidamente o motivo da visita',
+          obrigatorio: true,
+          placeholder: 'Ex.: pessoa acamada, dificuldade para ir ao posto ou outra situação'
+        }
+      ],
+      fluxo: {
+        escolhaDataPeloComunitario: false,
+        encaminharParaUnidade: true,
+        confirmacaoPosterior: true
+      },
+      card: { cor: 'azul-petroleo', titulo: 'Nova Solicitação de Visita Médica Domiciliar' }
+    },
+    {
       id: 'declaracoes',
       nome: 'Declarações',
       icone: '📄',
@@ -205,14 +237,13 @@
     /* Módulos futuros — preparados, porém invisíveis enquanto inativos. */
     { id: 'psicologia', nome: 'Psicologia', icone: '🧠', tipo: 'solicitacao', ativo: false, ordem: 210, agenda: { habilitada: true } },
     { id: 'fisioterapia', nome: 'Fisioterapia', icone: '🦿', tipo: 'solicitacao', ativo: false, ordem: 220, agenda: { habilitada: true } },
-    { id: 'visita-domiciliar', nome: 'Visita domiciliar', icone: '🏠', tipo: 'solicitacao', ativo: false, ordem: 230, agenda: { habilitada: false } },
     { id: 'bolsa-familia', nome: 'Acompanhamento do Bolsa Família', icone: '👨‍👩‍👧‍👦', tipo: 'solicitacao', ativo: false, ordem: 240, agenda: { habilitada: false } },
     { id: 'calendario-exames', nome: 'Calendário de exames', icone: '🧪', tipo: 'informativo', ativo: false, ordem: 250, mural: { formatos: ['texto', 'card'] } },
     { id: 'transporte-sanitario', nome: 'Transporte sanitário', icone: '🚐', tipo: 'solicitacao', ativo: false, ordem: 260, agenda: { habilitada: false } }
   ];
 
   var SETTINGS = {
-    versao: '1.0.0',
+    versao: '1.0.1',
     publico: 'Moradores da zona rural do Sítio Japaranduba',
     unidade: 'Unidade de Saúde Posto Matias',
     municipio: 'Chã Grande/PE',
