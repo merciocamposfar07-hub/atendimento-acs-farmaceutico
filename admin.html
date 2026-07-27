@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#062c46">
+  <title>Painel Administrativo | Portal TACS</title>
+  <style>
+    :root{--navy:#062c46;--blue:#0d5f8a;--green:#078940;--bg:#e9eff3;--ink:#102b3c;--muted:#526b78;--line:#9db4c1;--danger:#a3302b}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#dce6ec,#eef3f6);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+    .wrap{width:min(calc(100% - 20px),980px);margin:0 auto;padding:12px 0 40px}.hero{padding:28px 22px;border-radius:24px 24px 0 0;background:linear-gradient(135deg,#041f34,var(--navy),#0a4265);color:#fff}.hero small{color:#70e39f;font-weight:900;text-transform:uppercase}.hero h1{margin:8px 0 5px;font-size:clamp(32px,7vw,55px)}.hero p{margin:0;color:#d8e7ee;font-size:17px;line-height:1.5}
+    .panel{overflow:hidden;border:1px solid #7694a4;border-radius:24px;background:#fff;box-shadow:0 20px 50px rgba(3,35,56,.2)}main{padding:20px}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}.tab{min-height:55px;border:2px solid var(--line);border-radius:14px;background:#fff;font-weight:900;cursor:pointer}.tab.active{border-color:var(--blue);background:#e8f3f9;color:var(--navy)}
+    .card{padding:20px;border:1px solid #aabec8;border-radius:20px;background:#fff;box-shadow:0 10px 25px rgba(4,44,70,.08)}h2{margin:0 0 7px;font-size:28px}.intro{margin:0 0 18px;color:var(--muted);line-height:1.5}.days{display:grid;gap:12px}.day{display:grid;grid-template-columns:145px 72px 1fr 120px;gap:10px;align-items:center;padding:13px;border:1px solid #b5c7d0;border-radius:15px;background:#f8fbfc}.day strong{font-size:17px}.day input,.day select{width:100%;min-height:50px;border:2px solid #8ba4b1;border-radius:11px;padding:10px;font-size:16px;background:#fff}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.btn{min-height:54px;border:0;border-radius:13px;padding:12px 18px;font-size:17px;font-weight:900;cursor:pointer}.primary{background:var(--green);color:#fff}.secondary{background:var(--navy);color:#fff}.ghost{border:2px solid var(--line);background:#fff}.status{margin-top:15px;padding:14px;border-radius:12px;background:#eaf3f7;color:#234a5d;font-weight:750;line-height:1.45}.status.error{background:#fdecea;color:#762723}.hidden{display:none}.placeholder{padding:24px;border:2px dashed #aabec8;border-radius:17px;color:var(--muted);line-height:1.6}
+    @media(max-width:720px){.tabs{grid-template-columns:1fr}.day{grid-template-columns:1fr}.day strong{font-size:19px}.wrap{width:min(calc(100% - 10px),980px)}main{padding:14px}.hero{padding:24px 18px}}
+  </style>
+</head>
+<body>
+<div class="wrap"><section class="panel"><header class="hero"><small>Portal TACS</small><h1>Painel Administrativo</h1><p>Unidade de Saúde Posto Matias • Sítio Japaranduba</p></header><main>
+  <nav class="tabs" aria-label="Seções do painel"><button class="tab active" data-tab="enfermeira">Agenda da enfermeira</button><button class="tab" data-tab="avisos">Avisos</button><button class="tab" data-tab="odontologia">Odontologia</button></nav>
+  <section id="enfermeira" class="card"><h2>Agenda da Enfermeira Chefe</h2><p class="intro">Edite a programação e publique. O portal do cidadão continuará usando a agenda padrão quando o serviço online estiver indisponível.</p><div id="days" class="days"></div><div class="actions"><button id="save" class="btn primary">Publicar agenda</button><button id="reset" class="btn ghost">Restaurar agenda padrão</button><a class="btn secondary" href="index.html" style="text-decoration:none;display:inline-grid;place-items:center">Abrir portal</a></div><div id="status" class="status">Carregando a programação atual...</div></section>
+  <section id="avisos" class="card hidden"><h2>Avisos</h2><div class="placeholder">O módulo visual já foi reservado. A próxima integração aproveitará o serviço de avisos existente no Portal TACS.</div></section>
+  <section id="odontologia" class="card hidden"><h2>Agenda odontológica</h2><div class="placeholder">A agenda odontológica continuará funcionando pelo sistema atual. A próxima etapa será trazer o gerenciamento para dentro deste painel.</div></section>
+</main></section></div>
+<script src="agenda-config.js?v=20260726-02"></script>
+<script>
+(function(){'use strict';
+var API=String(window.TACS_ADMIN_API_URL||window.POSTO_MATIAS_AVISOS_API_URL||'').trim();
+var DEFAULT=[
+ {day:'Segunda-feira',service:'Visita',icon:'🏠',available:true},
+ {day:'Terça-feira',service:'Pré-natal',icon:'🤰',available:true},
+ {day:'Quarta-feira',service:'Folga',icon:'❌',available:false},
+ {day:'Quinta-feira',service:'Puericultura - acompanhamento de crianças e adolescentes',icon:'👶',available:true},
+ {day:'Sexta-feira',service:'Preventivo',icon:'🌸',available:true}
+];
+var model=DEFAULT.map(function(x){return Object.assign({},x)}),status=document.getElementById('status');
+function setStatus(text,error){status.textContent=text;status.className='status'+(error?' error':'')}
+function render(){var box=document.getElementById('days');box.innerHTML='';model.forEach(function(item,i){var row=document.createElement('div');row.className='day';row.innerHTML='<strong>'+item.day+'</strong><input aria-label="Ícone de '+item.day+'" maxlength="4" value="'+item.icon+'"><input aria-label="Atendimento de '+item.day+'" value="'+item.service.replace(/"/g,'&quot;')+'"><select aria-label="Situação de '+item.day+'"><option value="true"'+(item.available?' selected':'')+'>Atendimento</option><option value="false"'+(!item.available?' selected':'')+'>Folga / indisponível</option></select>';var fields=row.querySelectorAll('input,select');fields[0].addEventListener('input',function(){model[i].icon=this.value});fields[1].addEventListener('input',function(){model[i].service=this.value});fields[2].addEventListener('change',function(){model[i].available=this.value==='true'});box.appendChild(row)})}
+function jsonp(action,onOk,onFail){if(!API){onFail(new Error('Serviço administrativo ainda não foi publicado.'));return}var cb='tacsAdmin'+Date.now()+Math.floor(Math.random()*9999),s=document.createElement('script'),done=false,t=setTimeout(function(){finish(new Error('Tempo esgotado.'))},12000);function finish(err,data){if(done)return;done=true;clearTimeout(t);delete window[cb];if(s.parentNode)s.remove();err?onFail(err):onOk(data)}window[cb]=function(data){finish(null,data)};s.onerror=function(){finish(new Error('Não foi possível acessar o serviço.'))};s.src=API+(API.indexOf('?')<0?'?':'&')+'action='+encodeURIComponent(action)+'&callback='+cb+'&v='+Date.now();document.head.appendChild(s)}
+function load(){jsonp('agenda_enfermeira',function(data){if(data&&data.ok!==false&&Array.isArray(data.dias)&&data.dias.length){model=data.dias;render();setStatus('Programação atual carregada.')}else{render();setStatus('Agenda padrão carregada. O serviço online ainda não retornou uma programação.',true)}},function(){render();setStatus('Agenda padrão carregada. Falta publicar/conectar o serviço administrativo do Google Apps Script.',true)})}
+function save(){if(!API){setStatus('Não foi possível publicar: o serviço administrativo ainda não está conectado.',true);return}setStatus('Publicando agenda...');var frame=document.createElement('iframe'),form=document.createElement('form');frame.name='saveAgenda'+Date.now();frame.hidden=true;form.method='post';form.action=API;form.target=frame.name;form.hidden=true;[['action','salvar_agenda_enfermeira'],['payload',JSON.stringify({dias:model})]].forEach(function(p){var input=document.createElement('input');input.type='hidden';input.name=p[0];input.value=p[1];form.appendChild(input)});document.body.append(frame,form);form.submit();setTimeout(function(){form.remove();frame.remove();load()},1800)}
+document.querySelectorAll('.tab').forEach(function(b){b.onclick=function(){document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});document.querySelectorAll('main>.card').forEach(function(x){x.classList.add('hidden')});b.classList.add('active');document.getElementById(b.dataset.tab).classList.remove('hidden')}});
+document.getElementById('save').onclick=save;document.getElementById('reset').onclick=function(){model=DEFAULT.map(function(x){return Object.assign({},x)});render();setStatus('Agenda padrão restaurada na tela. Toque em “Publicar agenda” para confirmar.')};render();load();
+}());
+</script>
+</body></html>
