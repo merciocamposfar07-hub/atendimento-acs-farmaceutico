@@ -12,6 +12,28 @@
   ];
   var schedule = DEFAULT_SCHEDULE.slice();
 
+  function installFooterRights() {
+    var footer = document.querySelector('footer');
+    if (!footer || footer.dataset.rightsReady === '1') return;
+    footer.dataset.rightsReady = '1';
+
+    var style = document.createElement('style');
+    style.id = 'tacs-footer-rights-style';
+    style.textContent = [
+      'footer{grid-template-columns:1fr!important;gap:0!important;padding:20px 22px 17px!important;text-align:center!important}',
+      'footer>div{padding:0!important;border:0!important}',
+      'footer>div+div{margin-top:10px!important;padding-top:10px!important;border-top:1px solid rgba(255,255,255,.32)!important}',
+      '.tacs-rights{margin:13px 0 0!important;padding-top:12px!important;border-top:1px solid rgba(255,255,255,.32)!important;color:#D6E7EF!important;font-size:13px!important;font-weight:700!important;line-height:1.5!important}',
+      '@media(max-width:720px){footer{padding:18px 16px 15px!important}.tacs-rights{font-size:12px!important}}'
+    ].join('');
+    document.head.appendChild(style);
+
+    var rights = document.createElement('p');
+    rights.className = 'tacs-rights';
+    rights.textContent = '© 2026 Mércio José Campos dos Santos. Todos os direitos reservados.';
+    footer.appendChild(rights);
+  }
+
   function installStyle() {
     if (document.getElementById('nurse-agenda-style')) return;
     var style = document.createElement('style');
@@ -120,6 +142,8 @@
   }
 
   function install() {
+    installFooterRights();
+
     var category = document.getElementById('category');
     var dental = document.getElementById('dentalSchedule');
     var subject = document.getElementById('subject');
