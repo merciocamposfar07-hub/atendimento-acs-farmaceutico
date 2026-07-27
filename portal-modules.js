@@ -4,10 +4,7 @@
   /**
    * MATRIZ MODULAR — PORTAL TACS
    *
-   * Esta configuração separa as regras dos serviços do núcleo do portal.
-   * Novos módulos podem ser incluídos futuramente sem reescrever os módulos já ativos.
-   *
-   * Tipos disponíveis:
+   * Tipos:
    * - solicitacao: cria uma demanda do comunitário para o TACS.
    * - informativo: aparece no mural, card ou banner, sem solicitação de vaga.
    */
@@ -84,11 +81,34 @@
       agenda: {
         habilitada: true,
         origem: 'AGENDA_ENFERMEIRA',
+        editavelNoPainel: true,
+        exibirProgramacaoVigente: true,
         reservaAutomatica: false,
-        escolherHorario: false
+        escolherHorario: false,
+        programacaoPadrao: [
+          { diaSemana: 1, dia: 'Segunda-feira', atendimento: 'Visita domiciliar', icone: '🏠', status: 'atendimento' },
+          { diaSemana: 2, dia: 'Terça-feira', atendimento: 'Pré-natal', icone: '🤰', status: 'atendimento' },
+          { diaSemana: 3, dia: 'Quarta-feira', atendimento: 'Folga', icone: '❌', status: 'folga' },
+          { diaSemana: 4, dia: 'Quinta-feira', atendimento: 'Puericultura — acompanhamento de crianças e adolescentes', icone: '👶', status: 'atendimento' },
+          { diaSemana: 5, dia: 'Sexta-feira', atendimento: 'Preventivo (citologia)', icone: '🌸', status: 'atendimento' }
+        ],
+        regrasEdicao: {
+          alterarAtendimento: true,
+          trocarDias: true,
+          transformarFolgaEmAtendimento: true,
+          transformarAtendimentoEmFolga: true,
+          cancelarAtendimento: true,
+          criarAtendimentoExtraordinario: true,
+          criarMutirao: true,
+          exigirAlteracaoDeCodigo: false
+        }
       },
       campos: [],
-      card: { cor: 'azul-petroleo', titulo: 'Nova Solicitação à Enfermeira' }
+      card: {
+        cor: 'azul-petroleo',
+        titulo: 'Nova Solicitação à Enfermeira',
+        camposAgenda: ['atendimento', 'dia', 'data']
+      }
     },
     {
       id: 'visita-medica-domiciliar',
@@ -243,7 +263,7 @@
   ];
 
   var SETTINGS = {
-    versao: '1.0.1',
+    versao: '1.1.0',
     publico: 'Moradores da zona rural do Sítio Japaranduba',
     unidade: 'Unidade de Saúde Posto Matias',
     municipio: 'Chã Grande/PE',
