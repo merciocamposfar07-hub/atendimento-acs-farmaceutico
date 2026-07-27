@@ -41,9 +41,28 @@ Princípio central:
 
 ### Enfermeira Chefe
 
-- O comunitário escolhe apenas um dia disponibilizado pela unidade.
+Programação padrão da Unidade de Saúde Posto Matias:
+
+| Dia | Programação padrão |
+|---|---|
+| Segunda-feira | Visita domiciliar |
+| Terça-feira | Pré-natal |
+| Quarta-feira | Folga |
+| Quinta-feira | Puericultura — acompanhamento de crianças e adolescentes |
+| Sexta-feira | Preventivo (citologia) |
+
+Regras:
+
+- A programação padrão fica registrada na agenda `AGENDA_ENFERMEIRA`.
+- Toda a agenda é editável pelo Painel Administrativo.
+- Qualquer dia pode receber outro atendimento, folga, cancelamento, mutirão ou programação extraordinária.
+- É possível trocar os atendimentos entre os dias, por exemplo: Preventivo na quarta-feira e folga na sexta-feira.
+- Nenhuma alteração de rotina deve exigir modificação do código.
+- O comunitário vê somente a programação vigente publicada.
 - Não escolhe horário, salvo mudança futura na programação.
-- A agenda deve ser configurável separadamente.
+- O card da solicitação deve registrar o atendimento, o dia e a data selecionados.
+
+A visita domiciliar realizada pela Enfermeira Chefe é diferente da solicitação de visita médica domiciliar.
 
 ### Visita médica domiciliar
 
@@ -172,6 +191,8 @@ Cada módulo pode definir:
 - ordem;
 - campos;
 - agenda;
+- programação padrão;
+- regras de edição;
 - reserva automática;
 - card;
 - regras específicas.
