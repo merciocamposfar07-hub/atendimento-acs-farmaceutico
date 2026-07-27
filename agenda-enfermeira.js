@@ -1,212 +1,34 @@
-(function () {
-  'use strict';
-
-  var CATEGORY = 'Atendimento com a Enfermeira Chefe';
-  var API = 'https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec';
-  var DEFAULT_SCHEDULE = [
-    { day: 'Segunda-feira', service: 'Visita', icon: '🏠', available: true },
-    { day: 'Terça-feira', service: 'Pré-natal', icon: '🤰', available: true },
-    { day: 'Quarta-feira', service: 'Folga', icon: '❌', available: false },
-    { day: 'Quinta-feira', service: 'Puericultura - acompanhamento de crianças e adolescentes', icon: '👶', available: true },
-    { day: 'Sexta-feira', service: 'Preventivo', icon: '🌸', available: true }
-  ];
-  var schedule = DEFAULT_SCHEDULE.slice();
-
-  function installStyle() {
-    if (document.getElementById('nurse-agenda-style')) return;
-    var style = document.createElement('style');
-    style.id = 'nurse-agenda-style';
-    style.textContent = [
-      '.nurse-agenda{padding:24px;border:2px solid #0D5F8A;border-radius:20px;background:linear-gradient(145deg,#041F34 0%,#062C46 58%,#0A4265 100%);color:#fff;box-shadow:0 18px 34px rgba(3,35,56,.22)}',
-      '.nurse-agenda small{display:block;color:#70E39F;font-size:14px;font-weight:950;letter-spacing:.075em;text-transform:uppercase}',
-      '.nurse-agenda h3{margin:10px 0 8px;color:#fff;font-size:clamp(29px,5vw,40px);line-height:1.15}',
-      '.nurse-agenda>p{margin:0 0 18px;color:#D8E7EE;font-size:17px;line-height:1.5}',
-      '.nurse-days{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}',
-      '.nurse-day{min-height:112px;padding:15px;border:2px solid #6E9DB5;border-radius:16px;background:#fff;color:#102B3C;text-align:left;cursor:pointer}',
-      '.nurse-day strong,.nurse-day span,.nurse-day b{display:block}',
-      '.nurse-day strong{font-size:18px}.nurse-day span{margin-top:5px;font-size:22px}.nurse-day b{margin-top:6px;color:#06763A;font-size:16px;line-height:1.35}',
-      '.nurse-day.selected{border-color:#16A85D;background:#ECF9F1;box-shadow:0 0 0 4px rgba(22,168,93,.22)}',
-      '.nurse-day:disabled{cursor:not-allowed;opacity:.72;background:#EEF3F5}.nurse-day:disabled b{color:#718792}',
-      '.nurse-status{margin:17px 0 0;padding-top:15px;border-top:1px solid #4C829D;color:#fff;font-size:16px;font-weight:800;line-height:1.5}',
-      'footer.portal-footer-fixed{display:block!important;padding:22px 20px!important;text-align:center!important}',
-      'footer.portal-footer-fixed div{border:0!important;padding:0!important}',
-      'footer.portal-footer-fixed strong{display:block!important;font-size:17px!important;line-height:1.4!important}',
-      'footer.portal-footer-fixed .portal-location{margin-top:4px!important;font-size:15px!important;line-height:1.5!important}',
-      'footer.portal-footer-fixed .portal-rights{margin-top:17px!important;padding-top:15px!important;border-top:1px solid #7895a5!important;font-size:14px!important;font-weight:750!important;line-height:1.5!important}',
-      '@media(max-width:720px){.nurse-agenda{padding:21px 17px}.nurse-days{grid-template-columns:1fr}.nurse-day{min-height:100px}footer.portal-footer-fixed{padding:20px 16px!important}}'
-    ].join('');
-    document.head.appendChild(style);
-  }
-
-  function installFooter() {
-    var footer = document.querySelector('footer');
-    if (!footer) return;
-    footer.className = 'portal-footer-fixed';
-    footer.innerHTML = '<div><strong>Serviço TACS – Unidade de Saúde Posto Matias</strong><div class="portal-location">Sítio Japaranduba • Chã Grande/PE</div><div class="portal-rights">© 2026 Portal TACS. Todos os direitos reservados.</div></div>';
-  }
-
-  function recifeClock() {
-    var parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Recife',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-    }).formatToParts(new Date());
-    var values = {};
-    parts.forEach(function (part) { values[part.type] = part.value; });
-    return {
-      year: values.year,
-      month: values.month,
-      day: values.day,
-      minutes: Number(values.hour) * 60 + Number(values.minute)
-    };
-  }
-
-  function removeNutritionistOption() {
-    var category = document.getElementById('category');
-    if (!category) return;
-    var changed = false;
-    Array.prototype.slice.call(category.options).forEach(function (option) {
-      if (String(option.textContent || '').toLowerCase().indexOf('nutricionista') !== -1) {
-        if (category.value === option.value) category.value = '';
-        option.remove();
-        changed = true;
-      }
-    });
-    if (changed) category.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-
-  function expireTodayNoticesAtNoon() {
-    var clock = recifeClock();
-    if (clock.minutes < 720) return;
-    var area = document.getElementById('noticeArea');
-    if (!area) return;
-    var ddmmyyyy = clock.day + '/' + clock.month + '/' + clock.year;
-    var ddmm = clock.day + '/' + clock.month;
-    var iso = clock.year + '-' + clock.month + '-' + clock.day;
-    var cards = area.querySelectorAll('.notice-card');
-    Array.prototype.forEach.call(cards, function (card) {
-      var text = String(card.textContent || '').toLowerCase();
-      var isToday = text.indexOf(ddmmyyyy) !== -1 || text.indexOf(iso) !== -1 ||
-        new RegExp('(^|\\D)' + ddmm.replace('/', '\\/') + '(\\D|$)').test(text) ||
-        /\bhoje\b/.test(text);
-      if (isToday) card.remove();
-    });
-    var list = area.querySelector('.notice-list');
-    if (list && !list.querySelector('.notice-card')) {
-      area.innerHTML = '';
-      area.hidden = true;
-    }
-  }
-
-  function installNoticeExpiry() {
-    var area = document.getElementById('noticeArea');
-    if (!area || area.dataset.noonExpiry === '1') return;
-    area.dataset.noonExpiry = '1';
-    var observer = new MutationObserver(function () { expireTodayNoticesAtNoon(); });
-    observer.observe(area, { childList: true, subtree: true });
-    expireTodayNoticesAtNoon();
-    window.setInterval(expireTodayNoticesAtNoon, 30000);
-  }
-
-  function loadRemote(onDone) {
-    if (!API) { onDone(); return; }
-    var callback = 'tacsNurseAgenda' + Date.now() + Math.floor(Math.random() * 9999);
-    var script = document.createElement('script');
-    var finished = false;
-    var timer = setTimeout(function () { finish(); }, 9000);
-
-    function finish(data) {
-      if (finished) return;
-      finished = true;
-      clearTimeout(timer);
-      delete window[callback];
-      if (script.parentNode) script.remove();
-      if (data && data.ok !== false && Array.isArray(data.dias) && data.dias.length) schedule = data.dias;
-      onDone(data);
-    }
-
-    window[callback] = finish;
-    script.onerror = function () { finish(); };
-    script.src = API + '?action=agenda_enfermeira&callback=' + encodeURIComponent(callback) + '&v=' + Date.now();
-    document.head.appendChild(script);
-  }
-
-  function install() {
-    var category = document.getElementById('category');
-    var dental = document.getElementById('dentalSchedule');
-    var subject = document.getElementById('subject');
-    var subjectField = document.getElementById('subjectField');
-    if (!category || !dental || !subject || !subjectField || document.getElementById('nurseSchedule')) return;
-
-    installFooter();
-    removeNutritionistOption();
-    installNoticeExpiry();
-
-    var option = document.createElement('option');
-    option.value = CATEGORY;
-    option.textContent = CATEGORY;
-    var firstDental = Array.prototype.find.call(category.options, function (item) {
-      return item.value.indexOf('odontológico') !== -1;
-    });
-    category.insertBefore(option, firstDental || null);
-
-    var section = document.createElement('section');
-    section.className = 'nurse-agenda full';
-    section.id = 'nurseSchedule';
-    section.hidden = true;
-    section.innerHTML = '<small>Agenda da Enfermeira Chefe - Unidade de Saúde Posto Matias</small><h3>Escolha o atendimento</h3><p>Toque no dia correspondente ao atendimento que você precisa.</p><div class="nurse-days" id="nurseDays"></div><p class="nurse-status" id="nurseStatus">Carregando a programação vigente...</p>';
-    dental.parentNode.insertBefore(section, dental.nextSibling);
-
-    var list = document.getElementById('nurseDays');
-    var status = document.getElementById('nurseStatus');
-
-    function render() {
-      list.innerHTML = '';
-      schedule.forEach(function (item) {
-        var button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'nurse-day';
-        button.disabled = !item.available;
-        button.innerHTML = '<strong>' + item.day + '</strong><span aria-hidden="true">' + (item.icon || '') + '</span><b>' + item.service + '</b>';
-        button.addEventListener('click', function () {
-          Array.prototype.forEach.call(list.querySelectorAll('.nurse-day'), function (other) { other.classList.remove('selected'); });
-          button.classList.add('selected');
-          subject.value = 'Atendimento com a Enfermeira Chefe - ' + item.day + ': ' + item.service;
-          subject.dispatchEvent(new Event('input', { bubbles: true }));
-          status.textContent = 'Selecionado: ' + item.day + ' - ' + item.service + '.';
-        });
-        list.appendChild(button);
-      });
-      status.textContent = 'Programação vigente da Unidade de Saúde. Ela poderá ser alterada quando necessário.';
-    }
-
-    function update() {
-      var active = category.value === CATEGORY;
-      section.hidden = !active;
-      if (active) {
-        subjectField.firstChild.textContent = 'Motivo do atendimento ';
-        subject.placeholder = 'Explique resumidamente o motivo do atendimento';
-      } else {
-        if (subject.value.indexOf('Atendimento com a Enfermeira Chefe - ') === 0) subject.value = '';
-        subjectField.firstChild.textContent = 'Descrição da solicitação ';
-        subject.placeholder = 'Descreva sua solicitação ou dúvida com detalhes';
-        Array.prototype.forEach.call(list.querySelectorAll('.nurse-day'), function (button) { button.classList.remove('selected'); });
-        status.textContent = 'Programação vigente da Unidade de Saúde. Ela poderá ser alterada quando necessário.';
-      }
-      subject.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-
-    category.addEventListener('change', update);
-    render();
-    update();
-    loadRemote(function (data) {
-      render();
-      update();
-      if (!data || data.ok === false) status.textContent = 'Programação padrão exibida. Não foi possível atualizar a agenda agora.';
-    });
-  }
-
-  installStyle();
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
-  else install();
+(function(){
+'use strict';
+var CATEGORY='Atendimento com a Enfermeira Chefe';
+var API='https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec';
+var DEFAULT=[
+ {day:'Segunda-feira',service:'Visita',icon:'🏠',available:true},
+ {day:'Terça-feira',service:'Pré-natal',icon:'🤰',available:true},
+ {day:'Quarta-feira',service:'Folga',icon:'❌',available:false},
+ {day:'Quinta-feira',service:'Puericultura - acompanhamento de crianças e adolescentes',icon:'👶',available:true},
+ {day:'Sexta-feira',service:'Preventivo',icon:'🌸',available:true}
+];
+var schedule=DEFAULT.slice();
+function style(){if(document.getElementById('nurse-agenda-style'))return;var s=document.createElement('style');s.id='nurse-agenda-style';s.textContent='.nurse-agenda{padding:24px;border:2px solid #0D5F8A;border-radius:20px;background:linear-gradient(145deg,#041F34,#062C46 58%,#0A4265);color:#fff;box-shadow:0 18px 34px rgba(3,35,56,.22)}.nurse-agenda small{display:block;color:#70E39F;font-size:16px;font-weight:950;letter-spacing:.06em;text-transform:uppercase}.nurse-agenda h3{margin:10px 0 8px;color:#fff;font-size:clamp(31px,5vw,42px)}.nurse-agenda>p{font-size:19px;line-height:1.5}.nurse-days{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.nurse-day{min-height:118px;padding:17px;border:2px solid #6E9DB5;border-radius:16px;background:#fff;color:#102B3C;text-align:left}.nurse-day strong,.nurse-day span,.nurse-day b{display:block}.nurse-day strong{font-size:21px}.nurse-day span{margin-top:5px;font-size:24px}.nurse-day b{margin-top:6px;color:#06763A;font-size:18px}.nurse-day.selected{border-color:#16A85D;background:#ECF9F1;box-shadow:0 0 0 4px rgba(22,168,93,.22)}.nurse-day:disabled{opacity:.72;background:#EEF3F5}.nurse-status{margin:17px 0 0;padding-top:15px;border-top:1px solid #4C829D;font-size:18px;font-weight:800;line-height:1.5}footer.portal-footer-fixed{display:block!important;padding:22px 20px!important;text-align:center!important}footer.portal-footer-fixed div{border:0!important;padding:0!important}footer.portal-footer-fixed strong{display:block!important;font-size:17px!important}footer.portal-footer-fixed .portal-location{margin-top:4px!important;font-size:15px!important}footer.portal-footer-fixed .portal-rights{margin-top:17px!important;padding-top:15px!important;border-top:1px solid #7895a5!important;font-size:14px!important;font-weight:750!important}.id-cns-note{font-size:16px!important}.slot.closed-noon{opacity:.58!important;background:#e7ecef!important;pointer-events:none!important}.slot.closed-noon b{color:#718792!important}@media(max-width:720px){.nurse-agenda{padding:21px 17px}.nurse-days{grid-template-columns:1fr}.nurse-day{min-height:104px}}';document.head.appendChild(s)}
+function footer(){var f=document.querySelector('footer');if(!f)return;f.className='portal-footer-fixed';f.innerHTML='<div><strong>Serviço TACS – Unidade de Saúde Posto Matias</strong><div class="portal-location">Sítio Japaranduba • Chã Grande/PE</div><div class="portal-rights">© 2026 Portal TACS. Todos os direitos reservados.</div></div>'}
+function clock(){var p=new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),v={};p.forEach(function(x){v[x.type]=x.value});return{iso:v.year+'-'+v.month+'-'+v.day,br:v.day+'/'+v.month+'/'+v.year,minutes:Number(v.hour)*60+Number(v.minute)}}
+function removeNutrition(){var c=document.getElementById('category');if(!c)return;Array.prototype.slice.call(c.options).forEach(function(o){if(String(o.textContent).toLowerCase().indexOf('nutricionista')!==-1)o.remove()})}
+function expireNotices(){var c=clock();if(c.minutes<720)return;var a=document.getElementById('noticeArea');if(!a)return;Array.prototype.forEach.call(a.querySelectorAll('.notice-card'),function(card){var t=String(card.textContent||'').toLowerCase();if(t.indexOf(c.br)!==-1||t.indexOf(c.iso)!==-1||/\bhoje\b/.test(t))card.remove()});var l=a.querySelector('.notice-list');if(l&&!l.querySelector('.notice-card')){a.innerHTML='';a.hidden=true}}
+function expireDental(){var c=clock();if(c.minutes<720)return;Array.prototype.forEach.call(document.querySelectorAll('.slot'),function(b){var span=b.querySelector('span');if(!span)return;var d=String(span.textContent||'').trim();if(d===c.br){b.disabled=true;b.classList.add('closed-noon');var x=b.querySelector('b');if(x)x.textContent='Vagas encerradas às 12h'}})}
+function observeExpiry(){var a=document.getElementById('noticeArea'),d=document.getElementById('dentalSlots');if(a)new MutationObserver(expireNotices).observe(a,{childList:true,subtree:true});if(d)new MutationObserver(expireDental).observe(d,{childList:true,subtree:true});expireNotices();expireDental();setInterval(function(){expireNotices();expireDental()},30000)}
+function validCpf(v){var d=String(v||'').replace(/\D/g,'');if(!/^\d{11}$/.test(d)||/^(\d)\1{10}$/.test(d))return false;var s=0,i;for(i=0;i<9;i++)s+=Number(d[i])*(10-i);var a=(s*10)%11;if(a===10)a=0;if(a!==Number(d[9]))return false;s=0;for(i=0;i<10;i++)s+=Number(d[i])*(11-i);var b=(s*10)%11;if(b===10)b=0;return b===Number(d[10])}
+function installCpfCns(){var input=document.getElementById('cpf'),status=document.getElementById('cpfStatus'),send=document.getElementById('send');if(!input||!status||!send)return;var label=input.closest('label');if(label&&label.firstChild)label.firstChild.textContent='CPF ou CNS ';input.maxLength=18;input.placeholder='Digite o CPF ou os 15 números do CNS';status.textContent='Informe o CPF ou o Cartão Nacional de Saúde (CNS).';status.classList.add('id-cns-note');
+ function digits(){return input.value.replace(/\D/g,'')}
+ function isCns(){return /^\d{15}$/.test(digits())}
+ function format(){var d=digits().slice(0,15);if(d.length<=11){input.value=d.length>9?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9):d.length>6?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6):d.length>3?d.slice(0,3)+'.'+d.slice(3):d}else input.value=d.replace(/(\d{3})(?=\d)/g,'$1 ').trim()}
+ function refresh(){var d=digits(),okCpf=validCpf(d),okCns=isCns();status.textContent=okCpf?'CPF conferido ✓':okCns?'CNS informado ✓':d.length?'Digite um CPF válido ou os 15 números do CNS.':'Informe o CPF ou o Cartão Nacional de Saúde (CNS).';status.className='help id-cns-note'+((okCpf||okCns)?' valid':d.length?' invalid':'');if(okCns){setTimeout(function(){var category=document.getElementById('category'),name=document.getElementById('name'),birth=document.getElementById('birth'),locality=document.getElementById('locality'),subject=document.getElementById('subject'),impl=document.getElementById('implanonChoice'),dental=document.getElementById('dentalSchedule');var req=category&&category.value==='Implanon'?(impl?impl.value.trim():''):(subject?subject.value.trim():'');var dentalOk=!dental||dental.hidden||!!document.querySelector('.slot.selected');var ageOk=birth&&birth.value.replace(/\D/g,'').length===8;send.disabled=!(category&&category.value&&name&&name.value.trim().length>=3&&ageOk&&locality&&locality.value.trim()&&req&&dentalOk)},0)}}
+ input.addEventListener('input',function(e){if(digits().length>11){e.stopImmediatePropagation();format();refresh()}},true);
+ ['input','change'].forEach(function(ev){document.addEventListener(ev,function(){if(isCns())refresh()},false)});
+ input.addEventListener('input',function(){format();refresh()});refresh();
+ send.addEventListener('click',function(e){if(!isCns())return;e.preventDefault();e.stopImmediatePropagation();var q=function(id){var x=document.getElementById(id);return x?String(x.value||'').trim():''},category=q('category'),selected=document.querySelector('.slot.selected'),day='';if(selected){var parts=selected.querySelectorAll('strong,span');day=parts.length>1?'\nDia escolhido: '+parts[0].textContent.trim()+' — '+parts[1].textContent.trim():''}var msg='*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n*TACS - Técnico Agente Comunitário de Saúde*\n\nData e horário do envio: '+new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Recife',dateStyle:'short',timeStyle:'short'}).format(new Date())+'\nCategoria: '+category+day+'\nNome completo: '+q('name')+'\nData de nascimento: '+q('birth')+'\nCNS: '+digits()+'\nOnde mora: '+q('locality')+'\nDescrição: '+(category==='Implanon'?q('implanonChoice'):q('subject'));window.location.href='https://wa.me/5581989613130?text='+encodeURIComponent(msg)},true)}
+function load(done){var cb='tacsNurse'+Date.now(),s=document.createElement('script'),finished=false,t=setTimeout(function(){finish()},9000);function finish(data){if(finished)return;finished=true;clearTimeout(t);delete window[cb];if(s.parentNode)s.remove();if(data&&data.ok!==false&&Array.isArray(data.dias)&&data.dias.length)schedule=data.dias;done(data)}window[cb]=finish;s.onerror=function(){finish()};s.src=API+'?action=agenda_enfermeira&callback='+encodeURIComponent(cb)+'&v='+Date.now();document.head.appendChild(s)}
+function nurse(){var c=document.getElementById('category'),d=document.getElementById('dentalSchedule'),sub=document.getElementById('subject'),field=document.getElementById('subjectField');if(!c||!d||!sub||!field||document.getElementById('nurseSchedule'))return;var o=document.createElement('option');o.value=CATEGORY;o.textContent=CATEGORY;var first=Array.prototype.find.call(c.options,function(x){return x.value.indexOf('odontológico')!==-1});c.insertBefore(o,first||null);var sec=document.createElement('section');sec.className='nurse-agenda full';sec.id='nurseSchedule';sec.hidden=true;sec.innerHTML='<small>Agenda da Enfermeira Chefe</small><h3>Escolha o atendimento</h3><p>Toque no dia correspondente ao atendimento que você precisa.</p><div class="nurse-days" id="nurseDays"></div><p class="nurse-status" id="nurseStatus">Carregando a programação vigente...</p>';d.parentNode.insertBefore(sec,d.nextSibling);var list=document.getElementById('nurseDays'),st=document.getElementById('nurseStatus');function render(){list.innerHTML='';schedule.forEach(function(item){var b=document.createElement('button');b.type='button';b.className='nurse-day';b.disabled=!item.available;b.innerHTML='<strong>'+item.day+'</strong><span>'+((item.icon)||'')+'</span><b>'+item.service+'</b>';b.onclick=function(){Array.prototype.forEach.call(list.querySelectorAll('.nurse-day'),function(x){x.classList.remove('selected')});b.classList.add('selected');sub.value='Atendimento com a Enfermeira Chefe - '+item.day+': '+item.service;sub.dispatchEvent(new Event('input',{bubbles:true}));st.textContent='Selecionado: '+item.day+' - '+item.service+'.'};list.appendChild(b)});st.textContent='Programação vigente da Unidade de Saúde.'}function update(){var active=c.value===CATEGORY;sec.hidden=!active;if(active){field.firstChild.textContent='Motivo do atendimento ';sub.placeholder='Explique resumidamente o motivo do atendimento'}else if(sub.value.indexOf('Atendimento com a Enfermeira Chefe - ')===0)sub.value='';sub.dispatchEvent(new Event('input',{bubbles:true}))}c.addEventListener('change',update);render();update();load(function(data){render();update();if(!data||data.ok===false)st.textContent='Programação padrão exibida. Não foi possível atualizar agora.'})}
+function install(){footer();removeNutrition();installCpfCns();observeExpiry();nurse()}
+style();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 }());
