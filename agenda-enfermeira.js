@@ -12,28 +12,6 @@
   ];
   var schedule = DEFAULT_SCHEDULE.slice();
 
-  function installFooterRights() {
-    var footer = document.querySelector('footer');
-    if (!footer || footer.dataset.rightsReady === '1') return;
-    footer.dataset.rightsReady = '1';
-
-    var style = document.createElement('style');
-    style.id = 'tacs-footer-rights-style';
-    style.textContent = [
-      'footer{grid-template-columns:1fr!important;gap:0!important;padding:20px 22px 17px!important;text-align:center!important}',
-      'footer>div{padding:0!important;border:0!important}',
-      'footer>div+div{margin-top:10px!important;padding-top:10px!important;border-top:1px solid rgba(255,255,255,.32)!important}',
-      '.tacs-rights{margin:13px 0 0!important;padding-top:12px!important;border-top:1px solid rgba(255,255,255,.32)!important;color:#D6E7EF!important;font-size:13px!important;font-weight:700!important;line-height:1.5!important}',
-      '@media(max-width:720px){footer{padding:18px 16px 15px!important}.tacs-rights{font-size:12px!important}}'
-    ].join('');
-    document.head.appendChild(style);
-
-    var rights = document.createElement('p');
-    rights.className = 'tacs-rights';
-    rights.textContent = '© 2026 Mércio José Campos dos Santos. Todos os direitos reservados.';
-    footer.appendChild(rights);
-  }
-
   function installStyle() {
     if (document.getElementById('nurse-agenda-style')) return;
     var style = document.createElement('style');
@@ -50,9 +28,21 @@
       '.nurse-day.selected{border-color:#16A85D;background:#ECF9F1;box-shadow:0 0 0 4px rgba(22,168,93,.22)}',
       '.nurse-day:disabled{cursor:not-allowed;opacity:.72;background:#EEF3F5}.nurse-day:disabled b{color:#718792}',
       '.nurse-status{margin:17px 0 0;padding-top:15px;border-top:1px solid #4C829D;color:#fff;font-size:16px;font-weight:800;line-height:1.5}',
-      '@media(max-width:720px){.nurse-agenda{padding:21px 17px}.nurse-days{grid-template-columns:1fr}.nurse-day{min-height:100px}}'
+      'footer.portal-footer-fixed{display:block!important;padding:22px 20px!important;text-align:center!important}',
+      'footer.portal-footer-fixed div{border:0!important;padding:0!important}',
+      'footer.portal-footer-fixed strong{display:block!important;font-size:17px!important;line-height:1.4!important}',
+      'footer.portal-footer-fixed .portal-location{margin-top:4px!important;font-size:15px!important;line-height:1.5!important}',
+      'footer.portal-footer-fixed .portal-rights{margin-top:17px!important;padding-top:15px!important;border-top:1px solid #7895a5!important;font-size:14px!important;font-weight:750!important;line-height:1.5!important}',
+      '@media(max-width:720px){.nurse-agenda{padding:21px 17px}.nurse-days{grid-template-columns:1fr}.nurse-day{min-height:100px}footer.portal-footer-fixed{padding:20px 16px!important}}'
     ].join('');
     document.head.appendChild(style);
+  }
+
+  function installFooter() {
+    var footer = document.querySelector('footer');
+    if (!footer) return;
+    footer.className = 'portal-footer-fixed';
+    footer.innerHTML = '<div><strong>Serviço TACS – Unidade de Saúde Posto Matias</strong><div class="portal-location">Sítio Japaranduba • Chã Grande/PE</div><div class="portal-rights">© 2026 Portal TACS. Todos os direitos reservados.</div></div>';
   }
 
   function recifeClock() {
@@ -142,14 +132,13 @@
   }
 
   function install() {
-    installFooterRights();
-
     var category = document.getElementById('category');
     var dental = document.getElementById('dentalSchedule');
     var subject = document.getElementById('subject');
     var subjectField = document.getElementById('subjectField');
     if (!category || !dental || !subject || !subjectField || document.getElementById('nurseSchedule')) return;
 
+    installFooter();
     removeNutritionistOption();
     installNoticeExpiry();
 
