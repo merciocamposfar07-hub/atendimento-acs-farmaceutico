@@ -45,6 +45,16 @@ Princípio central:
 - Não escolhe horário, salvo mudança futura na programação.
 - A agenda deve ser configurável separadamente.
 
+### Visita médica domiciliar
+
+- É uma solicitação ativa e própria do portal.
+- O comunitário informa para quem é a visita.
+- O comunitário descreve resumidamente o motivo.
+- Não escolhe dia nem horário.
+- A solicitação chega ao WhatsApp do TACS em card azul-petróleo.
+- O TACS encaminha a demanda para a Unidade de Saúde.
+- A data da visita é definida posteriormente pela Unidade e pode ser comunicada ao comunitário por card.
+
 ### Declarações
 
 Opções:
@@ -170,7 +180,6 @@ Módulos futuros já previstos:
 
 - Psicologia.
 - Fisioterapia.
-- Visita domiciliar.
 - Bolsa Família.
 - Calendário de exames.
 - Transporte sanitário.
