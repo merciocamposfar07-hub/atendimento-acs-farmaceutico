@@ -4,8 +4,9 @@
   var API = 'https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec';
   var timer = null;
   var requestId = 0;
-  var activeScript = null;
+  var activeFrame = null;
   var activeTimeout = null;
+  var activeNonce = '';
 
   function onlyDigits(value) {
     return String(value || '').replace(/\D/g, '').slice(0, 15);
@@ -74,16 +75,17 @@
       field.dispatchEvent(new Event('input', { bubbles: true }));
       field.dispatchEvent(new Event('change', { bubbles: true }));
     });
+
     return true;
   }
 
   function clearRequest() {
     if (activeTimeout) clearTimeout(activeTimeout);
     activeTimeout = null;
-    if (activeScript) {
-      activeScript.onerror = null;
-      if (activeScript.parentNode) activeScript.parentNode.removeChild(activeScript);
-      activeScript = null;
+    activeNonce = '';
+    if (activeFrame) {
+      if (activeFrame.parentNode) activeFrame.parentNode.removeChild(activeFrame);
+      activeFrame = null;
     }
   }
 
@@ -103,19 +105,25 @@
     if (label && label.firstChild) label.firstChild.textContent = 'CPF ou CNS ';
     setStatus(status, 'Informe o CPF ou o Cartão Nacional de Saúde (CNS).', '');
 
-    window.testeCallback = function (data) {
+    window.addEventListener('message', function (event) {
+      if (!activeFrame || event.source !== activeFrame.contentWindow) return;
+
+      var message = event.data;
+      if (!message || message.source !== 'portal-tacs-morador' || message.nonce !== activeNonce) return;
+
       var current = requestId;
+      var payload = message.payload;
       clearRequest();
       if (current !== requestId) return;
 
-      if (data && data.ok === true && data.encontrado === true && fillFields(data)) {
+      if (payload && payload.ok === true && payload.encontrado === true && fillFields(payload)) {
         setStatus(status, (validCns(input.value) ? 'CNS' : 'CPF') + ' encontrado ✓ Dados preenchidos automaticamente.', 'valid');
-      } else if (data && data.ok === true && data.encontrado === false) {
+      } else if (payload && payload.ok === true && payload.encontrado === false) {
         setStatus(status, 'Cadastro não encontrado. Confira o documento ou preencha os dados manualmente.', 'invalid');
       } else {
-        setStatus(status, 'Não foi possível completar a consulta. Tente novamente.', 'invalid');
+        setStatus(status, payload && payload.message ? payload.message : 'Não foi possível completar a consulta. Tente novamente.', 'invalid');
       }
-    };
+    });
 
     function lookup() {
       var doc = onlyDigits(input.value);
@@ -126,21 +134,22 @@
       clearRequest();
       setStatus(status, 'Buscando cadastro...', '');
 
-      activeScript = document.createElement('script');
-      activeScript.type = 'text/javascript';
-      activeScript.async = true;
-      activeScript.src = API + '?action=buscar_morador&documento=' + encodeURIComponent(doc) + '&callback=testeCallback';
-      activeScript.onerror = function () {
-        if (current !== requestId) return;
-        clearRequest();
-        setStatus(status, 'Não foi possível consultar agora. Tente novamente.', 'invalid');
-      };
+      var nonce = 'morador-' + Date.now() + '-' + Math.floor(Math.random() * 1000000);
+      var frame = document.createElement('iframe');
+      frame.hidden = true;
+      frame.setAttribute('aria-hidden', 'true');
+      frame.title = 'Consulta de cadastro';
+      frame.src = API + '?action=buscar_morador_bridge&documento=' + encodeURIComponent(doc) + '&nonce=' + encodeURIComponent(nonce) + '&v=' + Date.now();
+
+      activeNonce = nonce;
+      activeFrame = frame;
       activeTimeout = setTimeout(function () {
         if (current !== requestId) return;
         clearRequest();
         setStatus(status, 'A consulta demorou mais que o esperado. Tente novamente.', 'invalid');
       }, 15000);
-      document.head.appendChild(activeScript);
+
+      document.body.appendChild(frame);
     }
 
     function refresh() {
