@@ -9,6 +9,8 @@
   var activeTimeout = null;
   var activeNonce = '';
   var activeCallback = '';
+  var localityDisplay = null;
+  var ageObserver = null;
 
   function onlyDigits(value) {
     return String(value || '').replace(/\D/g, '').slice(0, 15);
@@ -53,22 +55,146 @@
     return match ? match[1] + '/' + match[2] + '/' + match[3] : text;
   }
 
+  function normalizedKey(value) {
+    var text = String(value || '').toLowerCase();
+    if (text.normalize) text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return text.replace(/[^a-z0-9]/g, '');
+  }
+
+  function findDeepValue(source, aliases) {
+    var wanted = aliases.map(normalizedKey);
+    var queue = [source];
+    var visited = [];
+    while (queue.length) {
+      var current = queue.shift();
+      if (!current || typeof current !== 'object' || visited.indexOf(current) !== -1) continue;
+      visited.push(current);
+      var keys = Object.keys(current);
+      for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        var value = current[key];
+        var nk = normalizedKey(key);
+        if (wanted.indexOf(nk) !== -1 && value !== undefined && value !== null && String(value).trim()) return String(value).trim();
+        if (value && typeof value === 'object') queue.push(value);
+      }
+    }
+    return '';
+  }
+
+  function parentNames(resident) {
+    return {
+      mother: findDeepValue(resident, ['nomeMae', 'nome_da_mae', 'nome da mãe', 'nome da mae', 'mae', 'mãe', 'maeNome', 'nomeDaMae', 'motherName']),
+      father: findDeepValue(resident, ['nomePai', 'nome_do_pai', 'nome do pai', 'pai', 'paiNome', 'nomeDoPai', 'fatherName'])
+    };
+  }
+
   function setStatus(status, text, type) {
     status.textContent = text;
     status.className = 'help id-cns-note' + (type ? ' ' + type : '');
   }
 
+  function resizeLocality() {
+    if (!localityDisplay) return;
+    localityDisplay.style.height = 'auto';
+    localityDisplay.style.height = Math.max(72, localityDisplay.scrollHeight) + 'px';
+  }
+
+  function setupLocalityField() {
+    var original = document.getElementById('locality');
+    if (!original || document.getElementById('localityDisplay')) return;
+    localityDisplay = document.createElement('textarea');
+    localityDisplay.id = 'localityDisplay';
+    localityDisplay.rows = 2;
+    localityDisplay.placeholder = original.placeholder || 'Ex.: Japaranduba';
+    localityDisplay.autocomplete = original.autocomplete || 'street-address';
+    localityDisplay.value = original.value || '';
+    localityDisplay.style.minHeight = '72px';
+    localityDisplay.style.resize = 'none';
+    localityDisplay.style.overflow = 'hidden';
+    original.style.display = 'none';
+    original.setAttribute('aria-hidden', 'true');
+    original.insertAdjacentElement('afterend', localityDisplay);
+    localityDisplay.addEventListener('input', function () {
+      original.value = localityDisplay.value;
+      original.dispatchEvent(new Event('input', { bubbles: true }));
+      original.dispatchEvent(new Event('change', { bubbles: true }));
+      resizeLocality();
+    });
+    resizeLocality();
+  }
+
   function dispatchField(field, value) {
     if (!field) return;
     field.value = value;
+    if (field.id === 'locality' && localityDisplay) {
+      localityDisplay.value = value;
+      resizeLocality();
+    }
     field.dispatchEvent(new Event('input', { bubbles: true }));
     field.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function recifeParts() {
+    var parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Recife', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+    var out = {};
+    parts.forEach(function (part) { out[part.type] = Number(part.value); });
+    return { year: out.year, month: out.month, day: out.day };
+  }
+
+  function preciseAgeText(value) {
+    var match = normalizeBirth(value).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return '';
+    var birth = { day: Number(match[1]), month: Number(match[2]), year: Number(match[3]) };
+    var today = recifeParts();
+    var birthStamp = Date.UTC(birth.year, birth.month - 1, birth.day);
+    var todayStamp = Date.UTC(today.year, today.month - 1, today.day);
+    if (birthStamp > todayStamp) return '';
+    var totalDays = Math.floor((todayStamp - birthStamp) / 86400000);
+    var years = today.year - birth.year;
+    if (today.month < birth.month || (today.month === birth.month && today.day < birth.day)) years--;
+    var months = (today.year - birth.year) * 12 + today.month - birth.month;
+    if (today.day < birth.day) months--;
+    if (years >= 2) return years + (years === 1 ? ' ano' : ' anos');
+    if (years === 1) {
+      var remainingMonths = Math.max(0, months - 12);
+      return remainingMonths ? '1 ano e ' + remainingMonths + (remainingMonths === 1 ? ' mês' : ' meses') : '1 ano';
+    }
+    if (months >= 1) {
+      var monthStart = new Date(Date.UTC(birth.year, birth.month - 1 + months, birth.day));
+      var days = Math.max(0, Math.floor((todayStamp - monthStart.getTime()) / 86400000));
+      return months + (months === 1 ? ' mês' : ' meses') + (days ? ' e ' + days + (days === 1 ? ' dia' : ' dias') : '');
+    }
+    return totalDays + (totalDays === 1 ? ' dia' : ' dias');
+  }
+
+  function updatePreciseAge() {
+    var field = document.getElementById('birth');
+    var status = document.getElementById('ageStatus');
+    if (!field || !status) return;
+    var age = preciseAgeText(field.value);
+    if (!age) return;
+    var expected = 'Idade: ' + age;
+    if (status.textContent !== expected) status.textContent = expected;
+    status.className = 'help valid';
+  }
+
+  function protectPreciseAge() {
+    var status = document.getElementById('ageStatus');
+    var birth = document.getElementById('birth');
+    if (!status || !birth || ageObserver) return;
+    ageObserver = new MutationObserver(function () { window.requestAnimationFrame(updatePreciseAge); });
+    ageObserver.observe(status, { childList: true, characterData: true, subtree: true });
+    birth.addEventListener('input', function () { window.requestAnimationFrame(updatePreciseAge); });
+    birth.addEventListener('change', function () { window.requestAnimationFrame(updatePreciseAge); });
   }
 
   function clearResidentFields() {
     dispatchField(document.getElementById('birth'), '');
     dispatchField(document.getElementById('name'), '');
     dispatchField(document.getElementById('locality'), '');
+    dispatchField(document.getElementById('motherName'), '');
+    dispatchField(document.getElementById('fatherName'), '');
+    window.TACS_MORADOR_ATUAL = null;
   }
 
   function fillFields(payload) {
@@ -76,15 +202,25 @@
     if (!resident || typeof resident !== 'object') return false;
 
     var values = {
-      name: String(resident.nome || '').trim(),
-      birth: normalizeBirth(resident.nascimento || resident.dataNascimento || ''),
-      locality: String(resident.localidade || resident.endereco || '').trim()
+      name: String(resident.nome || resident.nomeCompleto || '').trim(),
+      birth: normalizeBirth(resident.nascimento || resident.dataNascimento || resident.data_nascimento || ''),
+      locality: String(resident.localidade || resident.endereco || resident.endereço || resident.comunidade || '').trim()
     };
 
     if (!values.name || !values.birth || !values.locality) return false;
     Object.keys(values).forEach(function (id) {
       dispatchField(document.getElementById(id), values[id]);
     });
+
+    var parents = parentNames(resident);
+    if (parents.mother) dispatchField(document.getElementById('motherName'), parents.mother);
+    if (parents.father) dispatchField(document.getElementById('fatherName'), parents.father);
+
+    window.TACS_MORADOR_ATUAL = resident;
+    try {
+      document.dispatchEvent(new CustomEvent('tacs:morador', { detail: resident }));
+    } catch (e) {}
+    window.requestAnimationFrame(function () { updatePreciseAge(); resizeLocality(); });
     return true;
   }
 
@@ -111,12 +247,15 @@
   }
 
   function install() {
+    setupLocalityField();
+    protectPreciseAge();
+
     var oldInput = document.getElementById('cpf');
     var status = document.getElementById('cpfStatus');
-    if (!oldInput || !status || oldInput.dataset.autofillIsolado === '3') return;
+    if (!oldInput || !status || oldInput.dataset.autofillIsolado === '4') return;
 
     var input = oldInput.cloneNode(true);
-    input.dataset.autofillIsolado = '3';
+    input.dataset.autofillIsolado = '4';
     input.value = '';
     input.maxLength = 18;
     input.placeholder = 'CPF ou CNS';
