@@ -112,6 +112,7 @@
 
         await OneSignal.init({
           appId: config.appId,
+          safari_web_id: config.safariWebId,
           serviceWorkerPath: config.serviceWorkerPath || 'push/OneSignalSDKWorker.js',
           serviceWorkerParam: config.serviceWorkerParam || { scope: '/atendimento-acs-farmaceutico/push/' },
           notifyButton: { enable: false },
