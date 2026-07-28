@@ -2,6 +2,7 @@
   'use strict';
 
   var API = 'https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec';
+  var PORTAL_ORIGIN = 'https://merciocamposfar07-hub.github.io';
   var timer = null;
   var requestId = 0;
   var activeFrame = null;
@@ -89,13 +90,33 @@
     }
   }
 
+  function makeBridgeHtml(documentNumber, nonce) {
+    var callback = 'moradorResposta' + Date.now() + Math.floor(Math.random() * 1000000);
+    var url = API + '?action=buscar_morador&documento=' + encodeURIComponent(documentNumber) + '&callback=' + encodeURIComponent(callback) + '&v=' + Date.now();
+
+    return '<!doctype html><html><head><meta charset="utf-8"></head><body>' +
+      '<script>' +
+      '(function(){' +
+      'var finished=false;' +
+      'function send(payload){if(finished)return;finished=true;parent.postMessage({source:"portal-tacs-morador",nonce:' + JSON.stringify(nonce) + ',payload:payload},' + JSON.stringify(PORTAL_ORIGIN) + ');}' +
+      'window[' + JSON.stringify(callback) + ']=function(data){send(data);};' +
+      'var script=document.createElement("script");' +
+      'script.async=true;' +
+      'script.src=' + JSON.stringify(url) + ';' +
+      'script.onerror=function(){send({ok:false,encontrado:false,message:"Não foi possível consultar agora. Tente novamente."});};' +
+      'document.head.appendChild(script);' +
+      'setTimeout(function(){send({ok:false,encontrado:false,message:"A consulta demorou mais que o esperado. Tente novamente."});},12000);' +
+      '}());' +
+      '<\/script></body></html>';
+  }
+
   function install() {
     var oldInput = document.getElementById('cpf');
     var status = document.getElementById('cpfStatus');
-    if (!oldInput || !status || oldInput.dataset.autofillIsolado === '1') return;
+    if (!oldInput || !status || oldInput.dataset.autofillIsolado === '2') return;
 
     var input = oldInput.cloneNode(true);
-    input.dataset.autofillIsolado = '1';
+    input.dataset.autofillIsolado = '2';
     input.value = '';
     input.maxLength = 18;
     input.placeholder = 'CPF ou CNS';
@@ -106,15 +127,13 @@
     setStatus(status, 'Informe o CPF ou o Cartão Nacional de Saúde (CNS).', '');
 
     window.addEventListener('message', function (event) {
-      if (!activeFrame || event.source !== activeFrame.contentWindow) return;
+      if (event.origin !== PORTAL_ORIGIN || !activeFrame || event.source !== activeFrame.contentWindow) return;
 
       var message = event.data;
       if (!message || message.source !== 'portal-tacs-morador' || message.nonce !== activeNonce) return;
 
-      var current = requestId;
       var payload = message.payload;
       clearRequest();
-      if (current !== requestId) return;
 
       if (payload && payload.ok === true && payload.encontrado === true && fillFields(payload)) {
         setStatus(status, (validCns(input.value) ? 'CNS' : 'CPF') + ' encontrado ✓ Dados preenchidos automaticamente.', 'valid');
@@ -129,8 +148,7 @@
       var doc = onlyDigits(input.value);
       if (!(validCpf(doc) || validCns(doc))) return;
 
-      requestId++;
-      var current = requestId;
+      var current = ++requestId;
       clearRequest();
       setStatus(status, 'Buscando cadastro...', '');
 
@@ -139,7 +157,7 @@
       frame.hidden = true;
       frame.setAttribute('aria-hidden', 'true');
       frame.title = 'Consulta de cadastro';
-      frame.src = API + '?action=buscar_morador_bridge&documento=' + encodeURIComponent(doc) + '&nonce=' + encodeURIComponent(nonce) + '&v=' + Date.now();
+      frame.srcdoc = makeBridgeHtml(doc, nonce);
 
       activeNonce = nonce;
       activeFrame = frame;
