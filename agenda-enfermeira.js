@@ -161,7 +161,7 @@
   function loadResidentsAutofill() {
     if (document.querySelector('script[data-moradores-autofill]')) return;
     var script = document.createElement('script');
-    script.src = 'moradores-autofill.js?v=20260727-01';
+    script.src = 'moradores-autofill.js?v=20260727-02';
     script.dataset.moradoresAutofill = '1';
     document.head.appendChild(script);
   }
