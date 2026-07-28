@@ -107,7 +107,7 @@
     status.className = 'help id-cns-note';
 
     var timer = null;
-    var requestNumber = 0;
+    var sequence = 0;
     var activeScript = null;
     var activeTimeout = null;
 
@@ -140,12 +140,13 @@
     }
 
     function fillResident(data) {
-      var resident = data && data.morador;
+      var resident = data && (data.morador || data.residente || data.dados || data.data);
       if (!resident || typeof resident !== 'object') return false;
-      var name = fieldValue(resident, ['nome', 'NOME']);
-      var birth = normalizeBirth(fieldValue(resident, ['nascimento', 'dataNascimento', 'data_nascimento']));
-      var locality = fieldValue(resident, ['localidade', 'endereco', 'endereço']);
+      var name = fieldValue(resident, ['nome', 'NOME', 'nomeCompleto', 'nome_completo']);
+      var birth = normalizeBirth(fieldValue(resident, ['nascimento', 'dataNascimento', 'data_nascimento', 'DATA NASCIMENTO', 'DATA_NASCIMENTO']));
+      var locality = fieldValue(resident, ['localidade', 'endereco', 'endereço', 'ENDERECO', 'ENDEREÇO', 'comunidade']);
       if (!name || !birth || !locality) return false;
+
       var values = { name: name, birth: birth, locality: locality };
       Object.keys(values).forEach(function (id) {
         var field = document.getElementById(id);
@@ -157,24 +158,37 @@
       return true;
     }
 
-    function clearActiveRequest() {
+    function clearActiveRequest(delayRemoval) {
       if (activeTimeout) clearTimeout(activeTimeout);
       activeTimeout = null;
-      if (activeScript && activeScript.parentNode) activeScript.parentNode.removeChild(activeScript);
-      activeScript = null;
+      if (activeScript) {
+        activeScript.onerror = null;
+        var scriptToRemove = activeScript;
+        activeScript = null;
+        setTimeout(function () {
+          if (scriptToRemove.parentNode) scriptToRemove.parentNode.removeChild(scriptToRemove);
+        }, delayRemoval ? 50 : 0);
+      }
     }
 
     function lookup() {
       var doc = digits();
       if (!(validCpf(doc) || isCns(doc))) return;
-      var currentRequest = ++requestNumber;
-      clearActiveRequest();
+
+      var current = ++sequence;
+      clearActiveRequest(false);
       status.textContent = 'Buscando seus dados na Unidade de Saúde...';
       status.className = 'help id-cns-note';
 
-      window.tacsMoradorCallback = function (data) {
-        if (currentRequest !== requestNumber) return;
-        clearActiveRequest();
+      var callbackName = 'moradorTacs' + Date.now() + Math.floor(Math.random() * 100000);
+      var completed = false;
+
+      window[callbackName] = function (data) {
+        if (completed || current !== sequence) return;
+        completed = true;
+        clearActiveRequest(true);
+        try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+
         if (data && data.ok === true && data.encontrado === true && fillResident(data)) {
           status.textContent = (isCns(doc) ? 'CNS' : 'CPF') + ' encontrado ✓ Dados preenchidos automaticamente.';
           status.className = 'help id-cns-note valid';
@@ -186,32 +200,39 @@
 
       activeScript = document.createElement('script');
       activeScript.type = 'text/javascript';
-      activeScript.src = API + '?action=buscar_morador&documento=' + encodeURIComponent(doc) + '&callback=tacsMoradorCallback&v=' + Date.now();
+      activeScript.async = true;
       activeScript.onerror = function () {
-        if (currentRequest !== requestNumber) return;
-        clearActiveRequest();
+        if (completed || current !== sequence) return;
+        completed = true;
+        clearActiveRequest(false);
+        try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
         status.textContent = 'Não foi possível consultar agora. Tente novamente.';
         status.className = 'help id-cns-note invalid';
       };
+      activeScript.src = API + '?action=buscar_morador&documento=' + encodeURIComponent(doc) + '&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
+
       activeTimeout = setTimeout(function () {
-        if (currentRequest !== requestNumber) return;
-        clearActiveRequest();
+        if (completed || current !== sequence) return;
+        completed = true;
+        clearActiveRequest(false);
+        try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
         status.textContent = 'A consulta demorou mais que o esperado. Tente novamente.';
         status.className = 'help id-cns-note invalid';
-      }, 20000);
-      document.body.appendChild(activeScript);
+      }, 15000);
+
+      document.head.appendChild(activeScript);
     }
 
     function refresh() {
       var d = digits();
       var ok = validCpf(d) || isCns(d);
       clearTimeout(timer);
-      requestNumber++;
-      clearActiveRequest();
+      sequence++;
+      clearActiveRequest(false);
       if (ok) {
         status.textContent = (isCns(d) ? 'CNS informado ✓' : 'CPF conferido ✓') + ' Buscando cadastro...';
         status.className = 'help id-cns-note valid';
-        timer = setTimeout(lookup, 300);
+        timer = setTimeout(lookup, 350);
       } else {
         status.textContent = d.length ? 'Digite um CPF válido ou os 15 números do CNS.' : 'Informe o CPF ou o Cartão Nacional de Saúde (CNS).';
         status.className = 'help id-cns-note' + (d.length ? ' invalid' : '');
