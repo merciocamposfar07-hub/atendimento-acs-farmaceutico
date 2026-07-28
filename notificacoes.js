@@ -3,6 +3,7 @@
 
   var STORAGE_PENDING = 'portalTacsNotificacoesPendente';
   var STORAGE_ENABLED = 'portalTacsNotificacoesAtivas';
+  var oneSignalStarted = false;
 
   function isIos() {
     return /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -10,6 +11,14 @@
 
   function isStandalone() {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+
+  function wantsNotificationsFromUrl() {
+    try {
+      return new URLSearchParams(window.location.search).get('notificacoes') === '1';
+    } catch (error) {
+      return false;
+    }
   }
 
   function ensureStyles() {
@@ -41,9 +50,11 @@
 
   function setPending() {
     try { localStorage.setItem(STORAGE_PENDING, '1'); } catch (error) {}
+    setTimeout(configureOffer, 0);
   }
 
   function shouldShowOffer() {
+    if (wantsNotificationsFromUrl()) return true;
     try {
       return localStorage.getItem(STORAGE_PENDING) === '1' || localStorage.getItem(STORAGE_ENABLED) === '1';
     } catch (error) {
@@ -56,6 +67,68 @@
     if (!send || send.dataset.notificationHook === '1') return;
     send.dataset.notificationHook = '1';
     send.addEventListener('click', setPending, true);
+  }
+
+  function showEnabled(status, button) {
+    status.textContent = 'Notificações ativadas neste aparelho.';
+    button.textContent = 'Notificações ativadas';
+    button.disabled = true;
+    try {
+      localStorage.setItem(STORAGE_ENABLED, '1');
+      localStorage.removeItem(STORAGE_PENDING);
+    } catch (error) {}
+  }
+
+  function configureOneSignal(button, status, help) {
+    if (oneSignalStarted) return;
+    oneSignalStarted = true;
+
+    var config = window.PORTAL_TACS_NOTIFICACOES || {};
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function (OneSignal) {
+      try {
+        await OneSignal.init({
+          appId: config.appId,
+          serviceWorkerPath: config.serviceWorkerPath || 'push/OneSignalSDKWorker.js',
+          serviceWorkerParam: config.serviceWorkerParam || { scope: '/atendimento-acs-farmaceutico/push/' },
+          notifyButton: { enable: false },
+          allowLocalhostAsSecureOrigin: false
+        });
+
+        if (OneSignal.Notifications.permission) {
+          showEnabled(status, button);
+          return;
+        }
+
+        status.textContent = 'Toque no botão para autorizar os avisos neste aparelho.';
+        help.textContent = 'O iPhone mostrará a janela oficial de permissão após o toque.';
+
+        if (button.dataset.permissionBound !== '1') {
+          button.dataset.permissionBound = '1';
+          button.addEventListener('click', async function () {
+            button.disabled = true;
+            status.textContent = 'Aguardando sua autorização...';
+            try {
+              await OneSignal.Notifications.requestPermission();
+              if (OneSignal.Notifications.permission) {
+                showEnabled(status, button);
+              } else {
+                status.textContent = 'A permissão não foi concedida.';
+                button.disabled = false;
+              }
+            } catch (error) {
+              status.textContent = 'Não foi possível ativar agora. Tente novamente.';
+              button.disabled = false;
+            }
+          });
+        }
+      } catch (error) {
+        oneSignalStarted = false;
+        status.textContent = 'Não foi possível iniciar as notificações agora.';
+        help.textContent = 'Feche e abra novamente o Portal TACS pelo ícone da Tela de Início.';
+        button.disabled = false;
+      }
+    });
   }
 
   function configureOffer() {
@@ -71,11 +144,15 @@
 
     if (isIos() && !isStandalone()) {
       status.textContent = 'No iPhone, adicione primeiro o Portal TACS à Tela de Início.';
-      help.textContent = 'Toque em Compartilhar e depois em “Adicionar à Tela de Início”. Abra o portal pelo novo ícone e toque novamente em Ativar notificações.';
+      help.textContent = 'Toque em Compartilhar e depois em “Adicionar à Tela de Início”. Abra o portal pelo novo ícone e toque em Ativar notificações.';
       button.textContent = 'Como adicionar à Tela de Início';
-      button.addEventListener('click', function () {
-        help.textContent = 'No Safari: Compartilhar → Adicionar à Tela de Início → Adicionar.';
-      });
+      button.disabled = false;
+      if (button.dataset.homeBound !== '1') {
+        button.dataset.homeBound = '1';
+        button.addEventListener('click', function () {
+          help.textContent = 'No Safari: Compartilhar → Adicionar à Tela de Início → Adicionar.';
+        });
+      }
       return;
     }
 
@@ -86,50 +163,9 @@
       return;
     }
 
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async function (OneSignal) {
-      await OneSignal.init({
-        appId: config.appId,
-        serviceWorkerPath: config.serviceWorkerPath || 'OneSignalSDKWorker.js',
-        serviceWorkerParam: config.serviceWorkerParam || { scope: '/atendimento-acs-farmaceutico/' },
-        notifyButton: { enable: false },
-        allowLocalhostAsSecureOrigin: false
-      });
-
-      var permission = OneSignal.Notifications.permission;
-      if (permission) {
-        status.textContent = 'Notificações ativadas neste aparelho.';
-        button.textContent = 'Notificações ativadas';
-        button.disabled = true;
-        try {
-          localStorage.setItem(STORAGE_ENABLED, '1');
-          localStorage.removeItem(STORAGE_PENDING);
-        } catch (error) {}
-        return;
-      }
-
-      button.addEventListener('click', async function () {
-        button.disabled = true;
-        status.textContent = 'Aguardando sua autorização...';
-        try {
-          await OneSignal.Notifications.requestPermission();
-          if (OneSignal.Notifications.permission) {
-            status.textContent = 'Notificações ativadas neste aparelho.';
-            button.textContent = 'Notificações ativadas';
-            try {
-              localStorage.setItem(STORAGE_ENABLED, '1');
-              localStorage.removeItem(STORAGE_PENDING);
-            } catch (error) {}
-          } else {
-            status.textContent = 'A permissão não foi concedida.';
-            button.disabled = false;
-          }
-        } catch (error) {
-          status.textContent = 'Não foi possível ativar agora. Tente novamente.';
-          button.disabled = false;
-        }
-      });
-    });
+    button.textContent = 'Ativar notificações';
+    button.disabled = false;
+    configureOneSignal(button, status, help);
   }
 
   function loadSdk() {
@@ -147,6 +183,7 @@
     installSendHook();
     loadSdk();
     configureOffer();
+    window.addEventListener('pageshow', configureOffer);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
