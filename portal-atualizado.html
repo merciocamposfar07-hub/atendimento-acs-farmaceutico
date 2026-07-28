@@ -16,7 +16,7 @@
     (function () {
       'use strict';
 
-      var version = '20260728-07';
+      var version = '20260728-08';
 
       var oldDentalLoader = `function loadDental(){dentalState='loading';renderDental();if(!DENTAL_API){failAgenda();return}var cb='dentalAgenda'+Date.now()+Math.floor(Math.random()*10000),script=document.createElement('script'),done=false,timer=setTimeout(function(){if(done)return;done=true;delete window[cb];if(script.parentNode)script.remove();failAgenda()},12000);window[cb]=function(data){if(done)return;done=true;clearTimeout(timer);delete window[cb];if(script.parentNode)script.remove();try{acceptAgenda(data)}catch(e){failAgenda()}};script.onerror=function(){if(done)return;done=true;clearTimeout(timer);delete window[cb];if(script.parentNode)script.remove();failAgenda()};script.src=DENTAL_API+(DENTAL_API.indexOf('?')===-1?'?':'&')+'action=agenda&callback='+encodeURIComponent(cb)+'&v='+Date.now();document.head.appendChild(script)}`;
 
@@ -35,7 +35,8 @@
           html = html
             .replace(/agenda-config\.js\?v=[^"']+/g, 'agenda-config.js?v=' + version)
             .replace(/agenda-enfermeira\.js\?v=[^"']+/g, 'agenda-enfermeira.js?v=' + version)
-            .replace(oldDentalLoader, newDentalLoader);
+            .replace(oldDentalLoader, newDentalLoader)
+            .replace('</body>', '<script src="notificacoes-config.js?v=' + version + '"><\/script><script src="notificacoes.js?v=' + version + '"><\/script></body>');
 
           document.open();
           document.write(html);
