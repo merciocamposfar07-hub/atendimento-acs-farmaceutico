@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#062c46">
+  <title>Correção pai e mãe | Portal TACS</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#e9eff3;color:#102b3c;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}.wrap{width:min(calc(100% - 18px),900px);margin:12px auto 40px}.card{background:#fff;border:2px solid #9eb4bf;border-radius:22px;overflow:hidden;box-shadow:0 16px 40px rgba(5,44,70,.16)}header{padding:26px 22px;background:linear-gradient(135deg,#041f34,#0a4265);color:#fff}h1{margin:0 0 10px;font-size:clamp(34px,8vw,54px);line-height:1.05}header p{margin:0;color:#d9e7ee;font-size:18px;line-height:1.5}main{padding:20px}.steps{padding:16px 18px;border-radius:16px;background:#eef7f2;border:2px solid #80bf9d;font-size:18px;line-height:1.55}.steps strong{color:#066f35}.copy{width:100%;min-height:64px;margin:18px 0;border:0;border-radius:15px;background:#08783b;color:#fff;font-size:22px;font-weight:900}.copy.done{background:#0a5f8a}textarea{width:100%;height:440px;border:2px solid #8ca5b2;border-radius:14px;padding:14px;background:#f7fafb;color:#102b3c;font:15px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}.note{margin-top:16px;padding:15px;border-radius:14px;background:#fff3df;border:2px solid #e1b96c;color:#6b470f;font-size:17px;line-height:1.5}
+  </style>
+</head>
+<body>
+<div class="wrap"><section class="card">
+<header><h1>Correção do nome do pai e da mãe</h1><p>Substitua apenas o conteúdo do arquivo <strong>MoradoresBusca.gs</strong>.</p></header>
+<main>
+<div class="steps"><strong>Passos:</strong><br>1. Toque em <strong>Copiar código completo</strong>.<br>2. No Apps Script, abra <strong>MoradoresBusca.gs</strong>.<br>3. Selecione todo o conteúdo antigo e cole este código.<br>4. Salve e faça <strong>Implantar → Gerenciar implantações → Editar → Nova versão → Implantar</strong>.</div>
+<button class="copy" id="copy" type="button">Copiar código completo</button>
+<textarea id="code" readonly>function normalizarDocumentoMorador_(valor) {
+  return String(valor || '').replace(/\D/g, '');
+}
+
+function normalizarCabecalhoMorador_(valor) {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+}
+
+function localizarColunaMorador_(cabecalhos, nomes, colunaPadrao) {
+  var procurados = nomes.map(normalizarCabecalhoMorador_);
+  for (var i = 0; i < cabecalhos.length; i++) {
+    if (procurados.indexOf(cabecalhos[i]) !== -1) return i;
+  }
+  return typeof colunaPadrao === 'number' ? colunaPadrao : -1;
+}
+
+function buscarMoradorPorDocumento_(documento) {
+  var doc = normalizarDocumentoMorador_(documento);
+  if (doc.length !== 11 && doc.length !== 15) {
+    return { ok: true, encontrado: false, morador: null };
+  }
+
+  var aba = getPlanilha().getSheetByName('MORADORES');
+  if (!aba) throw new Error('A aba MORADORES não foi encontrada.');
+
+  var dados = aba.getDataRange().getDisplayValues();
+  if (dados.length < 2) {
+    return { ok: true, encontrado: false, morador: null };
+  }
+
+  var cabecalhos = dados[0].map(normalizarCabecalhoMorador_);
+
+  var colCpf = localizarColunaMorador_(cabecalhos, ['CPF'], 2);
+  var colCns = localizarColunaMorador_(cabecalhos, ['CNS', 'CARTAO NACIONAL DE SAUDE', 'CARTÃO NACIONAL DE SAÚDE'], 3);
+  var colNome = localizarColunaMorador_(cabecalhos, ['NOME', 'NOME COMPLETO'], 4);
+  var colNascimento = localizarColunaMorador_(cabecalhos, ['DATA DE NASCIMENTO', 'NASCIMENTO', 'DATA NASCIMENTO'], 5);
+  var colEndereco = localizarColunaMorador_(cabecalhos, ['ENDERECO', 'ENDEREÇO', 'LOCALIDADE', 'COMUNIDADE', 'ENDERECO LOCALIDADE'], 8);
+
+  var colMae = localizarColunaMorador_(cabecalhos, [
+    'NOME DA MAE',
+    'NOME COMPLETO DA MAE',
+    'MAE',
+    'FILIACAO MAE',
+    'FILIACAO 1',
+    'NOME MAE'
+  ], -1);
+
+  var colPai = localizarColunaMorador_(cabecalhos, [
+    'NOME DO PAI',
+    'NOME COMPLETO DO PAI',
+    'PAI',
+    'FILIACAO PAI',
+    'FILIACAO 2',
+    'NOME PAI'
+  ], -1);
+
+  for (var linha = 1; linha < dados.length; linha++) {
+    var registro = dados[linha];
+    var cpf = normalizarDocumentoMorador_(registro[colCpf]);
+    var cns = normalizarDocumentoMorador_(registro[colCns]);
+
+    if (doc !== cpf && doc !== cns) continue;
+
+    return {
+      ok: true,
+      encontrado: true,
+      morador: {
+        cpf: registro[colCpf] || '',
+        cns: registro[colCns] || '',
+        nome: registro[colNome] || '',
+        nascimento: registro[colNascimento] || '',
+        localidade: registro[colEndereco] || '',
+        nomeMae: colMae >= 0 ? (registro[colMae] || '') : '',
+        nomePai: colPai >= 0 ? (registro[colPai] || '') : ''
+      }
+    };
+  }
+
+  return { ok: true, encontrado: false, morador: null };
+}</textarea>
+<div class="note"><strong>Importante:</strong> não altere os arquivos <strong>MoradoresBridge.gs</strong> nem <strong>Portal.gs</strong>. A correção é somente em <strong>MoradoresBusca.gs</strong>. O código procura automaticamente as colunas pelo título “Nome da mãe” e “Nome do pai”, mesmo que elas estejam depois da coluna I.</div>
+</main></section></div>
+<script>
+  document.getElementById('copy').addEventListener('click',async function(){
+    var code=document.getElementById('code').value;
+    try{await navigator.clipboard.writeText(code);this.textContent='Código copiado ✓';this.classList.add('done')}catch(e){var t=document.getElementById('code');t.focus();t.select();document.execCommand('copy');this.textContent='Código copiado ✓';this.classList.add('done')}
+  });
+</script>
+</body>
+</html>
