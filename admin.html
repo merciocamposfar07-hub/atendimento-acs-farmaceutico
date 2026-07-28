@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062c46">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Painel Administrativo | Portal TACS</title>
-  <link rel="stylesheet" href="admin-painel.css?v=20260728-01">
+  <link rel="stylesheet" href="admin-painel.css?v=20260728-02">
 </head>
 <body>
 <div class="wrap">
@@ -16,35 +16,53 @@
       <h1>Painel Administrativo</h1>
       <p>Unidade de Saúde Posto Matias • Sítio Japaranduba</p>
       <div class="top-actions">
-        <a href="portal-atualizado.html?v=20260728-13" target="_blank" rel="noopener">Abrir portal público</a>
+        <a href="portal-atualizado.html?v=20260728-14" target="_blank" rel="noopener">Abrir portal público</a>
         <button id="refreshAll" type="button">Atualizar todos os dados</button>
-        <button id="forgetKey" type="button">Esquecer chave administrativa</button>
       </div>
+      <details class="access-box">
+        <summary>Configurar chave administrativa</summary>
+        <p>A chave é usada apenas para publicar a agenda da enfermeira e a agenda odontológica. Ela precisa ser a mesma definida no Google Apps Script.</p>
+        <div class="access-grid">
+          <input id="adminKeyInput" type="password" autocomplete="off" placeholder="Digite a chave quando ela estiver configurada">
+          <button id="saveAdminKey" type="button">Salvar neste aparelho</button>
+          <button id="clearAdminKey" type="button">Apagar deste aparelho</button>
+        </div>
+        <div id="accessStatus" class="access-status">Nenhuma chave administrativa foi configurada neste aparelho.</div>
+      </details>
     </header>
 
     <main>
+      <div class="system-note">
+        <strong>Comunicados pelo WhatsApp</strong>
+        <span>O portal público não solicita mais permissão de notificações. Este painel prepara textos e cards em azul-petróleo para compartilhar no WhatsApp e no Status.</span>
+      </div>
+
       <nav class="tabs" aria-label="Seções do painel">
         <button class="tab active" data-tab="enfermeira">Agenda da enfermeira</button>
         <button class="tab" data-tab="avisos">Avisos</button>
         <button class="tab" data-tab="odontologia">Odontologia</button>
-        <button class="tab" data-tab="notificacoes">Notificações</button>
+        <button class="tab" data-tab="compartilhar">Compartilhar</button>
       </nav>
 
       <section id="enfermeira" class="card admin-section">
         <h2>Agenda da Enfermeira Chefe</h2>
-        <p class="intro">Edite a programação semanal e publique. A agenda padrão permanece como segurança caso a conexão esteja temporariamente indisponível.</p>
+        <p class="intro">Edite a programação semanal. Depois, publique no portal ou compartilhe a agenda por texto e card.</p>
         <div id="nurseDays" class="days"></div>
         <div class="actions">
           <button id="saveNurse" class="btn primary" type="button">Publicar agenda da enfermeira</button>
           <button id="resetNurse" class="btn ghost" type="button">Restaurar agenda padrão</button>
           <button id="reloadNurse" class="btn secondary" type="button">Recarregar</button>
         </div>
+        <div class="share-actions">
+          <button id="shareNurseText" class="btn whatsapp" type="button">Enviar texto no WhatsApp</button>
+          <button id="shareNurseCard" class="btn petroleum" type="button">Repostar card no Status</button>
+        </div>
         <div id="nurseStatus" class="status">Carregando a programação atual...</div>
       </section>
 
       <section id="avisos" class="card admin-section" hidden>
         <h2>Avisos da Unidade</h2>
-        <p class="intro">Publique o atendimento médico e um comunicado geral. Os dados atuais são carregados diretamente do mural público.</p>
+        <p class="intro">Publique o atendimento médico e um comunicado geral. Cada bloco também pode ser enviado como texto ou card.</p>
 
         <div class="subcard">
           <h3>Atendimento médico</h3>
@@ -64,17 +82,29 @@
               <input id="medicalTime" placeholder="Ex.: 08:00">
             </label>
             <label class="full">Observação
-              <textarea id="medicalNote" placeholder="Ex.: Atendimento confirmado na Unidade de Saúde Posto Matias."></textarea>
+              <textarea id="medicalNote" placeholder="Informação para os moradores"></textarea>
             </label>
           </div>
           <div class="actions">
             <button id="clearMedical" class="btn ghost" type="button">Limpar atendimento médico</button>
+            <button id="shareMedicalText" class="btn whatsapp" type="button">Enviar texto no WhatsApp</button>
+            <button id="shareMedicalCard" class="btn petroleum" type="button">Card para o Status</button>
           </div>
         </div>
 
         <div class="subcard">
           <h3>Comunicado geral</h3>
           <div class="grid">
+            <label>Tipo do comunicado
+              <select id="noticeType">
+                <option value="Aviso geral">Aviso geral</option>
+                <option value="Atendimento com nutricionista">Nutricionista</option>
+                <option value="Atendimento médico">Atendimento médico</option>
+                <option value="Vacinação">Vacinação</option>
+                <option value="Alteração de atendimento">Alteração</option>
+                <option value="Cancelamento">Cancelamento</option>
+              </select>
+            </label>
             <label>Importância
               <select id="noticePriority">
                 <option value="informativo">Informativo</option>
@@ -89,19 +119,19 @@
               <input id="noticeTitle" placeholder="Ex.: Atendimento com nutricionista">
             </label>
             <label class="full">Mensagem
-              <textarea id="noticeMessage" placeholder="Escreva o comunicado que aparecerá no portal."></textarea>
+              <textarea id="noticeMessage" placeholder="Escreva o comunicado que aparecerá no portal"></textarea>
             </label>
           </div>
           <div id="noticePreview" class="notice-preview" hidden></div>
           <div class="actions">
             <button id="clearNotice" class="btn ghost" type="button">Limpar comunicado geral</button>
+            <button id="shareNoticeText" class="btn whatsapp" type="button">Enviar texto no WhatsApp</button>
+            <button id="shareNoticeCard" class="btn petroleum" type="button">Card para o Status</button>
           </div>
         </div>
 
-        <label class="switch-line"><input id="openPushAfterNotice" type="checkbox" checked> Depois de publicar, abrir o OneSignal para enviar a notificação aos aparelhos inscritos.</label>
-
         <div class="actions">
-          <button id="publishNotices" class="btn primary" type="button">Publicar avisos</button>
+          <button id="publishNotices" class="btn primary" type="button">Publicar avisos no portal</button>
           <button id="reloadNotices" class="btn secondary" type="button">Recarregar avisos atuais</button>
         </div>
         <div id="noticeStatus" class="status">Carregando os avisos atuais...</div>
@@ -109,46 +139,62 @@
 
       <section id="odontologia" class="card admin-section" hidden>
         <h2>Agenda odontológica</h2>
-        <p class="intro">Defina as datas e quantidades de vagas comuns e emergenciais. As reservas feitas no portal continuam reduzindo automaticamente as vagas.</p>
+        <p class="intro">Defina as datas e vagas comuns e emergenciais. As reservas do portal continuam reduzindo as vagas automaticamente.</p>
         <div id="dentalRows" class="days"></div>
         <div class="actions">
           <button id="addDentalDate" class="btn ghost" type="button">Adicionar outra data</button>
           <button id="saveDental" class="btn primary" type="button">Publicar agenda odontológica</button>
           <button id="reloadDental" class="btn secondary" type="button">Recarregar</button>
         </div>
+        <div class="share-actions">
+          <button id="shareDentalText" class="btn whatsapp" type="button">Enviar texto no WhatsApp</button>
+          <button id="shareDentalCard" class="btn petroleum" type="button">Repostar card no Status</button>
+        </div>
         <div id="dentalStatus" class="status">Carregando a agenda odontológica...</div>
-        <div class="note">A publicação odontológica usa a mesma chave administrativa da agenda da enfermeira. Caso o serviço ainda responda “Ação inválida”, o arquivo do Apps Script odontológico precisa receber a atualização administrativa já preparada no repositório e ser implantado em nova versão.</div>
+        <div class="note">A publicação da agenda odontológica requer a mesma chave administrativa definida no Apps Script. O compartilhamento por WhatsApp e Status funciona independentemente dessa chave.</div>
       </section>
 
-      <section id="notificacoes" class="card admin-section" hidden>
-        <h2>Notificações aos moradores</h2>
-        <p class="intro">Os aparelhos que aceitaram as notificações já estão registrados no OneSignal. Use esta área para preparar a mensagem e abrir o envio oficial.</p>
+      <section id="compartilhar" class="card admin-section" hidden>
+        <h2>Criar comunicado para WhatsApp</h2>
+        <p class="intro">Use esta área para criar rapidamente um texto ou card que não precise ser publicado no mural.</p>
         <div class="grid">
-          <label class="full">Título da notificação
-            <input id="pushTitle" value="Portal TACS – Posto Matias">
+          <label>Tipo
+            <select id="customType">
+              <option>Atendimento com nutricionista</option>
+              <option>Atendimento médico</option>
+              <option>Agenda da enfermeira</option>
+              <option>Agenda odontológica</option>
+              <option>Vacinação</option>
+              <option>Aviso geral</option>
+              <option>Alteração de atendimento</option>
+              <option>Cancelamento</option>
+            </select>
+          </label>
+          <label>Data
+            <input id="customDate" placeholder="Ex.: 31/07/2026">
+          </label>
+          <label>Horário
+            <input id="customTime" placeholder="Ex.: 08:00">
+          </label>
+          <label class="full">Título
+            <input id="customTitle" placeholder="Título principal do comunicado">
           </label>
           <label class="full">Mensagem
-            <textarea id="pushMessage" placeholder="Ex.: Novo aviso disponível no Portal TACS."></textarea>
+            <textarea id="customMessage" placeholder="Informação que será enviada aos moradores"></textarea>
           </label>
         </div>
         <div class="actions">
-          <button id="copyPush" class="btn ghost" type="button">Copiar título e mensagem</button>
-          <a id="openOneSignal" class="btn primary" href="https://dashboard.onesignal.com/apps/e2294b98-c72b-4f8c-a055-de28979676dc/notifications/new" target="_blank" rel="noopener">Abrir envio no OneSignal</a>
+          <button id="shareCustomText" class="btn whatsapp" type="button">Enviar texto no WhatsApp</button>
+          <button id="shareCustomCard" class="btn petroleum" type="button">Criar card azul-petróleo</button>
         </div>
-        <div class="subcard">
-          <h3>Aplicativo conectado</h3>
-          <div class="code">App ID: e2294b98-c72b-4f8c-a055-de28979676dc</div>
-          <p class="intro" style="margin-top:12px">O envio permanece no painel oficial do OneSignal para que a chave secreta não fique exposta no GitHub Pages.</p>
-        </div>
-        <div id="pushStatus" class="status">Prepare a mensagem e abra o OneSignal para enviar.</div>
+        <div id="shareStatus" class="status">O WhatsApp pedirá que você escolha a conversa ou “Meu status”.</div>
       </section>
     </main>
 
     <footer>© 2026 Portal TACS • Painel administrativo da Unidade de Saúde Posto Matias</footer>
   </section>
 </div>
-
-<script src="agenda-config.js?v=20260728-admin-01"></script>
-<script src="admin-painel.js?v=20260728-01"></script>
+<script src="agenda-config.js?v=20260728-admin-02"></script>
+<script src="admin-painel.js?v=20260728-02"></script>
 </body>
 </html>
