@@ -12,7 +12,7 @@
   function showToast(message){var old=el('portalToast');if(old)old.remove();var box=document.createElement('div');box.id='portalToast';box.className='toast';box.setAttribute('role','status');box.textContent=message;document.body.appendChild(box);setTimeout(function(){if(box.parentNode)box.remove()},6000)}
   function recifeDateTime(){return new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Recife',dateStyle:'short',timeStyle:'short'}).format(new Date())}
   function recifeToday(){var parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),out={};parts.forEach(function(p){out[p.type]=p.value});return out.year+'-'+out.month+'-'+out.day}
-  function randomSuffix(){var alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',out='';if(crypto&&crypto.getRandomValues){var values=new Uint8Array(4);crypto.getRandomValues(values);values.forEach(function(v){out+=alphabet.charAt(v%alphabet.length)})}else{for(var i=0;i<4;i++)out+=alphabet.charAt(Math.floor(Math.random()*alphabet.length))}return out}
+  function randomSuffix(){var alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',out='';if(window.crypto&&window.crypto.getRandomValues){var values=new Uint8Array(4);window.crypto.getRandomValues(values);values.forEach(function(v){out+=alphabet.charAt(v%alphabet.length)})}else{for(var i=0;i<4;i++)out+=alphabet.charAt(Math.floor(Math.random()*alphabet.length))}return out}
   function makeRequestCode(){var p=recifeToday().split('-');return 'MATIAS-'+p[2]+p[1]+p[0].slice(2)+'-'+randomSuffix()}
   function formatDate(input){var text=String(input||'').trim(),m=text.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(m)return m[3]+'/'+m[2]+'/'+m[1];m=text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?m[1]+'/'+m[2]+'/'+m[3]:text}
   function toIsoDate(input){var text=String(input||'').trim(),m=text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?m[3]+'-'+m[2]+'-'+m[1]:text}
@@ -24,15 +24,16 @@
   function insertParentFields(){
     if(el('motherName')||!el('locality'))return;
     var localityLabel=el('locality').closest('label');
-    var mother=document.createElement('label');mother.innerHTML='Nome da mãe<input id="motherName" autocomplete="off" placeholder="Nome completo da mãe"><span class="help">Preenchido automaticamente quando disponível no cadastro.</span>';
-    var father=document.createElement('label');father.innerHTML='Nome do pai<input id="fatherName" autocomplete="off" placeholder="Nome completo do pai"><span class="help">Preenchido automaticamente quando disponível no cadastro.</span>';
+    var mother=document.createElement('label');mother.innerHTML='Nome da mãe<input id="motherName" autocomplete="off" placeholder="Nome completo da mãe"><span class="help">Preenchido automaticamente pelo cadastro.</span>';
+    var father=document.createElement('label');father.innerHTML='Nome do pai<input id="fatherName" autocomplete="off" placeholder="Nome completo do pai"><span class="help">Preenchido automaticamente pelo cadastro.</span>';
     localityLabel.insertAdjacentElement('afterend',father);localityLabel.insertAdjacentElement('afterend',mother);
     var privacy=document.querySelector('.privacy');if(privacy)privacy.textContent='Nome, data de nascimento, idade, CPF/CNS, nome da mãe, nome do pai, endereço e solicitação serão enviados ao TACS em um card pelo WhatsApp. Esses dados não ficam armazenados nesta página.';
     var send=el('send');if(send){send.innerHTML='Enviar solicitação em card pelo WhatsApp<small>O celular abrirá o compartilhamento para escolher o WhatsApp e o destinatário.</small>'}
   }
 
-  function parentValue(resident,names){for(var i=0;i<names.length;i++){var v=resident&&resident[names[i]];if(v!==undefined&&v!==null&&String(v).trim())return String(v).trim()}return ''}
-  function fillParents(payload){var resident=payload&&payload.morador;if(!resident)return;var mother=parentValue(resident,['nomeMae','nome_mae','mae','mãe','maeNome','nomeDaMae']);var father=parentValue(resident,['nomePai','nome_pai','pai','paiNome','nomeDoPai']);if(mother)el('motherName').value=mother;if(father)el('fatherName').value=father}
+  function normalizedKey(v){var t=String(v||'').toLowerCase();if(t.normalize)t=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'');return t.replace(/[^a-z0-9]/g,'')}
+  function findDeepValue(source,names){var wanted=names.map(normalizedKey),queue=[source],visited=[];while(queue.length){var current=queue.shift();if(!current||typeof current!=='object'||visited.indexOf(current)!==-1)continue;visited.push(current);Object.keys(current).forEach(function(key){var item=current[key],nk=normalizedKey(key);if(!findDeepValue.result&&wanted.indexOf(nk)!==-1&&item!==undefined&&item!==null&&String(item).trim())findDeepValue.result=String(item).trim();if(item&&typeof item==='object')queue.push(item)});if(findDeepValue.result){var found=findDeepValue.result;findDeepValue.result='';return found}}return ''}
+  function fillParents(payload){var resident=payload&&payload.morador?payload.morador:payload;if(!resident||typeof resident!=='object')return;var mother=findDeepValue(resident,['nomeMae','nome_mae','nome da mãe','nome da mae','mae','mãe','maeNome','nomeDaMae','motherName']);var father=findDeepValue(resident,['nomePai','nome_pai','nome do pai','pai','paiNome','nomeDoPai','fatherName']);if(mother&&el('motherName')){el('motherName').value=mother;el('motherName').dispatchEvent(new Event('input',{bubbles:true}))}if(father&&el('fatherName')){el('fatherName').value=father;el('fatherName').dispatchEvent(new Event('input',{bubbles:true}))}}
   function lookupParents(){
     var doc=digits(value('cpf'));if(doc.length!==11&&doc.length!==15)return;
     var callback='paisTacs_'+Date.now()+'_'+Math.floor(Math.random()*100000),script=document.createElement('script'),done=false;
@@ -41,7 +42,12 @@
     window[callback]=function(data){fillParents(data);cleanup()};
     script.onerror=cleanup;script.src=MORADORES_API+'?action=buscar_morador&documento='+encodeURIComponent(doc)+'&callback='+encodeURIComponent(callback)+'&v='+Date.now();document.head.appendChild(script);
   }
-  function installParentLookup(){var documentField=el('cpf');if(!documentField)return;documentField.addEventListener('input',function(){clearTimeout(parentTimer);if(el('motherName'))el('motherName').value='';if(el('fatherName'))el('fatherName').value='';parentTimer=setTimeout(lookupParents,1200)});documentField.addEventListener('change',lookupParents)}
+  function installParentLookup(){
+    document.addEventListener('tacs:morador',function(event){fillParents(event.detail)});
+    document.addEventListener('input',function(event){if(!event.target||event.target.id!=='cpf')return;clearTimeout(parentTimer);if(el('motherName'))el('motherName').value='';if(el('fatherName'))el('fatherName').value='';parentTimer=setTimeout(lookupParents,1200)},true);
+    document.addEventListener('change',function(event){if(event.target&&event.target.id==='cpf')lookupParents()},true);
+    if(window.TACS_MORADOR_ATUAL)fillParents(window.TACS_MORADOR_ATUAL);
+  }
 
   function selectedDentalData(){var selected=document.querySelector('.slot.selected');if(!selected)return null;var dateNode=selected.querySelector('span'),date=toIsoDate(dateNode?dateNode.textContent:'');if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return null;return {date:date,type:value('category').indexOf('emergência')>=0?'emergencial':'comum'}}
   function reserveDental(){
@@ -75,7 +81,7 @@
   }
   function fallbackText(data){return 'SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS\n\nCódigo: '+data.code+'\nCategoria: '+data.category+'\nNome: '+data.name+'\nNascimento: '+data.birth+' • '+data.age+'\n'+data.documentLabel+': '+data.document+'\nMãe: '+data.mother+'\nPai: '+data.father+'\nOnde mora: '+data.locality+'\nDescrição: '+data.description+(data.dental?'\n'+data.dental:'')}
   function shareRequest(){
-    var mother=value('motherName'),father=value('fatherName');if(!mother||!father){showToast('Preencha o nome da mãe e o nome do pai antes de enviar.');return}
+    var mother=value('motherName'),father=value('fatherName');if(!mother||!father){showToast('Os nomes da mãe e do pai não foram carregados. Aguarde a consulta ou confira o cadastro.');return}
     var data=requestData(),file=createCardFile(data),button=el('send'),original=button.innerHTML;button.disabled=true;button.textContent='Preparando o card...';
     var dentalPromise=reserveDental();
     if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
@@ -87,7 +93,7 @@
     if(!data.dental)setTimeout(function(){button.disabled=false;button.innerHTML=original},1200);
   }
 
-  function replaceSendHandler(){var old=el('send');if(!old||old.dataset.cardRequest==='1')return;var button=old.cloneNode(true);button.dataset.cardRequest='1';old.parentNode.replaceChild(button,old);button.addEventListener('click',shareRequest)}
-  function install(){insertParentFields();installParentLookup();replaceSendHandler();setTimeout(lookupParents,1000)}
+  function replaceSendHandler(){var old=el('send');if(!old||old.dataset.cardRequest==='2')return;var button=old.cloneNode(true);button.dataset.cardRequest='2';old.parentNode.replaceChild(button,old);button.addEventListener('click',shareRequest)}
+  function install(){insertParentFields();installParentLookup();replaceSendHandler();setTimeout(function(){if(window.TACS_MORADOR_ATUAL)fillParents(window.TACS_MORADOR_ATUAL);else lookupParents()},1000)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 }());
