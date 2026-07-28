@@ -5,47 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#062c46">
   <title>Portal TACS</title>
-  <style>
-    html,body{margin:0;min-height:100%;background:#e9eff3;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-    .loading{min-height:100vh;display:grid;place-items:center;padding:24px;color:#062c46;font-size:20px;font-weight:800;text-align:center}
-  </style>
+  <style>html,body{margin:0;min-height:100%;background:#e9eff3;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}.loading{min-height:100vh;display:grid;place-items:center;padding:24px;color:#062c46;font-size:20px;font-weight:800;text-align:center}</style>
 </head>
 <body>
   <div class="loading">Carregando o Portal TACS atualizado...</div>
   <script>
-    (function () {
+    (function(){
       'use strict';
-
-      var version = '20260728-11';
-      var notificationVersion = '20260728-13';
-
-      var oldDentalLoader = `function loadDental(){dentalState='loading';renderDental();if(!DENTAL_API){failAgenda();return}var cb='dentalAgenda'+Date.now()+Math.floor(Math.random()*10000),script=document.createElement('script'),done=false,timer=setTimeout(function(){if(done)return;done=true;delete window[cb];if(script.parentNode)script.remove();failAgenda()},12000);window[cb]=function(data){if(done)return;done=true;clearTimeout(timer);delete window[cb];if(script.parentNode)script.remove();try{acceptAgenda(data)}catch(e){failAgenda()}};script.onerror=function(){if(done)return;done=true;clearTimeout(timer);delete window[cb];if(script.parentNode)script.remove();failAgenda()};script.src=DENTAL_API+(DENTAL_API.indexOf('?')===-1?'?':'&')+'action=agenda&callback='+encodeURIComponent(cb)+'&v='+Date.now();document.head.appendChild(script)}`;
-
-      var newDentalLoader = `function loadDental(attempt){attempt=Number(attempt||0);dentalState='loading';renderDental();if(!DENTAL_API){failAgenda();return}var cb='dentalAgenda'+Date.now()+Math.floor(Math.random()*10000),script=document.createElement('script'),done=false,timer;function cleanup(){clearTimeout(timer);delete window[cb];if(script.parentNode)script.remove()}function retry(){if(done)return;done=true;cleanup();if(attempt<2){var status=el('dentalStatus');if(status){status.textContent='A agenda está demorando. Tentando novamente...';status.className='dental-status'}setTimeout(function(){loadDental(attempt+1)},700)}else{failAgenda()}}window[cb]=function(data){if(done)return;done=true;cleanup();try{acceptAgenda(data)}catch(e){if(attempt<2){setTimeout(function(){loadDental(attempt+1)},700)}else{failAgenda()}}};script.onerror=retry;timer=setTimeout(retry,10000);script.src=DENTAL_API+(DENTAL_API.indexOf('?')===-1?'?':'&')+'action=agenda&callback='+encodeURIComponent(cb)+'&tentativa='+attempt+'&v='+Date.now();document.head.appendChild(script)}`;
-
-      fetch('index.html?portal=' + version, { cache: 'no-store' })
-        .then(function (response) {
-          if (!response.ok) throw new Error('Não foi possível carregar o portal.');
-          return response.text();
+      var version='20260728-14';
+      var oldDentalLoader=`function loadDental(){dentalState='loading';renderDental();if(!DENTAL_API){failAgenda();return}var cb='dentalAgenda'+Date.now()+Math.floor(Math.random()*10000),script=document.createElement('script'),done=false,timer=setTimeout(function(){if(done)return;done=true;delete window[cb];if(script.parentNode)script.remove();failAgenda()},12000);window[cb]=function(data){if(done)return;done=true;clearTimeout(timer);delete window[cb];if(script.parentNode)script.remove();try{acceptAgenda(data)}catch(e){failAgenda()}};script.onerror=function(){if(done)return;done=true;clearTimeout(timer);delete window[cb];if(script.parentNode)script.remove();failAgenda()};script.src=DENTAL_API+(DENTAL_API.indexOf('?')===-1?'?':'&')+'action=agenda&callback='+encodeURIComponent(cb)+'&v='+Date.now();document.head.appendChild(script)}`;
+      var newDentalLoader=`function loadDental(attempt){attempt=Number(attempt||0);dentalState='loading';renderDental();if(!DENTAL_API){failAgenda();return}var cb='dentalAgenda'+Date.now()+Math.floor(Math.random()*10000),script=document.createElement('script'),done=false,timer;function cleanup(){clearTimeout(timer);delete window[cb];if(script.parentNode)script.remove()}function retry(){if(done)return;done=true;cleanup();if(attempt<2){var status=el('dentalStatus');if(status){status.textContent='A agenda está demorando. Tentando novamente...';status.className='dental-status'}setTimeout(function(){loadDental(attempt+1)},700)}else{failAgenda()}}window[cb]=function(data){if(done)return;done=true;cleanup();try{acceptAgenda(data)}catch(e){if(attempt<2){setTimeout(function(){loadDental(attempt+1)},700)}else{failAgenda()}}};script.onerror=retry;timer=setTimeout(retry,10000);script.src=DENTAL_API+(DENTAL_API.indexOf('?')===-1?'?':'&')+'action=agenda&callback='+encodeURIComponent(cb)+'&tentativa='+attempt+'&v='+Date.now();document.head.appendChild(script)}`;
+      fetch('index.html?portal='+version,{cache:'no-store'})
+        .then(function(response){if(!response.ok)throw new Error('Não foi possível carregar o portal.');return response.text()})
+        .then(function(html){
+          if(html.indexOf(oldDentalLoader)===-1)throw new Error('Rotina odontológica não localizada.');
+          html=html
+            .replace(/agenda-config\.js\?v=[^"']+/g,'agenda-config.js?v='+version)
+            .replace(/agenda-enfermeira\.js\?v=[^"']+/g,'agenda-enfermeira.js?v='+version)
+            .replace(oldDentalLoader,newDentalLoader);
+          document.open();document.write(html);document.close();
         })
-        .then(function (html) {
-          if (html.indexOf(oldDentalLoader) === -1) {
-            throw new Error('Rotina odontológica não localizada.');
-          }
-
-          html = html
-            .replace(/agenda-config\.js\?v=[^"']+/g, 'agenda-config.js?v=' + version)
-            .replace(/agenda-enfermeira\.js\?v=[^"']+/g, 'agenda-enfermeira.js?v=' + version)
-            .replace(oldDentalLoader, newDentalLoader)
-            .replace('</body>', '<script src="notificacoes-config.js?v=' + notificationVersion + '"><\/script><script src="notificacoes.js?v=' + notificationVersion + '"><\/script></body>');
-
-          document.open();
-          document.write(html);
-          document.close();
-        })
-        .catch(function () {
-          document.body.innerHTML = '<div class="loading">Não foi possível abrir o portal agora. Atualize esta página.</div>';
-        });
+        .catch(function(){document.body.innerHTML='<div class="loading">Não foi possível abrir o portal agora. Atualize esta página.</div>'});
     }());
   </script>
 </body>
