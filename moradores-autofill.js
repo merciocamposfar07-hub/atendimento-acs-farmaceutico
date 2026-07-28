@@ -7,6 +7,7 @@
   var activeFrame = null;
   var activeTimeout = null;
   var activeNonce = '';
+  var localityDisplay = null;
 
   function onlyDigits(value) {
     return String(value || '').replace(/\D/g, '').slice(0, 15);
@@ -51,6 +52,149 @@
     return match ? match[1] + '/' + match[2] + '/' + match[3] : text;
   }
 
+  function recifeTodayParts() {
+    var parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Recife',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+    var values = {};
+    parts.forEach(function (part) {
+      values[part.type] = part.value;
+    });
+    return {
+      year: Number(values.year),
+      month: Number(values.month),
+      day: Number(values.day)
+    };
+  }
+
+  function preciseAge(value) {
+    var text = normalizeBirth(value);
+    var match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return null;
+
+    var birthDay = Number(match[1]);
+    var birthMonth = Number(match[2]);
+    var birthYear = Number(match[3]);
+    var validDate = new Date(Date.UTC(birthYear, birthMonth - 1, birthDay));
+
+    if (
+      validDate.getUTCFullYear() !== birthYear ||
+      validDate.getUTCMonth() !== birthMonth - 1 ||
+      validDate.getUTCDate() !== birthDay
+    ) return null;
+
+    var today = recifeTodayParts();
+    var birthStamp = Date.UTC(birthYear, birthMonth - 1, birthDay);
+    var todayStamp = Date.UTC(today.year, today.month - 1, today.day);
+    if (birthStamp > todayStamp) return null;
+
+    var years = today.year - birthYear;
+    var months = today.month - birthMonth;
+    var days = today.day - birthDay;
+
+    if (days < 0) {
+      months--;
+      days += new Date(Date.UTC(today.year, today.month - 1, 0)).getUTCDate();
+    }
+
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+
+    return { years: years, months: months, days: days };
+  }
+
+  function unit(value, singular, plural) {
+    return value + ' ' + (value === 1 ? singular : plural);
+  }
+
+  function preciseAgeText(value) {
+    var age = preciseAge(value);
+    if (!age) return '';
+
+    if (age.years >= 2) return 'Idade: ' + unit(age.years, 'ano', 'anos');
+
+    if (age.years === 1) {
+      var yearText = unit(1, 'ano', 'anos');
+      return 'Idade: ' + (age.months ? yearText + ' e ' + unit(age.months, 'mês', 'meses') : yearText);
+    }
+
+    if (age.months > 0) {
+      var monthText = unit(age.months, 'mês', 'meses');
+      return 'Idade: ' + (age.days ? monthText + ' e ' + unit(age.days, 'dia', 'dias') : monthText);
+    }
+
+    return 'Idade: ' + unit(age.days, 'dia', 'dias');
+  }
+
+  function updatePreciseAge() {
+    var birth = document.getElementById('birth');
+    var status = document.getElementById('ageStatus');
+    if (!birth || !status) return;
+    var text = preciseAgeText(birth.value);
+    if (!text || status.textContent === text) return;
+    status.textContent = text;
+    status.className = 'help valid';
+  }
+
+  function resizeLocality() {
+    if (!localityDisplay) return;
+    localityDisplay.style.height = 'auto';
+    localityDisplay.style.height = Math.max(96, localityDisplay.scrollHeight) + 'px';
+  }
+
+  function setupLocalityField() {
+    var original = document.getElementById('locality');
+    if (!original) return;
+
+    localityDisplay = document.getElementById('localityDisplay');
+    if (localityDisplay) return;
+
+    localityDisplay = document.createElement('textarea');
+    localityDisplay.id = 'localityDisplay';
+    localityDisplay.rows = 2;
+    localityDisplay.value = original.value || '';
+    localityDisplay.placeholder = original.placeholder || 'Ex.: Japaranduba';
+    localityDisplay.autocomplete = 'street-address';
+    localityDisplay.setAttribute('aria-label', 'Localidade / comunidade');
+    localityDisplay.style.minHeight = '96px';
+    localityDisplay.style.resize = 'vertical';
+    localityDisplay.style.whiteSpace = 'pre-wrap';
+    localityDisplay.style.overflowWrap = 'anywhere';
+    localityDisplay.style.wordBreak = 'break-word';
+    localityDisplay.style.overflowY = 'hidden';
+
+    original.hidden = true;
+    original.parentNode.insertBefore(localityDisplay, original.nextSibling);
+
+    localityDisplay.addEventListener('input', function () {
+      original.value = localityDisplay.value;
+      original.dispatchEvent(new Event('input', { bubbles: true }));
+      resizeLocality();
+    });
+
+    localityDisplay.addEventListener('change', function () {
+      original.value = localityDisplay.value;
+      original.dispatchEvent(new Event('change', { bubbles: true }));
+      resizeLocality();
+    });
+
+    resizeLocality();
+  }
+
+  function setLocality(value) {
+    var original = document.getElementById('locality');
+    if (original) original.value = value;
+    if (localityDisplay) {
+      localityDisplay.value = value;
+      resizeLocality();
+    }
+  }
+
   function setStatus(status, text, type) {
     status.textContent = text;
     status.className = 'help id-cns-note' + (type ? ' ' + type : '');
@@ -68,7 +212,7 @@
 
     if (!values.name || !values.birth || !values.locality) return false;
 
-    Object.keys(values).forEach(function (id) {
+    ['name', 'birth'].forEach(function (id) {
       var field = document.getElementById(id);
       if (!field) return;
       field.value = values[id];
@@ -76,6 +220,15 @@
       field.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
+    setLocality(values.locality);
+    var locality = document.getElementById('locality');
+    if (locality) {
+      locality.dispatchEvent(new Event('input', { bubbles: true }));
+      locality.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    updatePreciseAge();
+    setTimeout(updatePreciseAge, 0);
     return true;
   }
 
@@ -93,6 +246,24 @@
     var oldInput = document.getElementById('cpf');
     var status = document.getElementById('cpfStatus');
     if (!oldInput || !status || oldInput.dataset.autofillIsolado === '1') return;
+
+    setupLocalityField();
+
+    var birthField = document.getElementById('birth');
+    var ageStatus = document.getElementById('ageStatus');
+    if (birthField) {
+      birthField.addEventListener('input', function () {
+        setTimeout(updatePreciseAge, 0);
+      });
+      birthField.addEventListener('change', function () {
+        setTimeout(updatePreciseAge, 0);
+      });
+    }
+    if (ageStatus && window.MutationObserver) {
+      new MutationObserver(function () {
+        updatePreciseAge();
+      }).observe(ageStatus, { childList: true, characterData: true, subtree: true });
+    }
 
     var input = oldInput.cloneNode(true);
     input.dataset.autofillIsolado = '1';
