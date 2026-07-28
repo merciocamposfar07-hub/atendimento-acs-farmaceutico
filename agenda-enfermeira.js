@@ -42,14 +42,25 @@
     });
   }
 
+  function noticeDateStamp(text) {
+    var match = String(text || '').match(/\b(\d{2})\/(\d{2})\/(\d{4})\b/);
+    if (!match) return NaN;
+    return Date.UTC(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+  }
+
   function expireNotices() {
     var c = clock();
-    if (c.minutes < 720) return;
     var a = document.getElementById('noticeArea');
     if (!a) return;
+    var currentParts = c.iso.split('-');
+    var todayStamp = Date.UTC(Number(currentParts[0]), Number(currentParts[1]) - 1, Number(currentParts[2]));
     Array.prototype.forEach.call(a.querySelectorAll('.notice-card'), function (card) {
-      var t = String(card.textContent || '').toLowerCase();
-      if (t.indexOf(c.br) !== -1 || t.indexOf(c.iso) !== -1 || /\bhoje\b/.test(t)) card.remove();
+      var text = String(card.textContent || '');
+      var lower = text.toLowerCase();
+      var stamp = noticeDateStamp(text);
+      var expiredByDate = Number.isFinite(stamp) && (stamp < todayStamp || (stamp === todayStamp && c.minutes >= 720));
+      var expiredTodayWord = /\bhoje\b/.test(lower) && c.minutes >= 720;
+      if (expiredByDate || expiredTodayWord) card.remove();
     });
     var l = a.querySelector('.notice-list');
     if (l && !l.querySelector('.notice-card')) { a.innerHTML = ''; a.hidden = true; }
@@ -161,7 +172,7 @@
   function loadResidentsAutofill() {
     if (document.querySelector('script[data-moradores-autofill]')) return;
     var script = document.createElement('script');
-    script.src = 'moradores-autofill.js?v=20260727-02';
+    script.src = 'moradores-autofill.js?v=20260728-01';
     script.dataset.moradoresAutofill = '1';
     document.head.appendChild(script);
   }
