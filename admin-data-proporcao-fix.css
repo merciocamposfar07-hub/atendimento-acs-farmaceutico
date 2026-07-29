@@ -1,0 +1,35 @@
+/* Corrige o tamanho excessivo do balão de data no Safari/iPhone. */
+.day-card,
+.day-controls,
+.day-controls > label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.day-card {
+  overflow: hidden;
+}
+
+.day-controls input[type="date"] {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  inline-size: 100% !important;
+  min-inline-size: 0 !important;
+  max-inline-size: 100% !important;
+  min-height: 58px !important;
+  height: 58px !important;
+  margin: 0 !important;
+  padding: 13px 14px !important;
+  box-sizing: border-box !important;
+  overflow: hidden;
+}
+
+@media (max-width: 520px) {
+  .day-controls input[type="date"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 58px !important;
+  }
+}
