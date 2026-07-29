@@ -41,28 +41,93 @@
     if(!requestCode)requestCode=makeRequestCode();
     return {code:requestCode,sentAt:recifeDateTime(),category:value('category'),name:value('name'),birth:formatDate(value('birth')),age:ageText(),documentLabel:documentLabel(),document:value('cpf'),locality:value('locality'),description:requestDescription(),dental:dentalDetails()};
   }
-  function wrap(ctx,text,maxWidth){var paragraphs=String(text||'').split('\n'),lines=[];paragraphs.forEach(function(paragraph){if(!paragraph){lines.push('');return}var words=paragraph.split(/\s+/),line='';words.forEach(function(word){var test=line?line+' '+word:word;if(line&&ctx.measureText(test).width>maxWidth){lines.push(line);line=word}else line=test});if(line)lines.push(line)});return lines}
-  function drawLines(ctx,text,x,y,maxWidth,lineHeight,maxLines){var lines=wrap(ctx,text,maxWidth),limit=Math.min(lines.length,maxLines||lines.length);for(var i=0;i<limit;i++){var line=lines[i];if(i===limit-1&&lines.length>limit)line=line.replace(/[\s.,;:!?-]*$/,'')+'…';ctx.fillText(line,x,y+i*lineHeight)}return y+limit*lineHeight}
+
+  function wrap(ctx,text,maxWidth){
+    var paragraphs=String(text||'').split('\n'),lines=[];
+    paragraphs.forEach(function(paragraph){
+      if(!paragraph){lines.push('');return}
+      var words=paragraph.split(/\s+/),line='';
+      words.forEach(function(word){
+        var test=line?line+' '+word:word;
+        if(line&&ctx.measureText(test).width>maxWidth){lines.push(line);line=word}else line=test;
+      });
+      if(line)lines.push(line);
+    });
+    return lines;
+  }
+
+  function drawLines(ctx,text,x,y,maxWidth,lineHeight,maxLines){
+    var lines=wrap(ctx,text,maxWidth),limit=Math.min(lines.length,maxLines||lines.length);
+    for(var i=0;i<limit;i++){
+      var line=lines[i];
+      if(i===limit-1&&lines.length>limit)line=line.replace(/[\s.,;:!?-]*$/,'')+'…';
+      ctx.fillText(line,x,y+i*lineHeight);
+    }
+    return y+limit*lineHeight;
+  }
+
   function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+
   function createCardFile(data){
+    var rows=[
+      {label:'Nome completo',value:data.name,max:3},
+      {label:'Nascimento e idade',value:data.birth+' • '+data.age,max:2},
+      {label:data.documentLabel,value:data.document,max:2},
+      {label:'Onde mora',value:data.locality,max:4}
+    ];
+    if(data.dental)rows.push({label:'Vaga odontológica',value:data.dental,max:3});
+    rows.push({label:'Descrição',value:data.description,max:9});
+
+    var measureCanvas=document.createElement('canvas');
+    measureCanvas.width=1440;
+    measureCanvas.height=2600;
+    var measureCtx=measureCanvas.getContext('2d');
+
+    var width=1440;
+    var headerX=90;
+    var contentX=120;
+    var contentWidth=1180;
+    var categoryWidth=1260;
+    var lineHeightValue=62;
+    var lineHeightCategory=72;
+
+    measureCtx.font='900 56px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    var categoryLines=wrap(measureCtx,data.category,categoryWidth);
+    var categoryHeight=Math.min(categoryLines.length,3)*lineHeightCategory;
+
+    var contentHeight=0;
+    rows.forEach(function(row){
+      measureCtx.font='700 50px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+      var lines=wrap(measureCtx,row.value||'Não informado',contentWidth);
+      var usedLines=Math.min(lines.length,row.max||3);
+      contentHeight+=56 + usedLines*lineHeightValue + 34;
+    });
+
+    var topContentY=520 + categoryHeight + 40;
+    var panelY=topContentY;
+    var panelHeight=88 + contentHeight + 42;
+    var footerY=panelY + panelHeight + 150;
+    var canvasHeight=Math.max(1900, footerY + 110);
+
     var canvas=document.createElement('canvas');
-    canvas.width=1440;
-    canvas.height=2560;
+    canvas.width=width;
+    canvas.height=canvasHeight;
     var ctx=canvas.getContext('2d');
-    var gradient=ctx.createLinearGradient(0,0,1440,2560);
+
+    var gradient=ctx.createLinearGradient(0,0,width,canvasHeight);
     gradient.addColorStop(0,'#041f34');
     gradient.addColorStop(.55,'#062c46');
     gradient.addColorStop(1,'#0d5f8a');
     ctx.fillStyle=gradient;
-    ctx.fillRect(0,0,1440,2560);
+    ctx.fillRect(0,0,width,canvasHeight);
 
     ctx.fillStyle='#70e39f';
     ctx.font='900 46px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('PORTAL TACS • POSTO MATIAS',90,125);
+    ctx.fillText('PORTAL TACS • POSTO MATIAS',headerX,125);
 
     ctx.fillStyle='#ffffff';
     ctx.font='900 82px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('SOLICITAÇÃO DO MORADOR',90,225);
+    ctx.fillText('SOLICITAÇÃO DO MORADOR',headerX,225);
 
     ctx.fillStyle='rgba(255,255,255,.13)';
     roundRect(ctx,80,285,1280,150,34);
@@ -74,45 +139,42 @@
     ctx.fillText('Enviado em: '+data.sentAt,120,402);
 
     ctx.fillStyle='#ffffff';
-    ctx.font='900 54px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    var y=505;
-    y=drawLines(ctx,data.category,90,y,1260,66,3)+36;
+    ctx.font='900 56px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    var y=520;
+    y=drawLines(ctx,data.category,headerX,y,categoryWidth,lineHeightCategory,3)+40;
 
     ctx.fillStyle='rgba(255,255,255,.97)';
-    roundRect(ctx,70,y,1300,1750-y,42);
+    roundRect(ctx,70,panelY,1300,panelHeight,42);
     ctx.fill();
 
-    y+=78;
-    ctx.fillStyle='#102b3c';
-    ctx.font='750 40px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    y=panelY+88;
 
     function row(label,val,max){
       ctx.fillStyle='#0d5f8a';
-      ctx.font='900 38px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-      ctx.fillText(label.toUpperCase(),120,y);
-      y+=50;
+      ctx.font='900 40px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+      ctx.fillText(label.toUpperCase(),contentX,y);
+      y+=56;
       ctx.fillStyle='#102b3c';
-      ctx.font='700 46px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-      y=drawLines(ctx,val||'Não informado',120,y,1180,56,max||3)+30;
+      ctx.font='700 50px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+      y=drawLines(ctx,val||'Não informado',contentX,y,contentWidth,lineHeightValue,max||3)+34;
     }
 
-    row('Nome completo',data.name,3);
-    row('Nascimento e idade',data.birth+' • '+data.age,2);
-    row(data.documentLabel,data.document,2);
-    row('Onde mora',data.locality,4);
-    if(data.dental)row('Vaga odontológica',data.dental,3);
-    row('Descrição',data.description,9);
+    rows.forEach(function(item){row(item.label,item.value,item.max)});
 
     ctx.fillStyle='#ffffff';
-    ctx.font='850 42px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('TACS responsável: Mércio José Campos dos Santos',90,2425);
+    ctx.font='850 44px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('TACS responsável: Mércio José Campos dos Santos',90,footerY);
     ctx.fillStyle='#d8e7ee';
-    ctx.font='650 34px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('Unidade de Saúde Posto Matias • Sítio Japaranduba',90,2485);
+    ctx.font='650 35px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('Unidade de Saúde Posto Matias • Sítio Japaranduba',90,footerY+52);
 
-    var dataUrl=canvas.toDataURL('image/png',1),parts=dataUrl.split(','),binary=atob(parts[1]),bytes=new Uint8Array(binary.length);for(var i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return new File([bytes],'solicitacao-'+data.code+'.png',{type:'image/png'});
+    var dataUrl=canvas.toDataURL('image/png',1),parts=dataUrl.split(','),binary=atob(parts[1]),bytes=new Uint8Array(binary.length);
+    for(var i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+    return new File([bytes],'solicitacao-'+data.code+'.png',{type:'image/png'});
   }
+
   function fallbackText(data){return 'SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS\n\nCódigo: '+data.code+'\nCategoria: '+data.category+'\nNome: '+data.name+'\nNascimento: '+data.birth+' • '+data.age+'\n'+data.documentLabel+': '+data.document+'\nOnde mora: '+data.locality+'\nDescrição: '+data.description+(data.dental?'\n'+data.dental:'')}
+
   function shareRequest(){
     var data=requestData(),file=createCardFile(data),button=el('send'),original=button.innerHTML;button.disabled=true;button.textContent='Preparando o card...';
     var dentalPromise=reserveDental();
@@ -125,7 +187,7 @@
     if(!data.dental)setTimeout(function(){button.disabled=false;button.innerHTML=original},1200);
   }
 
-  function replaceSendHandler(){var old=el('send');if(!old||old.dataset.cardRequest==='4')return;var button=old.cloneNode(true);button.dataset.cardRequest='4';old.parentNode.replaceChild(button,old);button.addEventListener('click',shareRequest)}
+  function replaceSendHandler(){var old=el('send');if(!old||old.dataset.cardRequest==='5')return;var button=old.cloneNode(true);button.dataset.cardRequest='5';old.parentNode.replaceChild(button,old);button.addEventListener('click',shareRequest)}
   function install(){updatePortalText();replaceSendHandler()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 }());
