@@ -1,35 +1,65 @@
-/* Corrige o tamanho excessivo do balão de data no Safari/iPhone. */
+/*
+ * Correção de proporção para Safari/iPhone.
+ * Todos os campos devem respeitar a largura interna dos cards.
+ */
+.section,
 .day-card,
+.form-grid,
 .day-controls,
+.form-grid > *,
+.day-controls > *,
+.form-grid > label,
 .day-controls > label {
-  min-width: 0;
-  max-width: 100%;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-.day-card {
-  overflow: hidden;
+.form-grid,
+.day-controls {
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
-.day-controls input[type="date"] {
-  display: block;
+.form-grid input,
+.form-grid textarea,
+.form-grid select,
+.day-controls input,
+.day-controls textarea,
+.day-controls select {
+  display: block !important;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
   inline-size: 100% !important;
   min-inline-size: 0 !important;
   max-inline-size: 100% !important;
-  min-height: 58px !important;
-  height: 58px !important;
-  margin: 0 !important;
-  padding: 13px 14px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
   box-sizing: border-box !important;
-  overflow: hidden;
 }
 
-@media (max-width: 520px) {
-  .day-controls input[type="date"] {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 58px !important;
+input[type="date"],
+input[type="time"] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  overflow: hidden !important;
+}
+
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value {
+  min-width: 0 !important;
+  text-align: center;
+}
+
+@media (max-width: 820px) {
+  .section,
+  .day-card {
+    overflow: hidden !important;
+  }
+
+  .form-grid,
+  .day-controls {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 }
