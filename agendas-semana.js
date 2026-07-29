@@ -22,6 +22,8 @@
       .professional-day span,.professional-day b{display:block}\
       .professional-day span{margin-top:5px;color:#415b69;font-size:16px}\
       .professional-day b{margin-top:8px;color:#06763a}\
+      .professional-day:disabled{cursor:not-allowed;opacity:.64;background:#e8eef1}\
+      .professional-day:disabled b{color:#687f8b}\
       .professional-day.selected{border-color:#0d5f8a;background:#e1f1f8;box-shadow:0 0 0 3px rgba(13,95,138,.15)}\
       .professional-status{margin:15px 0 0;padding-top:13px;border-top:1px solid #86a7b7;font-size:17px;font-weight:800;line-height:1.4}\
       @media(max-width:720px){.professional-agenda{padding:18px 14px}.professional-agenda h3{font-size:28px}.nurse-day,.dental-public-day,.professional-day{padding:17px 15px!important}}';
@@ -38,7 +40,7 @@
     select.insertBefore(o,before||null);
   }
 
-  function createProfessionalAgenda(id,title,icon,category,anchor){
+  function createProfessionalAgenda(id,title,icon,category,anchor,mode){
     if(document.getElementById(id))return;
     var select=document.getElementById('category');
     var subject=document.getElementById('subject');
@@ -48,16 +50,20 @@
     var sec=document.createElement('section');
     sec.id=id;
     sec.className='professional-agenda full';
-    sec.innerHTML='<small>'+icon+' '+title+'</small><h3>Escolha o dia</h3><p>A agenda permanece organizada de segunda a sexta. Toque no dia desejado para registrar sua solicitação.</p><div class="professional-days"></div><p class="professional-status">Selecione um dia para continuar.</p>';
+    var intro=mode==='doctor'?'O atendimento médico ocorre principalmente na sexta-feira. Os demais dias ficam indisponíveis até confirmação da Unidade.':'A nutricionista atende somente em data específica informada pela Unidade. Quando a data for confirmada, o dia correspondente será liberado.';
+    sec.innerHTML='<small>'+icon+' '+title+'</small><h3>Programação semanal</h3><p>'+intro+'</p><div class="professional-days"></div><p class="professional-status">Consulte a programação abaixo.</p>';
     anchor.parentNode.insertBefore(sec,anchor.nextSibling);
     var list=sec.querySelector('.professional-days');
     var status=sec.querySelector('.professional-status');
 
     WEEK.forEach(function(day){
+      var available=mode==='doctor'&&day==='Sexta-feira';
       var b=document.createElement('button');
-      b.type='button';b.className='professional-day';
-      b.innerHTML='<strong>'+day+'</strong><span>'+icon+' '+title+'</span><b>Solicitar atendimento ou informação</b>';
-      b.onclick=function(){
+      b.type='button';b.className='professional-day';b.disabled=!available;
+      var line=available?'Solicitar atendimento ou informação':'Atendimento não confirmado para este dia';
+      if(mode==='nutrition')line='Data da nutricionista ainda não informada';
+      b.innerHTML='<strong>'+day+'</strong><span>'+icon+' '+title+'</span><b>'+line+'</b>';
+      if(available)b.onclick=function(){
         Array.prototype.forEach.call(list.querySelectorAll('.professional-day'),function(x){x.classList.remove('selected');});
         b.classList.add('selected');
         select.value=category;
@@ -69,30 +75,40 @@
       };
       list.appendChild(b);
     });
+    status.textContent=mode==='doctor'?'Sexta-feira disponível. Outros dias dependem de confirmação.':'Aguardando a Unidade informar a próxima data da nutricionista.';
+  }
+
+  function canonicalDay(text){
+    var t=String(text||'').toLowerCase();
+    if(t.indexOf('segunda')!==-1)return 'Segunda-feira';
+    if(t.indexOf('terça')!==-1||t.indexOf('terca')!==-1)return 'Terça-feira';
+    if(t.indexOf('quarta')!==-1)return 'Quarta-feira';
+    if(t.indexOf('quinta')!==-1)return 'Quinta-feira';
+    if(t.indexOf('sexta')!==-1)return 'Sexta-feira';
+    return '';
   }
 
   function normalizeDentalDays(){
     var list=document.getElementById('dentalPublicDays');
-    if(!list)return;
+    if(!list||list.dataset.normalizing==='1')return;
+    list.dataset.normalizing='1';
     var existing={};
-    Array.prototype.forEach.call(list.children,function(card){
+    Array.prototype.slice.call(list.children).forEach(function(card){
       var strong=card.querySelector('strong');
-      if(strong)existing[String(strong.textContent||'').trim().toLowerCase()]=card;
+      var day=canonicalDay(strong&&strong.textContent);
+      if(!day)return;
+      if(existing[day])card.remove();
+      else existing[day]=card;
     });
     WEEK.forEach(function(day){
-      var key=day.toLowerCase();
-      if(existing[key])return;
+      if(existing[day])return;
       var b=document.createElement('button');
       b.type='button';b.className='dental-public-day';b.disabled=true;
       b.innerHTML='<strong>'+day+'</strong><b class="service">🦷 Atendimento odontológico</b><b class="closed">Sem atendimento informado para este dia</b>';
-      list.appendChild(b);
+      existing[day]=b;
     });
-    var ordered=[];
-    WEEK.forEach(function(day){
-      var target=Array.prototype.find.call(list.children,function(card){var st=card.querySelector('strong');return st&&String(st.textContent||'').trim().toLowerCase()===day.toLowerCase();});
-      if(target)ordered.push(target);
-    });
-    ordered.forEach(function(card){list.appendChild(card);});
+    WEEK.forEach(function(day){list.appendChild(existing[day]);});
+    delete list.dataset.normalizing;
   }
 
   function install(){
@@ -104,9 +120,9 @@
     var nurse=document.getElementById('nurseSchedule');
     var dental=document.getElementById('dentalPublicSchedule')||document.getElementById('dentalSchedule');
     var anchor=nurse||dental;
-    createProfessionalAgenda('doctorSchedule','Agenda do Médico','🩺',DOCTOR,anchor);
+    createProfessionalAgenda('doctorSchedule','Agenda da Médica','🩺',DOCTOR,anchor,'doctor');
     var doctor=document.getElementById('doctorSchedule');
-    createProfessionalAgenda('nutritionSchedule','Agenda da Nutricionista','🥗',NUTRITION,doctor||anchor);
+    createProfessionalAgenda('nutritionSchedule','Agenda da Nutricionista','🥗',NUTRITION,doctor||anchor,'nutrition');
 
     normalizeDentalDays();
     var dentalList=document.getElementById('dentalPublicDays');
