@@ -1,147 +1,104 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#062c46">
-  <meta name="robots" content="noindex,nofollow,noarchive">
-  <title>Painel Administrativo Espelho | Portal TACS</title>
-  <link rel="stylesheet" href="admin-painel.css?v=20260729-07">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#062c46">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Painel Administrativo | Portal TACS</title>
+<link rel="stylesheet" href="admin-controle-integral.css?v=20260729-40">
 </head>
 <body>
-<div class="wrap">
-  <section class="panel">
-    <header class="hero">
-      <small>Portal TACS</small>
-      <h1>Painel Administrativo Espelho</h1>
-      <p>Unidade de Saúde Posto Matias • Sítio Japaranduba</p>
-      <div class="top-actions">
-        <a href="portal-atualizado.html?v=20260729-37&notificacoes=1" target="_blank" rel="noopener">Abrir portal público</a>
-        <button id="refreshAll" type="button">Atualizar todos os dados</button>
-      </div>
-      <details class="access-box">
-        <summary>Configurar chave administrativa</summary>
-        <p>Essa chave protege a publicação das agendas. Depois de salva uma vez, ficará guardada neste aparelho.</p>
-        <div class="access-grid">
-          <input id="adminKeyInput" type="password" autocomplete="off" placeholder="Digite a chave administrativa">
-          <button id="saveAdminKey" type="button">Salvar neste aparelho</button>
-          <button id="clearAdminKey" type="button">Apagar deste aparelho</button>
-        </div>
-        <div id="accessStatus" class="access-status">Verificando chave salva neste aparelho...</div>
-      </details>
-    </header>
+<div class="app"><div class="shell">
+<header class="admin-hero">
+  <span class="admin-badge">⚙️ Área exclusiva do administrador</span>
+  <h1>Painel Administrativo</h1>
+  <p>Centro de comando do Portal TACS • Unidade de Saúde Posto Matias • Sítio Japaranduba</p>
+  <div class="hero-actions">
+    <a href="portal-atualizado.html?v=20260729-40&notificacoes=1" target="_blank" rel="noopener">🏥 Abrir Portal do Morador</a>
+    <button id="refreshAll" type="button">↻ Atualizar todos os dados</button>
+  </div>
+  <details class="security">
+    <summary>🔐 Chave administrativa</summary>
+    <div class="security-grid">
+      <input id="adminKeyInput" type="password" autocomplete="off" placeholder="Digite a chave administrativa">
+      <button id="saveAdminKey" type="button">Salvar</button>
+      <button id="clearAdminKey" type="button">Apagar</button>
+    </div>
+    <div id="securityStatus" class="security-status">A chave fica salva somente neste aparelho.</div>
+  </details>
+</header>
+<main class="main">
+  <div class="summary">
+    <div class="summary-card"><small>Função do painel</small><strong>Comandar o portal</strong></div>
+    <div class="summary-card"><small>Publicação</small><strong>Ativar ou retirar</strong></div>
+    <div class="summary-card"><small>Espelho</small><strong>Conferência ao vivo</strong></div>
+  </div>
 
-    <main>
-      <section class="mirror-card" aria-labelledby="mirrorTitle">
-        <div class="mirror-heading">
-          <div>
-            <span>VISUALIZAÇÃO REAL</span>
-            <h2 id="mirrorTitle">Espelho do Portal do Morador</h2>
-            <p>Esta é a mesma página que o morador vê. Edite nos controles abaixo, publique e o espelho será atualizado.</p>
-          </div>
-          <button id="refreshMirror" class="btn secondary mirror-refresh" type="button">Atualizar espelho</button>
-        </div>
-        <div class="mirror-shortcuts" aria-label="Editar parte do portal">
-          <button type="button" data-edit-tab="odontologia">Editar odontologia</button>
-          <button type="button" data-edit-tab="enfermeira">Editar enfermeira</button>
-          <button type="button" data-edit-tab="avisos">Editar avisos</button>
-          <button type="button" data-edit-tab="compartilhar">Criar comunicado</button>
-        </div>
-        <div class="mirror-device">
-          <iframe id="portalMirror" title="Espelho do Portal TACS do morador" src="portal-atualizado.html?v=20260729-37&notificacoes=1"></iframe>
-        </div>
-        <div id="mirrorStatus" class="mirror-status">Espelho carregado. As alterações aparecem depois da publicação.</div>
-      </section>
+  <nav class="tabs" aria-label="Módulos administrativos">
+    <button class="tab" data-tab="recados">💬 Recados</button>
+    <button class="tab" data-tab="medica">🩺 Médica</button>
+    <button class="tab" data-tab="enfermeira">👩‍⚕️ Enfermeira</button>
+    <button class="tab" data-tab="nutricionista">🥗 Nutricionista</button>
+    <button class="tab" data-tab="odontologia">🦷 Odontologia</button>
+    <button class="tab" data-tab="campanhas">📢 Campanhas</button>
+    <button class="tab" data-tab="espelho">📱 Espelho</button>
+  </nav>
 
-      <div class="system-note">
-        <strong>Avisos no portal e no celular</strong>
-        <span>Os comunicados publicados ficam visíveis no portal. Moradores que instalarem o Portal TACS e autorizarem as notificações poderão receber avisos no celular.</span>
-      </div>
-
-      <nav class="tabs" aria-label="Seções do painel">
-        <button class="tab active" data-tab="enfermeira">Agenda da enfermeira</button>
-        <button class="tab" data-tab="avisos">Avisos</button>
-        <button class="tab" data-tab="odontologia">Odontologia</button>
-        <button class="tab" data-tab="compartilhar">Compartilhar</button>
-      </nav>
-
-      <section id="enfermeira" class="card admin-section">
-        <h2>Agenda da Enfermeira Chefe</h2>
-        <p class="intro">Edite a programação semanal. Todos os dias, inclusive a quarta-feira, podem ser alterados. Marque “Folga / indisponível” somente quando não houver atendimento.</p>
-        <div id="nurseDays" class="days"></div>
-        <div class="actions">
-          <button id="saveNurse" class="btn primary" type="button">Publicar agenda da enfermeira</button>
-          <button id="resetNurse" class="btn ghost" type="button">Restaurar agenda padrão</button>
-          <button id="reloadNurse" class="btn secondary" type="button">Recarregar</button>
-        </div>
-        <div class="share-actions">
-          <button id="shareNurseText" class="btn whatsapp" type="button">Enviar texto no WhatsApp</button>
-          <button id="shareNurseCard" class="btn petroleum" type="button">Repostar card no Status</button>
-        </div>
-        <div id="nurseStatus" class="status">Carregando a programação atual...</div>
-      </section>
-
-      <section id="avisos" class="card admin-section" hidden>
-        <h2>Avisos da Unidade</h2>
-        <p class="intro">Publique o atendimento médico e um comunicado geral. Cada bloco também pode ser enviado como texto ou card.</p>
-        <div class="subcard">
-          <h3>Atendimento médico</h3>
-          <div class="grid">
-            <label>Situação<select id="medicalStatus"><option value="confirmado">Confirmado</option><option value="alterado">Data alterada</option><option value="cancelado">Cancelado</option><option value="aguardando">Aguardando confirmação</option></select></label>
-            <label>Data<input id="medicalDate" placeholder="Ex.: Sexta-feira, 31/07/2026"></label>
-            <label>Horário<input id="medicalTime" placeholder="Ex.: 08:00"></label>
-            <label class="full">Observação<textarea id="medicalNote" placeholder="Informação para os moradores"></textarea></label>
-          </div>
-          <div class="actions"><button id="clearMedical" class="btn ghost" type="button">Remover atendimento médico do portal</button><button id="shareMedicalText" class="btn whatsapp" type="button">Enviar texto no WhatsApp</button><button id="shareMedicalCard" class="btn petroleum" type="button">Card para o Status</button></div>
-        </div>
-        <div class="subcard">
-          <h3>Comunicado geral</h3>
-          <div class="grid">
-            <label>Tipo do comunicado<select id="noticeType"><option value="Aviso geral">Aviso geral</option><option value="Atendimento com nutricionista">Nutricionista</option><option value="Atendimento médico">Atendimento médico</option><option value="Vacinação">Vacinação</option><option value="Alteração de atendimento">Alteração</option><option value="Cancelamento">Cancelamento</option></select></label>
-            <label>Importância<select id="noticePriority"><option value="informativo">Informativo</option><option value="importante">Importante</option><option value="urgente">Urgente</option></select></label>
-            <label>Validade<input id="noticeValidity" type="date"></label>
-            <label class="full">Título<input id="noticeTitle" placeholder="Ex.: Atendimento com nutricionista"></label>
-            <label class="full">Mensagem<textarea id="noticeMessage" placeholder="Escreva o comunicado que aparecerá no portal"></textarea></label>
-          </div>
-          <div id="noticePreview" class="notice-preview" hidden></div>
-          <div class="actions"><button id="clearNotice" class="btn ghost" type="button">Limpar comunicado geral</button><button id="shareNoticeText" class="btn whatsapp" type="button">Enviar texto no WhatsApp</button><button id="shareNoticeCard" class="btn petroleum" type="button">Card para o Status</button></div>
-        </div>
-        <div class="actions"><button id="publishNotices" class="btn primary" type="button">Publicar avisos no portal</button><button id="reloadNotices" class="btn secondary" type="button">Recarregar avisos atuais</button></div>
-        <div id="noticeStatus" class="status">Carregando os avisos atuais...</div>
-      </section>
-
-      <section id="odontologia" class="card admin-section" hidden>
-        <h2>Agenda odontológica</h2>
-        <p class="intro">Defina datas e vagas comuns e emergenciais. Os dias regulares são segunda, terça e quinta. A sexta-feira deve ser usada somente como Dia Extra quando liberada.</p>
-        <div id="dentalRows" class="days"></div>
-        <div class="actions"><button id="addDentalDate" class="btn ghost" type="button">Adicionar outra data</button><button id="saveDental" class="btn primary" type="button">Publicar agenda odontológica</button><button id="reloadDental" class="btn secondary" type="button">Recarregar</button></div>
-        <div class="share-actions"><button id="shareDentalText" class="btn whatsapp" type="button">Enviar texto no WhatsApp</button><button id="shareDentalCard" class="btn petroleum" type="button">Repostar card no Status</button></div>
-        <div id="dentalStatus" class="status">Carregando a agenda odontológica...</div>
-        <div class="note">A chave administrativa protege apenas as alterações publicadas. Depois de salva neste aparelho, não será pedida novamente.</div>
-      </section>
-
-      <section id="compartilhar" class="card admin-section" hidden>
-        <h2>Criar comunicado para WhatsApp</h2>
-        <p class="intro">Use esta área para criar rapidamente um texto ou card que não precise ser publicado no mural.</p>
-        <div class="grid">
-          <label>Tipo<select id="customType"><option>Atendimento com nutricionista</option><option>Atendimento médico</option><option>Agenda da enfermeira</option><option>Agenda odontológica</option><option>Vacinação</option><option>Aviso geral</option><option>Alteração de atendimento</option><option>Cancelamento</option></select></label>
-          <label>Data<input id="customDate" placeholder="Ex.: 31/07/2026"></label>
-          <label>Horário<input id="customTime" placeholder="Ex.: 08:00"></label>
-          <label class="full">Título<input id="customTitle" placeholder="Título principal do comunicado"></label>
-          <label class="full">Mensagem<textarea id="customMessage" placeholder="Informação que será enviada aos moradores"></textarea></label>
-        </div>
-        <div class="actions"><button id="shareCustomText" class="btn whatsapp" type="button">Enviar texto no WhatsApp</button><button id="shareCustomCard" class="btn petroleum" type="button">Criar card azul-petróleo</button></div>
-        <div id="shareStatus" class="status">O WhatsApp pedirá que você escolha a conversa ou “Meu status”.</div>
-      </section>
-    </main>
-
-    <footer>© 2026 Portal TACS • Painel administrativo da Unidade de Saúde Posto Matias</footer>
+  <section class="section" data-section="recados">
+    <div class="section-head"><div><span class="section-label">Balão azul-petróleo</span><h2>Recados do Posto Matias</h2><p class="section-intro">Escreva, publique, edite ou retire qualquer recado exibido no Portal do Morador.</p></div></div>
+    <div class="petroleum-balloon"><h3 id="recadoPreviewTitle">Recado da Unidade</h3><p id="recadoPreviewMessage">O conteúdo publicado será exibido neste formato azul-petróleo.</p></div>
+    <div class="form-grid" style="margin-top:16px">
+      <label>Título<input id="recadoTitle" placeholder="Ex.: Atendimento confirmado"></label>
+      <label>Importância<select id="recadoPriority"><option value="informativo">Informativo</option><option value="importante">Importante</option><option value="urgente">Urgente</option></select></label>
+      <label>Exibir até<input id="recadoValidity" type="date"></label>
+      <label class="full">Mensagem<textarea id="recadoMessage" placeholder="Digite o recado que o morador verá"></textarea></label>
+    </div>
+    <div class="actions"><button id="publishRecado" class="btn publish" type="button">Publicar recado no portal</button><button id="cancelRecado" class="btn cancel" type="button">Cancelar e retirar recado</button></div>
+    <div id="recadoStatus" class="status">Nenhuma alteração publicada por esta tela.</div>
   </section>
-</div>
-<script src="agenda-config.js?v=20260729-06"></script>
-<script src="admin-painel.js?v=20260729-06"></script>
-<script src="admin-espelho.js?v=20260729-02"></script>
-<script src="avisos-remocao-fix.js?v=20260729-01"></script>
-<script src="admin-publicacao-fix.js?v=20260729-01"></script>
+
+  <section class="section" data-section="medica" hidden>
+    <span class="section-label">Controle por dia</span><h2>Agenda da Médica</h2><p class="section-intro">A sexta-feira pode ficar ativa como padrão. Os demais dias só serão ativados quando a Unidade informar.</p>
+    <div id="medicaWeek" class="week"></div>
+  </section>
+
+  <section class="section" data-section="enfermeira" hidden>
+    <span class="section-label">Controle por dia</span><h2>Agenda da Enfermeira Chefe</h2><p class="section-intro">Edite o atendimento, ative ou desative cada dia e publique diretamente no Portal do Morador.</p>
+    <div id="enfermeiraWeek" class="week"></div>
+  </section>
+
+  <section class="section" data-section="nutricionista" hidden>
+    <span class="section-label">Data informada pela profissional</span><h2>Agenda da Nutricionista</h2><p class="section-intro">Todos os dias começam desativados. Ative somente o dia confirmado pela nutricionista.</p>
+    <div id="nutricionistaWeek" class="week"></div>
+  </section>
+
+  <section class="section" data-section="odontologia" hidden>
+    <span class="section-label">Vagas comuns e emergenciais</span><h2>Agenda Odontológica</h2><p class="section-intro">Controle segunda a sexta, Dia Extra, vagas comuns, vagas de emergência, ativação manual e encerramento às 12h.</p>
+    <div id="odontologiaWeek" class="week"></div>
+  </section>
+
+  <section class="section" data-section="campanhas" hidden>
+    <span class="section-label">Publicação com prazo</span><h2>Campanhas da Unidade</h2><p class="section-intro">Defina a data inicial, o tempo de exposição em dias e publique no Portal do Morador.</p>
+    <div class="form-grid">
+      <label>Nome da campanha<input id="campaignTitle" placeholder="Ex.: Campanha de vacinação"></label>
+      <label>Data de início<input id="campaignStart" type="date"></label>
+      <label>Tempo de exposição em dias<input id="campaignDays" type="number" min="1" value="7"></label>
+      <label class="full">Mensagem<textarea id="campaignMessage" placeholder="Informações da campanha"></textarea></label>
+    </div>
+    <div class="actions"><button id="publishCampaign" class="btn publish" type="button">Publicar campanha no portal</button><button id="cancelCampaign" class="btn cancel" type="button">Encerrar e retirar campanha</button></div>
+    <div id="campaignStatus" class="status">Nenhuma campanha publicada por esta tela.</div>
+  </section>
+
+  <section class="section" data-section="espelho" hidden>
+    <div class="section-head"><div><span class="section-label">Visualização real</span><h2>Espelho do Portal do Morador</h2><p class="section-intro">Confira o resultado depois de publicar ou cancelar uma informação.</p></div><button id="refreshMirror" class="btn secondary" type="button">Atualizar espelho</button></div>
+    <div class="mirror-frame"><iframe id="portalMirror" title="Espelho do Portal do Morador" src="portal-atualizado.html?v=20260729-40&notificacoes=1"></iframe></div>
+    <div class="backend-note"><strong>Importante:</strong> o painel visual já está reorganizado. Para que Médica, Nutricionista, Recados e Campanhas coexistam com controles independentes, o Google Apps Script integral precisa estar implantado na planilha administrativa.</div>
+  </section>
+</main>
+<footer>© 2026 Portal TACS • Painel Administrativo da Unidade de Saúde Posto Matias</footer>
+</div></div>
+<script src="agenda-config.js?v=20260729-40"></script>
+<script src="admin-controle-integral.js?v=20260729-40"></script>
 </body>
 </html>
