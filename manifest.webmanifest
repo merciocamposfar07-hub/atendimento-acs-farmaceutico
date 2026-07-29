@@ -2,7 +2,7 @@
   "name": "TACS - Técnico Agente Comunitário de Saúde",
   "short_name": "Atendimento TACS",
   "description": "Portal do TACS - Técnico Agente Comunitário de Saúde da Unidade de Saúde Posto Matias para moradores do Sítio Japaranduba.",
-  "start_url": "./portal-atualizado.html?v=20260728-19",
+  "start_url": "./portal-atualizado.html?v=20260728-20",
   "scope": "./",
   "display": "standalone",
   "background_color": "#e9eff3",
