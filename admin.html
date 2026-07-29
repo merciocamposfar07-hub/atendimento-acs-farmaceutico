@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#062c46">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <title>Painel Administrativo | Portal TACS</title>
-  <link rel="stylesheet" href="admin-painel.css?v=20260729-06">
+  <title>Painel Administrativo Espelho | Portal TACS</title>
+  <link rel="stylesheet" href="admin-painel.css?v=20260729-07">
 </head>
 <body>
 <div class="wrap">
   <section class="panel">
     <header class="hero">
       <small>Portal TACS</small>
-      <h1>Painel Administrativo</h1>
+      <h1>Painel Administrativo Espelho</h1>
       <p>Unidade de Saúde Posto Matias • Sítio Japaranduba</p>
       <div class="top-actions">
-        <a href="portal-atualizado.html?v=20260729-32&notificacoes=1" target="_blank" rel="noopener">Abrir portal público</a>
+        <a href="portal-atualizado.html?v=20260729-34&notificacoes=1" target="_blank" rel="noopener">Abrir portal público</a>
         <button id="refreshAll" type="button">Atualizar todos os dados</button>
       </div>
       <details class="access-box">
@@ -32,6 +32,27 @@
     </header>
 
     <main>
+      <section class="mirror-card" aria-labelledby="mirrorTitle">
+        <div class="mirror-heading">
+          <div>
+            <span>VISUALIZAÇÃO REAL</span>
+            <h2 id="mirrorTitle">Espelho do Portal do Morador</h2>
+            <p>Esta é a mesma página que o morador vê. Edite nos controles abaixo, publique e o espelho será atualizado.</p>
+          </div>
+          <button id="refreshMirror" class="btn secondary mirror-refresh" type="button">Atualizar espelho</button>
+        </div>
+        <div class="mirror-shortcuts" aria-label="Editar parte do portal">
+          <button type="button" data-edit-tab="odontologia">Editar odontologia</button>
+          <button type="button" data-edit-tab="enfermeira">Editar enfermeira</button>
+          <button type="button" data-edit-tab="avisos">Editar avisos</button>
+          <button type="button" data-edit-tab="compartilhar">Criar comunicado</button>
+        </div>
+        <div class="mirror-device">
+          <iframe id="portalMirror" title="Espelho do Portal TACS do morador" src="portal-atualizado.html?v=20260729-34&notificacoes=1"></iframe>
+        </div>
+        <div id="mirrorStatus" class="mirror-status">Espelho carregado. As alterações aparecem depois da publicação.</div>
+      </section>
+
       <div class="system-note">
         <strong>Avisos no portal e no celular</strong>
         <span>Os comunicados publicados ficam visíveis no portal. Moradores que instalarem o Portal TACS e autorizarem as notificações poderão receber avisos no celular.</span>
@@ -46,7 +67,7 @@
 
       <section id="enfermeira" class="card admin-section">
         <h2>Agenda da Enfermeira Chefe</h2>
-        <p class="intro">Edite a programação semanal. Depois, publique no portal ou compartilhe a agenda por texto e card.</p>
+        <p class="intro">Edite a programação semanal. Todos os dias, inclusive a quarta-feira, podem ser alterados. Marque “Folga / indisponível” somente quando não houver atendimento.</p>
         <div id="nurseDays" class="days"></div>
         <div class="actions">
           <button id="saveNurse" class="btn primary" type="button">Publicar agenda da enfermeira</button>
@@ -91,7 +112,7 @@
 
       <section id="odontologia" class="card admin-section" hidden>
         <h2>Agenda odontológica</h2>
-        <p class="intro">Defina as datas e vagas comuns e emergenciais. As reservas do portal continuam reduzindo as vagas automaticamente.</p>
+        <p class="intro">Defina datas e vagas comuns e emergenciais. Os dias regulares são segunda, terça e quinta. A sexta-feira deve ser usada somente como Dia Extra quando liberada.</p>
         <div id="dentalRows" class="days"></div>
         <div class="actions"><button id="addDentalDate" class="btn ghost" type="button">Adicionar outra data</button><button id="saveDental" class="btn primary" type="button">Publicar agenda odontológica</button><button id="reloadDental" class="btn secondary" type="button">Recarregar</button></div>
         <div class="share-actions"><button id="shareDentalText" class="btn whatsapp" type="button">Enviar texto no WhatsApp</button><button id="shareDentalCard" class="btn petroleum" type="button">Repostar card no Status</button></div>
@@ -119,6 +140,7 @@
 </div>
 <script src="agenda-config.js?v=20260729-06"></script>
 <script src="admin-painel.js?v=20260729-06"></script>
+<script src="admin-espelho.js?v=20260729-01"></script>
 <script src="avisos-remocao-fix.js?v=20260729-01"></script>
 <script src="admin-publicacao-fix.js?v=20260729-01"></script>
 </body>
