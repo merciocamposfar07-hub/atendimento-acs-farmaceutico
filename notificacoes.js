@@ -14,7 +14,7 @@
     if (document.getElementById('portal-notificacoes-style')) return;
     var style = document.createElement('style');
     style.id = 'portal-notificacoes-style';
-    style.textContent = '.notification-offer{margin-top:18px;padding:22px;border:2px solid #0d5f8a;border-radius:18px;background:#f4fbff;color:#082b43}.notification-offer[hidden]{display:none!important}.notification-offer h3{margin:0 0 10px;font-size:28px;line-height:1.2}.notification-offer p{margin:10px 0;line-height:1.5;font-size:18px}.notification-offer button{width:100%;margin-top:14px;padding:18px 20px;border:0;border-radius:14px;background:#086b9b;color:#fff;font-size:21px;font-weight:900}.notification-offer button:disabled{opacity:.72}.notification-offer .notification-status{font-weight:850}.notification-offer .notification-status.success{color:#16753b}.notification-offer .notification-help{font-size:17px;color:#405866}.notification-guide{margin-top:18px;padding:16px;border:1px solid #9fb9c7;border-radius:14px;background:#fff}.notification-guide strong{display:block;margin-bottom:8px;font-size:20px}.notification-guide p{margin:8px 0;font-size:17px;color:#314b59}';
+    style.textContent = '.notification-offer{margin-top:18px;padding:22px;border:2px solid #0d5f8a;border-radius:18px;background:#f4fbff;color:#082b43}.notification-offer[hidden]{display:none!important}.notification-offer h3{margin:0 0 10px;font-size:28px;line-height:1.2}.notification-offer p{margin:10px 0;line-height:1.5;font-size:18px}.notification-offer button{width:100%;margin-top:14px;padding:18px 20px;border:0;border-radius:14px;background:#086b9b;color:#fff;font-size:21px;font-weight:900}.notification-offer button:disabled{opacity:.65}.notification-offer .notification-status{font-weight:850}.notification-offer .notification-help{font-size:17px;color:#405866}.notification-offer .notification-ok{color:#1c7a42;font-weight:900}.notification-guide{margin-top:18px;padding:16px;border:1px solid #9fb9c7;border-radius:14px;background:#fff}.notification-guide strong{display:block;margin-bottom:8px;font-size:20px}.notification-guide p{margin:8px 0;font-size:17px;color:#314b59}';
     document.head.appendChild(style);
   }
 
@@ -41,12 +41,17 @@
   }
 
   function setPending() { try { localStorage.setItem(STORAGE_PENDING, '1'); } catch (error) {} setTimeout(configureOffer, 0); }
-  function shouldShowOffer() { if (wantsNotificationsFromUrl()) return true; try { return localStorage.getItem(STORAGE_PENDING) === '1' || localStorage.getItem(STORAGE_ENABLED) === '1'; } catch (error) { return false; } }
+  function shouldShowOffer() {
+    if (isStandalone()) return true;
+    if (wantsNotificationsFromUrl()) return true;
+    try { return localStorage.getItem(STORAGE_PENDING) === '1' || localStorage.getItem(STORAGE_ENABLED) === '1'; }
+    catch (error) { return false; }
+  }
   function installSendHook() { var send = document.getElementById('send'); if (!send || send.dataset.notificationHook === '1') return; send.dataset.notificationHook = '1'; send.addEventListener('click', setPending, true); }
 
   function showEnabled(status, button, help) {
-    status.className = 'notification-status success';
     status.textContent = '✓ Notificações ativadas neste aparelho.';
+    status.classList.add('notification-ok');
     button.textContent = 'Notificações ativadas';
     button.disabled = true;
     help.textContent = 'Este aparelho receberá os novos avisos publicados no Portal TACS.';
@@ -70,7 +75,6 @@
           allowLocalhostAsSecureOrigin: false
         });
         if (OneSignal.Notifications.permission) { showEnabled(status, button, help); return; }
-        status.className = 'notification-status';
         status.textContent = 'Toque no botão para autorizar os avisos neste aparelho.';
         help.textContent = isAndroid() ? 'O Android mostrará a janela oficial de permissão.' : 'O iPhone mostrará a janela oficial de permissão.';
         button.onclick = async function () {
@@ -104,19 +108,17 @@
     var status = document.getElementById('notificationStatus');
     var help = document.getElementById('notificationHelp');
     box.hidden = false;
-    status.className = 'notification-status';
+    status.classList.remove('notification-ok');
+    button.textContent = 'Ativar e permitir notificações';
+    button.disabled = false;
 
     if (isIos() && !isStandalone()) {
       status.textContent = 'Ainda não ativado neste iPhone.';
-      help.textContent = 'Primeiro adicione o Portal TACS à Tela de Início. Depois abra pelo ícone criado e faça a autorização.';
+      help.textContent = 'Adicione o Portal TACS à Tela de Início e abra pelo ícone criado.';
       button.textContent = 'Instale o Portal para ativar avisos';
       button.disabled = true;
-      button.onclick = null;
       return;
     }
-
-    button.textContent = 'Ativar e permitir notificações';
-    button.disabled = false;
 
     if (!config.appId) {
       status.textContent = 'A ativação das notificações ainda está sendo finalizada.';
