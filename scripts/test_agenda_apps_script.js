@@ -224,19 +224,154 @@ testUnavailableSlot();
 const portal = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 assert.match(
   portal,
-  /DENTAL_REGULAR_CATEGORY='Solicitar atendimento odontológico \(dentista\)'/
+  /DENTAL_REGULAR='Solicitar atendimento odontológico \(dentista\)'/
 );
 assert.match(
   portal,
-  /DENTAL_EMERGENCY_CATEGORY='Solicitar atendimento odontológico de emergência \(dentista\)'/
+  /DENTAL_EMERGENCY='Solicitar atendimento odontológico de emergência \(dentista\)'/
 );
-assert.match(portal, /type==='emergencial'\?slot\.vagasEmergenciais:slot\.vagasComuns/);
-assert.match(portal, /reserveDentalSlot\(\)\.then/);
+assert.match(
+  portal,
+  /var v=type==='emergencial'\?slot\.vagasEmergenciais:slot\.vagasComuns/
+);
+assert.match(portal, /reserveSlot\(\)\.then/);
 assert.match(portal, /form\.submit\(\)/);
+assert.match(portal, /event\.source!==iframe\.contentWindow/);
+assert.match(
+  portal,
+  /DENTAL_ALLOWED_DAYS=\['Segunda-feira','Terça-feira','Quinta-feira'\]/
+);
+assert.match(
+  portal,
+  /DENTAL_ALLOWED_DAYS\.indexOf\(String\(slot&&slot\.dia\|\|''\)\.trim\(\)\)!==-1/
+);
 assert.ok(
-  portal.indexOf('<script src="agenda-config.js"></script>') <
-    portal.indexOf("var DENTAL_AGENDA_API_URL="),
+  portal.indexOf('src="agenda-config.js?v=') <
+    portal.indexOf("var DENTAL_API="),
   'A configuração da agenda precisa carregar antes do código do portal.'
 );
+assert.match(portal, /src="portal-controle-integral\.js\?v=/);
+assert.doesNotMatch(portal, /AKfycbwfcTFh7DR3eQa7pA1AQ_f1_aOEe_/);
+assert.doesNotMatch(portal, /solicitacao-card\.js/);
+assert.equal(
+  (portal.match(/form\.submit\(\)/g) || []).length,
+  1,
+  'O portal oficial deve possuir uma única rotina de envio da reserva odontológica.'
+);
 
-console.log('Agenda: 4 testes de reserva e integração do portal concluídos.');
+const agendaConfig = fs.readFileSync(
+  path.join(__dirname, '..', 'agenda-config.js'),
+  'utf8'
+);
+assert.doesNotMatch(agendaConfig, /reserveSlot|reservar|salvar_agenda/);
+assert.doesNotMatch(agendaConfig, /AKfycbwfcTFh7DR3eQa7pA1AQ_f1_aOEe_/);
+
+const nurseScript = fs.readFileSync(
+  path.join(__dirname, '..', 'agenda-enfermeira.js'),
+  'utf8'
+);
+assert.doesNotMatch(
+  nurseScript,
+  /dentalPublic|DENTAL_REGULAR|DENTAL_EMERGENCY|DENTAL_AGENDA_API_URL/
+);
+assert.match(nurseScript, /window\.TACS_ADMIN_API_URL/);
+
+const adminPage = fs.readFileSync(
+  path.join(__dirname, '..', 'admin.html'),
+  'utf8'
+);
+assert.match(adminPage, /src="admin-controle-integral\.js\?v=/);
+assert.doesNotMatch(adminPage, /admin-post-confirmacao-fix\.js/);
+assert.doesNotMatch(adminPage, /admin-post-fetch-fix\.js/);
+assert.doesNotMatch(adminPage, /portal-atualizado\.html/);
+
+const adminController = fs.readFileSync(
+  path.join(__dirname, '..', 'admin-controle-integral.js'),
+  'utf8'
+);
+assert.match(adminController, /event\.source !== frame\.contentWindow/);
+assert.match(adminController, /action: 'salvar_agenda'/);
+assert.match(adminController, /data\.source === 'portal-tacs'/);
+assert.match(adminController, /data\.source === 'agenda-odontologica-tacs'/);
+assert.doesNotMatch(adminController, /NOTICE|no-cors|fallback/i);
+
+const legacyPortal = fs.readFileSync(
+  path.join(__dirname, '..', 'portal-atualizado.html'),
+  'utf8'
+);
+assert.match(legacyPortal, /var target = '\.\/index\.html'/);
+assert.match(legacyPortal, /window\.location\.replace\(target\)/);
+
+const legacyNoticesAdmin = fs.readFileSync(
+  path.join(__dirname, '..', 'admin-avisos.html'),
+  'utf8'
+);
+assert.match(legacyNoticesAdmin, /var target = '\.\/admin\.html'/);
+assert.doesNotMatch(
+  legacyNoticesAdmin,
+  /POSTO_MATIAS_AVISOS_API_URL|no-cors|publicarAvisos/
+);
+
+const opener = fs.readFileSync(path.join(__dirname, '..', 'abrir.html'), 'utf8');
+assert.match(opener, /\.\/index\.html\?v=20260730-51/);
+
+const mainBackend = fs.readFileSync(
+  path.join(__dirname, '..', 'apps-script-controle-integral.gs'),
+  'utf8'
+);
+assert.match(
+  mainBackend,
+  /setXFrameOptionsMode\(HtmlService\.XFrameOptionsMode\.ALLOWALL\)/
+);
+assert.match(
+  mainBackend,
+  /if\(\['medica','nutricionista'\]\.indexOf\(module\)<0\)/
+);
+assert.match(mainBackend, /var out=\{medica:\[\],nutricionista:\[\]\}/);
+assert.doesNotMatch(
+  mainBackend,
+  /var out=\{medica:\[\],nutricionista:\[\],enfermeira:\[\],odontologia:\[\]\}/
+);
+
+[
+  'admin-espelho.js',
+  'admin-painel.js',
+  'admin-post-confirmacao-fix.js',
+  'admin-post-fetch-fix.js',
+  'admin-publicacao-fix.js',
+  'agenda-enfermeira-publica-fix.js',
+  'avisos-portal-fix.js',
+  'avisos-remocao-fix.js',
+  'apps-script-avisos.gs',
+  'apps-script-painel-tacs.gs',
+  path.join('google-apps-script-avisos', 'Index.html'),
+  path.join('.github', 'workflows', 'atualizar-vagas-odontologia.yml'),
+  path.join('.github', 'workflows', 'integrar-agenda-enfermeira.yml'),
+  'agenda-odontologica.json',
+  path.join('scripts', 'atualizar_vagas_odontologia.py'),
+  'moradores-api-redirect.js',
+  'moradores-pais-compat.js',
+  'agendas-semana.js',
+  'portal-modules.js',
+  'solicitacao-card.js',
+  'solicitacao-status-fix.js',
+  'portal-morador-cleanup.js',
+  'portal-escala-mobile-fix.js',
+  'notificacoes-config.js',
+  'notificacoes-ui-fix.js',
+  'notificacoes-visiveis-fix.js',
+  'notificacoes.js',
+  'OneSignalSDKWorker.js',
+  path.join('push', 'OneSignalSDKWorker.js'),
+  'admin-painel.css'
+].forEach(function (legacyPath) {
+  assert.equal(
+    fs.existsSync(path.join(__dirname, '..', legacyPath)),
+    false,
+    'O controlador antigo não pode permanecer no projeto: ' + legacyPath
+  );
+});
+
+console.log(
+  'Agenda: reservas, fontes oficiais e rotas antigas validadas.'
+);
