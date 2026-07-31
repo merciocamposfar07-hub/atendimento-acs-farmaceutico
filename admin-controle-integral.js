@@ -7,7 +7,7 @@
   ).trim();
   var DENTAL = String(window.DENTAL_AGENDA_API_URL || '').trim();
   var DAYS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
-  var DENTAL_DAYS = ['Segunda-feira', 'Terça-feira', 'Quinta-feira'];
+  var DENTAL_DAYS = DAYS.slice();
   var KEY = 'tacs-admin-key';
   var refreshing = false;
 
