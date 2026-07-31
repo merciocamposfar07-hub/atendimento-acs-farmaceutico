@@ -44,4 +44,20 @@
       options
     );
   };
+
+  function loadDentalRuntime() {
+    if (document.querySelector('script[data-geral-admin-fix]')) return;
+    var script = document.createElement('script');
+    script.src = 'geral-admin-fix.js?v=20260731-74';
+    script.dataset.geralAdminFix = '1';
+    document.head.appendChild(script);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(loadDentalRuntime, 0);
+    });
+  } else {
+    setTimeout(loadDentalRuntime, 0);
+  }
 }());
