@@ -1,208 +1,91 @@
-# Matriz Oficial — Portal TACS
+# Arquitetura oficial — Portal TACS
 
-Versão inicial da arquitetura modular do Portal TACS.
+Esta é a fonte de verdade da arquitetura do portal. Rotinas antigas não devem
+ser reativadas nem usadas como alternativa silenciosa.
 
-## Público e finalidade
+## Entradas oficiais
 
-Portal voltado exclusivamente aos moradores da zona rural do Sítio Japaranduba, vinculados à Unidade de Saúde Posto Matias, em Chã Grande/PE.
-
-Princípio central:
-
-> Máxima simplicidade para o comunitário. Máxima organização para o TACS.
-
-## Identidade visual
-
-- Cor principal: azul-petróleo `#062c46`.
-- Fundo claro: off-white/cinza muito claro.
-- Solicitações recebidas: card azul-petróleo.
-- Confirmações: card verde.
-- Avisos: card amarelo.
-- Urgências e cancelamentos: card vermelho.
-- Layout mobile-first, com letras e botões grandes.
-
-## Módulos ativos de solicitação
-
-### Odontologia comum e emergencial
-
-- Dias e vagas vêm da planilha `AGENDA`.
-- O comunitário vê somente vagas disponíveis.
-- Ao concluir, a vaga é reservada automaticamente.
-- A disponibilidade é atualizada imediatamente.
-- A solicitação chega ao WhatsApp do TACS em card azul-petróleo.
-- Não depende de confirmação posterior do TACS ao comunitário.
-
-### Vacinação
-
-- O comunitário informa qual vacina deseja.
-- Não escolhe data nem horário.
-- A Unidade de Saúde define a programação.
-- O TACS pode gerar um card individual com vacina, dia, data, hora e local.
-- Orientação do card: levar somente o cartão de vacinação.
-
-### Enfermeira Chefe
-
-Programação padrão da Unidade de Saúde Posto Matias:
-
-| Dia | Programação padrão |
+| Uso | Arquivo |
 |---|---|
-| Segunda-feira | Visita domiciliar |
-| Terça-feira | Pré-natal |
-| Quarta-feira | Folga |
-| Quinta-feira | Puericultura — acompanhamento de crianças e adolescentes |
-| Sexta-feira | Preventivo (citologia) |
+| Portal do morador | `index.html` |
+| Painel administrativo | `admin.html` |
+| Endereço antigo do portal | `portal-atualizado.html` redireciona para `index.html` |
+| Editor antigo de avisos | `admin-avisos.html` redireciona para `admin.html` |
 
-Regras:
+## Duas fontes de dados, sem concorrência
 
-- A programação padrão fica registrada na agenda `AGENDA_ENFERMEIRA`.
-- Toda a agenda é editável pelo Painel Administrativo.
-- Qualquer dia pode receber outro atendimento, folga, cancelamento, mutirão ou programação extraordinária.
-- É possível trocar os atendimentos entre os dias, por exemplo: Preventivo na quarta-feira e folga na sexta-feira.
-- Nenhuma alteração de rotina deve exigir modificação do código.
-- O comunitário vê somente a programação vigente publicada.
-- Não escolhe horário, salvo mudança futura na programação.
-- O card da solicitação deve registrar o atendimento, o dia e a data selecionados.
+### 1. Banco principal do Portal TACS
 
-A visita domiciliar realizada pela Enfermeira Chefe é diferente da solicitação de visita médica domiciliar.
+O endereço configurado em `TACS_ADMIN_API_URL` é a única fonte para:
 
-### Visita médica domiciliar
+- atendimento médico;
+- atendimento da nutricionista;
+- agenda da Enfermeira Chefe;
+- recados;
+- campanhas.
 
-- É uma solicitação ativa e própria do portal.
-- O comunitário informa para quem é a visita.
-- O comunitário descreve resumidamente o motivo.
-- Não escolhe dia nem horário.
-- A solicitação chega ao WhatsApp do TACS em card azul-petróleo.
-- O TACS encaminha a demanda para a Unidade de Saúde.
-- A data da visita é definida posteriormente pela Unidade e pode ser comunicada ao comunitário por card.
+O Painel Administrativo grava esses dados somente no banco principal. O Portal
+do Morador lê esses mesmos dados somente do banco principal.
 
-### Declarações
+### 2. Agenda odontológica
 
-Opções:
+O endereço configurado em `TACS_DENTAL_AGENDA_API_URL` é a única fonte para:
 
-- Aposentadoria.
-- Benefício.
-- Auxílio-maternidade.
+- vagas odontológicas comuns;
+- vagas odontológicas emergenciais;
+- reservas odontológicas;
+- abatimento automático da quantidade de vagas.
 
-### Outras solicitações ao TACS
+São aceitas agendas de segunda-feira, terça-feira e quinta-feira. Cada reserva
+é enviada uma única vez, possui identificador próprio e é protegida contra
+abatimento duplicado.
 
-- Campo simples para descrição do motivo.
+## Limites entre os módulos
 
-### Implanon
+- Odontologia nunca é gravada no banco principal.
+- Recados e campanhas nunca são gravados no sistema antigo de avisos.
+- A agenda da enfermeira nunca contém lógica odontológica.
+- O WhatsApp serve apenas para compartilhar a solicitação já preparada; ele
+  não publica nem sincroniza agendas, recados ou campanhas.
+- Não existe `no-cors`, espelhamento ou fallback para outro banco nos caminhos
+  oficiais.
 
-Mantido como módulo ativo conforme a estrutura atual do portal.
+## Funcionamento público
 
-## Módulos informativos
+- O comunitário vê apenas informações publicadas pelas duas fontes oficiais.
+- Na odontologia, o portal mostra apenas datas permitidas e vagas positivas.
+- A mensagem do WhatsApp é liberada depois da confirmação da reserva
+  odontológica pelo sistema.
+- O portal calcula e apresenta os dados do atendimento conforme o formulário.
 
-Não geram solicitação de marcação. São publicados no Mural de Avisos como texto, card ou banner.
+## Funcionamento administrativo
 
-- Nutricionista.
-- Outubro Rosa.
-- Novembro Azul.
-- Campanhas de vacinação.
-- Comunicados gerais da Unidade de Saúde.
+- O painel aguarda a leitura inicial antes de liberar alterações.
+- Depois de uma publicação, o painel relê a fonte oficial e confere se a
+  alteração ficou disponível.
+- Agenda odontológica comum e emergencial é editada no mesmo painel.
+- Recados e campanhas são publicados no banco principal e aparecem no Portal
+  do Morador a partir dessa mesma origem.
 
-O nutricionista comparece em data específica informada pela unidade. Portanto, sua programação aparece no mural e não como solicitação de agendamento.
+## Verificação obrigatória antes de publicar
 
-## Mural de Avisos
+Execute:
 
-Cada aviso pode conter:
+```sh
+npm test
+```
 
-- título;
-- categoria;
-- mensagem;
-- data;
-- hora;
-- local;
-- prioridade;
-- início da publicação;
-- fim da publicação;
-- formato: texto, card ou banner.
+Os testes cobrem, sem gravar dados reais:
 
-Ao vencer a validade, o aviso deixa de aparecer automaticamente.
+- reserva odontológica comum;
+- reserva odontológica emergencial;
+- abatimento único de vaga;
+- bloqueio de vaga indisponível;
+- abertura do WhatsApp somente após confirmação;
+- publicação e releitura de recado;
+- publicação e releitura de agenda odontológica;
+- ausência da API antiga de avisos nos arquivos oficiais.
 
-Os avisos podem ser reutilizados para:
-
-- portal;
-- conversa individual no WhatsApp;
-- grupos;
-- Status do WhatsApp.
-
-## Cards
-
-### Card recebido pelo TACS
-
-Deve reunir, conforme os dados disponíveis:
-
-- nome;
-- CPF ou CNS;
-- nascimento;
-- idade em anos e meses;
-- mãe;
-- pai;
-- comunidade;
-- unidade;
-- solicitação;
-- data, tipo de vaga ou informação específica do serviço.
-
-### Card enviado ao comunitário
-
-Pode ser gerado pelo painel administrativo e compartilhado pelo WhatsApp. O portal prepara o card e abre o WhatsApp; o TACS confirma o envio.
-
-## Painel Administrativo
-
-Estrutura planejada:
-
-- Dashboard.
-- Solicitações.
-- Comunitários.
-- Agendas.
-- Mural e campanhas.
-- Convocações individuais.
-- Histórico.
-- Relatórios.
-- Configurações.
-- Módulos.
-
-## Histórico e status
-
-As solicitações não devem ser apagadas, apenas arquivadas.
-
-Estados possíveis:
-
-- recebida;
-- em análise;
-- encaminhada à unidade;
-- aguardando resposta da unidade;
-- concluída;
-- cancelada.
-
-A odontologia é uma exceção operacional: a vaga já é reservada pelo próprio portal no momento da solicitação.
-
-## Arquitetura modular
-
-O arquivo `portal-modules.js` registra módulos ativos, informativos e futuros.
-
-Cada módulo pode definir:
-
-- identificador;
-- nome;
-- ícone;
-- tipo;
-- ativo ou inativo;
-- ordem;
-- campos;
-- agenda;
-- programação padrão;
-- regras de edição;
-- reserva automática;
-- card;
-- regras específicas.
-
-Módulos futuros já previstos:
-
-- Psicologia.
-- Fisioterapia.
-- Bolsa Família.
-- Calendário de exames.
-- Transporte sanitário.
-
-A inclusão futura de um módulo não deve exigir reescrever o núcleo do portal nem modificar os módulos existentes.
+O aplicativo web do Google Apps Script principal deve usar
+`apps-script-controle-integral.gs`. O aplicativo odontológico deve usar
+`google-apps-script/Code.gs`.

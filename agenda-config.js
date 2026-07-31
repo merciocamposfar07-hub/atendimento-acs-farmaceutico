@@ -1,8 +1,15 @@
 /*
- * Serviços externos gratuitos usados pelo portal.
+ * Configuração única dos serviços externos usados pelo Portal TACS.
+ *
+ * Responsabilidades:
+ * - Portal TACS / Banco de Dados: agendas profissionais, recados e campanhas.
+ * - Agenda Odontológica: vagas comuns e emergenciais e respectivas reservas.
+ *
+ * Este arquivo não publica avisos nem reserva vagas. Ele apenas expõe os
+ * endereços oficiais e cuida de recursos locais do formulário.
  */
+window.TACS_ADMIN_API_URL = 'https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec';
 window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_sawD2X8K9O3hGjgCge3gao5S9FjajcqYxyO8e_0WTkrsoqjtBhC4kFhAFTl/exec';
-window.POSTO_MATIAS_AVISOS_API_URL = 'https://script.google.com/macros/s/AKfycbwfcTFh7DR3eQa7pA1AQ_f1_aOEe_1W0uc_Z3og9mDYXBhjCH0ixLjZsQrT4SHNyQ5_GA/exec';
 
 (function () {
   'use strict';
@@ -13,7 +20,11 @@ window.POSTO_MATIAS_AVISOS_API_URL = 'https://script.google.com/macros/s/AKfycbw
     var link = document.createElement('link');
     link.rel = rel;
     link.href = new URL(href, base).href;
-    if (extra) Object.keys(extra).forEach(function (key) { link.setAttribute(key, extra[key]); });
+    if (extra) {
+      Object.keys(extra).forEach(function (key) {
+        link.setAttribute(key, extra[key]);
+      });
+    }
     document.head.appendChild(link);
   }
 
@@ -24,7 +35,7 @@ window.POSTO_MATIAS_AVISOS_API_URL = 'https://script.google.com/macros/s/AKfycbw
     style.textContent = [
       '.dental{padding:24px!important;border:2px solid #0D5F8A!important;border-radius:20px!important;background:linear-gradient(145deg,#041F34 0%,#062C46 58%,#0A4265 100%)!important;color:#fff!important;box-shadow:0 18px 34px rgba(3,35,56,.22)!important}',
       '.dental-head span{color:#70E39F!important;font-size:14px!important;font-weight:950!important;letter-spacing:.075em!important;line-height:1.45!important}',
-      '.dental-head h3{margin:10px 0 8px!important;color:#fff!important;font-size:clamp(30px,5vw,42px)!important;line-height:1.15!important;letter-spacing:-.025em!important}',
+      '.dental-head h3{margin:10px 0 8px!important;color:#fff!important;font-size:clamp(30px,5vw,42px)!important;line-height:1.15!important}',
       '.dental-head p{margin:0 0 20px!important;color:#D8E7EE!important;font-size:18px!important;font-weight:650!important;line-height:1.55!important}',
       '.slots{gap:14px!important}',
       '.slot{min-height:132px!important;padding:18px 20px!important;border:2px solid #6E9DB5!important;border-radius:17px!important;background:#fff!important;color:#102B3C!important;box-shadow:0 8px 18px rgba(0,0,0,.12)!important}',
@@ -42,55 +53,8 @@ window.POSTO_MATIAS_AVISOS_API_URL = 'https://script.google.com/macros/s/AKfycbw
     document.head.appendChild(style);
   }
 
-  function installNoticeTheme() {
-    if (document.getElementById('notice-theme-posto-matias')) return;
-    var style = document.createElement('style');
-    style.id = 'notice-theme-posto-matias';
-    style.textContent = [
-      '.notice-board{position:relative!important;overflow:hidden!important;padding:clamp(21px,4vw,30px)!important;border:2px solid #0D5F8A!important;border-radius:24px!important;background:linear-gradient(145deg,#041F34 0%,#062C46 58%,#0A4265 100%)!important;color:#fff!important;box-shadow:0 18px 34px rgba(3,35,56,.22)!important}',
-      '.notice-board::before{content:""!important;position:absolute!important;right:-52px!important;bottom:-72px!important;width:220px!important;height:220px!important;border-radius:50%!important;background:rgba(112,227,159,.10)!important;pointer-events:none!important}',
-      '.notice-board h2{position:relative!important;z-index:1!important;margin:0 0 7px!important;color:#fff!important;font-size:clamp(29px,5vw,42px)!important;line-height:1.13!important;letter-spacing:-.025em!important}',
-      '.notice-updated{position:relative!important;z-index:1!important;margin:0 0 20px!important;color:#D8E7EE!important;font-size:16px!important;font-weight:750!important;line-height:1.45!important}',
-      '.notice-list{position:relative!important;z-index:1!important;display:grid!important;gap:16px!important}',
-      '.notice-card{position:relative!important;overflow:hidden!important;padding:20px 21px!important;border:2px solid #6E9DB5!important;border-left:8px solid #70E39F!important;border-radius:20px!important;background:linear-gradient(180deg,#F8FCFF 0%,#EEF6FB 100%)!important;color:#102B3C!important;box-shadow:0 12px 24px rgba(0,0,0,.14)!important}',
-      '.notice-card::after{content:""!important;position:absolute!important;right:-28px!important;top:-28px!important;width:120px!important;height:120px!important;border-radius:50%!important;background:rgba(13,95,138,.08)!important;pointer-events:none!important}',
-      '.notice-card.important{border-color:#D7A351!important;border-left-color:#F2A000!important;background:linear-gradient(180deg,#FFFDF6 0%,#FFF5DA 100%)!important}',
-      '.notice-card.urgent{border-color:#D99C98!important;border-left-color:#C23B34!important;background:linear-gradient(180deg,#FFF9F8 0%,#FFF0EF 100%)!important}',
-      '.notice-card small{display:inline-flex!important;align-items:center!important;max-width:100%!important;margin:0!important;padding:7px 12px!important;border-radius:999px!important;background:#E8F3FB!important;color:#0D5F8A!important;font-size:13px!important;font-weight:950!important;letter-spacing:.09em!important;text-transform:uppercase!important}',
-      '.notice-card.important small{background:#FFF0C8!important;color:#9A5600!important}',
-      '.notice-card.urgent small{background:#FBE0DE!important;color:#A3302B!important}',
-      '.notice-day{display:inline-flex!important;align-items:center!important;max-width:100%!important;margin:12px 0 0!important;padding:8px 13px!important;border-radius:999px!important;background:#EAF7EF!important;color:#06763A!important;font-size:13px!important;font-weight:950!important;letter-spacing:.08em!important;text-transform:uppercase!important}',
-      '.notice-card.important .notice-day{background:#FFF3D8!important;color:#A85B00!important}',
-      '.notice-card.urgent .notice-day{background:#FDECEA!important;color:#A3302B!important}',
-      '.notice-card strong{position:relative!important;display:block!important;margin-top:12px!important;color:#102B3C!important;font-size:clamp(24px,4vw,32px)!important;line-height:1.23!important;letter-spacing:-.018em!important}',
-      '.notice-meta{position:relative!important;display:flex!important;flex-wrap:wrap!important;gap:10px!important;margin-top:14px!important}',
-      '.notice-chip{display:inline-flex!important;align-items:center!important;gap:8px!important;padding:11px 15px!important;border-radius:999px!important;background:#0A4265!important;color:#fff!important;font-size:16px!important;font-weight:900!important;line-height:1.1!important;box-shadow:0 8px 18px rgba(10,66,101,.20)!important}',
-      '.notice-chip .icon{display:inline-block!important;font-size:17px!important;line-height:1!important}',
-      '.notice-chip.pulse{animation:tacsPulse 1.8s ease-in-out infinite!important}',
-      '.notice-card.important .notice-chip{background:#A85B00!important}',
-      '.notice-card.urgent .notice-chip{background:#A3302B!important}',
-      '.notice-copy{position:relative!important;margin:14px 0 0!important;color:#314B59!important;font-size:clamp(18px,3.2vw,22px)!important;line-height:1.55!important;font-weight:560!important;white-space:pre-line!important}',
-      '.notice-card p{margin:12px 0 0!important;color:#314B59!important;font-size:clamp(18px,3.2vw,22px)!important;line-height:1.55!important;font-weight:520!important}',
-      '@keyframes tacsPulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(13,95,138,.28)}70%{transform:scale(1.03);box-shadow:0 0 0 12px rgba(13,95,138,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(13,95,138,0)}}',
-      '@media(max-width:720px){.notice-board{padding:21px 16px!important}.notice-card{padding:18px 17px!important;border-radius:18px!important}.notice-card strong{font-size:27px!important}.notice-chip{font-size:15px!important;padding:10px 14px!important}.notice-copy{font-size:19px!important}}'
-    ].join('');
-    document.head.appendChild(style);
-  }
-
-  addLink('manifest', 'manifest.webmanifest');
-  addLink('icon', 'icon-tacs.svg', { type: 'image/svg+xml' });
-  addLink('apple-touch-icon', 'icon-tacs.svg');
-  installDentalTheme();
-  installNoticeTheme();
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function () {
-      navigator.serviceWorker.register(new URL('service-worker.js', base).href, { scope: base.pathname })
-        .catch(function (error) { console.warn('Modo offline não pôde ser ativado:', error); });
-    });
-  }
-
   function installOfflineBanner() {
+    if (document.querySelector('.offline-tacs')) return;
     var style = document.createElement('style');
     style.textContent = '.offline-tacs{position:sticky;top:0;z-index:10000;padding:13px 16px;background:#a85b00;color:#fff;text-align:center;font:800 16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.22)}';
     document.head.appendChild(style);
@@ -99,41 +63,52 @@ window.POSTO_MATIAS_AVISOS_API_URL = 'https://script.google.com/macros/s/AKfycbw
     banner.className = 'offline-tacs';
     banner.hidden = true;
     banner.setAttribute('role', 'status');
-    banner.textContent = 'Sem internet: o portal pode ser preenchido, mas o envio pelo WhatsApp e as atualizações da agenda só funcionarão quando a conexão voltar.';
+    banner.textContent = 'Sem internet: os dados permanecem no formulário, mas as agendas e o envio pelo WhatsApp só funcionarão quando a conexão voltar.';
     document.body.insertBefore(banner, document.body.firstChild);
 
-    function updateConnection() { banner.hidden = navigator.onLine; }
+    function updateConnection() {
+      banner.hidden = navigator.onLine;
+    }
     window.addEventListener('online', updateConnection);
     window.addEventListener('offline', updateConnection);
     updateConnection();
   }
 
   function installFormPersistence() {
-    var storageKey = 'tacs-posto-matias-formulario-v1';
+    var storageKey = 'tacs-posto-matias-formulario-v2';
     var fieldIds = ['category', 'implanonChoice', 'name', 'birth', 'cpf', 'locality', 'subject'];
-    function fieldsReady() { return fieldIds.some(function (id) { return document.getElementById(id); }); }
+
     function save() {
       var data = {};
-      fieldIds.forEach(function (id) { var field = document.getElementById(id); if (field) data[id] = field.value; });
-      try { localStorage.setItem(storageKey, JSON.stringify(data)); } catch (e) {}
+      fieldIds.forEach(function (id) {
+        var field = document.getElementById(id);
+        if (field) data[id] = field.value;
+      });
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(data));
+      } catch (error) {}
     }
+
     function restore() {
       var raw;
-      try { raw = localStorage.getItem(storageKey); } catch (e) { return; }
+      try {
+        raw = localStorage.getItem(storageKey);
+      } catch (error) {
+        return;
+      }
       if (!raw) return;
       try {
         var data = JSON.parse(raw);
         fieldIds.forEach(function (id) {
           var field = document.getElementById(id);
-          if (field && typeof data[id] === 'string' && !field.value) {
-            field.value = data[id];
-            field.dispatchEvent(new Event(field.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
-          }
+          if (!field || field.value || typeof data[id] !== 'string') return;
+          field.value = data[id];
+          field.dispatchEvent(new Event(field.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
         });
-      } catch (e) {}
+      } catch (error) {}
     }
+
     function bind() {
-      if (!fieldsReady()) return;
       restore();
       fieldIds.forEach(function (id) {
         var field = document.getElementById(id);
@@ -141,345 +116,28 @@ window.POSTO_MATIAS_AVISOS_API_URL = 'https://script.google.com/macros/s/AKfycbw
         field.addEventListener('input', save);
         field.addEventListener('change', save);
       });
-      var send = document.getElementById('send');
-      if (send) send.addEventListener('click', save);
     }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
-    else bind();
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bind);
+    } else {
+      bind();
+    }
   }
 
-  function installReliableDentalWhatsApp() {
-    var send = document.getElementById('send');
-    if (!send || send.dataset.dentalFix === '2') return;
-    send.dataset.dentalFix = '2';
+  addLink('manifest', 'manifest.webmanifest');
+  addLink('icon', 'icon-tacs.svg', { type: 'image/svg+xml' });
+  addLink('apple-touch-icon', 'icon-tacs.svg');
+  installDentalTheme();
 
-    function text(id) {
-      var field = document.getElementById(id);
-      return field ? String(field.value || '').trim() : '';
-    }
-    function makeCode() {
-      var now = new Date();
-      var d = String(now.getDate()).padStart(2, '0');
-      var m = String(now.getMonth() + 1).padStart(2, '0');
-      var y = String(now.getFullYear()).slice(-2);
-      return 'TACS-' + d + m + y + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
-    }
-    function submitReservation(date, type, requestId) {
-      if (!window.DENTAL_AGENDA_API_URL || !date) return;
-      var iframe = document.createElement('iframe');
-      iframe.name = 'reservaDentista' + Date.now();
-      iframe.hidden = true;
-      var form = document.createElement('form');
-      form.method = 'post';
-      form.action = window.DENTAL_AGENDA_API_URL;
-      form.target = iframe.name;
-      form.hidden = true;
-      [['action','reservar'],['requestId',requestId],['date',date],['type',type]].forEach(function (pair) {
-        var input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = pair[0];
-        input.value = pair[1];
-        form.appendChild(input);
-      });
-      document.body.appendChild(iframe);
-      document.body.appendChild(form);
-      form.submit();
-      setTimeout(function () { if (form.parentNode) form.remove(); if (iframe.parentNode) iframe.remove(); }, 8000);
-    }
-    function openWhatsApp(message) {
-      var encoded = encodeURIComponent(message);
-      var webUrl = 'https://api.whatsapp.com/send?phone=5581989613130&text=' + encoded;
-      var appUrl = 'whatsapp://send?phone=5581989613130&text=' + encoded;
-      var link = document.createElement('a');
-      link.href = appUrl;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(function () {
-        if (link.parentNode) link.remove();
-        if (document.visibilityState === 'visible') window.location.assign(webUrl);
-      }, 1200);
-    }
-
-    send.addEventListener('click', function (event) {
-      var category = text('category');
-      var isDental = category === 'Solicitar atendimento odontológico (dentista)' || category === 'Solicitar atendimento odontológico de emergência (dentista)';
-      if (!isDental) return;
-      var selected = document.querySelector('.slot.selected');
-      if (!selected) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      if (!navigator.onLine) {
-        alert('Sem internet. Os dados permanecem preenchidos e poderão ser enviados quando a conexão voltar.');
-        return;
-      }
-      var parts = selected.querySelectorAll('strong, span');
-      var day = parts[0] ? parts[0].textContent.trim() : '';
-      var date = parts[1] ? parts[1].textContent.trim() : '';
-      var isoDate = date.replace(/^(\d{2})\/(\d{2})\/(\d{4})$/, '$3-$2-$1');
-      var type = category.indexOf('emergência') >= 0 ? 'emergencial' : 'comum';
-      var code = makeCode();
-      var birth = text('birth');
-      var ageStatus = document.getElementById('ageStatus');
-      var age = ageStatus ? ageStatus.textContent.replace(/^Idade:\s*/i, '') : '';
-      var subject = text('subject');
-      submitReservation(isoDate, type, code);
-      var message = '*SOLICITAÇÃO DE ATENDIMENTO DO TACS*\n\n' +
-        'Código: ' + code + '\n' +
-        'Data e horário do envio: ' + new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date()) + '\n' +
-        'Categoria: ' + category + '\n' +
-        '*Dia escolhido: ' + day + ' — ' + date + '*\n' +
-        'Tipo de vaga odontológica: ' + type + '\n' +
-        'Reserva automática: solicitada\n' +
-        'Nome completo: ' + text('name') + '\n' +
-        'Data de nascimento: ' + birth + '\n' +
-        'Idade: ' + age + '\n' +
-        'CPF: ' + text('cpf') + '\n' +
-        'Localidade: ' + text('locality') + '\n' +
-        'Assunto: ' + subject + '\n\n' +
-        'Este código é apenas uma referência para localizar a conversa.';
-      openWhatsApp(message);
-    }, true);
-  }
-
-  function installEnhancedNotices() {
-    var area = document.getElementById('noticeArea');
-    var api = String(window.POSTO_MATIAS_AVISOS_API_URL || '').trim();
-    if (!area || !api || area.dataset.noticeEnhancer === '1') return;
-    area.dataset.noticeEnhancer = '1';
-
-    function normalizeDate(value) {
-      var text = String(value || '').trim();
-      var match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      var y, m, d, date;
-      if (match) {
-        y = Number(match[1]);
-        m = Number(match[2]);
-        d = Number(match[3]);
-      } else {
-        match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-        if (!match) return '';
-        d = Number(match[1]);
-        m = Number(match[2]);
-        y = Number(match[3]);
-      }
-      date = new Date(Date.UTC(y, m - 1, d));
-      if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return '';
-      return String(y).padStart(4, '0') + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-    }
-
-    function formatDate(value) {
-      var iso = normalizeDate(value);
-      if (!iso) return '';
-      var parts = iso.split('-');
-      return parts[2] + '/' + parts[1] + '/' + parts[0];
-    }
-
-    function weekdayUpper(value) {
-      var iso = normalizeDate(value);
-      if (!iso) return '';
-      var parts = iso.split('-').map(Number);
-      return new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: 'UTC' })
-        .format(new Date(Date.UTC(parts[0], parts[1] - 1, parts[2])))
-        .toUpperCase();
-    }
-
-    function cleanedText(value) {
-      var seen = {};
-      return String(value || '')
-        .split(/\n+/)
-        .map(function (line) { return line.trim(); })
-        .filter(Boolean)
-        .filter(function (line) {
-          var key = line.toLowerCase();
-          if (seen[key]) return false;
-          seen[key] = true;
-          return true;
-        })
-        .join('\n');
-    }
-
-    function capitalize(value) {
-      var text = String(value || '').trim();
-      return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
-    }
-
-    function priorityClass(priority) {
-      return priority === 'urgente' ? 'urgent' : priority === 'importante' ? 'important' : '';
-    }
-
-    function activeItems(data) {
-      var today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Recife' }).format(new Date());
-      var items = Array.isArray(data && data.avisos) ? data.avisos : [];
-      return items.filter(function (item) {
-        return item && item.ativo !== false && (!item.validade || String(item.validade) >= today);
-      });
-    }
-
-    function createChip(icon, label) {
-      var chip = document.createElement('span');
-      chip.className = 'notice-chip pulse';
-      var iconSpan = document.createElement('span');
-      iconSpan.className = 'icon';
-      iconSpan.textContent = icon;
-      var textSpan = document.createElement('span');
-      textSpan.textContent = label;
-      chip.append(iconSpan, textSpan);
-      return chip;
-    }
-
-    function createCard(kind, title, message, priority, date, horario, situacao) {
-      var card = document.createElement('article');
-      var level = priorityClass(priority);
-      card.className = 'notice-card' + (level ? ' ' + level : '');
-
-      var tag = document.createElement('small');
-      tag.textContent = String(kind || 'Informação').toUpperCase();
-      card.appendChild(tag);
-
-      var day = weekdayUpper(date);
-      if (day) {
-        var dayBadge = document.createElement('div');
-        dayBadge.className = 'notice-day';
-        dayBadge.textContent = day;
-        card.appendChild(dayBadge);
-      }
-
-      var heading = document.createElement('strong');
-      heading.textContent = title || 'Aviso';
-      card.appendChild(heading);
-
-      if (date || horario) {
-        var meta = document.createElement('div');
-        meta.className = 'notice-meta';
-        if (date) meta.appendChild(createChip('📅', formatDate(date)));
-        if (horario) meta.appendChild(createChip('🕗', String(horario).trim()));
-        card.appendChild(meta);
-      }
-
-      var copy = cleanedText(message);
-      if (situacao && !/situa[cç][aã]o/i.test(copy)) {
-        copy = (copy ? copy + '\n' : '') + 'Situação: ' + capitalize(situacao) + '.';
-      }
-      if (copy) {
-        var text = document.createElement('p');
-        text.className = 'notice-copy';
-        text.textContent = copy;
-        card.appendChild(text);
-      }
-
-      return card;
-    }
-
-    function render(data) {
-      var notices = activeItems(data || {});
-      var medical = data && data.atendimentoMedico;
-      var hasMedical = medical && medical.ativo !== false && (medical.titulo || medical.data || medical.horario || medical.observacao || medical.situacao);
-      if (!hasMedical && !notices.length) {
-        area.hidden = true;
-        area.innerHTML = '';
-        return;
-      }
-
-      var board = document.createElement('div');
-      board.className = 'notice-board';
-
-      var h2 = document.createElement('h2');
-      h2.textContent = 'Avisos da Unidade de Saúde Posto Matias';
-      board.appendChild(h2);
-
-      var updated = document.createElement('p');
-      updated.className = 'notice-updated';
-      updated.textContent = data && data.atualizadoEm ? 'Atualizado em ' + data.atualizadoEm : 'Informação atual da unidade';
-      board.appendChild(updated);
-
-      var list = document.createElement('div');
-      list.className = 'notice-list';
-      board.appendChild(list);
-
-      if (hasMedical) {
-        list.appendChild(
-          createCard(
-            'Atendimento médico',
-            medical.titulo || 'Atendimento médico',
-            medical.observacao || '',
-            medical.situacao === 'cancelado' ? 'urgente' : medical.situacao === 'alterado' ? 'importante' : 'informativo',
-            medical.data || '',
-            medical.horario || '',
-            medical.situacao || ''
-          )
-        );
-      }
-
-      notices.forEach(function (item) {
-        var kind = item.tipo || (item.prioridade === 'urgente' ? 'Aviso urgente' : item.prioridade === 'importante' ? 'Aviso importante' : 'Informação');
-        list.appendChild(
-          createCard(
-            kind,
-            item.titulo || 'Aviso',
-            item.mensagem || '',
-            item.prioridade || 'informativo',
-            item.data || '',
-            item.horario || '',
-            item.situacao || ''
-          )
-        );
-      });
-
-      area.innerHTML = '';
-      area.appendChild(board);
-      area.hidden = false;
-    }
-
-    function requestRender() {
-      var callbackName = 'tacsAvisosTheme' + Date.now() + Math.floor(Math.random() * 10000);
-      var script = document.createElement('script');
-      var done = false;
-
-      function cleanup() {
-        delete window[callbackName];
-        if (script.parentNode) script.remove();
-      }
-
-      window[callbackName] = function (data) {
-        if (done) return;
-        done = true;
-        cleanup();
-        if (data && data.ok !== false) render(data);
-      };
-
-      script.onerror = function () {
-        if (done) return;
-        done = true;
-        cleanup();
-      };
-
-      script.src = api + (api.indexOf('?') === -1 ? '?' : '&') + 'action=avisos&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
-      document.head.appendChild(script);
-    }
-
-    var observer = new MutationObserver(function () {
-      if (!area.hidden && !area.querySelector('.notice-day') && !area.querySelector('.notice-chip')) {
-        requestRender();
-      }
-    });
-    observer.observe(area, { childList: true, subtree: true });
-
-    setTimeout(requestRender, 350);
-    setTimeout(requestRender, 1200);
+  function init() {
+    installOfflineBanner();
+    installFormPersistence();
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      installOfflineBanner();
-      installFormPersistence();
-      installReliableDentalWhatsApp();
-      installEnhancedNotices();
-    });
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    installOfflineBanner();
-    installFormPersistence();
-    installReliableDentalWhatsApp();
-    installEnhancedNotices();
+    init();
   }
 }());

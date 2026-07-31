@@ -37,7 +37,11 @@ function doPost(e){
     else if(action==='cancelar_campanhas')result=tacsCancelCampaigns_();
     else result={ok:false,message:'Ação não reconhecida.'};
   }catch(error){result={ok:false,message:error&&error.message?error.message:String(error)}}
-  return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><script>parent.postMessage('+JSON.stringify({source:'painel-tacs-integral',nonce:nonce,result:result})+',"*");<\/script>');
+  var message={source:'painel-tacs-integral',nonce:nonce,result:result};
+  var safeMessage=JSON.stringify(message).replace(/</g,'\\u003c').replace(/-->/g,'--\\>');
+  return HtmlService
+    .createHtmlOutput('<!doctype html><meta charset="utf-8"><script>parent.postMessage('+safeMessage+',"*");<\/script>')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function configurarControleIntegralTacs(){
@@ -63,7 +67,7 @@ function tacsSaveModule_(payloadText){
   var payload=JSON.parse(String(payloadText||'{}'));
   var module=String(payload.module||'').trim();
   var days=Array.isArray(payload.days)?payload.days:[];
-  if(['medica','nutricionista','enfermeira','odontologia'].indexOf(module)<0)throw new Error('Módulo inválido.');
+  if(['medica','nutricionista'].indexOf(module)<0)throw new Error('Módulo inválido.');
   if(days.length!==5)throw new Error('O módulo deve conter os cinco dias úteis.');
   var ss=SpreadsheetApp.getActiveSpreadsheet();var sh=tacsEnsureModules_(ss);
   var all=sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,13).getValues():[];
@@ -79,7 +83,7 @@ function tacsSaveModule_(payloadText){
 
 function tacsReadModules_(){
   var sh=tacsEnsureModules_(SpreadsheetApp.getActiveSpreadsheet());
-  var out={medica:[],nutricionista:[],enfermeira:[],odontologia:[]};
+  var out={medica:[],nutricionista:[]};
   if(sh.getLastRow()<2)return out;
   var rows=sh.getRange(2,1,sh.getLastRow()-1,13).getValues();
   rows.sort(function(a,b){return String(a[0]).localeCompare(String(b[0]))||Number(a[1])-Number(b[1])});
