@@ -1,5 +1,30 @@
 (function(){
 'use strict';
+var redispatching=false;
+window.addEventListener('message',function(event){
+  var data=event.data;
+  if(redispatching||!data||typeof data!=='object')return;
+  if(data.source!=='portal-tacs-integral')return;
+  var corrected={};
+  Object.keys(data).forEach(function(key){corrected[key]=data[key]});
+  corrected.source='painel-tacs-integral';
+  redispatching=true;
+  try{
+    window.dispatchEvent(new MessageEvent('message',{
+      data:corrected,
+      origin:event.origin,
+      lastEventId:event.lastEventId,
+      source:event.source,
+      ports:event.ports
+    }));
+  }finally{
+    redispatching=false;
+  }
+},false);
+})();
+
+(function(){
+'use strict';
 var PORTAL_URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/';
 var MODULES={
   medica:{icon:'🩺',title:'Atendimento médico'},
