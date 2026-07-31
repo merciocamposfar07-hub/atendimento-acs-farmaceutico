@@ -1,0 +1,100 @@
+name: Corrigir painel odontológico em cinco dias
+
+on:
+  push:
+    paths:
+      - '.github/workflows/corrigir-admin-odontologia-cinco-dias.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Manter segunda a sexta mesmo sem dados anteriores
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('admin-controle-integral.js')
+          text = path.read_text(encoding='utf-8')
+
+          old = """      state.odontologia = rows
+        .filter(function (item) {
+          return DENTAL_DAYS.indexOf(clean(item.dia)) >= 0;
+        })
+        .map(function (item) {
+          var common = Number(item.vagasComuns || 0);
+          var emergency = Number(item.vagasEmergenciais || 0);
+          return {
+            day: clean(item.dia),
+            active: common > 0 || emergency > 0,
+            date: clean(item.data),
+            common: common,
+            emergency: emergency
+          };
+        });
+      if (!state.odontologia.length) state.odontologia = defaultDental();"""
+
+          new = """      state.odontologia = DENTAL_DAYS.map(function (day) {
+        var item = rows.find(function (candidate) {
+          return clean(candidate.dia) === day;
+        });
+        if (!item) {
+          return {
+            day: day,
+            active: false,
+            date: '',
+            common: 0,
+            emergency: 0
+          };
+        }
+        var common = Number(item.vagasComuns || 0);
+        var emergency = Number(item.vagasEmergenciais || 0);
+        return {
+          day: day,
+          active: common > 0 || emergency > 0,
+          date: clean(item.data),
+          common: common,
+          emergency: emergency
+        };
+      });"""
+
+          if old not in text:
+              raise SystemExit('Bloco loadDental esperado não foi localizado.')
+
+          text = text.replace(old, new)
+          text = text.replace(
+              "Informe ao menos uma data de segunda, terça ou quinta-feira.",
+              "Informe ao menos uma data entre segunda e sexta-feira."
+          )
+          path.write_text(text, encoding='utf-8')
+
+          admin = Path('admin.html')
+          text = admin.read_text(encoding='utf-8')
+          text = re.sub(
+              r'admin-controle-integral\.js\?v=[^"\']+',
+              'admin-controle-integral.js?v=20260731-63',
+              text
+          )
+          admin.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validar
+        run: |
+          grep -q 'state.odontologia = DENTAL_DAYS.map' admin-controle-integral.js
+          grep -q 'entre segunda e sexta-feira' admin-controle-integral.js
+          grep -q 'admin-controle-integral.js?v=20260731-63' admin.html
+
+      - name: Publicar
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add admin-controle-integral.js admin.html
+          git commit -m "Manter agenda odontológica de segunda a sexta no painel"
+          git push
