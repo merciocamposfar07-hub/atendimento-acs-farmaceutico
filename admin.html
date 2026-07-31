@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#062c46">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>Painel Administrativo | Portal TACS</title>
-<link rel="stylesheet" href="admin-controle-integral.css?v=20260731-52">
-<link rel="stylesheet" href="admin-data-proporcao-fix.css?v=20260731-52">
-<link rel="stylesheet" href="admin-whatsapp-status.css?v=20260731-52">
+<link rel="stylesheet" href="admin-controle-integral.css?v=20260731-53">
+<link rel="stylesheet" href="admin-data-proporcao-fix.css?v=20260731-53">
+<link rel="stylesheet" href="admin-whatsapp-status.css?v=20260731-53">
 </head>
 <body>
 <div class="app"><div class="shell">
@@ -17,18 +17,16 @@
   <h1>Painel Administrativo</h1>
   <p>Centro de comando do Portal TACS • Unidade de Saúde Posto Matias • Sítio Japaranduba</p>
   <div class="hero-actions">
-    <a href="index.html?v=20260731-52" target="_blank" rel="noopener">🏥 Abrir Portal do Morador</a>
+    <a href="index.html?v=20260731-53" target="_blank" rel="noopener">🏥 Abrir Portal do Morador</a>
     <button id="refreshAll" type="button">↻ Atualizar todos os dados</button>
   </div>
-  <details class="security">
-    <summary>🔐 Chave administrativa</summary>
-    <div class="security-grid">
-      <input id="adminKeyInput" type="password" autocomplete="off" placeholder="Digite a chave administrativa">
-      <button id="saveAdminKey" type="button">Salvar</button>
-      <button id="clearAdminKey" type="button">Apagar</button>
-    </div>
-    <div id="securityStatus" class="security-status">A chave fica salva somente neste aparelho.</div>
-  </details>
+
+  <div hidden aria-hidden="true">
+    <input id="adminKeyInput" type="hidden" value="">
+    <button id="saveAdminKey" type="button"></button>
+    <button id="clearAdminKey" type="button"></button>
+    <div id="securityStatus"></div>
+  </div>
 </header>
 <main class="main">
   <div class="summary">
@@ -94,14 +92,15 @@
 
   <section class="section" data-section="espelho" hidden>
     <div class="section-head"><div><span class="section-label">Visualização real</span><h2>Espelho do Portal do Morador</h2><p class="section-intro">Confira o resultado depois de publicar ou cancelar uma informação.</p></div><button id="refreshMirror" class="btn secondary" type="button">Atualizar espelho</button></div>
-    <div class="mirror-frame"><iframe id="portalMirror" title="Espelho do Portal do Morador" src="index.html?v=20260731-52"></iframe></div>
+    <div class="mirror-frame"><iframe id="portalMirror" title="Espelho do Portal do Morador" src="index.html?v=20260731-53"></iframe></div>
     <div class="backend-note"><strong>Fonte oficial:</strong> Médica, Nutricionista, Enfermeira, Recados e Campanhas usam o Portal TACS – Banco de Dados. Somente as vagas odontológicas usam a Agenda Odontológica.</div>
   </section>
 </main>
-<footer>© 2026 Portal TACS • Painel Administrativo da Unidade de Saúde Posto Matias</footer>
+<footer>© 2026 Mércio José Campos dos Santos • Portal TACS • Todos os direitos reservados</footer>
 </div></div>
-<script src="agenda-config.js?v=20260731-52"></script>
-<script src="admin-controle-integral.js?v=20260731-52"></script>
-<script src="admin-whatsapp-status.js?v=20260731-52"></script>
+<script src="agenda-config.js?v=20260731-53"></script>
+<script src="admin-post-bridge.js?v=20260731-53"></script>
+<script src="admin-controle-integral.js?v=20260731-53"></script>
+<script src="admin-whatsapp-status.js?v=20260731-53"></script>
 </body>
 </html>
