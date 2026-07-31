@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#062c46">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>Painel Administrativo | Portal TACS</title>
-<link rel="stylesheet" href="admin-controle-integral.css?v=20260729-43">
-<link rel="stylesheet" href="admin-data-proporcao-fix.css?v=20260729-43">
-<link rel="stylesheet" href="admin-whatsapp-status.css?v=20260730-3">
+<link rel="stylesheet" href="admin-controle-integral.css?v=20260730-51">
+<link rel="stylesheet" href="admin-data-proporcao-fix.css?v=20260730-51">
+<link rel="stylesheet" href="admin-whatsapp-status.css?v=20260730-51">
 </head>
 <body>
 <div class="app"><div class="shell">
@@ -17,7 +17,7 @@
   <h1>Painel Administrativo</h1>
   <p>Centro de comando do Portal TACS • Unidade de Saúde Posto Matias • Sítio Japaranduba</p>
   <div class="hero-actions">
-    <a href="portal-atualizado.html?v=20260730-6&notificacoes=1" target="_blank" rel="noopener">🏥 Abrir Portal do Morador</a>
+    <a href="index.html?v=20260730-51" target="_blank" rel="noopener">🏥 Abrir Portal do Morador</a>
     <button id="refreshAll" type="button">↻ Atualizar todos os dados</button>
   </div>
   <details class="security">
@@ -76,7 +76,7 @@
   </section>
 
   <section class="section" data-section="odontologia" hidden>
-    <span class="section-label">Vagas comuns e emergenciais</span><h2>Agenda Odontológica</h2><p class="section-intro">Controle segunda a sexta, Dia Extra, vagas comuns, vagas de emergência, ativação manual e encerramento às 12h.</p>
+    <span class="section-label">Vagas comuns e emergenciais</span><h2>Agenda Odontológica</h2><p class="section-intro">Controle as vagas de segunda, terça e quinta-feira. Cada publicação é relida no servidor antes de aparecer como confirmada.</p>
     <div id="odontologiaWeek" class="week"></div>
   </section>
 
@@ -94,16 +94,14 @@
 
   <section class="section" data-section="espelho" hidden>
     <div class="section-head"><div><span class="section-label">Visualização real</span><h2>Espelho do Portal do Morador</h2><p class="section-intro">Confira o resultado depois de publicar ou cancelar uma informação.</p></div><button id="refreshMirror" class="btn secondary" type="button">Atualizar espelho</button></div>
-    <div class="mirror-frame"><iframe id="portalMirror" title="Espelho do Portal do Morador" src="portal-atualizado.html?v=20260730-6&notificacoes=1"></iframe></div>
-    <div class="backend-note"><strong>Importante:</strong> o painel visual já está reorganizado. Para que Médica, Nutricionista, Recados e Campanhas coexistam com controles independentes, o Google Apps Script integral precisa estar implantado na planilha administrativa.</div>
+    <div class="mirror-frame"><iframe id="portalMirror" title="Espelho do Portal do Morador" src="index.html?v=20260730-51"></iframe></div>
+    <div class="backend-note"><strong>Fonte oficial:</strong> Médica, Nutricionista, Enfermeira, Recados e Campanhas usam o Portal TACS – Banco de Dados. Somente as vagas odontológicas usam a Agenda Odontológica.</div>
   </section>
 </main>
 <footer>© 2026 Portal TACS • Painel Administrativo da Unidade de Saúde Posto Matias</footer>
 </div></div>
-<script src="agenda-config.js?v=20260729-40"></script>
-<script src="admin-controle-integral.js?v=20260730-2"></script>
-<script src="admin-post-confirmacao-fix.js?v=20260730-2"></script>
-<script src="admin-whatsapp-status.js?v=20260730-3"></script>
-<script src="admin-post-fetch-fix.js?v=20260730-6"></script>
+<script src="agenda-config.js?v=20260730-51"></script>
+<script src="admin-controle-integral.js?v=20260730-51"></script>
+<script src="admin-whatsapp-status.js?v=20260730-51"></script>
 </body>
 </html>
