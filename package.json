@@ -1,0 +1,10 @@
+{
+  "name": "portal-tacs-posto-matias",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/test_agenda_apps_script.js && node scripts/test_dom_flows.js"
+  },
+  "devDependencies": {
+    "jsdom": "27.0.1"
+  }
+}
