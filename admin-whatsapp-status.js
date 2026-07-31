@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-var PORTAL_URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/portal-atualizado.html';
+var PORTAL_URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/';
 var MODULES={
   medica:{icon:'🩺',title:'Atendimento médico'},
   enfermeira:{icon:'👩‍⚕️',title:'Agenda da Enfermeira Chefe'},
