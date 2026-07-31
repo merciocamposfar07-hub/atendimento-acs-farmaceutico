@@ -5,30 +5,50 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#062c46">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<title>Modo administrador | Portal Geral TACS</title>
-<link rel="stylesheet" href="admin-controle-integral.css?v=20260731-70">
-<link rel="stylesheet" href="admin-data-proporcao-fix.css?v=20260731-70">
-<link rel="stylesheet" href="admin-whatsapp-status.css?v=20260731-70">
+<title>Editar Portal Geral TACS</title>
+<link rel="stylesheet" href="admin-controle-integral.css?v=20260731-74">
+<link rel="stylesheet" href="admin-data-proporcao-fix.css?v=20260731-74">
 <style>
-  .admin-hero{padding-top:max(22px,env(safe-area-inset-top))!important}
-  .admin-hero .hero-actions a{display:none!important}
-  .summary{display:none!important}
-  .main{padding-top:16px!important}
-  .unified-note{margin-top:14px;padding:14px 16px;border:1px solid rgba(255,255,255,.35);border-radius:14px;background:rgba(255,255,255,.08);color:#e5f2f7;font-size:15px;font-weight:750;line-height:1.5}
+  html,body{min-height:100%;height:auto!important;overflow-x:hidden!important;background:#eaf1f5}
+  body{margin:0;padding:0 0 max(30px,env(safe-area-inset-bottom))!important}
+  .app,.shell{min-height:100%;height:auto!important;overflow:visible!important}
+  .admin-hero{padding:20px 18px!important;border-radius:0!important}
+  .admin-hero h1{margin:8px 0 5px!important;font-size:clamp(30px,8vw,44px)!important}
+  .admin-hero p{margin:0!important;font-size:17px!important;line-height:1.45!important}
+  .admin-badge{font-size:13px!important}
+  .hero-actions{margin-top:15px!important}
+  .hero-actions button{width:100%!important;min-height:52px!important}
+  .unified-note{margin-top:12px;padding:12px 14px;border:1px solid rgba(255,255,255,.32);border-radius:13px;background:rgba(255,255,255,.08);color:#e5f2f7;font-size:14px;font-weight:750;line-height:1.45}
+  .main{padding:14px!important;overflow:visible!important}
+  .tabs{position:sticky!important;top:0!important;z-index:50!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important;margin:0 0 14px!important;padding:10px!important;background:#eaf1f5!important;border-radius:0 0 16px 16px!important;box-shadow:0 8px 18px rgba(16,43,60,.12)!important}
+  .tab{width:100%!important;min-width:0!important;min-height:50px!important;padding:8px 6px!important;white-space:normal!important;text-align:center!important;font-size:14px!important;line-height:1.25!important}
+  .section{margin:0 0 16px!important;padding:18px 14px!important;border-radius:20px!important;overflow:visible!important}
+  .section h2{font-size:clamp(28px,7vw,40px)!important;line-height:1.08!important}
+  .section-intro{font-size:17px!important;line-height:1.5!important}
   .section-intro strong{color:#0d5f8a}
-  footer{padding-bottom:max(25px,env(safe-area-inset-bottom))!important}
+  .week{display:grid!important;grid-template-columns:1fr!important;gap:14px!important}
+  .day-card{padding:16px!important}
+  .day-title{align-items:flex-start!important;gap:8px!important}
+  .day-title strong{font-size:22px!important;line-height:1.25!important}
+  .state-pill{white-space:normal!important;text-align:center!important}
+  .day-controls{grid-template-columns:1fr!important}
+  .day-actions{grid-template-columns:1fr!important}
+  .form-grid{grid-template-columns:1fr!important}
+  .mirror-frame{height:72vh!important;min-height:520px!important}
+  footer{padding:22px 16px max(28px,env(safe-area-inset-bottom))!important}
+  @media(min-width:760px){.tabs{grid-template-columns:repeat(4,minmax(0,1fr))!important}.week{grid-template-columns:repeat(2,minmax(0,1fr))!important}.day-actions{grid-template-columns:1fr 1fr!important}}
 </style>
 </head>
 <body>
 <div class="app"><div class="shell">
 <header class="admin-hero">
-  <span class="admin-badge">🔒 Modo de edição protegido por PIN</span>
+  <span class="admin-badge">🔒 Modo de edição liberado pelo PIN</span>
   <h1>Editar o Portal Geral</h1>
-  <p>Todos os dias de todos os profissionais permanecem disponíveis para edição, inclusive os dias desativados.</p>
+  <p>Todos os dias de todos os profissionais ficam disponíveis para edição, inclusive os dias atualmente desativados.</p>
   <div class="hero-actions">
-    <button id="refreshAll" type="button">↻ Atualizar todos os dados</button>
+    <button id="refreshAll" type="button">↻ Atualizar dados do servidor</button>
   </div>
-  <div class="unified-note">O PIN não fica escrito no código público. Cada gravação é enviada ao servidor com a chave administrativa para validação.</div>
+  <div class="unified-note">Edite, publique ou retire uma informação. O morador só verá os dias que estiverem ativados.</div>
   <div hidden aria-hidden="true">
     <input id="adminKeyInput" type="hidden" value="">
     <button id="saveAdminKey" type="button"></button>
@@ -37,7 +57,7 @@
   </div>
 </header>
 <main class="main">
-  <nav class="tabs" aria-label="Áreas editáveis do Portal Geral">
+  <nav class="tabs" aria-label="Áreas editáveis">
     <button class="tab" data-tab="recados">💬 Recados</button>
     <button class="tab" data-tab="medica">🩺 Médica</button>
     <button class="tab" data-tab="enfermeira">👩‍⚕️ Enfermeira</button>
@@ -48,7 +68,9 @@
   </nav>
 
   <section class="section" data-section="recados">
-    <div class="section-head"><div><span class="section-label">Aviso público</span><h2>Recados da Unidade</h2><p class="section-intro">Publique, corrija ou retire o recado exibido no Portal do Morador.</p></div></div>
+    <span class="section-label">Aviso público</span>
+    <h2>Recados da Unidade</h2>
+    <p class="section-intro">Publique, corrija ou retire o recado exibido no Portal do Morador.</p>
     <div class="petroleum-balloon"><h3 id="recadoPreviewTitle">Recado da Unidade</h3><p id="recadoPreviewMessage">A prévia aparecerá neste balão azul-petróleo.</p></div>
     <div class="form-grid" style="margin-top:16px">
       <label>Título<input id="recadoTitle" placeholder="Ex.: Vacinação nesta semana"></label>
@@ -57,31 +79,36 @@
       <label class="full">Mensagem<textarea id="recadoMessage" placeholder="Digite o recado que o morador verá"></textarea></label>
     </div>
     <div class="actions"><button id="publishRecado" class="btn publish" type="button">Publicar recado</button><button id="cancelRecado" class="btn cancel" type="button">Retirar recado</button></div>
-    <div id="recadoStatus" class="status">Nenhuma alteração publicada nesta sessão.</div>
+    <div id="recadoStatus" class="status">Aguardando uma ação.</div>
   </section>
 
   <section class="section" data-section="medica" hidden>
-    <span class="section-label">Segunda a sexta</span><h2>Agenda da Médica</h2><p class="section-intro"><strong>Todos os cinco dias são editáveis.</strong> Um dia desativado pode ser ativado quando houver atendimento.</p>
+    <span class="section-label">Segunda a sexta</span><h2>Agenda da Médica</h2>
+    <p class="section-intro"><strong>Os cinco dias são editáveis.</strong> Ative qualquer dia em que houver atendimento.</p>
     <div id="medicaWeek" class="week"></div>
   </section>
 
   <section class="section" data-section="enfermeira" hidden>
-    <span class="section-label">Segunda a sexta</span><h2>Agenda da Enfermeira Chefe</h2><p class="section-intro"><strong>Todos os cinco dias são editáveis.</strong> Altere o serviço, o ícone e a disponibilidade de cada dia.</p>
+    <span class="section-label">Segunda a sexta</span><h2>Agenda da Enfermeira Chefe</h2>
+    <p class="section-intro"><strong>Os cinco dias são editáveis.</strong> Altere o serviço, o ícone e a disponibilidade.</p>
     <div id="enfermeiraWeek" class="week"></div>
   </section>
 
   <section class="section" data-section="nutricionista" hidden>
-    <span class="section-label">Segunda a sexta</span><h2>Agenda da Nutricionista</h2><p class="section-intro"><strong>Todos os cinco dias são editáveis.</strong> Ative qualquer dia informado pela profissional.</p>
+    <span class="section-label">Segunda a sexta</span><h2>Agenda da Nutricionista</h2>
+    <p class="section-intro"><strong>Os cinco dias são editáveis.</strong> Ative somente as datas confirmadas.</p>
     <div id="nutricionistaWeek" class="week"></div>
   </section>
 
   <section class="section" data-section="odontologia" hidden>
-    <span class="section-label">Segunda a sexta</span><h2>Agenda da Dentista</h2><p class="section-intro"><strong>Segunda, terça e quinta são dias oficiais; sexta pode ser usada como dia extra.</strong> Quarta e qualquer outro dia desativado continuam editáveis e podem ser ativados manualmente.</p>
+    <span class="section-label">Segunda a sexta</span><h2>Agenda da Dentista</h2>
+    <p class="section-intro"><strong>Segunda, terça e quinta são oficiais; sexta é dia extra.</strong> Quarta e qualquer outro dia desativado continuam editáveis e podem ser ativados manualmente.</p>
     <div id="odontologiaWeek" class="week"></div>
   </section>
 
   <section class="section" data-section="campanhas" hidden>
-    <span class="section-label">Publicação com prazo</span><h2>Campanhas da Unidade</h2><p class="section-intro">Defina a data inicial e o tempo de exposição no Portal do Morador.</p>
+    <span class="section-label">Publicação com prazo</span><h2>Campanhas da Unidade</h2>
+    <p class="section-intro">Defina o início, o período de exposição e a mensagem.</p>
     <div class="form-grid">
       <label>Nome da campanha<input id="campaignTitle" placeholder="Ex.: Campanha de vacinação"></label>
       <label>Data de início<input id="campaignStart" type="date"></label>
@@ -89,21 +116,19 @@
       <label class="full">Mensagem<textarea id="campaignMessage" placeholder="Informações da campanha"></textarea></label>
     </div>
     <div class="actions"><button id="publishCampaign" class="btn publish" type="button">Publicar campanha</button><button id="cancelCampaign" class="btn cancel" type="button">Retirar campanha</button></div>
-    <div id="campaignStatus" class="status">Nenhuma campanha publicada nesta sessão.</div>
+    <div id="campaignStatus" class="status">Aguardando uma ação.</div>
   </section>
 
   <section class="section" data-section="espelho" hidden>
-    <div class="section-head"><div><span class="section-label">Visualização real</span><h2>Conferir o Portal do Morador</h2><p class="section-intro">Atualize após publicar ou retirar uma informação.</p></div><button id="refreshMirror" class="btn secondary" type="button">Atualizar visualização</button></div>
-    <div class="mirror-frame"><iframe id="portalMirror" title="Visualização do Portal do Morador" src="index.html?v=20260731-70&espelho=1"></iframe></div>
-    <div class="backend-note"><strong>Todos os dias permanecem editáveis no modo administrador, mesmo quando estão desativados para os moradores.</strong></div>
+    <div class="section-head"><div><span class="section-label">Visualização real</span><h2>Conferir o Portal do Morador</h2><p class="section-intro">Atualize depois de publicar ou retirar uma informação.</p></div><button id="refreshMirror" class="btn secondary" type="button">Atualizar visualização</button></div>
+    <div class="mirror-frame"><iframe id="portalMirror" title="Visualização do Portal do Morador" src="index.html?v=20260731-74&espelho=1"></iframe></div>
   </section>
 </main>
 <footer>© 2026 Mércio José Campos dos Santos • Portal Geral TACS • Todos os direitos reservados</footer>
 </div></div>
-<script src="agenda-config.js?v=20260731-70"></script>
-<script src="admin-post-bridge.js?v=20260731-70"></script>
-<script src="admin-controle-integral.js?v=20260731-70"></script>
-<script src="geral-admin-fix.js?v=20260731-70"></script>
-<script src="admin-whatsapp-status.js?v=20260731-70"></script>
+<script src="agenda-config.js?v=20260731-74"></script>
+<script src="admin-message-bridge.js?v=20260731-74"></script>
+<script src="admin-controle-integral.js?v=20260731-74"></script>
+<script src="admin-whatsapp-status.js?v=20260731-74"></script>
 </body>
 </html>
