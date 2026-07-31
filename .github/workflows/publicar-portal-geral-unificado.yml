@@ -1,0 +1,56 @@
+name: Publicar Portal Geral unificado
+
+on:
+  push:
+    paths:
+      - '.github/workflows/publicar-portal-geral-unificado.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inserir modo administrador no Portal Geral
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          index = Path('index.html')
+          text = index.read_text(encoding='utf-8')
+          tag = '<script src="portal-unificado.js?v=20260731-70"></script>'
+
+          if 'portal-unificado.js' not in text:
+              text = text.replace('</body>', '  ' + tag + '\n</body>')
+          else:
+              text = re.sub(
+                  r'<script src="portal-unificado\.js\?v=[^"]+"></script>',
+                  tag,
+                  text
+              )
+
+          index.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validar
+        run: |
+          grep -q 'portal-unificado.js?v=20260731-70' index.html
+          test -f geral-admin.html
+          test -f geral-admin-fix.js
+
+      - name: Publicar
+        run: |
+          if git diff --quiet; then
+            echo "Portal Geral já publicado."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Publicar Portal Geral com modo administrador por PIN"
+          git push
