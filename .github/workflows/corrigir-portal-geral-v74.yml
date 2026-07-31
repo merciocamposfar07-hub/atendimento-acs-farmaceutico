@@ -30,16 +30,6 @@ jobs:
           )
 
           text = text.replace(
-              "'<div class=\"day-title\"><strong>' + esc(item.day) + '</strong>' +",
-              "'<div class=\"day-title\"><strong>' + esc(item.day + (module === 'odontologia' && item.day === 'Sexta-feira' ? ' • DIA EXTRA' : '')) + '</strong>' +"
-          )
-
-          text = text.replace(
-              "vagasEmergenciais: item.active ? Number(item.emergency || 0) : 0\n        };",
-              "vagasEmergenciais: item.active ? Number(item.emergency || 0) : 0,\n          diaExtra: item.day === 'Sexta-feira'\n        };"
-          )
-
-          text = text.replace(
               "Informe ao menos uma data de segunda, terça ou quinta-feira.",
               "Informe ao menos uma data entre segunda e sexta-feira."
           )
@@ -85,8 +75,9 @@ jobs:
         };
       });"""
 
-          if old_load in text:
-              text = text.replace(old_load, new_load)
+          if old_load not in text:
+              raise SystemExit('Bloco antigo da agenda odontológica não localizado.')
+          text = text.replace(old_load, new_load)
 
           text = text.replace(
               "index.html?v=20260730-51&espelho=",
@@ -108,8 +99,8 @@ jobs:
       - name: Validar
         run: |
           grep -q 'sessionStorage.getItem(KEY) || localStorage.getItem(KEY)' admin-controle-integral.js
-          grep -q 'DENTAL_DAYS.map' admin-controle-integral.js
-          grep -q 'DIA EXTRA' admin-controle-integral.js
+          grep -q 'state.odontologia = DENTAL_DAYS.map' admin-controle-integral.js
+          grep -q 'entre segunda e sexta-feira' admin-controle-integral.js
           grep -q 'portal-unificado.js?v=20260731-74' index.html
 
       - name: Publicar
@@ -123,3 +114,5 @@ jobs:
           git add admin-controle-integral.js index.html
           git commit -m 'Corrigir PIN, cinco dias e tela do Portal Geral'
           git push
+
+# nova execução 31/07/2026 20:05
