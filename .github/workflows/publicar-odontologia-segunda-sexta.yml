@@ -1,0 +1,71 @@
+name: Publicar odontologia segunda a sexta
+
+on:
+  push:
+    paths:
+      - '.github/workflows/publicar-odontologia-segunda-sexta.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Atualizar portal e painel odontológico
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          index = Path('index.html')
+          text = index.read_text(encoding='utf-8')
+          tag = '<script src="portal-odontologia-segunda-sexta.js?v=20260731-62"></script>'
+          if 'portal-odontologia-segunda-sexta.js' not in text:
+              text = text.replace('</body>', '  ' + tag + '\n</body>')
+          else:
+              text = re.sub(
+                  r'<script src="portal-odontologia-segunda-sexta\.js\?v=[^"]+"></script>',
+                  tag,
+                  text
+              )
+          index.write_text(text, encoding='utf-8')
+
+          admin_js = Path('admin-controle-integral.js')
+          text = admin_js.read_text(encoding='utf-8')
+          text = text.replace(
+              "var DENTAL_DAYS = ['Segunda-feira', 'Terça-feira', 'Quinta-feira'];",
+              'var DENTAL_DAYS = DAYS.slice();'
+          )
+          admin_js.write_text(text, encoding='utf-8')
+
+          admin = Path('admin.html')
+          text = admin.read_text(encoding='utf-8')
+          text = re.sub(
+              r'admin-controle-integral\.js\?v=[^"\']+',
+              'admin-controle-integral.js?v=20260731-62',
+              text
+          )
+          admin.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Confirmar arquivos
+        run: |
+          grep -q 'portal-odontologia-segunda-sexta.js?v=20260731-62' index.html
+          grep -q 'var DENTAL_DAYS = DAYS.slice();' admin-controle-integral.js
+          grep -q 'admin-controle-integral.js?v=20260731-62' admin.html
+
+      - name: Publicar
+        run: |
+          if git diff --quiet; then
+            echo "Alterações já publicadas."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html admin.html admin-controle-integral.js
+          git commit -m "Publicar odontologia de segunda a sexta com vagas comuns e emergenciais"
+          git push
