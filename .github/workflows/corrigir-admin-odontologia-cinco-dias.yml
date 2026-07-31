@@ -98,3 +98,5 @@ jobs:
           git add admin-controle-integral.js admin.html
           git commit -m "Manter agenda odontológica de segunda a sexta no painel"
           git push
+
+# execução solicitada em 31/07/2026
