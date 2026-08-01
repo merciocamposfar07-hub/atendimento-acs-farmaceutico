@@ -6,195 +6,63 @@
 <meta name="theme-color" content="#062c46">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>Modo administrador • Portal TACS</title>
-<script>
-(function(){
-  if(sessionStorage.getItem('tacs-admin-session-v1')!=='ok'){
-    location.replace('acesso-admin.html?v=20260731-77');
-  }
-}());
-</script>
 <style>
-  :root{--petroleo:#062c46;--petroleo2:#0a4265;--azul:#0d5f8a;--verde:#078b45;--fundo:#eaf1f5;--linha:#94adba;--texto:#102b3c;--muted:#49616e;--perigo:#a33a32;--branco:#fff}
-  *{box-sizing:border-box}
-  html{background:var(--fundo);-webkit-text-size-adjust:100%;scroll-behavior:auto}
-  body{margin:0;min-height:100%;overflow-x:hidden;overflow-y:auto;background:linear-gradient(180deg,#dce6ec,#f2f6f8);color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-  button,input,textarea,select{font:inherit}
-  [hidden]{display:none!important}
-  .topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:var(--petroleo);color:#fff;box-shadow:0 6px 20px rgba(3,35,56,.25)}
-  .topbar strong{font-size:16px;line-height:1.25}
-  .top-actions{display:flex;gap:8px}
-  .topbar button{min-height:46px;padding:8px 12px;border:1px solid rgba(255,255,255,.48);border-radius:12px;background:rgba(255,255,255,.1);color:#fff;font-size:13px;font-weight:950}
-  .page{width:min(100%,1040px);margin:0 auto;padding:0 8px calc(34px + env(safe-area-inset-bottom))}
-  .hero{margin:0 -8px;padding:24px 18px;background:linear-gradient(135deg,#041f34,var(--petroleo),var(--petroleo2));color:#fff}
-  .badge{display:inline-flex;padding:8px 12px;border:1px solid #4d91ae;border-radius:999px;background:rgba(255,255,255,.08);color:#78e5a6;font-size:13px;font-weight:950;text-transform:uppercase;letter-spacing:.05em}
-  .hero h1{margin:14px 0 8px;font-size:clamp(36px,9vw,56px);line-height:1.02;letter-spacing:-.04em}
-  .hero p{margin:0;color:#dbe9ef;font-size:17px;line-height:1.5}
-  .hero-actions{margin-top:18px}
-  .hero-actions button{width:100%;min-height:54px;border:1px solid #80a9bb;border-radius:14px;background:#fff;color:var(--petroleo);font-weight:950}
-  .note{margin-top:13px;padding:13px 14px;border:1px solid rgba(255,255,255,.3);border-radius:13px;background:rgba(255,255,255,.08);font-size:14px;font-weight:800;line-height:1.45}
-  .main{display:block;padding:14px 0}
-  .tabs{position:sticky;top:76px;z-index:80;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 14px;padding:10px 0;background:rgba(234,241,245,.97);backdrop-filter:blur(10px)}
-  .tab{min-width:0;min-height:52px;padding:9px 7px;border:2px solid var(--linha);border-radius:14px;background:#fff;color:var(--petroleo);font-size:14px;font-weight:950;line-height:1.2;text-align:center}
-  .tab.active{border-color:var(--azul);background:var(--petroleo);color:#fff}
-  .section{width:100%;margin:0 0 16px;padding:18px 14px;border:2px solid #a7bbc5;border-radius:22px;background:#fff;box-shadow:0 10px 26px rgba(4,44,70,.08);overflow:visible}
-  .section-label{display:block;color:var(--verde);font-size:14px;font-weight:950;letter-spacing:.06em;text-transform:uppercase}
-  .section h2{margin:6px 0 8px;color:var(--petroleo);font-size:clamp(30px,8vw,43px);line-height:1.06}
-  .section-intro{margin:0 0 17px;color:var(--muted);font-size:17px;line-height:1.5}
-  .petroleum-balloon{padding:20px;border:2px solid #0e6b98;border-radius:22px;background:linear-gradient(145deg,#052a43,#0a476b);color:#fff}
-  .petroleum-balloon h3{margin:0 0 10px;color:#79e5a6;font-size:25px}
-  .petroleum-balloon p{margin:0;font-size:18px;line-height:1.55}
-  .form-grid,.day-controls{display:grid;grid-template-columns:1fr;gap:14px;min-width:0}
-  .full{grid-column:auto}
-  label{display:grid;gap:8px;min-width:0;color:#0c2e49;font-size:17px;font-weight:900;line-height:1.35}
-  input,textarea,select{display:block;width:100%;max-width:100%;min-width:0;min-height:58px;border:2px solid #8fa7b3;border-radius:13px;background:#fff;padding:13px 14px;color:var(--texto);outline:none;font-size:18px;box-sizing:border-box}
-  textarea{min-height:118px;resize:vertical}
-  input:focus,textarea:focus,select:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(13,95,138,.14)}
-  .week{display:grid;grid-template-columns:1fr;gap:14px}
-  .day-card{min-width:0;padding:16px;border:2px solid #96aeb9;border-radius:18px;background:#f8fbfc}
-  .day-card.active-day{border-color:#2f9a64;background:#eef9f2}
-  .day-card.inactive-day{background:#edf1f3;color:#667b86}
-  .day-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}
-  .day-title strong{color:var(--petroleo);font-size:22px;line-height:1.25}
-  .state-pill{max-width:48%;padding:7px 10px;border-radius:999px;background:#dfe9ee;color:#49616e;font-size:13px;font-weight:950;text-align:center}
-  .active-day .state-pill{background:#d9f1e3;color:#06763a}
-  .switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #a8bdc7;border-radius:13px;background:#fff}
-  .switch-row label{display:flex;align-items:center;gap:10px}
-  .switch-row input{width:24px!important;height:24px;min-height:0;padding:0}
-  .day-actions,.actions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
-  .btn{min-height:56px;border:0;border-radius:14px;padding:12px 17px;font-weight:950}
-  .btn.publish{background:linear-gradient(180deg,#0aa653,#078a42);color:#fff}
-  .btn.cancel{border:2px solid #c88d87;background:#fff3f2;color:var(--perigo)}
-  .btn.secondary{background:var(--petroleo);color:#fff}
-  .btn.ghost{border:2px solid #8fa7b3;background:#fff;color:var(--petroleo)}
-  .btn.warning{border:2px solid #d7a24d;background:#fff2d8;color:#784a00}
-  .status{margin-top:15px;padding:15px;border-radius:14px;background:#eaf3f7;color:#264d60;font-size:16px;font-weight:850;line-height:1.5}
-  .status.success{border:2px solid #77c99a;background:#eaf8f0;color:#066f35}
-  .status.error{border:2px solid #dfa19b;background:#fff0ef;color:#8c2d27}
-  .status.warning{border:2px solid #dfb467;background:#fff6e6;color:#764a00}
-  .portal-link{display:grid;place-items:center;min-height:58px;border-radius:14px;background:var(--petroleo);color:#fff;text-decoration:none;font-size:18px;font-weight:950;text-align:center}
-  .mirror-frame{display:none!important}
-  footer{margin:0 -8px;padding:22px 16px calc(28px + env(safe-area-inset-bottom));background:var(--petroleo);color:#fff;text-align:center;font-size:14px;font-weight:800;line-height:1.5}
-  @media(min-width:760px){.tabs{grid-template-columns:repeat(4,minmax(0,1fr));top:74px}.form-grid,.day-controls{grid-template-columns:1fr 1fr}.full{grid-column:1/-1}.week{grid-template-columns:repeat(2,minmax(0,1fr))}.day-actions,.actions{grid-template-columns:1fr 1fr}}
-  @media(max-width:520px){.topbar{align-items:flex-start}.topbar strong{max-width:35%;font-size:14px}.top-actions{flex:1;justify-content:flex-end}.topbar button{padding:7px 9px;font-size:12px}.page{padding-left:5px;padding-right:5px}.hero{margin-left:-5px;margin-right:-5px}.section{padding:17px 12px}.tabs{top:84px}.day-card{padding:15px 11px}}
+:root{--petroleo:#062c46;--petroleo2:#0a4265;--azul:#0d5f8a;--verde:#078b45;--fundo:#eaf1f5;--linha:#94adba;--texto:#102b3c;--muted:#49616e;--perigo:#a33a32;--branco:#fff}
+*{box-sizing:border-box}html{background:var(--fundo);-webkit-text-size-adjust:100%}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#dce6ec,#f2f6f8);color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;overflow-x:hidden}button,input,textarea,select{font:inherit}[hidden]{display:none!important}
+.login-page{min-height:100vh;display:grid;place-items:center;padding:calc(24px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom))}.login-card{width:min(100%,480px);overflow:hidden;border:1px solid #7894a3;border-radius:24px;background:#fff;box-shadow:0 24px 70px rgba(3,35,56,.24)}.login-head{padding:28px 22px;background:linear-gradient(135deg,#041f34,var(--petroleo),var(--petroleo2));color:#fff}.login-head span{display:inline-block;padding:8px 12px;border:1px solid #4d91ae;border-radius:999px;background:rgba(255,255,255,.08);color:#79e5a6;font-size:13px;font-weight:950;text-transform:uppercase;letter-spacing:.05em}.login-head h1{margin:15px 0 8px;font-size:36px;line-height:1.05}.login-head p{margin:0;color:#dbe9ef;font-size:16px;line-height:1.5}.login-form{padding:22px}.login-form label{display:block;margin:0 0 8px;font-size:17px;font-weight:900}.login-form input{width:100%;min-height:62px;margin-bottom:15px;border:2px solid #8fa7b3;border-radius:14px;padding:14px;background:#fff;color:var(--texto);font-size:25px;font-weight:900;letter-spacing:.18em;text-align:center;outline:none}.login-form input:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(13,95,138,.14)}.login-help{margin:0 0 17px;padding:12px 14px;border-radius:12px;background:#edf6fa;color:#315363;font-size:14px;font-weight:750;line-height:1.45}.login-error{min-height:22px;margin:0 0 10px;color:var(--perigo);font-size:14px;font-weight:900}.login-actions{display:grid;gap:10px}.login-actions button,.login-actions a{display:grid;place-items:center;min-height:54px;border:0;border-radius:13px;padding:11px 15px;text-decoration:none;font-size:17px;font-weight:950}.login-actions button{background:var(--petroleo);color:#fff}.login-actions a{background:#e8eff2;color:#173245}.loading-note{margin-top:12px;color:#315363;font-size:14px;font-weight:800}
+.topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:var(--petroleo);color:#fff;box-shadow:0 6px 20px rgba(3,35,56,.25)}.topbar strong{font-size:16px;line-height:1.25}.top-actions{display:flex;gap:8px}.topbar button{min-height:46px;padding:8px 12px;border:1px solid rgba(255,255,255,.48);border-radius:12px;background:rgba(255,255,255,.1);color:#fff;font-size:13px;font-weight:950}.page{width:min(100%,1040px);margin:0 auto;padding:0 8px calc(34px + env(safe-area-inset-bottom))}.hero{margin:0 -8px;padding:24px 18px;background:linear-gradient(135deg,#041f34,var(--petroleo),var(--petroleo2));color:#fff}.badge{display:inline-flex;padding:8px 12px;border:1px solid #4d91ae;border-radius:999px;background:rgba(255,255,255,.08);color:#78e5a6;font-size:13px;font-weight:950;text-transform:uppercase;letter-spacing:.05em}.hero h1{margin:14px 0 8px;font-size:clamp(36px,9vw,56px);line-height:1.02}.hero p{margin:0;color:#dbe9ef;font-size:17px;line-height:1.5}.hero-actions{margin-top:18px}.hero-actions button{width:100%;min-height:54px;border:1px solid #80a9bb;border-radius:14px;background:#fff;color:var(--petroleo);font-weight:950}.note{margin-top:13px;padding:13px 14px;border:1px solid rgba(255,255,255,.3);border-radius:13px;background:rgba(255,255,255,.08);font-size:14px;font-weight:800;line-height:1.45}.main{display:block;padding:14px 0}.tabs{position:sticky;top:76px;z-index:80;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 14px;padding:10px 0;background:rgba(234,241,245,.97);backdrop-filter:blur(10px)}.tab{min-width:0;min-height:52px;padding:9px 7px;border:2px solid var(--linha);border-radius:14px;background:#fff;color:var(--petroleo);font-size:14px;font-weight:950;line-height:1.2;text-align:center}.tab.active{border-color:var(--azul);background:var(--petroleo);color:#fff}.section{width:100%;margin:0 0 16px;padding:18px 14px;border:2px solid #a7bbc5;border-radius:22px;background:#fff;box-shadow:0 10px 26px rgba(4,44,70,.08)}.section-label{display:block;color:var(--verde);font-size:14px;font-weight:950;letter-spacing:.06em;text-transform:uppercase}.section h2{margin:6px 0 8px;color:var(--petroleo);font-size:clamp(30px,8vw,43px);line-height:1.06}.section-intro{margin:0 0 17px;color:var(--muted);font-size:17px;line-height:1.5}.petroleum-balloon{padding:20px;border:2px solid #0e6b98;border-radius:22px;background:linear-gradient(145deg,#052a43,#0a476b);color:#fff}.petroleum-balloon h3{margin:0 0 10px;color:#79e5a6;font-size:25px}.petroleum-balloon p{margin:0;font-size:18px;line-height:1.55}.form-grid,.day-controls{display:grid;grid-template-columns:1fr;gap:14px;min-width:0}.full{grid-column:auto}label{display:grid;gap:8px;min-width:0;color:#0c2e49;font-size:17px;font-weight:900;line-height:1.35}input,textarea,select{display:block;width:100%;max-width:100%;min-width:0;min-height:58px;border:2px solid #8fa7b3;border-radius:13px;background:#fff;padding:13px 14px;color:var(--texto);outline:none;font-size:18px}textarea{min-height:118px;resize:vertical}input:focus,textarea:focus,select:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(13,95,138,.14)}.week{display:grid;grid-template-columns:1fr;gap:14px}.day-card{min-width:0;padding:16px;border:2px solid #96aeb9;border-radius:18px;background:#f8fbfc}.day-card.active-day{border-color:#2f9a64;background:#eef9f2}.day-card.inactive-day{background:#edf1f3;color:#667b86}.day-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}.day-title strong{color:var(--petroleo);font-size:22px;line-height:1.25}.state-pill{max-width:48%;padding:7px 10px;border-radius:999px;background:#dfe9ee;color:#49616e;font-size:13px;font-weight:950;text-align:center}.active-day .state-pill{background:#d9f1e3;color:#06763a}.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #a8bdc7;border-radius:13px;background:#fff}.switch-row label{display:flex;align-items:center;gap:10px}.switch-row input{width:24px!important;height:24px;min-height:0;padding:0}.day-actions,.actions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}.btn{min-height:56px;border:0;border-radius:14px;padding:12px 17px;font-weight:950}.btn.publish{background:linear-gradient(180deg,#0aa653,#078a42);color:#fff}.btn.cancel{border:2px solid #c88d87;background:#fff3f2;color:var(--perigo)}.btn.secondary{background:var(--petroleo);color:#fff}.btn.ghost{border:2px solid #8fa7b3;background:#fff;color:var(--petroleo)}.btn.warning{border:2px solid #d7a24d;background:#fff2d8;color:#784a00}.status{margin-top:15px;padding:15px;border-radius:14px;background:#eaf3f7;color:#264d60;font-size:16px;font-weight:850;line-height:1.5}.status.success{border:2px solid #77c99a;background:#eaf8f0;color:#066f35}.status.error{border:2px solid #dfa19b;background:#fff0ef;color:#8c2d27}.status.warning{border:2px solid #dfb467;background:#fff6e6;color:#764a00}.portal-link{display:grid;place-items:center;min-height:58px;border-radius:14px;background:var(--petroleo);color:#fff;text-decoration:none;font-size:18px;font-weight:950;text-align:center}.mirror-frame{display:none!important}footer{margin:0 -8px;padding:22px 16px calc(28px + env(safe-area-inset-bottom));background:var(--petroleo);color:#fff;text-align:center;font-size:14px;font-weight:800;line-height:1.5}
+@media(min-width:760px){.tabs{grid-template-columns:repeat(4,minmax(0,1fr));top:74px}.form-grid,.day-controls{grid-template-columns:1fr 1fr}.full{grid-column:1/-1}.week{grid-template-columns:repeat(2,minmax(0,1fr))}.day-actions,.actions{grid-template-columns:1fr 1fr}}@media(max-width:520px){.topbar{align-items:flex-start}.topbar strong{max-width:35%;font-size:14px}.top-actions{flex:1;justify-content:flex-end}.topbar button{padding:7px 9px;font-size:12px}.page{padding-left:5px;padding-right:5px}.hero{margin-left:-5px;margin-right:-5px}.section{padding:17px 12px}.tabs{top:84px}.day-card{padding:15px 11px}}
 </style>
 </head>
 <body>
-<header class="topbar">
-  <strong>Portal Geral • Modo administrador</strong>
-  <div class="top-actions">
-    <button id="backPortal" type="button">Voltar ao portal</button>
-    <button id="changePin" type="button">Trocar PIN</button>
-  </div>
-</header>
-
-<div class="page">
-  <header class="hero">
-    <span class="badge">🔒 Modo de edição liberado pelo PIN</span>
-    <h1>Editar o Portal Geral</h1>
-    <p>Todos os dias de todos os profissionais permanecem disponíveis para edição, inclusive os dias desativados.</p>
-    <div class="hero-actions"><button id="refreshAll" type="button">↻ Atualizar dados do servidor</button></div>
-    <div class="note">O morador só verá as informações e os dias que você ativar e publicar.</div>
-    <div hidden aria-hidden="true">
-      <input id="adminKeyInput" type="hidden">
-      <button id="saveAdminKey" type="button"></button>
-      <button id="clearAdminKey" type="button"></button>
-      <div id="securityStatus"></div>
-    </div>
-  </header>
-
-  <main class="main">
-    <nav class="tabs" aria-label="Áreas editáveis">
-      <button class="tab" data-tab="recados">💬 Recados</button>
-      <button class="tab" data-tab="medica">🩺 Médica</button>
-      <button class="tab" data-tab="enfermeira">👩‍⚕️ Enfermeira</button>
-      <button class="tab" data-tab="nutricionista">🥗 Nutricionista</button>
-      <button class="tab" data-tab="odontologia">🦷 Dentista</button>
-      <button class="tab" data-tab="campanhas">📢 Campanhas</button>
-      <button class="tab" data-tab="espelho">📱 Conferir portal</button>
-    </nav>
-
-    <section class="section" data-section="recados">
-      <span class="section-label">Aviso público</span>
-      <h2>Recados da Unidade</h2>
-      <p class="section-intro">Publique, corrija ou retire o recado exibido no Portal do Morador.</p>
-      <div class="petroleum-balloon"><h3 id="recadoPreviewTitle">Recado da Unidade</h3><p id="recadoPreviewMessage">A prévia aparecerá neste balão azul-petróleo.</p></div>
-      <div class="form-grid" style="margin-top:16px">
-        <label>Título<input id="recadoTitle" placeholder="Ex.: Vacinação nesta semana"></label>
-        <label>Importância<select id="recadoPriority"><option value="informativo">Informativo</option><option value="importante">Importante</option><option value="urgente">Urgente</option></select></label>
-        <label>Exibir até<input id="recadoValidity" type="date"></label>
-        <label class="full">Mensagem<textarea id="recadoMessage" placeholder="Digite o recado que o morador verá"></textarea></label>
-      </div>
-      <div class="actions"><button id="publishRecado" class="btn publish" type="button">Publicar recado</button><button id="cancelRecado" class="btn cancel" type="button">Retirar recado</button></div>
-      <div id="recadoStatus" class="status">Aguardando uma ação.</div>
-    </section>
-
-    <section class="section" data-section="medica" hidden>
-      <span class="section-label">Segunda a sexta</span><h2>Agenda da Médica</h2>
-      <p class="section-intro">Os cinco dias são editáveis. Ative qualquer dia em que houver atendimento.</p>
-      <div id="medicaWeek" class="week"></div>
-    </section>
-
-    <section class="section" data-section="enfermeira" hidden>
-      <span class="section-label">Segunda a sexta</span><h2>Agenda da Enfermeira Chefe</h2>
-      <p class="section-intro">Os cinco dias são editáveis. Altere serviço, ícone e disponibilidade.</p>
-      <div id="enfermeiraWeek" class="week"></div>
-    </section>
-
-    <section class="section" data-section="nutricionista" hidden>
-      <span class="section-label">Segunda a sexta</span><h2>Agenda da Nutricionista</h2>
-      <p class="section-intro">Os cinco dias são editáveis. Ative somente as datas confirmadas.</p>
-      <div id="nutricionistaWeek" class="week"></div>
-    </section>
-
-    <section class="section" data-section="odontologia" hidden>
-      <span class="section-label">Segunda a sexta</span><h2>Agenda da Dentista</h2>
-      <p class="section-intro">Segunda, terça e quinta são oficiais; sexta é dia extra. Quarta e qualquer outro dia desativado continuam editáveis.</p>
-      <div id="odontologiaWeek" class="week"></div>
-    </section>
-
-    <section class="section" data-section="campanhas" hidden>
-      <span class="section-label">Publicação com prazo</span><h2>Campanhas da Unidade</h2>
-      <p class="section-intro">Defina o início, o período de exposição e a mensagem.</p>
-      <div class="form-grid">
-        <label>Nome da campanha<input id="campaignTitle" placeholder="Ex.: Campanha de vacinação"></label>
-        <label>Data de início<input id="campaignStart" type="date"></label>
-        <label>Tempo em dias<input id="campaignDays" type="number" min="1" value="7"></label>
-        <label class="full">Mensagem<textarea id="campaignMessage" placeholder="Informações da campanha"></textarea></label>
-      </div>
-      <div class="actions"><button id="publishCampaign" class="btn publish" type="button">Publicar campanha</button><button id="cancelCampaign" class="btn cancel" type="button">Retirar campanha</button></div>
-      <div id="campaignStatus" class="status">Aguardando uma ação.</div>
-    </section>
-
-    <section class="section" data-section="espelho" hidden>
-      <span class="section-label">Visualização pública</span><h2>Conferir Portal do Morador</h2>
-      <p class="section-intro">Abra o Portal do Morador em uma página separada. Não será usado iframe.</p>
-      <a class="portal-link" href="index.html?v=20260731-77" target="_blank" rel="noopener">Abrir Portal do Morador</a>
-      <button id="refreshMirror" class="btn secondary" type="button" style="width:100%;margin-top:10px">Atualizar link do portal</button>
-      <div class="mirror-frame"><iframe id="portalMirror" title="Visualização do Portal do Morador"></iframe></div>
-    </section>
+<section id="loginPage" class="login-page">
+  <main class="login-card">
+    <header class="login-head"><span>🔒 Acesso administrativo</span><h1 id="loginTitle">PIN do Portal TACS</h1><p id="loginDescription">Digite o PIN para abrir o editor.</p></header>
+    <form id="pinForm" class="login-form">
+      <label for="pin">PIN numérico</label>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="4 a 8 números">
+      <div id="confirmWrap" hidden><label for="confirm">Confirme o PIN</label><input id="confirm" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Digite novamente"></div>
+      <p class="login-help">O editor será aberto nesta mesma página, sem redirecionamento e sem iframe.</p>
+      <div id="loginError" class="login-error"></div>
+      <div class="login-actions"><button id="enterButton" type="submit">Abrir editor</button><a href="index.html?v=20260731-78">Voltar ao Portal do Morador</a></div>
+      <div id="loadingNote" class="loading-note" hidden>Carregando os controles de edição…</div>
+    </form>
   </main>
+</section>
 
-  <footer>© 2026 Mércio José Campos dos Santos • Portal Geral TACS • Todos os direitos reservados</footer>
+<div id="adminApp" hidden>
+<header class="topbar"><strong>Portal Geral • Modo administrador</strong><div class="top-actions"><button id="backPortal" type="button">Voltar ao portal</button><button id="changePin" type="button">Trocar PIN</button></div></header>
+<div class="page">
+<header class="hero"><span class="badge">🔒 Modo de edição liberado pelo PIN</span><h1>Editar o Portal Geral</h1><p>Todos os dias de todos os profissionais permanecem disponíveis para edição, inclusive os dias desativados.</p><div class="hero-actions"><button id="refreshAll" type="button">↻ Atualizar dados do servidor</button></div><div class="note">O morador só verá as informações e os dias que você ativar e publicar.</div><div hidden aria-hidden="true"><input id="adminKeyInput" type="hidden"><button id="saveAdminKey" type="button"></button><button id="clearAdminKey" type="button"></button><div id="securityStatus"></div></div></header>
+<main class="main">
+<nav class="tabs" aria-label="Áreas editáveis"><button class="tab" data-tab="recados">💬 Recados</button><button class="tab" data-tab="medica">🩺 Médica</button><button class="tab" data-tab="enfermeira">👩‍⚕️ Enfermeira</button><button class="tab" data-tab="nutricionista">🥗 Nutricionista</button><button class="tab" data-tab="odontologia">🦷 Dentista</button><button class="tab" data-tab="campanhas">📢 Campanhas</button><button class="tab" data-tab="espelho">📱 Conferir portal</button></nav>
+<section class="section" data-section="recados"><span class="section-label">Aviso público</span><h2>Recados da Unidade</h2><p class="section-intro">Publique, corrija ou retire o recado exibido no Portal do Morador.</p><div class="petroleum-balloon"><h3 id="recadoPreviewTitle">Recado da Unidade</h3><p id="recadoPreviewMessage">A prévia aparecerá neste balão azul-petróleo.</p></div><div class="form-grid" style="margin-top:16px"><label>Título<input id="recadoTitle" placeholder="Ex.: Vacinação nesta semana"></label><label>Importância<select id="recadoPriority"><option value="informativo">Informativo</option><option value="importante">Importante</option><option value="urgente">Urgente</option></select></label><label>Exibir até<input id="recadoValidity" type="date"></label><label class="full">Mensagem<textarea id="recadoMessage" placeholder="Digite o recado que o morador verá"></textarea></label></div><div class="actions"><button id="publishRecado" class="btn publish" type="button">Publicar recado</button><button id="cancelRecado" class="btn cancel" type="button">Retirar recado</button></div><div id="recadoStatus" class="status">Aguardando uma ação.</div></section>
+<section class="section" data-section="medica" hidden><span class="section-label">Segunda a sexta</span><h2>Agenda da Médica</h2><p class="section-intro">Os cinco dias são editáveis. Ative qualquer dia em que houver atendimento.</p><div id="medicaWeek" class="week"></div></section>
+<section class="section" data-section="enfermeira" hidden><span class="section-label">Segunda a sexta</span><h2>Agenda da Enfermeira Chefe</h2><p class="section-intro">Os cinco dias são editáveis. Altere serviço, ícone e disponibilidade.</p><div id="enfermeiraWeek" class="week"></div></section>
+<section class="section" data-section="nutricionista" hidden><span class="section-label">Segunda a sexta</span><h2>Agenda da Nutricionista</h2><p class="section-intro">Os cinco dias são editáveis. Ative somente as datas confirmadas.</p><div id="nutricionistaWeek" class="week"></div></section>
+<section class="section" data-section="odontologia" hidden><span class="section-label">Segunda a sexta</span><h2>Agenda da Dentista</h2><p class="section-intro">Segunda, terça e quinta são oficiais; sexta é dia extra. Quarta e qualquer outro dia desativado continuam editáveis.</p><div id="odontologiaWeek" class="week"></div></section>
+<section class="section" data-section="campanhas" hidden><span class="section-label">Publicação com prazo</span><h2>Campanhas da Unidade</h2><p class="section-intro">Defina o início, o período de exposição e a mensagem.</p><div class="form-grid"><label>Nome da campanha<input id="campaignTitle" placeholder="Ex.: Campanha de vacinação"></label><label>Data de início<input id="campaignStart" type="date"></label><label>Tempo em dias<input id="campaignDays" type="number" min="1" value="7"></label><label class="full">Mensagem<textarea id="campaignMessage" placeholder="Informações da campanha"></textarea></label></div><div class="actions"><button id="publishCampaign" class="btn publish" type="button">Publicar campanha</button><button id="cancelCampaign" class="btn cancel" type="button">Retirar campanha</button></div><div id="campaignStatus" class="status">Aguardando uma ação.</div></section>
+<section class="section" data-section="espelho" hidden><span class="section-label">Visualização pública</span><h2>Conferir Portal do Morador</h2><p class="section-intro">Abra o Portal do Morador em uma página separada.</p><a class="portal-link" href="index.html?v=20260731-78" target="_blank" rel="noopener">Abrir Portal do Morador</a><button id="refreshMirror" class="btn secondary" type="button" style="width:100%;margin-top:10px">Atualizar link do portal</button><div class="mirror-frame"><iframe id="portalMirror" title="Visualização do Portal do Morador"></iframe></div></section>
+</main><footer>© 2026 Mércio José Campos dos Santos • Portal Geral TACS • Todos os direitos reservados</footer>
 </div>
-
+</div>
 <script>
 (function(){
-  document.getElementById('backPortal').addEventListener('click',function(){
-    sessionStorage.removeItem('tacs-admin-session-v1');
-    location.replace('index.html?v=20260731-77');
-  });
-  document.getElementById('changePin').addEventListener('click',function(){
-    sessionStorage.removeItem('tacs-admin-session-v1');
-    location.replace('acesso-admin.html?v=20260731-77&trocarPin=1');
-  });
-  document.getElementById('refreshMirror').addEventListener('click',function(){
-    window.open('index.html?v=20260731-77&t='+Date.now(),'_blank');
-  });
+'use strict';
+var HASH='tacs-admin-pin-hash-v3',SALT='tacs-admin-pin-salt-v3',KEY='tacs-admin-key',MANAGED='tacs-admin-key-gerenciada-pelo-pin-v3';
+var creating=!(localStorage.getItem(HASH)&&localStorage.getItem(SALT));
+var loaded=false;
+var title=document.getElementById('loginTitle'),description=document.getElementById('loginDescription'),confirmWrap=document.getElementById('confirmWrap'),enter=document.getElementById('enterButton'),error=document.getElementById('loginError'),loading=document.getElementById('loadingNote');
+if(creating){title.textContent='Crie seu PIN administrativo';description.textContent='Escolha um PIN de 4 a 8 números para proteger a edição neste aparelho.';confirmWrap.hidden=false;enter.textContent='Criar PIN e abrir editor'}
+function salt(){var b=new Uint8Array(18);if(window.crypto&&window.crypto.getRandomValues)window.crypto.getRandomValues(b);else for(var i=0;i<b.length;i++)b[i]=Math.floor(Math.random()*256);return Array.prototype.map.call(b,function(v){return v.toString(16).padStart(2,'0')}).join('')}
+function fallback(v){var h=2166136261;for(var i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}return Promise.resolve((h>>>0).toString(16))}
+function digest(pin,s){var v='Portal-TACS|'+s+'|'+pin;if(window.crypto&&window.crypto.subtle&&window.TextEncoder)return window.crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)).then(function(buf){return Array.prototype.map.call(new Uint8Array(buf),function(byte){return byte.toString(16).padStart(2,'0')}).join('')});return fallback(v)}
+function addScript(src){return new Promise(function(resolve,reject){var s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=function(){reject(new Error('Falha ao carregar '+src))};document.body.appendChild(s)})}
+function loadEditor(){if(loaded)return Promise.resolve();loaded=true;return addScript('agenda-config.js?v=20260731-78').then(function(){return addScript('admin-message-bridge.js?v=20260731-78')}).then(function(){return addScript('admin-controle-integral.js?v=20260731-78')}).then(function(){return addScript('geral-admin-fix.js?v=20260731-78')})}
+function unlock(pin){var serverKey=sessionStorage.getItem(KEY)||localStorage.getItem(KEY)||'';if(!serverKey){localStorage.setItem(KEY,pin);localStorage.setItem(MANAGED,'1');serverKey=pin}sessionStorage.setItem(KEY,serverKey);document.getElementById('adminKeyInput').value=serverKey;loading.hidden=false;enter.disabled=true;loadEditor().then(function(){document.getElementById('loginPage').hidden=true;document.getElementById('adminApp').hidden=false;document.body.scrollTop=0;document.documentElement.scrollTop=0;setTimeout(function(){var r=document.getElementById('refreshAll');if(r)r.click()},100)}).catch(function(e){loaded=false;loading.hidden=true;enter.disabled=false;error.textContent='O editor não carregou: '+e.message})}
+document.getElementById('pinForm').addEventListener('submit',function(ev){ev.preventDefault();var pin=String(document.getElementById('pin').value||'').trim(),conf=String(document.getElementById('confirm').value||'').trim();if(!/^\d{4,8}$/.test(pin)){error.textContent='Use um PIN numérico de 4 a 8 números.';return}if(creating&&pin!==conf){error.textContent='Os dois campos não coincidem.';return}error.textContent='';if(creating){var s=salt();digest(pin,s).then(function(h){localStorage.setItem(SALT,s);localStorage.setItem(HASH,h);unlock(pin)}).catch(function(){error.textContent='Não foi possível criar o PIN.'});return}digest(pin,localStorage.getItem(SALT)||'').then(function(h){if(h!==localStorage.getItem(HASH)){error.textContent='PIN incorreto.';return}unlock(pin)}).catch(function(){error.textContent='Não foi possível verificar o PIN.'})});
+document.getElementById('backPortal').addEventListener('click',function(){location.href='index.html?v=20260731-78'});document.getElementById('changePin').addEventListener('click',function(){localStorage.removeItem(HASH);localStorage.removeItem(SALT);if(localStorage.getItem(MANAGED)==='1'){localStorage.removeItem(KEY);sessionStorage.removeItem(KEY);localStorage.removeItem(MANAGED)}location.reload()});document.getElementById('refreshMirror').addEventListener('click',function(){window.open('index.html?v=20260731-78&t='+Date.now(),'_blank')});setTimeout(function(){document.getElementById('pin').focus()},80);
 }());
 </script>
-<script src="agenda-config.js?v=20260731-77"></script>
-<script src="admin-message-bridge.js?v=20260731-77"></script>
-<script src="admin-controle-integral.js?v=20260731-77"></script>
-<script src="geral-admin-fix.js?v=20260731-77"></script>
 </body>
 </html>
