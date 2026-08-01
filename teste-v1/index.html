@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>Teste V1 • Portal TACS</title>
+  <style>
+    :root {
+      --petroleo: #073a55;
+      --petroleo-2: #0b5878;
+      --verde: #148a46;
+      --verde-claro: #e8f7ee;
+      --azul-claro: #eef7fb;
+      --borda: #9fb7c3;
+      --texto: #102d40;
+      --muted: #536b78;
+      --erro: #a52d2d;
+      --erro-bg: #fff0f0;
+      --aviso: #8a5a00;
+      --aviso-bg: #fff5d9;
+      --branco: #fff;
+      --fundo: #eaf2f6;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--fundo);
+      color: var(--texto);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.45;
+    }
+
+    button { font: inherit; }
+
+    .topo {
+      background: linear-gradient(145deg, var(--petroleo), #0a4f6e);
+      color: var(--branco);
+      padding: calc(22px + env(safe-area-inset-top)) 20px 24px;
+      border-bottom: 4px solid #67c7a0;
+    }
+
+    .topo .selo {
+      display: inline-block;
+      padding: 8px 12px;
+      border: 2px solid #73c7e7;
+      border-radius: 999px;
+      color: #8df0b4;
+      font-weight: 800;
+      letter-spacing: .04em;
+      font-size: .92rem;
+    }
+
+    .topo h1 {
+      margin: 18px 0 8px;
+      font-size: clamp(2rem, 8vw, 3rem);
+      line-height: 1.05;
+    }
+
+    .topo p { margin: 0; font-size: 1.08rem; }
+
+    main {
+      width: min(900px, 100%);
+      margin: 0 auto;
+      padding: 18px 14px 60px;
+    }
+
+    .alerta {
+      background: var(--aviso-bg);
+      border: 2px solid #e1aa3f;
+      color: var(--aviso);
+      border-radius: 20px;
+      padding: 16px;
+      margin-bottom: 16px;
+      font-weight: 750;
+    }
+
+    .painel {
+      background: var(--branco);
+      border: 2px solid var(--borda);
+      border-radius: 24px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 25px rgba(7, 58, 85, .08);
+    }
+
+    .linha-status {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 9px 13px;
+      font-weight: 800;
+      background: #edf1f3;
+      color: var(--muted);
+    }
+
+    .status.ok { background: var(--verde-claro); color: var(--verde); }
+    .status.erro { background: var(--erro-bg); color: var(--erro); }
+
+    .botao {
+      border: 0;
+      border-radius: 16px;
+      padding: 13px 17px;
+      background: var(--petroleo);
+      color: white;
+      font-weight: 800;
+      min-height: 52px;
+      cursor: pointer;
+    }
+
+    .botao:disabled { opacity: .6; cursor: wait; }
+
+    .metadados {
+      margin-top: 14px;
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+
+    .resumo {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .numero {
+      background: var(--azul-claro);
+      border: 2px solid #c4dce6;
+      border-radius: 17px;
+      padding: 14px;
+      min-height: 95px;
+    }
+
+    .numero strong { display: block; font-size: 2rem; color: var(--petroleo); }
+    .numero span { color: var(--muted); font-weight: 700; }
+
+    h2 { margin: 0 0 14px; font-size: 1.7rem; }
+    h3 { margin: 0; font-size: 1.35rem; }
+
+    .profissional {
+      border: 2px solid #b7ccd5;
+      border-radius: 22px;
+      overflow: hidden;
+      margin-top: 14px;
+    }
+
+    .profissional-cabecalho {
+      background: var(--petroleo);
+      color: white;
+      padding: 16px;
+    }
+
+    .profissional-cabecalho small {
+      display: block;
+      margin-top: 5px;
+      color: #cfeaf5;
+    }
+
+    .profissional-corpo { padding: 15px; }
+
+    .subtitulo {
+      margin: 0 0 9px;
+      color: var(--verde);
+      font-size: .92rem;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .lista {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .item {
+      border: 2px solid #c8d8df;
+      border-radius: 16px;
+      padding: 13px;
+      background: white;
+    }
+
+    .item b { display: block; margin-bottom: 4px; }
+    .item p { margin: 4px 0 0; color: var(--muted); }
+    .item .etiqueta {
+      display: inline-block;
+      margin: 4px 6px 0 0;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: var(--verde-claro);
+      color: var(--verde);
+      font-size: .84rem;
+      font-weight: 800;
+    }
+
+    .vazio {
+      border: 2px dashed #b8cbd4;
+      border-radius: 16px;
+      padding: 14px;
+      color: var(--muted);
+      background: #f7fafb;
+    }
+
+    .erro-box {
+      background: var(--erro-bg);
+      border: 2px solid #d77f7f;
+      color: var(--erro);
+      border-radius: 18px;
+      padding: 15px;
+      margin-top: 15px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    footer {
+      background: var(--petroleo);
+      color: white;
+      padding: 24px 18px calc(24px + env(safe-area-inset-bottom));
+      text-align: center;
+    }
+
+    footer p { margin: 5px 0; }
+
+    @media (min-width: 700px) {
+      .resumo { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      .numero { min-height: 112px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topo">
+    <span class="selo">AMBIENTE ISOLADO DE TESTE</span>
+    <h1>Portal TACS V1</h1>
+    <p>Leitura direta da nova base única. Esta página ainda não deve ser enviada aos moradores.</p>
+  </header>
+
+  <main>
+    <div class="alerta">⚠️ O portal público atual não foi alterado. Esta tela serve somente para comprovar a sincronização planilha → API → página.</div>
+
+    <section class="painel">
+      <div class="linha-status">
+        <div>
+          <h2>Conexão com a base</h2>
+          <span id="status" class="status">Aguardando teste</span>
+        </div>
+        <button id="atualizar" class="botao" type="button">Atualizar dados</button>
+      </div>
+
+      <div id="metadados" class="metadados"></div>
+      <div id="erro"></div>
+      <div id="resumo" class="resumo"></div>
+    </section>
+
+    <section class="painel">
+      <h2>Profissionais, serviços e agendas</h2>
+      <div id="profissionais"></div>
+    </section>
+
+    <section class="painel">
+      <h2>Recados ativos</h2>
+      <div id="recados"></div>
+    </section>
+
+    <section class="painel">
+      <h2>Campanhas ativas</h2>
+      <div id="campanhas"></div>
+    </section>
+
+    <section class="painel">
+      <h2>Notificações</h2>
+      <div id="notificacoes" class="vazio">Aguardando dados da API.</div>
+    </section>
+  </main>
+
+  <footer>
+    <p id="unidade">Portal TACS</p>
+    <p id="localidade"></p>
+    <p id="direitos"></p>
+  </footer>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var API = 'https://script.google.com/macros/s/AKfycbwTmO0Iv-0tWxxygHOrAJ5q0CAXFivu0oYubcfRC6lbpdFFZs9hPV0RkIEWwhtCKrFiLw/exec';
+      var timeoutId = null;
+      var scriptAtual = null;
+      var contador = 0;
+
+      var statusEl = document.getElementById('status');
+      var botaoEl = document.getElementById('atualizar');
+      var erroEl = document.getElementById('erro');
+
+      function texto(valor) {
+        return String(valor == null ? '' : valor);
+      }
+
+      function escapar(valor) {
+        return texto(valor)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function formatarDataHora(valor) {
+        if (!valor) return 'não informado';
+        var data = new Date(valor);
+        if (isNaN(data.getTime())) return texto(valor);
+        return data.toLocaleString('pt-BR');
+      }
+
+      function definirStatus(tipo, mensagem) {
+        statusEl.className = 'status' + (tipo ? ' ' + tipo : '');
+        statusEl.textContent = mensagem;
+      }
+
+      function limparChamada() {
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = null;
+        if (scriptAtual && scriptAtual.parentNode) scriptAtual.parentNode.removeChild(scriptAtual);
+        scriptAtual = null;
+      }
+
+      function falhar(mensagem) {
+        limparChamada();
+        botaoEl.disabled = false;
+        definirStatus('erro', 'Falha na sincronização');
+        erroEl.innerHTML = '<div class="erro-box">' + escapar(mensagem) + '</div>';
+      }
+
+      function listaVazia(mensagem) {
+        return '<div class="vazio">' + escapar(mensagem) + '</div>';
+      }
+
+      function renderResumo(resumo) {
+        var itens = [
+          ['Profissionais', resumo.profissionais],
+          ['Serviços', resumo.servicos],
+          ['Agendas', resumo.agendas],
+          ['Recados', resumo.recados],
+          ['Campanhas', resumo.campanhas]
+        ];
+        document.getElementById('resumo').innerHTML = itens.map(function (item) {
+          return '<div class="numero"><strong>' + escapar(item[1]) + '</strong><span>' + escapar(item[0]) + '</span></div>';
+        }).join('');
+      }
+
+      function renderServicos(servicos) {
+        if (!servicos || !servicos.length) return listaVazia('Nenhum serviço ativo cadastrado para este profissional.');
+        return '<div class="lista">' + servicos.map(function (servico) {
+          var etiquetas = [];
+          if (servico.permiteVagaComum) etiquetas.push('<span class="etiqueta">Vaga comum</span>');
+          if (servico.permiteEmergencia) etiquetas.push('<span class="etiqueta">Emergência</span>');
+          return '<div class="item">' +
+            '<b>' + escapar(servico.nome) + '</b>' +
+            '<p>' + escapar(servico.descricaoAutomatica || 'Sem descrição automática.') + '</p>' +
+            etiquetas.join('') +
+          '</div>';
+        }).join('') + '</div>';
+      }
+
+      function renderAgenda(agenda) {
+        if (!agenda || !agenda.length) return listaVazia('Nenhum dia ativo foi publicado na base para este profissional.');
+        return '<div class="lista">' + agenda.map(function (item) {
+          var detalhes = [];
+          if (item.data) detalhes.push('Data: ' + item.data);
+          if (item.horario) detalhes.push('Horário: ' + item.horario);
+          if (item.situacao) detalhes.push('Situação: ' + item.situacao);
+          if (item.vagasComuns !== null) detalhes.push('Vagas comuns: ' + item.vagasComuns);
+          if (item.vagasEmergenciais !== null) detalhes.push('Emergências: ' + item.vagasEmergenciais);
+          if (item.diaExtra) detalhes.push('Dia extra');
+          return '<div class="item">' +
+            '<b>' + escapar(item.dia || 'Dia não informado') + '</b>' +
+            '<p>' + escapar(item.mensagem || 'Sem descrição.') + '</p>' +
+            (detalhes.length ? '<p>' + escapar(detalhes.join(' • ')) + '</p>' : '') +
+          '</div>';
+        }).join('') + '</div>';
+      }
+
+      function renderProfissionais(profissionais) {
+        if (!profissionais || !profissionais.length) {
+          document.getElementById('profissionais').innerHTML = listaVazia('Nenhum profissional ativo na base.');
+          return;
+        }
+
+        document.getElementById('profissionais').innerHTML = profissionais.map(function (profissional) {
+          return '<article class="profissional">' +
+            '<header class="profissional-cabecalho">' +
+              '<h3>' + escapar(profissional.icone + ' ' + profissional.tituloPublico) + '</h3>' +
+              '<small>ID da base: ' + escapar(profissional.id) + '</small>' +
+            '</header>' +
+            '<div class="profissional-corpo">' +
+              '<p class="subtitulo">Serviços ativos</p>' +
+              renderServicos(profissional.servicos) +
+              '<p class="subtitulo">Agenda publicada</p>' +
+              renderAgenda(profissional.agenda) +
+            '</div>' +
+          '</article>';
+        }).join('');
+      }
+
+      function renderPublicacoes(id, itens, mensagemVazia) {
+        var elemento = document.getElementById(id);
+        if (!itens || !itens.length) {
+          elemento.innerHTML = listaVazia(mensagemVazia);
+          return;
+        }
+        elemento.innerHTML = '<div class="lista">' + itens.map(function (item) {
+          return '<div class="item"><b>' + escapar(item.titulo || 'Sem título') + '</b><p>' + escapar(item.mensagem || '') + '</p></div>';
+        }).join('') + '</div>';
+      }
+
+      function receber(dados) {
+        limparChamada();
+        botaoEl.disabled = false;
+
+        if (!dados || dados.ok !== true) {
+          falhar(dados && dados.message ? dados.message : 'A API respondeu sem confirmação de sucesso.');
+          return;
+        }
+
+        definirStatus('ok', 'Sincronização confirmada');
+        erroEl.innerHTML = '';
+
+        document.getElementById('metadados').innerHTML =
+          '<div><b>API:</b> ' + escapar(dados.apiVersao) + '</div>' +
+          '<div><b>Base:</b> ' + escapar(dados.planilha) + '</div>' +
+          '<div><b>Revisão:</b> ' + escapar(dados.revisaoConteudo) + '</div>' +
+          '<div><b>Atualizado:</b> ' + escapar(formatarDataHora(dados.geradoEm)) + '</div>';
+
+        renderResumo(dados.resumo || {});
+        renderProfissionais(dados.profissionais || []);
+        renderPublicacoes('recados', dados.recados || [], 'Nenhum recado ativo publicado na base.');
+        renderPublicacoes('campanhas', dados.campanhas || [], 'Nenhuma campanha ativa publicada na base.');
+
+        var notificacoes = dados.notificacoes || {};
+        document.getElementById('notificacoes').innerHTML =
+          '<b>' + (notificacoes.habilitadas ? 'Habilitadas' : 'Ainda desativadas para envio') + '</b><br>' +
+          'Consentimento obrigatório: ' + (notificacoes.exigeConsentimento ? 'sim' : 'não') + '<br>' +
+          'Serviço push configurado: ' + (notificacoes.pushConfigurado ? 'sim' : 'não');
+
+        var config = dados.configuracoes || {};
+        document.getElementById('unidade').textContent = config.UNIDADE_NOME || 'Portal TACS';
+        document.getElementById('localidade').textContent = config.LOCALIDADE || '';
+        document.getElementById('direitos').textContent = config.RODAPE_DIREITOS || '';
+      }
+
+      function carregar() {
+        limparChamada();
+        contador += 1;
+        botaoEl.disabled = true;
+        erroEl.innerHTML = '';
+        definirStatus('', 'Consultando a planilha…');
+
+        var callback = '__portalTacsTesteV1_' + Date.now() + '_' + contador;
+        window[callback] = function (dados) {
+          try { receber(dados); }
+          finally {
+            try { delete window[callback]; } catch (e) { window[callback] = undefined; }
+          }
+        };
+
+        scriptAtual = document.createElement('script');
+        scriptAtual.src = API + '?action=bootstrap&callback=' + encodeURIComponent(callback) + '&_=' + Date.now();
+        scriptAtual.async = true;
+        scriptAtual.onerror = function () {
+          try { delete window[callback]; } catch (e) { window[callback] = undefined; }
+          falhar('Não foi possível carregar a API pela internet.');
+        };
+
+        timeoutId = setTimeout(function () {
+          try { delete window[callback]; } catch (e) { window[callback] = undefined; }
+          falhar('A API não respondeu dentro de 20 segundos.');
+        }, 20000);
+
+        document.head.appendChild(scriptAtual);
+      }
+
+      botaoEl.addEventListener('click', carregar);
+      carregar();
+    }());
+  </script>
+</body>
+</html>
