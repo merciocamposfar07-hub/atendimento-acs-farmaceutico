@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '20260801-82';
+  var VERSION = '20260801-83';
 
   function install() {
     if (document.getElementById('portalAdminEntry')) return;

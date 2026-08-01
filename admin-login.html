@@ -19,7 +19,7 @@
 <div id="confirmWrap" hidden><label for="confirmPin">Confirme o PIN</label><input id="confirmPin" name="confirmPin" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="8" placeholder="Digite novamente"></div>
 <p class="help">Esta página não carrega nenhum arquivo externo. O teclado deve abrir imediatamente ao tocar no campo.</p>
 <div id="error" class="error"></div>
-<div class="actions"><button id="submit" type="submit">Abrir painel administrativo</button><a href="index.html?v=20260801-82">Voltar ao Portal do Morador</a></div>
+<div class="actions"><button id="submit" type="submit">Abrir painel administrativo</button><a href="index.html?v=20260801-83">Voltar ao Portal do Morador</a></div>
 <div class="ready">Página de PIN pronta para digitação.</div>
 </form>
 </main>
@@ -46,7 +46,7 @@ if(creating){title.textContent='Crie seu PIN administrativo';description.textCon
 function makeSalt(){var b=new Uint8Array(18);if(window.crypto&&window.crypto.getRandomValues)window.crypto.getRandomValues(b);else for(var i=0;i<b.length;i++)b[i]=Math.floor(Math.random()*256);return Array.prototype.map.call(b,function(v){return v.toString(16).padStart(2,'0')}).join('')}
 function fallback(v){var h=2166136261;for(var i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}return Promise.resolve((h>>>0).toString(16))}
 function digest(pin,salt){var value='Portal-TACS|'+salt+'|'+pin;if(window.crypto&&window.crypto.subtle&&window.TextEncoder)return window.crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)).then(function(buffer){return Array.prototype.map.call(new Uint8Array(buffer),function(byte){return byte.toString(16).padStart(2,'0')}).join('')});return fallback(value)}
-function openPanel(pin){if(!localStorage.getItem(KEY)){localStorage.setItem(KEY,pin);localStorage.setItem(MANAGED,'1')}localStorage.setItem(AUTH,'ok');location.href='admin-painel.html?v=20260801-82&t='+Date.now()}
+function openPanel(pin){if(!localStorage.getItem(KEY)){localStorage.setItem(KEY,pin);localStorage.setItem(MANAGED,'1')}localStorage.setItem(AUTH,'ok');location.href='admin-painel.html?v=20260801-83&t='+Date.now()}
 document.getElementById('form').addEventListener('submit',function(event){event.preventDefault();var pin=String(document.getElementById('pin').value||'').replace(/\D/g,'');var confirmation=String(document.getElementById('confirmPin').value||'').replace(/\D/g,'');document.getElementById('pin').value=pin;document.getElementById('confirmPin').value=confirmation;if(!/^\d{4,8}$/.test(pin)){error.textContent='Use um PIN numérico de 4 a 8 números.';return}if(creating&&pin!==confirmation){error.textContent='Os dois PINs não coincidem.';return}error.textContent='';submit.disabled=true;submit.textContent='Abrindo...';if(creating){var salt=makeSalt();digest(pin,salt).then(function(hash){localStorage.setItem(SALT,salt);localStorage.setItem(HASH,hash);openPanel(pin)}).catch(function(){submit.disabled=false;submit.textContent='Criar PIN e abrir painel';error.textContent='Não foi possível criar o PIN.'});return}digest(pin,localStorage.getItem(SALT)||'').then(function(hash){if(hash!==localStorage.getItem(HASH)){submit.disabled=false;submit.textContent='Abrir painel administrativo';error.textContent='PIN incorreto.';return}openPanel(pin)}).catch(function(){submit.disabled=false;submit.textContent='Abrir painel administrativo';error.textContent='Não foi possível verificar o PIN.'})});
 }());
 </script>
