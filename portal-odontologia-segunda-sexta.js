@@ -4,15 +4,15 @@
   var WHATSAPP_NUMBER = '5581989613130';
   var DENTAL_REGULAR = 'Solicitar atendimento odontológico (dentista)';
   var DENTAL_EMERGENCY = 'Solicitar atendimento odontológico de emergência (dentista)';
-  var DENTAL_DAYS = [
+  var DAYS = [
     { name: 'Segunda-feira', weekday: 1, badge: 'DIA OFICIAL' },
     { name: 'Terça-feira', weekday: 2, badge: 'DIA OFICIAL' },
     { name: 'Quinta-feira', weekday: 4, badge: 'DIA OFICIAL' },
     { name: 'Sexta-feira', weekday: 5, badge: 'DIA EXTRA' }
   ];
 
-  var selectedDental = null;
-  var dentalRendering = false;
+  var selected = null;
+  var renderQueued = false;
 
   function el(id) {
     return document.getElementById(id);
@@ -29,18 +29,14 @@
       : text;
   }
 
-  function currentCategory() {
-    return clean(el('category') && el('category').value);
-  }
-
-  function categoryDentalType() {
-    var value = normalize(currentCategory());
+  function dentalType() {
+    var value = normalize(el('category') && el('category').value);
     if (value.indexOf('odontologico') === -1) return '';
     return value.indexOf('emergencia') !== -1 ? 'emergencial' : 'comum';
   }
 
-  function isDentalCategory() {
-    return Boolean(categoryDentalType());
+  function isDental() {
+    return Boolean(dentalType());
   }
 
   function setSubject(value) {
@@ -48,141 +44,82 @@
     if (!subject || subject.value === value) return;
     subject.value = value;
     subject.dispatchEvent(new Event('input', { bubbles: true }));
-    subject.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  function formatDate(value) {
-    var text = clean(value);
-    var iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (iso) return iso[3] + '/' + iso[2] + '/' + iso[1];
-    return text;
-  }
-
-  function recifeTodayParts() {
+  function recifeToday() {
     var parts = new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/Recife',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
     }).formatToParts(new Date());
-    var values = {};
-    parts.forEach(function (part) {
-      values[part.type] = part.value;
-    });
-    return [Number(values.year), Number(values.month), Number(values.day)];
+    var value = {};
+    parts.forEach(function (part) { value[part.type] = part.value; });
+    return [Number(value.year), Number(value.month), Number(value.day)];
   }
 
-  function nextDateForWeekday(weekday) {
-    var parts = recifeTodayParts();
-    var date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-    var diff = (weekday - date.getUTCDay() + 7) % 7;
-    date.setUTCDate(date.getUTCDate() + diff);
+  function nextDate(weekday) {
+    var today = recifeToday();
+    var date = new Date(Date.UTC(today[0], today[1] - 1, today[2]));
+    var difference = (weekday - date.getUTCDay() + 7) % 7;
+    date.setUTCDate(date.getUTCDate() + difference);
     return date.getUTCFullYear() + '-' +
       String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
       String(date.getUTCDate()).padStart(2, '0');
   }
 
-  function genericDescriptionForCategory() {
-    var value = normalize(currentCategory());
+  function formatDate(value) {
+    var match = clean(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return match ? match[3] + '/' + match[2] + '/' + match[1] : clean(value);
+  }
 
+  function descriptionForSelection() {
+    if (!selected) return '';
+    var prefix = selected.type === 'emergencial'
+      ? 'Solicitação de vaga odontológica de emergência para a dentista'
+      : 'Solicitação de vaga para atendimento odontológico com a dentista';
+    return prefix + ' — ' + selected.day + ' — ' + formatDate(selected.date) + '.';
+  }
+
+  function genericDescription() {
+    var value = normalize(el('category') && el('category').value);
     if (value.indexOf('odontologico') !== -1) {
       return value.indexOf('emergencia') !== -1
         ? 'Solicitação de vaga odontológica de emergência para a dentista.'
         : 'Solicitação de vaga para atendimento odontológico com a dentista.';
     }
-
-    if (value.indexOf('enfermeira') !== -1) {
-      return 'Solicitação de atendimento com a Enfermeira Chefe.';
-    }
-
-    if (value.indexOf('nutricionista') !== -1) {
-      return 'Solicitação de atendimento com a Nutricionista.';
-    }
-
-    if (value.indexOf('medica') !== -1 || value.indexOf('medico') !== -1) {
-      return 'Solicitação de atendimento com a Médica.';
-    }
-
+    if (value.indexOf('enfermeira') !== -1) return 'Solicitação de atendimento com a Enfermeira Chefe.';
+    if (value.indexOf('nutricionista') !== -1) return 'Solicitação de atendimento com a Nutricionista.';
+    if (value.indexOf('medica') !== -1 || value.indexOf('medico') !== -1) return 'Solicitação de atendimento com a Médica.';
     return '';
   }
 
-  function syncDescriptionForCategory() {
-    var description = genericDescriptionForCategory();
-    if (description) setSubject(description);
-  }
-
-  function professionalDescriptionFromButton(button) {
-    if (!button || button.disabled) return '';
-
-    var module = clean(button.dataset.module);
-    var category = normalize(currentCategory());
-    var label = '';
-
-    if (module === 'enfermeira' || category.indexOf('enfermeira') !== -1) {
-      label = 'Solicitação de atendimento com a Enfermeira Chefe';
-    } else if (module === 'nutricionista' || category.indexOf('nutricionista') !== -1) {
-      label = 'Solicitação de atendimento com a Nutricionista';
-    } else if (
-      module === 'medica' ||
-      category.indexOf('medica') !== -1 ||
-      category.indexOf('medico') !== -1
-    ) {
-      label = 'Solicitação de atendimento com a Médica';
-    }
-
-    if (!label) return '';
-
-    var day = clean(button.querySelector('strong') && button.querySelector('strong').textContent);
-    var service = clean(button.querySelector('b') && button.querySelector('b').textContent);
-    var details = Array.prototype.map.call(button.querySelectorAll('em'), function (node) {
-      return clean(node.textContent);
-    }).filter(Boolean);
-
-    if (module === 'enfermeira' || category.indexOf('enfermeira') !== -1) {
-      return label +
-        (service ? ' para ' + service : '') +
-        (day ? ' (' + day + ')' : '') + '.';
-    }
-
-    return label +
-      (day ? ' — ' + day : '') +
-      (details.length ? ' — ' + details.join(' — ') : '') +
-      (service ? ': ' + service : '') + '.';
-  }
-
-  function dentalDescription(selection) {
-    if (!selection) return '';
-    var label = selection.type === 'emergencial'
-      ? 'Solicitação de vaga odontológica de emergência para a dentista'
-      : 'Solicitação de vaga para atendimento odontológico com a dentista';
-    return label + ' — ' + selection.day + ' — ' + formatDate(selection.date) + '.';
-  }
-
   function installStyle() {
-    if (el('odontologia-vagas-duplas-style')) return;
-
+    if (el('tacs-dental-stable-style')) return;
     var style = document.createElement('style');
-    style.id = 'odontologia-vagas-duplas-style';
+    style.id = 'tacs-dental-stable-style';
     style.textContent = [
-      '#dentalSlots.tacs-dental-grid{display:grid!important;grid-template-columns:1fr!important;gap:14px!important}',
-      '#dentalSlots .tacs-dental-card{width:100%;padding:18px;border:2px solid #91aebb;border-radius:18px;background:#fff;color:#102b3c;box-shadow:0 10px 22px rgba(3,35,56,.10)}',
+      'html,body,.shell,.panel,.content,.form-panel,.dental,#dentalSlots{-webkit-backface-visibility:visible!important;backface-visibility:visible!important;will-change:auto!important;contain:none!important}',
+      'body{overflow-x:hidden!important}',
+      '#dentalSlots.tacs-dental-grid{display:grid!important;grid-template-columns:1fr!important;gap:14px!important;min-height:0!important;height:auto!important}',
+      '#dentalSlots .tacs-dental-card{width:100%;min-height:0;padding:18px;border:2px solid #91aebb;border-radius:18px;background:#fff;color:#102b3c;box-shadow:0 8px 20px rgba(3,35,56,.10)}',
       '#dentalSlots .tacs-dental-badge{display:block;margin-bottom:8px;color:#078940;font-size:13px;font-weight:950;letter-spacing:.07em}',
       '#dentalSlots .tacs-dental-badge.extra{color:#a85b00}',
       '#dentalSlots .tacs-dental-day{display:block;font-size:25px;line-height:1.2}',
       '#dentalSlots .tacs-dental-date{display:block;margin-top:6px;color:#425b69;font-size:18px}',
       '#dentalSlots .tacs-dental-actions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:16px}',
-      '#dentalSlots .tacs-dental-choice{width:100%;min-height:58px;padding:13px 15px;border:2px solid;border-radius:14px;text-align:left;font-size:17px;font-weight:950;cursor:pointer}',
+      '#dentalSlots .tacs-dental-choice{width:100%;min-height:58px;padding:13px 15px;border:2px solid;border-radius:14px;text-align:left;font-size:17px;font-weight:950;cursor:pointer;appearance:none;-webkit-appearance:none}',
       '#dentalSlots .tacs-dental-choice.common{border-color:#15944d;background:#edf9f1;color:#08763a}',
       '#dentalSlots .tacs-dental-choice.emergency{border-color:#c84d44;background:#fff1ef;color:#a3302b}',
-      '#dentalSlots .tacs-dental-choice.selected{box-shadow:0 0 0 4px rgba(13,95,138,.19);transform:translateY(-1px)}',
-      '#dentalSlots .tacs-dental-choice:focus-visible{outline:3px solid #0d5f8a;outline-offset:2px}',
+      '#dentalSlots .tacs-dental-choice.selected{box-shadow:0 0 0 4px rgba(13,95,138,.19)}',
       '@media(min-width:760px){#dentalSlots.tacs-dental-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}'
     ].join('');
     document.head.appendChild(style);
   }
 
-  function renderDentalChoices(force) {
-    if (!isDentalCategory()) return;
+  function renderDental() {
+    renderQueued = false;
+    if (!isDental()) return;
 
     var list = el('dentalSlots');
     var title = el('dentalTitle');
@@ -190,83 +127,67 @@
     var status = el('dentalStatus');
     if (!list || !title || !help || !status) return;
 
-    if (!force && list.querySelector('.tacs-dental-card')) return;
-    if (dentalRendering) return;
+    list.className = 'slots tacs-dental-grid';
+    list.innerHTML = '';
+    title.textContent = 'Escolha o dia e o tipo de vaga';
+    help.textContent = 'Em cada dia há 1 vaga comum e 1 vaga de emergência.';
 
-    dentalRendering = true;
-    try {
-      list.className = 'slots tacs-dental-grid';
-      list.innerHTML = '';
+    DAYS.forEach(function (info) {
+      var date = nextDate(info.weekday);
+      var card = document.createElement('div');
+      card.className = 'tacs-dental-card';
 
-      title.textContent = 'Escolha o dia e o tipo de vaga';
-      help.textContent = 'Em cada dia abaixo existe 1 vaga comum e 1 vaga de emergência.';
+      var badge = document.createElement('small');
+      badge.className = 'tacs-dental-badge' + (info.name === 'Sexta-feira' ? ' extra' : '');
+      badge.textContent = info.badge;
 
-      DENTAL_DAYS.forEach(function (dayInfo) {
-        var date = nextDateForWeekday(dayInfo.weekday);
-        var card = document.createElement('div');
-        card.className = 'tacs-dental-card';
+      var day = document.createElement('strong');
+      day.className = 'tacs-dental-day';
+      day.textContent = info.name;
 
-        var badge = document.createElement('small');
-        badge.className = 'tacs-dental-badge' +
-          (dayInfo.name === 'Sexta-feira' ? ' extra' : '');
-        badge.textContent = dayInfo.badge;
+      var dateNode = document.createElement('span');
+      dateNode.className = 'tacs-dental-date';
+      dateNode.textContent = formatDate(date);
 
-        var day = document.createElement('strong');
-        day.className = 'tacs-dental-day';
-        day.textContent = dayInfo.name;
+      var actions = document.createElement('div');
+      actions.className = 'tacs-dental-actions';
 
-        var dateNode = document.createElement('span');
-        dateNode.className = 'tacs-dental-date';
-        dateNode.textContent = formatDate(date);
+      var common = document.createElement('button');
+      common.type = 'button';
+      common.className = 'tacs-dental-choice common';
+      common.dataset.day = info.name;
+      common.dataset.date = date;
+      common.dataset.type = 'comum';
+      common.textContent = '1 vaga comum disponível';
 
-        var actions = document.createElement('div');
-        actions.className = 'tacs-dental-actions';
+      var emergency = document.createElement('button');
+      emergency.type = 'button';
+      emergency.className = 'tacs-dental-choice emergency';
+      emergency.dataset.day = info.name;
+      emergency.dataset.date = date;
+      emergency.dataset.type = 'emergencial';
+      emergency.textContent = '🚨 1 vaga de emergência disponível';
 
-        var common = document.createElement('button');
-        common.type = 'button';
-        common.className = 'tacs-dental-choice common';
-        common.dataset.day = dayInfo.name;
-        common.dataset.date = date;
-        common.dataset.type = 'comum';
-        common.textContent = '1 vaga comum disponível';
+      if (selected && selected.day === info.name && selected.type === 'comum') common.classList.add('selected');
+      if (selected && selected.day === info.name && selected.type === 'emergencial') emergency.classList.add('selected');
 
-        var emergency = document.createElement('button');
-        emergency.type = 'button';
-        emergency.className = 'tacs-dental-choice emergency';
-        emergency.dataset.day = dayInfo.name;
-        emergency.dataset.date = date;
-        emergency.dataset.type = 'emergencial';
-        emergency.textContent = '🚨 1 vaga de emergência disponível';
+      actions.append(common, emergency);
+      card.append(badge, day, dateNode, actions);
+      list.appendChild(card);
+    });
 
-        if (
-          selectedDental &&
-          selectedDental.day === dayInfo.name &&
-          selectedDental.type === 'comum'
-        ) {
-          common.classList.add('selected');
-        }
+    status.className = 'dental-status';
+    status.textContent = selected
+      ? 'Selecionado: ' + selected.day + ' — vaga ' + (selected.type === 'emergencial' ? 'de emergência' : 'comum') + '.'
+      : 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
+  }
 
-        if (
-          selectedDental &&
-          selectedDental.day === dayInfo.name &&
-          selectedDental.type === 'emergencial'
-        ) {
-          emergency.classList.add('selected');
-        }
-
-        actions.append(common, emergency);
-        card.append(badge, day, dateNode, actions);
-        list.appendChild(card);
-      });
-
-      status.className = 'dental-status';
-      status.textContent = selectedDental
-        ? 'Selecionado: ' + selectedDental.day + ' — vaga ' +
-          (selectedDental.type === 'emergencial' ? 'de emergência' : 'comum') + '.'
-        : 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
-    } finally {
-      dentalRendering = false;
-    }
+  function queueRender() {
+    if (!isDental() || renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(renderDental);
+    });
   }
 
   function validCpf(value) {
@@ -286,47 +207,34 @@
   }
 
   function ageFromBirth(value) {
-    var text = clean(value);
-    var match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    var match = clean(value).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (!match) return null;
-
-    var birth = new Date(Date.UTC(Number(match[3]), Number(match[2]) - 1, Number(match[1])));
-    if (
-      birth.getUTCFullYear() !== Number(match[3]) ||
-      birth.getUTCMonth() !== Number(match[2]) - 1 ||
-      birth.getUTCDate() !== Number(match[1])
-    ) return null;
-
-    var todayParts = recifeTodayParts();
-    var age = todayParts[0] - birth.getUTCFullYear();
-    if (
-      todayParts[1] - 1 < birth.getUTCMonth() ||
-      (todayParts[1] - 1 === birth.getUTCMonth() && todayParts[2] < birth.getUTCDate())
-    ) age -= 1;
-
+    var day = Number(match[1]);
+    var month = Number(match[2]);
+    var year = Number(match[3]);
+    var birth = new Date(Date.UTC(year, month - 1, day));
+    if (birth.getUTCFullYear() !== year || birth.getUTCMonth() !== month - 1 || birth.getUTCDate() !== day) return null;
+    var today = recifeToday();
+    var age = today[0] - year;
+    if (today[1] < month || (today[1] === month && today[2] < day)) age -= 1;
     return age >= 0 && age <= 120 ? age : null;
   }
 
-  function dentalFormReady() {
-    if (!isDentalCategory() || !selectedDental) return false;
-    var name = el('name');
-    var locality = el('locality');
-    var cpf = el('cpf');
-    var birth = el('birth');
-    var subject = el('subject');
+  function formReady() {
     return Boolean(
-      name && clean(name.value).length >= 3 &&
-      locality && clean(locality.value) &&
-      cpf && validCpf(cpf.value) &&
-      birth && ageFromBirth(birth.value) !== null &&
-      subject && clean(subject.value)
+      selected &&
+      clean(el('name') && el('name').value).length >= 3 &&
+      clean(el('locality') && el('locality').value) &&
+      validCpf(el('cpf') && el('cpf').value) &&
+      ageFromBirth(el('birth') && el('birth').value) !== null &&
+      clean(el('subject') && el('subject').value)
     );
   }
 
-  function refreshDentalSend() {
+  function refreshSend() {
     var send = el('send');
-    if (!send || !isDentalCategory()) return;
-    send.disabled = !dentalFormReady();
+    if (!send || !isDental()) return;
+    send.disabled = !formReady();
   }
 
   function recifeDateTime() {
@@ -337,38 +245,30 @@
     }).format(new Date());
   }
 
-  function requestCode() {
+  function makeCode() {
     var alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     var suffix = '';
-    for (var i = 0; i < 4; i += 1) {
-      suffix += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-    }
-    var parts = recifeTodayParts();
-    return 'MATIAS-' + String(parts[2]).padStart(2, '0') +
-      String(parts[1]).padStart(2, '0') + String(parts[0]).slice(2) + '-' + suffix;
+    for (var i = 0; i < 4; i += 1) suffix += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+    var today = recifeToday();
+    return 'MATIAS-' + String(today[2]).padStart(2, '0') + String(today[1]).padStart(2, '0') + String(today[0]).slice(2) + '-' + suffix;
   }
 
-  function openDentalWhatsApp() {
-    if (!dentalFormReady()) {
-      refreshDentalSend();
+  function sendDental() {
+    if (!formReady()) {
+      refreshSend();
       return;
     }
 
     var age = ageFromBirth(el('birth').value);
-    var category = selectedDental.type === 'emergencial'
-      ? DENTAL_EMERGENCY
-      : DENTAL_REGULAR;
-
-    var message =
-      '*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n' +
+    var category = selected.type === 'emergencial' ? DENTAL_EMERGENCY : DENTAL_REGULAR;
+    var message = '*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n' +
       '*TACS - Técnico Agente Comunitário de Saúde*\n' +
       '*TACS responsável: Mércio José Campos dos Santos*\n\n' +
-      'Código: ' + requestCode() + '\n' +
+      'Código: ' + makeCode() + '\n' +
       'Data e horário do envio: ' + recifeDateTime() + '\n' +
       'Categoria: ' + category + '\n' +
-      'Tipo de vaga odontológica: ' +
-        (selectedDental.type === 'emergencial' ? 'emergencial' : 'comum') + '\n' +
-      'Dia escolhido: ' + selectedDental.day + ' — ' + formatDate(selectedDental.date) + '\n' +
+      'Tipo de vaga odontológica: ' + (selected.type === 'emergencial' ? 'emergencial' : 'comum') + '\n' +
+      'Dia escolhido: ' + selected.day + ' — ' + formatDate(selected.date) + '\n' +
       'Nome completo: ' + clean(el('name').value) + '\n' +
       'Data de nascimento: ' + clean(el('birth').value) + '\n' +
       'Idade: ' + age + (age === 1 ? ' ano' : ' anos') + '\n' +
@@ -377,30 +277,41 @@
       'Descrição: ' + clean(el('subject').value) + '\n\n' +
       'Este código é apenas uma referência para localizar a conversa.';
 
-    window.location.href = 'https://wa.me/' + WHATSAPP_NUMBER +
-      '?text=' + encodeURIComponent(message);
+    window.location.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(message);
   }
 
-  function selectDentalChoice(button) {
-    selectedDental = {
+  function selectDental(button) {
+    selected = {
       day: clean(button.dataset.day),
       date: clean(button.dataset.date),
       type: clean(button.dataset.type)
     };
 
     var category = el('category');
-    if (category) {
-      category.value = selectedDental.type === 'emergencial'
-        ? DENTAL_EMERGENCY
-        : DENTAL_REGULAR;
-      category.dispatchEvent(new Event('change', { bubbles: true }));
-    }
+    if (category) category.value = selected.type === 'emergencial' ? DENTAL_EMERGENCY : DENTAL_REGULAR;
 
-    setSubject(dentalDescription(selectedDental));
-    setTimeout(function () {
-      renderDentalChoices(true);
-      refreshDentalSend();
-    }, 0);
+    var warning = el('dentalEmergency');
+    if (warning) warning.hidden = selected.type !== 'emergencial';
+
+    setSubject(descriptionForSelection());
+    queueRender();
+    setTimeout(refreshSend, 0);
+  }
+
+  function professionalDescription(button) {
+    if (!button || button.disabled) return '';
+    var category = normalize(el('category') && el('category').value);
+    var module = clean(button.dataset.module);
+    var day = clean(button.querySelector('strong') && button.querySelector('strong').textContent);
+    var service = clean(button.querySelector('b') && button.querySelector('b').textContent);
+    var label = '';
+
+    if (module === 'enfermeira' || category.indexOf('enfermeira') !== -1) label = 'Solicitação de atendimento com a Enfermeira Chefe';
+    else if (module === 'nutricionista' || category.indexOf('nutricionista') !== -1) label = 'Solicitação de atendimento com a Nutricionista';
+    else if (module === 'medica' || category.indexOf('medica') !== -1 || category.indexOf('medico') !== -1) label = 'Solicitação de atendimento com a Médica';
+
+    if (!label) return '';
+    return label + (service ? ' para ' + service : '') + (day ? ' (' + day + ')' : '') + '.';
   }
 
   function bind() {
@@ -409,36 +320,44 @@
     var category = el('category');
     if (category) {
       category.addEventListener('change', function () {
-        var type = categoryDentalType();
-        if (!type) {
-          selectedDental = null;
-          syncDescriptionForCategory();
+        if (!isDental()) {
+          selected = null;
+          var description = genericDescription();
+          if (description) setSubject(description);
           return;
         }
-
-        if (selectedDental && selectedDental.type !== type) selectedDental = null;
-        syncDescriptionForCategory();
-        setTimeout(function () {
-          renderDentalChoices(true);
-          refreshDentalSend();
-        }, 0);
+        if (selected && selected.type !== dentalType()) selected = null;
+        var description = genericDescription();
+        if (description) setSubject(description);
+        queueRender();
+        setTimeout(queueRender, 1000);
+        setTimeout(queueRender, 13000);
       });
     }
 
+    ['name', 'locality', 'cpf', 'birth', 'subject'].forEach(function (id) {
+      var field = el(id);
+      if (!field) return;
+      field.addEventListener('input', function () {
+        if (isDental()) {
+          queueRender();
+          setTimeout(refreshSend, 0);
+        }
+      });
+    });
+
     document.addEventListener('click', function (event) {
-      var dentalButton = event.target.closest &&
-        event.target.closest('#dentalSlots .tacs-dental-choice');
-      if (dentalButton) {
+      var dental = event.target.closest && event.target.closest('#dentalSlots .tacs-dental-choice');
+      if (dental) {
         event.preventDefault();
-        selectDentalChoice(dentalButton);
+        selectDental(dental);
         return;
       }
 
-      var professional = event.target.closest &&
-        event.target.closest('.agenda-day:not(:disabled), .integral-day:not(:disabled)');
+      var professional = event.target.closest && event.target.closest('.agenda-day:not(:disabled), .integral-day:not(:disabled)');
       if (professional) {
         setTimeout(function () {
-          var description = professionalDescriptionFromButton(professional);
+          var description = professionalDescription(professional);
           if (description) setSubject(description);
         }, 0);
       }
@@ -447,50 +366,22 @@
     var send = el('send');
     if (send) {
       send.addEventListener('click', function (event) {
-        if (!isDentalCategory() || !selectedDental) return;
+        if (!isDental() || !selected) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        openDentalWhatsApp();
+        sendDental();
       }, true);
-
-      new MutationObserver(function () {
-        if (isDentalCategory() && selectedDental) refreshDentalSend();
-      }).observe(send, { attributes: true, attributeFilter: ['disabled'] });
     }
 
-    ['name', 'locality', 'cpf', 'birth', 'subject'].forEach(function (id) {
-      var field = el(id);
-      if (field) {
-        field.addEventListener('input', function () {
-          setTimeout(refreshDentalSend, 0);
-        });
-      }
-    });
-
-    var list = el('dentalSlots');
-    if (list) {
-      new MutationObserver(function () {
-        if (!dentalRendering && isDentalCategory() && !list.querySelector('.tacs-dental-card')) {
-          setTimeout(function () {
-            renderDentalChoices(false);
-            refreshDentalSend();
-          }, 0);
-        }
-      }).observe(list, { childList: true, subtree: true });
-    }
-
-    syncDescriptionForCategory();
-    if (isDentalCategory()) {
-      setTimeout(function () {
-        renderDentalChoices(true);
-        refreshDentalSend();
-      }, 100);
+    var description = genericDescription();
+    if (description) setSubject(description);
+    if (isDental()) {
+      queueRender();
+      setTimeout(queueRender, 1000);
+      setTimeout(queueRender, 13000);
     }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bind);
-  } else {
-    bind();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
 }());
