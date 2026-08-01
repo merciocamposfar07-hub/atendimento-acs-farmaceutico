@@ -1,0 +1,85 @@
+name: Publicar modo administrador rápido v75
+
+on:
+  push:
+    paths:
+      - '.github/workflows/publicar-admin-rapido-v75.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Atualizar portal e editor
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          version = '20260731-75'
+
+          index = Path('index.html')
+          text = index.read_text(encoding='utf-8')
+          text = re.sub(
+              r'<script src="portal-unificado\.js\?v=[^"]+"></script>',
+              f'<script src="portal-unificado.js?v={version}"></script>',
+              text
+          )
+          fast = f'<script src="portal-admin-fast.js?v={version}"></script>'
+          if 'portal-admin-fast.js' not in text:
+              text = text.replace('</body>', '  ' + fast + '\n</body>')
+          else:
+              text = re.sub(
+                  r'<script src="portal-admin-fast\.js\?v=[^"]+"></script>',
+                  fast,
+                  text
+              )
+          index.write_text(text, encoding='utf-8')
+
+          admin = Path('geral-admin.html')
+          text = admin.read_text(encoding='utf-8')
+          fast = f'<script src="portal-admin-fast.js?v={version}"></script>'
+          if 'portal-admin-fast.js' not in text:
+              text = text.replace('</body>', '  ' + fast + '\n</body>')
+          else:
+              text = re.sub(
+                  r'<script src="portal-admin-fast\.js\?v=[^"]+"></script>',
+                  fast,
+                  text
+              )
+          text = re.sub(
+              r'admin-message-bridge\.js\?v=[^"\']+',
+              f'admin-message-bridge.js?v={version}',
+              text
+          )
+          text = re.sub(
+              r'admin-controle-integral\.js\?v=[^"\']+',
+              f'admin-controle-integral.js?v={version}',
+              text
+          )
+          admin.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validar publicação
+        run: |
+          grep -q 'portal-unificado.js?v=20260731-75' index.html
+          grep -q 'portal-admin-fast.js?v=20260731-75' index.html
+          grep -q 'portal-admin-fast.js?v=20260731-75' geral-admin.html
+          grep -q 'admin-controle-integral.js?v=20260731-75' geral-admin.html
+
+      - name: Publicar
+        run: |
+          if git diff --quiet; then
+            echo 'Versão rápida já publicada.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html geral-admin.html
+          git commit -m 'Abrir editor administrativo sem iframe e sem espera bloqueante'
+          git push
