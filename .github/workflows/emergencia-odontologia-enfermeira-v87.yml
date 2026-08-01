@@ -1,0 +1,60 @@
+name: Emergência odontológica e descrição da enfermeira v87
+
+on:
+  push:
+    paths:
+      - '.github/workflows/emergencia-odontologia-enfermeira-v87.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ativar vaga emergencial de segunda a sexta
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          pattern = r"function ensureDentalDefaults\(slots\)\{.*?\}\n    function scheduleConfigured"
+          replacement = """function ensureDentalDefaults(slots){slots=Array.isArray(slots)?slots.slice():[];['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'].forEach(function(day){var slot=slots.find(function(item){return String(item&&item.dia||'').trim()===day&&dentalCurrent(item.data)}),diaComumPadrao=day==='Segunda-feira'||day==='Terça-feira'||day==='Quinta-feira';if(!slot){slot={id:'padrao-'+day.toLowerCase().replace(/[^a-z]+/g,'-'),dia:day,data:nextDentalDate(day),vagasComuns:diaComumPadrao?1:0,vagasEmergenciais:1,_padraoFrontend:true};slots.push(slot);return}var comum=vacancies(slot,'comum'),emergencial=vacancies(slot,'emergencial');if(diaComumPadrao&&(comum===null||comum<1)){slot.vagasComuns=1;slot._padraoFrontend=true}if(emergencial===null||emergencial<1){slot.vagasEmergenciais=1;slot._padraoFrontend=true}});return slots.sort(function(a,b){return dateStamp(a.data)-dateStamp(b.data)})}
+    function scheduleConfigured"""
+
+          updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+          if count != 1:
+              raise SystemExit('Não foi possível localizar ensureDentalDefaults em index.html')
+
+          updated = updated.replace(
+              'portal-odontologia-segunda-sexta.js?v=20260801-86',
+              'portal-odontologia-segunda-sexta.js?v=20260801-87'
+          )
+
+          path.write_text(updated, encoding='utf-8')
+          PY
+
+      - name: Validar correções
+        run: |
+          grep -q "\['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'\].*vagasEmergenciais:1" index.html
+          grep -q "diaComumPadrao=day==='Segunda-feira'||day==='Terça-feira'||day==='Quinta-feira'" index.html
+          grep -q 'portal-odontologia-segunda-sexta.js?v=20260801-87' index.html
+          grep -q "para ' + service" portal-odontologia-segunda-sexta.js
+
+      - name: Publicar
+        run: |
+          if git diff --quiet; then
+            echo 'Versão 87 já aplicada.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Ativar emergência odontológica diária e descrição detalhada da enfermeira'
+          git push
