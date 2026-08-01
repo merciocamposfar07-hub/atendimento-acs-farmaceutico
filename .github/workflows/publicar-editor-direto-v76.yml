@@ -90,3 +90,5 @@ jobs:
           git add index.html admin-controle-integral.js
           git commit -m 'Abrir editor diretamente e carregar dados sem bloquear a página'
           git push
+
+# execução solicitada em 31/07/2026 21:31
