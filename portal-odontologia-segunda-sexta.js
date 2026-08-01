@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  var REGULAR_CATEGORY = 'Solicitar atendimento odontológico (dentista)';
+  var EMERGENCY_CATEGORY = 'Solicitar atendimento odontológico de emergência (dentista)';
   var DAYS = [
     { name: 'Segunda-feira', badge: 'DIA OFICIAL' },
     { name: 'Terça-feira', badge: 'DIA OFICIAL' },
@@ -26,9 +28,65 @@
       : text;
   }
 
-  function dentalSelected() {
+  function dentalType() {
     var category = el('category');
-    return Boolean(category && normalize(category.value).indexOf('odontologico') !== -1);
+    var value = normalize(category && category.value);
+    if (value.indexOf('odontologico') === -1) return '';
+    return value.indexOf('emergencia') !== -1 ? 'emergencial' : 'comum';
+  }
+
+  function dentalSelected() {
+    return Boolean(dentalType());
+  }
+
+  function formatDate(value) {
+    var text = clean(value);
+    var match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) return match[3] + '/' + match[2] + '/' + match[1];
+    return text;
+  }
+
+  function setSubject(value) {
+    var subject = el('subject');
+    if (!subject || subject.value === value) return;
+    subject.value = value;
+    subject.dispatchEvent(new Event('input', { bubbles: true }));
+    subject.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function genericDentalSubject() {
+    if (dentalType() === 'emergencial') {
+      return 'Solicitação de vaga odontológica de emergência para a dentista.';
+    }
+    return 'Solicitação de vaga para atendimento odontológico com a dentista.';
+  }
+
+  function syncDentalSubject() {
+    if (!dentalSelected()) return;
+    setSubject(genericDentalSubject());
+  }
+
+  function subjectFromButton(button) {
+    if (!button || button.disabled) return '';
+
+    var day = clean(button.dataset.day);
+    var date = clean(button.dataset.date);
+    var type = clean(button.dataset.type) || dentalType();
+
+    if (!day) {
+      var strong = button.querySelector('strong');
+      var span = button.querySelector('span');
+      day = clean(strong && strong.textContent);
+      date = clean(span && span.textContent);
+    }
+
+    if (!day) return genericDentalSubject();
+
+    var label = type === 'emergencial'
+      ? 'Solicitação de vaga odontológica de emergência para a dentista'
+      : 'Solicitação de vaga para atendimento odontológico com a dentista';
+
+    return label + ' — ' + day + (date ? ' — ' + formatDate(date) : '') + '.';
   }
 
   function installStyle() {
@@ -52,14 +110,6 @@
   function getDayFromButton(button) {
     var strong = button && button.querySelector('strong');
     return clean(strong && strong.textContent);
-  }
-
-  function badgeFor(day) {
-    var normalized = normalize(day);
-    for (var i = 0; i < DAYS.length; i++) {
-      if (normalize(DAYS[i].name) === normalized) return DAYS[i];
-    }
-    return null;
   }
 
   function addBadge(button, dayInfo) {
@@ -161,6 +211,11 @@
     var category = el('category');
     if (category) {
       category.addEventListener('change', function () {
+        if (dentalSelected()) {
+          syncDentalSubject();
+          setTimeout(syncDentalSubject, 0);
+          setTimeout(syncDentalSubject, 100);
+        }
         setTimeout(apply, 50);
         setTimeout(apply, 500);
         setTimeout(apply, 13000);
@@ -170,6 +225,15 @@
     var list = el('dentalSlots');
     var status = el('dentalStatus');
     if (list) {
+      list.addEventListener('click', function (event) {
+        var button = event.target.closest && event.target.closest('.slot');
+        if (!button || button.disabled || !dentalSelected()) return;
+        setTimeout(function () {
+          var description = subjectFromButton(button);
+          if (description) setSubject(description);
+        }, 0);
+      });
+
       new MutationObserver(function () {
         if (!changing) setTimeout(apply, 0);
       }).observe(list, { childList: true, subtree: true });
@@ -180,6 +244,10 @@
       }).observe(status, { childList: true, subtree: true, characterData: true });
     }
 
+    if (dentalSelected()) {
+      syncDentalSubject();
+      setTimeout(syncDentalSubject, 100);
+    }
     setTimeout(apply, 100);
     setTimeout(apply, 1000);
     setTimeout(apply, 13000);
