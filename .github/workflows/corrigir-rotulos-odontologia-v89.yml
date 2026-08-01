@@ -1,0 +1,80 @@
+name: Corrigir rótulos odontológicos v89
+
+on:
+  push:
+    paths:
+      - '.github/workflows/corrigir-rotulos-odontologia-v89.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Corrigir identificação das vagas e dos dias
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          index_path = Path('index.html')
+          index = index_path.read_text(encoding='utf-8')
+
+          old_count = "count.textContent=!current?'Data encerrada':!informed?'Vagas ainda não informadas':v===0?'Sem vagas':vacancyText(v);"
+          new_count = "count.textContent=!current?'Data encerrada':!informed?'Vagas ainda não informadas':v===0?'Sem vagas':emergency?(v===1?'1 vaga de emergência disponível':v+' vagas de emergência disponíveis'):(v===1?'1 vaga comum disponível':v+' vagas comuns disponíveis');"
+          if old_count in index:
+              index = index.replace(old_count, new_count, 1)
+          elif new_count not in index:
+              raise SystemExit('Trecho de contagem odontológica não localizado.')
+
+          index = index.replace(
+              'portal-odontologia-segunda-sexta.js?v=20260801-87',
+              'portal-odontologia-segunda-sexta.js?v=20260801-89'
+          ).replace(
+              'portal-odontologia-segunda-sexta.js?v=20260801-88',
+              'portal-odontologia-segunda-sexta.js?v=20260801-89'
+          )
+          index_path.write_text(index, encoding='utf-8')
+
+          script_path = Path('portal-odontologia-segunda-sexta.js')
+          script = script_path.read_text(encoding='utf-8')
+
+          old_badge = """    badge.textContent = dayInfo.badge;
+    button.insertBefore(badge, button.firstChild);"""
+          new_badge = """    badge.textContent = dentalType() === 'emergencial'
+      ? 'VAGA DE EMERGÊNCIA'
+      : dayInfo.badge;
+    button.insertBefore(badge, button.firstChild);"""
+          if old_badge in script:
+              script = script.replace(old_badge, new_badge, 1)
+          elif new_badge not in script:
+              raise SystemExit('Trecho do selo odontológico não localizado.')
+
+          old_placeholder_badge = """    badge.textContent = dayInfo.badge;
+
+    var day = document.createElement('strong');"""
+          new_placeholder_badge = """    badge.textContent = dentalType() === 'emergencial'
+      ? 'VAGA DE EMERGÊNCIA'
+      : dayInfo.badge;
+
+    var day = document.createElement('strong');"""
+          if old_placeholder_badge in script:
+              script = script.replace(old_placeholder_badge, new_placeholder_badge, 1)
+
+          script_path.write_text(script, encoding='utf-8')
+          PY
+
+      - name: Publicar
+        run: |
+          if git diff --quiet; then
+            echo 'Versão 89 já aplicada.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html portal-odontologia-segunda-sexta.js
+          git commit -m 'Identificar corretamente vagas comuns e emergenciais'
+          git push
