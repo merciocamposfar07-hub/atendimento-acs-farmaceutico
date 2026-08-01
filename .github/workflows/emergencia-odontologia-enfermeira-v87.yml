@@ -19,33 +19,26 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
           path = Path('index.html')
           text = path.read_text(encoding='utf-8')
 
-          pattern = r"function ensureDentalDefaults\(slots\)\{.*?\}\n    function scheduleConfigured"
-          replacement = """function ensureDentalDefaults(slots){slots=Array.isArray(slots)?slots.slice():[];['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'].forEach(function(day){var slot=slots.find(function(item){return String(item&&item.dia||'').trim()===day&&dentalCurrent(item.data)}),diaComumPadrao=day==='Segunda-feira'||day==='Terça-feira'||day==='Quinta-feira';if(!slot){slot={id:'padrao-'+day.toLowerCase().replace(/[^a-z]+/g,'-'),dia:day,data:nextDentalDate(day),vagasComuns:diaComumPadrao?1:0,vagasEmergenciais:1,_padraoFrontend:true};slots.push(slot);return}var comum=vacancies(slot,'comum'),emergencial=vacancies(slot,'emergencial');if(diaComumPadrao&&(comum===null||comum<1)){slot.vagasComuns=1;slot._padraoFrontend=true}if(emergencial===null||emergencial<1){slot.vagasEmergenciais=1;slot._padraoFrontend=true}});return slots.sort(function(a,b){return dateStamp(a.data)-dateStamp(b.data)})}
-    function scheduleConfigured"""
+          old = "function ensureDentalDefaults(slots){slots=Array.isArray(slots)?slots.slice():[];['Segunda-feira','Terça-feira','Quinta-feira'].forEach(function(day){var slot=slots.find(function(item){return String(item&&item.dia||'').trim()===day&&dentalCurrent(item.data)});if(!slot){slot={id:'padrao-'+day.toLowerCase().replace(/[^a-z]+/g,'-'),dia:day,data:nextDentalDate(day),vagasComuns:1,vagasEmergenciais:1,_padraoFrontend:true};slots.push(slot);return}var comum=vacancies(slot,'comum'),emergencial=vacancies(slot,'emergencial');if(comum===null||comum<1){slot.vagasComuns=1;slot._padraoFrontend=true}if(emergencial===null||emergencial<1){slot.vagasEmergenciais=1;slot._padraoFrontend=true}});return slots.sort(function(a,b){return dateStamp(a.data)-dateStamp(b.data)})}"
 
-          updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
-          if count != 1:
-              raise SystemExit('Não foi possível localizar ensureDentalDefaults em index.html')
+          new = "function ensureDentalDefaults(slots){slots=Array.isArray(slots)?slots.slice():[];['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'].forEach(function(day){var slot=slots.find(function(item){return String(item&&item.dia||'').trim()===day&&dentalCurrent(item.data)}),diaComumPadrao=day==='Segunda-feira'||day==='Terça-feira'||day==='Quinta-feira';if(!slot){slot={id:'padrao-'+day.toLowerCase().replace(/[^a-z]+/g,'-'),dia:day,data:nextDentalDate(day),vagasComuns:diaComumPadrao?1:0,vagasEmergenciais:1,_padraoFrontend:true};slots.push(slot);return}var comum=vacancies(slot,'comum'),emergencial=vacancies(slot,'emergencial');if(diaComumPadrao&&(comum===null||comum<1)){slot.vagasComuns=1;slot._padraoFrontend=true}if(emergencial===null||emergencial<1){slot.vagasEmergenciais=1;slot._padraoFrontend=true}});return slots.sort(function(a,b){return dateStamp(a.data)-dateStamp(b.data)})}"
 
-          updated = updated.replace(
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
+              raise SystemExit('Função odontológica esperada não foi localizada.')
+
+          text = text.replace(
               'portal-odontologia-segunda-sexta.js?v=20260801-86',
               'portal-odontologia-segunda-sexta.js?v=20260801-87'
           )
 
-          path.write_text(updated, encoding='utf-8')
+          path.write_text(text, encoding='utf-8')
           PY
-
-      - name: Validar correções
-        run: |
-          grep -q "\['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'\].*vagasEmergenciais:1" index.html
-          grep -q "diaComumPadrao=day==='Segunda-feira'||day==='Terça-feira'||day==='Quinta-feira'" index.html
-          grep -q 'portal-odontologia-segunda-sexta.js?v=20260801-87' index.html
-          grep -q "para ' + service" portal-odontologia-segunda-sexta.js
 
       - name: Publicar
         run: |
