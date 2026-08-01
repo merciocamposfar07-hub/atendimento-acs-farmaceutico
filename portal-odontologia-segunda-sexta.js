@@ -1,8 +1,6 @@
 (function () {
   'use strict';
 
-  var REGULAR_CATEGORY = 'Solicitar atendimento odontológico (dentista)';
-  var EMERGENCY_CATEGORY = 'Solicitar atendimento odontológico de emergência (dentista)';
   var DAYS = [
     { name: 'Segunda-feira', badge: 'DIA OFICIAL' },
     { name: 'Terça-feira', badge: 'DIA OFICIAL' },
@@ -28,9 +26,12 @@
       : text;
   }
 
+  function currentCategory() {
+    return clean(el('category') && el('category').value);
+  }
+
   function dentalType() {
-    var category = el('category');
-    var value = normalize(category && category.value);
+    var value = normalize(currentCategory());
     if (value.indexOf('odontologico') === -1) return '';
     return value.indexOf('emergencia') !== -1 ? 'emergencial' : 'comum';
   }
@@ -54,19 +55,36 @@
     subject.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  function genericDentalSubject() {
-    if (dentalType() === 'emergencial') {
-      return 'Solicitação de vaga odontológica de emergência para a dentista.';
+  function genericDescriptionForCategory() {
+    var value = normalize(currentCategory());
+
+    if (value.indexOf('odontologico') !== -1) {
+      return value.indexOf('emergencia') !== -1
+        ? 'Solicitação de vaga odontológica de emergência para a dentista.'
+        : 'Solicitação de vaga para atendimento odontológico com a dentista.';
     }
-    return 'Solicitação de vaga para atendimento odontológico com a dentista.';
+
+    if (value.indexOf('enfermeira') !== -1) {
+      return 'Solicitação de atendimento com a Enfermeira Chefe.';
+    }
+
+    if (value.indexOf('nutricionista') !== -1) {
+      return 'Solicitação de atendimento com a Nutricionista.';
+    }
+
+    if (value.indexOf('medica') !== -1 || value.indexOf('medico') !== -1) {
+      return 'Solicitação de atendimento com a Médica.';
+    }
+
+    return '';
   }
 
-  function syncDentalSubject() {
-    if (!dentalSelected()) return;
-    setSubject(genericDentalSubject());
+  function syncDescriptionForCategory() {
+    var description = genericDescriptionForCategory();
+    if (description) setSubject(description);
   }
 
-  function subjectFromButton(button) {
+  function dentalDescriptionFromButton(button) {
     if (!button || button.disabled) return '';
 
     var day = clean(button.dataset.day);
@@ -80,13 +98,40 @@
       date = clean(span && span.textContent);
     }
 
-    if (!day) return genericDentalSubject();
-
     var label = type === 'emergencial'
       ? 'Solicitação de vaga odontológica de emergência para a dentista'
       : 'Solicitação de vaga para atendimento odontológico com a dentista';
 
-    return label + ' — ' + day + (date ? ' — ' + formatDate(date) : '') + '.';
+    return label + (day ? ' — ' + day : '') +
+      (date ? ' — ' + formatDate(date) : '') + '.';
+  }
+
+  function professionalDescriptionFromButton(button) {
+    if (!button || button.disabled) return '';
+
+    var module = clean(button.dataset.module);
+    var category = normalize(currentCategory());
+    var label = '';
+
+    if (module === 'enfermeira' || category.indexOf('enfermeira') !== -1) {
+      label = 'Solicitação de atendimento com a Enfermeira Chefe';
+    } else if (module === 'nutricionista' || category.indexOf('nutricionista') !== -1) {
+      label = 'Solicitação de atendimento com a Nutricionista';
+    } else if (module === 'medica' || category.indexOf('medica') !== -1 || category.indexOf('medico') !== -1) {
+      label = 'Solicitação de atendimento com a Médica';
+    }
+
+    if (!label) return '';
+
+    var day = clean(button.querySelector('strong') && button.querySelector('strong').textContent);
+    var details = Array.prototype.map.call(button.querySelectorAll('em'), function (node) {
+      return clean(node.textContent);
+    }).filter(Boolean);
+    var service = clean(button.querySelector('b') && button.querySelector('b').textContent);
+
+    return label + (day ? ' — ' + day : '') +
+      (details.length ? ' — ' + details.join(' — ') : '') +
+      (service ? ': ' + service : '') + '.';
   }
 
   function installStyle() {
@@ -156,7 +201,7 @@
       value.indexOf('agenda indisponivel') !== -1;
   }
 
-  function apply() {
+  function applyDentalLayout() {
     if (changing || !dentalSelected()) return;
 
     var list = el('dentalSlots');
@@ -183,6 +228,10 @@
       DAYS.forEach(function (dayInfo) {
         var button = byDay[normalize(dayInfo.name)];
         if (button) {
+          button.dataset.day = dayInfo.name;
+          var dateNode = button.querySelector('span');
+          button.dataset.date = clean(dateNode && dateNode.textContent);
+          button.dataset.type = dentalType();
           addBadge(button, dayInfo);
           fragment.appendChild(button);
           return;
@@ -211,46 +260,52 @@
     var category = el('category');
     if (category) {
       category.addEventListener('change', function () {
-        if (dentalSelected()) {
-          syncDentalSubject();
-          setTimeout(syncDentalSubject, 0);
-          setTimeout(syncDentalSubject, 100);
-        }
-        setTimeout(apply, 50);
-        setTimeout(apply, 500);
-        setTimeout(apply, 13000);
+        syncDescriptionForCategory();
+        setTimeout(syncDescriptionForCategory, 30);
+        setTimeout(syncDescriptionForCategory, 180);
+        setTimeout(applyDentalLayout, 50);
+        setTimeout(applyDentalLayout, 500);
+        setTimeout(applyDentalLayout, 13000);
       });
     }
+
+    document.addEventListener('click', function (event) {
+      var dental = event.target.closest && event.target.closest('#dentalSlots .slot:not(:disabled)');
+      if (dental && dentalSelected()) {
+        setTimeout(function () {
+          var description = dentalDescriptionFromButton(dental);
+          if (description) setSubject(description);
+        }, 0);
+        return;
+      }
+
+      var professional = event.target.closest && event.target.closest('.agenda-day:not(:disabled), .integral-day:not(:disabled)');
+      if (professional) {
+        setTimeout(function () {
+          var description = professionalDescriptionFromButton(professional);
+          if (description) setSubject(description);
+        }, 0);
+      }
+    });
 
     var list = el('dentalSlots');
     var status = el('dentalStatus');
     if (list) {
-      list.addEventListener('click', function (event) {
-        var button = event.target.closest && event.target.closest('.slot');
-        if (!button || button.disabled || !dentalSelected()) return;
-        setTimeout(function () {
-          var description = subjectFromButton(button);
-          if (description) setSubject(description);
-        }, 0);
-      });
-
       new MutationObserver(function () {
-        if (!changing) setTimeout(apply, 0);
+        if (!changing) setTimeout(applyDentalLayout, 0);
       }).observe(list, { childList: true, subtree: true });
     }
     if (status) {
       new MutationObserver(function () {
-        if (!changing) setTimeout(apply, 0);
+        if (!changing) setTimeout(applyDentalLayout, 0);
       }).observe(status, { childList: true, subtree: true, characterData: true });
     }
 
-    if (dentalSelected()) {
-      syncDentalSubject();
-      setTimeout(syncDentalSubject, 100);
-    }
-    setTimeout(apply, 100);
-    setTimeout(apply, 1000);
-    setTimeout(apply, 13000);
+    syncDescriptionForCategory();
+    setTimeout(syncDescriptionForCategory, 100);
+    setTimeout(applyDentalLayout, 100);
+    setTimeout(applyDentalLayout, 1000);
+    setTimeout(applyDentalLayout, 13000);
   }
 
   if (document.readyState === 'loading') {
