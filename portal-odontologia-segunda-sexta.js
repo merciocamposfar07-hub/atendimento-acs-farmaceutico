@@ -129,6 +129,12 @@
     }).filter(Boolean);
     var service = clean(button.querySelector('b') && button.querySelector('b').textContent);
 
+    if (module === 'enfermeira' || category.indexOf('enfermeira') !== -1) {
+      return label +
+        (service ? ' para ' + service : '') +
+        (day ? ' (' + day + ')' : '') + '.';
+    }
+
     return label + (day ? ' — ' + day : '') +
       (details.length ? ' — ' + details.join(' — ') : '') +
       (service ? ': ' + service : '') + '.';
@@ -261,8 +267,6 @@
     if (category) {
       category.addEventListener('change', function () {
         syncDescriptionForCategory();
-        setTimeout(syncDescriptionForCategory, 30);
-        setTimeout(syncDescriptionForCategory, 180);
         setTimeout(applyDentalLayout, 50);
         setTimeout(applyDentalLayout, 500);
         setTimeout(applyDentalLayout, 13000);
@@ -302,7 +306,6 @@
     }
 
     syncDescriptionForCategory();
-    setTimeout(syncDescriptionForCategory, 100);
     setTimeout(applyDentalLayout, 100);
     setTimeout(applyDentalLayout, 1000);
     setTimeout(applyDentalLayout, 13000);
