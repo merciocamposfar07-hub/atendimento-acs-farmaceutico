@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#062c46">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>PIN administrativo • Portal TACS</title>
+<style>
+*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:#eaf1f5;color:#102b3c;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}body{display:grid;place-items:center;padding:calc(18px + env(safe-area-inset-top)) 14px calc(26px + env(safe-area-inset-bottom));overflow:auto}.card{width:min(100%,480px);overflow:hidden;border:1px solid #7894a3;border-radius:24px;background:#fff;box-shadow:0 24px 70px rgba(3,35,56,.24)}.head{padding:28px 22px;background:linear-gradient(135deg,#041f34,#062c46,#0a4265);color:#fff}.badge{display:inline-block;padding:8px 12px;border:1px solid #4d91ae;border-radius:999px;background:rgba(255,255,255,.08);color:#79e5a6;font-size:13px;font-weight:950;text-transform:uppercase;letter-spacing:.05em}.head h1{margin:15px 0 8px;font-size:38px;line-height:1.03}.head p{margin:0;color:#dbe9ef;font-size:16px;line-height:1.5}.form{padding:22px}.form label{display:block;margin:0 0 8px;font-size:17px;font-weight:900}.form input{width:100%;min-height:64px;margin-bottom:15px;border:2px solid #8fa7b3;border-radius:14px;padding:14px;background:#fff;color:#102b3c;font-size:26px;font-weight:900;letter-spacing:.18em;text-align:center;outline:none;-webkit-appearance:none}.form input:focus{border-color:#0d5f8a;box-shadow:0 0 0 4px rgba(13,95,138,.14)}.help{margin:0 0 17px;padding:12px 14px;border-radius:12px;background:#edf6fa;color:#315363;font-size:14px;font-weight:750;line-height:1.45}.error{min-height:22px;margin:0 0 10px;color:#a3302b;font-size:14px;font-weight:900}.actions{display:grid;gap:10px}.actions button,.actions a{display:grid;place-items:center;min-height:56px;border:0;border-radius:13px;padding:12px 15px;text-decoration:none;font-size:17px;font-weight:950}.actions button{background:#062c46;color:#fff}.actions button:disabled{opacity:.65}.actions a{background:#e8eff2;color:#173245}.ready{margin-top:10px;color:#087a3c;font-size:13px;font-weight:850;text-align:center}
+</style>
+</head>
+<body>
+<main class="card">
+<header class="head"><span class="badge">🔒 Área administrativa</span><h1 id="title">PIN do Portal TACS</h1><p id="description">Digite o PIN para abrir o painel.</p></header>
+<form id="form" class="form" novalidate>
+<label for="pin">PIN numérico</label>
+<input id="pin" name="pin" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="8" placeholder="4 a 8 números">
+<div id="confirmWrap" hidden><label for="confirmPin">Confirme o PIN</label><input id="confirmPin" name="confirmPin" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="8" placeholder="Digite novamente"></div>
+<p class="help">Esta página não carrega nenhum arquivo externo. O teclado deve abrir imediatamente ao tocar no campo.</p>
+<div id="error" class="error"></div>
+<div class="actions"><button id="submit" type="submit">Abrir painel administrativo</button><a href="index.html?v=20260801-82">Voltar ao Portal do Morador</a></div>
+<div class="ready">Página de PIN pronta para digitação.</div>
+</form>
+</main>
+<script>
+(function(){
+'use strict';
+var HASH='tacs-admin-pin-hash-v6';
+var SALT='tacs-admin-pin-salt-v6';
+var KEY='tacs-admin-key';
+var AUTH='tacs-admin-auth-v6';
+var MANAGED='tacs-admin-key-gerenciada-pelo-pin-v6';
+var creating=!(localStorage.getItem(HASH)&&localStorage.getItem(SALT));
+var title=document.getElementById('title');
+var description=document.getElementById('description');
+var confirmWrap=document.getElementById('confirmWrap');
+var submit=document.getElementById('submit');
+var error=document.getElementById('error');
+if(new URLSearchParams(location.search).get('trocarPin')==='1'){
+  localStorage.removeItem(HASH);localStorage.removeItem(SALT);localStorage.removeItem(AUTH);
+  if(localStorage.getItem(MANAGED)==='1'){localStorage.removeItem(KEY);localStorage.removeItem(MANAGED)}
+  creating=true;
+}
+if(creating){title.textContent='Crie seu PIN administrativo';description.textContent='Escolha um PIN de 4 a 8 números para proteger a edição neste aparelho.';confirmWrap.hidden=false;submit.textContent='Criar PIN e abrir painel'}
+function makeSalt(){var b=new Uint8Array(18);if(window.crypto&&window.crypto.getRandomValues)window.crypto.getRandomValues(b);else for(var i=0;i<b.length;i++)b[i]=Math.floor(Math.random()*256);return Array.prototype.map.call(b,function(v){return v.toString(16).padStart(2,'0')}).join('')}
+function fallback(v){var h=2166136261;for(var i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}return Promise.resolve((h>>>0).toString(16))}
+function digest(pin,salt){var value='Portal-TACS|'+salt+'|'+pin;if(window.crypto&&window.crypto.subtle&&window.TextEncoder)return window.crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)).then(function(buffer){return Array.prototype.map.call(new Uint8Array(buffer),function(byte){return byte.toString(16).padStart(2,'0')}).join('')});return fallback(value)}
+function openPanel(pin){if(!localStorage.getItem(KEY)){localStorage.setItem(KEY,pin);localStorage.setItem(MANAGED,'1')}localStorage.setItem(AUTH,'ok');location.href='admin-painel.html?v=20260801-82&t='+Date.now()}
+document.getElementById('form').addEventListener('submit',function(event){event.preventDefault();var pin=String(document.getElementById('pin').value||'').replace(/\D/g,'');var confirmation=String(document.getElementById('confirmPin').value||'').replace(/\D/g,'');document.getElementById('pin').value=pin;document.getElementById('confirmPin').value=confirmation;if(!/^\d{4,8}$/.test(pin)){error.textContent='Use um PIN numérico de 4 a 8 números.';return}if(creating&&pin!==confirmation){error.textContent='Os dois PINs não coincidem.';return}error.textContent='';submit.disabled=true;submit.textContent='Abrindo...';if(creating){var salt=makeSalt();digest(pin,salt).then(function(hash){localStorage.setItem(SALT,salt);localStorage.setItem(HASH,hash);openPanel(pin)}).catch(function(){submit.disabled=false;submit.textContent='Criar PIN e abrir painel';error.textContent='Não foi possível criar o PIN.'});return}digest(pin,localStorage.getItem(SALT)||'').then(function(hash){if(hash!==localStorage.getItem(HASH)){submit.disabled=false;submit.textContent='Abrir painel administrativo';error.textContent='PIN incorreto.';return}openPanel(pin)}).catch(function(){submit.disabled=false;submit.textContent='Abrir painel administrativo';error.textContent='Não foi possível verificar o PIN.'})});
+}());
+</script>
+</body>
+</html>
