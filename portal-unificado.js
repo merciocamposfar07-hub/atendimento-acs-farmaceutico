@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '20260731-80';
+  var VERSION = '20260731-81';
 
   function install() {
     if (document.getElementById('portalAdminEntry')) return;
@@ -9,9 +9,9 @@
     var footer = document.querySelector('footer');
     var link = document.createElement('a');
     link.id = 'portalAdminEntry';
-    link.href = 'modo-admin.html?v=' + VERSION;
+    link.href = 'admin-estavel.html?v=' + VERSION;
     link.textContent = '🔒 Área do administrador';
-    link.setAttribute('aria-label', 'Abrir modo administrador do Portal TACS');
+    link.setAttribute('aria-label', 'Abrir modo administrador estável do Portal TACS');
     link.style.cssText = [
       'display:grid',
       'place-items:center',
