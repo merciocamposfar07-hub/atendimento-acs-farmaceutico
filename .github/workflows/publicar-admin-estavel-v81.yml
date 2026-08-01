@@ -1,0 +1,47 @@
+name: Publicar painel administrativo estável v81
+
+on:
+  push:
+    paths:
+      - '.github/workflows/publicar-admin-estavel-v81.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Atualizar versão do acesso administrativo
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          text = re.sub(
+              r'portal-unificado\.js\?v=[^"\']+',
+              'portal-unificado.js?v=20260731-81',
+              text
+          )
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validar
+        run: grep -q 'portal-unificado.js?v=20260731-81' index.html
+
+      - name: Publicar
+        run: |
+          if git diff --quiet; then
+            echo 'Versão já publicada.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Publicar acesso ao painel administrativo estável v81'
+          git push
