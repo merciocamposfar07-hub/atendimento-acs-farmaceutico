@@ -1,0 +1,129 @@
+name: Odontologia com vagas comuns e de emergência v90
+
+on:
+  push:
+    paths:
+      - '.github/workflows/odontologia-vagas-comuns-emergencia-v90.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Corrigir agenda odontológica
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          index_path = Path('index.html')
+          text = index_path.read_text(encoding='utf-8')
+
+          text = re.sub(
+              r"var DENTAL_ALLOWED_DAYS=\[[^;]+;",
+              "var DENTAL_ALLOWED_DAYS=['Segunda-feira','Terça-feira','Quinta-feira','Sexta-feira'];",
+              text,
+              count=1
+          )
+
+          ensure_new = """function ensureDentalDefaults(slots){slots=Array.isArray(slots)?slots.slice():[];['Segunda-feira','Terça-feira','Quinta-feira','Sexta-feira'].forEach(function(day){var slot=slots.find(function(item){return String(item&&item.dia||'').trim()===day&&dentalCurrent(item.data)});if(!slot){slot={id:'padrao-'+day.toLowerCase().replace(/[^a-z]+/g,'-'),dia:day,data:nextDentalDate(day),vagasComuns:1,vagasEmergenciais:1,_padraoFrontend:true};slots.push(slot);return}var comum=vacancies(slot,'comum'),emergencial=vacancies(slot,'emergencial');if(comum===null||comum<1){slot.vagasComuns=1;slot._padraoFrontend=true}if(emergencial===null||emergencial<1){slot.vagasEmergenciais=1;slot._padraoFrontend=true}});return slots.sort(function(a,b){return dateStamp(a.data)-dateStamp(b.data)})}"""
+          text, count = re.subn(
+              r"function ensureDentalDefaults\(slots\)\{.*?\}(?=\n    function scheduleConfigured)",
+              ensure_new,
+              text,
+              count=1,
+              flags=re.S
+          )
+          if count != 1:
+              raise SystemExit('Função ensureDentalDefaults não localizada.')
+
+          select_new = """function selectSlot(slot,type,button){var v=vacancies(slot,type);if(!slot||(type!=='comum'&&type!=='emergencial')||v===null||v<=0||!dentalCurrent(slot.data))return;var category=el('category'),target=type==='emergencial'?DENTAL_EMERGENCY:DENTAL_REGULAR;category.value=target;selectedDentalSlot=slot;selectedDentalType=type;category.dispatchEvent(new Event('change',{bubbles:true}));updateForm()}"""
+          text, count = re.subn(
+              r"function selectSlot\(slot,button\)\{.*?\}(?=\n    function renderDental)",
+              select_new,
+              text,
+              count=1,
+              flags=re.S
+          )
+          if count != 1:
+              raise SystemExit('Função selectSlot não localizada.')
+
+          render_new = """function renderDental(){var list=el('dentalSlots'),status=el('dentalStatus');list.innerHTML='';status.className='dental-status';el('dentalTitle').textContent='Escolha o dia e o tipo de vaga';el('dentalHelp').textContent='Cada dia disponível possui uma vaga comum e uma vaga de emergência.';if(dentalState==='loading'){status.textContent='Carregando as vagas...';return}if(dentalState==='error'){status.textContent='Não foi possível carregar a agenda agora. Tente novamente mais tarde.';status.classList.add('error');return}var available=0,currentCount=0;dentalSlots.forEach(function(slot){var current=dentalCurrent(slot.data),common=vacancies(slot,'comum'),emergency=vacancies(slot,'emergencial');if(current)currentCount++;if(current&&((common!==null&&common>0)||(emergency!==null&&emergency>0)))available++;var card=document.createElement('div');card.className='dental-day-card';card.dataset.day=slot.dia;var badge=document.createElement('small');badge.className='dental-day-label';badge.textContent=slot.dia==='Sexta-feira'?'DIA EXTRA':'DIA OFICIAL';var day=document.createElement('strong');day.textContent=slot.dia;var date=document.createElement('span');date.className='dental-day-date';date.textContent=formatDate(slot.data);var actions=document.createElement('div');actions.className='dental-vacancy-actions';var commonButton=document.createElement('button');commonButton.type='button';commonButton.className='dental-vacancy dental-vacancy-common';commonButton.dataset.day=slot.dia;commonButton.dataset.date=slot.data;commonButton.dataset.type='comum';commonButton.disabled=!current||common===null||common<=0;commonButton.textContent=!current?'Data encerrada':common===null?'Vagas comuns não informadas':common<=0?'Sem vagas comuns':vacancyText(common).replace('vaga disponível','vaga comum disponível').replace('vagas disponíveis','vagas comuns disponíveis');if(selectedDentalSlot&&selectedDentalSlot.id===slot.id&&selectedDentalType==='comum')commonButton.classList.add('selected');commonButton.addEventListener('click',function(){selectSlot(slot,'comum',commonButton)});var emergencyButton=document.createElement('button');emergencyButton.type='button';emergencyButton.className='dental-vacancy dental-vacancy-emergency';emergencyButton.dataset.day=slot.dia;emergencyButton.dataset.date=slot.data;emergencyButton.dataset.type='emergencial';emergencyButton.disabled=!current||emergency===null||emergency<=0;emergencyButton.textContent=!current?'Data encerrada':emergency===null?'Vaga de emergência não informada':emergency<=0?'Sem vaga de emergência':'🚨 '+vacancyText(emergency).replace('vaga disponível','vaga de emergência disponível').replace('vagas disponíveis','vagas de emergência disponíveis');if(selectedDentalSlot&&selectedDentalSlot.id===slot.id&&selectedDentalType==='emergencial')emergencyButton.classList.add('selected');emergencyButton.addEventListener('click',function(){selectSlot(slot,'emergencial',emergencyButton)});actions.append(commonButton,emergencyButton);card.append(badge,day,date,actions);list.appendChild(card)});if(!dentalSlots.length){status.textContent='A agenda ainda não foi informada.';status.classList.add('error')}else if(!currentCount){status.textContent='A agenda precisa ser atualizada com novas datas.';status.classList.add('error')}else if(!available){status.textContent='No momento não há vagas odontológicas disponíveis.';status.classList.add('error')}else status.textContent='Toque na vaga comum ou na vaga de emergência do dia desejado.'}"""
+          text, count = re.subn(
+              r"function renderDental\(\)\{.*?\}(?=\n    function acceptAgenda)",
+              render_new,
+              text,
+              count=1,
+              flags=re.S
+          )
+          if count != 1:
+              raise SystemExit('Função renderDental não localizada.')
+
+          text = re.sub(
+              r'portal-odontologia-segunda-sexta\.js\?v=[^"\']+',
+              'portal-odontologia-segunda-sexta.js?v=20260801-90',
+              text,
+              count=1
+          )
+          index_path.write_text(text, encoding='utf-8')
+
+          script_path = Path('portal-odontologia-segunda-sexta.js')
+          script = script_path.read_text(encoding='utf-8')
+
+          style_anchor = "      '#dentalSlots .dental-placeholder b{color:#657b86!important}',"
+          styles = """      '#dentalSlots .dental-day-card{width:100%;padding:18px;border:2px solid #9bb4c1;border-radius:18px;background:#fff;color:#102b3c;text-align:left;box-shadow:0 9px 22px rgba(3,35,56,.10)}',
+      '#dentalSlots .dental-day-label{display:block;margin-bottom:8px;color:#078940;font-size:13px;font-weight:950;letter-spacing:.07em}',
+      '#dentalSlots .dental-day-card>strong{display:block;font-size:25px;line-height:1.2}',
+      '#dentalSlots .dental-day-date{display:block;margin-top:6px;color:#425b69;font-size:19px}',
+      '#dentalSlots .dental-vacancy-actions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:16px}',
+      '#dentalSlots .dental-vacancy{width:100%;min-height:58px;padding:13px 15px;border:2px solid #88a9b8;border-radius:14px;background:#f8fcfd;color:#102b3c;text-align:left;font-size:17px;font-weight:900}',
+      '#dentalSlots .dental-vacancy-common{border-color:#15944d;background:#edf9f1;color:#08763a}',
+      '#dentalSlots .dental-vacancy-emergency{border-color:#c84d44;background:#fff1ef;color:#a3302b}',
+      '#dentalSlots .dental-vacancy.selected{box-shadow:0 0 0 4px rgba(13,95,138,.18);transform:translateY(-1px)}',
+      '#dentalSlots .dental-vacancy:disabled{opacity:.5;cursor:not-allowed}',"""
+          if 'dental-vacancy-actions' not in script:
+              if style_anchor not in script:
+                  raise SystemExit('Âncora de estilos odontológicos não localizada.')
+              script = script.replace(style_anchor, style_anchor + '\n' + styles, 1)
+
+          script = script.replace(
+              "    if (changing || !dentalSelected()) return;\n\n    var list = el('dentalSlots');",
+              "    if (changing || !dentalSelected()) return;\n\n    var list = el('dentalSlots');"
+          )
+          guard_anchor = "    if (!list || !status) return;"
+          guard_new = guard_anchor + "\n    if (list.querySelector('.dental-day-card')) return;"
+          if guard_new not in script:
+              script = script.replace(guard_anchor, guard_new, 1)
+
+          script = script.replace(
+              "event.target.closest('#dentalSlots .slot:not(:disabled)')",
+              "event.target.closest('#dentalSlots .dental-vacancy:not(:disabled), #dentalSlots .slot:not(:disabled)')"
+          )
+
+          script_path.write_text(script, encoding='utf-8')
+          PY
+
+      - name: Validar
+        run: |
+          grep -q "DENTAL_ALLOWED_DAYS=\['Segunda-feira','Terça-feira','Quinta-feira','Sexta-feira'\]" index.html
+          grep -q "vagasComuns:1,vagasEmergenciais:1" index.html
+          grep -q "dental-vacancy-emergency" index.html
+          grep -q "portal-odontologia-segunda-sexta.js?v=20260801-90" index.html
+          grep -q "dental-day-card" portal-odontologia-segunda-sexta.js
+
+      - name: Publicar
+        run: |
+          if git diff --quiet; then
+            echo 'Versão 90 já aplicada.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html portal-odontologia-segunda-sexta.js
+          git commit -m 'Inserir vagas comuns e emergenciais juntas na odontologia'
+          git push
