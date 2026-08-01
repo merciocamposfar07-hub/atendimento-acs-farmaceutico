@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#062c46">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Modo administrador • Portal TACS</title>
+<link rel="stylesheet" href="admin-controle-integral.css?v=20260731-80">
+<link rel="stylesheet" href="admin-data-proporcao-fix.css?v=20260731-80">
+<style>
+*{box-sizing:border-box}
+html,body{min-height:100%;margin:0;background:#eaf1f5;color:#102b3c;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+body{overflow-x:hidden}
+[hidden]{display:none!important}
+.pin-layer{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));background:#eaf1f5;overflow:auto}
+.pin-card{width:min(100%,480px);overflow:hidden;border:1px solid #7894a3;border-radius:24px;background:#fff;box-shadow:0 24px 70px rgba(3,35,56,.24)}
+.pin-head{padding:27px 22px;background:linear-gradient(135deg,#041f34,#062c46,#0a4265);color:#fff}
+.pin-head span{display:inline-block;padding:8px 12px;border:1px solid #4d91ae;border-radius:999px;background:rgba(255,255,255,.08);color:#79e5a6;font-size:13px;font-weight:950;text-transform:uppercase;letter-spacing:.05em}
+.pin-head h1{margin:15px 0 8px;font-size:36px;line-height:1.05}
+.pin-head p{margin:0;color:#dbe9ef;font-size:16px;line-height:1.5}
+.pin-form{padding:22px}
+.pin-form label{display:block;margin:0 0 8px;font-size:17px;font-weight:900}
+.pin-form input{width:100%;min-height:62px;margin-bottom:15px;border:2px solid #8fa7b3;border-radius:14px;padding:14px;background:#fff;color:#102b3c;font-size:25px;font-weight:900;letter-spacing:.18em;text-align:center;outline:none}
+.pin-form input:focus{border-color:#0d5f8a;box-shadow:0 0 0 4px rgba(13,95,138,.14)}
+.pin-help{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#edf6fa;color:#315363;font-size:14px;font-weight:750;line-height:1.45}
+.pin-error{min-height:22px;margin:0 0 10px;color:#a3302b;font-size:14px;font-weight:900}
+.pin-actions{display:grid;gap:10px}
+.pin-actions button,.pin-actions a{display:grid;place-items:center;min-height:54px;border:0;border-radius:13px;padding:11px 15px;text-decoration:none;font-size:17px;font-weight:950}
+.pin-actions button{background:#062c46;color:#fff}
+.pin-actions a{background:#e8eff2;color:#173245}
+.admin-topbar{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;background:#062c46;color:#fff;box-shadow:0 6px 18px rgba(3,35,56,.22)}
+.admin-topbar strong{font-size:15px;line-height:1.25}
+.admin-topbar button{min-height:44px;padding:8px 12px;border:1px solid rgba(255,255,255,.48);border-radius:11px;background:rgba(255,255,255,.1);color:#fff;font-size:13px;font-weight:900}
+.admin-top-actions{display:flex;gap:8px}
+.admin-status-fixed{margin:12px 14px 0;padding:12px 14px;border-radius:12px;background:#e7f6ed;color:#075f32;font-size:14px;font-weight:850;line-height:1.45}
+.tabs{position:sticky!important;top:69px!important;z-index:100!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important;padding:10px!important;background:#eaf1f5!important}
+.tab{width:100%!important;min-width:0!important;white-space:normal!important;text-align:center!important}
+.week{display:grid!important;grid-template-columns:1fr!important;gap:14px!important}
+.form-grid,.day-controls{grid-template-columns:1fr!important}
+.day-actions,.actions{grid-template-columns:1fr!important}
+@media(min-width:760px){.tabs{grid-template-columns:repeat(4,minmax(0,1fr))!important}.week{grid-template-columns:repeat(2,minmax(0,1fr))!important}.form-grid,.day-controls{grid-template-columns:1fr 1fr!important}.day-actions,.actions{grid-template-columns:1fr 1fr!important}}
+@media(max-width:520px){.admin-topbar{align-items:flex-start}.admin-topbar strong{max-width:34%;font-size:13px}.admin-top-actions{flex:1;justify-content:flex-end}.admin-topbar button{padding:7px 9px;font-size:12px}.main{padding-left:10px!important;padding-right:10px!important}.section{padding-left:12px!important;padding-right:12px!important}}
+</style>
+</head>
+<body>
+<section id="pinLayer" class="pin-layer">
+  <main class="pin-card">
+    <header class="pin-head">
+      <span>🔒 Área administrativa</span>
+      <h1 id="pinTitle">PIN do Portal TACS</h1>
+      <p id="pinDescription">Digite seu PIN para abrir os controles de edição.</p>
+    </header>
+    <form id="pinForm" class="pin-form">
+      <label for="pin">PIN numérico</label>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="4 a 8 números">
+      <div id="confirmWrap" hidden>
+        <label for="confirmPin">Confirme o PIN</label>
+        <input id="confirmPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Digite novamente">
+      </div>
+      <p class="pin-help">O PIN e o editor ficam nesta mesma página. Não haverá redirecionamento, iframe nem tela branca.</p>
+      <div id="pinError" class="pin-error"></div>
+      <div class="pin-actions">
+        <button id="openAdmin" type="submit">Abrir modo administrador</button>
+        <a href="index.html?v=20260731-80">Voltar ao Portal do Morador</a>
+      </div>
+    </form>
+  </main>
+</section>
+
+<div id="adminContent" hidden>
+  <header class="admin-topbar">
+    <strong>Portal Geral • Modo administrador</strong>
+    <div class="admin-top-actions">
+      <button id="backPortal" type="button">Voltar ao portal</button>
+      <button id="changePin" type="button">Trocar PIN</button>
+    </div>
+  </header>
+
+  <div class="app"><div class="shell">
+  <header class="admin-hero">
+    <span class="admin-badge">⚙️ Área exclusiva do administrador</span>
+    <h1>Painel Administrativo</h1>
+    <p>Centro de comando do Portal TACS • Unidade de Saúde Posto Matias • Sítio Japaranduba</p>
+    <div class="hero-actions">
+      <a href="index.html?v=20260731-80" target="_blank" rel="noopener">🏥 Abrir Portal do Morador</a>
+      <button id="refreshAll" type="button">↻ Atualizar todos os dados</button>
+    </div>
+    <div hidden aria-hidden="true">
+      <input id="adminKeyInput" type="hidden" value="">
+      <button id="saveAdminKey" type="button"></button>
+      <button id="clearAdminKey" type="button"></button>
+      <div id="securityStatus"></div>
+    </div>
+  </header>
+
+  <div class="admin-status-fixed" id="editorLoadStatus">Editor aberto. Os dados do servidor serão atualizados em segundo plano.</div>
+
+  <main class="main">
+    <nav class="tabs" aria-label="Módulos administrativos">
+      <button class="tab" data-tab="recados">💬 Recados</button>
+      <button class="tab" data-tab="medica">🩺 Médica</button>
+      <button class="tab" data-tab="enfermeira">👩‍⚕️ Enfermeira</button>
+      <button class="tab" data-tab="nutricionista">🥗 Nutricionista</button>
+      <button class="tab" data-tab="odontologia">🦷 Dentista</button>
+      <button class="tab" data-tab="campanhas">📢 Campanhas</button>
+      <button class="tab" data-tab="espelho">📱 Conferir portal</button>
+    </nav>
+
+    <section class="section" data-section="recados">
+      <span class="section-label">Aviso público</span>
+      <h2>Recados da Unidade</h2>
+      <p class="section-intro">Publique, corrija ou retire o recado exibido no Portal do Morador.</p>
+      <div class="petroleum-balloon"><h3 id="recadoPreviewTitle">Recado da Unidade</h3><p id="recadoPreviewMessage">A prévia aparecerá neste balão azul-petróleo.</p></div>
+      <div class="form-grid" style="margin-top:16px">
+        <label>Título<input id="recadoTitle" placeholder="Ex.: Vacinação nesta semana"></label>
+        <label>Importância<select id="recadoPriority"><option value="informativo">Informativo</option><option value="importante">Importante</option><option value="urgente">Urgente</option></select></label>
+        <label>Exibir até<input id="recadoValidity" type="date"></label>
+        <label class="full">Mensagem<textarea id="recadoMessage" placeholder="Digite o recado que o morador verá"></textarea></label>
+      </div>
+      <div class="actions"><button id="publishRecado" class="btn publish" type="button">Publicar recado</button><button id="cancelRecado" class="btn cancel" type="button">Retirar recado</button></div>
+      <div id="recadoStatus" class="status">Aguardando uma ação.</div>
+    </section>
+
+    <section class="section" data-section="medica" hidden><span class="section-label">Segunda a sexta</span><h2>Agenda da Médica</h2><p class="section-intro">Todos os cinco dias permanecem editáveis, inclusive os desativados.</p><div id="medicaWeek" class="week"></div></section>
+    <section class="section" data-section="enfermeira" hidden><span class="section-label">Segunda a sexta</span><h2>Agenda da Enfermeira Chefe</h2><p class="section-intro">Todos os cinco dias permanecem editáveis, inclusive os desativados.</p><div id="enfermeiraWeek" class="week"></div></section>
+    <section class="section" data-section="nutricionista" hidden><span class="section-label">Segunda a sexta</span><h2>Agenda da Nutricionista</h2><p class="section-intro">Todos os cinco dias permanecem editáveis, inclusive os desativados.</p><div id="nutricionistaWeek" class="week"></div></section>
+    <section class="section" data-section="odontologia" hidden><span class="section-label">Segunda a sexta</span><h2>Agenda da Dentista</h2><p class="section-intro">Segunda, terça e quinta são oficiais; sexta pode ser usada como dia extra. Quarta continua editável.</p><div id="odontologiaWeek" class="week"></div></section>
+
+    <section class="section" data-section="campanhas" hidden>
+      <span class="section-label">Publicação com prazo</span><h2>Campanhas da Unidade</h2>
+      <div class="form-grid">
+        <label>Nome da campanha<input id="campaignTitle" placeholder="Ex.: Campanha de vacinação"></label>
+        <label>Data de início<input id="campaignStart" type="date"></label>
+        <label>Tempo em dias<input id="campaignDays" type="number" min="1" value="7"></label>
+        <label class="full">Mensagem<textarea id="campaignMessage" placeholder="Informações da campanha"></textarea></label>
+      </div>
+      <div class="actions"><button id="publishCampaign" class="btn publish" type="button">Publicar campanha</button><button id="cancelCampaign" class="btn cancel" type="button">Retirar campanha</button></div>
+      <div id="campaignStatus" class="status">Aguardando uma ação.</div>
+    </section>
+
+    <section class="section" data-section="espelho" hidden>
+      <span class="section-label">Visualização pública</span><h2>Conferir Portal do Morador</h2>
+      <p class="section-intro">Abra o Portal do Morador em uma página separada.</p>
+      <a class="btn secondary" href="index.html?v=20260731-80" target="_blank" rel="noopener">Abrir Portal do Morador</a>
+      <button id="refreshMirror" class="btn secondary" type="button" style="margin-top:10px">Atualizar portal</button>
+      <div class="mirror-frame" hidden><iframe id="portalMirror" title="Portal do Morador"></iframe></div>
+    </section>
+  </main>
+  <footer>© 2026 Mércio José Campos dos Santos • Portal TACS • Todos os direitos reservados</footer>
+  </div></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+var HASH='tacs-admin-pin-hash-v4';
+var SALT='tacs-admin-pin-salt-v4';
+var KEY='tacs-admin-key';
+var MANAGED='tacs-admin-key-gerenciada-pelo-pin-v4';
+var creating=!(localStorage.getItem(HASH)&&localStorage.getItem(SALT));
+var layer=document.getElementById('pinLayer');
+var content=document.getElementById('adminContent');
+var title=document.getElementById('pinTitle');
+var description=document.getElementById('pinDescription');
+var confirmWrap=document.getElementById('confirmWrap');
+var submit=document.getElementById('openAdmin');
+var error=document.getElementById('pinError');
+if(creating){title.textContent='Crie seu PIN administrativo';description.textContent='Escolha um PIN de 4 a 8 números para proteger a edição neste aparelho.';confirmWrap.hidden=false;submit.textContent='Criar PIN e abrir modo administrador'}
+function makeSalt(){var bytes=new Uint8Array(18);if(window.crypto&&window.crypto.getRandomValues)window.crypto.getRandomValues(bytes);else for(var i=0;i<bytes.length;i++)bytes[i]=Math.floor(Math.random()*256);return Array.prototype.map.call(bytes,function(v){return v.toString(16).padStart(2,'0')}).join('')}
+function fallback(v){var h=2166136261;for(var i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}return Promise.resolve((h>>>0).toString(16))}
+function digest(pin,salt){var value='Portal-TACS|'+salt+'|'+pin;if(window.crypto&&window.crypto.subtle&&window.TextEncoder)return window.crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)).then(function(buffer){return Array.prototype.map.call(new Uint8Array(buffer),function(byte){return byte.toString(16).padStart(2,'0')}).join('')});return fallback(value)}
+function loadScript(src){return new Promise(function(resolve,reject){var script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=function(){reject(new Error(src))};document.body.appendChild(script)})}
+function openEditor(pin){var serverKey=localStorage.getItem(KEY)||pin;if(!localStorage.getItem(KEY)){localStorage.setItem(KEY,pin);localStorage.setItem(MANAGED,'1')}sessionStorage.setItem(KEY,serverKey);document.getElementById('adminKeyInput').value=serverKey;layer.hidden=true;content.hidden=false;document.body.scrollTop=0;document.documentElement.scrollTop=0;var status=document.getElementById('editorLoadStatus');loadScript('agenda-config.js?v=20260731-80').then(function(){return loadScript('admin-message-bridge.js?v=20260731-80')}).then(function(){return loadScript('admin-controle-integral.js?v=20260731-80')}).then(function(){return loadScript('geral-admin-fix.js?v=20260731-80')}).then(function(){status.textContent='Editor conectado. Os dados do servidor estão sendo atualizados.';setTimeout(function(){var refresh=document.getElementById('refreshAll');if(refresh)refresh.click()},120)}).catch(function(e){status.style.background='#fff0ef';status.style.color='#8c2d27';status.textContent='A página abriu, mas um arquivo de controle não carregou: '+e.message})}
+document.getElementById('pinForm').addEventListener('submit',function(event){event.preventDefault();var pin=String(document.getElementById('pin').value||'').trim();var confirmation=String(document.getElementById('confirmPin').value||'').trim();if(!/^\d{4,8}$/.test(pin)){error.textContent='Use um PIN numérico de 4 a 8 números.';return}if(creating&&pin!==confirmation){error.textContent='Os dois PINs não coincidem.';return}error.textContent='';if(creating){var salt=makeSalt();digest(pin,salt).then(function(hash){localStorage.setItem(SALT,salt);localStorage.setItem(HASH,hash);openEditor(pin)}).catch(function(){error.textContent='Não foi possível criar o PIN.'});return}digest(pin,localStorage.getItem(SALT)||'').then(function(hash){if(hash!==localStorage.getItem(HASH)){error.textContent='PIN incorreto.';return}openEditor(pin)}).catch(function(){error.textContent='Não foi possível verificar o PIN.'})});
+document.getElementById('backPortal').addEventListener('click',function(){location.href='index.html?v=20260731-80'});
+document.getElementById('changePin').addEventListener('click',function(){localStorage.removeItem(HASH);localStorage.removeItem(SALT);if(localStorage.getItem(MANAGED)==='1'){localStorage.removeItem(KEY);sessionStorage.removeItem(KEY);localStorage.removeItem(MANAGED)}location.reload()});
+document.getElementById('refreshMirror').addEventListener('click',function(){window.open('index.html?v=20260731-80&t='+Date.now(),'_blank')});
+setTimeout(function(){document.getElementById('pin').focus()},100);
+}());
+</script>
+</body>
+</html>
