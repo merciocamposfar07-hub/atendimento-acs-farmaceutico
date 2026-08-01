@@ -6,49 +6,56 @@
 <meta name="theme-color" content="#062c46">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>Editar Portal Geral TACS</title>
-<link rel="stylesheet" href="admin-controle-integral.css?v=20260731-74">
-<link rel="stylesheet" href="admin-data-proporcao-fix.css?v=20260731-74">
+<link rel="stylesheet" href="admin-controle-integral.css?v=20260731-76">
+<link rel="stylesheet" href="admin-data-proporcao-fix.css?v=20260731-76">
 <style>
-  html,body{min-height:100%;height:auto!important;overflow-x:hidden!important;background:#eaf1f5}
-  body{margin:0;padding:0 0 max(30px,env(safe-area-inset-bottom))!important}
-  .app,.shell{min-height:100%;height:auto!important;overflow:visible!important}
-  .admin-hero{padding:20px 18px!important;border-radius:0!important}
-  .admin-hero h1{margin:8px 0 5px!important;font-size:clamp(30px,8vw,44px)!important}
-  .admin-hero p{margin:0!important;font-size:17px!important;line-height:1.45!important}
-  .admin-badge{font-size:13px!important}
-  .hero-actions{margin-top:15px!important}
-  .hero-actions button{width:100%!important;min-height:52px!important}
-  .unified-note{margin-top:12px;padding:12px 14px;border:1px solid rgba(255,255,255,.32);border-radius:13px;background:rgba(255,255,255,.08);color:#e5f2f7;font-size:14px;font-weight:750;line-height:1.45}
-  .main{padding:14px!important;overflow:visible!important}
-  .tabs{position:sticky!important;top:0!important;z-index:50!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important;margin:0 0 14px!important;padding:10px!important;background:#eaf1f5!important;border-radius:0 0 16px 16px!important;box-shadow:0 8px 18px rgba(16,43,60,.12)!important}
-  .tab{width:100%!important;min-width:0!important;min-height:50px!important;padding:8px 6px!important;white-space:normal!important;text-align:center!important;font-size:14px!important;line-height:1.25!important}
-  .section{margin:0 0 16px!important;padding:18px 14px!important;border-radius:20px!important;overflow:visible!important}
-  .section h2{font-size:clamp(28px,7vw,40px)!important;line-height:1.08!important}
-  .section-intro{font-size:17px!important;line-height:1.5!important}
-  .section-intro strong{color:#0d5f8a}
-  .week{display:grid!important;grid-template-columns:1fr!important;gap:14px!important}
-  .day-card{padding:16px!important}
-  .day-title{align-items:flex-start!important;gap:8px!important}
-  .day-title strong{font-size:22px!important;line-height:1.25!important}
-  .state-pill{white-space:normal!important;text-align:center!important}
-  .day-controls{grid-template-columns:1fr!important}
-  .day-actions{grid-template-columns:1fr!important}
-  .form-grid{grid-template-columns:1fr!important}
-  .mirror-frame{height:72vh!important;min-height:520px!important}
+  html{min-height:100%;overflow-y:auto!important;background:#eaf1f5;-webkit-overflow-scrolling:touch}
+  body{min-height:100%;height:auto!important;overflow:visible!important;margin:0!important;padding:calc(82px + env(safe-area-inset-top)) 0 max(34px,env(safe-area-inset-bottom))!important;background:#eaf1f5!important}
+  .admin-topbar{position:fixed;left:0;right:0;top:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:82px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;background:#062c46;color:#fff;box-shadow:0 7px 22px rgba(3,35,56,.24)}
+  .admin-topbar strong{max-width:38%;font-size:15px;line-height:1.25}
+  .admin-topbar-actions{display:flex;gap:8px;justify-content:flex-end}
+  .admin-topbar button{min-height:46px;padding:8px 11px;border:1px solid rgba(255,255,255,.48);border-radius:12px;background:rgba(255,255,255,.1);color:#fff;font-size:13px;font-weight:900}
+  .app{width:min(calc(100% - 8px),1120px)!important;min-height:0!important;height:auto!important;margin:4px auto 36px!important;overflow:visible!important}
+  .shell{min-height:0!important;height:auto!important;overflow:visible!important;border-radius:20px!important}
+  .admin-hero{padding:20px 17px!important}
+  .admin-hero h1{margin:10px 0 6px!important;font-size:clamp(32px,8vw,48px)!important}
+  .admin-hero p{font-size:17px!important}
+  .hero-actions{margin-top:14px!important}
+  .hero-actions button{width:100%!important;min-height:54px!important}
+  .unified-note{margin-top:12px;padding:12px 14px;border:1px solid rgba(255,255,255,.3);border-radius:13px;background:rgba(255,255,255,.08);color:#e5f2f7;font-size:14px;font-weight:750;line-height:1.45}
+  .main{min-height:0!important;height:auto!important;overflow:visible!important;padding:12px!important}
+  .tabs{position:static!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;overflow:visible!important;margin:0 0 16px!important;padding:11px!important;border-radius:17px!important;background:#dfe8ed!important;box-shadow:none!important}
+  .tab{width:100%!important;min-width:0!important;min-height:56px!important;padding:8px 6px!important;white-space:normal!important;text-align:center!important;font-size:15px!important;line-height:1.25!important}
+  .section{display:block;min-height:0!important;height:auto!important;overflow:visible!important;margin:0 0 18px!important;padding:18px 14px!important;border-radius:20px!important}
+  .section[hidden]{display:none!important}
+  .section h2{font-size:clamp(29px,7vw,42px)!important}
+  .section-intro{font-size:17px!important}
+  .form-grid,.day-controls,.week{grid-template-columns:1fr!important}
+  .week{display:grid!important;gap:14px!important}
+  .day-card{overflow:visible!important;padding:16px 13px!important}
+  .day-actions,.actions{display:grid!important;grid-template-columns:1fr!important}
+  .day-actions .btn,.actions .btn{width:100%!important}
+  .mirror-frame{height:70vh!important;min-height:520px!important}
   footer{padding:22px 16px max(28px,env(safe-area-inset-bottom))!important}
   @media(min-width:760px){.tabs{grid-template-columns:repeat(4,minmax(0,1fr))!important}.week{grid-template-columns:repeat(2,minmax(0,1fr))!important}.day-actions{grid-template-columns:1fr 1fr!important}}
 </style>
 </head>
 <body>
+<header class="admin-topbar">
+  <strong>Portal Geral • Modo administrador</strong>
+  <div class="admin-topbar-actions">
+    <button id="backToPortal" type="button">Voltar ao portal</button>
+    <button id="changePin" type="button">Trocar PIN</button>
+  </div>
+</header>
+
 <div class="app"><div class="shell">
 <header class="admin-hero">
   <span class="admin-badge">🔒 Modo de edição liberado pelo PIN</span>
   <h1>Editar o Portal Geral</h1>
-  <p>Todos os dias de todos os profissionais ficam disponíveis para edição, inclusive os dias atualmente desativados.</p>
-  <div class="hero-actions">
-    <button id="refreshAll" type="button">↻ Atualizar dados do servidor</button>
-  </div>
-  <div class="unified-note">Edite, publique ou retire uma informação. O morador só verá os dias que estiverem ativados.</div>
+  <p>Todos os dias de todos os profissionais permanecem disponíveis para edição, inclusive os dias desativados.</p>
+  <div class="hero-actions"><button id="refreshAll" type="button">↻ Atualizar dados do servidor</button></div>
+  <div class="unified-note">O editor abre imediatamente. A consulta ao servidor ocorre em segundo plano.</div>
   <div hidden aria-hidden="true">
     <input id="adminKeyInput" type="hidden" value="">
     <button id="saveAdminKey" type="button"></button>
@@ -56,6 +63,7 @@
     <div id="securityStatus"></div>
   </div>
 </header>
+
 <main class="main">
   <nav class="tabs" aria-label="Áreas editáveis">
     <button class="tab" data-tab="recados">💬 Recados</button>
@@ -96,13 +104,13 @@
 
   <section class="section" data-section="nutricionista" hidden>
     <span class="section-label">Segunda a sexta</span><h2>Agenda da Nutricionista</h2>
-    <p class="section-intro"><strong>Os cinco dias são editáveis.</strong> Ative somente as datas confirmadas.</p>
+    <p class="section-intro"><strong>Os cinco dias são editáveis.</strong> Ative as datas necessárias.</p>
     <div id="nutricionistaWeek" class="week"></div>
   </section>
 
   <section class="section" data-section="odontologia" hidden>
     <span class="section-label">Segunda a sexta</span><h2>Agenda da Dentista</h2>
-    <p class="section-intro"><strong>Segunda, terça e quinta são oficiais; sexta é dia extra.</strong> Quarta e qualquer outro dia desativado continuam editáveis e podem ser ativados manualmente.</p>
+    <p class="section-intro"><strong>Segunda, terça e quinta são oficiais; sexta é dia extra.</strong> Quarta e qualquer outro dia desativado continuam editáveis.</p>
     <div id="odontologiaWeek" class="week"></div>
   </section>
 
@@ -120,16 +128,46 @@
   </section>
 
   <section class="section" data-section="espelho" hidden>
-    <div class="section-head"><div><span class="section-label">Visualização real</span><h2>Conferir o Portal do Morador</h2><p class="section-intro">Atualize depois de publicar ou retirar uma informação.</p></div><button id="refreshMirror" class="btn secondary" type="button">Atualizar visualização</button></div>
-    <div class="mirror-frame"><iframe id="portalMirror" title="Visualização do Portal do Morador" src="index.html?v=20260731-74&espelho=1"></iframe></div>
+    <div class="section-head"><div><span class="section-label">Visualização real</span><h2>Conferir o Portal do Morador</h2><p class="section-intro">A visualização só será carregada quando você abrir esta área.</p></div><button id="refreshMirror" class="btn secondary" type="button">Atualizar visualização</button></div>
+    <div class="mirror-frame"><iframe id="portalMirror" title="Visualização do Portal do Morador" src="about:blank" data-src="index.html?v=20260731-76&espelho=1"></iframe></div>
   </section>
 </main>
 <footer>© 2026 Mércio José Campos dos Santos • Portal Geral TACS • Todos os direitos reservados</footer>
 </div></div>
-<script src="agenda-config.js?v=20260731-74"></script>
-<script src="admin-message-bridge.js?v=20260731-75"></script>
-<script src="admin-controle-integral.js?v=20260731-75"></script>
-<script src="admin-whatsapp-status.js?v=20260731-74"></script>
-  <script src="portal-admin-fast.js?v=20260731-75"></script>
+
+<script>
+(function(){
+  'use strict';
+  var PIN_HASH_KEY='tacs-admin-pin-hash-v3';
+  var PIN_SALT_KEY='tacs-admin-pin-salt-v3';
+  var SERVER_KEY='tacs-admin-key';
+  var MANAGED_SERVER_KEY='tacs-admin-key-gerenciada-pelo-pin-v3';
+  document.getElementById('backToPortal').addEventListener('click',function(){
+    window.location.href='index.html?v=20260731-76&t='+Date.now();
+  });
+  document.getElementById('changePin').addEventListener('click',function(){
+    try{
+      localStorage.removeItem(PIN_HASH_KEY);
+      localStorage.removeItem(PIN_SALT_KEY);
+      if(localStorage.getItem(MANAGED_SERVER_KEY)==='1'){
+        localStorage.removeItem(SERVER_KEY);
+        sessionStorage.removeItem(SERVER_KEY);
+        localStorage.removeItem(MANAGED_SERVER_KEY);
+      }
+    }catch(error){}
+    window.location.href='index.html?v=20260731-76&trocarPin=1&t='+Date.now();
+  });
+  document.querySelector('[data-tab="espelho"]').addEventListener('click',function(){
+    var frame=document.getElementById('portalMirror');
+    if(frame&&frame.src.indexOf('about:blank')!==-1){
+      frame.src=frame.dataset.src+'&t='+Date.now();
+    }
+  });
+}());
+</script>
+<script src="agenda-config.js?v=20260731-76"></script>
+<script src="admin-message-bridge.js?v=20260731-76"></script>
+<script src="admin-controle-integral.js?v=20260731-76"></script>
+<script src="admin-whatsapp-status.js?v=20260731-76"></script>
 </body>
 </html>
