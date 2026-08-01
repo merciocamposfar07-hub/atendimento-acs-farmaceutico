@@ -9,7 +9,7 @@
 <style>
   *{box-sizing:border-box}
   html,body{min-height:100%;margin:0;background:#eaf1f5;color:#102b3c;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-  body{display:grid;place-items:center;padding:calc(22px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom))}
+  body{display:grid;place-items:center;padding:calc(22px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));overflow-y:auto}
   .card{width:min(100%,480px);overflow:hidden;border:1px solid #7894a3;border-radius:24px;background:#fff;box-shadow:0 24px 70px rgba(3,35,56,.24)}
   .head{padding:28px 22px;background:linear-gradient(135deg,#041f34,#062c46,#0a4265);color:#fff}
   .badge{display:inline-block;padding:8px 12px;border:1px solid #4d91ae;border-radius:999px;background:rgba(255,255,255,.08);color:#79e5a6;font-size:13px;font-weight:950;text-transform:uppercase;letter-spacing:.05em}
@@ -41,11 +41,11 @@
       <label for="confirm">Confirme o PIN</label>
       <input id="confirm" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Digite novamente">
     </div>
-    <p class="help">O editor será aberto em página própria. Não será usado iframe nem tela sobreposta.</p>
+    <p class="help">Depois do PIN, o editor será aberto em página própria, sem iframe e sem tela sobreposta.</p>
     <div id="error" class="error"></div>
     <div class="actions">
       <button id="enter" type="submit">Abrir editor</button>
-      <a href="index.html?v=20260731-76">Voltar ao Portal do Morador</a>
+      <a href="index.html?v=20260731-77">Voltar ao Portal do Morador</a>
     </div>
   </form>
 </main>
@@ -57,6 +57,19 @@
   var KEY='tacs-admin-key';
   var MANAGED='tacs-admin-key-gerenciada-pelo-pin-v3';
   var SESSION='tacs-admin-session-v1';
+  var params=new URLSearchParams(location.search);
+
+  if(params.get('trocarPin')==='1'){
+    localStorage.removeItem(HASH);
+    localStorage.removeItem(SALT);
+    if(localStorage.getItem(MANAGED)==='1'){
+      localStorage.removeItem(KEY);
+      sessionStorage.removeItem(KEY);
+      localStorage.removeItem(MANAGED);
+    }
+    sessionStorage.removeItem(SESSION);
+  }
+
   var creating=!(localStorage.getItem(HASH)&&localStorage.getItem(SALT));
   var title=document.getElementById('title');
   var description=document.getElementById('description');
@@ -71,9 +84,13 @@
     enter.textContent='Criar PIN e abrir editor';
   }
 
-  function salt(){
+  function createSalt(){
     var bytes=new Uint8Array(18);
-    crypto.getRandomValues(bytes);
+    if(window.crypto&&window.crypto.getRandomValues){
+      window.crypto.getRandomValues(bytes);
+    }else{
+      for(var i=0;i<bytes.length;i+=1)bytes[i]=Math.floor(Math.random()*256);
+    }
     return Array.prototype.map.call(bytes,function(value){return value.toString(16).padStart(2,'0')}).join('');
   }
 
@@ -85,8 +102,8 @@
 
   function digest(pin,s){
     var value='Portal-TACS|'+s+'|'+pin;
-    if(crypto&&crypto.subtle&&window.TextEncoder){
-      return crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)).then(function(buffer){
+    if(window.crypto&&window.crypto.subtle&&window.TextEncoder){
+      return window.crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)).then(function(buffer){
         return Array.prototype.map.call(new Uint8Array(buffer),function(byte){return byte.toString(16).padStart(2,'0')}).join('');
       });
     }
@@ -102,13 +119,14 @@
     }
     sessionStorage.setItem(KEY,serverKey);
     sessionStorage.setItem(SESSION,'ok');
-    window.location.replace('geral-admin.html?v=20260731-76&t='+Date.now());
+    location.replace('admin-direto.html?v=20260731-77&t='+Date.now());
   }
 
   document.getElementById('form').addEventListener('submit',function(event){
     event.preventDefault();
     var pin=String(document.getElementById('pin').value||'').trim();
     var confirmation=String(document.getElementById('confirm').value||'').trim();
+
     if(!/^\d{4,8}$/.test(pin)){
       error.textContent='Use um PIN numérico de 4 a 8 números.';
       return;
@@ -117,9 +135,11 @@
       error.textContent='Os dois campos não coincidem.';
       return;
     }
+
     error.textContent='Verificando...';
+
     if(creating){
-      var newSalt=salt();
+      var newSalt=createSalt();
       digest(pin,newSalt).then(function(hash){
         localStorage.setItem(SALT,newSalt);
         localStorage.setItem(HASH,hash);
@@ -127,6 +147,7 @@
       }).catch(function(){error.textContent='Não foi possível criar o PIN neste aparelho.'});
       return;
     }
+
     digest(pin,localStorage.getItem(SALT)||'').then(function(hash){
       if(hash!==localStorage.getItem(HASH)){
         error.textContent='PIN incorreto.';
@@ -135,6 +156,7 @@
       openEditor(pin);
     }).catch(function(){error.textContent='Não foi possível verificar o PIN.'});
   });
+
   setTimeout(function(){document.getElementById('pin').focus()},80);
 }());
 </script>
