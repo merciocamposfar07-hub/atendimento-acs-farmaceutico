@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#062c46">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Acesso administrativo • Portal TACS</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{min-height:100%;margin:0;background:#eaf1f5;color:#102b3c;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+  body{display:grid;place-items:center;padding:calc(22px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom))}
+  .card{width:min(100%,480px);overflow:hidden;border:1px solid #7894a3;border-radius:24px;background:#fff;box-shadow:0 24px 70px rgba(3,35,56,.24)}
+  .head{padding:28px 22px;background:linear-gradient(135deg,#041f34,#062c46,#0a4265);color:#fff}
+  .badge{display:inline-block;padding:8px 12px;border:1px solid #4d91ae;border-radius:999px;background:rgba(255,255,255,.08);color:#79e5a6;font-size:13px;font-weight:950;text-transform:uppercase;letter-spacing:.05em}
+  h1{margin:15px 0 8px;font-size:36px;line-height:1.05;letter-spacing:-.035em}
+  .head p{margin:0;color:#dbe9ef;font-size:16px;line-height:1.5}
+  form{padding:22px}
+  label{display:block;margin:0 0 8px;font-size:17px;font-weight:900}
+  input{width:100%;min-height:62px;margin-bottom:15px;border:2px solid #8fa7b3;border-radius:14px;padding:14px;background:#fff;color:#102b3c;font-size:25px;font-weight:900;letter-spacing:.18em;text-align:center;outline:none}
+  input:focus{border-color:#0d5f8a;box-shadow:0 0 0 4px rgba(13,95,138,.14)}
+  .help{margin:0 0 17px;padding:12px 14px;border-radius:12px;background:#edf6fa;color:#315363;font-size:14px;font-weight:750;line-height:1.45}
+  .error{min-height:22px;margin:0 0 10px;color:#a3302b;font-size:14px;font-weight:900}
+  .actions{display:grid;grid-template-columns:1fr;gap:10px}
+  button,a{display:grid;place-items:center;min-height:54px;border:0;border-radius:13px;padding:11px 15px;text-decoration:none;font-size:17px;font-weight:950}
+  button{background:#062c46;color:#fff}
+  a{background:#e8eff2;color:#173245}
+</style>
+</head>
+<body>
+<main class="card">
+  <header class="head">
+    <span class="badge">🔒 Acesso administrativo</span>
+    <h1 id="title">PIN do Portal TACS</h1>
+    <p id="description">Digite o PIN para abrir o editor.</p>
+  </header>
+  <form id="form">
+    <label for="pin">PIN numérico</label>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="4 a 8 números">
+    <div id="confirmWrap" hidden>
+      <label for="confirm">Confirme o PIN</label>
+      <input id="confirm" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Digite novamente">
+    </div>
+    <p class="help">O editor será aberto em página própria. Não será usado iframe nem tela sobreposta.</p>
+    <div id="error" class="error"></div>
+    <div class="actions">
+      <button id="enter" type="submit">Abrir editor</button>
+      <a href="index.html?v=20260731-76">Voltar ao Portal do Morador</a>
+    </div>
+  </form>
+</main>
+<script>
+(function(){
+  'use strict';
+  var HASH='tacs-admin-pin-hash-v3';
+  var SALT='tacs-admin-pin-salt-v3';
+  var KEY='tacs-admin-key';
+  var MANAGED='tacs-admin-key-gerenciada-pelo-pin-v3';
+  var SESSION='tacs-admin-session-v1';
+  var creating=!(localStorage.getItem(HASH)&&localStorage.getItem(SALT));
+  var title=document.getElementById('title');
+  var description=document.getElementById('description');
+  var confirmWrap=document.getElementById('confirmWrap');
+  var enter=document.getElementById('enter');
+  var error=document.getElementById('error');
+
+  if(creating){
+    title.textContent='Crie seu PIN administrativo';
+    description.textContent='Escolha um PIN de 4 a 8 números para proteger a edição neste aparelho.';
+    confirmWrap.hidden=false;
+    enter.textContent='Criar PIN e abrir editor';
+  }
+
+  function salt(){
+    var bytes=new Uint8Array(18);
+    crypto.getRandomValues(bytes);
+    return Array.prototype.map.call(bytes,function(value){return value.toString(16).padStart(2,'0')}).join('');
+  }
+
+  function fallback(value){
+    var hash=2166136261;
+    for(var i=0;i<value.length;i+=1){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619)}
+    return Promise.resolve((hash>>>0).toString(16));
+  }
+
+  function digest(pin,s){
+    var value='Portal-TACS|'+s+'|'+pin;
+    if(crypto&&crypto.subtle&&window.TextEncoder){
+      return crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)).then(function(buffer){
+        return Array.prototype.map.call(new Uint8Array(buffer),function(byte){return byte.toString(16).padStart(2,'0')}).join('');
+      });
+    }
+    return fallback(value);
+  }
+
+  function openEditor(pin){
+    var serverKey=sessionStorage.getItem(KEY)||localStorage.getItem(KEY)||'';
+    if(!serverKey){
+      localStorage.setItem(KEY,pin);
+      localStorage.setItem(MANAGED,'1');
+      serverKey=pin;
+    }
+    sessionStorage.setItem(KEY,serverKey);
+    sessionStorage.setItem(SESSION,'ok');
+    window.location.replace('geral-admin.html?v=20260731-76&t='+Date.now());
+  }
+
+  document.getElementById('form').addEventListener('submit',function(event){
+    event.preventDefault();
+    var pin=String(document.getElementById('pin').value||'').trim();
+    var confirmation=String(document.getElementById('confirm').value||'').trim();
+    if(!/^\d{4,8}$/.test(pin)){
+      error.textContent='Use um PIN numérico de 4 a 8 números.';
+      return;
+    }
+    if(creating&&pin!==confirmation){
+      error.textContent='Os dois campos não coincidem.';
+      return;
+    }
+    error.textContent='Verificando...';
+    if(creating){
+      var newSalt=salt();
+      digest(pin,newSalt).then(function(hash){
+        localStorage.setItem(SALT,newSalt);
+        localStorage.setItem(HASH,hash);
+        openEditor(pin);
+      }).catch(function(){error.textContent='Não foi possível criar o PIN neste aparelho.'});
+      return;
+    }
+    digest(pin,localStorage.getItem(SALT)||'').then(function(hash){
+      if(hash!==localStorage.getItem(HASH)){
+        error.textContent='PIN incorreto.';
+        return;
+      }
+      openEditor(pin);
+    }).catch(function(){error.textContent='Não foi possível verificar o PIN.'});
+  });
+  setTimeout(function(){document.getElementById('pin').focus()},80);
+}());
+</script>
+</body>
+</html>
