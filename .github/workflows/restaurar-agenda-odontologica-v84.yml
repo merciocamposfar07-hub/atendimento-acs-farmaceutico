@@ -1,0 +1,53 @@
+name: Restaurar agenda odontológica de segunda a sexta v84
+
+on:
+  push:
+    paths:
+      - '.github/workflows/restaurar-agenda-odontologica-v84.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restaurar cinco dias no Portal do Morador
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          old_days = "var DENTAL_ALLOWED_DAYS=['Segunda-feira','Terça-feira','Quinta-feira'];"
+          new_days = "var DENTAL_ALLOWED_DAYS=['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'];"
+          if old_days in text:
+              text = text.replace(old_days, new_days, 1)
+
+          script = '  <script src="portal-odontologia-segunda-sexta.js?v=20260801-84"></script>\n'
+          if 'portal-odontologia-segunda-sexta.js' not in text:
+              text = text.replace('</body>', script + '</body>', 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validar alteração
+        run: |
+          grep -q "DENTAL_ALLOWED_DAYS=\['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'\]" index.html
+          grep -q 'portal-odontologia-segunda-sexta.js?v=20260801-84' index.html
+
+      - name: Publicar
+        run: |
+          if git diff --quiet; then
+            echo 'Agenda odontológica v84 já está publicada.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Restaurar agenda odontológica de segunda a sexta no portal'
+          git push
