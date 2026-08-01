@@ -1,0 +1,76 @@
+name: Corrigir vagas e descrições v86
+
+on:
+  push:
+    paths:
+      - '.github/workflows/corrigir-vagas-descricoes-v86.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Aplicar vagas padrão da odontologia
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          old_vacancies = "function vacancies(slot,type){if(!slot)return null;var v=type==='emergencial'?slot.vagasEmergenciais:slot.vagasComuns;if(v===null||v===''||!Number.isFinite(Number(v)))return null;return Math.max(0,Number(v))}"
+          new_vacancies = old_vacancies + "\n    function nextDentalDate(dayName){var targets={'Segunda-feira':1,'Terça-feira':2,'Quarta-feira':3,'Quinta-feira':4,'Sexta-feira':5},target=targets[dayName],parts=recifeToday().split('-').map(Number),date=new Date(Date.UTC(parts[0],parts[1]-1,parts[2])),diff=(target-date.getUTCDay()+7)%7;date.setUTCDate(date.getUTCDate()+diff);return date.getUTCFullYear()+'-'+String(date.getUTCMonth()+1).padStart(2,'0')+'-'+String(date.getUTCDate()).padStart(2,'0')}\n    function ensureDentalDefaults(slots){slots=Array.isArray(slots)?slots.slice():[];['Segunda-feira','Terça-feira','Quinta-feira'].forEach(function(day){var slot=slots.find(function(item){return String(item&&item.dia||'').trim()===day&&dentalCurrent(item.data)});if(!slot){slot={id:'padrao-'+day.toLowerCase().replace(/[^a-z]+/g,'-'),dia:day,data:nextDentalDate(day),vagasComuns:1,vagasEmergenciais:1,_padraoFrontend:true};slots.push(slot);return}var comum=vacancies(slot,'comum'),emergencial=vacancies(slot,'emergencial');if(comum===null||comum<1){slot.vagasComuns=1;slot._padraoFrontend=true}if(emergencial===null||emergencial<1){slot.vagasEmergenciais=1;slot._padraoFrontend=true}});return slots.sort(function(a,b){return dateStamp(a.data)-dateStamp(b.data)})}"
+
+          if old_vacancies not in text:
+              raise SystemExit('Função vacancies não localizada.')
+          text = text.replace(old_vacancies, new_vacancies, 1)
+
+          old_accept = "function acceptAgenda(data){if(!data||data.ok===false)throw new Error(data&&data.message?data.message:'agenda indisponível');dentalSlots=(Array.isArray(data.dias)?data.dias:[]).filter(function(slot){return DENTAL_ALLOWED_DAYS.indexOf(String(slot&&slot.dia||'').trim())!==-1});selectedDentalSlot=null;selectedDentalType='';dentalState='ready';renderDental();updateForm()}"
+          new_accept = "function acceptAgenda(data){if(!data||data.ok===false)throw new Error(data&&data.message?data.message:'agenda indisponível');dentalSlots=ensureDentalDefaults((Array.isArray(data.dias)?data.dias:[]).filter(function(slot){return DENTAL_ALLOWED_DAYS.indexOf(String(slot&&slot.dia||'').trim())!==-1}));selectedDentalSlot=null;selectedDentalType='';dentalState='ready';renderDental();updateForm()}"
+          if old_accept not in text:
+              raise SystemExit('Função acceptAgenda não localizada.')
+          text = text.replace(old_accept, new_accept, 1)
+
+          old_fail = "function failAgenda(){dentalSlots=[];selectedDentalSlot=null;selectedDentalType='';dentalState='error';renderDental();updateForm()}"
+          new_fail = "function failAgenda(){dentalSlots=ensureDentalDefaults([]);selectedDentalSlot=null;selectedDentalType='';dentalState='ready';renderDental();updateForm()}"
+          if old_fail not in text:
+              raise SystemExit('Função failAgenda não localizada.')
+          text = text.replace(old_fail, new_fail, 1)
+
+          old_reserve = "if(!type||!selectedDentalSlot||!DENTAL_API)return Promise.resolve({ok:true,skipped:true});"
+          new_reserve = "if(!type||!selectedDentalSlot||!DENTAL_API||selectedDentalSlot._padraoFrontend)return Promise.resolve({ok:true,skipped:true});"
+          if old_reserve not in text:
+              raise SystemExit('Condição reserveSlot não localizada.')
+          text = text.replace(old_reserve, new_reserve, 1)
+
+          text = text.replace(
+              'portal-odontologia-segunda-sexta.js?v=20260801-85',
+              'portal-odontologia-segunda-sexta.js?v=20260801-86'
+          )
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validar
+        run: |
+          grep -q 'function ensureDentalDefaults' index.html
+          grep -q 'dentalSlots=ensureDentalDefaults' index.html
+          grep -q 'selectedDentalSlot._padraoFrontend' index.html
+          grep -q 'portal-odontologia-segunda-sexta.js?v=20260801-86' index.html
+
+      - name: Publicar
+        run: |
+          if git diff --quiet; then
+            echo 'Versão 86 já aplicada.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Ativar vagas odontológicas padrão e sincronizar descrições'
+          git push
