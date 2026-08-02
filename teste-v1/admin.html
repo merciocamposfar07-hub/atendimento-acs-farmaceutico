@@ -6,21 +6,7 @@
   <meta name="color-scheme" content="light">
   <title>Administração de teste • Portal TACS V1</title>
   <style>
-    :root {
-      --petroleo:#073a55;
-      --petroleo2:#0b5878;
-      --verde:#148a46;
-      --verde-claro:#e8f7ee;
-      --fundo:#eaf2f6;
-      --branco:#fff;
-      --texto:#102d40;
-      --muted:#536b78;
-      --borda:#9fb7c3;
-      --erro:#a52d2d;
-      --erro-bg:#fff0f0;
-      --aviso:#8a5a00;
-      --aviso-bg:#fff5d9;
-    }
+    :root{--petroleo:#073a55;--petroleo2:#0b5878;--verde:#148a46;--verde-claro:#e8f7ee;--fundo:#eaf2f6;--texto:#102d40;--muted:#536b78;--borda:#9fb7c3;--erro:#a52d2d;--erro-bg:#fff0f0;--aviso:#8a5a00;--aviso-bg:#fff5d9}
     *{box-sizing:border-box}
     html{-webkit-text-size-adjust:100%}
     body{margin:0;background:var(--fundo);color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}
@@ -48,6 +34,7 @@
     .mensagem.ok{background:var(--verde-claro);color:var(--verde);border:2px solid #a6d9b8}
     .mensagem.erro{background:var(--erro-bg);color:var(--erro);border:2px solid #d77f7f}
     .oculto{display:none!important}
+    .ponte-iframe{position:fixed!important;left:-10000px!important;top:-10000px!important;width:2px!important;height:2px!important;opacity:.01!important;border:0!important;pointer-events:none!important;visibility:visible!important;display:block!important}
     .grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
     .numero{background:#eef7fb;border:2px solid #c4dce6;border-radius:17px;padding:14px;min-height:95px}
     .numero strong{display:block;font-size:2rem;color:var(--petroleo)}
@@ -70,7 +57,7 @@
   </header>
 
   <main>
-    <div class="alerta">⚠️ Use somente neste aparelho. O código temporário expira em 30 minutos. Não envie o código nem o PIN a terceiros.</div>
+    <div class="alerta">⚠️ Use somente neste aparelho. Não envie o PIN a terceiros.</div>
 
     <section class="painel">
       <h2>Estado da administração</h2>
@@ -99,7 +86,7 @@
       <form id="loginForm" autocomplete="off">
         <label for="pinLogin">PIN administrativo</label>
         <input id="pinLogin" name="pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" required>
-        <div class="acoes"><button class="botao" type="submit">Entrar</button></div>
+        <div class="acoes"><button id="botaoEntrar" class="botao" type="submit">Entrar</button></div>
       </form>
       <div id="loginMensagem"></div>
     </section>
@@ -122,7 +109,7 @@
     <p>Sítio Japaranduba • Chã Grande/PE</p>
   </footer>
 
-  <iframe id="ponte" name="ponteAdminTacsV1" title="Ponte de comunicação" class="oculto"></iframe>
+  <iframe id="ponte" name="ponteAdminTacsV1" title="Ponte de comunicação" class="ponte-iframe" src="about:blank"></iframe>
 
   <script>
     (function(){
@@ -140,6 +127,7 @@
       var setupPainel=document.getElementById('setupPainel');
       var loginPainel=document.getElementById('loginPainel');
       var dashboard=document.getElementById('dashboard');
+      var botaoEntrar=document.getElementById('botaoEntrar');
 
       function texto(v){return String(v==null?'':v)}
       function escapar(v){return texto(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
@@ -162,24 +150,35 @@
       function post(dados,receber){
         if(callbackPost){receber({ok:false,message:'Aguarde a operação anterior terminar.'});return}
         callbackPost=receber;
-        timeoutPost=setTimeout(function(){finalizarPost({ok:false,message:'O servidor não respondeu dentro de 30 segundos.'})},30000);
+        timeoutPost=setTimeout(function(){finalizarPost({ok:false,message:'A operação chegou ao servidor, mas o iPhone não recebeu a resposta. Atualize a página e tente novamente.'})},45000);
         var form=document.createElement('form');
-        form.method='POST';form.action=API;form.target='ponteAdminTacsV1';form.className='oculto';
+        form.method='POST';
+        form.action=API+'?_='+Date.now();
+        form.target='ponteAdminTacsV1';
+        form.style.position='fixed';
+        form.style.left='-10000px';
+        form.style.top='-10000px';
         Object.keys(dados).forEach(function(chave){var input=document.createElement('input');input.type='hidden';input.name=chave;input.value=texto(dados[chave]);form.appendChild(input)});
-        document.body.appendChild(form);form.submit();setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form)},1000);
+        document.body.appendChild(form);
+        form.submit();
+        setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form)},3000);
       }
 
       function finalizarPost(resultado){
         if(timeoutPost)clearTimeout(timeoutPost);timeoutPost=null;
         var cb=callbackPost;callbackPost=null;
+        botaoEntrar.disabled=false;
         if(cb)cb(resultado||{ok:false,message:'Resposta vazia do servidor.'});
       }
 
       window.addEventListener('message',function(event){
         var dados=event.data;
+        if(typeof dados==='string'){
+          try{dados=JSON.parse(dados)}catch(e){return}
+        }
         if(!dados||dados.source!=='portal-tacs')return;
         finalizarPost(dados.result);
-      });
+      },false);
 
       function carregarStatus(){
         statusEl.className='status';statusEl.textContent='Consultando servidor…';statusDetalhes.textContent='';
@@ -206,10 +205,18 @@
 
       document.getElementById('loginForm').addEventListener('submit',function(e){
         e.preventDefault();limparMensagem('loginMensagem');
+        botaoEntrar.disabled=true;
         var pin=document.getElementById('pinLogin').value.replace(/\D/g,'');
         post({action:'admin_login',pin:pin,dispositivo:dispositivo},function(resultado){
-          if(resultado&&resultado.ok===true&&resultado.token){token=resultado.token;sessionStorage.setItem('portalTacsAdminTokenV1',token);document.getElementById('loginForm').reset();exibir(dashboard);carregarDados()}
-          else mensagem('loginMensagem','erro',resultado&&resultado.message?resultado.message:'Não foi possível entrar.');
+          if(resultado&&resultado.ok===true&&resultado.token){
+            token=resultado.token;
+            sessionStorage.setItem('portalTacsAdminTokenV1',token);
+            document.getElementById('loginForm').reset();
+            exibir(dashboard);
+            carregarDados();
+          }else{
+            mensagem('loginMensagem','erro',resultado&&resultado.message?resultado.message:'Não foi possível entrar.');
+          }
         });
       });
 
@@ -221,7 +228,7 @@
           document.getElementById('resumo').innerHTML=itens.map(function(item){return '<div class="numero"><strong>'+escapar(item[1])+'</strong><span>'+escapar(item[0])+'</span></div>'}).join('');
           document.getElementById('sessao').textContent='Sessão válida até: '+new Date(resultado.sessao.expiraEm).toLocaleString('pt-BR');
           document.getElementById('profissionais').innerHTML=(resultado.profissionais||[]).map(function(p){return '<div class="item"><b>'+escapar((p.ICONE||'')+' '+(p.TITULO_PUBLICO||p.NOME||p.ID))+'</b><small>ID: '+escapar(p.ID)+' • Ativo: '+(String(p.ATIVO).toLowerCase()==='true'?'sim':'não')+'</small></div>'}).join('');
-          mensagem('dashboardMensagem','ok','Leitura administrativa confirmada. As telas de edição serão liberadas após este teste.');
+          mensagem('dashboardMensagem','ok','Leitura administrativa confirmada.');
         });
       }
 
