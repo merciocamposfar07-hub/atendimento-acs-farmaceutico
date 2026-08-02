@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Painel administrativo V1 • Portal TACS</title>
+  <style>
+    :root{--petroleo:#073a55;--petroleo2:#0b5878;--verde:#148a46;--verde-bg:#e8f7ee;--fundo:#eaf2f6;--texto:#102d40;--muted:#536b78;--borda:#a9c0ca;--erro:#a52d2d;--erro-bg:#fff0f0;--aviso:#805300;--aviso-bg:#fff6dd;--azul-bg:#eef7fb;--branco:#fff}
+    *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--fundo);color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}button,input,textarea,select{font:inherit}button{cursor:pointer}
+    header{background:linear-gradient(145deg,var(--petroleo),var(--petroleo2));color:#fff;padding:calc(22px + env(safe-area-inset-top)) 20px 25px;border-bottom:4px solid #67c7a0}.selo{display:inline-block;padding:8px 12px;border:2px solid #73c7e7;border-radius:999px;color:#8df0b4;font-weight:900;letter-spacing:.04em}h1{margin:17px 0 8px;font-size:clamp(2rem,8vw,3rem);line-height:1.05}header p{margin:0;font-size:1.05rem}
+    main{width:min(820px,100%);margin:0 auto;padding:18px 14px 64px}.nota{background:var(--aviso-bg);border:2px solid #dfaa43;color:#704900;border-radius:20px;padding:15px;margin-bottom:16px;font-weight:800}.painel{background:var(--branco);border:2px solid var(--borda);border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 10px 25px rgba(7,58,85,.08)}h2{margin:0 0 13px;font-size:1.7rem}h3{margin:0;font-size:1.35rem}.muted{color:var(--muted)}
+    label{display:block;font-weight:850;margin:12px 0 6px}.campo{width:100%;min-height:54px;border:2px solid var(--borda);border-radius:15px;padding:11px 13px;background:#fff;color:var(--texto)}textarea.campo{min-height:100px;resize:vertical}.campo:focus{outline:3px solid rgba(11,88,120,.17);border-color:var(--petroleo2)}.campo[readonly]{background:#edf3f6;color:#4e6470}
+    .acoes{display:grid;gap:10px;margin-top:15px}.acoes.duas{grid-template-columns:1fr}.botao{width:100%;min-height:56px;border:0;border-radius:16px;padding:13px 16px;background:var(--petroleo);color:#fff;font-weight:900}.botao.verde{background:var(--verde)}.botao.secundario{background:#607985}.botao.perigo{background:#972f2f}.botao:disabled{opacity:.45;cursor:not-allowed}
+    .status{padding:13px 14px;border:2px solid #cad9df;border-radius:16px;background:#f5f8fa;font-weight:800;overflow-wrap:anywhere}.status.ok{border-color:#9ed6b2;background:var(--verde-bg);color:#08723a}.status.erro{border-color:#d88a8a;background:var(--erro-bg);color:var(--erro)}.status.aviso{border-color:#e1aa3f;background:var(--aviso-bg);color:var(--aviso)}
+    .resumo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.numero{background:var(--azul-bg);border:2px solid #c2d6df;border-radius:18px;padding:14px}.numero strong{display:block;font-size:2rem;line-height:1}.numero span{display:block;margin-top:6px;color:var(--muted);font-weight:800}
+    .abas{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}.aba{border:2px solid var(--borda);border-radius:15px;padding:12px;background:#fff;color:var(--texto);font-weight:900}.aba.ativa{background:var(--petroleo);border-color:var(--petroleo);color:#fff}
+    .lista{display:grid;gap:12px}.cartao{border:2px solid #c4d4db;border-radius:19px;background:#fbfdfe;overflow:hidden}.cartao summary{list-style:none;padding:15px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.cartao summary::-webkit-details-marker{display:none}.tituloItem{display:flex;gap:10px;align-items:flex-start}.icone{font-size:1.7rem;line-height:1}.sub{color:var(--muted);font-size:.92rem;font-weight:700}.sinal{border-radius:999px;padding:5px 9px;font-size:.82rem;font-weight:900;white-space:nowrap}.sinal.ativo{background:var(--verde-bg);color:#08723a}.sinal.inativo{background:var(--erro-bg);color:var(--erro)}.corpo{padding:0 15px 16px;border-top:1px solid #d9e3e7}.linhaChecks{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}.check{display:flex;align-items:center;gap:10px;border:2px solid #cbd9df;border-radius:14px;padding:11px;background:#fff;font-weight:800}.check input{width:23px;height:23px;margin:0}
+    .vazio{padding:18px;border:2px dashed #b8cbd4;border-radius:17px;text-align:center;color:var(--muted);font-weight:800}.oculto{display:none!important}.ponte{position:fixed!important;left:-10000px!important;top:-10000px!important;width:2px!important;height:2px!important;border:0!important;opacity:.01!important;pointer-events:none!important}
+    .barraFixa{position:sticky;bottom:10px;z-index:5;margin-top:14px}.undo{box-shadow:0 10px 25px rgba(0,0,0,.18)}footer{background:var(--petroleo);color:#fff;padding:24px 18px calc(24px + env(safe-area-inset-bottom));text-align:center}footer p{margin:5px 0}
+    @media(min-width:650px){.acoes.duas{grid-template-columns:1fr 1fr}.linhaChecks{grid-template-columns:1fr 1fr}.resumo{grid-template-columns:repeat(4,1fr)}}
+  </style>
+</head>
+<body>
+<header>
+  <span class="selo">AMBIENTE ISOLADO • FASE 2</span>
+  <h1>Painel administrativo V1</h1>
+  <p>Profissionais e serviços do Portal TACS.</p>
+</header>
+<main>
+  <div class="nota">A tela é isolada, mas qualquer alteração confirmada é gravada na planilha real. Nesta primeira abertura, apenas confira a leitura. Não salve mudanças ainda.</div>
+
+  <section class="painel">
+    <h2>Acesso administrativo</h2>
+    <label for="pin">PIN administrativo</label>
+    <input id="pin" class="campo" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" autocomplete="off">
+    <div class="acoes duas">
+      <button id="entrar" class="botao" type="button">Entrar e carregar dados</button>
+      <button id="sair" class="botao perigo" type="button" disabled>Encerrar sessão</button>
+    </div>
+    <p class="muted">O PIN é enviado por POST, apagado do campo e não é armazenado nesta página.</p>
+    <div id="loginStatus" class="status">Verificando a implantação separada de teste…</div>
+    <div id="resumo" class="resumo oculto">
+      <div class="numero"><strong id="qProf">0</strong><span>Profissionais</span></div>
+      <div class="numero"><strong id="qServ">0</strong><span>Serviços</span></div>
+      <div class="numero"><strong id="qProfAtivos">0</strong><span>Profissionais ativos</span></div>
+      <div class="numero"><strong id="qServAtivos">0</strong><span>Serviços ativos</span></div>
+    </div>
+  </section>
+
+  <section id="conteudo" class="painel oculto">
+    <div class="abas">
+      <button id="abaProf" class="aba ativa" type="button">Profissionais</button>
+      <button id="abaServ" class="aba" type="button">Serviços</button>
+    </div>
+    <div id="statusOperacao" class="status">Dados carregados. Nenhuma alteração realizada.</div>
+    <div id="profissionaisArea">
+      <h2>Profissionais</h2>
+      <p class="muted">Edite somente após a conferência desta primeira leitura.</p>
+      <div id="listaProfissionais" class="lista"></div>
+    </div>
+    <div id="servicosArea" class="oculto">
+      <h2>Serviços</h2>
+      <p class="muted">Cada serviço permanece vinculado a um profissional.</p>
+      <div id="listaServicos" class="lista"></div>
+    </div>
+    <div class="barraFixa">
+      <button id="desfazer" class="botao secundario undo oculto" type="button">Desfazer a última alteração</button>
+    </div>
+  </section>
+</main>
+<footer><p>Portal TACS • Painel administrativo isolado</p><p>Portal do Morador não foi modificado</p></footer>
+<iframe name="pontePainelPSV1" class="ponte" src="about:blank" title="Envio seguro ao servidor"></iframe>
+<script>
+(function(){
+'use strict';
+var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var TOKEN_KEY='portalTacsAdminTokenV1';
+var DEVICE_KEY='portalTacsDispositivoV1';
+var UNDO_KEY='portalTacsUndoPSV1';
+var token=sessionStorage.getItem(TOKEN_KEY)||'';
+var dispositivo=localStorage.getItem(DEVICE_KEY)||'';
+if(!dispositivo){dispositivo='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,dispositivo)}
+var dados={profissionais:[],servicos:[]};
+var ativa=null,contador=0;
+var entrar=document.getElementById('entrar');
+var sair=document.getElementById('sair');
+var desfazer=document.getElementById('desfazer');
+
+function txt(v){return String(v==null?'':v)}
+function bool(v){if(v===true||v===1)return true;var s=txt(v).trim().toLowerCase();return ['true','1','sim','yes','ativo'].indexOf(s)!==-1}
+function num(v,padrao){var n=Number(v);return Number.isFinite(n)?n:(padrao||0)}
+function esc(v){return txt(v).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
+function status(id,mensagem,tipo){var e=document.getElementById(id);e.textContent=mensagem;e.className='status'+(tipo?' '+tipo:'')}
+function requestId(prefixo){var bytes=new Uint8Array(24);if(window.crypto&&crypto.getRandomValues){crypto.getRandomValues(bytes);return prefixo+'_'+Array.prototype.map.call(bytes,function(b){return('0'+b.toString(16)).slice(-2)}).join('')}return prefixo+'_'+Date.now()+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
+function jsonp(action,parametros,receber){contador++;var nome='__psv1_'+Date.now()+'_'+contador,s=document.createElement('script'),p=parametros||{},concluido=false,timer=setTimeout(function(){if(concluido)return;concluido=true;limpar();receber({ok:false,message:'O servidor não respondeu à consulta.'})},20000);function limpar(){clearTimeout(timer);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}window[nome]=function(r){if(concluido)return;concluido=true;limpar();receber(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(p).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(txt(p[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){if(concluido)return;concluido=true;limpar();receber({ok:false,message:'Falha de rede ao consultar o servidor.'})};document.head.appendChild(s)}
+function finalizar(resultado){if(!ativa)return;clearTimeout(ativa.timeout);var cb=ativa.callback;ativa=null;entrar.disabled=false;sair.disabled=!token;cb(resultado||{ok:false,message:'Resposta vazia do servidor.'})}
+function consultarResultado(){if(!ativa)return;jsonp('admin_result',{requestId:ativa.id},function(r){if(!ativa)return;if(r&&r.ok===true&&r.pendente===true){setTimeout(consultarResultado,700);return}if(r&&r.ok===true&&r.pendente===false){finalizar(r.result);return}finalizar(r)})}
+function post(action,payload,receber){if(ativa){receber({ok:false,message:'Aguarde a operação anterior terminar.'});return}var id=requestId(action);ativa={id:id,callback:receber,timeout:setTimeout(function(){finalizar({ok:false,message:'A operação não produziu resposta consultável em 50 segundos.'})},50000)};entrar.disabled=true;sair.disabled=true;var form=document.createElement('form');form.method='POST';form.action=API+'?_='+Date.now();form.target='pontePainelPSV1';form.className='ponte';payload=payload||{};payload.action=action;payload.requestId=id;Object.keys(payload).forEach(function(k){var input=document.createElement('input');input.type='hidden';input.name=k;input.value=txt(payload[k]);form.appendChild(input)});document.body.appendChild(form);form.submit();setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form)},5000);setTimeout(consultarResultado,650)}
+function sessao(){return{token:token,dispositivo:dispositivo}}
+function normalizarRegistro(reg){var o={};Object.keys(reg||{}).forEach(function(k){o[k]=reg[k]});return o}
+function encontrarProf(id){return dados.profissionais.find(function(x){return txt(x.ID)===txt(id)})||null}
+function encontrarServ(id){return dados.servicos.find(function(x){return txt(x.ID)===txt(id)})||null}
+function setUndo(tipo,registro){sessionStorage.setItem(UNDO_KEY,JSON.stringify({tipo:tipo,registro:registro,criadoEm:Date.now()}));atualizarUndo()}
+function limparUndo(){sessionStorage.removeItem(UNDO_KEY);atualizarUndo()}
+function lerUndo(){try{return JSON.parse(sessionStorage.getItem(UNDO_KEY)||'null')}catch(e){return null}}
+function atualizarUndo(){desfazer.classList.toggle('oculto',!lerUndo())}
+
+function carregarDados(mensagem){post('admin_dados',sessao(),function(r){if(!r||r.ok!==true){token='';sessionStorage.removeItem(TOKEN_KEY);document.getElementById('conteudo').classList.add('oculto');document.getElementById('resumo').classList.add('oculto');sair.disabled=true;status('loginStatus',txt(r&&r.message||'Sessão inválida ou expirada.'),'erro');return}dados.profissionais=Array.isArray(r.profissionais)?r.profissionais.map(normalizarRegistro):[];dados.servicos=Array.isArray(r.servicos)?r.servicos.map(normalizarRegistro):[];render();document.getElementById('conteudo').classList.remove('oculto');document.getElementById('resumo').classList.remove('oculto');sair.disabled=false;status('loginStatus',mensagem||'Sessão validada e dados carregados.','ok');status('statusOperacao','Leitura concluída. Nenhuma alteração realizada.','ok')})}
+
+function render(){
+  document.getElementById('qProf').textContent=dados.profissionais.length;
+  document.getElementById('qServ').textContent=dados.servicos.length;
+  document.getElementById('qProfAtivos').textContent=dados.profissionais.filter(function(x){return bool(x.ATIVO)}).length;
+  document.getElementById('qServAtivos').textContent=dados.servicos.filter(function(x){return bool(x.ATIVO)}).length;
+  renderProfissionais();renderServicos();atualizarUndo();
+}
+function renderProfissionais(){var alvo=document.getElementById('listaProfissionais');if(!dados.profissionais.length){alvo.innerHTML='<div class="vazio">Nenhum profissional encontrado.</div>';return}var lista=dados.profissionais.slice().sort(function(a,b){return num(a.ORDEM,999)-num(b.ORDEM,999)});alvo.innerHTML=lista.map(function(p){var id=txt(p.ID);return '<details class="cartao" data-tipo="profissional" data-id="'+esc(id)+'"><summary><div class="tituloItem"><span class="icone">'+esc(p.ICONE||'👤')+'</span><div><h3>'+esc(p.TITULO_PUBLICO||p.NOME||id)+'</h3><div class="sub">ID: '+esc(id)+' • Ordem: '+esc(p.ORDEM)+'</div></div></div><span class="sinal '+(bool(p.ATIVO)?'ativo':'inativo')+'">'+(bool(p.ATIVO)?'Ativo':'Inativo')+'</span></summary><div class="corpo"><label>ID</label><input class="campo" name="id" value="'+esc(id)+'" readonly><label>Nome interno</label><input class="campo" name="nome" value="'+esc(p.NOME)+'"><label>Título público</label><input class="campo" name="tituloPublico" value="'+esc(p.TITULO_PUBLICO)+'"><label>Ícone</label><input class="campo" name="icone" value="'+esc(p.ICONE)+'"><label>Ordem</label><input class="campo" name="ordem" type="number" min="1" max="999" value="'+esc(p.ORDEM)+'"><div class="linhaChecks"><label class="check"><input name="ativo" type="checkbox" '+(bool(p.ATIVO)?'checked':'')+'> Profissional ativo</label></div><div class="acoes"><button class="botao verde salvarProf" type="button">Salvar profissional</button></div></div></details>'}).join('')}
+function renderServicos(){var alvo=document.getElementById('listaServicos');if(!dados.servicos.length){alvo.innerHTML='<div class="vazio">Nenhum serviço encontrado.</div>';return}var profissionais=dados.profissionais.slice().sort(function(a,b){return num(a.ORDEM,999)-num(b.ORDEM,999)});var opcoes=profissionais.map(function(p){return '<option value="'+esc(p.ID)+'">'+esc(p.TITULO_PUBLICO||p.NOME||p.ID)+'</option>'}).join('');var lista=dados.servicos.slice().sort(function(a,b){var pa=txt(a.PROFISSIONAL_ID),pb=txt(b.PROFISSIONAL_ID);if(pa!==pb)return pa.localeCompare(pb);return num(a.ORDEM,999)-num(b.ORDEM,999)});alvo.innerHTML=lista.map(function(s){var id=txt(s.ID);var prof=encontrarProf(s.PROFISSIONAL_ID);var nomeProf=prof?(prof.TITULO_PUBLICO||prof.NOME||prof.ID):s.PROFISSIONAL_ID;return '<details class="cartao" data-tipo="servico" data-id="'+esc(id)+'"><summary><div class="tituloItem"><span class="icone">🧾</span><div><h3>'+esc(s.NOME||id)+'</h3><div class="sub">'+esc(nomeProf)+' • Ordem: '+esc(s.ORDEM)+'</div></div></div><span class="sinal '+(bool(s.ATIVO)?'ativo':'inativo')+'">'+(bool(s.ATIVO)?'Ativo':'Inativo')+'</span></summary><div class="corpo"><label>ID</label><input class="campo" name="id" value="'+esc(id)+'" readonly><label>Profissional</label><select class="campo" name="profissionalId">'+opcoes+'</select><label>Nome do serviço</label><input class="campo" name="nome" value="'+esc(s.NOME)+'"><label>Descrição automática</label><textarea class="campo" name="descricaoAutomatica">'+esc(s.DESCRICAO_AUTOMATICA)+'</textarea><label>Ordem</label><input class="campo" name="ordem" type="number" min="1" max="999" value="'+esc(s.ORDEM)+'"><div class="linhaChecks"><label class="check"><input name="ativo" type="checkbox" '+(bool(s.ATIVO)?'checked':'')+'> Serviço ativo</label><label class="check"><input name="permiteVagaComum" type="checkbox" '+(bool(s.PERMITE_VAGA_COMUM)?'checked':'')+'> Permite vaga comum</label><label class="check"><input name="permiteEmergencia" type="checkbox" '+(bool(s.PERMITE_EMERGENCIA)?'checked':'')+'> Permite emergência</label></div><div class="acoes"><button class="botao verde salvarServ" type="button">Salvar serviço</button></div></div></details>'}).join('');lista.forEach(function(s){var itens=alvo.querySelectorAll('details[data-id]');for(var i=0;i<itens.length;i++){if(itens[i].getAttribute('data-id')===txt(s.ID)){var select=itens[i].querySelector('[name="profissionalId"]');if(select)select.value=txt(s.PROFISSIONAL_ID);break}}})}
+
+function valorCampo(cartao,nome){var e=cartao.querySelector('[name="'+nome+'"]');return e?e.value:''}
+function valorCheck(cartao,nome){var e=cartao.querySelector('[name="'+nome+'"]');return e&&e.checked?'true':'false'}
+function salvarProfissional(cartao){var id=valorCampo(cartao,'id');var anterior=encontrarProf(id);if(!anterior){status('statusOperacao','Profissional não encontrado na leitura atual.','erro');return}var payload=Object.assign(sessao(),{id:id,nome:valorCampo(cartao,'nome').trim(),tituloPublico:valorCampo(cartao,'tituloPublico').trim(),icone:valorCampo(cartao,'icone').trim(),ordem:valorCampo(cartao,'ordem'),ativo:valorCheck(cartao,'ativo')});if(!payload.nome||!payload.tituloPublico){status('statusOperacao','Nome e título público são obrigatórios.','erro');return}if(!window.confirm('Gravar esta alteração na planilha real?'))return;setUndo('profissional',anterior);status('statusOperacao','Salvando profissional e conferindo a releitura…','aviso');post('admin_salvar_profissional',payload,function(r){if(!r||r.ok!==true){limparUndo();status('statusOperacao',txt(r&&r.message||'Não foi possível salvar o profissional.'),'erro');return}carregarDados('Profissional salvo. Sessão permanece válida.');setTimeout(function(){var atual=encontrarProf(id);if(atual&&txt(atual.NOME)===payload.nome&&txt(atual.TITULO_PUBLICO)===payload.tituloPublico&&txt(atual.ICONE)===payload.icone&&num(atual.ORDEM)===num(payload.ordem)&&bool(atual.ATIVO)===bool(payload.ativo)){status('statusOperacao','Profissional gravado e confirmado pela releitura da planilha.','ok')}else{status('statusOperacao','O servidor respondeu, mas a releitura não coincidiu integralmente. Use “Desfazer” e não faça outra alteração.','erro')}},1600)})}
+function salvarServico(cartao){var id=valorCampo(cartao,'id');var anterior=encontrarServ(id);if(!anterior){status('statusOperacao','Serviço não encontrado na leitura atual.','erro');return}var payload=Object.assign(sessao(),{id:id,profissionalId:valorCampo(cartao,'profissionalId'),nome:valorCampo(cartao,'nome').trim(),descricaoAutomatica:valorCampo(cartao,'descricaoAutomatica').trim(),ordem:valorCampo(cartao,'ordem'),ativo:valorCheck(cartao,'ativo'),permiteVagaComum:valorCheck(cartao,'permiteVagaComum'),permiteEmergencia:valorCheck(cartao,'permiteEmergencia')});if(!payload.nome||!payload.descricaoAutomatica){status('statusOperacao','Nome e descrição automática são obrigatórios.','erro');return}if(!window.confirm('Gravar esta alteração na planilha real?'))return;setUndo('servico',anterior);status('statusOperacao','Salvando serviço e conferindo a releitura…','aviso');post('admin_salvar_servico',payload,function(r){if(!r||r.ok!==true){limparUndo();status('statusOperacao',txt(r&&r.message||'Não foi possível salvar o serviço.'),'erro');return}carregarDados('Serviço salvo. Sessão permanece válida.');setTimeout(function(){var atual=encontrarServ(id);if(atual&&txt(atual.PROFISSIONAL_ID)===payload.profissionalId&&txt(atual.NOME)===payload.nome&&txt(atual.DESCRICAO_AUTOMATICA)===payload.descricaoAutomatica&&num(atual.ORDEM)===num(payload.ordem)&&bool(atual.ATIVO)===bool(payload.ativo)&&bool(atual.PERMITE_VAGA_COMUM)===bool(payload.permiteVagaComum)&&bool(atual.PERMITE_EMERGENCIA)===bool(payload.permiteEmergencia)){status('statusOperacao','Serviço gravado e confirmado pela releitura da planilha.','ok')}else{status('statusOperacao','O servidor respondeu, mas a releitura não coincidiu integralmente. Use “Desfazer” e não faça outra alteração.','erro')}},1600)})}
+function restaurarUltima(){var u=lerUndo();if(!u||!u.registro)return;if(!window.confirm('Restaurar exatamente os valores anteriores da última alteração?'))return;var r=u.registro;var payload;if(u.tipo==='profissional'){payload=Object.assign(sessao(),{id:r.ID,nome:r.NOME,tituloPublico:r.TITULO_PUBLICO,icone:r.ICONE,ordem:r.ORDEM,ativo:bool(r.ATIVO)?'true':'false'});status('statusOperacao','Restaurando o profissional…','aviso');post('admin_salvar_profissional',payload,finalizarRestauracao)}else{payload=Object.assign(sessao(),{id:r.ID,profissionalId:r.PROFISSIONAL_ID,nome:r.NOME,descricaoAutomatica:r.DESCRICAO_AUTOMATICA,ordem:r.ORDEM,ativo:bool(r.ATIVO)?'true':'false',permiteVagaComum:bool(r.PERMITE_VAGA_COMUM)?'true':'false',permiteEmergencia:bool(r.PERMITE_EMERGENCIA)?'true':'false'});status('statusOperacao','Restaurando o serviço…','aviso');post('admin_salvar_servico',payload,finalizarRestauracao)}}
+function finalizarRestauracao(r){if(!r||r.ok!==true){status('statusOperacao',txt(r&&r.message||'A restauração falhou.'),'erro');return}limparUndo();carregarDados('Última alteração restaurada.');setTimeout(function(){status('statusOperacao','Valores anteriores restaurados e relidos.','ok')},1500)}
+
+entrar.addEventListener('click',function(){var pin=document.getElementById('pin').value.replace(/\D/g,'');if(!/^\d{4,8}$/.test(pin)){status('loginStatus','Digite um PIN numérico de 4 a 8 dígitos.','erro');return}status('loginStatus','Validando o PIN…','aviso');post('admin_login',{pin:pin,dispositivo:dispositivo},function(r){document.getElementById('pin').value='';if(!r||r.ok!==true||!r.token){token='';sessionStorage.removeItem(TOKEN_KEY);status('loginStatus',txt(r&&r.message||'Login recusado.'),'erro');return}token=r.token;sessionStorage.setItem(TOKEN_KEY,token);carregarDados('Sessão validada e dados carregados.')})});
+sair.addEventListener('click',function(){if(!token)return;post('admin_logout',sessao(),function(){token='';sessionStorage.removeItem(TOKEN_KEY);document.getElementById('conteudo').classList.add('oculto');document.getElementById('resumo').classList.add('oculto');sair.disabled=true;status('loginStatus','Sessão encerrada.','ok')})});
+desfazer.addEventListener('click',restaurarUltima);
+document.getElementById('listaProfissionais').addEventListener('click',function(e){var b=e.target.closest('.salvarProf');if(b)salvarProfissional(b.closest('.cartao'))});
+document.getElementById('listaServicos').addEventListener('click',function(e){var b=e.target.closest('.salvarServ');if(b)salvarServico(b.closest('.cartao'))});
+document.getElementById('abaProf').addEventListener('click',function(){this.classList.add('ativa');document.getElementById('abaServ').classList.remove('ativa');document.getElementById('profissionaisArea').classList.remove('oculto');document.getElementById('servicosArea').classList.add('oculto')});
+document.getElementById('abaServ').addEventListener('click',function(){this.classList.add('ativa');document.getElementById('abaProf').classList.remove('ativa');document.getElementById('servicosArea').classList.remove('oculto');document.getElementById('profissionaisArea').classList.add('oculto')});
+
+jsonp('admin_status',{},function(r){if(!r||r.ok!==true){status('loginStatus',txt(r&&r.message||'A implantação de teste não respondeu.'),'erro');return}status('loginStatus','Implantação de teste disponível. Digite o PIN para carregar os dados.','ok');if(token){carregarDados('Sessão existente validada e dados carregados.')}});
+}());
+</script>
+</body>
+</html>
