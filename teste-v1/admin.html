@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>Administração de teste • Portal TACS V1</title>
+  <style>
+    :root {
+      --petroleo:#073a55;
+      --petroleo2:#0b5878;
+      --verde:#148a46;
+      --verde-claro:#e8f7ee;
+      --fundo:#eaf2f6;
+      --branco:#fff;
+      --texto:#102d40;
+      --muted:#536b78;
+      --borda:#9fb7c3;
+      --erro:#a52d2d;
+      --erro-bg:#fff0f0;
+      --aviso:#8a5a00;
+      --aviso-bg:#fff5d9;
+    }
+    *{box-sizing:border-box}
+    html{-webkit-text-size-adjust:100%}
+    body{margin:0;background:var(--fundo);color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}
+    button,input{font:inherit}
+    .topo{background:linear-gradient(145deg,var(--petroleo),#0a4f6e);color:#fff;padding:calc(22px + env(safe-area-inset-top)) 20px 24px;border-bottom:4px solid #67c7a0}
+    .selo{display:inline-block;padding:8px 12px;border:2px solid #73c7e7;border-radius:999px;color:#8df0b4;font-weight:800;letter-spacing:.04em;font-size:.92rem}
+    h1{margin:18px 0 8px;font-size:clamp(2rem,8vw,3rem);line-height:1.05}
+    .topo p{margin:0;font-size:1.08rem}
+    main{width:min(760px,100%);margin:0 auto;padding:18px 14px 60px}
+    .alerta{background:var(--aviso-bg);border:2px solid #e1aa3f;color:var(--aviso);border-radius:20px;padding:16px;margin-bottom:16px;font-weight:750}
+    .painel{background:#fff;border:2px solid var(--borda);border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 10px 25px rgba(7,58,85,.08)}
+    h2{margin:0 0 14px;font-size:1.7rem}
+    .status{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:9px 13px;font-weight:800;background:#edf1f3;color:var(--muted);margin-bottom:14px}
+    .status.ok{background:var(--verde-claro);color:var(--verde)}
+    .status.erro{background:var(--erro-bg);color:var(--erro)}
+    label{display:block;font-weight:800;margin:14px 0 6px}
+    input{width:100%;min-height:56px;border:2px solid var(--borda);border-radius:16px;padding:12px 14px;color:var(--texto);background:#fff;font-size:1.08rem}
+    input:focus{outline:3px solid rgba(11,88,120,.18);border-color:var(--petroleo2)}
+    .acoes{display:grid;gap:10px;margin-top:18px}
+    .botao{border:0;border-radius:16px;padding:14px 17px;background:var(--petroleo);color:#fff;font-weight:850;min-height:56px;cursor:pointer}
+    .botao.secundario{background:#fff;color:var(--petroleo);border:2px solid var(--borda)}
+    .botao.perigo{background:#8e2d2d}
+    .botao:disabled{opacity:.6;cursor:wait}
+    .mensagem{border-radius:16px;padding:13px 14px;margin-top:14px;font-weight:750;overflow-wrap:anywhere}
+    .mensagem.ok{background:var(--verde-claro);color:var(--verde);border:2px solid #a6d9b8}
+    .mensagem.erro{background:var(--erro-bg);color:var(--erro);border:2px solid #d77f7f}
+    .oculto{display:none!important}
+    .grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+    .numero{background:#eef7fb;border:2px solid #c4dce6;border-radius:17px;padding:14px;min-height:95px}
+    .numero strong{display:block;font-size:2rem;color:var(--petroleo)}
+    .numero span{color:var(--muted);font-weight:700}
+    .meta{color:var(--muted);overflow-wrap:anywhere;margin-top:12px}
+    .lista{display:grid;gap:10px;margin-top:14px}
+    .item{border:2px solid #c8d8df;border-radius:16px;padding:13px;background:#fff}
+    .item b{display:block;margin-bottom:4px}
+    .item small{color:var(--muted)}
+    footer{background:var(--petroleo);color:#fff;padding:24px 18px calc(24px + env(safe-area-inset-bottom));text-align:center}
+    footer p{margin:5px 0}
+    @media(min-width:700px){.grade{grid-template-columns:repeat(4,minmax(0,1fr))}.acoes.duas{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+  <header class="topo">
+    <span class="selo">AMBIENTE ADMINISTRATIVO ISOLADO</span>
+    <h1>Administração do Portal TACS V1</h1>
+    <p>Configuração e teste do acesso administrativo. O portal público não é alterado por esta página.</p>
+  </header>
+
+  <main>
+    <div class="alerta">⚠️ Use somente neste aparelho. O código temporário expira em 30 minutos. Não envie o código nem o PIN a terceiros.</div>
+
+    <section class="painel">
+      <h2>Estado da administração</h2>
+      <div id="status" class="status">Consultando servidor…</div>
+      <div id="statusDetalhes" class="meta"></div>
+      <button id="atualizarStatus" class="botao secundario" type="button">Atualizar estado</button>
+    </section>
+
+    <section id="setupPainel" class="painel oculto">
+      <h2>Criar PIN administrativo</h2>
+      <p>Digite o código temporário gerado no Apps Script e escolha um PIN numérico de 4 a 8 dígitos.</p>
+      <form id="setupForm" autocomplete="off">
+        <label for="codigo">Código temporário</label>
+        <input id="codigo" name="codigo" inputmode="numeric" pattern="[0-9]*" maxlength="8" required>
+        <label for="pinNovo">Novo PIN</label>
+        <input id="pinNovo" name="pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" required>
+        <label for="pinConfirmacao">Confirme o PIN</label>
+        <input id="pinConfirmacao" name="confirmacao" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" required>
+        <div class="acoes"><button class="botao" type="submit">Criar PIN</button></div>
+      </form>
+      <div id="setupMensagem"></div>
+    </section>
+
+    <section id="loginPainel" class="painel oculto">
+      <h2>Entrar no modo administrador</h2>
+      <form id="loginForm" autocomplete="off">
+        <label for="pinLogin">PIN administrativo</label>
+        <input id="pinLogin" name="pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" required>
+        <div class="acoes"><button class="botao" type="submit">Entrar</button></div>
+      </form>
+      <div id="loginMensagem"></div>
+    </section>
+
+    <section id="dashboard" class="painel oculto">
+      <h2>Acesso administrativo liberado</h2>
+      <div id="sessao" class="meta"></div>
+      <div id="resumo" class="grade"></div>
+      <div class="acoes duas">
+        <button id="recarregarDados" class="botao" type="button">Carregar dados da administração</button>
+        <button id="sair" class="botao perigo" type="button">Encerrar sessão</button>
+      </div>
+      <div id="dashboardMensagem"></div>
+      <div id="profissionais" class="lista"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Portal TACS • Unidade de Saúde Posto Matias</p>
+    <p>Sítio Japaranduba • Chã Grande/PE</p>
+  </footer>
+
+  <iframe id="ponte" name="ponteAdminTacsV1" title="Ponte de comunicação" class="oculto"></iframe>
+
+  <script>
+    (function(){
+      'use strict';
+      var API='https://script.google.com/macros/s/AKfycbwTmO0Iv-0tWxxygHOrAJ5q0CAXFivu0oYubcfRC6lbpdFFZs9hPV0RkIEWwhtCKrFiLw/exec';
+      var callbackPost=null;
+      var timeoutPost=null;
+      var contador=0;
+      var token=sessionStorage.getItem('portalTacsAdminTokenV1')||'';
+      var dispositivo=localStorage.getItem('portalTacsDispositivoV1');
+      if(!dispositivo){dispositivo='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem('portalTacsDispositivoV1',dispositivo)}
+
+      var statusEl=document.getElementById('status');
+      var statusDetalhes=document.getElementById('statusDetalhes');
+      var setupPainel=document.getElementById('setupPainel');
+      var loginPainel=document.getElementById('loginPainel');
+      var dashboard=document.getElementById('dashboard');
+
+      function texto(v){return String(v==null?'':v)}
+      function escapar(v){return texto(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+      function mensagem(id,tipo,conteudo){document.getElementById(id).innerHTML='<div class="mensagem '+tipo+'">'+escapar(conteudo)+'</div>'}
+      function limparMensagem(id){document.getElementById(id).innerHTML=''}
+      function exibir(secao){setupPainel.classList.add('oculto');loginPainel.classList.add('oculto');dashboard.classList.add('oculto');secao.classList.remove('oculto')}
+
+      function jsonp(action,receber){
+        contador+=1;
+        var nome='__adminTacsStatus_'+Date.now()+'_'+contador;
+        var script=document.createElement('script');
+        var timer=setTimeout(function(){limpar();receber({ok:false,message:'O servidor não respondeu dentro de 20 segundos.'})},20000);
+        function limpar(){clearTimeout(timer);if(script.parentNode)script.parentNode.removeChild(script);try{delete window[nome]}catch(e){window[nome]=undefined}}
+        window[nome]=function(dados){limpar();receber(dados)};
+        script.src=API+'?action='+encodeURIComponent(action)+'&callback='+encodeURIComponent(nome)+'&_='+Date.now();
+        script.onerror=function(){limpar();receber({ok:false,message:'Não foi possível consultar o servidor.'})};
+        document.head.appendChild(script);
+      }
+
+      function post(dados,receber){
+        if(callbackPost){receber({ok:false,message:'Aguarde a operação anterior terminar.'});return}
+        callbackPost=receber;
+        timeoutPost=setTimeout(function(){finalizarPost({ok:false,message:'O servidor não respondeu dentro de 30 segundos.'})},30000);
+        var form=document.createElement('form');
+        form.method='POST';form.action=API;form.target='ponteAdminTacsV1';form.className='oculto';
+        Object.keys(dados).forEach(function(chave){var input=document.createElement('input');input.type='hidden';input.name=chave;input.value=texto(dados[chave]);form.appendChild(input)});
+        document.body.appendChild(form);form.submit();setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form)},1000);
+      }
+
+      function finalizarPost(resultado){
+        if(timeoutPost)clearTimeout(timeoutPost);timeoutPost=null;
+        var cb=callbackPost;callbackPost=null;
+        if(cb)cb(resultado||{ok:false,message:'Resposta vazia do servidor.'});
+      }
+
+      window.addEventListener('message',function(event){
+        var dados=event.data;
+        if(!dados||dados.source!=='portal-tacs')return;
+        finalizarPost(dados.result);
+      });
+
+      function carregarStatus(){
+        statusEl.className='status';statusEl.textContent='Consultando servidor…';statusDetalhes.textContent='';
+        jsonp('admin_status',function(dados){
+          if(!dados||dados.ok!==true){statusEl.className='status erro';statusEl.textContent='Falha na rota administrativa';statusDetalhes.textContent=dados&&dados.message?dados.message:'Resposta inválida.';return}
+          statusEl.className='status ok';statusEl.textContent='Rota administrativa funcionando';
+          statusDetalhes.innerHTML='<b>Versão:</b> '+escapar(dados.versaoAdmin)+'<br><b>PIN configurado:</b> '+(dados.pinConfigurado?'sim':'não')+'<br><b>Código temporário ativo:</b> '+(dados.setupTemporarioAtivo?'sim':'não');
+          if(token){exibir(dashboard);carregarDados();return}
+          if(dados.pinConfigurado){exibir(loginPainel)}else{exibir(setupPainel)}
+        });
+      }
+
+      document.getElementById('setupForm').addEventListener('submit',function(e){
+        e.preventDefault();limparMensagem('setupMensagem');
+        var codigo=document.getElementById('codigo').value.replace(/\D/g,'');
+        var pin=document.getElementById('pinNovo').value.replace(/\D/g,'');
+        var confirmacao=document.getElementById('pinConfirmacao').value.replace(/\D/g,'');
+        if(pin!==confirmacao){mensagem('setupMensagem','erro','A confirmação não coincide com o PIN.');return}
+        post({action:'admin_criar_pin',codigo:codigo,pin:pin,confirmacao:confirmacao},function(resultado){
+          if(resultado&&resultado.ok===true){mensagem('setupMensagem','ok',resultado.message||'PIN configurado.');document.getElementById('setupForm').reset();setTimeout(carregarStatus,700)}
+          else mensagem('setupMensagem','erro',resultado&&resultado.message?resultado.message:'Não foi possível criar o PIN.');
+        });
+      });
+
+      document.getElementById('loginForm').addEventListener('submit',function(e){
+        e.preventDefault();limparMensagem('loginMensagem');
+        var pin=document.getElementById('pinLogin').value.replace(/\D/g,'');
+        post({action:'admin_login',pin:pin,dispositivo:dispositivo},function(resultado){
+          if(resultado&&resultado.ok===true&&resultado.token){token=resultado.token;sessionStorage.setItem('portalTacsAdminTokenV1',token);document.getElementById('loginForm').reset();exibir(dashboard);carregarDados()}
+          else mensagem('loginMensagem','erro',resultado&&resultado.message?resultado.message:'Não foi possível entrar.');
+        });
+      });
+
+      function carregarDados(){
+        limparMensagem('dashboardMensagem');
+        post({action:'admin_dados',token:token},function(resultado){
+          if(!resultado||resultado.ok!==true){sessionStorage.removeItem('portalTacsAdminTokenV1');token='';exibir(loginPainel);mensagem('loginMensagem','erro',resultado&&resultado.message?resultado.message:'Sessão inválida ou expirada.');return}
+          var itens=[['Profissionais',(resultado.profissionais||[]).length],['Serviços',(resultado.servicos||[]).length],['Agendas',(resultado.agendas||[]).length],['Configurações',(resultado.configuracoes||[]).length]];
+          document.getElementById('resumo').innerHTML=itens.map(function(item){return '<div class="numero"><strong>'+escapar(item[1])+'</strong><span>'+escapar(item[0])+'</span></div>'}).join('');
+          document.getElementById('sessao').textContent='Sessão válida até: '+new Date(resultado.sessao.expiraEm).toLocaleString('pt-BR');
+          document.getElementById('profissionais').innerHTML=(resultado.profissionais||[]).map(function(p){return '<div class="item"><b>'+escapar((p.ICONE||'')+' '+(p.TITULO_PUBLICO||p.NOME||p.ID))+'</b><small>ID: '+escapar(p.ID)+' • Ativo: '+(String(p.ATIVO).toLowerCase()==='true'?'sim':'não')+'</small></div>'}).join('');
+          mensagem('dashboardMensagem','ok','Leitura administrativa confirmada. As telas de edição serão liberadas após este teste.');
+        });
+      }
+
+      document.getElementById('recarregarDados').addEventListener('click',carregarDados);
+      document.getElementById('sair').addEventListener('click',function(){
+        if(!token){exibir(loginPainel);return}
+        post({action:'admin_logout',token:token},function(){sessionStorage.removeItem('portalTacsAdminTokenV1');token='';exibir(loginPainel);mensagem('loginMensagem','ok','Sessão encerrada.')});
+      });
+      document.getElementById('atualizarStatus').addEventListener('click',carregarStatus);
+      carregarStatus();
+    }());
+  </script>
+</body>
+</html>
