@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Escrita controlada • Portal TACS V1</title>
+  <style>
+    :root{--petroleo:#073a55;--petroleo2:#0b5878;--verde:#148a46;--verde-bg:#e8f7ee;--fundo:#eaf2f6;--texto:#102d40;--muted:#536b78;--borda:#9fb7c3;--erro:#a52d2d;--erro-bg:#fff0f0;--aviso:#805300;--aviso-bg:#fff6dd;--azul-bg:#eef7fb}
+    *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--fundo);color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}button,input{font:inherit}
+    header{background:linear-gradient(145deg,var(--petroleo),var(--petroleo2));color:#fff;padding:calc(23px + env(safe-area-inset-top)) 20px 25px;border-bottom:4px solid #67c7a0}.selo{display:inline-block;padding:8px 12px;border:2px solid #73c7e7;border-radius:999px;color:#8df0b4;font-weight:850;letter-spacing:.04em}h1{margin:17px 0 8px;font-size:clamp(2rem,8vw,3rem);line-height:1.05}header p{margin:0;font-size:1.06rem}
+    main{width:min(760px,100%);margin:0 auto;padding:18px 14px 60px}.nota{background:var(--azul-bg);border:2px solid #8db8ca;color:#17445a;border-radius:20px;padding:15px;margin-bottom:16px;font-weight:750}.painel{background:#fff;border:2px solid var(--borda);border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 10px 25px rgba(7,58,85,.08)}h2{margin:0 0 13px;font-size:1.65rem}label{display:block;font-weight:850;margin:12px 0 6px}input{width:100%;min-height:58px;border:2px solid var(--borda);border-radius:16px;padding:12px 14px;font-size:1.16rem;background:#fff;color:var(--texto)}input:focus{outline:3px solid rgba(11,88,120,.17);border-color:var(--petroleo2)}
+    .acoes{display:grid;gap:10px;margin-top:16px}.botao{width:100%;min-height:58px;border:0;border-radius:16px;padding:13px 16px;background:var(--petroleo);color:#fff;font-weight:900;cursor:pointer}.botao.verde{background:var(--verde)}.botao.perigo{background:#8e2d2d}.botao:disabled{opacity:.46;cursor:not-allowed}.pequeno{color:var(--muted);font-size:.95rem}.status{padding:13px 14px;border:2px solid #cad9df;border-radius:16px;background:#f5f8fa;font-weight:800;overflow-wrap:anywhere}.status.ok{border-color:#9ed6b2;background:var(--verde-bg);color:#08723a}.status.erro{border-color:#d88a8a;background:var(--erro-bg);color:var(--erro)}.status.aviso{border-color:#e1aa3f;background:var(--aviso-bg);color:var(--aviso)}
+    .valor{margin-top:12px;padding:15px;border:2px solid #b7ccd5;border-radius:17px;background:#f8fbfc}.valor small{display:block;color:var(--muted);font-weight:800}.valor strong{display:block;margin-top:6px;font-size:1.23rem;overflow-wrap:anywhere}.passos{display:grid;gap:10px}.passo{display:grid;grid-template-columns:42px 1fr;gap:11px;align-items:start;padding:12px;border:2px solid #cad9df;border-radius:16px;background:#f7fafb}.passo .n{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#dbe5ea;color:#385563;font-weight:950}.passo b{display:block}.passo span{display:block;margin-top:3px;color:var(--muted);font-size:.95rem}.passo.ok{border-color:#9ed6b2;background:var(--verde-bg)}.passo.ok .n{background:var(--verde);color:#fff}.passo.erro{border-color:#d88a8a;background:var(--erro-bg)}.passo.erro .n{background:var(--erro);color:#fff}.oculto{display:none!important}.ponte{position:fixed!important;left:-10000px!important;top:-10000px!important;width:2px!important;height:2px!important;border:0!important;opacity:.01!important;pointer-events:none!important}
+    footer{background:var(--petroleo);color:#fff;padding:24px 18px calc(24px + env(safe-area-inset-bottom));text-align:center}footer p{margin:5px 0}@media(min-width:650px){.acoes.duas{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+<header>
+  <span class="selo">TESTE ISOLADO • ESCRITA REVERSÍVEL</span>
+  <h1>Escrita controlada V1</h1>
+  <p>Comprovação real de gravação, releitura e restauração do título da nutricionista.</p>
+</header>
+<main>
+  <div class="nota">Esta tela usa a versão de desenvolvimento do Apps Script. A implantação pública e o Portal do Morador permanecem inalterados.</div>
+
+  <section class="painel">
+    <h2>1. Validar acesso</h2>
+    <label for="pin">PIN administrativo</label>
+    <input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" autocomplete="off">
+    <button id="entrar" class="botao" type="button">Entrar e ler o valor atual</button>
+    <p class="pequeno">O PIN é enviado por POST ao Apps Script, limpo imediatamente e não é salvo nesta página.</p>
+    <div id="loginStatus" class="status">Aguardando o PIN.</div>
+  </section>
+
+  <section class="painel">
+    <h2>2. Valor controlado</h2>
+    <div class="valor"><small>Campo da planilha</small><strong id="campo">TITULO_PUBLICO — Nutricionista</strong></div>
+    <div class="valor"><small>Valor exibido nesta página</small><strong id="valorAtual">Ainda não lido.</strong></div>
+    <div id="operacaoStatus" class="status">Nenhuma gravação iniciada.</div>
+    <div class="acoes duas">
+      <button id="aplicar" class="botao verde" type="button" disabled>Aplicar teste e conferir</button>
+      <button id="restaurar" class="botao perigo" type="button" disabled>Restaurar original agora</button>
+    </div>
+    <p class="pequeno">Após a confirmação, a página restaura automaticamente o texto original. O botão vermelho fica disponível como segurança adicional.</p>
+  </section>
+
+  <section class="painel">
+    <h2>Comprovação</h2>
+    <div class="passos">
+      <div class="passo" id="passo1"><div class="n">1</div><div><b>Sessão validada</b><span>Aguardando login.</span></div></div>
+      <div class="passo" id="passo2"><div class="n">2</div><div><b>Valor anterior lido</b><span>Aguardando leitura da planilha.</span></div></div>
+      <div class="passo" id="passo3"><div class="n">3</div><div><b>Gravação confirmada na planilha</b><span>Aguardando o teste.</span></div></div>
+      <div class="passo" id="passo4"><div class="n">4</div><div><b>API devolveu o novo valor</b><span>Aguardando releitura independente.</span></div></div>
+      <div class="passo" id="passo5"><div class="n">5</div><div><b>Página exibiu o novo valor</b><span>Aguardando atualização visual.</span></div></div>
+      <div class="passo" id="passo6"><div class="n">6</div><div><b>Valor original restaurado</b><span>Aguardando restauração e conferência final.</span></div></div>
+    </div>
+  </section>
+</main>
+<footer><p>Portal TACS • Ambiente administrativo isolado</p><p>Unidade de Saúde Posto Matias • Sítio Japaranduba</p></footer>
+<iframe name="ponteEscritaControladaV1" class="ponte" src="about:blank" title="Envio seguro ao servidor"></iframe>
+<script>
+(function(){
+'use strict';
+var API='https://script.google.com/macros/s/AKfycbwTmO0Iv-0tWxxygHOrAJ5q0CAXFivu0oYubcfRC6lbpdFFZs9hPV0RkIEWwhtCKrFiLw/dev';
+var token=sessionStorage.getItem('portalTacsAdminTokenV1')||'';
+var dispositivo=localStorage.getItem('portalTacsDispositivoV1')||'';
+if(!dispositivo){dispositivo='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem('portalTacsDispositivoV1',dispositivo)}
+var ativa=null,contador=0,valorOriginal='',valorTeste='',restaurando=false;
+var entrar=document.getElementById('entrar'),aplicar=document.getElementById('aplicar'),restaurar=document.getElementById('restaurar');
+function texto(v){return String(v==null?'':v)}
+function status(id,mensagem,tipo){var e=document.getElementById(id);e.textContent=mensagem;e.className='status'+(tipo?' '+tipo:'')}
+function passo(n,tipo,mensagem){var e=document.getElementById('passo'+n);e.className='passo'+(tipo?' '+tipo:'');e.querySelector('span').textContent=mensagem}
+function resetTeste(){for(var i=3;i<=6;i++)passo(i,'','Aguardando o teste.')}
+function requestId(prefixo){var bytes=new Uint8Array(24);if(window.crypto&&crypto.getRandomValues){crypto.getRandomValues(bytes);return prefixo+'_'+Array.prototype.map.call(bytes,function(b){return('0'+b.toString(16)).slice(-2)}).join('')}return prefixo+'_'+Date.now()+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
+function jsonp(action,parametros,receber){contador++;var nome='__ecv1_'+Date.now()+'_'+contador,s=document.createElement('script'),p=parametros||{},timer=setTimeout(function(){fim();receber({ok:false,message:'O servidor não respondeu à consulta.'})},20000);function fim(){clearTimeout(timer);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}window[nome]=function(r){fim();receber(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(p).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(texto(p[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){fim();receber({ok:false,message:'Falha de rede ao consultar o servidor.'})};document.head.appendChild(s)}
+function finalizar(resultado){if(!ativa)return;clearTimeout(ativa.timeout);var cb=ativa.callback;ativa=null;entrar.disabled=false;aplicar.disabled=!token||restaurando;restaurar.disabled=!token;cb(resultado||{ok:false,message:'Resposta vazia do servidor.'})}
+function consultarResultado(){if(!ativa)return;jsonp(ativa.poll,{requestId:ativa.id},function(r){if(!ativa)return;if(r&&r.ok===true&&r.pendente===true){setTimeout(consultarResultado,700);return}if(r&&r.ok===true&&r.pendente===false){finalizar(r.result);return}finalizar(r)})}
+function post(action,dados,poll,receber){if(ativa){receber({ok:false,message:'Aguarde a operação anterior terminar.'});return}var id=requestId(action);ativa={id:id,poll:poll,callback:receber,timeout:setTimeout(function(){finalizar({ok:false,message:'A operação não produziu resposta consultável em 50 segundos.'})},50000)};entrar.disabled=true;aplicar.disabled=true;restaurar.disabled=true;var form=document.createElement('form');form.method='POST';form.action=API+'?_='+Date.now();form.target='ponteEscritaControladaV1';form.className='ponte';dados=dados||{};dados.action=action;dados.requestId=id;Object.keys(dados).forEach(function(k){var input=document.createElement('input');input.type='hidden';input.name=k;input.value=texto(dados[k]);form.appendChild(input)});document.body.appendChild(form);form.submit();setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form)},5000);setTimeout(consultarResultado,650)}
+function dadosSessao(){return{token:token,dispositivo:dispositivo}}
+function leitura(receber){post('admin_escrita_ler',dadosSessao(),'admin_escrita_result',receber)}
+function mostrarLeitura(r,inicial){if(!r||r.ok!==true)throw new Error(r&&r.message?r.message:'Leitura inválida.');valorOriginal=texto(r.valorOriginal||r.valorAtual);valorTeste=texto(r.valorTeste);document.getElementById('campo').textContent=texto(r.campo||'TITULO_PUBLICO')+' — '+texto(r.profissionalId||'Nutricionista');document.getElementById('valorAtual').textContent=texto(r.valorAtual);if(inicial){passo(1,'ok','Token e dispositivo aceitos pelo servidor.');passo(2,'ok','Lido na planilha: “'+texto(r.valorAtual)+'”.')}aplicar.disabled=!!r.testeAtivo;restaurar.disabled=false;if(r.testeAtivo){status('operacaoStatus','Há um teste pendente. Restaure o texto original antes de iniciar outro.','aviso');passo(3,'ok','O valor de teste já está gravado na planilha.');passo(4,'ok','A API devolveu o valor de teste pendente.');passo(5,'ok','A página exibiu o valor de teste pendente.')}else{status('operacaoStatus','Valor atual lido. O teste pode ser iniciado.','ok')}}
+function falhaOperacao(mensagem){status('operacaoStatus',mensagem,'erro');aplicar.disabled=!token;restaurar.disabled=!token}
+function fazerRestauracao(automatica){if(!token||restaurando)return;restaurando=true;aplicar.disabled=true;restaurar.disabled=true;status('operacaoStatus',automatica?'Restaurando automaticamente o texto original…':'Restaurando o texto original…','aviso');post('admin_escrita_restaurar',dadosSessao(),'admin_escrita_result',function(r){if(!r||r.ok!==true||r.restauracaoConfirmada!==true){restaurando=false;passo(6,'erro',texto(r&&r.message||'Restauração não confirmada.'));falhaOperacao(texto(r&&r.message||'A restauração não foi confirmada.'));return}leitura(function(confirma){restaurando=false;try{mostrarLeitura(confirma,false);var final=texto(confirma.valorAtual);if(final!==texto(r.valorRestaurado)){throw new Error('A releitura final não coincide com o valor restaurado.')}document.getElementById('valorAtual').textContent=final;passo(6,'ok','Restaurado e relido: “'+final+'”.');status('operacaoStatus','Teste concluído: gravação e restauração confirmadas.','ok');aplicar.disabled=false;restaurar.disabled=false}catch(e){passo(6,'erro',e.message);falhaOperacao(e.message)}})})}
+entrar.addEventListener('click',function(){var pin=document.getElementById('pin').value.replace(/\D/g,'');if(!/^\d{4,8}$/.test(pin)){status('loginStatus','Digite um PIN numérico de 4 a 8 dígitos.','erro');return}entrar.disabled=true;status('loginStatus','Validando o PIN…','aviso');post('admin_login',{pin:pin,dispositivo:dispositivo},'admin_result',function(r){document.getElementById('pin').value='';if(!r||r.ok!==true||!r.token){token='';sessionStorage.removeItem('portalTacsAdminTokenV1');passo(1,'erro',texto(r&&r.message||'Login recusado.'));status('loginStatus',texto(r&&r.message||'Não foi possível entrar.'),'erro');return}token=r.token;sessionStorage.setItem('portalTacsAdminTokenV1',token);status('loginStatus','Login confirmado. Lendo a planilha…','ok');leitura(function(lido){try{mostrarLeitura(lido,true);status('loginStatus','Sessão validada e leitura concluída.','ok')}catch(e){passo(2,'erro',e.message);status('loginStatus',e.message,'erro')}})})});
+aplicar.addEventListener('click',function(){if(!token)return;resetTeste();aplicar.disabled=true;status('operacaoStatus','Aplicando o sufixo “— TESTE” e conferindo a célula…','aviso');post('admin_escrita_aplicar',dadosSessao(),'admin_escrita_result',function(r){if(!r||r.ok!==true||r.gravacaoConfirmada!==true){passo(3,'erro',texto(r&&r.message||'Gravação não confirmada.'));falhaOperacao(texto(r&&r.message||'A gravação não foi confirmada.'));leitura(function(x){try{mostrarLeitura(x,false);if(x.testeAtivo)fazerRestauracao(true)}catch(e){}});return}valorOriginal=texto(r.valorAnterior);valorTeste=texto(r.valorGravado);passo(3,'ok','Célula gravada e relida diretamente na planilha.');status('operacaoStatus','Gravação confirmada. Fazendo releitura independente pela API…','aviso');leitura(function(lido){try{if(!lido||lido.ok!==true)throw new Error(lido&&lido.message?lido.message:'A API não respondeu.');if(texto(lido.valorAtual)!==valorTeste)throw new Error('A API devolveu um valor diferente do que foi gravado.');passo(4,'ok','A API devolveu: “'+valorTeste+'”.');document.getElementById('valorAtual').textContent=valorTeste;requestAnimationFrame(function(){passo(5,'ok','O novo título foi renderizado nesta tela.');status('operacaoStatus','Novo valor exibido. Restauração automática em 2 segundos…','aviso');setTimeout(function(){fazerRestauracao(true)},2000)})}catch(e){passo(4,'erro',e.message);falhaOperacao(e.message);fazerRestauracao(true)}})})});
+restaurar.addEventListener('click',function(){fazerRestauracao(false)});
+jsonp('admin_escrita_status',{},function(r){if(!r||r.ok!==true){status('loginStatus','O módulo de escrita ainda não respondeu pela URL de desenvolvimento.','erro');return}status('loginStatus','Módulo de escrita V'+texto(r.versao)+' disponível no ambiente de teste.','ok');if(token){leitura(function(lido){try{mostrarLeitura(lido,true);status('loginStatus','Sessão existente validada e valor atual carregado.','ok')}catch(e){token='';sessionStorage.removeItem('portalTacsAdminTokenV1');status('loginStatus','A sessão anterior expirou. Digite o PIN novamente.','aviso')}})}})
+}());
+</script>
+</body>
+</html>
