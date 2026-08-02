@@ -1,0 +1,38 @@
+name: Diagnostico Apps Script
+
+on:
+  push:
+    paths:
+      - '.github/workflows/diagnostico-apps-script.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  testar-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Testar rotas publicadas
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://script.google.com/macros/s/AKfycbwTmO0Iv-0tWxxygHOrAJ5q0CAXFivu0oYubcfRC6lbpdFFZs9hPV0RkIEWwhtCKrFiLw/exec'
+          STATUS=$(curl -L --fail --silent --show-error --max-time 30 "$BASE?action=admin_status&_=$(date +%s)")
+          RESULT=$(curl -L --fail --silent --show-error --max-time 30 "$BASE?action=admin_result&requestId=diagnostico_polling_12345678901234567890&_=$(date +%s)")
+          {
+            echo "executado_em_utc=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "admin_status=$STATUS"
+            echo "admin_result=$RESULT"
+          } > diagnostico-apps-script.txt
+
+      - name: Gravar resultado
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add diagnostico-apps-script.txt
+          git commit -m 'Registra diagnóstico da implantação Apps Script' || exit 0
+          git push
