@@ -36,3 +36,5 @@ jobs:
           git add diagnostico-apps-script.txt
           git commit -m 'Registra diagnóstico da implantação Apps Script' || exit 0
           git push
+
+# diagnóstico solicitado em 2026-08-02 00:17 -03:00
