@@ -15,37 +15,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Testar rotas publicadas
+      - name: Testar implantação separada de escrita
         shell: bash
         run: |
           set -euo pipefail
-          BASE='https://script.google.com/macros/s/AKfycbwTmO0Iv-0tWxxygHOrAJ5q0CAXFivu0oYubcfRC6lbpdFFZs9hPV0RkIEWwhtCKrFiLw/exec'
-          RID="diagnostico_post_$(date +%s)_12345678901234567890"
-          DEVICE="diagnostico-github-actions-$(date +%s)"
-          STATUS=$(curl -L --fail --silent --show-error --max-time 30 "$BASE?action=admin_status&_=$(date +%s)")
-          POST=$(curl -L --fail --silent --show-error --max-time 30 -X POST \
-            -d "action=admin_login" \
-            -d "pin=1" \
-            -d "dispositivo=$DEVICE" \
-            -d "requestId=$RID" \
-            "$BASE?_=$(date +%s)")
-          sleep 2
-          RESULT=$(curl -L --fail --silent --show-error --max-time 30 "$BASE?action=admin_result&requestId=$RID&_=$(date +%s)")
+          BASE='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+          STATUS_ESCRITA=$(curl -L --fail --silent --show-error --max-time 30 "$BASE?action=admin_escrita_status&_=$(date +%s)")
+          STATUS_ADMIN=$(curl -L --fail --silent --show-error --max-time 30 "$BASE?action=admin_status&_=$(date +%s)")
           {
             echo "executado_em_utc=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            echo "request_id=$RID"
-            echo "admin_status=$STATUS"
-            echo "post_resposta_html_tamanho=${#POST}"
-            echo "admin_result=$RESULT"
-          } > diagnostico-apps-script.txt
+            echo "base=$BASE"
+            echo "admin_escrita_status=$STATUS_ESCRITA"
+            echo "admin_status=$STATUS_ADMIN"
+          } > diagnostico-escrita-controlada.txt
 
       - name: Gravar resultado
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add diagnostico-apps-script.txt
-          git commit -m 'Registra diagnóstico da implantação Apps Script' || exit 0
+          git add diagnostico-escrita-controlada.txt
+          git commit -m 'Registra diagnóstico externo da escrita controlada' || exit 0
           git push
-
-# diagnóstico completo solicitado em 2026-08-02 00:20 -03:00
