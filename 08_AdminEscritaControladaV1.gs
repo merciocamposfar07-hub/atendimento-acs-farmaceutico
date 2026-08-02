@@ -716,7 +716,7 @@ function adminEscritaV1ResponderPost_(requestId, resultado) {
     .createHtmlOutput(
       '<!doctype html><meta charset="utf-8"><script>' +
       'parent.postMessage(' + seguro + ',"*");' +
-      '<\\/script>'
+      '<\/script>'
     )
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
