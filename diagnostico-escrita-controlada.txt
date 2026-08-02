@@ -1,4 +1,5 @@
-executado_em_utc=2026-08-02T20:46:11Z
+executado_em_utc=2026-08-02T20:47:25Z
 base=https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec
-admin_escrita_status={"ok":true,"modulo":"Escrita controlada","versao":"1.0.0","ambiente":"teste-dev","implantacaoPublicaAlterada":false,"geradoEm":"2026-08-02T17:46:10-03:00"}
-admin_status={"ok":true,"versaoAdmin":"1.0.0","pinConfigurado":true,"setupTemporarioAtivo":false,"geradoEm":"2026-08-02T17:46:11-03:00"}
+admin_escrita_status={"ok":true,"modulo":"Escrita controlada","versao":"1.0.0","ambiente":"teste-dev","implantacaoPublicaAlterada":false,"geradoEm":"2026-08-02T17:47:11-03:00"}
+admin_status={"ok":true,"versaoAdmin":"1.0.0","pinConfigurado":true,"setupTemporarioAtivo":false,"geradoEm":"2026-08-02T17:47:15-03:00"}
+pagina_api_configurada=https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec
