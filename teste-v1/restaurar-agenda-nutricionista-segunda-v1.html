@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Restauração segura da agenda • Portal TACS</title>
+<style>
+:root{--p:#073a55;--v:#148a46;--r:#a52d2d;--f:#eaf2f6;--t:#102d40;--b:#a9c0ca}
+*{box-sizing:border-box}body{margin:0;background:var(--f);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;line-height:1.45}
+header{background:var(--p);color:#fff;padding:calc(22px + env(safe-area-inset-top)) 20px 24px;border-bottom:4px solid #67c7a0}
+main{max-width:760px;margin:auto;padding:18px 14px 60px}.card{background:#fff;border:2px solid var(--b);border-radius:22px;padding:18px;margin-bottom:16px}
+h1{margin:0 0 8px;font-size:2.15rem}h2{margin:0 0 12px}.campo{width:100%;min-height:56px;border:2px solid var(--b);border-radius:15px;padding:12px;font:inherit;font-size:1.1rem}
+button{width:100%;min-height:58px;border:0;border-radius:16px;padding:13px;background:var(--p);color:#fff;font:inherit;font-weight:900;margin-top:12px}button.verde{background:var(--v)}button:disabled{opacity:.45}
+.status{padding:14px;border:2px solid var(--b);border-radius:16px;background:#f5f8fa;font-weight:800;margin-top:14px;white-space:pre-wrap}
+.status.ok{background:#e8f7ee;border-color:#9ed6b2;color:#08723a}.status.erro{background:#fff0f0;border-color:#d88a8a;color:var(--r)}.status.aviso{background:#fff6dd;border-color:#dfaa43;color:#704900}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f7f9;border-radius:14px;padding:12px}.ponte{position:fixed;left:-10000px;top:-10000px;width:2px;height:2px;border:0}
+</style>
+</head>
+<body>
+<header><h1>Restauração segura</h1><div>Agenda inativa da Nutricionista • Segunda-feira</div></header>
+<main>
+<section class="card">
+<h2>1. Validar acesso</h2>
+<label for="pin"><strong>PIN administrativo</strong></label>
+<input id="pin" class="campo" type="password" inputmode="numeric" maxlength="8" autocomplete="off">
+<button id="entrar" type="button">Entrar</button>
+<div id="loginStatus" class="status">Verificando a implantação separada de teste…</div>
+</section>
+<section class="card">
+<h2>2. Restaurar exatamente o estado anterior</h2>
+<pre>Profissional: NUTRICIONISTA
+Dia: Segunda-feira
+Data: vazia
+Horário: vazio
+Situação: vazia
+Mensagem: vazia
+Vagas: 0 comuns e 0 emergenciais
+Agenda ativa: não
+Encerrar às 12h: não
+Dia extra: não</pre>
+<button id="restaurar" class="verde" type="button" disabled>Restaurar e conferir</button>
+<div id="opStatus" class="status">Aguardando login.</div>
+</section>
+</main>
+<iframe name="ponteRestauracao" class="ponte" src="about:blank"></iframe>
+<script>
+(function(){
+'use strict';
+var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var TOKEN_KEY='portalTacsAdminTokenV1',DEVICE_KEY='portalTacsDispositivoV1';
+var token=sessionStorage.getItem(TOKEN_KEY)||'', dispositivo=localStorage.getItem(DEVICE_KEY)||'';
+if(!dispositivo){dispositivo='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,dispositivo)}
+var ativa=null, contador=0, entrar=document.getElementById('entrar'), restaurar=document.getElementById('restaurar');
+function txt(v){return String(v==null?'':v)}
+function bool(v){if(v===true||v===1)return true;return ['true','1','sim','yes','ativo'].indexOf(txt(v).trim().toLowerCase())!==-1}
+function num(v){var n=Number(v);return Number.isFinite(n)?n:0}
+function norm(v){return txt(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'')}
+function status(id,msg,tipo){var e=document.getElementById(id);e.textContent=msg;e.className='status'+(tipo?' '+tipo:'')}
+function requestId(prefixo){var b=new Uint8Array(24);crypto.getRandomValues(b);return prefixo+'_'+Array.prototype.map.call(b,function(x){return('0'+x.toString(16)).slice(-2)}).join('')}
+function jsonp(action,parametros,cb){contador++;var nome='__rst_'+Date.now()+'_'+contador,s=document.createElement('script'),fim=false,t=setTimeout(function(){if(fim)return;fim=true;limpar();cb({ok:false,message:'O servidor não respondeu à consulta.'})},20000);function limpar(){clearTimeout(t);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}window[nome]=function(r){if(fim)return;fim=true;limpar();cb(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(parametros||{}).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(txt(parametros[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){if(fim)return;fim=true;limpar();cb({ok:false,message:'Falha de rede ao consultar o servidor.'})};document.head.appendChild(s)}
+function finalizar(r){if(!ativa)return;clearTimeout(ativa.timeout);var cb=ativa.cb;ativa=null;entrar.disabled=false;restaurar.disabled=!token;cb(r||{ok:false,message:'Resposta vazia.'})}
+function consultar(){if(!ativa)return;jsonp('admin_result',{requestId:ativa.id},function(r){if(!ativa)return;if(r&&r.ok===true&&r.pendente===true){setTimeout(consultar,700);return}if(r&&r.ok===true&&r.pendente===false){finalizar(r.result);return}finalizar(r)})}
+function post(action,payload,cb){if(ativa){cb({ok:false,message:'Aguarde a operação anterior.'});return}var id=requestId(action);ativa={id:id,cb:cb,timeout:setTimeout(function(){finalizar({ok:false,message:'A operação não produziu resposta em 50 segundos.'})},50000)};entrar.disabled=true;restaurar.disabled=true;var f=document.createElement('form');f.method='POST';f.action=API+'?_='+Date.now();f.target='ponteRestauracao';f.className='ponte';payload=payload||{};payload.action=action;payload.requestId=id;Object.keys(payload).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=txt(payload[k]);f.appendChild(i)});document.body.appendChild(f);f.submit();setTimeout(function(){if(f.parentNode)f.parentNode.removeChild(f)},5000);setTimeout(consultar,650)}
+function sessao(){return{token:token,dispositivo:dispositivo}}
+function achar(r){var agendas=Array.isArray(r&&r.agendas)?r.agendas:[];return agendas.find(function(a){return norm(a.MODULO)==='NUTRICIONISTA'&&norm(a.DIA)==='SEGUNDA_FEIRA'})||null}
+function divergencias(a){if(!a)return['registro não encontrado'];var d=[];if(txt(a.DATA).trim()!=='')d.push('DATA='+txt(a.DATA));if(txt(a.HORARIO).trim()!=='')d.push('HORARIO='+txt(a.HORARIO));if(txt(a.SITUACAO).trim()!=='')d.push('SITUACAO='+txt(a.SITUACAO));if(txt(a.MENSAGEM).trim()!=='')d.push('MENSAGEM='+txt(a.MENSAGEM));if(num(a.VAGAS_COMUNS)!==0)d.push('VAGAS_COMUNS='+txt(a.VAGAS_COMUNS));if(num(a.VAGAS_EMERGENCIAIS)!==0)d.push('VAGAS_EMERGENCIAIS='+txt(a.VAGAS_EMERGENCIAIS));if(bool(a.ATIVO))d.push('ATIVO=true');if(bool(a.ENCERRA_12H))d.push('ENCERRA_12H=true');if(bool(a.DIA_EXTRA))d.push('DIA_EXTRA=true');return d}
+function conferir(){post('admin_dados',sessao(),function(r){if(!r||r.ok!==true){status('opStatus',txt(r&&r.message||'Falha na releitura.'),'erro');return}var a=achar(r),d=divergencias(a);if(d.length){status('opStatus','A restauração foi enviada, mas ainda há divergências:\n- '+d.join('\n- '),'erro');return}sessionStorage.removeItem('portalTacsUndoAgendaV1');status('opStatus','Estado original restaurado e confirmado pela releitura da planilha.','ok')})}
+entrar.addEventListener('click',function(){var pin=document.getElementById('pin').value.replace(/\D/g,'');if(!/^\d{4,8}$/.test(pin)){status('loginStatus','Digite um PIN numérico de 4 a 8 dígitos.','erro');return}status('loginStatus','Validando o PIN…','aviso');post('admin_login',{pin:pin,dispositivo:dispositivo},function(r){document.getElementById('pin').value='';if(!r||r.ok!==true||!r.token){token='';sessionStorage.removeItem(TOKEN_KEY);status('loginStatus',txt(r&&r.message||'Login recusado.'),'erro');return}token=r.token;sessionStorage.setItem(TOKEN_KEY,token);restaurar.disabled=false;status('loginStatus','Sessão validada. A restauração exata está liberada.','ok')})});
+restaurar.addEventListener('click',function(){if(!token)return;if(!confirm('Restaurar exatamente o estado anterior da agenda inativa da Nutricionista na segunda-feira?'))return;status('opStatus','Restaurando e relendo a planilha…','aviso');post('admin_salvar_agenda',Object.assign(sessao(),{modulo:'NUTRICIONISTA',dia:'Segunda-feira',data:'',horario:'',situacao:'',mensagem:'',encerra12h:'false',vagasComuns:'0',vagasEmergenciais:'0',diaExtra:'false',ativo:'false'}),function(r){if(!r||r.ok!==true){status('opStatus',txt(r&&r.message||'A restauração falhou.'),'erro');return}conferir()})});
+jsonp('admin_status',{},function(r){if(!r||r.ok!==true){status('loginStatus','A implantação de teste não respondeu.','erro');return}status('loginStatus','Implantação de teste disponível.','ok');if(token){restaurar.disabled=false;status('loginStatus','Sessão existente encontrada. A restauração está liberada.','ok')}})
+}());
+</script>
+</body>
+</html>
