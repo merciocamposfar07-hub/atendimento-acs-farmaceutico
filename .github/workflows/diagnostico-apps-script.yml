@@ -20,11 +20,22 @@ jobs:
         run: |
           set -euo pipefail
           BASE='https://script.google.com/macros/s/AKfycbwTmO0Iv-0tWxxygHOrAJ5q0CAXFivu0oYubcfRC6lbpdFFZs9hPV0RkIEWwhtCKrFiLw/exec'
+          RID="diagnostico_post_$(date +%s)_12345678901234567890"
+          DEVICE="diagnostico-github-actions-$(date +%s)"
           STATUS=$(curl -L --fail --silent --show-error --max-time 30 "$BASE?action=admin_status&_=$(date +%s)")
-          RESULT=$(curl -L --fail --silent --show-error --max-time 30 "$BASE?action=admin_result&requestId=diagnostico_polling_12345678901234567890&_=$(date +%s)")
+          POST=$(curl -L --fail --silent --show-error --max-time 30 -X POST \
+            -d "action=admin_login" \
+            -d "pin=1" \
+            -d "dispositivo=$DEVICE" \
+            -d "requestId=$RID" \
+            "$BASE?_=$(date +%s)")
+          sleep 2
+          RESULT=$(curl -L --fail --silent --show-error --max-time 30 "$BASE?action=admin_result&requestId=$RID&_=$(date +%s)")
           {
             echo "executado_em_utc=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "request_id=$RID"
             echo "admin_status=$STATUS"
+            echo "post_resposta_html_tamanho=${#POST}"
             echo "admin_result=$RESULT"
           } > diagnostico-apps-script.txt
 
@@ -37,4 +48,4 @@ jobs:
           git commit -m 'Registra diagnóstico da implantação Apps Script' || exit 0
           git push
 
-# diagnóstico solicitado em 2026-08-02 00:17 -03:00
+# diagnóstico completo solicitado em 2026-08-02 00:20 -03:00
