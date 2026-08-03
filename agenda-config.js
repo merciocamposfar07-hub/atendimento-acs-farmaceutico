@@ -9,7 +9,7 @@
  * endereços oficiais e cuida de recursos locais do formulário.
  */
 window.TACS_ADMIN_API_URL = 'https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec';
-window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_sawD2X8K9O3hGjgCge3gao5S9FjajcqYxyO8e_0WTkrsoqjtBhC4kFhAFTl/exec';
+window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_sawD2X8K9O3hGjgCge3gao5S9FjajcqYxy08e_0WTkrsqojtBhC4kFhAFTI/exec';
 
 (function () {
   'use strict';
