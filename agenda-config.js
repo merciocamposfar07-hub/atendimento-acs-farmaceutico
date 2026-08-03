@@ -28,6 +28,24 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
     document.head.appendChild(link);
   }
 
+  function installPublicContentModule() {
+    if (
+      window.PortalTacsConteudoPublicoV1 ||
+      document.getElementById('portal-conteudo-publico-v1-script')
+    ) {
+      return;
+    }
+
+    var script = document.createElement('script');
+    script.id = 'portal-conteudo-publico-v1-script';
+    script.src = new URL(
+      'assets/js/portal-conteudo-publico-v1.js?v=20260802-2247',
+      base
+    ).href;
+    script.async = true;
+    document.head.appendChild(script);
+  }
+
   function installDentalTheme() {
     if (document.getElementById('dental-theme-posto-matias')) return;
     var style = document.createElement('style');
@@ -129,6 +147,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
   addLink('icon', 'icon-tacs.svg', { type: 'image/svg+xml' });
   addLink('apple-touch-icon', 'icon-tacs.svg');
   installDentalTheme();
+  installPublicContentModule();
 
   function init() {
     installOfflineBanner();
