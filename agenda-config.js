@@ -143,6 +143,57 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
     }
   }
 
+  function installCnsWhatsappActivation() {
+    function digits(value) {
+      return String(value || '').replace(/\D/g, '');
+    }
+
+    function isDentalCategory(value) {
+      return String(value || '').toLowerCase().indexOf('odontol') !== -1;
+    }
+
+    function refresh() {
+      window.setTimeout(function () {
+        var send = document.getElementById('send');
+        var documentField = document.getElementById('cpf');
+        var category = document.getElementById('category');
+        var name = document.getElementById('name');
+        var birth = document.getElementById('birth');
+        var locality = document.getElementById('locality');
+        var subject = document.getElementById('subject');
+
+        if (!send || !documentField || !category || !name || !birth || !locality || !subject) return;
+        if (!/^\d{15}$/.test(digits(documentField.value))) return;
+        if (!isDentalCategory(category.value)) return;
+
+        var ready =
+          name.value.trim().length >= 3 &&
+          /^\d{2}\/\d{2}\/\d{4}$/.test(birth.value.trim()) &&
+          locality.value.trim().length > 0 &&
+          subject.value.trim().length > 0 &&
+          Boolean(document.querySelector('#dentalSlots .slot.selected:not(:disabled)'));
+
+        if (ready && !send.hidden && send.textContent.indexOf('Reservando') === -1) {
+          send.disabled = false;
+        }
+      }, 0);
+    }
+
+    document.addEventListener('input', refresh, true);
+    document.addEventListener('change', refresh, true);
+    document.addEventListener('click', refresh, true);
+
+    var observer = new MutationObserver(refresh);
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['disabled', 'class', 'hidden']
+    });
+
+    refresh();
+  }
+
   addLink('manifest', 'manifest.webmanifest');
   addLink('icon', 'icon-tacs.svg', { type: 'image/svg+xml' });
   addLink('apple-touch-icon', 'icon-tacs.svg');
@@ -152,6 +203,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
   function init() {
     installOfflineBanner();
     installFormPersistence();
+    installCnsWhatsappActivation();
   }
 
   if (document.readyState === 'loading') {
