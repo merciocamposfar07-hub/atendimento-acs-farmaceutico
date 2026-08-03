@@ -143,6 +143,55 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
     }
   }
 
+  function installDentalReservationReturnReset() {
+    var storageKey = 'tacs-reserva-odontologica-concluida-v1';
+
+    function hasCompletedReservation() {
+      try {
+        return sessionStorage.getItem(storageKey) === '1';
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function clearCompletedReservation() {
+      try {
+        sessionStorage.removeItem(storageKey);
+      } catch (error) {}
+    }
+
+    function markCompletedReservation(event) {
+      var data = event && event.data;
+      if (
+        !data ||
+        data.source !== 'agenda-odontologica-tacs' ||
+        data.ok !== true ||
+        !data.requestId
+      ) {
+        return;
+      }
+      try {
+        sessionStorage.setItem(storageKey, '1');
+      } catch (error) {}
+    }
+
+    function reloadAfterWhatsAppReturn() {
+      if (!hasCompletedReservation()) return;
+      clearCompletedReservation();
+      window.location.reload();
+    }
+
+    window.addEventListener('message', markCompletedReservation);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) reloadAfterWhatsAppReturn();
+    });
+    window.addEventListener('pageshow', function (event) {
+      if (!hasCompletedReservation()) return;
+      if (event.persisted) reloadAfterWhatsAppReturn();
+      else clearCompletedReservation();
+    });
+  }
+
   function installCpfCnsCompatibility() {
     var field = document.getElementById('cpf');
     var send = document.getElementById('send');
@@ -322,6 +371,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
 
   function init() {
     installOfflineBanner();
+    installDentalReservationReturnReset();
     installCpfCnsCompatibility();
     installFormPersistence();
   }
