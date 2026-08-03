@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Painel oficial de agendas e vagas • Portal TACS</title>
+  <style>
+    body{margin:0;background:#eaf2f6;color:#102d40;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+    .carga{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center}
+    .caixa{max-width:620px;background:#fff;border:2px solid #a9c0ca;border-radius:24px;padding:24px}
+    h1{margin:0 0 12px}.erro{color:#a52d2d}
+  </style>
+</head>
+<body>
+  <div class="carga"><div class="caixa"><h1>Painel oficial</h1><p id="mensagem">Carregando agendas e vagas…</p></div></div>
+  <script>
+  (function(){
+    'use strict';
+    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-agendas-v1.html?v=20260803-0004';
+    var trocas=[
+      ['<title>Painel de agendas V1.1 • Portal TACS</title>','<title>Painel oficial de agendas e vagas • Portal TACS</title>'],
+      ['AMBIENTE ISOLADO • FASE 3','PAINEL ADMINISTRATIVO OFICIAL'],
+      ['Painel de agendas V1.1','Agendas e vagas'],
+      ['A tela usa a implantação separada de teste, mas qualquer salvamento confirmado altera a planilha real. A confirmação só aparece depois de uma releitura independente de todos os campos.','Painel administrativo oficial conectado à planilha do Portal TACS. Toda alteração só é confirmada depois da releitura independente dos campos.'],
+      ['Verificando a implantação separada de teste…','Verificando o painel administrativo oficial…'],
+      ['Implantação de teste disponível. Entre para carregar as agendas.','Painel administrativo oficial disponível. Entre para carregar as agendas.'],
+      ['Portal TACS • Painel administrativo isolado','Portal TACS • Painel administrativo oficial'],
+      ['Portal do Morador não foi modificado','Alterações confirmadas são aplicadas ao Portal do Morador']
+    ];
+    function substituir(t,a,b){return t.split(a).join(b)}
+    fetch(origem,{cache:'no-store'}).then(function(r){
+      if(!r.ok)throw new Error('Não foi possível carregar o painel.');
+      return r.text();
+    }).then(function(html){
+      html=substituir(html,'<head>','<head><base href="/atendimento-acs-farmaceutico/teste-v1/">');
+      trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
+      document.open();document.write(html);document.close();
+    }).catch(function(erro){
+      var e=document.getElementById('mensagem');
+      e.className='erro';e.textContent=erro.message+' Atualize a página.';
+    });
+  })();
+  </script>
+</body>
+</html>
