@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#062c46">
+  <title>Teste isolado — conteúdo no Portal do Morador</title>
+  <style>
+    :root{--navy:#062c46;--ink:#112a3b;--muted:#506876;--green:#0b9148;--green-soft:#e8f6ee;--line:#9fb6c2;--canvas:#e9f0f4;--amber:#8a5a00;--amber-soft:#fff4d8;--danger:#a3302b;--danger-soft:#fff0ef}
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#dce7ed,#eef3f6);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+    .shell{width:min(calc(100% - 16px),900px);margin:0 auto;padding:8px 0 32px}
+    .panel{overflow:hidden;border:1px solid #7895a5;border-radius:24px;background:#fff;box-shadow:0 20px 50px rgba(3,35,56,.18)}
+    .hero{padding:30px 24px;background:linear-gradient(135deg,#041f34,var(--navy),#0b4b6e);color:#fff;border-bottom:6px solid #67d9a1}
+    .tag{display:inline-block;padding:10px 16px;border:2px solid #77c9eb;border-radius:999px;color:#82efa9;font-size:15px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}
+    h1{margin:22px 0 8px;font-size:clamp(38px,8vw,62px);line-height:1.02}
+    .hero p{margin:0;font-size:19px;line-height:1.55}
+    .content{padding:24px 18px 34px}
+    .safe{margin-bottom:20px;padding:18px;border:2px solid #d8a235;border-radius:18px;background:var(--amber-soft);color:#6d4800;font-size:17px;font-weight:850;line-height:1.5}
+    .status{margin-bottom:20px;padding:18px;border:2px solid var(--line);border-radius:18px;background:#f4f8fa;font-size:17px;line-height:1.5}
+    .status strong{display:block;font-size:21px}.status.ok{border-color:#82cda1;background:var(--green-soft);color:#08753a}.status.erro{border-color:#d58c87;background:var(--danger-soft);color:#892b27}
+    .notice-area{margin-bottom:22px}
+    .notice-board{padding:22px;border:2px solid #5e8da5;border-radius:20px;background:#eaf3f7}
+    .notice-board h2{margin:0 0 6px;font-size:clamp(27px,5vw,36px)}
+    .notice-updated{margin:0 0 16px;color:var(--muted);font-size:14px;font-weight:800}
+    .notice-list{display:grid;gap:12px}
+    .notice-card{padding:17px 18px;border:1px solid #a7bfcb;border-left:7px solid #0d5f8a;border-radius:15px;background:#fff}
+    .notice-card.important{border-left-color:#c67300;background:#fffaf0}.notice-card.urgent{border-left-color:var(--danger);background:#fff5f4}
+    .notice-card small{display:block;margin-bottom:5px;color:var(--muted);font-size:12px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+    .notice-card strong{display:block;font-size:22px}.notice-card p{margin:7px 0 0;color:#344d5b;font-size:17px;line-height:1.55;white-space:pre-line}
+    .notice-period{font-weight:800}
+    .empty{padding:28px;border:2px dashed #b2c4cd;border-radius:18px;text-align:center;color:var(--muted);font-size:18px;font-weight:800}
+    footer{padding:22px;background:var(--navy);color:#fff;text-align:center;font-size:16px;line-height:1.5}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <article class="panel">
+      <header class="hero">
+        <span class="tag">Ambiente isolado • integração</span>
+        <h1>Conteúdo no Portal do Morador</h1>
+        <p>Teste do mesmo módulo de leitura que será conectado ao portal público.</p>
+      </header>
+
+      <div class="content">
+        <div class="safe">Esta página não grava, altera ou remove dados. O Portal do Morador permanece inalterado durante este teste.</div>
+        <div class="status" id="diagnostico" aria-live="polite"><strong>Verificando conexão…</strong>Aguarde a leitura do conteúdo público.</div>
+        <section class="notice-area" id="noticeArea" hidden aria-live="polite"></section>
+        <div class="empty" id="vazio" hidden>Nenhum recado ou campanha está ativo neste momento.</div>
+      </div>
+
+      <footer>Portal TACS • teste isolado de integração pública</footer>
+    </article>
+  </main>
+
+  <script src="../assets/js/portal-conteudo-publico-v1.js?v=20260802-1"></script>
+  <script>
+    (function () {
+      function iniciarDiagnostico() {
+        var status = document.getElementById('diagnostico');
+        var vazio = document.getElementById('vazio');
+        if (!window.PortalTacsConteudoPublicoV1) {
+          status.className = 'status erro';
+          status.innerHTML = '<strong>Falha ao carregar o módulo.</strong>O arquivo de integração não foi encontrado.';
+          return;
+        }
+        window.PortalTacsConteudoPublicoV1.carregar().then(function (resultado) {
+          if (resultado.ok) {
+            status.className = 'status ok';
+            status.innerHTML = '<strong>Conexão pública validada.</strong>Leitura concluída sem qualquer operação de gravação.';
+            vazio.hidden = resultado.visivel !== false;
+          } else {
+            status.className = 'status erro';
+            status.innerHTML = '<strong>Não foi possível concluir a leitura.</strong>Motivo técnico: ' + String(resultado.motivo || 'não informado') + '.';
+            vazio.hidden = true;
+          }
+        });
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciarDiagnostico, { once: true });
+      else iniciarDiagnostico();
+    })();
+  </script>
+</body>
+</html>
