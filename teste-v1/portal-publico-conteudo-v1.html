@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Visão pública de recados e campanhas • Portal TACS</title>
+<style>
+:root{--p:#073a55;--p2:#0b5878;--v:#148a46;--vb:#e8f7ee;--f:#eaf2f6;--t:#102d40;--m:#536b78;--b:#a9c0ca;--r:#a52d2d;--rb:#fff0f0;--a:#805300;--ab:#fff6dd;--w:#fff}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--f);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}button{font:inherit;cursor:pointer}
+header{background:linear-gradient(145deg,var(--p),var(--p2));color:#fff;padding:calc(22px + env(safe-area-inset-top)) 20px 25px;border-bottom:4px solid #67c7a0}.selo{display:inline-block;padding:8px 12px;border:2px solid #73c7e7;border-radius:999px;color:#8df0b4;font-weight:900;letter-spacing:.04em}h1{margin:17px 0 8px;font-size:clamp(2rem,8vw,3rem);line-height:1.05}header p{margin:0;font-size:1.08rem}
+main{width:min(860px,100%);margin:auto;padding:18px 14px 70px}.card{background:#fff;border:2px solid var(--b);border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 10px 25px rgba(7,58,85,.08)}.nota{background:var(--ab);border:2px solid #dfaa43;color:#704900;border-radius:20px;padding:15px;margin-bottom:16px;font-weight:850}h2{margin:0 0 13px;font-size:1.75rem}
+.status{padding:14px;border:2px solid #cad9df;border-radius:16px;background:#f5f8fa;font-weight:850;overflow-wrap:anywhere}.status.ok{border-color:#9ed6b2;background:var(--vb);color:#08723a}.status.erro{border-color:#d88a8a;background:var(--rb);color:var(--r)}.status.aviso{border-color:#e1aa3f;background:var(--ab);color:var(--a)}
+.botao{width:100%;min-height:58px;border:0;border-radius:16px;padding:13px 16px;background:var(--p);color:#fff;font-weight:900;margin-top:12px}.botao:disabled{opacity:.45;cursor:not-allowed}
+.resumo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.numero{background:#eef7fb;border:2px solid #c2d6df;border-radius:18px;padding:14px}.numero strong{display:block;font-size:2rem;line-height:1}.numero span{display:block;margin-top:6px;color:var(--m);font-weight:850}
+.lista{display:grid;gap:12px}.publicacao{padding:17px 18px;border:2px solid #b7cad3;border-left:8px solid var(--p2);border-radius:17px;background:#fff}.publicacao.importante{border-left-color:#c67300;background:#fffaf0}.publicacao.urgente{border-left-color:var(--r);background:#fff5f4}.publicacao.campanha{border-left-color:var(--v);background:#f4fbf7}.publicacao small{display:block;margin-bottom:5px;color:var(--m);font-size:.78rem;font-weight:950;letter-spacing:.07em;text-transform:uppercase}.publicacao strong{display:block;font-size:1.28rem}.publicacao p{margin:7px 0 0;color:#344d5b;font-size:1.04rem;line-height:1.55;white-space:pre-line}.publicacao .meta{margin-top:10px;color:var(--m);font-size:.9rem;font-weight:750}.vazio{padding:20px;border:2px dashed #b8cbd4;border-radius:17px;text-align:center;color:var(--m);font-weight:850}.oculto{display:none!important}footer{background:var(--p);color:#fff;padding:24px 18px calc(24px + env(safe-area-inset-bottom));text-align:center}
+@media(min-width:650px){.resumo{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header><span class="selo">TESTE ISOLADO • VISÃO DO MORADOR</span><h1>Recados e campanhas</h1><p>Prévia pública, somente leitura, antes da integração ao portal oficial.</p></header>
+<main>
+<div class="nota">Esta página não possui login, não grava dados e não substitui o Portal do Morador.</div>
+<section class="card">
+<h2>Diagnóstico público</h2>
+<div id="status" class="status">Executando testes internos da página…</div>
+<button id="atualizar" class="botao" type="button" disabled>Atualizar leitura</button>
+<div id="resumo" class="resumo oculto"><div class="numero"><strong id="qRecados">0</strong><span>Recados visíveis</span></div><div class="numero"><strong id="qCampanhas">0</strong><span>Campanhas visíveis</span></div></div>
+</section>
+<section class="card"><h2>Recados</h2><div id="recados" class="lista"><div class="vazio">Aguardando a leitura pública.</div></div></section>
+<section class="card"><h2>Campanhas</h2><div id="campanhas" class="lista"><div class="vazio">Aguardando a leitura pública.</div></div></section>
+</main>
+<footer><p>Portal TACS • Ambiente público isolado</p><p>Portal oficial permanece inalterado</p></footer>
+<script>
+(function(){
+'use strict';
+var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var contador=0,testesOk=false,atualizar=document.getElementById('atualizar');
+function txt(v){return String(v==null?'':v)}
+function status(msg,tipo){var e=document.getElementById('status');e.textContent=msg;e.className='status'+(tipo?' '+tipo:'')}
+function jsonp(action,cb){contador++;var nome='__publico_v1_'+Date.now()+'_'+contador,s=document.createElement('script'),fim=false,t=setTimeout(function(){if(fim)return;fim=true;limpar();cb({ok:false,message:'O servidor não respondeu à consulta pública.'})},20000);function limpar(){clearTimeout(t);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}window[nome]=function(r){if(fim)return;fim=true;limpar();cb(r)};s.src=API+'?action='+encodeURIComponent(action)+'&callback='+encodeURIComponent(nome)+'&_='+Date.now();s.onerror=function(){if(fim)return;fim=true;limpar();cb({ok:false,message:'Falha de rede ao consultar o servidor.'})};document.head.appendChild(s)}
+function formatarData(v){var s=txt(v).trim(),m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:''}
+function limparLista(id){var e=document.getElementById(id);while(e.firstChild)e.removeChild(e.firstChild);return e}
+function textoNo(parent,tag,valor,classe){var e=document.createElement(tag);if(classe)e.className=classe;e.textContent=txt(valor);parent.appendChild(e);return e}
+function renderRecados(lista){var area=limparLista('recados');if(!Array.isArray(lista)||!lista.length){textoNo(area,'div','Nenhum recado ativo para o morador.','vazio');return}lista.forEach(function(item){var prioridade=txt(item.prioridade||'INFORMATIVO').toLowerCase(),c=document.createElement('article');c.className='publicacao'+(prioridade==='urgente'?' urgente':prioridade==='importante'?' importante':'');textoNo(c,'small',prioridade);textoNo(c,'strong',item.titulo||'Informativo');textoNo(c,'p',item.mensagem||'');var validade=formatarData(item.validade);if(validade)textoNo(c,'div','Válido até '+validade,'meta');area.appendChild(c)})}
+function renderCampanhas(lista){var area=limparLista('campanhas');if(!Array.isArray(lista)||!lista.length){textoNo(area,'div','Nenhuma campanha ativa para o morador.','vazio');return}lista.forEach(function(item){var c=document.createElement('article');c.className='publicacao campanha';textoNo(c,'small','Campanha de saúde');textoNo(c,'strong',item.titulo||'Campanha de saúde');if(item.mensagem)textoNo(c,'p',item.mensagem);var meta=[];var inicio=formatarData(item.inicio);if(inicio)meta.push('Início: '+inicio);if(item.dias)meta.push(txt(item.dias));if(meta.length)textoNo(c,'div',meta.join(' • '),'meta');area.appendChild(c)})}
+function aplicar(dados){var recados=Array.isArray(dados.recados)?dados.recados:[],campanhas=Array.isArray(dados.campanhas)?dados.campanhas:[];document.getElementById('qRecados').textContent=String(recados.length);document.getElementById('qCampanhas').textContent=String(campanhas.length);document.getElementById('resumo').classList.remove('oculto');renderRecados(recados);renderCampanhas(campanhas);status('Leitura pública concluída. A página exibe somente conteúdo ativo e dentro da validade.','ok')}
+function carregar(){if(!testesOk)return;atualizar.disabled=true;status('Consultando o conteúdo público…','aviso');jsonp('publico_conteudo',function(r){atualizar.disabled=false;if(!r||r.ok!==true){status(r&&r.message?r.message:'A leitura pública falhou.','erro');return}aplicar(r)})}
+function testesInternos(){var host=document.createElement('div');var seguro='<scr'+'ipt>não executar</scr'+'ipt>';textoNo(host,'strong',seguro);if(host.textContent!==seguro)throw new Error('Falha no tratamento seguro de texto.');if(formatarData('2026-08-02')!=='02/08/2026')throw new Error('Falha na formatação de data.');var mock={recados:[{titulo:'Teste',mensagem:'Mensagem',prioridade:'URGENTE'}],campanhas:[{titulo:'Campanha',mensagem:'Mensagem'}]};renderRecados(mock.recados);renderCampanhas(mock.campanhas);if(document.querySelectorAll('#recados .publicacao').length!==1||document.querySelectorAll('#campanhas .publicacao').length!==1)throw new Error('Falha na renderização interna.');renderRecados([]);renderCampanhas([]);return true}
+try{testesOk=testesInternos()}catch(e){status('Os testes internos da página falharam: '+e.message,'erro');return}
+jsonp('publico_conteudo_status',function(r){if(!r||r.ok!==true||r.somenteLeitura!==true){status('O módulo público ainda não está disponível nesta implantação.','erro');return}atualizar.disabled=false;status('Módulo público V'+txt(r.versao||'1.0.0')+' disponível. Nenhuma gravação é permitida nesta página.','ok');carregar()})
+atualizar.addEventListener('click',carregar);
+})();
+</script>
+</body>
+</html>
