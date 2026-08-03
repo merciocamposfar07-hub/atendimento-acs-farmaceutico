@@ -143,6 +143,177 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
     }
   }
 
+  function installCpfCnsCompatibility() {
+    var field = document.getElementById('cpf');
+    var send = document.getElementById('send');
+    if (!field || !send || field.dataset.cpfCnsCompat === '1') return;
+
+    field.dataset.cpfCnsCompat = '1';
+    field.maxLength = 18;
+    field.placeholder = 'CPF ou CNS';
+
+    var label = field.parentElement;
+    if (label && label.firstChild && label.firstChild.nodeType === 3) {
+      label.firstChild.nodeValue = 'CPF ou CNS\n              ';
+    }
+
+    var status = document.getElementById('cpfStatus');
+
+    function onlyDigits(value) {
+      return String(value == null ? '' : value).replace(/\D/g, '');
+    }
+
+    function validCpf(value) {
+      var valueDigits = onlyDigits(value);
+      if (!/^\d{11}$/.test(valueDigits) || /^(\d)\1{10}$/.test(valueDigits)) return false;
+      var sum = 0;
+      var index;
+      for (index = 0; index < 9; index += 1) sum += Number(valueDigits.charAt(index)) * (10 - index);
+      var first = (sum * 10) % 11;
+      if (first === 10) first = 0;
+      if (first !== Number(valueDigits.charAt(9))) return false;
+      sum = 0;
+      for (index = 0; index < 10; index += 1) sum += Number(valueDigits.charAt(index)) * (11 - index);
+      var second = (sum * 10) % 11;
+      if (second === 10) second = 0;
+      return second === Number(valueDigits.charAt(10));
+    }
+
+    function validCns(value) {
+      var valueDigits = onlyDigits(value);
+      if (!/^\d{15}$/.test(valueDigits) || /^(\d)\1{14}$/.test(valueDigits)) return false;
+      var sum = 0;
+      for (var index = 0; index < 15; index += 1) {
+        sum += Number(valueDigits.charAt(index)) * (15 - index);
+      }
+      return sum % 11 === 0;
+    }
+
+    function formatCns(value) {
+      var valueDigits = onlyDigits(value).slice(0, 15);
+      if (valueDigits.length <= 3) return valueDigits;
+      if (valueDigits.length <= 7) return valueDigits.slice(0, 3) + ' ' + valueDigits.slice(3);
+      if (valueDigits.length <= 11) return valueDigits.slice(0, 3) + ' ' + valueDigits.slice(3, 7) + ' ' + valueDigits.slice(7);
+      return valueDigits.slice(0, 3) + ' ' + valueDigits.slice(3, 7) + ' ' + valueDigits.slice(7, 11) + ' ' + valueDigits.slice(11);
+    }
+
+    function validBirth(value) {
+      var match = String(value || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!match) return false;
+      var day = Number(match[1]);
+      var month = Number(match[2]);
+      var year = Number(match[3]);
+      var date = new Date(Date.UTC(year, month - 1, day));
+      if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return false;
+      var now = new Date();
+      var age = now.getUTCFullYear() - year;
+      return year >= 1900 && age >= 0 && age <= 120;
+    }
+
+    function normalized(value) {
+      var text = String(value || '').toLowerCase();
+      return text.normalize ? text.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : text;
+    }
+
+    function requestText() {
+      var category = document.getElementById('category');
+      var implanon = document.getElementById('implanonChoice');
+      var subject = document.getElementById('subject');
+      return category && category.value === 'Implanon'
+        ? String(implanon && implanon.value || '').trim()
+        : String(subject && subject.value || '').trim();
+    }
+
+    function dentalSelected() {
+      return Boolean(document.querySelector(
+        '#dentalSlots .sheet-dental-choice.selected:not(:disabled), #dentalSlots .slot.selected:not(:disabled)'
+      ));
+    }
+
+    function formReady() {
+      var category = document.getElementById('category');
+      var name = document.getElementById('name');
+      var birth = document.getElementById('birth');
+      var locality = document.getElementById('locality');
+      var routing = document.getElementById('routingAlert');
+      var categoryValue = String(category && category.value || '').trim();
+      var documentOk = validCpf(field.value) || validCns(field.value);
+      var dental = normalized(categoryValue).indexOf('odontologico') !== -1;
+      var clinicalBlocked = send.hidden || Boolean(routing && !routing.hidden);
+
+      return Boolean(
+        categoryValue &&
+        name && name.value.trim().length >= 3 &&
+        validBirth(birth && birth.value) &&
+        documentOk &&
+        locality && locality.value.trim() &&
+        requestText() &&
+        (!dental || dentalSelected()) &&
+        !clinicalBlocked
+      );
+    }
+
+    function refresh() {
+      var valueDigits = onlyDigits(field.value);
+      var cpfOk = validCpf(valueDigits);
+      var cnsOk = validCns(valueDigits);
+
+      if (status) {
+        if (cnsOk) {
+          status.textContent = 'CNS conferido ✓';
+          status.className = 'help valid';
+        } else if (cpfOk) {
+          status.textContent = 'CPF conferido ✓';
+          status.className = 'help valid';
+        } else if (valueDigits.length === 15) {
+          status.textContent = 'Confira os números do CNS.';
+          status.className = 'help invalid';
+        } else if (valueDigits.length === 11) {
+          status.textContent = 'Confira os números do CPF.';
+          status.className = 'help invalid';
+        } else {
+          status.textContent = 'Digite o CPF ou o Cartão Nacional de Saúde (CNS).';
+          status.className = 'help';
+        }
+      }
+
+      send.disabled = !formReady();
+    }
+
+    field.addEventListener('input', function (event) {
+      var valueDigits = onlyDigits(field.value);
+      if (valueDigits.length <= 11) return;
+      event.stopImmediatePropagation();
+      field.value = formatCns(valueDigits);
+      setTimeout(function () {
+        refresh();
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+      }, 0);
+    }, true);
+
+    document.addEventListener('input', function (event) {
+      if (event.target === field && onlyDigits(field.value).length > 11) return;
+      setTimeout(refresh, 0);
+    });
+    document.addEventListener('change', function () {
+      setTimeout(refresh, 0);
+    });
+    document.addEventListener('click', function () {
+      setTimeout(refresh, 100);
+    });
+
+    var dentalSlots = document.getElementById('dentalSlots');
+    if (dentalSlots && window.MutationObserver) {
+      new MutationObserver(function () {
+        setTimeout(refresh, 0);
+      }).observe(dentalSlots, { childList: true, subtree: true, attributes: true });
+    }
+
+    [100, 400, 900, 1600].forEach(function (delay) {
+      setTimeout(refresh, delay);
+    });
+  }
+
   addLink('manifest', 'manifest.webmanifest');
   addLink('icon', 'icon-tacs.svg', { type: 'image/svg+xml' });
   addLink('apple-touch-icon', 'icon-tacs.svg');
@@ -151,6 +322,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbzB8HKs_
 
   function init() {
     installOfflineBanner();
+    installCpfCnsCompatibility();
     installFormPersistence();
   }
 
