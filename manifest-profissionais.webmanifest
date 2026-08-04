@@ -1,0 +1,17 @@
+{
+  "name": "Painel de Profissionais e Serviços • Portal TACS",
+  "short_name": "Painel Profissionais",
+  "start_url": "/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html",
+  "scope": "/atendimento-acs-farmaceutico/",
+  "display": "standalone",
+  "background_color": "#EAF2F6",
+  "theme_color": "#073A55",
+  "icons": [
+    {
+      "src": "/atendimento-acs-farmaceutico/icons/painel-profissionais.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
