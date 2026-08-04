@@ -174,17 +174,22 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
         var birth = document.getElementById('birth');
         var locality = document.getElementById('locality');
         var subject = document.getElementById('subject');
+        var implanonChoice = document.getElementById('implanonChoice');
 
         if (!send || !documentField || !category || !name || !birth || !locality || !subject) return;
         if (!isCns(documentField.value)) return;
-        if (!isDentalCategory(category.value)) return;
 
+        var description = category.value === 'Implanon' && implanonChoice
+          ? implanonChoice.value.trim()
+          : subject.value.trim();
+        var dentalReady = !isDentalCategory(category.value) || selectedDentalVacancy();
         var ready =
+          category.value.trim().length > 0 &&
           name.value.trim().length >= 3 &&
           /^\d{2}\/\d{2}\/\d{4}$/.test(birth.value.trim()) &&
           locality.value.trim().length > 0 &&
-          subject.value.trim().length > 0 &&
-          selectedDentalVacancy();
+          description.length > 0 &&
+          dentalReady;
 
         if (ready && !send.hidden && send.textContent.indexOf('Reservando') === -1) {
           send.disabled = false;
