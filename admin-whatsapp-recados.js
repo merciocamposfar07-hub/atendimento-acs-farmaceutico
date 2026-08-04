@@ -1,0 +1,1 @@
+(function(){'use strict';console.log('Portal TACS: módulo de compartilhamento de recados carregado.');}());
