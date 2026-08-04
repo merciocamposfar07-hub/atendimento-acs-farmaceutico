@@ -1,0 +1,17 @@
+{
+  "name": "Painel de Agendas e Vagas • Portal TACS",
+  "short_name": "Painel Agendas",
+  "start_url": "/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html",
+  "scope": "/atendimento-acs-farmaceutico/",
+  "display": "standalone",
+  "background_color": "#EAF2F6",
+  "theme_color": "#073A55",
+  "icons": [
+    {
+      "src": "/atendimento-acs-farmaceutico/icons/painel-agendas.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
