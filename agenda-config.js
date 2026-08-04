@@ -199,6 +199,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
       if (!send || target !== send || !documentField || !isCns(documentField.value)) return;
 
       var originalValue = documentField.value;
+      documentField.dataset.cnsOriginal = originalValue;
       documentField.value = temporaryCpf;
       Promise.resolve().then(function () {
         documentField.value = originalValue;
@@ -220,11 +221,83 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
     refresh();
   }
 
+  function installCompactWhatsappMessage() {
+    if (window.__tacsCompactWhatsappInstalled) return;
+    window.__tacsCompactWhatsappInstalled = true;
+
+    var originalEncodeURIComponent = window.encodeURIComponent;
+
+    function fieldValue(id) {
+      var field = document.getElementById(id);
+      return field ? String(field.value || '').trim() : '';
+    }
+
+    function originalLine(message, prefix) {
+      var lines = String(message || '').split('\n');
+      for (var i = 0; i < lines.length; i += 1) {
+        if (lines[i].indexOf(prefix) === 0) return lines[i].slice(prefix.length).trim();
+      }
+      return '';
+    }
+
+    function ageText() {
+      var status = document.getElementById('ageStatus');
+      if (!status) return '';
+      return String(status.textContent || '').replace(/^Idade:\s*/i, '').trim();
+    }
+
+    function compactMessage(message) {
+      var text = String(message || '');
+      if (text.indexOf('*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*') !== 0) return text;
+
+      var category = fieldValue('category');
+      var description = category === 'Implanon' ? fieldValue('implanonChoice') : fieldValue('subject');
+      var documentField = document.getElementById('cpf');
+      var documentValue = documentField
+        ? String(documentField.dataset.cnsOriginal || documentField.value || '').trim()
+        : originalLine(text, 'CPF: ');
+      var code = originalLine(text, 'Código: ');
+      var sentAt = originalLine(text, 'Data e horário do envio: ');
+      var birth = fieldValue('birth') || originalLine(text, 'Data de nascimento: ');
+      var age = ageText() || originalLine(text, 'Idade: ');
+
+      return [
+        '*PORTAL TACS • POSTO MATIAS*',
+        '*SOLICITAÇÃO DO MORADOR*',
+        '',
+        '*' + category + '*',
+        '',
+        '*Nome completo*',
+        fieldValue('name'),
+        '',
+        '*Nascimento e idade*',
+        birth + (age ? ' • ' + age : ''),
+        '',
+        '*CPF ou CNS*',
+        documentValue,
+        '',
+        '*Onde mora*',
+        fieldValue('locality'),
+        '',
+        '*Descrição*',
+        description,
+        '',
+        '*Código:* ' + code,
+        '*Enviado em:* ' + sentAt
+      ].join('\n');
+    }
+
+    window.encodeURIComponent = function (value) {
+      return originalEncodeURIComponent(compactMessage(value));
+    };
+  }
+
   addLink('manifest', 'manifest.webmanifest');
   addLink('icon', 'icon-tacs.svg', { type: 'image/svg+xml' });
   addLink('apple-touch-icon', 'icon-tacs.svg');
   installDentalTheme();
   installPublicContentModule();
+  installCompactWhatsappMessage();
 
   function init() {
     installOfflineBanner();
