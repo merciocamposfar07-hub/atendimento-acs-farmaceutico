@@ -143,6 +143,40 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
     }
   }
 
+  function installDescriptionRules() {
+    var category = document.getElementById('category');
+    var subject = document.getElementById('subject');
+    if (!category || !subject || category.dataset.descriptionRulesInstalled === '1') return;
+    category.dataset.descriptionRulesInstalled = '1';
+
+    function normalize(value) {
+      var text = String(value || '').trim().toLowerCase();
+      return text.normalize
+        ? text.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        : text;
+    }
+
+    function updateDescription() {
+      var selected = normalize(category.value);
+
+      if (selected.indexOf('odontol') !== -1 || selected.indexOf('enfermeira') !== -1) {
+        return;
+      }
+
+      if (selected.indexOf('medic') !== -1) {
+        subject.value = 'Solicitação de atendimento com a Médica.';
+      } else if (selected.indexOf('nutricion') !== -1) {
+        subject.value = 'Solicitação de atendimento com a Nutricionista.';
+      } else {
+        subject.value = '';
+      }
+
+      subject.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    category.addEventListener('change', updateDescription);
+  }
+
   function installCnsWhatsappActivation() {
     var temporaryCpf = '52998224725';
 
@@ -306,6 +340,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
 
   function init() {
     installOfflineBanner();
+    installDescriptionRules();
     installFormPersistence();
     installCnsWhatsappActivation();
   }
