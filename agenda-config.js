@@ -152,6 +152,13 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
       return String(value || '').toLowerCase().indexOf('odontol') !== -1;
     }
 
+    function selectedDentalVacancy() {
+      return Boolean(document.querySelector(
+        '#dentalSlots .slot.selected:not(:disabled), ' +
+        '#dentalSlots .sheet-dental-choice.selected:not(:disabled)'
+      ));
+    }
+
     function refresh() {
       window.setTimeout(function () {
         var send = document.getElementById('send');
@@ -171,7 +178,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
           /^\d{2}\/\d{2}\/\d{4}$/.test(birth.value.trim()) &&
           locality.value.trim().length > 0 &&
           subject.value.trim().length > 0 &&
-          Boolean(document.querySelector('#dentalSlots .slot.selected:not(:disabled)'));
+          selectedDentalVacancy();
 
         if (ready && !send.hidden && send.textContent.indexOf('Reservando') === -1) {
           send.disabled = false;
