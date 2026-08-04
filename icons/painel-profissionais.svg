@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Painel de Profissionais e Serviços">
+  <rect width="512" height="512" rx="112" fill="#073A55"/>
+  <circle cx="190" cy="190" r="72" fill="#FFFFFF"/>
+  <circle cx="330" cy="210" r="58" fill="#83EFAD"/>
+  <path d="M78 412c0-87 50-142 112-142s112 55 112 142" fill="#FFFFFF"/>
+  <path d="M248 412c0-70 37-116 82-116s82 46 82 116" fill="#83EFAD"/>
+  <circle cx="372" cy="126" r="58" fill="#FFFFFF"/>
+  <rect x="353" y="84" width="38" height="84" rx="10" fill="#15934A"/>
+  <rect x="330" y="107" width="84" height="38" rx="10" fill="#15934A"/>
+</svg>
