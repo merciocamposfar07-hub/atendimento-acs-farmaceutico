@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Painel de Recados e Campanhas">
+  <rect width="512" height="512" rx="112" fill="#073A55"/>
+  <path d="M116 236v68c0 25 20 45 45 45h30l38 75c7 14 24 20 38 13 14-7 20-24 13-38l-25-50h24c37 0 73 12 102 34l24 18V139l-24 18c-29 22-65 34-102 34H161c-25 0-45 20-45 45z" fill="#FFFFFF"/>
+  <rect x="78" y="221" width="60" height="98" rx="28" fill="#83EFAD"/>
+  <path d="M396 207c27 18 42 47 42 80s-15 62-42 80" fill="none" stroke="#83EFAD" stroke-width="24" stroke-linecap="round"/>
+  <path d="M414 168c40 29 63 72 63 119s-23 90-63 119" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" opacity=".95"/>
+</svg>
