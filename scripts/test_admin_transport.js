@@ -97,20 +97,20 @@ function verifyStaticSource(config) {
     assert.doesNotMatch(official, new RegExp(staleMessage));
   }
 
-  assert.match(base, /admin-warmup\.js\?v=20260805-preaquecimento-v3/);
+  assert.match(base, /PortalTacsAdminPreload/);
+  assert.match(base, /jsonp\('admin_status',\{\},pronto\)/);
   assert.match(base, /Preparando a conexão com o Google Apps Script/);
   assert.match(base, /A sessão anterior não pôde ser reutilizada/);
   assert.match(official, /20260805-preaquecimento-v3/);
   assert.match(official, /admin-warmup\.js\?v=20260805-preaquecimento-v3/);
   assert.match(official, /rel="preconnect" href="https:\/\/script\.google\.com"/);
   assert.match(official, /Promise\.all\(\[painel,conexao/);
+  assert.match(official, /window\.PortalTacsAdminPreload=/);
   assert.doesNotMatch(official, /aplicarRetry|aplicarConexao|aplicarReconexao|reenviarOperacao/);
 }
 
 function baseHtml(config) {
-  return fs
-    .readFileSync(path.join(ROOT, config.file), 'utf8')
-    .replace(/<script src="\.\.\/admin-warmup\.js[^>]*><\/script>/, '');
+  return fs.readFileSync(path.join(ROOT, config.file), 'utf8');
 }
 
 async function testWarmupRoute() {
@@ -186,7 +186,7 @@ async function testDirectResponse(config) {
     pretendToBeVisual: true,
     virtualConsole,
     beforeParse(window) {
-      window.PortalTacsAdminWarmup = {ready: Promise.resolve({ok: true})};
+      window.PortalTacsAdminPreload = {ok: true};
       window.HTMLFormElement.prototype.submit = function submit() {
         const form = this;
         const payload = fields(form);
@@ -287,6 +287,49 @@ async function testDirectResponse(config) {
   window.close();
 }
 
+async function testFallbackStatus(config) {
+  const statusRequests = [];
+  const errors = [];
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on('jsdomError', error => errors.push(error.message));
+
+  const dom = new JSDOM(baseHtml(config), {
+    url: `https://portal.test/${config.file}`,
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    virtualConsole,
+    beforeParse(window) {
+      window.HTMLFormElement.prototype.submit = function submit() {
+        errors.push('Um POST foi enviado antes do PIN.');
+      };
+      const appendChild = window.Element.prototype.appendChild;
+      window.Element.prototype.appendChild = function appendChildWithStatus(node) {
+        const result = appendChild.call(this, node);
+        if (node && node.tagName === 'SCRIPT' && node.src.includes('action=admin_status')) {
+          statusRequests.push(node.src);
+          const callback = new URL(node.src).searchParams.get('callback');
+          setTimeout(() => window[callback]({ok: true, versaoAdmin: '1.0.0'}), 10);
+        }
+        return result;
+      };
+    }
+  });
+
+  const {window} = dom;
+  await waitFor(() => {
+    const status = window.document.getElementById('loginStatus');
+    return status && /Conexão preparada/.test(status.textContent);
+  }, `A contingência admin_status não preparou ${config.file}.`);
+
+  const status = window.document.getElementById('loginStatus');
+  assert.equal(statusRequests.length, 1, `${config.file} duplicou admin_status antes do PIN.`);
+  assert.equal(status.classList.contains('ok'), true);
+  assert.equal(status.classList.contains('erro'), false);
+  assert.equal(window.document.getElementById('entrar').disabled, false);
+  assert.deepEqual(errors, [], `${config.file} produziu erros internos: ${errors.join(' | ')}`);
+  window.close();
+}
+
 async function testExpiredStoredSession(config) {
   const actions = [];
   const errors = [];
@@ -299,7 +342,7 @@ async function testExpiredStoredSession(config) {
     pretendToBeVisual: true,
     virtualConsole,
     beforeParse(window) {
-      window.PortalTacsAdminWarmup = {ready: Promise.resolve({ok: true})};
+      window.PortalTacsAdminPreload = {ok: true};
       window.sessionStorage.setItem('portalTacsAdminTokenV1', 'token-antigo');
       window.HTMLFormElement.prototype.submit = function submit() {
         const payload = fields(this);
@@ -341,6 +384,7 @@ async function testExpiredStoredSession(config) {
 async function main() {
   CASES.forEach(verifyStaticSource);
   await testWarmupRoute();
+  await Promise.all(CASES.map(testFallbackStatus));
   await Promise.all(CASES.map(testDirectResponse));
   await Promise.all(CASES.map(testExpiredStoredSession));
   console.log('OK: pré-aquecimento, transporte direto e sessão antiga aprovados nos 3 painéis.');

@@ -6,7 +6,6 @@
 <meta name="color-scheme" content="light">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>Painel de agendas V1.1 • Portal TACS</title>
-<script src="../admin-warmup.js?v=20260805-preaquecimento-v3"></script>
 <style>
 :root{--petroleo:#073a55;--petroleo2:#0b5878;--verde:#148a46;--verde-bg:#e8f7ee;--fundo:#eaf2f6;--texto:#102d40;--muted:#536b78;--borda:#a9c0ca;--erro:#a52d2d;--erro-bg:#fff0f0;--aviso:#805300;--aviso-bg:#fff6dd;--branco:#fff}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--fundo);color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}button,input,textarea,select{font:inherit}button{cursor:pointer}
@@ -89,7 +88,7 @@ entrar.addEventListener('click',function(){var pin=document.getElementById('pin'
 sair.addEventListener('click',function(){if(!token)return;post('admin_logout',sessao(),function(){token='';sessionStorage.removeItem(TOKEN_KEY);document.getElementById('conteudo').classList.add('oculto');document.getElementById('resumo').classList.add('oculto');sair.disabled=true;status('loginStatus','Sessão encerrada.','ok')})});
 document.getElementById('listaAgendas').addEventListener('click',function(e){var b=e.target.closest('.salvarAgenda');if(b)salvarAgenda(b.closest('details'))});
 document.getElementById('filtroProf').addEventListener('change',render);document.getElementById('filtroDia').addEventListener('change',render);desfazer.addEventListener('click',restaurar);
-function iniciarPainel(){var aquecimento=window.PortalTacsAdminWarmup;entrar.disabled=true;status('loginStatus','Preparando a conexão com o Google Apps Script…','aviso');var pronto=aquecimento&&aquecimento.ready?aquecimento.ready:Promise.resolve({ok:true});pronto.then(function(r){entrar.disabled=false;if(!r||r.ok!==true){token='';sessionStorage.removeItem(TOKEN_KEY);sair.disabled=true;status('loginStatus','A conexão ainda não foi confirmada. Toque em Entrar para tentar novamente.','aviso');return}if(token){carregarDados('Sessão existente validada e agendas carregadas.',null,true);return}status('loginStatus','Conexão preparada. Digite o PIN para carregar as agendas.','ok')}).catch(function(){entrar.disabled=false;status('loginStatus','A conexão ainda não foi confirmada. Toque em Entrar para tentar novamente.','aviso')})}
+function iniciarPainel(){entrar.disabled=true;status('loginStatus','Preparando a conexão com o Google Apps Script…','aviso');function pronto(r){entrar.disabled=false;if(!r||r.ok!==true){token='';sessionStorage.removeItem(TOKEN_KEY);sair.disabled=true;status('loginStatus','A conexão ainda não foi confirmada. Toque em Entrar para tentar novamente.','aviso');return}if(token){carregarDados('Sessão existente validada e agendas carregadas.',null,true);return}status('loginStatus','Conexão preparada. Digite o PIN para carregar as agendas.','ok')}if(window.PortalTacsAdminPreload&&window.PortalTacsAdminPreload.ok===true){pronto(window.PortalTacsAdminPreload);return}jsonp('admin_status',{},pronto)}
 iniciarPainel();
 }());
 </script>

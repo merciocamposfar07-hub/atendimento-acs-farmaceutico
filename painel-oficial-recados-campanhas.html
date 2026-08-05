@@ -64,7 +64,9 @@
     var painel=fetch(origem,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text()});
     Promise.all([painel,conexao.catch(function(){return{ok:false}})]).then(function(resultados){
       var html=resultados[0];
-      html=substituir(html,'<head>','<head><base href="/atendimento-acs-farmaceutico/teste-v1/">');
+      var conexaoSegura=JSON.stringify(resultados[1]||{ok:false}).replace(/</g,'\\u003c');
+      var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt>';
+      html=substituir(html,'<head>',bootstrap);
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
       html=substituir(html,'</body>',complementoStatus()+'</body>');
       document.open();document.write(html);document.close();
