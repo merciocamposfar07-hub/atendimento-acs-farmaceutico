@@ -3,7 +3,7 @@
 
   var API = String(
     window.TACS_ADMIN_API_URL ||
-      'https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec'
+      'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
   ).trim();
 
   var ONE_SIGNAL_APP_ID = 'e2294b98-c72b-4f8c-a055-de28979676dc';
@@ -281,6 +281,33 @@
     return match ? match[3] + '/' + match[2] + '/' + match[1] : text;
   }
 
+  function statusKey(value) {
+    var text = clean(value).toLowerCase();
+    return text.normalize
+      ? text.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      : text;
+  }
+
+  function unavailableStatus(value) {
+    return ['cancelado', 'sem atendimento', 'feriado', 'desativado'].indexOf(
+      statusKey(value)
+    ) !== -1;
+  }
+
+  function statusLabel(value) {
+    var labels = {
+      atendimento: 'Atendimento confirmado',
+      confirmado: 'Atendimento confirmado',
+      aguardando: 'Aguardando confirmação',
+      alterado: 'Data alterada',
+      cancelado: 'Cancelado',
+      'sem atendimento': 'Sem atendimento',
+      feriado: 'Feriado',
+      desativado: 'Desativado'
+    };
+    return labels[statusKey(value)] || clean(value);
+  }
+
   function ensureAgendasContainer() {
     var existing = id('portalProfessionalAgendas');
     if (existing) return existing;
@@ -322,6 +349,13 @@
     var hasPublished = days.some(function (item) {
       return item.active === true;
     });
+    var hasAvailable = days.some(function (item) {
+      return (
+        item.active === true &&
+        item.closedNow !== true &&
+        !unavailableStatus(item.status)
+      );
+    });
 
     var intro =
       module === 'enfermeira'
@@ -349,10 +383,14 @@
         '<div class="agenda-status">Nenhuma programação publicada no momento.</div>';
     } else {
       days.forEach(function (item, index) {
-        var active = item.active === true && item.closedNow !== true;
+        var active =
+          item.active === true &&
+          item.closedNow !== true &&
+          !unavailableStatus(item.status);
         var service = clean(item.service || item.message);
         var date = formatDate(item.date);
         var time = clean(item.time);
+        var situation = statusLabel(item.status);
         var icon =
           module === 'enfermeira'
             ? clean(item.icon || (active ? '✅' : '❌'))
@@ -377,6 +415,7 @@
           '<b>' +
           esc(service || (active ? 'Atendimento disponível' : 'Sem atendimento')) +
           '</b>' +
+          (situation ? '<em>Situação: ' + esc(situation) + '</em>' : '') +
           (date ? '<em>Data: ' + esc(date) + '</em>' : '') +
           (time ? '<em>Horário: ' + esc(time) + '</em>' : '') +
           '</button>';
@@ -386,7 +425,9 @@
     html +=
       '</div><p class="agenda-status">' +
       (hasPublished
-        ? 'Programação vigente publicada pela Unidade de Saúde.'
+        ? hasAvailable
+          ? 'Programação vigente publicada pela Unidade de Saúde.'
+          : 'A programação foi publicada, mas não há atendimento disponível neste dia.'
         : 'Nenhum dia ativo foi publicado para este atendimento.') +
       '</p>';
 
