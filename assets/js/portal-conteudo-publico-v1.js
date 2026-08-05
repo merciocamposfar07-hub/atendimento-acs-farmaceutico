@@ -183,16 +183,14 @@
   }
 
   window.PortalTacsConteudoPublicoV1 = Object.freeze({
-    versao: '1.0.0',
+    versao: '1.0.1',
     somenteLeitura: true,
+    renderizacaoAutomatica: false,
     normalizarResposta: normalizarResposta,
     renderizar: renderizar,
     carregar: carregar
   });
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', carregar, { once: true });
-  } else {
-    carregar();
-  }
+  // A renderização automática do cartão branco foi desativada.
+  // O cartão azul-petróleo permanece responsável pela exibição pública.
 })(window, document);
