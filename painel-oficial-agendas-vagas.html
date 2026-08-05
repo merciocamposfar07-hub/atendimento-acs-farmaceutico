@@ -7,6 +7,10 @@
   <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/painel-agendas.svg">
   <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/painel-agendas.svg">
   <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-agendas.webmanifest">
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://script.googleusercontent.com">
+  <link rel="dns-prefetch" href="//script.google.com">
+  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260805-preaquecimento-v3"></script>
   <meta name="color-scheme" content="light">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Painel oficial de agendas e vagas • Portal TACS</title>
@@ -22,7 +26,7 @@
   <script>
   (function(){
     'use strict';
-    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-agendas-v1.html?v=20260805-transporte-v2';
+    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-agendas-v1.html?v=20260805-preaquecimento-v3';
     var trocas=[
       ['<title>Painel de agendas V1.1 • Portal TACS</title>','<title>Painel oficial de agendas e vagas • Portal TACS</title>'],
       ['AMBIENTE ISOLADO • FASE 3','PAINEL ADMINISTRATIVO OFICIAL'],
@@ -34,10 +38,11 @@
       ['Portal do Morador não foi modificado','Alterações confirmadas são aplicadas ao Portal do Morador']
     ];
     function substituir(t,a,b){return t.split(a).join(b)}
-    fetch(origem,{cache:'no-store'}).then(function(r){
-      if(!r.ok)throw new Error('Não foi possível carregar o painel.');
-      return r.text();
-    }).then(function(html){
+    var aquecimento=window.PortalTacsAdminWarmup;
+    var conexao=aquecimento&&aquecimento.ready?aquecimento.ready:Promise.resolve({ok:false});
+    var painel=fetch(origem,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text()});
+    Promise.all([painel,conexao.catch(function(){return{ok:false}})]).then(function(resultados){
+      var html=resultados[0];
       html=substituir(html,'<head>','<head><base href="/atendimento-acs-farmaceutico/teste-v1/">');
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
       document.open();document.write(html);document.close();
