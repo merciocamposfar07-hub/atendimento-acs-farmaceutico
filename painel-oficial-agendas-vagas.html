@@ -7,7 +7,6 @@
   <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/painel-agendas.svg">
   <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/painel-agendas.svg">
   <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-agendas.webmanifest">
-  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260805-1505"></script>
   <meta name="color-scheme" content="light">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Painel oficial de agendas e vagas • Portal TACS</title>
@@ -23,7 +22,7 @@
   <script>
   (function(){
     'use strict';
-    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-agendas-v1.html?v=20260805-1505';
+    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-agendas-v1.html?v=20260805-transporte-v2';
     var trocas=[
       ['<title>Painel de agendas V1.1 • Portal TACS</title>','<title>Painel oficial de agendas e vagas • Portal TACS</title>'],
       ['AMBIENTE ISOLADO • FASE 3','PAINEL ADMINISTRATIVO OFICIAL'],
@@ -35,29 +34,12 @@
       ['Portal do Morador não foi modificado','Alterações confirmadas são aplicadas ao Portal do Morador']
     ];
     function substituir(t,a,b){return t.split(a).join(b)}
-    function aplicarConexaoResiliente(html){
-      var regraJsonp=/function jsonp\([^)]*\)\{[\s\S]*?\}\nfunction finalizar/;
-      var jsonp="function jsonp(action,parametros,receber){contador++;var nome='__ag_resiliente_'+Date.now()+'_'+contador,s=document.createElement('script'),p=parametros||{},fim=false,timer=setTimeout(function(){encerrar({ok:false,message:'O servidor não respondeu à consulta.'})},8500);function limpar(){clearTimeout(timer);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}function encerrar(r){if(fim)return;fim=true;limpar();receber(r)}window[nome]=function(r){encerrar(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(p).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(txt(p[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){encerrar({ok:false,message:'Falha de rede ao consultar o servidor.'})};document.head.appendChild(s)}";
-      if(!regraJsonp.test(html))throw new Error('A rotina de consulta do painel não foi localizada.');
-      html=html.replace(regraJsonp,jsonp+'\nfunction finalizar');
-
-      var regraConsulta=/function consultarResultado\(\)\{[\s\S]*?\}\nfunction post/;
-      var consulta="function consultarResultado(){if(!ativa)return;jsonp('admin_result',{requestId:ativa.id},function(r){if(!ativa)return;if(r&&r.ok===true&&r.pendente===false){finalizar(r.result);return}if(r&&r.ok===true&&r.pendente===true){setTimeout(consultarResultado,900);return}ativa.falhas=(ativa.falhas||0)+1;if(ativa.falhas<7){setTimeout(consultarResultado,700+ativa.falhas*250);return}if(!ativa.reenviado){ativa.reenviado=true;ativa.falhas=0;reenviarOperacao();setTimeout(consultarResultado,1400);return}finalizar({ok:false,message:'Não foi possível concluir a conexão. Toque novamente em Entrar e carregar agendas.'})})}";
-      if(!regraConsulta.test(html))throw new Error('A rotina de confirmação do painel não foi localizada.');
-      html=html.replace(regraConsulta,consulta+'\nfunction post');
-
-      var regraPost=/function post\(action,payload,receber\)\{[\s\S]*?\}\nfunction sessao/;
-      var post="function criarEnvio(){if(!ativa)return;var form=document.createElement('form');form.method='POST';form.action=API+'?_='+Date.now();form.target='ponteAgendaV1';form.className='ponte';Object.keys(ativa.payload).forEach(function(k){var input=document.createElement('input');input.type='hidden';input.name=k;input.value=txt(ativa.payload[k]);form.appendChild(input)});document.body.appendChild(form);form.submit();setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form)},5000)}\nfunction reenviarOperacao(){if(!ativa)return;criarEnvio()}\nfunction post(action,payload,receber){if(ativa){receber({ok:false,message:'Aguarde a operação anterior terminar.'});return}var id=requestId(action),campos=Object.assign({},payload||{});campos.action=action;campos.requestId=id;ativa={id:id,callback:receber,payload:campos,falhas:0,reenviado:false,timeout:setTimeout(function(){if(!ativa)return;if(!ativa.reenviado){ativa.reenviado=true;ativa.falhas=0;reenviarOperacao();setTimeout(consultarResultado,1200);ativa.timeout=setTimeout(function(){finalizar({ok:false,message:'Não foi possível concluir a conexão. Toque novamente em Entrar e carregar agendas.'})},30000);return}finalizar({ok:false,message:'Não foi possível concluir a conexão. Toque novamente em Entrar e carregar agendas.'})},26000)};entrar.disabled=true;sair.disabled=true;criarEnvio();setTimeout(consultarResultado,1200)}";
-      if(!regraPost.test(html))throw new Error('A rotina de envio do painel não foi localizada.');
-      return html.replace(regraPost,post+'\nfunction sessao');
-    }
     fetch(origem,{cache:'no-store'}).then(function(r){
       if(!r.ok)throw new Error('Não foi possível carregar o painel.');
       return r.text();
     }).then(function(html){
       html=substituir(html,'<head>','<head><base href="/atendimento-acs-farmaceutico/teste-v1/">');
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
-      html=aplicarConexaoResiliente(html);
       document.open();document.write(html);document.close();
     }).catch(function(erro){
       var e=document.getElementById('mensagem');

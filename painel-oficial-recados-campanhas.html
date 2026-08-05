@@ -7,7 +7,6 @@
   <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/painel-recados.svg">
   <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/painel-recados.svg">
   <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-recados.webmanifest">
-  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260804-2000"></script>
   <meta name="color-scheme" content="light">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Painel oficial de recados e campanhas • Portal TACS</title>
@@ -23,7 +22,7 @@
   <script>
   (function(){
     'use strict';
-    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-recados-campanhas-v1.html?v=20260804-1711';
+    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-recados-campanhas-v1.html?v=20260805-transporte-v2';
     var trocas=[
       ['<title>Recados e campanhas V1 • Portal TACS</title>','<title>Painel oficial de recados e campanhas • Portal TACS</title>'],
       ['AMBIENTE ISOLADO • FASE 4','PAINEL ADMINISTRATIVO OFICIAL'],
@@ -35,17 +34,6 @@
       ['Portal do Morador não foi modificado','Alterações confirmadas são aplicadas ao Portal do Morador']
     ];
     function substituir(t,a,b){return t.split(a).join(b)}
-    function aplicarRetryServidor(html){
-      var regra=/function jsonp\([^)]*\)\{[\s\S]*?\}\nfunction finalizar/;
-      var nova="function jsonp(action,parametros,receber){contador++;var base='__rc_retry_'+Date.now()+'_'+contador,p=parametros||{},tentativa=0,concluido=false;function executar(){tentativa++;var nome=base+'_'+tentativa,s=document.createElement('script'),fim=false,timer=setTimeout(function(){falhar('O servidor não respondeu à consulta.')},20000);function limpar(){clearTimeout(timer);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}function falhar(msg){if(fim||concluido)return;fim=true;limpar();if(tentativa<2){setTimeout(executar,900);return}concluido=true;receber({ok:false,message:msg})}window[nome]=function(r){if(fim||concluido)return;fim=true;concluido=true;limpar();receber(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(p).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(txt(p[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){falhar('Falha de rede ao consultar o servidor.')};document.head.appendChild(s)}executar()}";
-      if(!regra.test(html))throw new Error('A rotina de conexão do painel não foi localizada.');
-      return html.replace(regra,nova+'\nfunction finalizar');
-    }
-    function aplicarRetryModulo(html){
-      var antigo="post('admin_conteudo_status',sessao(),function(s){if(!s||s.ok!==true){status('loginStatus','Login aceito, mas o módulo ZZ_10 ainda não está ativo na implantação de teste.','erro');return}carregar('Sessão validada. Módulo de Recados e Campanhas V'+txt(s.versao)+' disponível.')})";
-      var novo="(function tentarModulo(tentativa){post('admin_conteudo_status',sessao(),function(s){if(!s||s.ok!==true){if(tentativa<1){status('loginStatus','Conexão lenta. Tentando novamente automaticamente…','aviso');setTimeout(function(){tentarModulo(tentativa+1)},1200);return}status('loginStatus','Login aceito, mas o módulo de Recados e Campanhas não respondeu após nova tentativa.','erro');return}carregar('Sessão validada. Módulo de Recados e Campanhas V'+txt(s.versao)+' disponível.')})})(0)";
-      return substituir(html,antigo,novo);
-    }
     function complementoStatus(){
       var css='<style id="whatsapp-status-recados-estilo">'+
         '.acoes-status-whatsapp{display:grid;gap:10px;margin-top:12px}'+
@@ -73,8 +61,6 @@
     }).then(function(html){
       html=substituir(html,'<head>','<head><base href="/atendimento-acs-farmaceutico/teste-v1/">');
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
-      html=aplicarRetryServidor(html);
-      html=aplicarRetryModulo(html);
       html=substituir(html,'</body>',complementoStatus()+'</body>');
       document.open();document.write(html);document.close();
     }).catch(function(erro){

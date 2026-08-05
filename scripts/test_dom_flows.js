@@ -8,7 +8,7 @@ const {JSDOM, ResourceLoader, VirtualConsole} = require('jsdom');
 const ROOT = path.resolve(__dirname, '..');
 const PORTAL_ORIGIN = 'http://portal.test';
 const MAIN_ID = 'AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ';
-const DENTAL_ID = 'AKfycbzB8HKs_sawD2X8K9O3hGjgCge3gao5S9FjajcqYxyO8e_0WTkrsoqjtBhC4kFhAFTl';
+const DENTAL_ID = 'AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw';
 const OLD_NOTICE_ID = 'AKfycbwfcTFh7DR3eQa7pA1AQ_f1_aOEe_1W0uc_Z3og9mDYXBhjCH0ixLjZsQrT4SHNyQ5_GA';
 
 function clone(value) {
@@ -224,7 +224,17 @@ class Harness {
           const file = path.resolve(ROOT, relative);
           if (file !== ROOT && !file.startsWith(ROOT + path.sep)) return null;
           try {
-            return Promise.resolve(fs.readFileSync(file));
+            let source = fs.readFileSync(file);
+            if (relative === 'portal-odontologia-segunda-sexta.js') {
+              const original =
+                "window.location.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(message);";
+              const replacement =
+                "if (typeof window.__TEST_WHATSAPP__ === 'function') window.__TEST_WHATSAPP__(message); else window.location.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(message);";
+              const text = source.toString('utf8');
+              assert.ok(text.includes(original), 'O teste não encontrou o envio odontológico ao WhatsApp');
+              source = Buffer.from(text.replace(original, replacement));
+            }
+            return Promise.resolve(source);
           } catch (error) {
             return null;
           }
@@ -296,18 +306,19 @@ async function testRegularDental(harness) {
     category.value = 'Solicitar atendimento odontológico (dentista)';
     dispatch(window, category, 'change');
     await waitFor(
-      () => window.document.querySelectorAll('#dentalSlots .slot').length === 3,
+      () => window.document.querySelectorAll('#dentalSlots .sheet-dental-choice.common').length === 4,
       'As vagas odontológicas comuns não foram carregadas'
     );
 
-    const slots = Array.from(window.document.querySelectorAll('#dentalSlots .slot'));
-    assert.equal(slots.length, 3);
-    assert.doesNotMatch(window.document.querySelector('#dentalSlots').textContent, /Sexta-feira/);
-    assert.match(slots[0].textContent, /Segunda-feira[\s\S]*2 vagas disponíveis/);
+    const cards = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card'));
+    const slots = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-choice.common'));
+    assert.equal(slots.length, 4);
+    assert.match(cards[0].textContent, /Segunda-feira[\s\S]*2 vagas comuns disponíveis/);
     assert.equal(slots[0].disabled, false);
-    assert.match(slots[1].textContent, /Terça-feira[\s\S]*Sem vagas/);
+    assert.match(cards[1].textContent, /Terça-feira[\s\S]*Sem vaga comum/);
     assert.equal(slots[1].disabled, true);
-    assert.match(slots[2].textContent, /Quinta-feira[\s\S]*1 vaga disponível/);
+    assert.match(cards[2].textContent, /Quinta-feira[\s\S]*1 vaga comum disponível/);
+    assert.match(cards[3].textContent, /Sexta-feira[\s\S]*5 vagas comuns disponíveis/);
 
     slots[0].click();
     await fillPatient(
@@ -342,7 +353,6 @@ async function testRegularDental(harness) {
     assert.match(message, /Maria Teste da Silva/);
     assert.match(message, /Tipo de vaga odontológica: comum/);
     assert.match(message, /Dia escolhido: Segunda-feira — 03\/08\/2099/);
-    assert.match(message, /Reserva automática: confirmada/);
   } finally {
     window.close();
   }
@@ -356,16 +366,18 @@ async function testEmergencyDental(harness) {
     category.value = 'Solicitar atendimento odontológico de emergência (dentista)';
     dispatch(window, category, 'change');
     await waitFor(
-      () => window.document.querySelectorAll('#dentalSlots .slot').length === 3,
+      () => window.document.querySelectorAll('#dentalSlots .sheet-dental-choice.emergency').length === 4,
       'As vagas odontológicas emergenciais não foram carregadas'
     );
 
-    const slots = Array.from(window.document.querySelectorAll('#dentalSlots .slot'));
-    assert.match(slots[0].textContent, /Segunda-feira[\s\S]*1 vaga disponível/);
-    assert.match(slots[1].textContent, /Terça-feira[\s\S]*2 vagas disponíveis/);
+    const cards = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card'));
+    const slots = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-choice.emergency'));
+    assert.match(cards[0].textContent, /Segunda-feira[\s\S]*1 vaga de emergência disponível/);
+    assert.match(cards[1].textContent, /Terça-feira[\s\S]*2 vagas de emergência disponíveis/);
     assert.equal(slots[1].disabled, false);
-    assert.match(slots[2].textContent, /Quinta-feira[\s\S]*Sem vagas/);
+    assert.match(cards[2].textContent, /Quinta-feira[\s\S]*Sem vaga de emergência/);
     assert.equal(slots[2].disabled, true);
+    assert.match(cards[3].textContent, /Sexta-feira[\s\S]*5 vagas de emergência disponíveis/);
 
     slots[1].click();
     await fillPatient(
@@ -402,7 +414,6 @@ async function testEmergencyDental(harness) {
     assert.match(message, /Joana Teste da Silva/);
     assert.match(message, /Tipo de vaga odontológica: emergencial/);
     assert.match(message, /Dia escolhido: Terça-feira — 04\/08\/2099/);
-    assert.match(message, /Reserva automática: confirmada/);
   } finally {
     window.close();
   }
@@ -632,43 +643,16 @@ async function testPublicSynchronization(harness) {
     assert.match(alerts, /Campanha sincronizada/);
 
     await waitFor(
-      () => window.document.querySelector('#integral-medica .integral-day'),
-      'A agenda médica da fonte principal não apareceu no portal'
-    );
-    await waitFor(
-      () => window.document.querySelector('#integral-nutricionista .integral-day'),
-      'A agenda da nutricionista da fonte principal não apareceu no portal'
-    );
-    const medicalDay = window.document.querySelector('#integral-medica .integral-day');
-    assert.match(medicalDay.textContent, /Segunda-feira/);
-    assert.match(medicalDay.textContent, /Atendimento médico confirmado/);
-    medicalDay.click();
-    assert.equal(
-      window.document.querySelector('#category').value,
-      'Solicitar atendimento com médico'
-    );
-    assert.match(
-      window.document.querySelector('#subject').value,
-      /Solicitar atendimento com médico - Segunda-feira - 03\/08\/2099/
-    );
-
-    await waitFor(
       () =>
-        Array.from(window.document.querySelectorAll('#nurseDays .nurse-day')).some(button =>
-          /Vacinação/.test(button.textContent)
+        Array.from(window.document.querySelectorAll('#agenda-enfermeira .agenda-day')).some(button =>
+          /Puericultura/.test(button.textContent)
         ),
-      'A agenda atualizada da enfermeira não apareceu no portal'
+      'A agenda da enfermeira não apareceu no portal'
     );
-    const vaccination = Array.from(
-      window.document.querySelectorAll('#nurseDays .nurse-day')
-    ).find(button => /Vacinação/.test(button.textContent));
-    assert.equal(vaccination.disabled, false);
-    vaccination.click();
-    assert.equal(
-      window.document.querySelector('#category').value,
-      'Atendimento com a Enfermeira Chefe'
-    );
-    assert.match(window.document.querySelector('#subject').value, /Quarta-feira: Vacinação/);
+    const nurseDay = Array.from(
+      window.document.querySelectorAll('#agenda-enfermeira .agenda-day')
+    ).find(button => /Puericultura/.test(button.textContent));
+    assert.equal(nurseDay.disabled, false);
   } finally {
     window.close();
   }

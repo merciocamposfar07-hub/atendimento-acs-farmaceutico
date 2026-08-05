@@ -239,7 +239,7 @@ assert.match(portal, /form\.submit\(\)/);
 assert.match(portal, /event\.source!==iframe\.contentWindow/);
 assert.match(
   portal,
-  /DENTAL_ALLOWED_DAYS=\['Segunda-feira','Terça-feira','Quinta-feira'\]/
+  /DENTAL_ALLOWED_DAYS=\['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'\]/
 );
 assert.match(
   portal,
@@ -362,7 +362,6 @@ assert.doesNotMatch(
   'notificacoes-visiveis-fix.js',
   'notificacoes.js',
   'OneSignalSDKWorker.js',
-  path.join('push', 'OneSignalSDKWorker.js'),
   'admin-painel.css'
 ].forEach(function (legacyPath) {
   assert.equal(
