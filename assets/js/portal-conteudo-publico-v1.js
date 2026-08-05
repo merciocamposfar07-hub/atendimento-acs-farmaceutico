@@ -136,9 +136,11 @@
     };
   }
 
-  function carregar() {
+  function carregar(opcoes) {
+    opcoes = opcoes || {};
+    var deveRenderizar = opcoes.renderizar !== false;
     var alvo = document.getElementById(TARGET_ID);
-    if (!alvo) return Promise.resolve({ ok: false, motivo: 'alvo_nao_encontrado' });
+    if (deveRenderizar && !alvo) return Promise.resolve({ ok: false, motivo: 'alvo_nao_encontrado' });
 
     return new Promise(function (resolve) {
       var callback = '__portalTacsConteudoPublicoV1_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
@@ -157,20 +159,32 @@
 
       window[callback] = function (resposta) {
         try {
-          finalizar(renderizar(resposta, alvo));
+          if (deveRenderizar) {
+            finalizar(renderizar(resposta, alvo));
+            return;
+          }
+
+          var dados = normalizarResposta(resposta);
+          finalizar({
+            ok: dados.ok,
+            visivel: false,
+            renderizado: false,
+            recados: dados.recados.length,
+            campanhas: dados.campanhas.length
+          });
         } catch (erro) {
-          alvo.hidden = true;
-          finalizar({ ok: false, motivo: 'falha_renderizacao', detalhe: texto(erro && erro.message) });
+          if (alvo) alvo.hidden = true;
+          finalizar({ ok: false, motivo: 'falha_processamento', detalhe: texto(erro && erro.message) });
         }
       };
 
       script.onerror = function () {
-        alvo.hidden = true;
+        if (alvo) alvo.hidden = true;
         finalizar({ ok: false, motivo: 'falha_conexao' });
       };
 
       timer = window.setTimeout(function () {
-        alvo.hidden = true;
+        if (alvo) alvo.hidden = true;
         finalizar({ ok: false, motivo: 'tempo_esgotado' });
       }, TIMEOUT_MS);
 
@@ -183,14 +197,22 @@
   }
 
   window.PortalTacsConteudoPublicoV1 = Object.freeze({
-    versao: '1.0.1',
+    versao: '1.0.2',
     somenteLeitura: true,
     renderizacaoAutomatica: false,
+    leituraAutomatica: true,
     normalizarResposta: normalizarResposta,
     renderizar: renderizar,
     carregar: carregar
   });
 
-  // A renderização automática do cartão branco foi desativada.
-  // O cartão azul-petróleo permanece responsável pela exibição pública.
+  function iniciarLeituraSilenciosa() {
+    carregar({ renderizar: false });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', iniciarLeituraSilenciosa, { once: true });
+  } else {
+    iniciarLeituraSilenciosa();
+  }
 })(window, document);
