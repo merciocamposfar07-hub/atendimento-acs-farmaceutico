@@ -265,6 +265,11 @@ const agendaConfig = fs.readFileSync(
 );
 assert.doesNotMatch(agendaConfig, /reserveSlot|reservar|salvar_agenda/);
 assert.doesNotMatch(agendaConfig, /AKfycbwfcTFh7DR3eQa7pA1AQ_f1_aOEe_/);
+assert.doesNotMatch(agendaConfig, /AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/);
+assert.match(
+  agendaConfig,
+  /TACS_ADMIN_API_URL\s*=\s*'https:\/\/script\.google\.com\/macros\/s\/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw\/exec'/
+);
 
 const nurseScript = fs.readFileSync(
   path.join(__dirname, '..', 'agenda-enfermeira.js'),
@@ -275,6 +280,7 @@ assert.doesNotMatch(
   /dentalPublic|DENTAL_REGULAR|DENTAL_EMERGENCY|DENTAL_AGENDA_API_URL/
 );
 assert.match(nurseScript, /window\.TACS_ADMIN_API_URL/);
+assert.doesNotMatch(nurseScript, /AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/);
 
 const adminPage = fs.readFileSync(
   path.join(__dirname, '..', 'admin.html'),
@@ -313,7 +319,7 @@ assert.doesNotMatch(
 );
 
 const opener = fs.readFileSync(path.join(__dirname, '..', 'abrir.html'), 'utf8');
-assert.match(opener, /\.\/index\.html\?v=20260730-51/);
+assert.match(opener, /\.\/index\.html\?v=20260805-agenda-sync-v1/);
 
 const mainBackend = fs.readFileSync(
   path.join(__dirname, '..', 'apps-script-controle-integral.gs'),

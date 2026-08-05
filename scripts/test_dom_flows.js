@@ -7,7 +7,7 @@ const {JSDOM, ResourceLoader, VirtualConsole} = require('jsdom');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORTAL_ORIGIN = 'http://portal.test';
-const MAIN_ID = 'AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ';
+const MAIN_ID = 'AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw';
 const DENTAL_ID = 'AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw';
 const OLD_NOTICE_ID = 'AKfycbwfcTFh7DR3eQa7pA1AQ_f1_aOEe_1W0uc_Z3og9mDYXBhjCH0ixLjZsQrT4SHNyQ5_GA';
 
@@ -614,6 +614,18 @@ async function testAdmin(harness) {
 }
 
 async function testPublicSynchronization(harness) {
+  harness.main.modules.medica = [
+    {
+      day: 'Sexta-feira',
+      active: true,
+      date: '2099-08-07',
+      time: '08:00 as 12:00',
+      status: 'CANCELADO',
+      message: 'Atendimento médico',
+      service: 'Atendimento médico',
+      closedNow: false
+    }
+  ];
   harness.main.recados = [
     {
       id: 'recado-publico',
@@ -653,6 +665,26 @@ async function testPublicSynchronization(harness) {
       window.document.querySelectorAll('#agenda-enfermeira .agenda-day')
     ).find(button => /Puericultura/.test(button.textContent));
     assert.equal(nurseDay.disabled, false);
+
+    const category = window.document.querySelector('#category');
+    category.value = 'Solicitar atendimento com a Médica';
+    dispatch(window, category, 'change');
+    await waitFor(
+      () => window.document.querySelector('#agenda-medica .agenda-day'),
+      'A agenda médica ativa não apareceu no portal'
+    );
+    const medicalDay = window.document.querySelector('#agenda-medica .agenda-day');
+    assert.match(medicalDay.textContent, /Sexta-feira/);
+    assert.match(medicalDay.textContent, /Situação:\s*Cancelado/);
+    assert.equal(
+      medicalDay.disabled,
+      true,
+      'Uma agenda cancelada deve ser publicada para informação, mas não pode ser selecionada'
+    );
+    assert.doesNotMatch(
+      window.document.querySelector('#agenda-medica').textContent,
+      /Nenhuma programação publicada/
+    );
   } finally {
     window.close();
   }
