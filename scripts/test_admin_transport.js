@@ -3,6 +3,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 const {JSDOM, VirtualConsole} = require('jsdom');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -24,8 +25,8 @@ const CASES = [
   {
     file: 'teste-v1/painel-recados-campanhas-v1.html',
     frame: 'ponteConteudoV1',
-    actions: ['admin_login', 'admin_conteudo_status', 'admin_dados'],
-    success: /Sessão validada[\s\S]*Módulo de Recados e Campanhas V1\.2\.3 disponível/,
+    actions: ['admin_login', 'admin_dados'],
+    success: /Sessão validada e conteúdo carregado/,
     official: 'painel-oficial-recados-campanhas.html'
   }
 ];
@@ -73,6 +74,10 @@ function verifyStaticSource(config) {
   const base = fs.readFileSync(path.join(ROOT, config.file), 'utf8');
   const official = fs.readFileSync(path.join(ROOT, config.official), 'utf8');
 
+  for (const [index, match] of Array.from(official.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)).entries()) {
+    if (match[1].trim()) new vm.Script(match[1], {filename: `${config.official}#script-${index + 1}`});
+  }
+
   assert.match(base, new RegExp(`event\\.source!==frame\\.contentWindow`));
   assert.match(base, /proximaEspera:2500/);
   assert.match(base, /Math\.min\(7000,[^)]*\+1200\)/);
@@ -92,9 +97,79 @@ function verifyStaticSource(config) {
     assert.doesNotMatch(official, new RegExp(staleMessage));
   }
 
-  assert.match(official, /20260805-transporte-v2/);
-  assert.doesNotMatch(official, /admin-warmup\.js/);
+  assert.match(base, /admin-warmup\.js\?v=20260805-preaquecimento-v3/);
+  assert.match(base, /Preparando a conexão com o Google Apps Script/);
+  assert.match(base, /A sessão anterior não pôde ser reutilizada/);
+  assert.match(official, /20260805-preaquecimento-v3/);
+  assert.match(official, /admin-warmup\.js\?v=20260805-preaquecimento-v3/);
+  assert.match(official, /rel="preconnect" href="https:\/\/script\.google\.com"/);
+  assert.match(official, /Promise\.all\(\[painel,conexao/);
   assert.doesNotMatch(official, /aplicarRetry|aplicarConexao|aplicarReconexao|reenviarOperacao/);
+}
+
+function baseHtml(config) {
+  return fs
+    .readFileSync(path.join(ROOT, config.file), 'utf8')
+    .replace(/<script src="\.\.\/admin-warmup\.js[^>]*><\/script>/, '');
+}
+
+async function testWarmupRoute() {
+  const source = fs.readFileSync(path.join(ROOT, 'admin-warmup.js'), 'utf8');
+  const requests = [];
+  const listeners = {};
+  const head = {
+    appendChild(node) {
+      node.parentNode = head;
+      requests.push(node.src);
+      const callback = new URL(node.src).searchParams.get('callback');
+      setTimeout(() => {
+        context[callback]({
+          ok: true,
+          versaoAdmin: '1.0.0',
+          pinConfigurado: true
+        });
+      }, 0);
+      return node;
+    },
+    removeChild(node) {
+      node.parentNode = null;
+    }
+  };
+  const context = vm.createContext({
+    Promise,
+    Date,
+    Math,
+    CustomEvent: function CustomEvent(type, options) {
+      this.type = type;
+      this.detail = options && options.detail;
+    },
+    setTimeout,
+    clearTimeout,
+    document: {
+      head,
+      visibilityState: 'visible',
+      createElement() {
+        return {parentNode: null, async: false, src: '', onerror: null};
+      },
+      addEventListener(type, handler) {
+        listeners[type] = handler;
+      }
+    }
+  });
+  context.window = context;
+  context.addEventListener = (type, handler) => {
+    listeners[type] = handler;
+  };
+  context.dispatchEvent = () => true;
+
+  vm.runInContext(source, context);
+  const result = await context.PortalTacsAdminWarmup.ready;
+
+  assert.equal(result.ok, true, 'O pré-aquecimento não reconheceu admin_status como disponível.');
+  assert.equal(requests.length, 1, 'O pré-aquecimento duplicou a consulta após resposta válida.');
+  assert.match(requests[0], /AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/);
+  assert.match(requests[0], /[?&]action=admin_status(?:&|$)/);
+  assert.doesNotMatch(requests[0], /painel_publico|admin_result/);
 }
 
 async function testDirectResponse(config) {
@@ -104,13 +179,14 @@ async function testDirectResponse(config) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', error => errors.push(error.message));
 
-  const dom = new JSDOM(fs.readFileSync(path.join(ROOT, config.file), 'utf8'), {
+  const dom = new JSDOM(baseHtml(config), {
     url: `https://portal.test/${config.file}`,
     runScripts: 'dangerously',
     resources: 'usable',
     pretendToBeVisual: true,
     virtualConsole,
     beforeParse(window) {
+      window.PortalTacsAdminWarmup = {ready: Promise.resolve({ok: true})};
       window.HTMLFormElement.prototype.submit = function submit() {
         const form = this;
         const payload = fields(form);
@@ -211,10 +287,63 @@ async function testDirectResponse(config) {
   window.close();
 }
 
+async function testExpiredStoredSession(config) {
+  const actions = [];
+  const errors = [];
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on('jsdomError', error => errors.push(error.message));
+
+  const dom = new JSDOM(baseHtml(config), {
+    url: `https://portal.test/${config.file}`,
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    virtualConsole,
+    beforeParse(window) {
+      window.PortalTacsAdminWarmup = {ready: Promise.resolve({ok: true})};
+      window.sessionStorage.setItem('portalTacsAdminTokenV1', 'token-antigo');
+      window.HTMLFormElement.prototype.submit = function submit() {
+        const payload = fields(this);
+        const frame = Array.from(window.document.querySelectorAll('iframe')).find(
+          item => item.name === this.target
+        );
+        actions.push(payload.action);
+        setTimeout(() => {
+          window.dispatchEvent(
+            new window.MessageEvent('message', {
+              source: frame.contentWindow,
+              data: {
+                requestId: payload.requestId,
+                result: {ok: false, message: 'Sessão inválida ou expirada.'}
+              }
+            })
+          );
+        }, 10);
+      };
+    }
+  });
+
+  const {window} = dom;
+  await waitFor(() => {
+    const status = window.document.getElementById('loginStatus');
+    return status && /sessão anterior não pôde ser reutilizada/i.test(status.textContent);
+  }, `A sessão antiga não foi tratada silenciosamente em ${config.file}.`);
+
+  const status = window.document.getElementById('loginStatus');
+  assert.deepEqual(actions, ['admin_dados'], `${config.file} fez consultas extras ao validar a sessão antiga.`);
+  assert.equal(status.classList.contains('erro'), false, `${config.file} exibiu alerta vermelho antes do PIN.`);
+  assert.equal(status.classList.contains('ok'), true, `${config.file} não voltou ao estado pronto para novo PIN.`);
+  assert.equal(window.sessionStorage.getItem('portalTacsAdminTokenV1'), null);
+  assert.equal(window.document.getElementById('entrar').disabled, false);
+  assert.deepEqual(errors, [], `${config.file} produziu erros internos: ${errors.join(' | ')}`);
+  window.close();
+}
+
 async function main() {
   CASES.forEach(verifyStaticSource);
+  await testWarmupRoute();
   await Promise.all(CASES.map(testDirectResponse));
-  console.log('OK: transporte administrativo direto aprovado nos 3 painéis.');
+  await Promise.all(CASES.map(testExpiredStoredSession));
+  console.log('OK: pré-aquecimento, transporte direto e sessão antiga aprovados nos 3 painéis.');
 }
 
 main().catch(error => {
