@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/painel-agendas.svg">
   <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/painel-agendas.svg">
   <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-agendas.webmanifest">
-  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260804-2000"></script>
+  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260805-1418"></script>
   <meta name="color-scheme" content="light">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Painel oficial de agendas e vagas • Portal TACS</title>
@@ -37,11 +37,11 @@
     function substituir(t,a,b){return t.split(a).join(b)}
     function aplicarRetryServidor(html){
       var regra=/function jsonp\([^)]*\)\{[\s\S]*?\}\nfunction finalizar/;
-      var nova="function jsonp(action,parametros,receber){contador++;var base='__ag_retry_'+Date.now()+'_'+contador,p=parametros||{},tentativa=0,concluido=false;function executar(){tentativa++;var nome=base+'_'+tentativa,s=document.createElement('script'),fim=false,timer=setTimeout(function(){falhar('O servidor não respondeu à consulta.')},20000);function limpar(){clearTimeout(timer);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}function falhar(msg){if(fim||concluido)return;fim=true;limpar();if(tentativa<2){setTimeout(executar,900);return}concluido=true;receber({ok:false,message:msg})}window[nome]=function(r){if(fim||concluido)return;fim=true;concluido=true;limpar();receber(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(p).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(txt(p[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){falhar('Falha de rede ao consultar o servidor.')};document.head.appendChild(s)}executar()}";
+      var nova="function jsonp(action,parametros,receber){contador++;var base='__ag_retry_'+Date.now()+'_'+contador,p=parametros||{},tentativa=0,concluido=false;function executar(){tentativa++;var nome=base+'_'+tentativa,s=document.createElement('script'),fim=false,timer=setTimeout(function(){falhar('O servidor não respondeu à consulta.')},10000);function limpar(){clearTimeout(timer);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}function falhar(msg){if(fim||concluido)return;fim=true;limpar();if(tentativa<3){setTimeout(executar,350*tentativa);return}concluido=true;receber({ok:false,message:msg})}window[nome]=function(r){if(fim||concluido)return;fim=true;concluido=true;limpar();receber(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(p).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(txt(p[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){falhar('Falha de rede ao consultar o servidor.')};document.head.appendChild(s)}executar()}";
       if(!regra.test(html))throw new Error('A rotina de conexão do painel não foi localizada.');
       return html.replace(regra,nova+'\nfunction finalizar');
     }
-    fetch(origem,{cache:'no-store'}).then(function(r){
+    fetch(origem,{cache:'force-cache'}).then(function(r){
       if(!r.ok)throw new Error('Não foi possível carregar o painel.');
       return r.text();
     }).then(function(html){
