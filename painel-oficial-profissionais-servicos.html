@@ -38,9 +38,15 @@
     function substituir(t,a,b){return t.split(a).join(b)}
     function aplicarRetryServidor(html){
       var regra=/function jsonp\([^)]*\)\{[\s\S]*?\}\nfunction finalizar/;
-      var nova="function jsonp(action,parametros,receber){contador++;var base='__ps_retry_'+Date.now()+'_'+contador,p=parametros||{},tentativa=0,concluido=false;function executar(){tentativa++;var nome=base+'_'+tentativa,s=document.createElement('script'),fim=false,timer=setTimeout(function(){falhar('O servidor não respondeu à consulta.')},20000);function limpar(){clearTimeout(timer);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}function falhar(msg){if(fim||concluido)return;fim=true;limpar();if(tentativa<2){setTimeout(executar,900);return}concluido=true;receber({ok:false,message:msg})}window[nome]=function(r){if(fim||concluido)return;fim=true;concluido=true;limpar();receber(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(p).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(txt(p[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){falhar('Falha de rede ao consultar o servidor.')};document.head.appendChild(s)}executar()}";
+      var nova="function jsonp(action,parametros,receber){contador++;var base='__ps_retry_'+Date.now()+'_'+contador,p=parametros||{},tentativa=0,concluido=false;function executar(){tentativa++;var nome=base+'_'+tentativa,s=document.createElement('script'),fim=false,timer=setTimeout(function(){falhar('O servidor não respondeu à consulta.')},12000);function limpar(){clearTimeout(timer);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}function falhar(msg){if(fim||concluido)return;fim=true;limpar();if(tentativa<3){setTimeout(executar,700*tentativa);return}concluido=true;receber({ok:false,message:msg})}window[nome]=function(r){if(fim||concluido)return;fim=true;concluido=true;limpar();receber(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(p).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(txt(p[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){falhar('Falha de rede ao consultar o servidor.')};document.head.appendChild(s)}executar()}";
       if(!regra.test(html))throw new Error('A rotina de conexão do painel não foi localizada.');
       return html.replace(regra,nova+'\nfunction finalizar');
+    }
+    function aplicarReconexaoLeitura(html){
+      var regra=/function post\(action,payload,receber\)\{[\s\S]*?\}\nfunction sessao/;
+      var nova="function post(action,payload,receber){if(ativa){receber({ok:false,message:'Aguarde a operação anterior terminar.'});return}var leitura=/login|dados/i.test(action),copia={};Object.keys(payload||{}).forEach(function(k){copia[k]=payload[k]});ativa={id:'',action:action,payload:copia,callback:receber,reconexoes:0,timeout:null};entrar.disabled=true;sair.disabled=true;function enviar(){if(!ativa)return;var id=requestId(action);ativa.id=id;clearTimeout(ativa.timeout);ativa.timeout=setTimeout(function(){if(!ativa)return;if(leitura&&ativa.reconexoes<2){ativa.reconexoes++;status('loginStatus','O servidor demorou. Reconectando automaticamente… tentativa '+(ativa.reconexoes+1)+' de 3.','aviso');enviar();return}finalizar({ok:false,message:'Não foi possível conectar após as tentativas automáticas. Toque novamente em Entrar.'})},50000);var form=document.createElement('form');form.method='POST';form.action=API+'?_='+Date.now();form.target='pontePainelPSV1';form.className='ponte';var dadosPost={};Object.keys(ativa.payload).forEach(function(k){dadosPost[k]=ativa.payload[k]});dadosPost.action=action;dadosPost.requestId=id;Object.keys(dadosPost).forEach(function(k){var input=document.createElement('input');input.type='hidden';input.name=k;input.value=txt(dadosPost[k]);form.appendChild(input)});document.body.appendChild(form);form.submit();setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form)},5000);setTimeout(consultarResultado,650)}enviar()}";
+      if(!regra.test(html))throw new Error('A rotina de envio do painel não foi localizada.');
+      return html.replace(regra,nova+'\nfunction sessao');
     }
     fetch(origem,{cache:'no-store'}).then(function(r){
       if(!r.ok)throw new Error('Não foi possível carregar o painel.');
@@ -49,6 +55,7 @@
       html=substituir(html,'<head>','<head><base href="/atendimento-acs-farmaceutico/teste-v1/">');
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
       html=aplicarRetryServidor(html);
+      html=aplicarReconexaoLeitura(html);
       document.open();document.write(html);document.close();
     }).catch(function(erro){
       var e=document.getElementById('mensagem');
