@@ -217,15 +217,33 @@
       var option = document.createElement('option');
       option.value = value;
       option.textContent = value;
+      option.dataset.professionalModule = value === PROFESSIONAL_CATEGORIES.medica
+        ? 'medica'
+        : 'enfermeira';
       var dentalOption = Array.prototype.find.call(select.options, function (item) {
         return normalize(item.value).indexOf('odontologico') !== -1;
       });
       select.insertBefore(option, dentalOption || null);
     });
+
+    Array.prototype.forEach.call(select.options, function (option) {
+      if (option.value === PROFESSIONAL_CATEGORIES.medica) {
+        option.dataset.professionalModule = 'medica';
+      } else if (option.value === PROFESSIONAL_CATEGORIES.enfermeira) {
+        option.dataset.professionalModule = 'enfermeira';
+      } else if (option.value === PROFESSIONAL_CATEGORIES.nutricionista) {
+        option.dataset.professionalModule = 'nutricionista';
+      }
+    });
   }
 
   function selectedProfessionalModule() {
-    var value = clean(el('category') && el('category').value);
+    var select = el('category');
+    var value = clean(select && select.value);
+    var selected = select && select.options[select.selectedIndex];
+    if (selected && selected.dataset.professionalModule) {
+      return clean(selected.dataset.professionalModule);
+    }
     if (value === PROFESSIONAL_CATEGORIES.medica) return 'medica';
     if (value === PROFESSIONAL_CATEGORIES.enfermeira) return 'enfermeira';
     if (value === PROFESSIONAL_CATEGORIES.nutricionista) return 'nutricionista';
@@ -237,10 +255,12 @@
     if (!container) return;
     var selected = selectedProfessionalModule();
     container.hidden = !selected;
-    ['medica', 'enfermeira', 'nutricionista'].forEach(function (module) {
-      var section = el('agenda-' + module);
-      if (section) section.hidden = module !== selected;
-    });
+    Array.prototype.forEach.call(
+      container.querySelectorAll('.portal-agenda'),
+      function (section) {
+        section.hidden = clean(section.dataset.module) !== selected;
+      }
+    );
     if (selected) {
       setTimeout(function () {
         var section = el('agenda-' + selected);
@@ -249,8 +269,17 @@
     }
   }
 
+  function optionForModule(module) {
+    var select = el('category');
+    if (!select) return null;
+    return Array.prototype.find.call(select.options, function (option) {
+      return clean(option.dataset.professionalModule) === clean(module);
+    });
+  }
+
   function professionalCategory(module) {
-    return PROFESSIONAL_CATEGORIES[module] || '';
+    var option = optionForModule(module);
+    return PROFESSIONAL_CATEGORIES[module] || clean(option && option.value);
   }
 
   function fillProfessionalDescription(button) {

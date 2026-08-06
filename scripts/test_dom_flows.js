@@ -626,6 +626,32 @@ async function testPublicSynchronization(harness) {
       closedNow: false
     }
   ];
+  harness.main.modules.psicologo = [
+    {
+      day: 'Sexta-feira',
+      active: true,
+      date: '2099-08-07',
+      time: '13:00 as 16:00',
+      status: 'ATENDIMENTO',
+      message: 'Atendimento psicológico',
+      service: 'Atendimento psicológico',
+      closedNow: false
+    }
+  ];
+  harness.main.professionals = [
+    {
+      id: 'psicologo',
+      title: 'Atendimento com psicólogo',
+      icon: '🧠',
+      order: 5,
+      active: true,
+      category: 'Solicitar atendimento com psicólogo',
+      service: {
+        name: 'Atendimento psicológico',
+        description: 'Solicitação de atendimento com psicólogo.'
+      }
+    }
+  ];
   harness.main.recados = [
     {
       id: 'recado-publico',
@@ -685,6 +711,42 @@ async function testPublicSynchronization(harness) {
       window.document.querySelector('#agenda-medica').textContent,
       /Nenhuma programação publicada/
     );
+
+    await waitFor(
+      () => Array.from(category.options).some(option =>
+        option.dataset.professionalModule === 'psicologo' &&
+        option.value === 'Solicitar atendimento com psicólogo'
+      ),
+      'O psicólogo ativo não foi incluído nas opções do morador'
+    );
+    category.value = 'Solicitar atendimento com psicólogo';
+    dispatch(window, category, 'change');
+    await waitFor(
+      () => {
+        const section = window.document.querySelector('#agenda-psicologo');
+        return section && !section.hidden && section.querySelector('.agenda-day:not(:disabled)');
+      },
+      'A agenda dinâmica do psicólogo não apareceu no portal'
+    );
+    const psychologistDay = window.document.querySelector(
+      '#agenda-psicologo .agenda-day:not(:disabled)'
+    );
+    assert.match(psychologistDay.textContent, /Sexta-feira/);
+    assert.match(psychologistDay.textContent, /Atendimento psicológico/);
+    psychologistDay.click();
+    await waitFor(
+      () => /Solicitar atendimento com psicólogo/.test(
+        window.document.querySelector('#subject').value
+      ),
+      'O dia do psicólogo não preencheu a solicitação do morador'
+    );
+    assert.match(window.document.querySelector('#subject').value, /07\/08\/2099/);
+    assert.ok(
+      Array.from(category.options).some(option =>
+        /odontológico \(dentista\)/.test(option.value)
+      ),
+      'A opção odontológica foi removida pela extensão dinâmica'
+    );
   } finally {
     window.close();
   }
@@ -700,7 +762,7 @@ async function main() {
   assert.equal(harness.records.oldNoticeRequests.length, 0);
   assert.deepEqual(harness.errors, [], `Erros no DOM: ${harness.errors.join('; ')}`);
   console.log(
-    'DOM: abas, sincronização pública, médica, enfermeira, nutricionista, campanhas, recados, odontologia, abatimento único e WhatsApp validados sem gravação real.'
+    'DOM: abas, sincronização pública, profissionais dinâmicos, médica, enfermeira, nutricionista, campanhas, recados, odontologia, abatimento único e WhatsApp validados sem gravação real.'
   );
 }
 
