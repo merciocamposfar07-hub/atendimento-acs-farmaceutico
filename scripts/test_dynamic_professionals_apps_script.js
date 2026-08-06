@@ -430,6 +430,40 @@ const publicAfter = context.integralObterPainelPublico_();
 assert.equal(publicAfter.modules.fisioterapeuta.length, 5);
 assert.ok(publicAfter.professionals.some(item => item.id === 'fisioterapeuta'));
 
+const rowsBeforeDeactivate = sheets.PROFISSIONAIS.getLastRow();
+const deactivatePhysiotherapist = runPost('admin_salvar_profissional', 'fisiooff', {
+  id: 'FISIOTERAPEUTA',
+  nome: 'Fisioterapeuta',
+  tituloPublico: 'Atendimento com fisioterapeuta',
+  icone: '🧑‍⚕️',
+  ordem: '6',
+  ativo: 'false'
+});
+assert.equal(deactivatePhysiotherapist.ok, true);
+assert.equal(
+  context.integralObterPainelPublico_().professionals.some(
+    item => item.id === 'fisioterapeuta'
+  ),
+  false,
+  'Um profissional desativado no painel não pode permanecer no portal.'
+);
+assert.equal(sheets.PROFISSIONAIS.getLastRow(), rowsBeforeDeactivate);
+
+const reactivatePhysiotherapist = runPost('admin_salvar_profissional', 'fisioon', {
+  id: 'FISIOTERAPEUTA',
+  nome: 'Fisioterapeuta',
+  tituloPublico: 'Atendimento com fisioterapeuta',
+  icone: '🧑‍⚕️',
+  ordem: '6',
+  ativo: 'true'
+});
+assert.equal(reactivatePhysiotherapist.ok, true);
+assert.ok(
+  context.integralObterPainelPublico_().professionals.some(
+    item => item.id === 'fisioterapeuta'
+  )
+);
+
 const legacyResponse = context.doPost(event({
   action: 'admin_salvar_profissional',
   requestId: 'legacy_medica_12345678',
