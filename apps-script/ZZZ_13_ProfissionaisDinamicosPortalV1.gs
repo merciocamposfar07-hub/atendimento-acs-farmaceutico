@@ -1266,3 +1266,32 @@ function profissionaisDinamicosV1ConteudoResposta_(resposta) {
 function profissionaisDinamicosV1Texto_(valor) {
   return String(valor == null ? '' : valor).trim();
 }
+
+/**
+ * Diagnóstico manual e somente leitura antes da implantação.
+ * Não cria, edita ou apaga qualquer linha da planilha.
+ */
+function testarProfissionaisDinamicosPortalV1() {
+  var modulos = profissionaisDinamicosV1LerModulosPublicos_();
+  var profissionais = profissionaisDinamicosV1LerPublicos_();
+  var contagens = {};
+
+  Object.keys(modulos).forEach(function (chave) {
+    contagens[chave] = Array.isArray(modulos[chave])
+      ? modulos[chave].length
+      : 0;
+  });
+
+  var resultado = {
+    ok: true,
+    versao: PROFISSIONAIS_DINAMICOS_PORTAL_V1.VERSAO,
+    somenteLeitura: true,
+    profissionaisAtivos: profissionais.map(function (item) {
+      return item.id;
+    }),
+    agendasPorProfissional: contagens
+  };
+
+  console.log(JSON.stringify(resultado));
+  return resultado;
+}

@@ -446,6 +446,22 @@ const invalidRequest = context.doPost(event({
 }));
 assert.match(invalidRequest.getContent(), /Identificador da operação inválido/);
 
+const rowsBeforeDiagnostic = {
+  professionals: sheets.PROFISSIONAIS.getLastRow(),
+  services: sheets.SERVICOS.getLastRow(),
+  agendas: sheets.PAINEL_PROFISSIONAIS.getLastRow()
+};
+const diagnostic = context.testarProfissionaisDinamicosPortalV1();
+assert.equal(diagnostic.ok, true);
+assert.equal(diagnostic.somenteLeitura, true);
+assert.equal(diagnostic.agendasPorProfissional.psicologo, 5);
+assert.ok(diagnostic.profissionaisAtivos.includes('psicologo'));
+assert.deepEqual(rowsBeforeDiagnostic, {
+  professionals: sheets.PROFISSIONAIS.getLastRow(),
+  services: sheets.SERVICOS.getLastRow(),
+  agendas: sheets.PAINEL_PROFISSIONAIS.getLastRow()
+});
+
 console.log(
   'Apps Script dinâmico: psicólogo adotado sem duplicação, fisioterapeuta criado com 5 agendas e módulos legados preservados.'
 );
