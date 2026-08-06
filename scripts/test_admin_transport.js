@@ -79,10 +79,8 @@ function verifyStaticSource(config) {
   }
 
   assert.match(base, new RegExp(`event\\.source!==frame\\.contentWindow`));
-  assert.match(base, /proximaEspera:18000/);
-  assert.match(base, /Math\.min\(8000,[^)]*\+1000\)/);
-  assert.match(base, /},25000\)/);
-  assert.match(base, /limite:Date\.now\(\)\+74000/);
+  assert.match(base, /proximaEspera:2500/);
+  assert.match(base, /Math\.min\(7000,[^)]*\+1200\)/);
   assert.equal(
     (base.match(/\.submit\(\)/g) || []).length,
     1,
@@ -99,18 +97,14 @@ function verifyStaticSource(config) {
     assert.doesNotMatch(official, new RegExp(staleMessage));
   }
 
-  assert.match(base, /PortalTacsAdminWarmup/);
-  assert.doesNotMatch(base, /jsonp\('admin_status',\{\},pronto\)/);
-  assert.doesNotMatch(base, /Preparando a conexão com o Google Apps Script/);
+  assert.match(base, /PortalTacsAdminPreload/);
+  assert.match(base, /jsonp\('admin_status',\{\},pronto\)/);
+  assert.match(base, /Preparando a conexão com o Google Apps Script/);
   assert.match(base, /A sessão anterior não pôde ser reutilizada/);
-  assert.match(official, /20260806-(?:desempenho-v4|profissionais-dinamicos-v1)/);
-  assert.match(
-    official,
-    /admin-warmup\.js\?v=20260806-(?:desempenho-v4|profissionais-dinamicos-v1)/
-  );
+  assert.match(official, /20260805-preaquecimento-v3/);
+  assert.match(official, /admin-warmup\.js\?v=20260805-preaquecimento-v3/);
   assert.match(official, /rel="preconnect" href="https:\/\/script\.google\.com"/);
-  assert.doesNotMatch(official, /Promise\.all\(\[painel,conexao/);
-  assert.match(official, /painel\.then\(function\(html\)/);
+  assert.match(official, /Promise\.all\(\[painel,conexao/);
   assert.match(official, /window\.PortalTacsAdminPreload=/);
   assert.doesNotMatch(official, /aplicarRetry|aplicarConexao|aplicarReconexao|reenviarOperacao/);
 }
@@ -293,7 +287,7 @@ async function testDirectResponse(config) {
   window.close();
 }
 
-async function testImmediatePanel(config) {
+async function testFallbackStatus(config) {
   const statusRequests = [];
   const errors = [];
   const virtualConsole = new VirtualConsole();
@@ -324,11 +318,11 @@ async function testImmediatePanel(config) {
   const {window} = dom;
   await waitFor(() => {
     const status = window.document.getElementById('loginStatus');
-    return status && /Digite o PIN/.test(status.textContent);
-  }, `O painel não liberou o PIN imediatamente em ${config.file}.`);
+    return status && /Conexão preparada/.test(status.textContent);
+  }, `A contingência admin_status não preparou ${config.file}.`);
 
   const status = window.document.getElementById('loginStatus');
-  assert.equal(statusRequests.length, 0, `${config.file} bloqueou a abertura com admin_status.`);
+  assert.equal(statusRequests.length, 1, `${config.file} duplicou admin_status antes do PIN.`);
   assert.equal(status.classList.contains('ok'), true);
   assert.equal(status.classList.contains('erro'), false);
   assert.equal(window.document.getElementById('entrar').disabled, false);
@@ -390,10 +384,10 @@ async function testExpiredStoredSession(config) {
 async function main() {
   CASES.forEach(verifyStaticSource);
   await testWarmupRoute();
-  await Promise.all(CASES.map(testImmediatePanel));
+  await Promise.all(CASES.map(testFallbackStatus));
   await Promise.all(CASES.map(testDirectResponse));
   await Promise.all(CASES.map(testExpiredStoredSession));
-  console.log('OK: abertura imediata, pré-aquecimento, transporte direto e sessão antiga aprovados nos 3 painéis.');
+  console.log('OK: pré-aquecimento, transporte direto e sessão antiga aprovados nos 3 painéis.');
 }
 
 main().catch(error => {
