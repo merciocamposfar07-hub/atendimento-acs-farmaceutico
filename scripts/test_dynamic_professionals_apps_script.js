@@ -244,6 +244,8 @@ context.tratarGetPainelTacs_ = event => {
   }
   return new Output(JSON.stringify({ok: true, pendente: true}));
 };
+context.doPost = event => context.tratarPostPainelTacs_(event);
+context.doGet = event => context.tratarGetPainelTacs_(event);
 
 vm.createContext(context);
 vm.runInContext(source, context);
@@ -254,7 +256,7 @@ function event(parameters) {
 
 function runPost(action, suffix, extra) {
   const requestId = `${action}_${suffix}_12345678`;
-  const response = context.tratarPostPainelTacs_(event({
+  const response = context.doPost(event({
     action,
     requestId,
     token: 'sessao-valida',
@@ -262,7 +264,7 @@ function runPost(action, suffix, extra) {
     ...extra
   }));
   assert.ok(response && typeof response.getContent === 'function');
-  const resultResponse = context.tratarGetPainelTacs_(event({
+  const resultResponse = context.doGet(event({
     action: 'admin_result',
     requestId,
     callback: ''
@@ -289,6 +291,19 @@ assert.equal(psychologist.service.name, 'Atendimento psicológico');
 assert.doesNotMatch(JSON.stringify(publicInitial), /sessao-valida|iphone-teste|pin/i);
 assert.equal(context.tacsReadModules_().psicologo.length, 5);
 
+const psychologistService = sheets.SERVICOS.rows.find(row =>
+  String(row[1]).normalize('NFD').replace(/[\u0300-\u036f]/g, '') === 'PSICOLOGO'
+);
+psychologistService[5] = false;
+assert.equal(
+  context.integralObterPainelPublico_().professionals.some(
+    item => item.id === 'psicologo'
+  ),
+  false,
+  'Um serviço dinâmico inativo não pode aparecer no portal.'
+);
+psychologistService[5] = true;
+
 const agendaResult = runPost('admin_salvar_agenda', 'psico', {
   modulo: 'PSICOLOGO',
   dia: 'Quarta-feira',
@@ -309,6 +324,20 @@ const psychologistWednesday = sheets.PAINEL_PROFISSIONAIS.rows.find(row =>
 );
 assert.equal(psychologistWednesday[3], true);
 assert.equal(psychologistWednesday[7], 'Psicologia');
+
+const serviceLinkBefore = psychologistService[1];
+const invalidServiceLink = runPost('admin_salvar_servico', 'linkinvalido', {
+  id: 'ATEND_PSICO',
+  profissionalId: 'PROFISSIONAL_INEXISTENTE',
+  nome: 'Atendimento psicológico',
+  descricaoAutomatica: 'Solicitação de atendimento com psicólogo.',
+  ordem: '1',
+  ativo: 'true',
+  permiteVagaComum: 'false',
+  permiteEmergencia: 'false'
+});
+assert.equal(invalidServiceLink.ok, false);
+assert.equal(psychologistService[1], serviceLinkBefore);
 
 const beforeAdoption = {
   professionals: sheets.PROFISSIONAIS.getLastRow(),
@@ -353,6 +382,34 @@ assert.equal(sheets.PROFISSIONAIS.getLastRow(), beforeAdoption.professionals + 1
 assert.equal(sheets.SERVICOS.getLastRow(), beforeAdoption.services + 1);
 assert.equal(sheets.PAINEL_PROFISSIONAIS.getLastRow(), beforeAdoption.agendas + 5);
 
+sheets.SERVICOS.appendRow([
+  'ATENDIMENTO_TERAPEUTA',
+  'MEDICA',
+  'Identificador ocupado',
+  'Registro de teste.',
+  99,
+  false,
+  false,
+  false,
+  ''
+]);
+const professionalsBeforeCollision = sheets.PROFISSIONAIS.getLastRow();
+const agendasBeforeCollision = sheets.PAINEL_PROFISSIONAIS.getLastRow();
+const collision = runPost('admin_criar_profissional', 'colisao', {
+  id: 'TERAPEUTA',
+  nome: 'Terapeuta',
+  tituloPublico: 'Atendimento com terapeuta',
+  icone: '👤',
+  ordem: '7',
+  servicoNome: 'Terapia',
+  descricaoAutomatica: 'Solicitação de atendimento com terapeuta.',
+  ativo: 'true'
+});
+assert.equal(collision.ok, false);
+assert.equal(sheets.PROFISSIONAIS.getLastRow(), professionalsBeforeCollision);
+assert.equal(sheets.PAINEL_PROFISSIONAIS.getLastRow(), agendasBeforeCollision);
+sheets.SERVICOS.rows.pop();
+
 const duplicate = runPost('admin_criar_profissional', 'fisio2', {
   id: 'FISIOTERAPEUTA',
   nome: 'Fisioterapeuta',
@@ -373,13 +430,21 @@ const publicAfter = context.integralObterPainelPublico_();
 assert.equal(publicAfter.modules.fisioterapeuta.length, 5);
 assert.ok(publicAfter.professionals.some(item => item.id === 'fisioterapeuta'));
 
-const legacyResponse = context.tratarPostPainelTacs_(event({
+const legacyResponse = context.doPost(event({
   action: 'admin_salvar_profissional',
   requestId: 'legacy_medica_12345678',
   id: 'MEDICA'
 }));
 assert.equal(legacyResponse.legacy, true);
 assert.equal(legacyPasses, 1);
+
+const invalidRequest = context.doPost(event({
+  action: 'admin_criar_profissional',
+  requestId: 'curto',
+  token: 'sessao-valida',
+  dispositivo: 'iphone-teste'
+}));
+assert.match(invalidRequest.getContent(), /Identificador da operação inválido/);
 
 console.log(
   'Apps Script dinâmico: psicólogo adotado sem duplicação, fisioterapeuta criado com 5 agendas e módulos legados preservados.'

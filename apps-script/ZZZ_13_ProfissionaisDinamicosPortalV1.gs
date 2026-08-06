@@ -32,10 +32,30 @@ var PROFISSIONAIS_DINAMICOS_PORTAL_V1 = Object.freeze({
 
 var profissionaisDinamicosV1GetAnterior_;
 var profissionaisDinamicosV1PostAnterior_;
+var profissionaisDinamicosV1DoGetAnterior_;
+var profissionaisDinamicosV1DoPostAnterior_;
 var profissionaisDinamicosV1PainelPublicoAnterior_;
 var profissionaisDinamicosV1TacsPublicoAnterior_;
 
 (function instalarProfissionaisDinamicosPortalV1_() {
+  if (typeof doGet === 'function') {
+    profissionaisDinamicosV1DoGetAnterior_ = doGet;
+
+    doGet = function (e) {
+      var resposta = profissionaisDinamicosV1TratarGet_(e);
+      return resposta || profissionaisDinamicosV1DoGetAnterior_(e);
+    };
+  }
+
+  if (typeof doPost === 'function') {
+    profissionaisDinamicosV1DoPostAnterior_ = doPost;
+
+    doPost = function (e) {
+      var resposta = profissionaisDinamicosV1TratarPost_(e);
+      return resposta || profissionaisDinamicosV1DoPostAnterior_(e);
+    };
+  }
+
   if (typeof tratarGetPainelTacs_ === 'function') {
     profissionaisDinamicosV1GetAnterior_ = tratarGetPainelTacs_;
 
@@ -124,12 +144,11 @@ function profissionaisDinamicosV1TratarPost_(e) {
 
   if (!dinamica) return null;
 
-  var requestId = profissionaisDinamicosV1ValidarRequestId_(
-    parametros.requestId
-  );
+  var requestId = profissionaisDinamicosV1Texto_(parametros.requestId);
   var resultado;
 
   try {
+    requestId = profissionaisDinamicosV1ValidarRequestId_(requestId);
     profissionaisDinamicosV1ValidarSessao_(parametros);
 
     if (acao === 'admin_criar_profissional') {
@@ -148,7 +167,9 @@ function profissionaisDinamicosV1TratarPost_(e) {
     };
   }
 
-  profissionaisDinamicosV1GuardarResultado_(requestId, resultado);
+  if (/^[A-Za-z0-9_-]{8,160}$/.test(requestId)) {
+    profissionaisDinamicosV1GuardarResultado_(requestId, resultado);
+  }
   return profissionaisDinamicosV1ResponderPost_(requestId, resultado);
 }
 
@@ -236,6 +257,30 @@ function profissionaisDinamicosV1Criar_(parametros) {
     );
     var ativo = profissionaisDinamicosV1Booleano_(parametros.ativo);
     var agora = new Date();
+    var idReal = profissionaisDinamicosV1Texto_(
+      profissional && profissional.valores[
+        profissionaisDinamicosV1Indice_(tabelaProf, 'ID')
+      ]
+    ) || idSugerido;
+    var servicos = profissionaisDinamicosV1EncontrarTodos_(
+      tabelaServ,
+      'PROFISSIONAL_ID',
+      idReal
+    );
+    var servicoId = 'ATENDIMENTO_' + profissionaisDinamicosV1Id_(idReal);
+    var servicoMesmoId = profissionaisDinamicosV1Encontrar_(
+      tabelaServ,
+      'ID',
+      servicoId
+    );
+    var servicoCriado = false;
+
+    if (!servicos.length && servicoMesmoId) {
+      throw new Error(
+        'Já existe outro serviço usando o identificador ' + servicoId +
+        '. Nenhuma linha foi duplicada.'
+      );
+    }
 
     if (!profissional) {
       profissionaisDinamicosV1Adicionar_(tabelaProf, {
@@ -254,22 +299,9 @@ function profissionaisDinamicosV1Criar_(parametros) {
       );
     }
 
-    var idReal = profissionaisDinamicosV1Texto_(
-      profissional && profissional.valores[
-        profissionaisDinamicosV1Indice_(tabelaProf, 'ID')
-      ]
-    ) || idSugerido;
-
-    var servicos = profissionaisDinamicosV1EncontrarTodos_(
-      tabelaServ,
-      'PROFISSIONAL_ID',
-      idReal
-    );
-    var servicoCriado = false;
-
     if (!servicos.length) {
       profissionaisDinamicosV1Adicionar_(tabelaServ, {
-        ID: 'ATENDIMENTO_' + profissionaisDinamicosV1Id_(idReal),
+        ID: servicoId,
         PROFISSIONAL_ID: idReal,
         NOME: servicoNome,
         DESCRICAO_AUTOMATICA: descricao,
@@ -372,8 +404,9 @@ function profissionaisDinamicosV1SalvarServico_(parametros) {
   }
 
   try {
+    var planilha = profissionaisDinamicosV1Planilha_();
     var tabela = profissionaisDinamicosV1Tabela_(
-      profissionaisDinamicosV1Planilha_(),
+      planilha,
       PROFISSIONAIS_DINAMICOS_PORTAL_V1.ABA_SERVICOS,
       [
         'ID',
@@ -398,14 +431,34 @@ function profissionaisDinamicosV1SalvarServico_(parametros) {
     var descricao = profissionaisDinamicosV1Texto_(
       parametros.descricaoAutomatica
     );
+    var profissionalId = profissionaisDinamicosV1Texto_(
+      parametros.profissionalId
+    );
     if (!nome || !descricao) {
       throw new Error('Nome e descrição automática são obrigatórios.');
     }
 
+    var tabelaProfissionais = profissionaisDinamicosV1Tabela_(
+      planilha,
+      PROFISSIONAIS_DINAMICOS_PORTAL_V1.ABA_PROFISSIONAIS,
+      ['ID']
+    );
+    var profissional = profissionaisDinamicosV1Encontrar_(
+      tabelaProfissionais,
+      'ID',
+      profissionalId
+    );
+    if (!profissional) {
+      throw new Error('O profissional associado ao serviço não foi encontrado.');
+    }
+    profissionalId = profissionaisDinamicosV1Texto_(
+      profissional.valores[
+        profissionaisDinamicosV1Indice_(tabelaProfissionais, 'ID')
+      ]
+    );
+
     profissionaisDinamicosV1AtualizarRegistro_(tabela, registro, {
-      PROFISSIONAL_ID: profissionaisDinamicosV1Texto_(
-        parametros.profissionalId
-      ),
+      PROFISSIONAL_ID: profissionalId,
       NOME: nome,
       DESCRICAO_AUTOMATICA: descricao,
       ORDEM: profissionaisDinamicosV1InteiroPositivo_(parametros.ordem, 1),
@@ -724,6 +777,9 @@ function profissionaisDinamicosV1LerPublicos_() {
       valores[profissionaisDinamicosV1Indice_(tabelaProf, 'ID')]
     );
     if (!chave) return;
+    if (!profissionaisDinamicosV1Legado_(chave) && !servicos[chave]) {
+      return;
+    }
 
     var titulo = profissionaisDinamicosV1Texto_(
       valores[profissionaisDinamicosV1Indice_(tabelaProf, 'TITULO_PUBLICO')]
@@ -757,10 +813,36 @@ function profissionaisDinamicosV1LerPublicos_() {
 
 function profissionaisDinamicosV1EnriquecerPublico_(dados) {
   dados = dados && typeof dados === 'object' ? dados : {ok: true};
-  if (!dados.modules || typeof dados.modules !== 'object') {
-    dados.modules = profissionaisDinamicosV1LerModulosPublicos_();
+  var tinhaModulos = dados.modules && typeof dados.modules === 'object';
+  var modulos = tinhaModulos ? dados.modules : {};
+  var profissionais = profissionaisDinamicosV1LerPublicos_();
+  var precisaCompletar = !tinhaModulos;
+
+  profissionais.some(function (profissional) {
+    if (
+      !profissionaisDinamicosV1Legado_(profissional.id) &&
+      !Object.prototype.hasOwnProperty.call(modulos, profissional.id)
+    ) {
+      precisaCompletar = true;
+      return true;
+    }
+    return false;
+  });
+
+  if (precisaCompletar) {
+    var lidos = profissionaisDinamicosV1LerModulosPublicos_();
+    Object.keys(lidos).forEach(function (chave) {
+      if (
+        !Object.prototype.hasOwnProperty.call(modulos, chave) ||
+        !profissionaisDinamicosV1Legado_(chave)
+      ) {
+        modulos[chave] = lidos[chave];
+      }
+    });
   }
-  dados.professionals = profissionaisDinamicosV1LerPublicos_();
+
+  dados.modules = modulos;
+  dados.professionals = profissionais;
   dados.profissionaisDinamicosVersao =
     PROFISSIONAIS_DINAMICOS_PORTAL_V1.VERSAO;
   return dados;
@@ -769,20 +851,26 @@ function profissionaisDinamicosV1EnriquecerPublico_(dados) {
 function profissionaisDinamicosV1ValidarSessao_(parametros) {
   var token = profissionaisDinamicosV1Texto_(parametros.token);
   var dispositivo = profissionaisDinamicosV1Texto_(parametros.dispositivo);
+  var rotaPost = typeof profissionaisDinamicosV1DoPostAnterior_ === 'function'
+    ? profissionaisDinamicosV1DoPostAnterior_
+    : profissionaisDinamicosV1PostAnterior_;
+  var rotaGet = typeof profissionaisDinamicosV1DoGetAnterior_ === 'function'
+    ? profissionaisDinamicosV1DoGetAnterior_
+    : profissionaisDinamicosV1GetAnterior_;
 
   if (!token || !dispositivo) {
     throw new Error('Sessão administrativa ausente. Entre novamente com o PIN.');
   }
 
   if (
-    typeof profissionaisDinamicosV1PostAnterior_ !== 'function' ||
-    typeof profissionaisDinamicosV1GetAnterior_ !== 'function'
+    typeof rotaPost !== 'function' ||
+    typeof rotaGet !== 'function'
   ) {
     throw new Error('As rotas administrativas anteriores não estão disponíveis.');
   }
 
   var requestId = 'pdv1_auth_' + Utilities.getUuid().replace(/-/g, '');
-  profissionaisDinamicosV1PostAnterior_(
+  rotaPost(
     profissionaisDinamicosV1Evento_({
       action: 'admin_dados',
       token: token,
@@ -794,7 +882,7 @@ function profissionaisDinamicosV1ValidarSessao_(parametros) {
   var envelope = null;
   for (var tentativa = 0; tentativa < 20; tentativa += 1) {
     envelope = profissionaisDinamicosV1ConteudoResposta_(
-      profissionaisDinamicosV1GetAnterior_(
+      rotaGet(
         profissionaisDinamicosV1Evento_({
           action: 'admin_result',
           requestId: requestId,
