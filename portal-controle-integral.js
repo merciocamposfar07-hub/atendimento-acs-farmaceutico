@@ -19,4 +19,3 @@ function load(){jsonp(render,1)}
 function init(){style();load();var select=document.getElementById('category');if(select)select.addEventListener('change',function(){var value=String(select.value||'').toLowerCase();if(value.indexOf('médica')!==-1||value.indexOf('medica')!==-1||value.indexOf('nutricionista')!==-1){if(lastData)render(lastData);load()}});document.addEventListener('visibilitychange',function(){if(!document.hidden)load()});setInterval(load,45000)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 }());
-
