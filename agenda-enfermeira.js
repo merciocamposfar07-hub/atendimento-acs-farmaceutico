@@ -35,9 +35,11 @@
       medica: [],
       nutricionista: []
     },
+    professionals: {},
     updatedAt: '',
     syncError: ''
   };
+  var publicListenerInstalled = false;
 
   function id(value) {
     return document.getElementById(value);
@@ -45,6 +47,32 @@
 
   function clean(value) {
     return String(value == null ? '' : value).trim();
+  }
+
+  function booleanValue(value) {
+    if (value === true || value === 1) return true;
+    return ['true', '1', 'sim', 'yes', 'ativo', 'ativa'].indexOf(
+      clean(value).toLowerCase()
+    ) !== -1;
+  }
+
+  function moduleKey(value) {
+    var text = clean(value).toLowerCase();
+    if (text.normalize) {
+      text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+    text = text.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    if (['medica', 'medico', 'medicina'].indexOf(text) !== -1) return 'medica';
+    if (['nutricionista', 'nutricao'].indexOf(text) !== -1) return 'nutricionista';
+    if (['enfermeira', 'enfermeiro', 'enfermagem'].indexOf(text) !== -1) return 'enfermeira';
+    if (['odontologia', 'dentista'].indexOf(text) !== -1) return 'odontologia';
+    return text;
+  }
+
+  function titleFromKey(value) {
+    return clean(value).split('_').map(function (part) {
+      return part ? part.charAt(0).toUpperCase() + part.slice(1) : '';
+    }).join(' ');
   }
 
   function esc(value) {
@@ -164,6 +192,13 @@
   }
 
   function jsonp(action) {
+    if (
+      action === 'painel_publico' &&
+      window.PortalTacsPublicData &&
+      typeof window.PortalTacsPublicData.get === 'function'
+    ) {
+      return window.PortalTacsPublicData.get();
+    }
     return new Promise(function (resolve, reject) {
       if (!API) {
         reject(new Error('Serviço não configurado.'));
@@ -238,15 +273,19 @@
     var select = id('category');
     if (!select) return;
 
-    [
-      'Atendimento com a Médica',
-      'Atendimento com a Enfermeira Chefe',
-      'Atendimento com a Nutricionista'
-    ].forEach(function (value) {
+    var legacy = [
+      {module: 'medica', value: 'Solicitar atendimento com a Médica'},
+      {module: 'enfermeira', value: 'Solicitar atendimento com a Enfermeira Chefe'},
+      {module: 'nutricionista', value: 'Solicitar atendimento com nutricionista'}
+    ];
+
+    legacy.forEach(function (item) {
+      var value = item.value;
       if (optionExists(select, value)) return;
       var option = document.createElement('option');
       option.value = value;
       option.textContent = value;
+      option.dataset.professionalModule = item.module;
       var firstDental = Array.prototype.find.call(
         select.options,
         function (item) {
@@ -255,24 +294,79 @@
       );
       select.insertBefore(option, firstDental || null);
     });
+
+    legacy.forEach(function (item) {
+      Array.prototype.forEach.call(select.options, function (option) {
+        if (option.value === item.value) {
+          option.dataset.professionalModule = item.module;
+        }
+      });
+    });
+
+    var ativos = {};
+    Object.keys(state.professionals).forEach(function (module) {
+      var professional = state.professionals[module];
+      if (!professional || professional.active === false || module === 'odontologia') return;
+      ativos[module] = true;
+      var category = moduleCategory(module);
+      if (!category) return;
+      var existing = Array.prototype.find.call(select.options, function (option) {
+        return option.dataset.professionalModule === module || option.value === category;
+      });
+      if (existing) {
+        existing.value = category;
+        existing.textContent = category;
+        existing.dataset.professionalModule = module;
+        if (['medica', 'enfermeira', 'nutricionista'].indexOf(module) === -1) {
+          existing.dataset.dynamicProfessional = '1';
+        }
+        return;
+      }
+      var option = document.createElement('option');
+      option.value = category;
+      option.textContent = category;
+      option.dataset.professionalModule = module;
+      option.dataset.dynamicProfessional = '1';
+      var firstDental = Array.prototype.find.call(select.options, function (candidate) {
+        return clean(candidate.value).toLowerCase().indexOf('odontológico') !== -1;
+      });
+      select.insertBefore(option, firstDental || null);
+    });
+
+    Array.prototype.slice.call(
+      select.querySelectorAll('option[data-dynamic-professional="1"]')
+    ).forEach(function (option) {
+      if (!ativos[option.dataset.professionalModule]) option.remove();
+    });
   }
 
   function moduleTitle(module) {
     if (module === 'medica') return 'Agenda da Médica';
     if (module === 'nutricionista') return 'Agenda da Nutricionista';
-    return 'Agenda da Enfermeira Chefe';
+    if (module === 'enfermeira') return 'Agenda da Enfermeira Chefe';
+    var professional = state.professionals[module] || {};
+    return professional.title
+      ? 'Agenda: ' + clean(professional.title)
+      : 'Agenda de ' + titleFromKey(module);
   }
 
   function moduleCategory(module) {
-    if (module === 'medica') return 'Atendimento com a Médica';
-    if (module === 'nutricionista') return 'Atendimento com a Nutricionista';
-    return 'Atendimento com a Enfermeira Chefe';
+    if (module === 'medica') return 'Solicitar atendimento com a Médica';
+    if (module === 'nutricionista') return 'Solicitar atendimento com nutricionista';
+    if (module === 'enfermeira') {
+      return 'Solicitar atendimento com a Enfermeira Chefe';
+    }
+    var professional = state.professionals[module] || {};
+    return clean(professional.category) ||
+      'Solicitar atendimento com ' +
+      clean(professional.title || titleFromKey(module));
   }
 
   function moduleIcon(module) {
     if (module === 'medica') return '🩺';
     if (module === 'nutricionista') return '🥗';
-    return '👩‍⚕️';
+    if (module === 'enfermeira') return '👩‍⚕️';
+    return clean((state.professionals[module] || {}).icon) || '👤';
   }
 
   function formatDate(value) {
@@ -481,45 +575,103 @@
   }
 
   function renderAgendas() {
-    ['medica', 'enfermeira', 'nutricionista'].forEach(renderModule);
+    var modules = ['medica', 'enfermeira', 'nutricionista'];
+    Object.keys(state.professionals)
+      .sort(function (a, b) {
+        var pa = state.professionals[a] || {};
+        var pb = state.professionals[b] || {};
+        return Number(pa.order || 999) - Number(pb.order || 999);
+      })
+      .forEach(function (module) {
+        if (
+          module !== 'odontologia' &&
+          modules.indexOf(module) === -1 &&
+          state.professionals[module].active !== false
+        ) {
+          modules.push(module);
+        }
+      });
+
+    var container = ensureAgendasContainer();
+    if (container) {
+      Array.prototype.slice.call(container.querySelectorAll('.portal-agenda')).forEach(
+        function (section) {
+          if (modules.indexOf(clean(section.dataset.module)) === -1) section.remove();
+        }
+      );
+    }
+    modules.forEach(renderModule);
+  }
+
+  function applyPublicData(data) {
+    if (!data || data.ok === false) return null;
+    var modules = data.modules || {};
+    state.modules = {
+      medica: [],
+      enfermeira: DEFAULTS.enfermeira.slice(),
+      nutricionista: []
+    };
+    Object.keys(modules).forEach(function (rawModule) {
+      var module = moduleKey(rawModule);
+      if (!module || !Array.isArray(modules[rawModule])) return;
+      state.modules[module] = modules[rawModule];
+    });
+    if (!state.modules.enfermeira.length) {
+      state.modules.enfermeira = DEFAULTS.enfermeira.slice();
+    }
+
+    state.professionals = {};
+    var professionals = Array.isArray(data.professionals)
+      ? data.professionals
+      : Array.isArray(data.profissionais)
+        ? data.profissionais
+        : [];
+    professionals.forEach(function (item) {
+      var module = moduleKey(item && (item.id || item.ID || item.module));
+      if (!module || !booleanValue(item.active == null ? item.ATIVO : item.active)) return;
+      state.professionals[module] = {
+        id: module,
+        title: clean(item.title || item.TITULO_PUBLICO || item.name || item.NOME),
+        icon: clean(item.icon || item.ICONE) || '👤',
+        order: Number(item.order == null ? item.ORDEM : item.order) || 999,
+        category: clean(item.category),
+        active: true,
+        service: item.service || null
+      };
+    });
+
+    Object.keys(state.modules).forEach(function (module) {
+      if (
+        ['medica', 'enfermeira', 'nutricionista', 'odontologia'].indexOf(module) !== -1 ||
+        state.professionals[module]
+      ) return;
+      var days = state.modules[module] || [];
+      if (!days.some(function (item) { return booleanValue(item && item.active); })) return;
+      state.professionals[module] = {
+        id: module,
+        title: titleFromKey(module),
+        icon: '👤',
+        order: 999,
+        category: 'Solicitar atendimento com ' + titleFromKey(module),
+        active: true,
+        service: null
+      };
+    });
+
+    addCategoryOptions();
+    state.updatedAt = clean(data.atualizadoEm);
+    state.syncError = '';
+    renderAgendas();
+    return data;
   }
 
   function syncPortal() {
-    setSync(
-      12,
-      'Conectando ao banco de dados da unidade...',
-      '1/3 — Conectando ao Google Apps Script'
-    );
-
+    renderAgendas();
     return jsonp('painel_publico')
-      .then(function (data) {
-        setSync(
-          58,
-          'Recebendo agendas, recados e campanhas...',
-          '2/3 — Recebendo informações publicadas'
-        );
-
-        var modules = data.modules || {};
-        state.modules.medica = Array.isArray(modules.medica)
-          ? modules.medica
-          : [];
-        state.modules.enfermeira =
-          Array.isArray(modules.enfermeira) && modules.enfermeira.length
-            ? modules.enfermeira
-            : DEFAULTS.enfermeira.slice();
-        state.modules.nutricionista = Array.isArray(modules.nutricionista)
-          ? modules.nutricionista
-          : [];
-        state.updatedAt = clean(data.atualizadoEm);
-
-        renderAgendas();
-        finishSync(true);
-        return data;
-      })
+      .then(applyPublicData)
       .catch(function (error) {
         state.syncError = error.message || String(error);
         renderAgendas();
-        finishSync(false);
         return null;
       });
   }
@@ -898,6 +1050,12 @@
     installNotifications();
     loadAutofill();
     renderAgendas();
+    if (!publicListenerInstalled) {
+      publicListenerInstalled = true;
+      window.addEventListener('portal-tacs-public-data', function (event) {
+        applyPublicData(event && event.detail);
+      });
+    }
     syncPortal();
   }
 

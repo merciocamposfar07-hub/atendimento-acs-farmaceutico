@@ -2,7 +2,7 @@
   "name": "portal-tacs-posto-matias",
   "private": true,
   "scripts": {
-    "test": "node scripts/test_agenda_apps_script.js && node scripts/test_public_agendas_apps_script.js && node scripts/test_dom_flows.js && node scripts/test_admin_transport.js"
+    "test": "node scripts/test_agenda_apps_script.js && node scripts/test_public_agendas_apps_script.js && node scripts/test_dynamic_professionals_apps_script.js && node scripts/test_dom_flows.js && node scripts/test_admin_transport.js && node scripts/test_dynamic_professionals_dom.js && node scripts/test_public_data_transport.js"
   },
   "devDependencies": {
     "jsdom": "27.0.1"
