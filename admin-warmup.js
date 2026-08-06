@@ -3,35 +3,61 @@
 
   var existente=window.PortalTacsAdminWarmup;
   if(existente&&typeof existente.iniciar==='function'){
-    document.addEventListener('visibilitychange',function(){
-      if(document.visibilityState==='visible')existente.iniciar();
-    });
-    window.addEventListener('pageshow',function(){existente.iniciar()});
     existente.iniciar();
     return;
   }
 
   var API=String(window.TACS_ADMIN_API_URL||'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec').trim();
+  var CACHE_KEY='portalTacsAdminStatusV5';
+  var WARM_KEY='portalTacsAppsScriptWarmAtV1';
+  var CACHE_MS=2*60*1000;
+  var WARM_MS=45*1000;
+  var TIMEOUT_MS=25000;
   var emCurso=null;
-  var ultimaConclusao=0;
+  var ultimaConclusao=lerInstanteAquecido();
+  var cacheInicial=lerCache();
   var estado={
     api:API,
-    situacao:'aguardando',
-    resultado:null,
+    situacao:cacheInicial?'pronta':'aguardando',
+    resultado:cacheInicial,
     ready:null,
     iniciar:iniciar
   };
 
   window.PortalTacsAdminWarmup=estado;
 
-  function avisar(){
+  function lerJson(chave){
+    try{return JSON.parse(localStorage.getItem(chave)||'null')}catch(e){return null}
+  }
+
+  function lerInstanteAquecido(){
+    try{return Number(localStorage.getItem(WARM_KEY)||0)}catch(e){return 0}
+  }
+
+  function lerCache(){
+    var item=lerJson(CACHE_KEY);
+    if(!item||!item.resultado||item.resultado.ok!==true)return null;
+    if(Date.now()-Number(item.salvoEm||0)>CACHE_MS)return null;
+    return item.resultado;
+  }
+
+  function servidorAquecido(){
+    return Date.now()-lerInstanteAquecido()<WARM_MS;
+  }
+
+  function salvar(resultado){
     try{
-      window.dispatchEvent(new CustomEvent('portal-tacs-admin-warmup',{detail:estado.resultado}));
+      localStorage.setItem(CACHE_KEY,JSON.stringify({salvoEm:Date.now(),resultado:resultado}));
+      localStorage.setItem(WARM_KEY,String(Date.now()));
     }catch(e){}
   }
 
-  function consultar(tentativa,concluir){
-    var nome='__portalTacsAdminStatus_'+Date.now()+'_'+tentativa+'_'+Math.random().toString(36).slice(2);
+  function avisar(){
+    try{window.dispatchEvent(new CustomEvent('portal-tacs-admin-warmup',{detail:estado.resultado}))}catch(e){}
+  }
+
+  function consultar(concluir){
+    var nome='__portalTacsAdminStatus_'+Date.now()+'_'+Math.random().toString(36).slice(2);
     var script=document.createElement('script');
     var encerrado=false;
     var timer;
@@ -46,15 +72,7 @@
       if(encerrado)return;
       encerrado=true;
       limpar();
-      if(resposta&&resposta.ok===true){
-        concluir({ok:true,resposta:resposta,tentativas:tentativa});
-        return;
-      }
-      if(tentativa<2){
-        setTimeout(function(){consultar(tentativa+1,concluir)},700);
-        return;
-      }
-      concluir({ok:false,tentativas:tentativa});
+      concluir(resposta&&resposta.ok===true?{ok:true,resposta:resposta,tentativas:1}:{ok:false,tentativas:1});
     }
 
     window[nome]=finalizar;
@@ -62,35 +80,51 @@
     script.src=API+(API.indexOf('?')<0?'?':'&')+'action=admin_status&callback='+encodeURIComponent(nome)+'&_='+Date.now();
     script.onerror=function(){finalizar(null)};
     document.head.appendChild(script);
-    timer=setTimeout(function(){finalizar(null)},8000);
+    timer=setTimeout(function(){finalizar(null)},TIMEOUT_MS);
   }
 
-  function iniciar(){
+  function iniciar(forcar){
     if(emCurso)return emCurso;
-    if(estado.resultado&&estado.resultado.ok===true&&Date.now()-ultimaConclusao<30000){
-      return Promise.resolve(estado.resultado);
+    var cache=lerCache();
+    if(!forcar&&servidorAquecido()){
+      var recente=cache||{ok:true,aquecido:true,origem:'atividade-recente'};
+      estado.resultado=recente;
+      estado.situacao='pronta';
+      estado.ready=Promise.resolve(recente);
+      return estado.ready;
     }
+
     estado.situacao='preparando';
-    estado.resultado=null;
     emCurso=new Promise(function(resolve){
-      consultar(1,function(resultado){
-        estado.resultado=resultado;
-        estado.situacao=resultado.ok?'pronta':'nao-confirmada';
+      consultar(function(resultado){
+        var preservado=resultado.ok?resultado:(lerCache()||resultado);
+        estado.resultado=preservado;
+        estado.situacao=resultado.ok?'pronta':(preservado.ok?'pronta-com-cache':'nao-confirmada');
         ultimaConclusao=Date.now();
+        if(resultado.ok)salvar(resultado);
         emCurso=null;
         avisar();
-        resolve(resultado);
+        resolve(preservado);
       });
     });
+
+    if(!forcar&&cache){
+      estado.resultado=cache;
+      estado.ready=Promise.resolve(cache);
+      return estado.ready;
+    }
     estado.ready=emCurso;
     return emCurso;
   }
 
   function reaquecerAoVoltar(){
-    if(document.visibilityState==='visible'&&Date.now()-ultimaConclusao>=60000)iniciar();
+    if(document.visibilityState==='visible'&&Date.now()-ultimaConclusao>=2*60*1000){
+      iniciar(true);
+    }
   }
 
   document.addEventListener('visibilitychange',reaquecerAoVoltar);
   window.addEventListener('pageshow',reaquecerAoVoltar);
-  iniciar();
+  estado.ready=iniciar();
 }());
+

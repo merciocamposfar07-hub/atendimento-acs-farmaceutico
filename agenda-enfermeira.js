@@ -39,6 +39,7 @@
     updatedAt: '',
     syncError: ''
   };
+  var publicListenerInstalled = false;
 
   function id(value) {
     return document.getElementById(value);
@@ -191,6 +192,13 @@
   }
 
   function jsonp(action) {
+    if (
+      action === 'painel_publico' &&
+      window.PortalTacsPublicData &&
+      typeof window.PortalTacsPublicData.get === 'function'
+    ) {
+      return window.PortalTacsPublicData.get();
+    }
     return new Promise(function (resolve, reject) {
       if (!API) {
         reject(new Error('Serviço não configurado.'));
@@ -658,27 +666,12 @@
   }
 
   function syncPortal() {
-    setSync(
-      12,
-      'Conectando ao banco de dados da unidade...',
-      '1/3 — Conectando ao Google Apps Script'
-    );
-
+    renderAgendas();
     return jsonp('painel_publico')
-      .then(function (data) {
-        setSync(
-          58,
-          'Recebendo agendas, recados e campanhas...',
-          '2/3 — Recebendo informações publicadas'
-        );
-        applyPublicData(data);
-        finishSync(true);
-        return data;
-      })
+      .then(applyPublicData)
       .catch(function (error) {
         state.syncError = error.message || String(error);
         renderAgendas();
-        finishSync(false);
         return null;
       });
   }
@@ -1057,6 +1050,12 @@
     installNotifications();
     loadAutofill();
     renderAgendas();
+    if (!publicListenerInstalled) {
+      publicListenerInstalled = true;
+      window.addEventListener('portal-tacs-public-data', function (event) {
+        applyPublicData(event && event.detail);
+      });
+    }
     syncPortal();
   }
 
@@ -1068,3 +1067,4 @@
     install();
   }
 }());
+
