@@ -94,4 +94,3 @@
   window.addEventListener('pageshow',reaquecerAoVoltar);
   iniciar();
 }());
-
