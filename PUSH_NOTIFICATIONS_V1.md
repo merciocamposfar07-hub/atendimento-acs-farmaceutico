@@ -4,6 +4,28 @@ Branch: `stabilization/push-notifications-v1`
 
 Base congelada da produção: `c129976a8e67d9f45890fa215ce0676a6c3bef53`
 
+## REGRA DE SEGURANÇA — GATE 0 OBRIGATÓRIO
+
+**Não adicionar módulo, não criar propriedade secreta, não atualizar implantação e não integrar esta branch à `main` antes de auditar o Apps Script real que está em produção.**
+
+A auditoria deve verificar, no projeto Apps Script `Portal TACS – Banco de Dados`, se já existe qualquer implementação total ou parcial de notificações. Procurar por:
+
+- `OneSignal`, `ONESIGNAL`, `push`, `notificacao`, `notificação`;
+- chamadas a `UrlFetchApp.fetch` direcionadas ao OneSignal ou outro provedor de push;
+- propriedades como `ONESIGNAL_APP_API_KEY`, `REST_API_KEY`, `ONESIGNAL_APP_ID` ou equivalentes;
+- rotas/ações como `admin_publicar_notificacao`, `enviarNotificacao`, `enviarPush` ou equivalentes;
+- gatilhos instaláveis que possam enviar avisos;
+- wrappers de `doGet`, `doPost`, `tratarGetPainelTacs_` ou `tratarPostPainelTacs_` relacionados a notificações.
+
+Resultado obrigatório do Gate 0:
+
+1. **Se já existir fluxo funcional:** não instalar `ZZZZ_14_NotificacoesPushPortalV1.gs`. Primeiro comparar o fluxo existente com esta V1 e consolidar uma única implementação.
+2. **Se existir fluxo parcial/antigo:** não empilhar outra implementação. Mapear o que permanece útil, desativar duplicidade de forma controlada e manter uma única rota oficial.
+3. **Se não existir envio servidor-servidor:** somente então o módulo V1 pode ser candidato à instalação.
+4. Nenhuma chave privada deve ser exibida, fotografada, enviada ao chat ou copiada para o GitHub.
+
+Enquanto essa auditoria não estiver concluída, o estado oficial é: **NÃO LIBERADO PARA PRODUÇÃO**.
+
 ## Objetivo
 
 Entregar notificações push para novos recados e campanhas sem transformar o push em dependência crítica do Portal do Morador.
@@ -47,7 +69,7 @@ Fluxo pretendido:
   - não envia novamente se conteúdo ativo não mudou;
   - conteúdo inativo não gera push.
 
-### Apps Script
+### Apps Script — CANDIDATO, NÃO INSTALAR ANTES DO GATE 0
 
 - `apps-script/ZZZZ_14_NotificacoesPushPortalV1.gs`
   - ação nova: `admin_publicar_notificacao`;
@@ -57,9 +79,9 @@ Fluxo pretendido:
   - usa idempotência no OneSignal;
   - falha de push nunca desfaz conteúdo publicado.
 
-## Configuração secreta obrigatória
+## Configuração secreta — SOMENTE DEPOIS DO GATE 0
 
-No projeto Apps Script `Portal TACS – Banco de Dados`, criar uma Script Property:
+Se a auditoria provar que não existe configuração equivalente e o módulo V1 for aprovado, criar no projeto Apps Script uma Script Property:
 
 - Nome: `ONESIGNAL_APP_API_KEY`
 - Valor: App API Key privada do aplicativo OneSignal correspondente ao App ID público já configurado.
@@ -72,14 +94,24 @@ App ID público usado pelo Portal:
 
 ## Ordem de ativação
 
+### Gate 0 — auditoria obrigatória do Apps Script real
+
+1. Não alterar nenhum arquivo.
+2. Mapear arquivos e pesquisar termos de notificação/push/OneSignal.
+3. Verificar rotas, `UrlFetchApp`, propriedades e gatilhos relacionados.
+4. Classificar o estado como `EXISTENTE_FUNCIONAL`, `EXISTENTE_PARCIAL` ou `AUSENTE`.
+5. Somente `AUSENTE` autoriza instalar diretamente o módulo V1. Os outros estados exigem consolidação antes de qualquer instalação.
+
 ### Gate 1 — código
 
 O workflow `Portal TACS - Push Notifications Tests` deve estar verde.
 
 ### Gate 2 — servidor
 
-1. Adicionar `ZZZZ_14_NotificacoesPushPortalV1.gs` ao projeto Apps Script existente.
-2. Criar a Script Property `ONESIGNAL_APP_API_KEY`.
+Somente se liberado pelo Gate 0:
+
+1. Adicionar `ZZZZ_14_NotificacoesPushPortalV1.gs` ao projeto Apps Script existente, se realmente necessário.
+2. Criar `ONESIGNAL_APP_API_KEY` somente se não existir propriedade equivalente já aprovada.
 3. Executar `testarConfiguracaoNotificacoesPushPortalV1()`.
 4. O retorno precisa indicar `ok:true`, `chaveConfigurada:true` e `nenhumEnvioRealizado:true`.
 5. Atualizar a implantação **existente** do Web App; não criar outro Web App/endereço.
