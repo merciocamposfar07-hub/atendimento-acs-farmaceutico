@@ -81,4 +81,15 @@ const warmup = fs.readFileSync(path.join(ROOT, 'admin-warmup.js'), 'utf8');
 assert.match(warmup, /action=admin_status&prewarm=1/);
 assert.match(warmup, /TIMEOUT_MS=15000/);
 
-console.log('OK: pré-aquecimento prepara dados, reutiliza cache e gravações invalidam snapshots.');
+[
+  'painel-oficial-agendas-vagas.html',
+  'painel-oficial-profissionais-servicos.html',
+  'painel-oficial-recados-campanhas.html'
+].forEach(file => {
+  const official = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  assert.match(official, /fetch\(origem\)/, `${file} não usa o cache normal do navegador.`);
+  assert.doesNotMatch(official, /cache\s*:\s*['"]no-store['"]/, `${file} ainda força download em toda abertura.`);
+  assert.match(official, /\?v=20260806-desempenho-v5/, `${file} perdeu o versionamento do recurso.`);
+});
+
+console.log('OK: pré-aquecimento, cache servidor e cache versionado dos três painéis aprovados.');
