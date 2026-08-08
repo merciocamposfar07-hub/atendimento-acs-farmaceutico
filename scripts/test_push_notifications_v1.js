@@ -82,11 +82,13 @@ assert.match(panel,/pushInativo:[^\n]+===false/);
 
 // 6. Servidor: segredo em Script Properties, endpoint oficial e sem configuração de som customizado.
 const serverSource=read('apps-script/ZZZZ_14_NotificacoesPushPortalV1.gs');
+assert.match(serverSource,/VERSAO: '1\.1\.0'/);
 assert.match(serverSource,/API_KEY_PROPERTY: 'ONESIGNAL_APP_API_KEY'/);
 assert.match(serverSource,/getProperty\(TACS_PUSH_PORTAL_V1\.API_KEY_PROPERTY\)/);
 assert.match(serverSource,/https:\/\/api\.onesignal\.com\/notifications/);
 assert.match(serverSource,/included_segments:\['Subscribed Users'\]/);
 assert.match(serverSource,/idempotency_key:idempotencyKey/);
+assert.match(serverSource,/tacsPushV1UuidIdempotente_\(fingerprint\)/);
 assert.doesNotMatch(serverSource,/ios_sound|android_sound|silent\s*:/);
 
 // 7. Simulação do Apps Script e da API OneSignal.
@@ -97,7 +99,7 @@ const fetchCalls=[];
 let uuidCounter=0;
 class Output{constructor(text){this.text=String(text)}setMimeType(){return this}setXFrameOptionsMode(){return this}getContent(){return this.text}}
 const context={
-  console,JSON,String,Number,Object,Array,RegExp,Error,Math,isFinite,
+  console,JSON,String,Number,Object,Array,RegExp,Error,Math,isFinite,Date,
   CacheService:{getScriptCache(){return{get:k=>cache.get(k)||null,put:(k,v)=>cache.set(k,String(v)),remove:k=>cache.delete(k)}}},
   PropertiesService:{getScriptProperties(){return{getProperty:k=>props.get(k)||'',setProperty:(k,v)=>props.set(k,String(v))}}},
   Utilities:{
@@ -106,7 +108,7 @@ const context={
     computeDigest(algorithm,value){assert.equal(algorithm,'SHA_256');return Array.from(crypto.createHash('sha256').update(String(value),'utf8').digest()).map(b=>b>127?b-256:b)},
     sleep(){}
   },
-  UrlFetchApp:{fetch(url,options){fetchCalls.push({url,options,body:JSON.parse(options.payload)});const response=fetchQueue.shift()||{code:200,body:{id:'msg-default',recipients:1}};return{getResponseCode:()=>response.code,getContentText:()=>JSON.stringify(response.body)}}},
+  UrlFetchApp:{fetch(url,options){fetchCalls.push({url,options,body:JSON.parse(options.payload)});const response=fetchQueue.shift()||{code:200,body:{id:'msg-default',recipients:1}};return{getResponseCode:()=>response.code,getContentText:()=>JSON.stringify(response.body),getAllHeaders:()=>response.headers||{}}}},
   ContentService:{MimeType:{JSON:'json',JAVASCRIPT:'js'},createTextOutput:t=>new Output(t)},
   HtmlService:{XFrameOptionsMode:{ALLOWALL:'allowall'},createHtmlOutput:t=>new Output(t)},
   profissionaisDinamicosV1ValidarSessao_(){return{ok:true}}
@@ -138,12 +140,23 @@ assert.deepEqual(fetchCalls[0].body.included_segments,['Subscribed Users']);
 assert.equal(fetchCalls[0].body.url,'https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/');
 assert.equal(fetchCalls[0].body.data.id,'r-1');
 assert.ok(fetchCalls[0].body.idempotency_key);
+assert.match(fetchCalls[0].body.idempotency_key,/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 assert.equal('silent' in fetchCalls[0].body,false);
+const firstIdempotencyKey=fetchCalls[0].body.idempotency_key;
 
 result=context.tacsPushV1Publicar_(base);
 assert.equal(result.skipped,true);
 assert.equal(result.reason,'duplicate');
 assert.equal(fetchCalls.length,1,'Deduplicação curta não deve reenviar a mesma publicação.');
+
+// Mesmo sem o cache, a mesma publicação deve continuar usando a mesma idempotency_key.
+cache.clear();
+fetchQueue.push({code:200,body:{id:'msg-1-retry',recipients:3}});
+result=context.tacsPushV1Publicar_(base);
+assert.equal(result.ok,true);
+assert.equal(result.push,true);
+assert.equal(fetchCalls.length,2);
+assert.equal(fetchCalls[1].body.idempotency_key,firstIdempotencyKey,'A mesma publicação deve manter a mesma chave mesmo após perda do cache.');
 
 const changed={...base,id:'r-2',mensagem:'Mensagem alterada.'};
 fetchQueue.push({code:500,body:{errors:['temporário']}},{code:200,body:{id:'msg-2',recipients:2}});
@@ -153,6 +166,6 @@ assert.equal(result.ok,true);
 assert.equal(result.push,true);
 const retryCalls=fetchCalls.slice(beforeRetry);
 assert.equal(retryCalls.length,2);
-assert.equal(retryCalls[0].body.idempotency_key,retryCalls[1].body.idempotency_key,'Retry deve reutilizar a mesma chave de idempotência.');
+assert.equal(retryCalls[0].body.idempotency_key,retryCalls[1].body.idempotency_key,'Retry técnico deve reutilizar a mesma chave de idempotência.');
 
-console.log('OK: Gate 0 concluído; Push V1 isolado, deduplicado, seguro e sem regressão estrutural do Portal.');
+console.log('OK: Gate 0 concluído; Push V1.1 isolado, idempotente, deduplicado, seguro e sem regressão estrutural do Portal.');
