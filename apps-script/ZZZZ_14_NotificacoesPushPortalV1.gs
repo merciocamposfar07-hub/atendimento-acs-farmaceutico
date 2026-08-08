@@ -13,10 +13,11 @@
  * - usa idempotência determinística e deduplicação curta para evitar envio repetido.
  */
 var TACS_PUSH_PORTAL_V1 = Object.freeze({
-  VERSAO: '1.1.0',
+  VERSAO: '1.1.1',
   APP_ID: 'e2294b98-c72b-4f8c-a055-de28979676dc',
   API_KEY_PROPERTY: 'ONESIGNAL_APP_API_KEY',
   ENDPOINT: 'https://api.onesignal.com/notifications',
+  TARGET_SEGMENT: 'Total Subscriptions',
   PORTAL_URL: 'https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/',
   RESULT_PREFIX: 'tacs_push_v1_result_',
   DEDUPE_PREFIX: 'tacs_push_v1_sent_',
@@ -117,7 +118,7 @@ function tacsPushV1Publicar_(p){
     return {ok:true,push:false,skipped:true,reason:'duplicate',message:'Esta mesma publicação já gerou uma notificação recentemente.'};
   }
 
-  var apiKey=tacsPushV1Texto_(PropertiesService.getScriptProperties().getProperty(TACS_PUSH_PORTAL_V1.API_KEY_PROPERTY));
+  var apiKey=String(PropertiesService.getScriptProperties().getProperty(TACS_PUSH_PORTAL_V1.API_KEY_PROPERTY)||'').replace(/\s+/g,'');
   if(!apiKey){
     return {ok:false,push:false,code:'PUSH_NOT_CONFIGURED',message:'A chave privada do OneSignal ainda não foi configurada no Apps Script.'};
   }
@@ -127,7 +128,7 @@ function tacsPushV1Publicar_(p){
   var payload={
     app_id:TACS_PUSH_PORTAL_V1.APP_ID,
     target_channel:'push',
-    included_segments:['Subscribed Users'],
+    included_segments:[TACS_PUSH_PORTAL_V1.TARGET_SEGMENT],
     headings:{en:heading,pt:heading},
     contents:{en:titulo+' — '+mensagem,pt:titulo+' — '+mensagem},
     url:TACS_PUSH_PORTAL_V1.PORTAL_URL,
@@ -350,7 +351,7 @@ function tacsPushV1MensagemErro_(erro){
 
 /** Diagnóstico sem envio. */
 function testarConfiguracaoNotificacoesPushPortalV1(){
-  var chave=String(PropertiesService.getScriptProperties().getProperty(TACS_PUSH_PORTAL_V1.API_KEY_PROPERTY)||'').trim();
+  var chave=String(PropertiesService.getScriptProperties().getProperty(TACS_PUSH_PORTAL_V1.API_KEY_PROPERTY)||'').replace(/\s+/g,'');
   var resultado={
     ok:Boolean(chave),
     versao:TACS_PUSH_PORTAL_V1.VERSAO,
