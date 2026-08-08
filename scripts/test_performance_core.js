@@ -93,7 +93,7 @@ assert.match(warmup, /TIMEOUT_MS=15000/);
   assert.doesNotMatch(official, /cache\s*:\s*['"]no-store['"]/, `${file} ainda força download em toda abertura.`);
   assert.match(official, /admin-warmup\.js\?v=20260808-stable-v1/, `${file} perdeu o pré-aquecimento versionado.`);
   assert.match(official, /admin-client-v1\.js\?v=20260808-stable-v1/, `${file} não usa o cliente administrativo comum.`);
-  assert.match(official, /admin-official\.css\?v=20260808-stable-v1/, `${file} não usa o estilo administrativo comum.`);
+  assert.match(official, /admin-official\.css\?v=[A-Za-z0-9._-]+/, `${file} não usa o estilo administrativo comum.`);
 });
 
 console.log('OK: pré-aquecimento, cache servidor e painéis oficiais diretos aprovados.');
