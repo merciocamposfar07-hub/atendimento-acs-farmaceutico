@@ -5,49 +5,85 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const source = fs.readFileSync(
-  path.join(__dirname, '..', 'apps-script', 'ZZ_12_PublicoAgendasPortalV1.gs'),
-  'utf8'
-);
+const ROOT = path.resolve(__dirname, '..');
+const source = fs.readFileSync(path.join(ROOT, 'apps-script-controle-integral.gs'), 'utf8');
 
-function formatDate(date, timeZone, pattern) {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  if (pattern === 'yyyy-MM-dd') return `${year}-${month}-${day}`;
-  if (pattern === 'HH') return '09';
-  return `${day}/${month}/${year} 09:00`;
+class Range {
+  constructor(sheet, row, column, rowCount, columnCount) {
+    this.sheet = sheet;
+    this.row = row;
+    this.column = column;
+    this.rowCount = rowCount || 1;
+    this.columnCount = columnCount || 1;
+  }
+  getValues() {
+    const out = [];
+    for (let r = 0; r < this.rowCount; r += 1) {
+      const src = this.sheet.rows[this.row - 1 + r] || [];
+      out.push(Array.from({length: this.columnCount}, (_, c) => src[this.column - 1 + c] ?? ''));
+    }
+    return out;
+  }
+  setValues(values) {
+    for (let r = 0; r < values.length; r += 1) {
+      while (this.sheet.rows.length < this.row + r) this.sheet.rows.push([]);
+      const target = this.sheet.rows[this.row - 1 + r];
+      values[r].forEach((value, c) => { target[this.column - 1 + c] = value; });
+    }
+    return this;
+  }
+  clearContent() { return this; }
+  setValue(value) {
+    for (let r = 0; r < this.rowCount; r += 1) {
+      while (this.sheet.rows.length < this.row + r) this.sheet.rows.push([]);
+      const target = this.sheet.rows[this.row - 1 + r];
+      for (let c = 0; c < this.columnCount; c += 1) target[this.column - 1 + c] = value;
+    }
+    return this;
+  }
 }
 
-const rows = [
-  [
-    'MODULO', 'ORDEM', 'DIA', 'ATIVO', 'DATA', 'HORARIO', 'SITUACAO',
-    'MENSAGEM', 'ENCERRA_12H', 'VAGAS_COMUNS', 'VAGAS_EMERGENCIAIS',
-    'DIA_EXTRA', 'ATUALIZADO_EM'
-  ],
-  [
-    'MEDICA', 5, 'Sexta-feira', true, new Date(Date.UTC(2099, 7, 7)),
-    '08:00 as 12:00', 'CANCELADO', 'Atendimento médico', false, 15, 0,
-    false, new Date(Date.UTC(2026, 7, 5))
-  ]
-];
+class Sheet {
+  constructor(name, rows) { this.name = name; this.rows = rows.map(row => row.slice()); }
+  getLastRow() { return this.rows.length; }
+  getRange(row, column, rowCount, columnCount) { return new Range(this, row, column, rowCount, columnCount); }
+  setFrozenRows() { return this; }
+  autoResizeColumns() { return this; }
+  appendRow(row) { this.rows.push(row.slice()); return this; }
+}
 
-const sheet = {
-  getName: () => 'AGENDAS',
-  getLastRow: () => rows.length,
-  getLastColumn: () => rows[0].length,
-  getRange: (row, column, rowCount, columnCount) => {
-    const selected = rows
-      .slice(row - 1, row - 1 + rowCount)
-      .map(values => values.slice(column - 1, column - 1 + columnCount));
-    return {
-      getValues: () => selected,
-      getDisplayValues: () => selected.map(values =>
-        values.map(value => value instanceof Date ? formatDate(value, 'UTC', 'yyyy-MM-dd') : String(value))
-      )
-    };
-  }
+const moduleHeaders = [
+  'MODULO', 'ORDEM', 'DIA', 'ATIVO', 'DATA', 'HORARIO', 'SITUACAO',
+  'MENSAGEM', 'ENCERRA_12H', 'VAGAS_COMUNS', 'VAGAS_EMERGENCIAIS',
+  'DIA_EXTRA', 'ATUALIZADO_EM'
+];
+const sheets = {
+  PAINEL_PROFISSIONAIS: new Sheet('PAINEL_PROFISSIONAIS', [
+    moduleHeaders,
+    ['MEDICA', 1, 'Segunda-feira', true, '2099-08-07', '08:00 as 12:00', 'ATENDIMENTO', 'Atendimento médico', false, 15, 0, false, ''],
+    ['NUTRICIONISTA', 1, 'Terça-feira', true, '2099-08-08', '08:00 as 12:00', 'ATENDIMENTO', 'Nutrição', false, 0, 0, false, '']
+  ]),
+  RECADOS_PORTAL: new Sheet('RECADOS_PORTAL', [
+    ['ID', 'TITULO', 'MENSAGEM', 'PRIORIDADE', 'VALIDADE', 'ATIVO', 'ATUALIZADO_EM'],
+    ['r1', 'Recado preservado', 'Mensagem', 'informativo', '2099-12-31', true, '']
+  ]),
+  CAMPANHAS_PORTAL: new Sheet('CAMPANHAS_PORTAL', [
+    ['ID', 'TITULO', 'MENSAGEM', 'INICIO', 'DIAS', 'ATIVO', 'ATUALIZADO_EM'],
+    ['c1', 'Campanha preservada', 'Campanha', '2099-08-01', 30, true, '']
+  ]),
+  AGENDA_ENFERMEIRA: new Sheet('AGENDA_ENFERMEIRA', [['ORDEM', 'DIA', 'ATENDIMENTO', 'ICONE', 'DISPONIVEL', 'ATUALIZADO_EM']]),
+  CONFIGURACOES: new Sheet('CONFIGURACOES', [['CHAVE', 'VALOR']])
 };
+const spreadsheet = {
+  getSheetByName(name) { return sheets[name] || null; },
+  insertSheet(name) { return (sheets[name] = new Sheet(name, [])); }
+};
+
+function formatDate(date, zone, pattern) {
+  if (pattern === 'yyyy-MM-dd') return '2099-08-07';
+  if (pattern === 'HH') return '09';
+  return '07/08/2099 09:00';
+}
 
 const context = {
   console,
@@ -57,52 +93,60 @@ const context = {
   Number,
   Object,
   String,
+  Array,
+  RegExp,
+  Error,
   isFinite,
   isNaN,
-  PropertiesService: {
-    getScriptProperties: () => ({getProperty: () => ''})
-  },
+  PropertiesService: {getScriptProperties: () => ({getProperty: () => ''})},
   SpreadsheetApp: {
-    getActiveSpreadsheet: () => ({getSheets: () => [sheet]})
+    getActiveSpreadsheet: () => spreadsheet,
+    openById: () => spreadsheet,
+    flush() {}
   },
-  Utilities: {formatDate},
+  Utilities: {formatDate, getUuid: () => 'uuid-teste'},
   ContentService: {
     MimeType: {JAVASCRIPT: 'js', JSON: 'json'},
-    createTextOutput: text => ({
-      text,
-      mime: '',
-      setMimeType(type) {
-        this.mime = type;
-        return this;
-      }
-    })
+    createTextOutput(text) {
+      return {text, mime: '', setMimeType(type) { this.mime = type; return this; }};
+    }
+  },
+  HtmlService: {
+    XFrameOptionsMode: {ALLOWALL: 'allowall'},
+    createHtmlOutput(text) { return {text, setXFrameOptionsMode() { return this; }}; }
   }
 };
-
 vm.createContext(context);
 vm.runInContext(source, context);
 
-const result = context.publicoAgendasV1Montar_();
-assert.equal(result.ok, true);
-assert.equal(result.somenteLeitura, true);
-assert.equal(result.origem, 'AGENDAS');
-assert.equal(result.modules.medica.length, 1);
-assert.equal(result.modules.medica[0].active, true);
-assert.equal(result.modules.medica[0].status, 'CANCELADO');
-assert.equal(result.modules.medica[0].date, '2099-08-07');
-assert.equal(result.modules.medica[0].common, 15);
-assert.equal(result.modules.MEDICA, undefined);
+assert.equal(context.tacsModuleKey_('MEDICA'), 'medica');
+assert.equal(context.tacsModuleKey_('MÉDICA'), 'medica');
+assert.equal(context.tacsModuleKey_('medica'), 'medica');
+assert.equal(context.tacsModuleKey_('NUTRIÇÃO'), 'nutricionista');
 
-const response = context.doGet({
-  parameter: {action: 'painel_publico', callback: 'testeCallback'}
-});
+const publicData = context.tacsGetPublic_();
+assert.equal(publicData.ok, true);
+assert.equal(publicData.modules.medica.length, 1, 'MEDICA em caixa alta foi descartada.');
+assert.equal(publicData.modules.nutricionista.length, 1, 'NUTRICIONISTA em caixa alta foi descartada.');
+assert.equal(publicData.modules.medica[0].day, 'Segunda-feira');
+assert.equal(publicData.modules.medica[0].active, true);
+assert.equal(publicData.recados.length, 1, 'Recados desapareceram da resposta pública unificada.');
+assert.equal(publicData.campanhas.length, 1, 'Campanhas desapareceram da resposta pública unificada.');
+
+const response = context.doGet({parameter: {action: 'painel_publico', callback: 'cbTeste'}});
 assert.equal(response.mime, 'js');
-assert.match(response.text, /^testeCallback\(\{"ok":true/);
+assert.match(response.text, /^cbTeste\(/);
+const payloadText = response.text.replace(/^cbTeste\(/, '').replace(/\);$/, '');
+const payload = JSON.parse(payloadText);
+assert.equal(payload.modules.medica.length, 1);
+assert.equal(payload.recados[0].title, 'Recado preservado');
+assert.equal(payload.campanhas[0].title, 'Campanha preservada');
 assert.doesNotMatch(response.text, /pin|token|sessao|morador/i);
 
-assert.equal(context.publicoAgendasV1Modulo_('MÉDICA'), 'medica');
-assert.equal(context.publicoAgendasV1Modulo_('Nutricionista'), 'nutricionista');
-assert.equal(context.publicoAgendasV1Booleano_('TRUE'), true);
-assert.equal(context.publicoAgendasV1Booleano_('false'), false);
+assert.equal(
+  fs.existsSync(path.join(ROOT, 'apps-script', 'ZZ_12_PublicoAgendasPortalV1.gs')),
+  false,
+  'A rota pública concorrente de agendas voltou ao projeto.'
+);
 
-console.log('Apps Script público: MEDICA normalizada e agenda cancelada publicada sem dados privados.');
+console.log('Apps Script público estável: módulos normalizados e agenda + recados + campanhas preservados na mesma resposta.');
