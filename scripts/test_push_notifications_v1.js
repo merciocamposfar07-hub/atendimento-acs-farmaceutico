@@ -9,19 +9,17 @@ const vm=require('node:vm');
 const ROOT=path.resolve(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 
-// Gate 0: a branch não pode ser tratada como liberada antes da auditoria do Apps Script real.
+// Gate 0 concluído: auditoria real classificou backend servidor-servidor de push como AUSENTE.
 const releaseGate=JSON.parse(read('PUSH_RELEASE_GATE_V1.json'));
-assert.equal(releaseGate.appsScriptAudit,'PENDING');
-assert.equal(releaseGate.existingPushClassification,'UNKNOWN');
+assert.equal(releaseGate.appsScriptAudit,'COMPLETED');
+assert.equal(releaseGate.existingPushClassification,'AUSENTE');
 assert.equal(releaseGate.serverInstall,'NOT_STARTED');
+assert.equal(releaseGate.serverRegression,'NOT_STARTED');
 assert.equal(releaseGate.frontendMerge,'NOT_STARTED');
 assert.equal(releaseGate.realDeviceTest,'NOT_STARTED');
 assert.equal(releaseGate.releaseAllowed,false);
 const activationDoc=read('PUSH_NOTIFICATIONS_V1.md');
 assert.match(activationDoc,/GATE 0 OBRIGATÓRIO/);
-assert.match(activationDoc,/Não adicionar módulo, não criar propriedade secreta, não atualizar implantação e não integrar esta branch/);
-assert.match(activationDoc,/EXISTENTE_FUNCIONAL/);
-assert.match(activationDoc,/EXISTENTE_PARCIAL/);
 assert.match(activationDoc,/AUSENTE/);
 
 // 1. O Portal do Morador só recebe os novos vínculos; fluxos atuais continuam referenciados.
@@ -156,4 +154,4 @@ const retryCalls=fetchCalls.slice(beforeRetry);
 assert.equal(retryCalls.length,2);
 assert.equal(retryCalls[0].body.idempotency_key,retryCalls[1].body.idempotency_key,'Retry deve reutilizar a mesma chave de idempotência.');
 
-console.log('OK: Gate 0 preservado; Push V1 isolado, deduplicado, seguro e sem regressão estrutural do Portal.');
+console.log('OK: Gate 0 concluído; Push V1 isolado, deduplicado, seguro e sem regressão estrutural do Portal.');
