@@ -113,7 +113,7 @@ function tacsSaveModule_(payloadText) {
   var module = tacsModuleKey_(payload.module);
   var days = Array.isArray(payload.days) ? payload.days : [];
 
-  if (['medica', 'nutricionista'].indexOf(module) < 0) {
+  if(['medica','nutricionista'].indexOf(module)<0){
     throw new Error('Módulo inválido.');
   }
   if (days.length !== 5) {
@@ -160,7 +160,7 @@ function tacsSaveModule_(payloadText) {
 
 function tacsReadModules_() {
   var sh = tacsEnsureModules_(tacsSpreadsheet_());
-  var out = {medica: [], nutricionista: []};
+  var out={medica:[],nutricionista:[]};
   if (sh.getLastRow() < 2) return out;
 
   var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 13).getValues();
