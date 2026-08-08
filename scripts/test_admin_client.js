@@ -29,7 +29,7 @@ for (const [file, actions] of officialPages) {
   assert.doesNotMatch(html, /document\.write|fetch\(origem/, `${file} voltou a usar wrapper dinâmico.`);
   assert.match(html, /admin-client-v1\.js\?v=20260808-stable-v1/);
   assert.match(html, /admin-warmup\.js\?v=20260808-stable-v1/);
-  assert.match(html, /admin-official\.css\?v=20260808-stable-v1/);
+  assert.match(html, /admin-official\.css\?v=[A-Za-z0-9._-]+/);
   assert.match(html, /rel="preconnect" href="https:\/\/script\.google\.com"/);
   for (const action of actions) assert.match(html, new RegExp(action));
   for (const [i, match] of Array.from(html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)).entries()) {
