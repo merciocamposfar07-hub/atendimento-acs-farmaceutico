@@ -4,75 +4,70 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#073A55">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="noindex,nofollow,noarchive">
   <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/painel-recados.svg">
   <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/painel-recados.svg">
   <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-recados.webmanifest">
   <link rel="preconnect" href="https://script.google.com">
   <link rel="preconnect" href="https://script.googleusercontent.com">
   <link rel="dns-prefetch" href="//script.google.com">
-  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260806-desempenho-v5"></script>
-  <meta name="color-scheme" content="light">
-  <meta name="robots" content="noindex,nofollow,noarchive">
-  <title>Painel oficial de recados e campanhas • Portal TACS</title>
-  <style>
-    body{margin:0;background:#eaf2f6;color:#102d40;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-    .carga{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center}
-    .caixa{max-width:620px;background:#fff;border:2px solid #a9c0ca;border-radius:24px;padding:24px}
-    h1{margin:0 0 12px}.erro{color:#a52d2d}
-  </style>
+  <link rel="stylesheet" href="/atendimento-acs-farmaceutico/admin-official.css?v=20260808-stable-v1">
+  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260808-stable-v1"></script>
+  <script src="/atendimento-acs-farmaceutico/admin-client-v1.js?v=20260808-stable-v1"></script>
+  <title>Recados e campanhas • Portal TACS</title>
 </head>
 <body>
-  <div class="carga"><div class="caixa"><h1>Painel oficial</h1><p id="mensagem">Carregando recados e campanhas…</p></div></div>
-  <script>
-  (function(){
-    'use strict';
-    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-recados-campanhas-v1.html?v=20260806-desempenho-v5';
-    var trocas=[
-      ['<title>Recados e campanhas V1 • Portal TACS</title>','<title>Painel oficial de recados e campanhas • Portal TACS</title>'],
-      ['AMBIENTE ISOLADO • FASE 4','PAINEL ADMINISTRATIVO OFICIAL'],
-      ['Recados e campanhas V1','Recados e campanhas'],
-      ['O painel é isolado, mas um salvamento confirmado altera a planilha real. O Portal do Morador continua inalterado nesta etapa.','Painel administrativo oficial conectado à planilha do Portal TACS. Recados e campanhas salvos e confirmados são aplicados ao Portal do Morador.'],
-      ['Executando testes internos da página…','Verificando o painel administrativo oficial…'],
-      ['Testes internos da página aprovados. Entre para validar o módulo no servidor.','Painel administrativo oficial disponível. Entre para carregar o conteúdo.'],
-      ['Portal TACS • Painel administrativo isolado','Portal TACS • Painel administrativo oficial'],
-      ['Portal do Morador não foi modificado','Alterações confirmadas são aplicadas ao Portal do Morador']
-    ];
-    function substituir(t,a,b){return t.split(a).join(b)}
-    function complementoStatus(){
-      var css='<style id="whatsapp-status-recados-estilo">'+
-        '.acoes-status-whatsapp{display:grid;gap:10px;margin-top:12px}'+
-        '.botao-status-whatsapp{width:100%;min-height:72px;border:3px solid #69c7e7;border-radius:17px;padding:15px 16px;background:#073a55;color:#fff;font-size:1.12rem;font-weight:950;line-height:1.25;box-shadow:0 7px 16px rgba(7,58,85,.18)}'+
-        '.botao-status-whatsapp:active{transform:translateY(1px)}'+
-        '.botao-status-whatsapp:disabled{opacity:.6;cursor:wait}'+
-        '</style>';
-      var codigo="(function(){'use strict';"+
-        "function texto(v){return String(v==null?'':v).trim()}"+
-        "function campo(item,nome){var e=item.querySelector('[name=\"'+nome+'\"]');return e?texto(e.value):''}"+
-        "function dataBr(v){var m=texto(v).match(/^(\\d{4})-(\\d{2})-(\\d{2})/);return m?m[3]+'/'+m[2]+'/'+m[1]:texto(v)}"+
-        "function linhas(ctx,valor,maxWidth){var palavras=texto(valor).split(/\\s+/),saida=[],linha='';palavras.forEach(function(p){var teste=linha?linha+' '+p:p;if(ctx.measureText(teste).width>maxWidth&&linha){saida.push(linha);linha=p}else{linha=teste}});if(linha)saida.push(linha);return saida}"+
-        "function escrever(ctx,valor,x,y,maxWidth,altura,maxLinhas){var ls=linhas(ctx,valor,maxWidth);if(maxLinhas&&ls.length>maxLinhas){ls=ls.slice(0,maxLinhas);ls[maxLinhas-1]=ls[maxLinhas-1].replace(/[.,;:!?]*$/,'')+'…'}ls.forEach(function(l,i){ctx.fillText(l,x,y+i*altura)});return y+ls.length*altura}"+
-        "function criarCard(tipo,item){var titulo=campo(item,'titulo'),mensagem=campo(item,'mensagem');if(!titulo||!mensagem)throw new Error('Preencha o título e a mensagem antes de compartilhar.');var c=document.createElement('canvas');c.width=1080;c.height=1920;var ctx=c.getContext('2d'),g=ctx.createLinearGradient(0,0,1080,1920);g.addColorStop(0,'#062c46');g.addColorStop(1,'#0b5878');ctx.fillStyle=g;ctx.fillRect(0,0,1080,1920);ctx.fillStyle='#83efad';ctx.font='900 42px Arial';ctx.fillText('PORTAL TACS • POSTO MATIAS',74,115);ctx.fillStyle='#fff';ctx.font='900 72px Arial';ctx.fillText(tipo==='recado'?'RECADO DA UNIDADE':'CAMPANHA DA UNIDADE',74,225);ctx.fillStyle='#fff';ctx.beginPath();if(ctx.roundRect){ctx.roundRect(54,310,972,1370,42)}else{ctx.rect(54,310,972,1370)}ctx.fill();ctx.fillStyle='#073a55';ctx.font='900 62px Arial';var y=420;y=escrever(ctx,titulo,98,y,884,76,5)+52;ctx.fillStyle='#24495d';var tam=mensagem.length>520?38:(mensagem.length>300?44:50);ctx.font='700 '+tam+'px Arial';escrever(ctx,mensagem,98,y,884,tam+18,18);ctx.fillStyle='#073a55';ctx.font='800 35px Arial';var detalhe='';if(tipo==='recado'){var p=campo(item,'prioridade')||'INFORMATIVO',v=dataBr(campo(item,'validade'));detalhe=p+(v?' • Válido até '+v:'')}else{var ini=dataBr(campo(item,'inicio')),dias=campo(item,'dias');detalhe=(ini?'Início: '+ini:'')+(dias?(ini?' • ':'')+dias:'')}if(detalhe)ctx.fillText(detalhe,98,1600);ctx.fillStyle='#83efad';ctx.fillRect(54,1730,972,8);ctx.fillStyle='#fff';ctx.font='800 34px Arial';ctx.fillText('Unidade de Saúde Posto Matias',74,1815);ctx.font='600 30px Arial';ctx.fillText('Informação oficial do Portal TACS',74,1870);return{canvas:c,titulo:titulo}}"+
-        "function compartilhar(tipo,item,botao){var original=botao.textContent;botao.disabled=true;botao.textContent='Gerando card…';try{var card=criarCard(tipo,item);card.canvas.toBlob(function(blob){if(!blob){botao.disabled=false;botao.textContent=original;alert('Não foi possível gerar o card.');return}var arquivo=new File([blob],(tipo==='recado'?'recado':'campanha')+'-portal-tacs.png',{type:'image/png'});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[arquivo]}))){navigator.share({files:[arquivo],title:card.titulo,text:'Portal TACS • Posto Matias'}).catch(function(e){if(e&&e.name!=='AbortError')alert('Não foi possível abrir o compartilhamento.')}).finally(function(){botao.disabled=false;botao.textContent=original})}else{var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';a.click();setTimeout(function(){URL.revokeObjectURL(url)},60000);botao.disabled=false;botao.textContent=original}},'image/png',1)}catch(e){botao.disabled=false;botao.textContent=original;alert(e.message||'Não foi possível gerar o card.')}}"+
-        "function adicionarItem(item,tipo){if(!item||item.querySelector('.botao-status-whatsapp'))return;var corpo=item.querySelector('.corpo')||item;if(!corpo)return;var bloco=document.createElement('div');bloco.className='acoes-status-whatsapp';var b=document.createElement('button');b.type='button';b.className='botao-status-whatsapp';b.textContent=tipo==='recado'?'📱 Postar recado no Status do WhatsApp':'📱 Postar campanha no Status do WhatsApp';b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();compartilhar(tipo,item,b)});bloco.appendChild(b);corpo.appendChild(bloco)}"+
-        "function atualizar(){adicionarItem(document.getElementById('formNovoRecado'),'recado');adicionarItem(document.getElementById('formNovaCampanha'),'campanha');document.querySelectorAll('#listaRecados .item').forEach(function(i){adicionarItem(i,'recado')});document.querySelectorAll('#listaCampanhas .item').forEach(function(i){adicionarItem(i,'campanha')})}"+
-        "var alvo=document.getElementById('conteudo')||document.body;new MutationObserver(atualizar).observe(alvo,{childList:true,subtree:true});document.addEventListener('click',function(e){if(e.target&&((e.target.id==='novoRecado')||(e.target.id==='novaCampanha')))setTimeout(atualizar,0)});atualizar();"+
-        "}());";
-      return css+'<scr'+'ipt>'+codigo+'</scr'+'ipt>';
-    }
-    var painel=fetch(origem).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text()});
-    painel.then(function(html){
-      var aquecimento=window.PortalTacsAdminWarmup;
-      var conexaoSegura=JSON.stringify(aquecimento&&aquecimento.resultado||{ok:false,preparando:true}).replace(/</g,'\\u003c');
-      var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt><scr'+'ipt src="../admin-warmup.js?v=20260806-desempenho-v5"></scr'+'ipt>';
-      html=substituir(html,'<head>',bootstrap);
-      trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
-      html=substituir(html,'</body>',complementoStatus()+'</body>');
-      document.open();document.write(html);document.close();
-    }).catch(function(erro){
-      var e=document.getElementById('mensagem');
-      e.className='erro';e.textContent=erro.message+' Atualize a página.';
-    });
-  })();
-  </script>
+<header><span class="selo">PAINEL ADMINISTRATIVO OFICIAL</span><h1>Recados e campanhas</h1><p>Publique informações da Unidade de Saúde no Portal TACS.</p></header>
+<main>
+  <div class="nota">Recados e campanhas ativos ficam visíveis no Portal do Morador. O painel confirma cada alteração pela releitura da planilha.</div>
+  <section class="painel">
+    <h2>Acesso administrativo</h2>
+    <label for="pin">PIN administrativo</label><input id="pin" class="campo" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" autocomplete="off">
+    <div class="acoes duas"><button id="entrar" class="botao" type="button">Entrar e carregar conteúdo</button><button id="sair" class="botao perigo" type="button" disabled>Encerrar sessão</button></div>
+    <div class="toolbar"><button id="recarregar" class="botao secundario" type="button">Recarregar conteúdo</button></div>
+    <p class="muted">Falha temporária de conexão não força um novo PIN. A sessão só é apagada quando o servidor informa que ela expirou ou é inválida.</p>
+    <div id="loginStatus" class="status" role="status">Preparando a conexão e o conteúdo em segundo plano…</div>
+    <div id="resumo" class="resumo oculto"><div class="numero"><strong id="qRecados">0</strong><span>Recados</span></div><div class="numero"><strong id="qRecadosAtivos">0</strong><span>Recados ativos</span></div><div class="numero"><strong id="qCampanhas">0</strong><span>Campanhas</span></div><div class="numero"><strong id="qCampanhasAtivas">0</strong><span>Campanhas ativas</span></div></div>
+  </section>
+  <section id="conteudo" class="painel oculto">
+    <div class="abas" style="grid-template-columns:1fr 1fr"><button id="abaRecados" class="aba ativa" type="button">Recados</button><button id="abaCampanhas" class="aba" type="button">Campanhas</button></div>
+    <div id="statusOperacao" class="status ok" role="status">Conteúdo carregado.</div>
+    <div id="secaoRecados">
+      <div class="toolbar"><button id="novoRecado" class="botao verde" type="button">Novo recado</button></div>
+      <form id="formNovoRecado" class="cartao corpo oculto" autocomplete="off">
+        <h3>Novo recado</h3><label>Título</label><input class="campo" name="titulo" maxlength="160" required><label>Mensagem</label><textarea class="campo" name="mensagem" maxlength="1200" required></textarea><div class="grid duas"><div><label>Prioridade</label><select class="campo" name="prioridade"><option>INFORMATIVO</option><option>IMPORTANTE</option><option>URGENTE</option></select></div><div><label>Validade</label><input class="campo" name="validade" type="date"></div></div><label class="check"><input name="ativo" type="checkbox" checked> Recado ativo</label><div class="acoes duas"><button class="botao verde" type="submit">Publicar recado</button><button class="botao secundario cancelarNovoRecado" type="button">Cancelar</button></div>
+      </form>
+      <div id="listaRecados" class="lista"></div>
+    </div>
+    <div id="secaoCampanhas" class="oculto">
+      <div class="toolbar"><button id="novaCampanha" class="botao verde" type="button">Nova campanha</button></div>
+      <form id="formNovaCampanha" class="cartao corpo oculto" autocomplete="off">
+        <h3>Nova campanha</h3><label>Título</label><input class="campo" name="titulo" maxlength="160" required><label>Mensagem</label><textarea class="campo" name="mensagem" maxlength="1200" required></textarea><div class="grid duas"><div><label>Data de início</label><input class="campo" name="inicio" type="date"></div><div><label>Dias / período de exibição</label><input class="campo" name="dias" maxlength="120" placeholder="Ex.: Segunda a sexta"></div></div><label class="check"><input name="ativo" type="checkbox" checked> Campanha ativa</label><div class="acoes duas"><button class="botao verde" type="submit">Publicar campanha</button><button class="botao secundario cancelarNovaCampanha" type="button">Cancelar</button></div>
+      </form>
+      <div id="listaCampanhas" class="lista"></div>
+    </div>
+  </section>
+</main>
+<footer><p>Portal TACS • Painel administrativo oficial</p><p>Recados e campanhas</p></footer>
+<script>
+(function(){
+'use strict';
+var Client=window.PortalTacsAdminClient,state={recados:[],campanhas:[]};
+var pin=document.getElementById('pin'),entrar=document.getElementById('entrar'),sair=document.getElementById('sair'),recarregar=document.getElementById('recarregar'),conteudo=document.getElementById('conteudo'),resumo=document.getElementById('resumo');
+function txt(v){return String(v==null?'':v)}function bool(v){if(v===true||v===1)return true;return['true','1','sim','yes','ativo'].indexOf(txt(v).trim().toLowerCase())!==-1}function esc(v){return txt(v).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}function status(id,message,type){var e=document.getElementById(id);e.textContent=message;e.className='status'+(type?' '+type:'')}function setBusy(v){entrar.disabled=v;recarregar.disabled=v;sair.disabled=v||!Client.hasSession()}function dateValue(v){var s=txt(v),m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);return m?m[3]+'-'+m[2]+'-'+m[1]:''}
+function render(){document.getElementById('qRecados').textContent=state.recados.length;document.getElementById('qRecadosAtivos').textContent=state.recados.filter(function(x){return bool(x.ATIVO)}).length;document.getElementById('qCampanhas').textContent=state.campanhas.length;document.getElementById('qCampanhasAtivas').textContent=state.campanhas.filter(function(x){return bool(x.ATIVO)}).length;renderRecados();renderCampanhas()}
+function renderRecados(){var target=document.getElementById('listaRecados');if(!state.recados.length){target.innerHTML='<div class="vazio">Nenhum recado cadastrado.</div>';return}target.innerHTML=state.recados.map(function(r){return '<details class="cartao" data-recado="'+esc(r.ID)+'"><summary><div><h3>'+esc(r.TITULO||'Recado')+'</h3><div class="sub">'+esc(r.PRIORIDADE||'INFORMATIVO')+(r.VALIDADE?' • até '+esc(dateValue(r.VALIDADE)):'')+'</div></div><span class="sinal '+(bool(r.ATIVO)?'ativo':'inativo')+'">'+(bool(r.ATIVO)?'Ativo':'Inativo')+'</span></summary><div class="corpo"><label>ID</label><input class="campo" name="id" value="'+esc(r.ID)+'" readonly><label>Título</label><input class="campo" name="titulo" value="'+esc(r.TITULO)+'"><label>Mensagem</label><textarea class="campo" name="mensagem">'+esc(r.MENSAGEM)+'</textarea><div class="grid duas"><div><label>Prioridade</label><select class="campo" name="prioridade"><option>INFORMATIVO</option><option>IMPORTANTE</option><option>URGENTE</option></select></div><div><label>Validade</label><input class="campo" name="validade" type="date" value="'+esc(dateValue(r.VALIDADE))+'"></div></div><label class="check"><input name="ativo" type="checkbox" '+(bool(r.ATIVO)?'checked':'')+'> Recado ativo</label><div class="acoes duas"><button class="botao verde salvarRecado" type="button">Salvar recado</button><button class="botao perigo removerRecado" type="button">Remover recado</button></div></div></details>'}).join('');state.recados.forEach(function(r){var card=target.querySelector('[data-recado="'+CSS.escape(txt(r.ID))+'"]');if(card)card.querySelector('[name="prioridade"]').value=txt(r.PRIORIDADE||'INFORMATIVO').toUpperCase()})}
+function renderCampanhas(){var target=document.getElementById('listaCampanhas');if(!state.campanhas.length){target.innerHTML='<div class="vazio">Nenhuma campanha cadastrada.</div>';return}target.innerHTML=state.campanhas.map(function(c){return '<details class="cartao" data-campanha="'+esc(c.ID)+'"><summary><div><h3>'+esc(c.TITULO||'Campanha')+'</h3><div class="sub">'+(c.INICIO?'Início: '+esc(dateValue(c.INICIO)):'Sem data de início')+(c.DIAS?' • '+esc(c.DIAS):'')+'</div></div><span class="sinal '+(bool(c.ATIVO)?'ativo':'inativo')+'">'+(bool(c.ATIVO)?'Ativa':'Inativa')+'</span></summary><div class="corpo"><label>ID</label><input class="campo" name="id" value="'+esc(c.ID)+'" readonly><label>Título</label><input class="campo" name="titulo" value="'+esc(c.TITULO)+'"><label>Mensagem</label><textarea class="campo" name="mensagem">'+esc(c.MENSAGEM)+'</textarea><div class="grid duas"><div><label>Data de início</label><input class="campo" name="inicio" type="date" value="'+esc(dateValue(c.INICIO))+'"></div><div><label>Dias / período de exibição</label><input class="campo" name="dias" value="'+esc(c.DIAS)+'"></div></div><label class="check"><input name="ativo" type="checkbox" '+(bool(c.ATIVO)?'checked':'')+'> Campanha ativa</label><div class="acoes duas"><button class="botao verde salvarCampanha" type="button">Salvar campanha</button><button class="botao perigo removerCampanha" type="button">Remover campanha</button></div></div></details>'}).join('')}
+function applyData(r){state.recados=Array.isArray(r.recados)?r.recados:[];state.campanhas=Array.isArray(r.campanhas)?r.campanhas:[];render();conteudo.classList.remove('oculto');resumo.classList.remove('oculto');sair.disabled=false}
+function loadData(silent){if(!Client.hasSession()){conteudo.classList.add('oculto');resumo.classList.add('oculto');sair.disabled=true;if(!silent)status('loginStatus','Digite o PIN para entrar.','ok');return Promise.resolve(false)}setBusy(true);if(!silent)status('loginStatus','Carregando conteúdo…','aviso');return Client.data().then(function(r){setBusy(false);if(r&&r.ok===true){applyData(r);status('loginStatus',r.cache?'Conteúdo carregado imediatamente. Sessão válida.':'Sessão validada e conteúdo carregado.','ok');return true}if(Client.isAuthError(r)){conteudo.classList.add('oculto');resumo.classList.add('oculto');status('loginStatus',txt(r&&r.message||'Sessão expirada.'),'erro');return false}status('loginStatus',txt(r&&r.message||'Falha temporária.')+' Sua sessão foi preservada; toque em “Recarregar conteúdo”.','temp');return false})}
+function payloadRecado(card,id){return{id:id||'',titulo:card.querySelector('[name="titulo"]').value.trim(),mensagem:card.querySelector('[name="mensagem"]').value.trim(),prioridade:card.querySelector('[name="prioridade"]').value,validade:card.querySelector('[name="validade"]').value,ativo:card.querySelector('[name="ativo"]').checked?'true':'false'}}function payloadCampanha(card,id){return{id:id||'',titulo:card.querySelector('[name="titulo"]').value.trim(),mensagem:card.querySelector('[name="mensagem"]').value.trim(),inicio:card.querySelector('[name="inicio"]').value,dias:card.querySelector('[name="dias"]').value.trim(),ativo:card.querySelector('[name="ativo"]').checked?'true':'false'}}
+function save(kind,card,id){var payload=kind==='recado'?payloadRecado(card,id):payloadCampanha(card,id);if(!payload.titulo||!payload.mensagem){status('statusOperacao','Título e mensagem são obrigatórios.','erro');return}if(!confirm('Salvar '+(kind==='recado'?'este recado':'esta campanha')+' na planilha oficial?'))return;status('statusOperacao','Salvando e confirmando a releitura…','aviso');setBusy(true);Client.mutate(kind==='recado'?'admin_salvar_recado':'admin_salvar_campanha',payload).then(function(r){setBusy(false);if(!r||r.ok!==true){status('statusOperacao',txt(r&&r.message||'Não foi possível salvar.'),Client.isTemporary(r)?'temp':'erro');return}loadData(true).then(function(ok){if(ok&&kind==='recado'&&!id)document.getElementById('formNovoRecado').reset();if(ok&&kind==='campanha'&&!id)document.getElementById('formNovaCampanha').reset();status('statusOperacao',ok?(kind==='recado'?'Recado salvo e relido com sucesso.':'Campanha salva e relida com sucesso.'):'Salvamento concluído; tente recarregar para confirmar.',ok?'ok':'temp')})})}
+function remove(kind,id){if(!confirm('Remover '+(kind==='recado'?'este recado':'esta campanha')+' da planilha oficial?'))return;status('statusOperacao','Removendo e confirmando a releitura…','aviso');setBusy(true);Client.mutate(kind==='recado'?'admin_remover_recado':'admin_remover_campanha',{id:id}).then(function(r){setBusy(false);if(!r||r.ok!==true){status('statusOperacao',txt(r&&r.message||'Não foi possível remover.'),Client.isTemporary(r)?'temp':'erro');return}loadData(true).then(function(ok){status('statusOperacao',ok?(kind==='recado'?'Recado removido e ausência confirmada.':'Campanha removida e ausência confirmada.'):'Remoção concluída; tente recarregar para confirmar.',ok?'ok':'temp')})})}
+function tab(name){document.getElementById('secaoRecados').classList.toggle('oculto',name!=='recados');document.getElementById('secaoCampanhas').classList.toggle('oculto',name!=='campanhas');document.getElementById('abaRecados').classList.toggle('ativa',name==='recados');document.getElementById('abaCampanhas').classList.toggle('ativa',name==='campanhas')}
+entrar.addEventListener('click',function(){status('loginStatus','Validando o PIN…','aviso');setBusy(true);Client.login(pin.value).then(function(r){pin.value='';setBusy(false);if(!r||r.ok!==true){status('loginStatus',txt(r&&r.message||'Login recusado.'),Client.isTemporary(r)?'temp':'erro');return}loadData(false)})});sair.addEventListener('click',function(){setBusy(true);Client.logout().then(function(){setBusy(false);conteudo.classList.add('oculto');resumo.classList.add('oculto');status('loginStatus','Sessão encerrada.','ok')})});recarregar.addEventListener('click',function(){loadData(false)});document.getElementById('abaRecados').addEventListener('click',function(){tab('recados')});document.getElementById('abaCampanhas').addEventListener('click',function(){tab('campanhas')});document.getElementById('novoRecado').addEventListener('click',function(){document.getElementById('formNovoRecado').classList.remove('oculto')});document.querySelector('.cancelarNovoRecado').addEventListener('click',function(){document.getElementById('formNovoRecado').classList.add('oculto')});document.getElementById('novaCampanha').addEventListener('click',function(){document.getElementById('formNovaCampanha').classList.remove('oculto')});document.querySelector('.cancelarNovaCampanha').addEventListener('click',function(){document.getElementById('formNovaCampanha').classList.add('oculto')});document.getElementById('formNovoRecado').addEventListener('submit',function(e){e.preventDefault();save('recado',this,'')});document.getElementById('formNovaCampanha').addEventListener('submit',function(e){e.preventDefault();save('campanha',this,'')});document.getElementById('listaRecados').addEventListener('click',function(e){var card=e.target.closest('.cartao');if(!card)return;var id=card.querySelector('[name="id"]').value;if(e.target.closest('.salvarRecado'))save('recado',card,id);if(e.target.closest('.removerRecado'))remove('recado',id)});document.getElementById('listaCampanhas').addEventListener('click',function(e){var card=e.target.closest('.cartao');if(!card)return;var id=card.querySelector('[name="id"]').value;if(e.target.closest('.salvarCampanha'))save('campanha',card,id);if(e.target.closest('.removerCampanha'))remove('campanha',id)});
+if(Client.hasSession())loadData(true);else{setBusy(false);status('loginStatus','Digite o PIN. A conexão e o conteúdo já estão sendo preparados em segundo plano.','ok')}
+})();
+</script>
 </body>
 </html>
