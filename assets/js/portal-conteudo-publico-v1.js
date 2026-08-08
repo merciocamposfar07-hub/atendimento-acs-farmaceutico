@@ -1,8 +1,10 @@
 (function (window, document) {
   'use strict';
 
-  var API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-  var ACTION = 'publico_conteudo';
+  var API_URL = String(
+    window.TACS_ADMIN_API_URL ||
+    'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+  ).trim();
   var TARGET_ID = 'noticeArea';
   var TIMEOUT_MS = 15000;
 
@@ -30,8 +32,8 @@
     var titulo = primeiro(item, ['titulo', 'TITULO', 'title', 'nome', 'NOME']);
     var mensagem = primeiro(item, ['mensagem', 'MENSAGEM', 'message', 'descricao', 'DESCRICAO']);
     var prioridade = primeiro(item, ['prioridade', 'PRIORIDADE', 'priority']);
-    var inicio = primeiro(item, ['inicio', 'INICIO', 'dataInicio', 'DATA_INICIO']);
-    var fim = primeiro(item, ['fim', 'FIM', 'validade', 'VALIDADE', 'dataFim', 'DATA_FIM']);
+    var inicio = primeiro(item, ['inicio', 'INICIO', 'start', 'dataInicio', 'DATA_INICIO']);
+    var fim = primeiro(item, ['fim', 'FIM', 'end', 'validade', 'VALIDADE', 'validity', 'dataFim', 'DATA_FIM']);
 
     return {
       tipo: tipo,
@@ -51,7 +53,7 @@
 
     return {
       ok: resposta.ok === true,
-      geradoEm: texto(resposta.geradoEm),
+      geradoEm: texto(resposta.geradoEm || resposta.atualizadoEm),
       recados: recadosBrutos.map(function (item) { return normalizarItem(item, 'recado'); }),
       campanhas: campanhasBrutas.map(function (item) { return normalizarItem(item, 'campanha'); })
     };
@@ -86,14 +88,12 @@
     var cartao = elemento('article', 'notice-card' + (item.classePrioridade ? ' ' + item.classePrioridade : ''));
     cartao.appendChild(elemento('small', '', item.tipo === 'campanha' ? 'Campanha' : item.prioridade));
     cartao.appendChild(elemento('strong', '', item.titulo));
-
     if (item.mensagem) cartao.appendChild(elemento('p', '', item.mensagem));
 
     var periodo = '';
     if (item.inicio && item.fim) periodo = 'De ' + item.inicio + ' até ' + item.fim;
     else if (item.inicio) periodo = 'A partir de ' + item.inicio;
     else if (item.fim) periodo = 'Válido até ' + item.fim;
-
     if (periodo) cartao.appendChild(elemento('p', 'notice-period', periodo));
     return cartao;
   }
@@ -101,10 +101,9 @@
   function renderizar(resposta, alvo) {
     var dados = normalizarResposta(resposta);
     alvo = alvo || document.getElementById(TARGET_ID);
-    if (!alvo) return { ok: false, motivo: 'alvo_nao_encontrado' };
+    if (!alvo) return {ok: false, motivo: 'alvo_nao_encontrado'};
 
     alvo.replaceChildren();
-
     if (!dados.ok || (dados.recados.length === 0 && dados.campanhas.length === 0)) {
       alvo.hidden = true;
       return {
@@ -117,7 +116,6 @@
 
     var quadro = elemento('div', 'notice-board');
     quadro.appendChild(elemento('h2', '', 'Recados e campanhas'));
-
     var atualizado = formatarDataHora(dados.geradoEm);
     if (atualizado) quadro.appendChild(elemento('p', 'notice-updated', 'Atualizado em ' + atualizado));
 
@@ -136,11 +134,32 @@
     };
   }
 
-  function carregar(opcoes) {
-    opcoes = opcoes || {};
+  function resumir(resposta) {
+    var dados = normalizarResposta(resposta);
+    return {
+      ok: dados.ok,
+      visivel: false,
+      renderizado: false,
+      recados: dados.recados.length,
+      campanhas: dados.campanhas.length
+    };
+  }
+
+  function carregarCompartilhado(opcoes) {
+    if (!window.PortalTacsPublicData || typeof window.PortalTacsPublicData.get !== 'function') {
+      return null;
+    }
     var deveRenderizar = opcoes.renderizar !== false;
     var alvo = document.getElementById(TARGET_ID);
-    if (deveRenderizar && !alvo) return Promise.resolve({ ok: false, motivo: 'alvo_nao_encontrado' });
+    return window.PortalTacsPublicData.get().then(function (resposta) {
+      return deveRenderizar ? renderizar(resposta, alvo) : resumir(resposta);
+    });
+  }
+
+  function carregarFallback(opcoes) {
+    var deveRenderizar = opcoes.renderizar !== false;
+    var alvo = document.getElementById(TARGET_ID);
+    if (deveRenderizar && !alvo) return Promise.resolve({ok: false, motivo: 'alvo_nao_encontrado'});
 
     return new Promise(function (resolve) {
       var callback = '__portalTacsConteudoPublicoV1_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
@@ -159,60 +178,46 @@
 
       window[callback] = function (resposta) {
         try {
-          if (deveRenderizar) {
-            finalizar(renderizar(resposta, alvo));
-            return;
-          }
-
-          var dados = normalizarResposta(resposta);
-          finalizar({
-            ok: dados.ok,
-            visivel: false,
-            renderizado: false,
-            recados: dados.recados.length,
-            campanhas: dados.campanhas.length
-          });
+          finalizar(deveRenderizar ? renderizar(resposta, alvo) : resumir(resposta));
         } catch (erro) {
           if (alvo) alvo.hidden = true;
-          finalizar({ ok: false, motivo: 'falha_processamento', detalhe: texto(erro && erro.message) });
+          finalizar({ok: false, motivo: 'falha_processamento', detalhe: texto(erro && erro.message)});
         }
       };
-
       script.onerror = function () {
         if (alvo) alvo.hidden = true;
-        finalizar({ ok: false, motivo: 'falha_conexao' });
+        finalizar({ok: false, motivo: 'falha_conexao'});
       };
-
       timer = window.setTimeout(function () {
         if (alvo) alvo.hidden = true;
-        finalizar({ ok: false, motivo: 'tempo_esgotado' });
+        finalizar({ok: false, motivo: 'tempo_esgotado'});
       }, TIMEOUT_MS);
-
-      script.src = API_URL + '?action=' + encodeURIComponent(ACTION) +
-        '&callback=' + encodeURIComponent(callback) +
-        '&_=' + Date.now();
+      script.src = API_URL + '?action=painel_publico&callback=' + encodeURIComponent(callback) + '&_=' + Date.now();
       script.async = true;
       document.head.appendChild(script);
     });
   }
 
+  function carregar(opcoes) {
+    opcoes = opcoes || {};
+    var compartilhado = carregarCompartilhado(opcoes);
+    return compartilhado || carregarFallback(opcoes);
+  }
+
   window.PortalTacsConteudoPublicoV1 = Object.freeze({
-    versao: '1.0.2',
+    versao: '2.0.0',
     somenteLeitura: true,
     renderizacaoAutomatica: false,
-    leituraAutomatica: true,
+    leituraAutomatica: false,
+    fontePreferencial: 'painel_publico_compartilhado',
     normalizarResposta: normalizarResposta,
     renderizar: renderizar,
     carregar: carregar
   });
 
-  function iniciarLeituraSilenciosa() {
-    carregar({ renderizar: false });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', iniciarLeituraSilenciosa, { once: true });
-  } else {
-    iniciarLeituraSilenciosa();
-  }
+  /*
+   * Não existe mais leitura silenciosa automática aqui. O Portal oficial já
+   * carrega `painel_publico` por PortalTacsPublicData; disparar outra consulta
+   * nesta inicialização duplicaria o trabalho do Apps Script.
+   */
 })(window, document);
