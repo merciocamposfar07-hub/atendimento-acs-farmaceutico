@@ -7,7 +7,7 @@
   "isolatedBackendCode": "COMPLETED",
   "generalAdminShell": "COMPLETED",
   "csvLocalPreview": "COMPLETED",
-  "staticTests": "LOCAL_COMPLETED_CI_PENDING",
+  "staticTests": "COMPLETED",
   "appsScriptInstall": "NOT_STARTED",
   "realReadValidation": "NOT_STARTED",
   "dailyCrudWrites": "LOCKED",
