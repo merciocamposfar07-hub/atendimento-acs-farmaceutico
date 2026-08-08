@@ -9,15 +9,18 @@ const vm=require('node:vm');
 const ROOT=path.resolve(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 
-// Gate 0 concluído: auditoria real classificou backend servidor-servidor de push como AUSENTE.
+// Gates reais já concluídos no Apps Script e em aparelho real.
 const releaseGate=JSON.parse(read('PUSH_RELEASE_GATE_V1.json'));
+assert.equal(releaseGate.version,'1.1.1');
 assert.equal(releaseGate.appsScriptAudit,'COMPLETED');
 assert.equal(releaseGate.existingPushClassification,'AUSENTE');
-assert.equal(releaseGate.serverInstall,'NOT_STARTED');
-assert.equal(releaseGate.serverRegression,'NOT_STARTED');
+assert.equal(releaseGate.serverInstall,'COMPLETED');
+assert.equal(releaseGate.serverRegression,'COMPLETED');
 assert.equal(releaseGate.frontendMerge,'NOT_STARTED');
-assert.equal(releaseGate.realDeviceTest,'NOT_STARTED');
+assert.equal(releaseGate.realDeviceTest,'COMPLETED');
 assert.equal(releaseGate.releaseAllowed,false);
+assert.equal(releaseGate.validatedTargetSegment,'Total Subscriptions');
+assert.equal(releaseGate.validatedAuthorization,'Key <ONESIGNAL_APP_API_KEY>');
 const activationDoc=read('PUSH_NOTIFICATIONS_V1.md');
 assert.match(activationDoc,/Gate 0 concluído/);
 assert.match(activationDoc,/Classificação: \*\*AUSENTE\*\*/);
