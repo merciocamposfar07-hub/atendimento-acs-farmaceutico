@@ -87,9 +87,13 @@ assert.match(warmup, /TIMEOUT_MS=15000/);
   'painel-oficial-recados-campanhas.html'
 ].forEach(file => {
   const official = fs.readFileSync(path.join(ROOT, file), 'utf8');
-  assert.match(official, /fetch\(origem\)/, `${file} não usa o cache normal do navegador.`);
+  assert.doesNotMatch(official, /fetch\(origem\)/, `${file} voltou a carregar um segundo HTML.`);
+  assert.doesNotMatch(official, /document\.write/, `${file} voltou a reescrever o documento em tempo de execução.`);
+  assert.doesNotMatch(official, /\/teste-v1\//, `${file} voltou a depender do ambiente de teste.`);
   assert.doesNotMatch(official, /cache\s*:\s*['"]no-store['"]/, `${file} ainda força download em toda abertura.`);
-  assert.match(official, /\?v=20260806-desempenho-v5/, `${file} perdeu o versionamento do recurso.`);
+  assert.match(official, /admin-warmup\.js\?v=20260808-stable-v1/, `${file} perdeu o pré-aquecimento versionado.`);
+  assert.match(official, /admin-client-v1\.js\?v=20260808-stable-v1/, `${file} não usa o cliente administrativo comum.`);
+  assert.match(official, /admin-official\.css\?v=20260808-stable-v1/, `${file} não usa o estilo administrativo comum.`);
 });
 
-console.log('OK: pré-aquecimento, cache servidor e cache versionado dos três painéis aprovados.');
+console.log('OK: pré-aquecimento, cache servidor e painéis oficiais diretos aprovados.');
