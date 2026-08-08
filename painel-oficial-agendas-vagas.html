@@ -38,7 +38,7 @@
       ['Portal do Morador não foi modificado','Alterações confirmadas são aplicadas ao Portal do Morador']
     ];
     function substituir(t,a,b){return t.split(a).join(b)}
-    var painel=fetch(origem,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text()});
+    var painel=fetch(origem).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text()});
     painel.then(function(html){
       var aquecimento=window.PortalTacsAdminWarmup;
       var conexaoSegura=JSON.stringify(aquecimento&&aquecimento.resultado||{ok:false,preparando:true}).replace(/</g,'\\u003c');
