@@ -14,14 +14,20 @@ var TACS_PERFORMANCE_CORE_V1 = Object.freeze({
 
 function tacsPerformanceV1PreaquecerAdmin_() {
   try {
+    var cache = CacheService.getScriptCache();
+    var existente = cache.get(TACS_PERFORMANCE_CORE_V1.ADMIN_CACHE_KEY);
+    if (existente) {
+      return {ok: true, aquecido: true, cache: true};
+    }
+
     var dados = tacsAdminV1Dados_();
     if (!dados || dados.ok !== true) return {ok: false, aquecido: false};
-    CacheService.getScriptCache().put(
+    cache.put(
       TACS_PERFORMANCE_CORE_V1.ADMIN_CACHE_KEY,
       JSON.stringify(dados),
       TACS_PERFORMANCE_CORE_V1.ADMIN_SECONDS
     );
-    return {ok: true, aquecido: true, atualizadoEm: dados.atualizadoEm || ''};
+    return {ok: true, aquecido: true, cache: false, atualizadoEm: dados.atualizadoEm || ''};
   } catch (erro) {
     return {ok: false, aquecido: false, message: erro && erro.message ? erro.message : String(erro)};
   }
