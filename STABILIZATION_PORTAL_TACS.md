@@ -6,7 +6,7 @@ Branch: `stabilization/portal-tacs-v1`
 
 Transformar o Portal TACS em uma base previsível, versionada e testável, sem continuar acumulando correções sobre correções.
 
-Esta branch **não é produção**. Nenhuma alteração desta linha deve chegar ao Portal do Morador ou aos painéis oficiais sem cumprir todos os gates descritos abaixo.
+Esta branch **não é produção**. Nenhuma alteração desta linha deve chegar ao Portal do Morador ou aos painéis oficiais sem cumprir os gates descritos abaixo.
 
 ## Diagnóstico confirmado
 
@@ -30,9 +30,16 @@ A regra agora é:
 
 **uma única resposta `painel_publico` carrega agendas + profissionais + recados + campanhas.**
 
-### 4. O Portal fazia leituras redundantes
+### 4. O Portal fazia leituras e renderizações redundantes
 
-A versão histórica tinha mais de um módulo consultando o Apps Script de forma independente. A linha de estabilização usa `portal-public-data.js` como leitura compartilhada. O módulo de compatibilidade de recados/campanhas não dispara mais uma leitura silenciosa própria.
+A versão histórica tinha mais de um módulo consultando o Apps Script de forma independente. Além disso, `portal-controle-integral.js` ainda continha lógica antiga para renderizar agendas de médica/nutricionista em elementos que já nem existem mais no `index.html`.
+
+A linha de estabilização separa responsabilidades:
+
+- `portal-public-data.js` — única leitura pública compartilhada e atualização periódica centralizada;
+- `agenda-enfermeira.js` — única renderização das agendas profissionais e profissionais dinâmicos;
+- `portal-controle-integral.js` — somente recados/campanhas;
+- `assets/js/portal-conteudo-publico-v1.js` — compatibilidade sem leitura silenciosa concorrente.
 
 ### 5. O núcleo administrativo não estava integralmente versionado
 
@@ -46,16 +53,22 @@ A branch herdou 14 workflows históricos de correção/diagnóstico, vários com
 
 Todos foram retirados da linha de estabilização. A pasta `.github/workflows` mantém apenas `stabilization-tests.yml`.
 
+### 7. Os painéis oficiais impediam cache do próprio HTML
+
+Os três painéis oficiais carregavam seu HTML interno com `fetch(...,{cache:'no-store'})`, forçando novo download a cada abertura. Como a URL já possui identificador de versão, o `no-store` era desperdício.
+
+Na linha estabilizada os três painéis usam o cache normal do navegador e continuam controlados pela versão da URL.
+
 ## Arquitetura oficial da linha estabilizada
 
 ### Frontend público
 
 - `index.html`
 - `agenda-config.js`
-- `portal-public-data.js` — transporte público compartilhado
-- `agenda-enfermeira.js` — renderização das agendas e profissionais
-- `portal-controle-integral.js` — compatibilidade pública existente
-- `assets/js/portal-conteudo-publico-v1.js` — compatibilidade de recados/campanhas sem leitura paralela
+- `portal-public-data.js` — transporte público compartilhado, cache local e atualização centralizada
+- `agenda-enfermeira.js` — renderização exclusiva das agendas e profissionais
+- `portal-controle-integral.js` — renderização exclusiva de recados e campanhas
+- `assets/js/portal-conteudo-publico-v1.js` — compatibilidade de conteúdo sem leitura paralela
 
 ### Painéis administrativos
 
@@ -67,12 +80,13 @@ Todos foram retirados da linha de estabilização. A pasta `.github/workflows` m
 
 ### Apps Script estabilizado
 
-A fonte oficial é composta por exatamente três módulos:
+A fonte oficial é composta por quatro módulos:
 
 1. `apps-script/PortalRouterV1.gs`
    - único arquivo que declara `doGet` e `doPost`;
    - encaminha cada ação ao núcleo correto;
-   - serializa JSON/JSONP e respostas por iframe.
+   - serializa JSON/JSONP e respostas por iframe;
+   - integra o cache/preaquecimento sem duplicar rotas.
 
 2. `apps-script/AdminCoreV1.gs`
    - PIN administrativo com hash;
@@ -90,6 +104,13 @@ A fonte oficial é composta por exatamente três módulos:
    - recados e campanhas no mesmo payload;
    - compatibilidade de `DIAS` da campanha tanto como texto atual quanto como duração numérica antiga.
 
+4. `apps-script/PerformanceCoreV1.gs`
+   - cache curto do snapshot administrativo e público;
+   - pré-aquecimento explícito durante a abertura visual do painel;
+   - reutilização do snapshot somente depois de validar a sessão;
+   - invalidação dos caches após criar/salvar/remover dados;
+   - não declara `doGet`/`doPost` e não altera regras de negócio.
+
 Os backends substituídos `apps-script-controle-integral.gs`, `ZZ_11...`, `ZZ_12...`, `ZZZ_13...` e `08_AdminEscritaControladaV1.gs` não fazem parte da linha estabilizada.
 
 ## Contrato administrativo versionado
@@ -101,6 +122,8 @@ Os backends substituídos `apps-script-controle-integral.gs`, `ZZ_11...`, `ZZ_12
 - `painel_publico`
 - `agenda_enfermeira`
 - `status_publico`
+
+`admin_status` aceita `prewarm=1` para preparar o snapshot administrativo em segundo plano, sem bloquear a abertura visual do painel.
 
 ### Escrita POST
 
@@ -136,22 +159,29 @@ O workflow `Portal TACS - Stabilization Tests` executa a suíte de regressão da
 - logout invalidando a sessão;
 - ausência de PIN/token no payload público;
 - leitura pública compartilhada no navegador;
+- atualização periódica feita por um único transporte;
+- ausência de renderização legada duplicada de médica/nutricionista;
+- pré-aquecimento administrativo e reutilização do cache servidor;
+- invalidação do cache após gravações;
 - abertura imediata e transporte dos três painéis;
+- cache normal/versionado no HTML interno dos três painéis;
 - fluxos DOM de médica, enfermeira, nutricionista, odontologia e profissionais dinâmicos.
+
+O HEAD atual da branch passou a suíte completa depois da consolidação do transporte público e da otimização dos três painéis.
 
 ## Gates que ainda faltam antes de produção
 
-1. `npm test` completo verde no estado final da branch.
-2. Revisar o pacote exato de três arquivos do Apps Script contra a planilha real.
-3. Configurar o PIN atual no `AdminCoreV1` durante a implantação controlada, sem expô-lo no repositório.
-4. Implantar os três módulos no Apps Script como uma única versão e validar o endpoint.
-5. Testar no ambiente real, antes do merge:
+1. Revisar o pacote exato dos quatro arquivos do Apps Script contra a planilha real.
+2. Configurar o PIN atual no `AdminCoreV1` durante a implantação controlada, sem expô-lo no repositório.
+3. Implantar os quatro módulos no Apps Script como uma única versão e validar o endpoint.
+4. Testar no ambiente real, antes do merge:
    - segunda-feira da médica publicada chegando ao Portal;
    - agenda da nutricionista chegando ao Portal;
    - recado atual permanecendo visível;
    - campanha atual permanecendo visível;
    - criação de um profissional de teste sem duplicação;
    - reabertura dos três painéis sem espera bloqueante.
+5. Definir um identificador único de release/cache para a versão estabilizada.
 6. Somente depois abrir/validar PR da branch para `main`.
 7. Confirmar que o GitHub Pages publicou exatamente o commit aprovado.
 8. Fazer smoke test final em produção.
