@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "productionBase": "2f5136f52d59cc4a6cf188c0527f56cce3858c79",
+  "branch": "stabilization/moradores-admin-v1",
+  "sourceAudit": "COMPLETED",
+  "sameResidentSpreadsheetConfirmed": true,
+  "isolatedBackendCode": "COMPLETED",
+  "generalAdminShell": "COMPLETED",
+  "csvLocalPreview": "COMPLETED",
+  "staticTests": "LOCAL_COMPLETED_CI_PENDING",
+  "appsScriptInstall": "NOT_STARTED",
+  "realReadValidation": "NOT_STARTED",
+  "dailyCrudWrites": "LOCKED",
+  "realCrudTest": "NOT_STARTED",
+  "publicStatusFilter": "NOT_STARTED",
+  "statusRealTest": "NOT_STARTED",
+  "csvReconciliation": "NOT_STARTED",
+  "agentsAreasModule": "NOT_STARTED",
+  "multiAreaIsolation": "NOT_STARTED",
+  "mainMerge": "NOT_STARTED",
+  "releaseAllowed": false,
+  "rule": "Japaranduba permanece intacta em produção. O módulo Moradores só avança por gates: leitura real, depois novo/editar, depois situação com filtro público, depois conciliação CSV, e somente então multiárea. Nenhuma mudança na main é autorizada por este arquivo."
+}
