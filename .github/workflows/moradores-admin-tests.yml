@@ -1,0 +1,52 @@
+name: Portal TACS - Moradores Admin Tests
+
+on:
+  push:
+    branches:
+      - stabilization/moradores-admin-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  moradores-admin-v1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Testar estrutura e regressões
+        run: node scripts/test_moradores_admin_v1.js
+
+      - name: Garantir isolamento da branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='2f5136f52d59cc4a6cf188c0527f56cce3858c79'
+          git cat-file -e "$BASE^{commit}"
+          changed="$(git diff --name-only "$BASE"..HEAD)"
+          echo "$changed"
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              apps-script/ZZZZ_15_MoradoresAdminPortalV1.gs|\
+              teste-v1/painel-moradores-v1.html|\
+              scripts/test_moradores_admin_v1.js|\
+              MORADORES_ADMIN_V1.md|\
+              MORADORES_RELEASE_GATE_V1.json|\
+              .github/workflows/moradores-admin-tests.yml)
+                ;;
+              *)
+                echo "Arquivo fora do escopo isolado: $file" >&2
+                exit 1
+                ;;
+            esac
+          done <<< "$changed"
