@@ -4,53 +4,58 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#073A55">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="noindex,nofollow,noarchive">
   <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/painel-agendas.svg">
   <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/painel-agendas.svg">
   <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-agendas.webmanifest">
   <link rel="preconnect" href="https://script.google.com">
   <link rel="preconnect" href="https://script.googleusercontent.com">
   <link rel="dns-prefetch" href="//script.google.com">
-  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260806-desempenho-v5"></script>
-  <meta name="color-scheme" content="light">
-  <meta name="robots" content="noindex,nofollow,noarchive">
-  <title>Painel oficial de agendas e vagas • Portal TACS</title>
-  <style>
-    body{margin:0;background:#eaf2f6;color:#102d40;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-    .carga{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center}
-    .caixa{max-width:620px;background:#fff;border:2px solid #a9c0ca;border-radius:24px;padding:24px}
-    h1{margin:0 0 12px}.erro{color:#a52d2d}
-  </style>
+  <link rel="stylesheet" href="/atendimento-acs-farmaceutico/admin-official.css?v=20260808-stable-v1">
+  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260808-stable-v1"></script>
+  <script src="/atendimento-acs-farmaceutico/admin-client-v1.js?v=20260808-stable-v1"></script>
+  <title>Agendas e vagas • Portal TACS</title>
 </head>
 <body>
-  <div class="carga"><div class="caixa"><h1>Painel oficial</h1><p id="mensagem">Carregando agendas e vagas…</p></div></div>
-  <script>
-  (function(){
-    'use strict';
-    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-agendas-v1.html?v=20260806-desempenho-v5';
-    var trocas=[
-      ['<title>Painel de agendas V1.1 • Portal TACS</title>','<title>Painel oficial de agendas e vagas • Portal TACS</title>'],
-      ['AMBIENTE ISOLADO • FASE 3','PAINEL ADMINISTRATIVO OFICIAL'],
-      ['Painel de agendas V1.1','Agendas e vagas'],
-      ['A tela usa a implantação separada de teste, mas qualquer salvamento confirmado altera a planilha real. A confirmação só aparece depois de uma releitura independente de todos os campos.','Painel administrativo oficial conectado à planilha do Portal TACS. Toda alteração só é confirmada depois da releitura independente dos campos.'],
-      ['Verificando a implantação separada de teste…','Verificando o painel administrativo oficial…'],
-      ['Implantação de teste disponível. Entre para carregar as agendas.','Painel administrativo oficial disponível. Entre para carregar as agendas.'],
-      ['Portal TACS • Painel administrativo isolado','Portal TACS • Painel administrativo oficial'],
-      ['Portal do Morador não foi modificado','Alterações confirmadas são aplicadas ao Portal do Morador']
-    ];
-    function substituir(t,a,b){return t.split(a).join(b)}
-    var painel=fetch(origem).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text()});
-    painel.then(function(html){
-      var aquecimento=window.PortalTacsAdminWarmup;
-      var conexaoSegura=JSON.stringify(aquecimento&&aquecimento.resultado||{ok:false,preparando:true}).replace(/</g,'\\u003c');
-      var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt><scr'+'ipt src="../admin-warmup.js?v=20260806-desempenho-v5"></scr'+'ipt>';
-      html=substituir(html,'<head>',bootstrap);
-      trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
-      document.open();document.write(html);document.close();
-    }).catch(function(erro){
-      var e=document.getElementById('mensagem');
-      e.className='erro';e.textContent=erro.message+' Atualize a página.';
-    });
-  })();
-  </script>
+<header><span class="selo">PAINEL ADMINISTRATIVO OFICIAL</span><h1>Agendas e vagas</h1><p>Configure os dias, horários e vagas que serão exibidos no Portal TACS.</p></header>
+<main>
+  <div class="nota">Cada alteração é gravada uma única vez. Depois do salvamento, o painel relê a planilha para confirmar o resultado.</div>
+  <section class="painel">
+    <h2>Acesso administrativo</h2>
+    <label for="pin">PIN administrativo</label><input id="pin" class="campo" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" autocomplete="off">
+    <div class="acoes duas"><button id="entrar" class="botao" type="button">Entrar e carregar agendas</button><button id="sair" class="botao perigo" type="button" disabled>Encerrar sessão</button></div>
+    <div class="toolbar"><button id="recarregar" class="botao secundario" type="button">Recarregar agendas</button></div>
+    <p class="muted">Oscilação de rede não apaga automaticamente a sessão. Recarregue os dados sem fechar a aba.</p>
+    <div id="loginStatus" class="status" role="status">Preparando a conexão e as agendas em segundo plano…</div>
+    <div id="resumo" class="resumo oculto"><div class="numero"><strong id="qProf">0</strong><span>Profissionais com agenda</span></div><div class="numero"><strong id="qDias">0</strong><span>Dias cadastrados</span></div><div class="numero"><strong id="qAtivos">0</strong><span>Dias ativos</span></div><div class="numero"><strong id="qVagas">0</strong><span>Vagas informadas</span></div></div>
+  </section>
+  <section id="conteudo" class="painel oculto"><div id="statusOperacao" class="status ok" role="status">Agendas carregadas.</div><div id="agendasArea"></div></section>
+</main>
+<footer><p>Portal TACS • Painel administrativo oficial</p><p>Agendas e vagas</p></footer>
+<script>
+(function(){
+'use strict';
+var Client=window.PortalTacsAdminClient,state={profissionais:[],agendas:[]};
+var pin=document.getElementById('pin'),entrar=document.getElementById('entrar'),sair=document.getElementById('sair'),recarregar=document.getElementById('recarregar'),conteudo=document.getElementById('conteudo'),resumo=document.getElementById('resumo');
+function txt(v){return String(v==null?'':v)}function bool(v){if(v===true||v===1)return true;return['true','1','sim','yes','ativo'].indexOf(txt(v).trim().toLowerCase())!==-1}function num(v,p){var n=Number(v);return Number.isFinite(n)?n:(p||0)}function esc(v){return txt(v).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}function status(id,message,type){var e=document.getElementById(id);e.textContent=message;e.className='status'+(type?' '+type:'')}function setBusy(v){entrar.disabled=v;recarregar.disabled=v;sair.disabled=v||!Client.hasSession()}
+function key(v){var s=txt(v).trim().toUpperCase();if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');s=s.replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');if(['MEDICA','MEDICO','MEDICINA'].indexOf(s)!==-1)return'MEDICA';if(['ENFERMEIRA','ENFERMEIRO','ENFERMAGEM'].indexOf(s)!==-1)return'ENFERMEIRA';if(['NUTRICIONISTA','NUTRICAO'].indexOf(s)!==-1)return'NUTRICIONISTA';if(['DENTISTA','ODONTOLOGIA'].indexOf(s)!==-1)return'ODONTOLOGIA';return s}
+function professionalInfo(module){var k=key(module),p=state.profissionais.find(function(x){return key(x.ID)===k||(k==='ODONTOLOGIA'&&key(x.ID)==='ODONTOLOGIA')})||null;return p||{ID:module,NOME:module,TITULO_PUBLICO:module,ICONE:'👤',ORDEM:999}}
+function dateValue(v){var s=txt(v);var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);return m?m[3]+'-'+m[2]+'-'+m[1]:''}
+function render(){
+  var groups={};state.agendas.forEach(function(row){var k=key(row.MODULO);if(!groups[k])groups[k]=[];groups[k].push(row)});
+  var keys=Object.keys(groups).sort(function(a,b){return num(professionalInfo(a).ORDEM,999)-num(professionalInfo(b).ORDEM,999)||a.localeCompare(b)});
+  document.getElementById('qProf').textContent=keys.length;document.getElementById('qDias').textContent=state.agendas.length;document.getElementById('qAtivos').textContent=state.agendas.filter(function(x){return bool(x.ATIVO)}).length;document.getElementById('qVagas').textContent=state.agendas.reduce(function(sum,x){return sum+num(x.VAGAS_COMUNS,0)+num(x.VAGAS_EMERGENCIAIS,0)},0);
+  var target=document.getElementById('agendasArea');if(!keys.length){target.innerHTML='<div class="vazio">Nenhuma agenda cadastrada. Adicione o profissional no painel de Profissionais e serviços.</div>';return}
+  target.innerHTML=keys.map(function(k){var prof=professionalInfo(k),rows=groups[k].slice().sort(function(a,b){return num(a.ORDEM,999)-num(b.ORDEM,999)});return '<section class="grupo"><h2>'+esc(prof.ICONE||'👤')+' '+esc(prof.TITULO_PUBLICO||prof.NOME||k)+'</h2><div class="day-grid">'+rows.map(function(r){return card(r)}).join('')+'</div></section>'}).join('');
+}
+function card(r){var id=key(r.MODULO)+'__'+key(r.DIA);return '<details class="cartao" data-agenda="'+esc(id)+'"><summary><div><h3>'+esc(r.DIA||'Dia')+'</h3><div class="sub">'+(r.DATA?esc(dateValue(r.DATA))+' • ':'')+esc(r.HORARIO||'Sem horário')+'</div></div><span class="sinal '+(bool(r.ATIVO)?'ativo':'inativo')+'">'+(bool(r.ATIVO)?'Publicado':'Inativo')+'</span></summary><div class="corpo"><input name="modulo" type="hidden" value="'+esc(r.MODULO)+'"><input name="dia" type="hidden" value="'+esc(r.DIA)+'"><div class="grid duas"><div><label>Data</label><input class="campo" name="data" type="date" value="'+esc(dateValue(r.DATA))+'"></div><div><label>Horário</label><input class="campo" name="horario" value="'+esc(r.HORARIO)+'" placeholder="Ex.: 08:00 às 12:00"></div><div><label>Situação</label><input class="campo" name="situacao" value="'+esc(r.SITUACAO)+'" placeholder="Ex.: ATENDIMENTO"></div><div><label>Mensagem / atendimento</label><input class="campo" name="mensagem" value="'+esc(r.MENSAGEM)+'"></div><div><label>Vagas comuns</label><input class="campo" name="comuns" type="number" min="0" max="999" value="'+esc(num(r.VAGAS_COMUNS,0))+'"></div><div><label>Vagas emergenciais</label><input class="campo" name="emergenciais" type="number" min="0" max="999" value="'+esc(num(r.VAGAS_EMERGENCIAIS,0))+'"></div></div><div class="linhaChecks"><label class="check"><input name="ativo" type="checkbox" '+(bool(r.ATIVO)?'checked':'')+'> Publicar este dia</label><label class="check"><input name="encerra" type="checkbox" '+(bool(r.ENCERRA_12H)?'checked':'')+'> Encerrar às 12h</label><label class="check"><input name="extra" type="checkbox" '+(bool(r.DIA_EXTRA)?'checked':'')+'> Dia extra</label></div><div class="acoes"><button class="botao verde salvarAgenda" type="button">Salvar este dia</button></div></div></details>'}
+function applyData(r){state.profissionais=Array.isArray(r.profissionais)?r.profissionais:[];state.agendas=Array.isArray(r.agendas)?r.agendas:[];render();conteudo.classList.remove('oculto');resumo.classList.remove('oculto');sair.disabled=false}
+function loadData(silent){if(!Client.hasSession()){conteudo.classList.add('oculto');resumo.classList.add('oculto');sair.disabled=true;if(!silent)status('loginStatus','Digite o PIN para entrar.','ok');return Promise.resolve(false)}setBusy(true);if(!silent)status('loginStatus','Carregando agendas…','aviso');return Client.data().then(function(r){setBusy(false);if(r&&r.ok===true){applyData(r);status('loginStatus',r.cache?'Agendas carregadas imediatamente. Sessão válida.':'Sessão validada e agendas carregadas.','ok');return true}if(Client.isAuthError(r)){conteudo.classList.add('oculto');resumo.classList.add('oculto');status('loginStatus',txt(r&&r.message||'Sessão expirada.'),'erro');return false}status('loginStatus',txt(r&&r.message||'Falha temporária.')+' Sua sessão foi preservada; toque em “Recarregar agendas”.','temp');return false})}
+function save(card){var payload={modulo:card.querySelector('[name="modulo"]').value,dia:card.querySelector('[name="dia"]').value,data:card.querySelector('[name="data"]').value,horario:card.querySelector('[name="horario"]').value.trim(),situacao:card.querySelector('[name="situacao"]').value.trim(),mensagem:card.querySelector('[name="mensagem"]').value.trim(),encerra12h:card.querySelector('[name="encerra"]').checked?'true':'false',vagasComuns:card.querySelector('[name="comuns"]').value,vagasEmergenciais:card.querySelector('[name="emergenciais"]').value,diaExtra:card.querySelector('[name="extra"]').checked?'true':'false',ativo:card.querySelector('[name="ativo"]').checked?'true':'false'};if(!confirm('Salvar '+payload.dia+' na agenda oficial?'))return;status('statusOperacao','Salvando '+payload.dia+' e confirmando a releitura…','aviso');setBusy(true);Client.mutate('admin_salvar_agenda',payload).then(function(r){setBusy(false);if(!r||r.ok!==true){status('statusOperacao',txt(r&&r.message||'Não foi possível salvar.'),Client.isTemporary(r)?'temp':'erro');return}loadData(true).then(function(ok){status('statusOperacao',ok?payload.dia+' salvo e relido com sucesso.':'Salvamento concluído; tente recarregar para confirmar.',ok?'ok':'temp')})})}
+entrar.addEventListener('click',function(){status('loginStatus','Validando o PIN…','aviso');setBusy(true);Client.login(pin.value).then(function(r){pin.value='';setBusy(false);if(!r||r.ok!==true){status('loginStatus',txt(r&&r.message||'Login recusado.'),Client.isTemporary(r)?'temp':'erro');return}loadData(false)})});sair.addEventListener('click',function(){setBusy(true);Client.logout().then(function(){setBusy(false);conteudo.classList.add('oculto');resumo.classList.add('oculto');status('loginStatus','Sessão encerrada.','ok')})});recarregar.addEventListener('click',function(){loadData(false)});document.getElementById('agendasArea').addEventListener('click',function(e){var b=e.target.closest('.salvarAgenda');if(b)save(b.closest('.cartao'))});
+if(Client.hasSession())loadData(true);else{setBusy(false);status('loginStatus','Digite o PIN. A conexão e as agendas já estão sendo preparadas em segundo plano.','ok')}
+})();
+</script>
 </body>
 </html>
