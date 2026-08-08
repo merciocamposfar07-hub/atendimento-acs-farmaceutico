@@ -1,12 +1,15 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.1",
   "productionBase": "c129976a8e67d9f45890fa215ce0676a6c3bef53",
   "appsScriptAudit": "COMPLETED",
   "existingPushClassification": "AUSENTE",
-  "serverInstall": "NOT_STARTED",
-  "serverRegression": "NOT_STARTED",
+  "serverInstall": "COMPLETED",
+  "serverRegression": "COMPLETED",
   "frontendMerge": "NOT_STARTED",
-  "realDeviceTest": "NOT_STARTED",
+  "realDeviceTest": "COMPLETED",
   "releaseAllowed": false,
-  "rule": "Gate 0 concluído: não foi encontrado backend servidor-servidor de push/OneSignal no Apps Script auditado. A instalação do módulo isolado pode prosseguir, mas nenhuma integração na main ou publicação do frontend é permitida antes dos gates de servidor, regressão e aparelho real."
+  "validatedTargetSegment": "Total Subscriptions",
+  "validatedAuthorization": "Key <ONESIGNAL_APP_API_KEY>",
+  "validatedAt": "2026-08-08",
+  "rule": "Backend isolado instalado e validado no Apps Script real. Authorization, envio individual e envio coletivo para Total Subscriptions foram confirmados em aparelho real. A main continua bloqueada até integração/revisão controlada do frontend; nenhuma funcionalidade fora do subsistema de push deve ser alterada."
 }
