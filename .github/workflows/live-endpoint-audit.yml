@@ -1,0 +1,28 @@
+name: Portal TACS - Live Endpoint Audit
+
+on:
+  push:
+    branches:
+      - stabilization/portal-tacs-v1
+    paths:
+      - .github/workflows/live-endpoint-audit.yml
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Audit deployed Apps Script public routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+          for action in admin_status painel_publico; do
+            echo "===== $action ====="
+            response="$(curl --location --fail --silent --show-error --max-time 40 "${API}?action=${action}")"
+            printf '%s\n' "$response"
+            echo
+          done
