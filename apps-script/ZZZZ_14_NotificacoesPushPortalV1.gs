@@ -10,10 +10,10 @@
  * - lê a chave do OneSignal em Script Properties;
  * - nunca expõe a chave ao GitHub Pages;
  * - falha de push não desfaz nem altera conteúdo já publicado;
- * - usa idempotência e deduplicação curta para evitar envio repetido.
+ * - usa idempotência determinística e deduplicação curta para evitar envio repetido.
  */
 var TACS_PUSH_PORTAL_V1 = Object.freeze({
-  VERSAO: '1.0.0',
+  VERSAO: '1.1.0',
   APP_ID: 'e2294b98-c72b-4f8c-a055-de28979676dc',
   API_KEY_PROPERTY: 'ONESIGNAL_APP_API_KEY',
   ENDPOINT: 'https://api.onesignal.com/notifications',
@@ -21,7 +21,8 @@ var TACS_PUSH_PORTAL_V1 = Object.freeze({
   RESULT_PREFIX: 'tacs_push_v1_result_',
   DEDUPE_PREFIX: 'tacs_push_v1_sent_',
   RESULT_SECONDS: 300,
-  DEDUPE_SECONDS: 600
+  DEDUPE_SECONDS: 600,
+  RETRY_MAX_WAIT_MS: 5000
 });
 
 var tacsPushV1DoGetAnterior_;
@@ -80,9 +81,11 @@ function tacsPushV1TratarPost_(e){
     tacsPushV1ValidarSessao_(p);
     resultado=tacsPushV1Publicar_(p);
   }catch(erro){
-    resultado={ok:false,push:false,message:erro&&erro.message?erro.message:String(erro)};
+    resultado={ok:false,push:false,message:tacsPushV1MensagemErro_(erro)};
   }
-  tacsPushV1GuardarResultado_(requestId,resultado);
+  if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId)){
+    tacsPushV1GuardarResultado_(requestId,resultado);
+  }
   return tacsPushV1ResponderPost_(requestId,resultado);
 }
 
@@ -100,7 +103,15 @@ function tacsPushV1Publicar_(p){
 
   titulo=titulo.slice(0,120);
   mensagem=mensagem.slice(0,800);
-  var fingerprint=tacsPushV1Fingerprint_([tipo,origemId,titulo,mensagem,tacsPushV1Texto_(p.meta)].join('|'));
+
+  var fingerprint=tacsPushV1Fingerprint_([
+    tipo,
+    origemId,
+    titulo,
+    mensagem,
+    tacsPushV1Texto_(p.meta)
+  ].join('|'));
+
   var cache=CacheService.getScriptCache();
   if(cache.get(TACS_PUSH_PORTAL_V1.DEDUPE_PREFIX+fingerprint)){
     return {ok:true,push:false,skipped:true,reason:'duplicate',message:'Esta mesma publicação já gerou uma notificação recentemente.'};
@@ -112,7 +123,7 @@ function tacsPushV1Publicar_(p){
   }
 
   var heading=tipo==='campanha'?'Campanha da Unidade de Saúde':'Recado da Unidade de Saúde';
-  var idempotencyKey=Utilities.getUuid();
+  var idempotencyKey=tacsPushV1UuidIdempotente_(fingerprint);
   var payload={
     app_id:TACS_PUSH_PORTAL_V1.APP_ID,
     target_channel:'push',
@@ -126,45 +137,117 @@ function tacsPushV1Publicar_(p){
 
   var resposta=tacsPushV1EnviarOneSignal_(apiKey,payload);
   if(resposta.ok){
-    cache.put(TACS_PUSH_PORTAL_V1.DEDUPE_PREFIX+fingerprint,'1',TACS_PUSH_PORTAL_V1.DEDUPE_SECONDS);
+    try{cache.put(TACS_PUSH_PORTAL_V1.DEDUPE_PREFIX+fingerprint,'1',TACS_PUSH_PORTAL_V1.DEDUPE_SECONDS)}catch(erro){}
   }
   return resposta;
 }
 
 function tacsPushV1EnviarOneSignal_(apiKey,payload){
   var ultimo=null;
+  var ultimaExcecao=null;
+
   for(var tentativa=1;tentativa<=2;tentativa+=1){
-    var resposta=UrlFetchApp.fetch(TACS_PUSH_PORTAL_V1.ENDPOINT,{
-      method:'post',
-      contentType:'application/json',
-      headers:{Authorization:'Key '+apiKey},
-      payload:JSON.stringify(payload),
-      muteHttpExceptions:true
-    });
+    var resposta;
+    try{
+      resposta=UrlFetchApp.fetch(TACS_PUSH_PORTAL_V1.ENDPOINT,{
+        method:'post',
+        contentType:'application/json',
+        headers:{Authorization:'Key '+apiKey},
+        payload:JSON.stringify(payload),
+        muteHttpExceptions:true
+      });
+    }catch(erroFetch){
+      ultimaExcecao=erroFetch;
+      if(tentativa===1){
+        Utilities.sleep(750);
+        continue;
+      }
+      break;
+    }
+
     var status=Number(resposta.getResponseCode());
     var texto=String(resposta.getContentText()||'');
     var corpo={};
-    try{corpo=texto?JSON.parse(texto):{}}catch(erro){corpo={raw:texto.slice(0,500)}}
+    try{corpo=texto?JSON.parse(texto):{}}catch(erroJson){corpo={raw:texto.slice(0,500)}}
     ultimo={status:status,body:corpo};
 
     if(status>=200&&status<300){
       if(corpo&&corpo.id){
-        return {ok:true,push:true,messageId:String(corpo.id),recipients:Number(corpo.recipients||0),message:'Notificação criada no OneSignal.'};
+        return {
+          ok:true,
+          push:true,
+          messageId:String(corpo.id),
+          recipients:Number(corpo.recipients||0),
+          message:'Notificação criada no OneSignal.'
+        };
       }
-      return {ok:true,push:false,skipped:true,reason:'no-targets',recipients:Number(corpo&&corpo.recipients||0),message:'Nenhum aparelho inscrito foi encontrado para esta notificação.'};
+      return {
+        ok:true,
+        push:false,
+        skipped:true,
+        reason:'no-targets',
+        recipients:Number(corpo&&corpo.recipients||0),
+        message:tacsPushV1DetalheOneSignal_(corpo)||'Nenhum aparelho inscrito foi encontrado para esta notificação.'
+      };
     }
-    if(!(status===429||status>=500)||tentativa===2)break;
-    Utilities.sleep(350);
+
+    if(tentativa===2)break;
+
+    if(status===429){
+      var espera=tacsPushV1RetryAfterMs_(resposta);
+      if(espera<0||espera>TACS_PUSH_PORTAL_V1.RETRY_MAX_WAIT_MS)break;
+      Utilities.sleep(espera);
+      continue;
+    }
+
+    if(status>=500){
+      Utilities.sleep(750);
+      continue;
+    }
+
+    break;
   }
-  var detalhe=ultimo&&ultimo.body&&(ultimo.body.errors||ultimo.body.error||ultimo.body.message);
+
+  if(ultimaExcecao&&!ultimo){
+    throw new Error('Falha de comunicação com o OneSignal. A publicação do portal permanece salva.');
+  }
+
+  var detalhe=ultimo&&ultimo.body?tacsPushV1DetalheOneSignal_(ultimo.body):'';
+  var codigo=ultimo&&ultimo.status?(' HTTP '+ultimo.status):'';
+  throw new Error('Falha ao enviar a notificação'+codigo+(detalhe?': '+detalhe:'.'));
+}
+
+function tacsPushV1RetryAfterMs_(resposta){
+  try{
+    var headers=typeof resposta.getAllHeaders==='function'?resposta.getAllHeaders():
+      (typeof resposta.getHeaders==='function'?resposta.getHeaders():{});
+    var valor=headers&&(
+      headers['Retry-After']||headers['retry-after']||headers['RETRY-AFTER']
+    );
+    if(valor==null||valor==='')return -1;
+    var segundos=Number(valor);
+    if(isFinite(segundos)&&segundos>=0)return Math.round(segundos*1000);
+    var data=Date.parse(String(valor));
+    if(!isNaN(data))return Math.max(0,data-Date.now());
+  }catch(erro){}
+  return -1;
+}
+
+function tacsPushV1DetalheOneSignal_(corpo){
+  if(!corpo||typeof corpo!=='object')return '';
+  var detalhe=corpo.errors||corpo.error||corpo.message||'';
   if(Array.isArray(detalhe))detalhe=detalhe.join('; ');
-  throw new Error('Falha ao enviar a notificação'+(detalhe?': '+String(detalhe).slice(0,300):'.'));
+  if(detalhe&&typeof detalhe==='object'){
+    try{detalhe=JSON.stringify(detalhe)}catch(erro){detalhe=String(detalhe)}
+  }
+  return tacsPushV1Texto_(detalhe).slice(0,300);
 }
 
 function tacsPushV1ValidarSessao_(p){
   if(typeof profissionaisDinamicosV1ValidarSessao_==='function'){
     return profissionaisDinamicosV1ValidarSessao_(p);
   }
+
   var token=tacsPushV1Texto_(p.token),dispositivo=tacsPushV1Texto_(p.dispositivo);
   if(!token||!dispositivo)throw new Error('Sessão administrativa ausente. Entre novamente com o PIN.');
 
@@ -191,45 +274,91 @@ function tacsPushV1ValidarRequestId_(valor){
   if(!/^[A-Za-z0-9_-]{8,160}$/.test(id))throw new Error('Identificador da operação de push inválido.');
   return id;
 }
+
 function tacsPushV1GuardarResultado_(id,resultado){
   try{CacheService.getScriptCache().put(TACS_PUSH_PORTAL_V1.RESULT_PREFIX+id,JSON.stringify(resultado),TACS_PUSH_PORTAL_V1.RESULT_SECONDS)}catch(erro){}
 }
+
 function tacsPushV1LerResultado_(id){
   if(!/^[A-Za-z0-9_-]{8,160}$/.test(String(id||'')))return null;
-  try{var texto=CacheService.getScriptCache().get(TACS_PUSH_PORTAL_V1.RESULT_PREFIX+id);return texto?JSON.parse(texto):null}catch(erro){return null}
+  try{
+    var texto=CacheService.getScriptCache().get(TACS_PUSH_PORTAL_V1.RESULT_PREFIX+id);
+    return texto?JSON.parse(texto):null;
+  }catch(erro){return null}
 }
+
 function tacsPushV1ResponderPost_(requestId,resultado){
   var mensagem={source:'admin-painel-tacs-v1',requestId:requestId,result:resultado};
   var saida=HtmlService.createHtmlOutput('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"></head><body><script>parent.postMessage('+JSON.stringify(mensagem).replace(/</g,'\\u003c')+',"*");<\/script></body></html>');
   return saida.setXFrameOptionsMode?saida.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL):saida;
 }
+
 function tacsPushV1ResponderJson_(dados,callback){
   var json=JSON.stringify(dados);
-  if(callback&&/^[A-Za-z_$][0-9A-Za-z_$.]*$/.test(callback))return ContentService.createTextOutput(callback+'('+json+');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+  if(callback&&/^[A-Za-z_$][0-9A-Za-z_$.]*$/.test(callback)){
+    return ContentService.createTextOutput(callback+'('+json+');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
+
 function tacsPushV1Evento_(parametros){
-  var lista={};Object.keys(parametros||{}).forEach(function(k){lista[k]=[String(parametros[k]==null?'':parametros[k])]});
+  var lista={};
+  Object.keys(parametros||{}).forEach(function(k){
+    lista[k]=[String(parametros[k]==null?'':parametros[k])];
+  });
   return {parameter:parametros||{},parameters:lista,postData:{type:'application/x-www-form-urlencoded',contents:''}};
 }
+
 function tacsPushV1ConteudoResposta_(resposta){
-  if(!resposta)return null;var conteudo=typeof resposta.getContent==='function'?resposta.getContent():String(resposta||'');
+  if(!resposta)return null;
+  var conteudo=typeof resposta.getContent==='function'?resposta.getContent():String(resposta||'');
   try{return JSON.parse(conteudo)}catch(erro){return null}
 }
+
 function tacsPushV1Fingerprint_(valor){
   var bytes=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(valor),Utilities.Charset.UTF_8);
-  return bytes.map(function(byte){var n=byte<0?byte+256:byte;return('0'+n.toString(16)).slice(-2)}).join('').slice(0,40);
+  return bytes.map(function(byte){
+    var n=byte<0?byte+256:byte;
+    return('0'+n.toString(16)).slice(-2);
+  }).join('').slice(0,40);
 }
+
+function tacsPushV1UuidIdempotente_(fingerprint){
+  var h=String(fingerprint||'').replace(/[^0-9a-f]/gi,'').toLowerCase();
+  if(h.length<32)throw new Error('Não foi possível gerar a chave de idempotência da notificação.');
+  var chars=h.slice(0,32).split('');
+  chars[12]='4';
+  var variante=parseInt(chars[16],16);
+  chars[16]=((variante&3)|8).toString(16);
+  var x=chars.join('');
+  return x.slice(0,8)+'-'+x.slice(8,12)+'-'+x.slice(12,16)+'-'+x.slice(16,20)+'-'+x.slice(20,32);
+}
+
 function tacsPushV1Booleano_(valor){
   if(valor===true||valor===1)return true;
   return ['TRUE','1','SIM','YES','ATIVO','ATIVA','VERDADEIRO'].indexOf(tacsPushV1Texto_(valor).toUpperCase())!==-1;
 }
-function tacsPushV1Texto_(valor){return String(valor==null?'':valor).trim()}
+
+function tacsPushV1Texto_(valor){
+  return String(valor==null?'':valor).trim();
+}
+
+function tacsPushV1MensagemErro_(erro){
+  var mensagem=erro&&erro.message?erro.message:String(erro||'Erro inesperado ao processar a notificação.');
+  return tacsPushV1Texto_(mensagem).slice(0,500);
+}
 
 /** Diagnóstico sem envio. */
 function testarConfiguracaoNotificacoesPushPortalV1(){
   var chave=String(PropertiesService.getScriptProperties().getProperty(TACS_PUSH_PORTAL_V1.API_KEY_PROPERTY)||'').trim();
-  var resultado={ok:Boolean(chave),versao:TACS_PUSH_PORTAL_V1.VERSAO,appId:TACS_PUSH_PORTAL_V1.APP_ID,chaveConfigurada:Boolean(chave),endpoint:TACS_PUSH_PORTAL_V1.ENDPOINT,nenhumEnvioRealizado:true};
+  var resultado={
+    ok:Boolean(chave),
+    versao:TACS_PUSH_PORTAL_V1.VERSAO,
+    appId:TACS_PUSH_PORTAL_V1.APP_ID,
+    chaveConfigurada:Boolean(chave),
+    endpoint:TACS_PUSH_PORTAL_V1.ENDPOINT,
+    nenhumEnvioRealizado:true
+  };
   console.log(JSON.stringify(resultado));
   return resultado;
 }
