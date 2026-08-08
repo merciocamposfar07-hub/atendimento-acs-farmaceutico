@@ -80,13 +80,16 @@ assert.doesNotMatch(undoFn,/admin_publicar_notificacao/);
 assert.match(panel,/pushIgual:[^\n]+===false/);
 assert.match(panel,/pushInativo:[^\n]+===false/);
 
-// 6. Servidor: segredo em Script Properties, endpoint oficial e sem configuração de som customizado.
+// 6. Servidor: segredo em Script Properties, endpoint oficial, alvo coletivo validado e sem som customizado.
 const serverSource=read('apps-script/ZZZZ_14_NotificacoesPushPortalV1.gs');
-assert.match(serverSource,/VERSAO: '1\.1\.0'/);
+assert.match(serverSource,/VERSAO: '1\.1\.1'/);
 assert.match(serverSource,/API_KEY_PROPERTY: 'ONESIGNAL_APP_API_KEY'/);
+assert.match(serverSource,/TARGET_SEGMENT: 'Total Subscriptions'/);
 assert.match(serverSource,/getProperty\(TACS_PUSH_PORTAL_V1\.API_KEY_PROPERTY\)/);
+assert.match(serverSource,/replace\(\/\\s\+\/g,''\)/);
 assert.match(serverSource,/https:\/\/api\.onesignal\.com\/notifications/);
-assert.match(serverSource,/included_segments:\['Subscribed Users'\]/);
+assert.match(serverSource,/included_segments:\[TACS_PUSH_PORTAL_V1\.TARGET_SEGMENT\]/);
+assert.doesNotMatch(serverSource,/included_segments:\['Subscribed Users'\]/);
 assert.match(serverSource,/idempotency_key:idempotencyKey/);
 assert.match(serverSource,/tacsPushV1UuidIdempotente_\(fingerprint\)/);
 assert.doesNotMatch(serverSource,/ios_sound|android_sound|silent\s*:/);
@@ -136,7 +139,7 @@ assert.equal(result.recipients,3);
 assert.equal(fetchCalls.length,1);
 assert.equal(fetchCalls[0].url,'https://api.onesignal.com/notifications');
 assert.equal(fetchCalls[0].options.headers.Authorization,'Key SECRET_TEST_ONLY');
-assert.deepEqual(fetchCalls[0].body.included_segments,['Subscribed Users']);
+assert.deepEqual(fetchCalls[0].body.included_segments,['Total Subscriptions']);
 assert.equal(fetchCalls[0].body.url,'https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/');
 assert.equal(fetchCalls[0].body.data.id,'r-1');
 assert.ok(fetchCalls[0].body.idempotency_key);
@@ -168,4 +171,12 @@ const retryCalls=fetchCalls.slice(beforeRetry);
 assert.equal(retryCalls.length,2);
 assert.equal(retryCalls[0].body.idempotency_key,retryCalls[1].body.idempotency_key,'Retry técnico deve reutilizar a mesma chave de idempotência.');
 
-console.log('OK: Gate 0 concluído; Push V1.1 isolado, idempotente, deduplicado, seguro e sem regressão estrutural do Portal.');
+// Espaços acidentais na chave não podem invalidar o Authorization.
+cache.clear();
+props.set('ONESIGNAL_APP_API_KEY','  SECRET_ TEST_ ONLY  ');
+fetchQueue.push({code:200,body:{id:'msg-space',recipients:1}});
+result=context.tacsPushV1Publicar_({...base,id:'r-space'});
+assert.equal(result.ok,true);
+assert.equal(fetchCalls.at(-1).options.headers.Authorization,'Key SECRET_TEST_ONLY');
+
+console.log('OK: Push V1.1.1 usa Total Subscriptions validado em aparelho real, higieniza a chave e preserva idempotência/deduplicação.');
