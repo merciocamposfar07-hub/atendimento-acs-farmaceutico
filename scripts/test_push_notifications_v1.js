@@ -19,8 +19,9 @@ assert.equal(releaseGate.frontendMerge,'NOT_STARTED');
 assert.equal(releaseGate.realDeviceTest,'NOT_STARTED');
 assert.equal(releaseGate.releaseAllowed,false);
 const activationDoc=read('PUSH_NOTIFICATIONS_V1.md');
-assert.match(activationDoc,/GATE 0 OBRIGATÓRIO/);
-assert.match(activationDoc,/AUSENTE/);
+assert.match(activationDoc,/Gate 0 concluído/);
+assert.match(activationDoc,/Classificação: \*\*AUSENTE\*\*/);
+assert.match(activationDoc,/releaseAllowed:false/);
 
 // 1. O Portal do Morador só recebe os novos vínculos; fluxos atuais continuam referenciados.
 const index=read('index.html');
