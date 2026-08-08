@@ -7,9 +7,13 @@
   "serverRegression": "COMPLETED",
   "frontendMerge": "NOT_STARTED",
   "realDeviceTest": "COMPLETED",
+  "productionDeploymentUpdate": "COMPLETED",
+  "productionEndToEndTest": "COMPLETED",
   "releaseAllowed": false,
   "validatedTargetSegment": "Total Subscriptions",
   "validatedAuthorization": "Key <ONESIGNAL_APP_API_KEY>",
   "validatedAt": "2026-08-08",
-  "rule": "Backend isolado instalado e validado no Apps Script real. Authorization, envio individual e envio coletivo para Total Subscriptions foram confirmados em aparelho real. A main continua bloqueada até integração/revisão controlada do frontend; nenhuma funcionalidade fora do subsistema de push deve ser alterada."
+  "productionDeploymentVersion": 20,
+  "productionWebAppUrlPreserved": true,
+  "rule": "Backend isolado instalado e validado no Apps Script real. Authorization, envio individual, envio coletivo para Total Subscriptions e fluxo real recado -> Portal -> push foram confirmados em aparelho real. A implantação existente foi atualizada sem trocar o /exec. A main continua bloqueada até integração/revisão controlada do frontend; nenhuma funcionalidade fora do subsistema de push deve ser alterada."
 }
