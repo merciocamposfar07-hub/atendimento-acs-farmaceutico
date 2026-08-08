@@ -10,6 +10,7 @@
   var WARM_KEY='portalTacsAppsScriptWarmAtV1';
   var CACHE_MAX_MS=15*60*1000;
   var REFRESH_MIN_MS=30*1000;
+  var PERIODIC_REFRESH_MS=60*1000;
   var TIMEOUT_MS=25000;
   var memoria=lerCache();
   var emCurso=null;
@@ -154,6 +155,11 @@
     if(!document.hidden)agendarAtualizacao(false);
   });
   window.addEventListener('pageshow',function(){agendarAtualizacao(false)});
+  if(typeof window.setInterval==='function'){
+    window.setInterval(function(){
+      if(!document.hidden)agendarAtualizacao(false);
+    },PERIODIC_REFRESH_MS);
+  }
 
   window.PortalTacsPublicData={
     get:get,
@@ -162,7 +168,7 @@
     invalidate:invalidate,
     api:API,
     cacheKey:CACHE_KEY,
-    timeout:TIMEOUT_MS
+    timeout:TIMEOUT_MS,
+    periodicRefresh:PERIODIC_REFRESH_MS
   };
 }());
-
