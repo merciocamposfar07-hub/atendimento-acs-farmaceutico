@@ -4,138 +4,123 @@ Branch: `stabilization/push-notifications-v1`
 
 Base congelada da produção: `c129976a8e67d9f45890fa215ce0676a6c3bef53`
 
-## REGRA DE SEGURANÇA — GATE 0 OBRIGATÓRIO
+## Estado atual
 
-**Não adicionar módulo, não criar propriedade secreta, não atualizar implantação e não integrar esta branch à `main` antes de auditar o Apps Script real que está em produção.**
+**Gate 0 concluído em 08/08/2026.**
 
-A auditoria deve verificar, no projeto Apps Script `Portal TACS – Banco de Dados`, se já existe qualquer implementação total ou parcial de notificações. Procurar por:
+Auditoria realizada no projeto real `Portal TACS – Banco de Dados`, no projeto `Avisos TACS – Unidade de Saúde Posto Matias`, nos arquivos históricos enviados e no repositório GitHub.
 
-- `OneSignal`, `ONESIGNAL`, `push`, `notificacao`, `notificação`;
-- chamadas a `UrlFetchApp.fetch` direcionadas ao OneSignal ou outro provedor de push;
-- propriedades como `ONESIGNAL_APP_API_KEY`, `REST_API_KEY`, `ONESIGNAL_APP_ID` ou equivalentes;
-- rotas/ações como `admin_publicar_notificacao`, `enviarNotificacao`, `enviarPush` ou equivalentes;
-- gatilhos instaláveis que possam enviar avisos;
-- wrappers de `doGet`, `doPost`, `tratarGetPainelTacs_` ou `tratarPostPainelTacs_` relacionados a notificações.
+Classificação: **AUSENTE** — não foi encontrada implementação servidor-servidor existente de push/OneSignal no Apps Script auditado. Não foram encontrados `OneSignal`, `UrlFetchApp` direcionado ao provedor, App API Key privada, `admin_publicar_notificacao`, `enviarPush`, `enviarNotificacao` ou rota equivalente de envio automático.
 
-Resultado obrigatório do Gate 0:
+A infraestrutura histórica do lado do navegador/OneSignal existiu, mas o backend automático de envio não foi encontrado.
 
-1. **Se já existir fluxo funcional:** não instalar `ZZZZ_14_NotificacoesPushPortalV1.gs`. Primeiro comparar o fluxo existente com esta V1 e consolidar uma única implementação.
-2. **Se existir fluxo parcial/antigo:** não empilhar outra implementação. Mapear o que permanece útil, desativar duplicidade de forma controlada e manter uma única rota oficial.
-3. **Se não existir envio servidor-servidor:** somente então o módulo V1 pode ser candidato à instalação.
-4. Nenhuma chave privada deve ser exibida, fotografada, enviada ao chat ou copiada para o GitHub.
+**Importante:** Gate 0 concluído não significa produção liberada. O estado continua `releaseAllowed:false` até concluir servidor, regressão, frontend e teste em aparelho real.
 
-Enquanto essa auditoria não estiver concluída, o estado oficial é: **NÃO LIBERADO PARA PRODUÇÃO**.
+## Regra permanente de isolamento
 
-## Objetivo
-
-Entregar notificações push para novos recados e campanhas sem transformar o push em dependência crítica do Portal do Morador.
-
-Fluxo pretendido:
-
-1. administrador salva recado/campanha;
-2. gravação é confirmada pela releitura da planilha;
-3. somente então o painel solicita o push;
-4. Apps Script autentica a sessão e chama o OneSignal no servidor;
-5. aparelhos inscritos recebem a notificação;
-6. toque na notificação abre o Portal do Morador.
-
-## Princípios de isolamento
+Não substituir, apagar ou reescrever as rotinas que já funcionam. O push é uma extensão isolada.
 
 - Agenda médica/nutricionista não é alterada.
 - Agenda odontológica/reserva não é alterada.
 - Fluxo WhatsApp não é alterado.
-- Mural de recados/campanhas continua funcionando mesmo se o OneSignal falhar.
-- `service-worker.js` da raiz permanece desativado; não reativar cache por causa do push.
-- OneSignal usa o worker separado `push/OneSignalSDKWorker.js`.
-- O SDK do OneSignal não é carregado no caminho crítico de abertura do Portal. Ele é carregado sob demanda ou em idle quando já existe permissão.
-- A chave privada do OneSignal nunca fica no GitHub Pages.
+- `Código.gs` e `AvisosNovo.gs` do projeto de Avisos não são substituídos.
+- Recados/campanhas continuam sendo gravados pelo fluxo atual.
+- Falha do OneSignal nunca desfaz conteúdo publicado.
+- `service-worker.js` da raiz permanece desativado.
+- OneSignal usa somente `push/OneSignalSDKWorker.js`.
+- A chave privada nunca fica no GitHub Pages.
 
-## Arquivos da função
+## Objetivo
+
+Fluxo único pretendido:
+
+1. administrador salva recado/campanha;
+2. gravação é confirmada pela releitura;
+3. somente então o painel solicita o push;
+4. módulo isolado do Apps Script autentica a sessão e chama o OneSignal;
+5. aparelhos inscritos recebem a notificação;
+6. toque na notificação abre o Portal do Morador.
+
+## Componentes isolados
 
 ### Frontend público
 
 - `notificacoes-config-v1.js`
 - `portal-notificacoes-v1.js`
-- `push/OneSignalSDKWorker.js` (já existente)
+- `push/OneSignalSDKWorker.js`
 - `manifest.webmanifest`
-- `index.html` — apenas vínculo do manifest e dos dois scripts V1
+- `index.html`: somente vínculo do manifest e scripts V1 na branch; não publicado na `main` ainda.
 
 ### Painel administrativo
 
 - `teste-v1/painel-recados-campanhas-v1.html`
-  - mantém o salvamento existente;
-  - só solicita push depois de releitura confirmada;
-  - não envia push ao remover/desfazer;
-  - não envia novamente se conteúdo ativo não mudou;
-  - conteúdo inativo não gera push.
+- mantém o salvamento existente;
+- só solicita push depois de releitura confirmada;
+- não envia push ao remover/desfazer;
+- não envia novamente se o conteúdo ativo não mudou;
+- conteúdo inativo não gera push.
 
-### Apps Script — CANDIDATO, NÃO INSTALAR ANTES DO GATE 0
+### Apps Script
 
-- `apps-script/ZZZZ_14_NotificacoesPushPortalV1.gs`
-  - ação nova: `admin_publicar_notificacao`;
-  - exige sessão administrativa válida;
-  - lê segredo de Script Properties;
-  - deduplica publicações;
-  - usa idempotência no OneSignal;
-  - falha de push nunca desfaz conteúdo publicado.
+Arquivo candidato: `apps-script/ZZZZ_14_NotificacoesPushPortalV1.gs`
 
-## Configuração secreta — SOMENTE DEPOIS DO GATE 0
+- ação nova e exclusiva: `admin_publicar_notificacao`;
+- exige sessão administrativa válida;
+- lê segredo de Script Properties;
+- deduplica publicações;
+- usa idempotência no OneSignal;
+- falha de push não altera conteúdo publicado;
+- não substitui `doGet`/`doPost` centrais: envolve apenas a ação nova e delega as demais rotas anteriores.
 
-Se a auditoria provar que não existe configuração equivalente e o módulo V1 for aprovado, criar no projeto Apps Script uma Script Property:
+## Configuração secreta
+
+Somente no Apps Script real, quando iniciarmos o Gate 2:
 
 - Nome: `ONESIGNAL_APP_API_KEY`
-- Valor: App API Key privada do aplicativo OneSignal correspondente ao App ID público já configurado.
+- Valor: App API Key privada do aplicativo OneSignal correspondente ao App ID público.
 
-**Nunca colocar o valor dessa chave no GitHub, HTML, JavaScript público, print ou conversa.**
+Nunca colocar o valor no GitHub, HTML, JavaScript público, print ou conversa.
 
-App ID público usado pelo Portal:
+App ID público já utilizado pelo Portal:
 
 `e2294b98-c72b-4f8c-a055-de28979676dc`
 
-## Ordem de ativação
-
-### Gate 0 — auditoria obrigatória do Apps Script real
-
-1. Não alterar nenhum arquivo.
-2. Mapear arquivos e pesquisar termos de notificação/push/OneSignal.
-3. Verificar rotas, `UrlFetchApp`, propriedades e gatilhos relacionados.
-4. Classificar o estado como `EXISTENTE_FUNCIONAL`, `EXISTENTE_PARCIAL` ou `AUSENTE`.
-5. Somente `AUSENTE` autoriza instalar diretamente o módulo V1. Os outros estados exigem consolidação antes de qualquer instalação.
+## Gates restantes
 
 ### Gate 1 — código
 
-O workflow `Portal TACS - Push Notifications Tests` deve estar verde.
+O workflow `Portal TACS - Push Notifications Tests` deve estar verde no HEAD atual.
 
 ### Gate 2 — servidor
 
-Somente se liberado pelo Gate 0:
-
-1. Adicionar `ZZZZ_14_NotificacoesPushPortalV1.gs` ao projeto Apps Script existente, se realmente necessário.
-2. Criar `ONESIGNAL_APP_API_KEY` somente se não existir propriedade equivalente já aprovada.
-3. Executar `testarConfiguracaoNotificacoesPushPortalV1()`.
-4. O retorno precisa indicar `ok:true`, `chaveConfigurada:true` e `nenhumEnvioRealizado:true`.
-5. Atualizar a implantação **existente** do Web App; não criar outro Web App/endereço.
-6. Confirmar que as rotas atuais de agenda, moradores, odontologia e administração continuam respondendo antes de publicar o frontend.
+1. Adicionar **somente** `ZZZZ_14_NotificacoesPushPortalV1.gs` ao projeto Apps Script `Portal TACS – Banco de Dados`.
+2. Não alterar `Portal.gs`, `Código.gs`, `05_AdminApiPortalTacsV1`, `ZZ_10...`, agendas, odontologia ou moradores.
+3. Criar `ONESIGNAL_APP_API_KEY` em Script Properties sem expor seu valor.
+4. Executar `testarConfiguracaoNotificacoesPushPortalV1()`; o diagnóstico não envia push.
+5. O resultado deve indicar `ok:true`, `chaveConfigurada:true`, `nenhumEnvioRealizado:true`.
+6. Só então realizar uma única atualização da implantação existente, mantendo o mesmo `/exec`.
+7. Testar as rotas atuais antes de qualquer frontend de push entrar na `main`.
 
 ### Gate 3 — frontend
 
-Somente depois do Gate 2:
+Somente depois do Gate 2 aprovado:
 
-1. integrar a branch de push à versão aprovada da `main`;
-2. confirmar GitHub Pages publicado no SHA aprovado;
-3. abrir o Portal e conferir agenda, odontologia, formulário, WhatsApp e mural antes de ativar uma inscrição push.
+1. integrar apenas os componentes de push à versão aprovada da `main`;
+2. confirmar GitHub Pages no SHA aprovado;
+3. testar Portal, agendas, odontologia, formulário, WhatsApp e mural sem push;
+4. somente depois habilitar uma inscrição de teste.
 
 ### Gate 4 — aparelho real
 
-1. Em aparelho de teste, instalar/abrir o Portal no modo apropriado.
-2. Tocar em `Ativar notificações`.
-3. Confirmar inscrição no OneSignal.
-4. Criar um recado de teste ativo pelo painel.
-5. Confirmar no painel: gravação/releitura primeiro, push depois.
-6. Confirmar recebimento da notificação fora do Portal.
-7. Tocar na notificação e confirmar abertura do Portal.
-8. Confirmar que o som/comportamento da notificação segue a configuração do sistema operacional do aparelho.
-9. Remover o recado de teste e confirmar que remoção não gera novo push.
+1. usar um único aparelho de teste;
+2. ativar notificações;
+3. confirmar inscrição no OneSignal;
+4. criar um recado de teste ativo;
+5. confirmar gravação/releitura primeiro e push depois;
+6. confirmar recebimento fora do Portal;
+7. tocar na notificação e confirmar abertura do Portal;
+8. confirmar comportamento sonoro conforme o sistema operacional;
+9. remover o recado e confirmar que remoção não gera outro push.
 
 ## Comportamento em falha
 
@@ -143,17 +128,17 @@ Se OneSignal/API estiver indisponível:
 
 - recado/campanha permanece salvo;
 - mural permanece atualizado;
-- painel mostra que o conteúdo foi publicado, mas o push falhou;
-- nenhuma gravação é reenviada automaticamente por causa do push;
-- não há rollback do conteúdo por falha de notificação.
+- painel informa falha do push separadamente;
+- não há rollback do conteúdo;
+- não há repetição funcional do salvamento por causa do push.
 
 ## Deduplicação
 
 O backend usa:
 
-- `idempotency_key` por operação de envio;
+- `idempotency_key` por envio;
 - fingerprint de conteúdo em cache por curto período;
-- no máximo uma repetição técnica em erro transitório (429/5xx), reutilizando a mesma chave de idempotência.
+- no máximo uma repetição técnica em 429/5xx com a mesma chave de idempotência.
 
 O painel não pede push quando:
 
@@ -164,39 +149,20 @@ O painel não pede push quando:
 
 ## Som
 
-A V1 não força arquivo de áudio customizado. A notificação é enviada como push normal e o comportamento sonoro é controlado pelo navegador/sistema operacional e pelas preferências de notificação do aparelho. Isso evita diferenças incompatíveis entre iOS e Android.
+Web Push não suporta som personalizado do OneSignal como um app nativo. A V1 não força arquivo de áudio. O comportamento sonoro é controlado pelo navegador/sistema operacional e pelas preferências de notificação do aparelho.
 
 ## Rollback
 
-O subsistema foi desenhado para ser removível sem tocar nas funcionalidades centrais.
+O subsistema é removível sem tocar nas funcionalidades centrais.
 
-Rollback do frontend:
-
-- remover do `index.html` o vínculo de `manifest.webmanifest?v=20260808-push-v1` somente se necessário voltar exatamente ao estado anterior;
-- remover os dois scripts `notificacoes-config-v1.js` e `portal-notificacoes-v1.js`;
-- restaurar o `start_url` anterior do manifest.
-
-Rollback administrativo:
-
-- restaurar `teste-v1/painel-recados-campanhas-v1.html` para a versão anterior ao hook de push.
-
-Rollback servidor:
-
-- o módulo `ZZZZ_14_NotificacoesPushPortalV1.gs` pode permanecer sem uso ou ser retirado; nenhuma função central depende dele.
-
-Não alterar `service-worker.js` raiz durante rollback.
+- frontend: retirar apenas os vínculos/scripts V1;
+- administrativo: retirar somente o hook de push;
+- servidor: retirar ou deixar inativo apenas `ZZZZ_14_NotificacoesPushPortalV1.gs`;
+- não alterar `service-worker.js` raiz;
+- não alterar agendas, odontologia, moradores, WhatsApp, `Código.gs` ou `AvisosNovo.gs`.
 
 ## Gate de regressão
 
 Arquivo: `scripts/test_push_notifications_v1.js`
 
-Ele bloqueia regressões estruturais, incluindo:
-
-- perda dos scripts atuais de agenda/odontologia/WhatsApp;
-- reativação acidental do worker raiz;
-- exposição de chave privada no frontend;
-- acoplamento do cliente push ao botão de WhatsApp;
-- push antes da confirmação da releitura;
-- push em remoção/undo;
-- reenvio duplicado;
-- retry com nova chave de idempotência.
+Ele bloqueia regressões estruturais, exposição de segredo, push antes da confirmação, push em remoção/undo, duplicidade e retry com nova chave de idempotência.
