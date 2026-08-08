@@ -8,11 +8,11 @@
   }
 
   var API=String(window.TACS_ADMIN_API_URL||'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec').trim();
-  var CACHE_KEY='portalTacsAdminStatusV5';
-  var WARM_KEY='portalTacsAppsScriptWarmAtV1';
+  var CACHE_KEY='portalTacsAdminStatusV6';
+  var WARM_KEY='portalTacsAppsScriptWarmAtV2';
   var CACHE_MS=2*60*1000;
-  var WARM_MS=45*1000;
-  var TIMEOUT_MS=25000;
+  var WARM_MS=40*1000;
+  var TIMEOUT_MS=15000;
   var emCurso=null;
   var ultimaConclusao=lerInstanteAquecido();
   var cacheInicial=lerCache();
@@ -77,7 +77,7 @@
 
     window[nome]=finalizar;
     script.async=true;
-    script.src=API+(API.indexOf('?')<0?'?':'&')+'action=admin_status&callback='+encodeURIComponent(nome)+'&_='+Date.now();
+    script.src=API+(API.indexOf('?')<0?'?':'&')+'action=admin_status&prewarm=1&callback='+encodeURIComponent(nome)+'&_='+Date.now();
     script.onerror=function(){finalizar(null)};
     document.head.appendChild(script);
     timer=setTimeout(function(){finalizar(null)},TIMEOUT_MS);
@@ -127,4 +127,3 @@
   window.addEventListener('pageshow',reaquecerAoVoltar);
   estado.ready=iniciar();
 }());
-
