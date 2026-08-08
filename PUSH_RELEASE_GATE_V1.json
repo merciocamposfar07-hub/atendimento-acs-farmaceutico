@@ -1,12 +1,12 @@
 {
   "version": "1.0.0",
   "productionBase": "c129976a8e67d9f45890fa215ce0676a6c3bef53",
-  "appsScriptAudit": "PENDING",
-  "existingPushClassification": "UNKNOWN",
+  "appsScriptAudit": "COMPLETED",
+  "existingPushClassification": "AUSENTE",
   "serverInstall": "NOT_STARTED",
   "serverRegression": "NOT_STARTED",
   "frontendMerge": "NOT_STARTED",
   "realDeviceTest": "NOT_STARTED",
   "releaseAllowed": false,
-  "rule": "Nenhuma instalação no Apps Script, merge na main ou publicação do frontend antes de auditar a implementação real de notificações e confirmar que não haverá rota duplicada."
+  "rule": "Gate 0 concluído: não foi encontrado backend servidor-servidor de push/OneSignal no Apps Script auditado. A instalação do módulo isolado pode prosseguir, mas nenhuma integração na main ou publicação do frontend é permitida antes dos gates de servidor, regressão e aparelho real."
 }
