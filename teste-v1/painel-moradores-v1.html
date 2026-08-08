@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#073a55">
+  <title>Administração Geral • Moradores • Portal TACS</title>
+  <style>
+    :root{--petroleo:#073a55;--petroleo2:#0b5878;--verde:#148a46;--verde-bg:#e8f7ee;--fundo:#eaf2f6;--texto:#102d40;--muted:#536b78;--borda:#a9c0ca;--erro:#a52d2d;--erro-bg:#fff0f0;--aviso:#805300;--aviso-bg:#fff6dd;--azul-bg:#eef7fb;--branco:#fff}
+    *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--fundo);color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.5}button,input,textarea,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed}
+    header{background:linear-gradient(145deg,var(--petroleo),var(--petroleo2));color:#fff;padding:calc(22px + env(safe-area-inset-top)) 20px 25px;border-bottom:4px solid #67c7a0}.selo{display:inline-block;padding:8px 12px;border:2px solid #73c7e7;border-radius:999px;color:#8df0b4;font-weight:900;letter-spacing:.035em;font-size:.9rem}h1{margin:17px 0 8px;font-size:clamp(2rem,8vw,3rem);line-height:1.04}header p{margin:0;font-size:1.06rem}.heroLinks{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}.heroLinks a{color:#fff;border:2px solid rgba(255,255,255,.45);border-radius:14px;padding:10px 12px;text-decoration:none;font-weight:850}
+    main{width:min(900px,100%);margin:0 auto;padding:18px 14px 64px}.painel{background:#fff;border:2px solid var(--borda);border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 10px 25px rgba(7,58,85,.08)}h2{margin:0 0 10px;font-size:1.72rem}h3{margin:0 0 8px;font-size:1.27rem}.muted{color:var(--muted)}.nota{background:var(--aviso-bg);border:2px solid #dfaa43;color:#704900;border-radius:18px;padding:14px;font-weight:800;margin-bottom:16px}.oculto{display:none!important}
+    .status{padding:13px 14px;border:2px solid #cad9df;border-radius:16px;background:#f5f8fa;font-weight:800;overflow-wrap:anywhere}.status.ok{border-color:#9ed6b2;background:var(--verde-bg);color:#08723a}.status.erro{border-color:#d88a8a;background:var(--erro-bg);color:var(--erro)}.status.aviso{border-color:#e1aa3f;background:var(--aviso-bg);color:var(--aviso)}
+    label{display:block;font-weight:850;margin:12px 0 6px}.campo{width:100%;min-height:56px;border:2px solid var(--borda);border-radius:15px;padding:12px 13px;background:#fff;color:var(--texto);font-size:1.05rem}.campo:focus{outline:3px solid rgba(11,88,120,.17);border-color:var(--petroleo2)}textarea.campo{min-height:96px;resize:vertical}
+    .acoes{display:grid;gap:10px;margin-top:15px}.botao{width:100%;min-height:56px;border:0;border-radius:16px;padding:13px 16px;background:var(--petroleo);color:#fff;font-weight:900}.botao.verde{background:var(--verde)}.botao.secundario{background:#fff;color:var(--petroleo);border:2px solid var(--borda)}.botao.perigo{background:#972f2f}.botao:disabled{opacity:.46}.resumo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.numero{background:var(--azul-bg);border:2px solid #c2d6df;border-radius:18px;padding:14px}.numero strong{display:block;font-size:1.7rem;line-height:1.1;color:var(--petroleo)}.numero span{display:block;margin-top:5px;color:var(--muted);font-weight:800}
+    .modulos{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px}.modulo{border:2px solid var(--borda);border-radius:16px;padding:12px;background:#fff;color:var(--texto);font-weight:900;text-align:left}.modulo.ativo{background:var(--petroleo);border-color:var(--petroleo);color:#fff}.modulo[disabled]{opacity:.6;background:#eef2f4}.modulo small{display:block;font-weight:700;margin-top:2px}
+    .atalhos{display:grid;grid-template-columns:1fr;gap:10px;margin:14px 0}.atalho{border:2px solid #b7ccd5;border-radius:18px;background:#f8fbfc;padding:16px;text-align:left;color:var(--texto)}.atalho b{display:block;font-size:1.12rem}.atalho span{display:block;color:var(--muted);margin-top:4px}.atalho.ativo{border-color:#7fb79a;background:#f0fbf4}
+    .formGrid{display:grid;grid-template-columns:1fr;gap:0}.lista{display:grid;gap:12px;margin-top:14px}.cartao{border:2px solid #c4d4db;border-radius:19px;background:#fbfdfe;padding:15px}.cartaoTopo{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.cartao h3{margin:0}.sub{color:var(--muted);font-size:.93rem;font-weight:700}.tag{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:.8rem;font-weight:900;white-space:nowrap;background:var(--verde-bg);color:#08723a}.tag.inativo{background:var(--erro-bg);color:var(--erro)}.dados{display:grid;gap:4px;margin:10px 0;font-size:.98rem}.dados b{color:#36515f}.linhaBotoes{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}.vazio{padding:18px;border:2px dashed #b8cbd4;border-radius:17px;text-align:center;color:var(--muted);font-weight:800}.divisor{height:1px;background:#d9e3e7;margin:18px 0}.seguranca{display:flex;align-items:flex-start;gap:10px;background:#eef7fb;border:2px solid #c3dbe6;border-radius:16px;padding:13px}.seguranca strong{display:block}.seguranca span{color:var(--muted)}
+    .csvPreview{margin-top:12px;display:grid;gap:10px}.csvLinha{border:2px solid #cbd9df;border-radius:14px;padding:12px}.ponte{position:fixed!important;left:-10000px!important;top:-10000px!important;width:2px!important;height:2px!important;border:0!important;opacity:.01!important;pointer-events:none!important}
+    footer{background:var(--petroleo);color:#fff;padding:24px 18px calc(24px + env(safe-area-inset-bottom));text-align:center}footer p{margin:5px 0}
+    @media(min-width:680px){.acoes.duas,.linhaBotoes{grid-template-columns:1fr 1fr}.resumo{grid-template-columns:repeat(4,1fr)}.modulos{grid-template-columns:repeat(4,1fr)}.atalhos{grid-template-columns:repeat(3,1fr)}.formGrid{grid-template-columns:1fr 1fr;gap:0 14px}.formGrid .largo{grid-column:1/-1}}
+  </style>
+</head>
+<body>
+<header>
+  <span class="selo">ADMINISTRAÇÃO GERAL • PORTAL TACS</span>
+  <h1>Moradores</h1>
+  <p>Gestão da sua área • Sítio Japaranduba • Chã Grande/PE</p>
+  <div class="heroLinks"><a href="../index.html" target="_blank" rel="noopener">Abrir Portal do Morador</a></div>
+</header>
+<main>
+  <div class="nota">Esta página está em estabilização isolada. Primeiro validamos a leitura dos moradores atuais. Nenhuma escrita é liberada automaticamente.</div>
+  <section class="painel">
+    <h2>Acesso administrativo</h2>
+    <label for="pin">PIN administrativo</label>
+    <input id="pin" class="campo" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" autocomplete="off" placeholder="Seu PIN">
+    <div class="acoes duas"><button id="entrar" class="botao" type="button">Entrar</button><button id="sair" class="botao perigo" type="button" disabled>Encerrar sessão</button></div>
+    <p class="muted">O PIN não é armazenado nesta página.</p>
+    <div id="loginStatus" class="status">Digite o PIN para acessar a Administração Geral.</div>
+  </section>
+
+  <section id="dashboard" class="oculto">
+    <section class="painel">
+      <div class="modulos" aria-label="Módulos da Administração Geral">
+        <button class="modulo ativo" type="button">👥 Moradores<small>Primeiro módulo</small></button>
+        <button class="modulo" type="button" disabled>🧑‍⚕️ Agentes e áreas<small>Próxima etapa</small></button>
+        <button class="modulo" type="button" disabled>🏥 Unidades<small>Próxima etapa</small></button>
+        <button class="modulo" type="button" disabled>🔐 Permissões<small>Próxima etapa</small></button>
+      </div>
+      <div id="gateStatus" class="status">Consultando configuração…</div>
+      <div class="resumo">
+        <div class="numero"><strong id="qMoradores">—</strong><span>Moradores na base</span></div>
+        <div class="numero"><strong id="qArea">Japaranduba</strong><span>Área atual</span></div>
+        <div class="numero"><strong id="qEscrita">Bloqueada</strong><span>Novo / editar</span></div>
+        <div class="numero"><strong id="qSituacao">Bloqueada</strong><span>Óbito / saída / transferência</span></div>
+      </div>
+    </section>
+
+    <section class="painel">
+      <h2>O que deseja fazer?</h2>
+      <div class="atalhos">
+        <button id="atalhoNovo" class="atalho" type="button"><b>＋ Novo morador</b><span>Nascimento ou chegada à área.</span></button>
+        <button id="atalhoBuscar" class="atalho ativo" type="button"><b>🔎 Buscar / editar</b><span>Nome, CPF ou CNS.</span></button>
+        <button id="atalhoCsv" class="atalho" type="button"><b>📄 Atualização por CSV</b><span>Conferência antes de importar.</span></button>
+      </div>
+      <div class="seguranca"><div>🛡️</div><div><strong>Sem exclusão física</strong><span>Saída, transferência e óbito serão tratados por situação cadastral e histórico, não apagando a pessoa da base.</span></div></div>
+    </section>
+
+    <section id="areaBuscar" class="painel">
+      <h2>Buscar morador</h2>
+      <p class="muted">Digite nome, CPF, CNS, data de nascimento ou parte da localidade.</p>
+      <label for="busca">Busca</label>
+      <input id="busca" class="campo" type="search" autocomplete="off" placeholder="Ex.: Maria da Silva ou CNS">
+      <div class="acoes"><button id="buscar" class="botao" type="button">Buscar morador</button></div>
+      <div id="buscaStatus" class="status" style="margin-top:12px">Nenhuma busca realizada.</div>
+      <div id="resultados" class="lista"></div>
+    </section>
+
+    <section id="areaFormulario" class="painel oculto">
+      <h2 id="formTitulo">Cadastrar novo morador</h2>
+      <p id="formAjuda" class="muted">Para recém-nascido sem CPF/CNS, informe o nome da mãe.</p>
+      <form id="moradorForm" autocomplete="off">
+        <input id="moradorId" type="hidden"><input id="origemAba" type="hidden"><input id="origemLinha" type="hidden"><input id="chaveAtual" type="hidden">
+        <div class="formGrid">
+          <div class="largo"><label for="nome">Nome completo</label><input id="nome" class="campo" maxlength="160" required></div>
+          <div><label for="nascimento">Data de nascimento</label><input id="nascimento" class="campo" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" required></div>
+          <div><label for="cpf">CPF</label><input id="cpf" class="campo" inputmode="numeric" maxlength="14" placeholder="Se já possuir"></div>
+          <div><label for="cns">CNS / Cartão SUS</label><input id="cns" class="campo" inputmode="numeric" maxlength="18" placeholder="Se já possuir"></div>
+          <div><label for="localidade">Localidade / endereço</label><input id="localidade" class="campo" maxlength="220" value="Sítio Japaranduba"></div>
+          <div class="largo"><label for="nomeMae">Nome da mãe</label><input id="nomeMae" class="campo" maxlength="160"></div>
+          <div class="largo"><label for="nomePai">Nome do pai</label><input id="nomePai" class="campo" maxlength="160"></div>
+        </div>
+        <div id="formStatus" class="status" style="margin-top:14px">Preencha os dados e confira antes de salvar.</div>
+        <div class="acoes duas"><button id="salvar" class="botao verde" type="submit">Salvar morador</button><button id="cancelarForm" class="botao secundario" type="button">Cancelar</button></div>
+      </form>
+      <div id="situacaoArea" class="oculto">
+        <div class="divisor"></div><h3>Situação cadastral</h3>
+        <p class="muted">Este controle só será liberado depois que o Portal do Morador estiver validado para ignorar cadastros inativos.</p>
+        <div class="acoes duas">
+          <button class="botao secundario situacao" data-situacao="ATIVO" type="button">Marcar ativo</button>
+          <button class="botao secundario situacao" data-situacao="FORA_DA_AREA" type="button">Saiu da área</button>
+          <button class="botao secundario situacao" data-situacao="TRANSFERIDO" type="button">Transferido</button>
+          <button class="botao perigo situacao" data-situacao="FALECIDO" type="button">Registrar óbito</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="areaCsv" class="painel oculto">
+      <h2>Atualização por CSV</h2>
+      <div class="nota">Nesta fase o arquivo é apenas lido no seu aparelho para conferência. O sistema ainda não envia nem grava o CSV no banco.</div>
+      <label for="csvFile">Escolher arquivo CSV</label><input id="csvFile" class="campo" type="file" accept=".csv,text/csv">
+      <div id="csvStatus" class="status" style="margin-top:12px">Nenhum arquivo selecionado.</div><div id="csvPreview" class="csvPreview"></div>
+    </section>
+  </section>
+</main>
+<footer><p>Portal TACS • Administração Geral</p><p>Primeiro módulo: Moradores • Área Japaranduba</p></footer>
+<iframe name="ponteMoradoresV1" class="ponte" src="about:blank" title="Comunicação segura com o servidor"></iframe>
+<script>
+(function(){
+'use strict';
+var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var TOKEN_KEY='portalTacsAdminTokenV1';
+var DEVICE_KEY='portalTacsDispositivoV1';
+var token=sessionStorage.getItem(TOKEN_KEY)||'';
+var dispositivo=localStorage.getItem(DEVICE_KEY)||'';
+if(!dispositivo){dispositivo='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,dispositivo)}
+var ativa=null,contador=0,config={escritaHabilitada:false,situacaoHabilitada:false};
+var entrar=document.getElementById('entrar'),sair=document.getElementById('sair');
+function txt(v){return String(v==null?'':v)}
+function digits(v){return txt(v).replace(/\D/g,'')}
+function esc(v){return txt(v).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
+function setStatus(id,mensagem,tipo){var el=document.getElementById(id);el.textContent=mensagem;el.className='status'+(tipo?' '+tipo:'')}
+function sessao(){return{token:token,dispositivo:dispositivo}}
+function requestId(prefixo){var bytes=new Uint8Array(24);if(window.crypto&&crypto.getRandomValues){crypto.getRandomValues(bytes);return prefixo+'_'+Array.prototype.map.call(bytes,function(b){return('0'+b.toString(16)).slice(-2)}).join('')}return prefixo+'_'+Date.now()+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
+function jsonp(action,parametros,receber){contador++;var nome='__moradoresV1_'+Date.now()+'_'+contador,s=document.createElement('script'),p=parametros||{},fim=false,timer=setTimeout(function(){encerrar({ok:false,message:'O servidor demorou para responder.'})},25000);function limpar(){clearTimeout(timer);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}function encerrar(r){if(fim)return;fim=true;limpar();receber(r)}window[nome]=function(r){encerrar(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(p).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(txt(p[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){encerrar({ok:false,message:'Falha de rede ao consultar o servidor.'})};document.head.appendChild(s)}
+function resultadoMensagem(data){if(!ativa||!data||typeof data!=='object')return null;var id=txt(data.requestId||(data.result&&data.result.requestId)||'');if(id&&id!==ativa.id)return null;if(Object.prototype.hasOwnProperty.call(data,'result'))return data.result;if(Object.prototype.hasOwnProperty.call(data,'payload'))return data.payload;return Object.prototype.hasOwnProperty.call(data,'ok')?data:null}
+function finalizar(resultado){if(!ativa)return;clearTimeout(ativa.timeout);clearTimeout(ativa.pollTimer);var cb=ativa.callback;ativa=null;entrar.disabled=false;sair.disabled=!token;if(cb)cb(resultado||{ok:false,message:'Resposta vazia do servidor.'})}
+window.addEventListener('message',function(event){var frame=document.querySelector('iframe[name="ponteMoradoresV1"]');if(!ativa||!frame||event.source!==frame.contentWindow)return;var data=event.data;if(typeof data==='string'){try{data=JSON.parse(data)}catch(e){return}}var r=resultadoMensagem(data);if(r)finalizar(r)});
+function agendarPoll(){if(!ativa)return;clearTimeout(ativa.pollTimer);ativa.pollTimer=setTimeout(pollResultado,ativa.proximaEspera)}
+function pollResultado(){if(!ativa)return;var acao=/^admin_morador(es_|_)/.test(ativa.action)?'admin_moradores_result':'admin_result';var p={requestId:ativa.id};jsonp(acao,p,function(r){if(!ativa)return;if(r&&r.ok===true&&r.pendente===false){finalizar(r.result);return}if(Date.now()>=ativa.limite){finalizar({ok:false,message:'A confirmação do servidor não chegou a tempo. A operação não será reenviada automaticamente.'});return}ativa.proximaEspera=Math.min(8000,ativa.proximaEspera+1000);agendarPoll()})}
+function post(action,payload,receber){if(ativa){receber({ok:false,message:'Aguarde a operação anterior terminar.'});return}var id=requestId(action),campos={},form=document.createElement('form');Object.keys(payload||{}).forEach(function(k){campos[k]=payload[k]});campos.action=action;campos.requestId=id;ativa={id:id,action:action,callback:receber,pollTimer:null,proximaEspera:2500,limite:Date.now()+74000,timeout:setTimeout(function(){finalizar({ok:false,message:'A confirmação do servidor não chegou a tempo. A operação não será reenviada automaticamente.'})},75000)};entrar.disabled=true;sair.disabled=true;form.method='POST';form.action=API+'?_='+Date.now();form.target='ponteMoradoresV1';form.className='ponte';Object.keys(campos).forEach(function(k){var input=document.createElement('input');input.type='hidden';input.name=k;input.value=txt(campos[k]);form.appendChild(input)});document.body.appendChild(form);form.submit();setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form)},5000);agendarPoll()}
+
+function aplicarConfig(r){config.escritaHabilitada=r.escritaHabilitada===true;config.situacaoHabilitada=r.situacaoHabilitada===true;document.getElementById('qMoradores').textContent=txt(r.totalRegistros);document.getElementById('qArea').textContent=txt(r.areaNome||'Japaranduba');document.getElementById('qEscrita').textContent=config.escritaHabilitada?'Liberada':'Bloqueada';document.getElementById('qSituacao').textContent=config.situacaoHabilitada?'Liberada':'Bloqueada';document.getElementById('salvar').disabled=!config.escritaHabilitada;document.querySelectorAll('.situacao').forEach(function(b){b.disabled=!config.situacaoHabilitada});if(config.escritaHabilitada){setStatus('gateStatus',config.situacaoHabilitada?'Cadastro e situação habilitados.':'Novo/editar habilitado. Situação cadastral continua protegida até a próxima validação.','ok')}else{setStatus('gateStatus','Modo de validação: leitura liberada; qualquer gravação permanece bloqueada no servidor.','aviso')}}
+function carregarConfig(depois){post('admin_moradores_status',sessao(),function(r){if(!r||r.ok!==true){token='';sessionStorage.removeItem(TOKEN_KEY);document.getElementById('dashboard').classList.add('oculto');sair.disabled=true;setStatus('loginStatus',txt(r&&r.message||'Sessão inválida ou módulo ainda não instalado.'),'erro');if(depois)depois(false,r);return}aplicarConfig(r);document.getElementById('dashboard').classList.remove('oculto');sair.disabled=false;setStatus('loginStatus','Sessão administrativa validada.','ok');if(depois)depois(true,r)})}
+function mostrar(area){['areaBuscar','areaFormulario','areaCsv'].forEach(function(id){document.getElementById(id).classList.toggle('oculto',id!==area)});document.getElementById('atalhoBuscar').classList.toggle('ativo',area==='areaBuscar');document.getElementById('atalhoNovo').classList.toggle('ativo',area==='areaFormulario'&&!document.getElementById('origemLinha').value);document.getElementById('atalhoCsv').classList.toggle('ativo',area==='areaCsv')}
+function limparForm(){document.getElementById('moradorForm').reset();document.getElementById('moradorId').value='';document.getElementById('origemAba').value='';document.getElementById('origemLinha').value='';document.getElementById('chaveAtual').value='';document.getElementById('localidade').value='Sítio Japaranduba';document.getElementById('formTitulo').textContent='Cadastrar novo morador';document.getElementById('formAjuda').textContent='Para recém-nascido sem CPF/CNS, informe o nome da mãe.';document.getElementById('situacaoArea').classList.add('oculto');setStatus('formStatus',config.escritaHabilitada?'Preencha, confira e salve.':'Leitura validando: o botão Salvar permanece bloqueado no servidor.',config.escritaHabilitada?'':'aviso')}
+function novoMorador(){limparForm();mostrar('areaFormulario')}
+function preencherForm(m){document.getElementById('moradorId').value=txt(m.moradorId);document.getElementById('origemAba').value=txt(m.origemAba);document.getElementById('origemLinha').value=txt(m.origemLinha);document.getElementById('chaveAtual').value=txt(m.chave);document.getElementById('nome').value=txt(m.nome);document.getElementById('nascimento').value=txt(m.nascimento);document.getElementById('cpf').value=txt(m.cpf);document.getElementById('cns').value=txt(m.cns);document.getElementById('localidade').value=txt(m.localidade);document.getElementById('nomeMae').value=txt(m.nomeMae);document.getElementById('nomePai').value=txt(m.nomePai);document.getElementById('formTitulo').textContent='Editar morador';document.getElementById('formAjuda').textContent='Situação atual: '+txt(m.situacao||'ATIVO')+(m.motivo?' • '+txt(m.motivo):'');document.getElementById('situacaoArea').classList.remove('oculto');setStatus('formStatus',config.escritaHabilitada?'Cadastro carregado. Faça somente as alterações necessárias.':'Cadastro carregado em modo de leitura; gravação ainda bloqueada.',config.escritaHabilitada?'ok':'aviso');mostrar('areaFormulario')}
+function cardMorador(m,index){var situacao=txt(m.situacao||'ATIVO'),tag=situacao==='ATIVO'?'tag':'tag inativo';return '<article class="cartao"><div class="cartaoTopo"><div><h3>'+esc(m.nome)+'</h3><div class="sub">'+esc(m.nascimento||'Nascimento não informado')+'</div></div><span class="'+tag+'">'+esc(situacao.replace(/_/g,' '))+'</span></div><div class="dados"><div><b>CPF:</b> '+esc(m.cpf||'—')+'</div><div><b>CNS:</b> '+esc(m.cns||'—')+'</div><div><b>Localidade:</b> '+esc(m.localidade||'—')+'</div><div><b>Mãe:</b> '+esc(m.nomeMae||'—')+'</div></div><div class="linhaBotoes"><button class="botao secundario editarResultado" data-index="'+index+'" type="button">Abrir cadastro</button></div></article>'}
+var ultimosResultados=[];
+function buscarMoradores(){var q=document.getElementById('busca').value.trim();if(q.length<2){setStatus('buscaStatus','Digite pelo menos 2 caracteres.','erro');return}setStatus('buscaStatus','Buscando na base de Japaranduba…','aviso');post('admin_moradores_buscar',Object.assign(sessao(),{q:q}),function(r){if(!r||r.ok!==true){setStatus('buscaStatus',txt(r&&r.message||'Não foi possível buscar.'),'erro');return}ultimosResultados=Array.isArray(r.resultados)?r.resultados:[];document.getElementById('resultados').innerHTML=ultimosResultados.length?ultimosResultados.map(cardMorador).join(''):'<div class="vazio">Nenhum morador encontrado.</div>';setStatus('buscaStatus',ultimosResultados.length+' resultado(s) encontrado(s).'+(r.limitado?' A lista foi limitada.':''),'ok')})}
+function payloadForm(){return{moradorId:document.getElementById('moradorId').value,origemAba:document.getElementById('origemAba').value,origemLinha:document.getElementById('origemLinha').value,chave:document.getElementById('chaveAtual').value,nome:document.getElementById('nome').value.trim(),nascimento:document.getElementById('nascimento').value.trim(),cpf:digits(document.getElementById('cpf').value),cns:digits(document.getElementById('cns').value),localidade:document.getElementById('localidade').value.trim(),nomeMae:document.getElementById('nomeMae').value.trim(),nomePai:document.getElementById('nomePai').value.trim()}}
+function salvarMorador(e){e.preventDefault();if(!config.escritaHabilitada){setStatus('formStatus','A escrita continua bloqueada pela estabilização do servidor.','aviso');return}var p=payloadForm();if(!p.nome||!p.nascimento){setStatus('formStatus','Nome e data de nascimento são obrigatórios.','erro');return}if(!p.cpf&&!p.cns&&!p.nomeMae){setStatus('formStatus','Sem CPF/CNS, informe o nome da mãe antes de salvar.','erro');return}if(!window.confirm('Conferiu os dados? Deseja gravar este cadastro na base real de Japaranduba?'))return;document.getElementById('salvar').disabled=true;setStatus('formStatus','Salvando e aguardando confirmação do servidor…','aviso');post('admin_morador_salvar',Object.assign(sessao(),{payload:JSON.stringify(p)}),function(r){document.getElementById('salvar').disabled=!config.escritaHabilitada;if(!r||r.ok!==true){setStatus('formStatus',txt(r&&r.message||'Não foi possível salvar.'),'erro');return}preencherForm(r.morador);setStatus('formStatus',txt(r.message||'Cadastro salvo e confirmado.'),'ok')})}
+function alterarSituacao(situacao){if(!config.situacaoHabilitada){setStatus('formStatus','Situação cadastral ainda está protegida até o filtro público ser validado.','aviso');return}var p=payloadForm();if(!p.origemAba||!p.origemLinha)return;var motivo=window.prompt('Informe o motivo/observação para '+situacao.replace(/_/g,' ')+':','')||'';if(!window.confirm('Confirmar esta mudança de situação cadastral?'))return;post('admin_morador_situacao',Object.assign(sessao(),{payload:JSON.stringify({moradorId:p.moradorId,origemAba:p.origemAba,origemLinha:p.origemLinha,situacao:situacao,motivo:motivo})}),function(r){if(!r||r.ok!==true){setStatus('formStatus',txt(r&&r.message||'Não foi possível atualizar a situação.'),'erro');return}preencherForm(r.morador);setStatus('formStatus','Situação cadastral atualizada.','ok')})}
+
+function detectarSeparador(texto){var primeira=texto.split(/\r?\n/)[0]||'';var candidatos=[',',';','\t'];var melhor=',',max=-1;candidatos.forEach(function(s){var n=primeira.split(s).length;if(n>max){max=n;melhor=s}});return melhor}
+function parseCsvLine(linha,sep){var out=[],atual='',aspas=false;for(var i=0;i<linha.length;i++){var c=linha.charAt(i);if(c==='"'){if(aspas&&linha.charAt(i+1)==='"'){atual+='"';i++}else aspas=!aspas}else if(c===sep&&!aspas){out.push(atual);atual=''}else atual+=c}out.push(atual);return out}
+function normalizarCab(v){var s=txt(v).toLowerCase();if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');return s.replace(/[^a-z0-9]/g,'')}
+function analisarCsv(file){var reader=new FileReader();reader.onload=function(){var texto=txt(reader.result).replace(/^\uFEFF/,'');var linhas=texto.split(/\r?\n/).filter(function(l){return l.trim()});if(linhas.length<2){setStatus('csvStatus','O arquivo não possui registros suficientes.','erro');return}var sep=detectarSeparador(texto),cab=parseCsvLine(linhas[0],sep),cabNorm=cab.map(normalizarCab),aliases={nome:['nome','nomecompleto','nomedomorador'],nascimento:['datadenascimento','nascimento','datanascimento'],cpf:['cpf'],cns:['cns','cartaonacionaldesaude','cartaosus'],localidade:['localidade','comunidade','endereco','microarea'],mae:['nomedamae','nomemae','mae'],pai:['nomedopai','nomepai','pai']};var mapa={};Object.keys(aliases).forEach(function(k){mapa[k]=-1;for(var i=0;i<cabNorm.length;i++){if(aliases[k].indexOf(cabNorm[i])!==-1){mapa[k]=i;break}}});var essenciais=mapa.nome>=0&&mapa.nascimento>=0&&(mapa.cpf>=0||mapa.cns>=0);var total=linhas.length-1;setStatus('csvStatus',essenciais?'Arquivo reconhecido para prévia. Nenhum dado foi enviado ao servidor.':'Arquivo lido, mas os campos essenciais não foram reconhecidos.',essenciais?'ok':'aviso');document.getElementById('csvPreview').innerHTML='<div class="csvLinha"><b>'+total+' registro(s)</b><br><span class="muted">Separador detectado: '+esc(sep==='\t'?'TAB':sep)+'</span></div><div class="csvLinha"><b>Colunas reconhecidas</b><br><span class="muted">Nome: '+(mapa.nome>=0?'sim':'não')+' • Nascimento: '+(mapa.nascimento>=0?'sim':'não')+' • CPF: '+(mapa.cpf>=0?'sim':'não')+' • CNS: '+(mapa.cns>=0?'sim':'não')+' • Mãe: '+(mapa.mae>=0?'sim':'não')+'</span></div><div class="csvLinha"><b>Importação real</b><br><span class="muted">Ainda bloqueada. A próxima fase fará conciliação: novos, atualizados, iguais e conflitos antes de qualquer gravação.</span></div>'};reader.onerror=function(){setStatus('csvStatus','Não foi possível ler o arquivo neste aparelho.','erro')};reader.readAsText(file,'UTF-8')}
+
+entrar.addEventListener('click',function(){var pin=digits(document.getElementById('pin').value);if(!/^\d{4,8}$/.test(pin)){setStatus('loginStatus','Digite um PIN numérico de 4 a 8 dígitos.','erro');return}setStatus('loginStatus','Validando o PIN…','aviso');post('admin_login',{pin:pin,dispositivo:dispositivo},function(r){document.getElementById('pin').value='';if(!r||r.ok!==true||!r.token){token='';sessionStorage.removeItem(TOKEN_KEY);setStatus('loginStatus',txt(r&&r.message||'Login recusado.'),'erro');return}token=r.token;sessionStorage.setItem(TOKEN_KEY,token);carregarConfig()})});
+sair.addEventListener('click',function(){if(!token)return;post('admin_logout',sessao(),function(){token='';sessionStorage.removeItem(TOKEN_KEY);document.getElementById('dashboard').classList.add('oculto');sair.disabled=true;setStatus('loginStatus','Sessão encerrada.','ok')})});
+document.getElementById('atalhoNovo').addEventListener('click',novoMorador);document.getElementById('atalhoBuscar').addEventListener('click',function(){mostrar('areaBuscar')});document.getElementById('atalhoCsv').addEventListener('click',function(){mostrar('areaCsv')});document.getElementById('buscar').addEventListener('click',buscarMoradores);document.getElementById('busca').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();buscarMoradores()}});document.getElementById('resultados').addEventListener('click',function(e){var b=e.target.closest('.editarResultado');if(!b)return;var m=ultimosResultados[Number(b.getAttribute('data-index'))];if(m)preencherForm(m)});document.getElementById('moradorForm').addEventListener('submit',salvarMorador);document.getElementById('cancelarForm').addEventListener('click',function(){limparForm();mostrar('areaBuscar')});document.querySelectorAll('.situacao').forEach(function(b){b.addEventListener('click',function(){alterarSituacao(b.getAttribute('data-situacao'))})});document.getElementById('csvFile').addEventListener('change',function(){var f=this.files&&this.files[0];if(f)analisarCsv(f)});
+function iniciar(){limparForm();entrar.disabled=false;if(token){carregarConfig(function(ok){if(!ok)setStatus('loginStatus','A sessão anterior expirou. Digite o PIN.','aviso')});return}setStatus('loginStatus','Digite o PIN para acessar a Administração Geral.','ok')}
+iniciar();
+}());
+</script>
+</body>
+</html>
