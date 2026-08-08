@@ -129,19 +129,24 @@ async function main() {
   await expiredRead;
 
   const index = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const agenda = fs.readFileSync(path.join(ROOT, 'agenda-enfermeira.js'), 'utf8');
+  const alerts = fs.readFileSync(path.join(ROOT, 'portal-controle-integral.js'), 'utf8');
   assert.ok(index.indexOf('portal-public-data.js') < index.indexOf('agenda-enfermeira.js'));
   assert.ok(index.indexOf('portal-public-data.js') < index.indexOf('portal-controle-integral.js'));
   assert.match(index, /rel="preconnect" href="https:\/\/script\.google\.com"/);
   assert.match(index, /20260806-desempenho-v5/);
   assert.match(source, /TIMEOUT_MS=25000/);
   assert.match(source, /REFRESH_MIN_MS=30\*1000/);
+  assert.match(source, /PERIODIC_REFRESH_MS=60\*1000/);
   assert.match(source, /portalTacsPublicInvalidateAtV1/);
-  assert.match(fs.readFileSync(path.join(ROOT, 'agenda-enfermeira.js'), 'utf8'), /PortalTacsPublicData\.get/);
-  assert.match(fs.readFileSync(path.join(ROOT, 'agenda-enfermeira.js'), 'utf8'), /portal-tacs-public-data/);
-  assert.match(fs.readFileSync(path.join(ROOT, 'portal-controle-integral.js'), 'utf8'), /PortalTacsPublicData\.get/);
-  assert.match(fs.readFileSync(path.join(ROOT, 'portal-controle-integral.js'), 'utf8'), /portal-tacs-public-data/);
+  assert.match(agenda, /PortalTacsPublicData\.get/);
+  assert.match(agenda, /portal-tacs-public-data/);
+  assert.match(alerts, /window\.PortalTacsPublicData/);
+  assert.match(alerts, /shared\.get\(\)/);
+  assert.match(alerts, /portal-tacs-public-data/);
+  assert.doesNotMatch(alerts, /renderLegacy|doctorSchedule|nutritionSchedule/);
 
-  console.log('OK: cache imediato, atualização em segundo plano e consulta pública única aprovados.');
+  console.log('OK: cache imediato, atualização centralizada e consulta pública única aprovados.');
 }
 
 main().catch(error => {
