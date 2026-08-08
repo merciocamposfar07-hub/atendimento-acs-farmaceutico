@@ -5,7 +5,8 @@
  * Os núcleos público, administrativo e de desempenho apenas tratam ações.
  */
 var TACS_PORTAL_ROUTER_V1 = Object.freeze({
-  VERSAO: '1.1.0'
+  VERSAO: '1.1.0',
+  RELEASE_ID: '20260807-estavel-v1'
 });
 
 function doGet(e) {
@@ -121,7 +122,14 @@ function doPost(e) {
   }
 }
 
+function tacsRouterV1ComRelease_(dados) {
+  if (!dados || typeof dados !== 'object' || Array.isArray(dados)) return dados;
+  dados.releaseId = TACS_PORTAL_ROUTER_V1.RELEASE_ID;
+  return dados;
+}
+
 function tacsRouterV1Responder_(dados, callback) {
+  dados = tacsRouterV1ComRelease_(dados);
   var json = JSON.stringify(dados);
   if (callback && /^[A-Za-z_$][0-9A-Za-z_$.]*$/.test(callback)) {
     return ContentService
@@ -134,6 +142,7 @@ function tacsRouterV1Responder_(dados, callback) {
 }
 
 function tacsRouterV1ResponderPostAdmin_(resultado, requestId) {
+  resultado = tacsRouterV1ComRelease_(resultado);
   var mensagem = {
     source: 'admin-painel-tacs-v1',
     requestId: String(requestId || ''),
