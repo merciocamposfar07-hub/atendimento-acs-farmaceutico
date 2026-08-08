@@ -2,10 +2,10 @@
  * Portal TACS — Router V1
  *
  * ÚNICO arquivo da arquitetura estabilizada que declara doGet/doPost.
- * Os núcleos público e administrativo apenas tratam ações e retornam dados.
+ * Os núcleos público, administrativo e de desempenho apenas tratam ações.
  */
 var TACS_PORTAL_ROUTER_V1 = Object.freeze({
-  VERSAO: '1.0.0'
+  VERSAO: '1.1.0'
 });
 
 function doGet(e) {
@@ -18,13 +18,36 @@ function doGet(e) {
       ? tratarGetAdminCoreV1_(e)
       : null;
     if (admin && admin.handled) {
+      if (
+        action === 'admin_status' &&
+        String(parametros.prewarm || '') === '1' &&
+        typeof tacsPerformanceV1PreaquecerAdmin_ === 'function'
+      ) {
+        admin.data.preaquecimento = tacsPerformanceV1PreaquecerAdmin_();
+      }
       return tacsRouterV1Responder_(admin.data, callback);
+    }
+
+    if (
+      (action === 'painel_publico' || action === '') &&
+      typeof tacsPerformanceV1PublicoCache_ === 'function'
+    ) {
+      var publicoEmCache = tacsPerformanceV1PublicoCache_();
+      if (publicoEmCache) {
+        return tacsRouterV1Responder_(publicoEmCache, callback);
+      }
     }
 
     var publico = typeof tratarGetPublicCoreV1_ === 'function'
       ? tratarGetPublicCoreV1_(e)
       : null;
     if (publico && publico.handled) {
+      if (
+        (action === 'painel_publico' || action === '') &&
+        typeof tacsPerformanceV1GuardarPublico_ === 'function'
+      ) {
+        tacsPerformanceV1GuardarPublico_(publico.data);
+      }
       return tacsRouterV1Responder_(publico.data, callback);
     }
 
@@ -59,13 +82,30 @@ function doGet(e) {
 
 function doPost(e) {
   var parametros = e && e.parameter ? e.parameter : {};
+  var action = String(parametros.action || '').trim();
   var requestId = String(parametros.requestId || '').trim();
 
   try {
+    if (
+      action === 'admin_dados' &&
+      typeof tacsPerformanceV1AdminDadosCache_ === 'function'
+    ) {
+      var adminEmCache = tacsPerformanceV1AdminDadosCache_(parametros);
+      if (adminEmCache && adminEmCache.handled) {
+        return tacsRouterV1ResponderPostAdmin_(
+          adminEmCache.data,
+          adminEmCache.requestId || requestId
+        );
+      }
+    }
+
     var admin = typeof tratarPostAdminCoreV1_ === 'function'
       ? tratarPostAdminCoreV1_(e)
       : null;
     if (admin && admin.handled) {
+      if (typeof tacsPerformanceV1DepoisDeAdmin_ === 'function') {
+        tacsPerformanceV1DepoisDeAdmin_(action, admin.data);
+      }
       return tacsRouterV1ResponderPostAdmin_(admin.data, admin.requestId || requestId);
     }
 
