@@ -7,6 +7,9 @@ var DEVICE_KEY='portalTacsDispositivoV1';
 var token=sessionStorage.getItem(TOKEN_KEY)||'';
 var device=localStorage.getItem(DEVICE_KEY)||'';
 var active=null;
+var writesEnabled=false;
+var situationEnabled=false;
+var currentSituation='ATIVO';
 
 if(!device){
   device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);
@@ -25,6 +28,12 @@ function requestId(action){
   return 'morv2_'+String(action||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
 }
 function session(){return{token:token,dispositivo:device}}
+function cloneSession(extra){
+  var out=session();
+  Object.keys(extra||{}).forEach(function(k){out[k]=extra[k]});
+  return out;
+}
+function digits(v){return String(v==null?'':v).replace(/\D/g,'')}
 
 function jsonp(action,extra,cb){
   var name='mrV2Cb'+Date.now()+Math.floor(Math.random()*100000);
@@ -153,15 +162,88 @@ function post(action,payload,resultAction,cb){
   schedulePoll();
 }
 
+function updateNote(){
+  var note=document.querySelector('main > .note');
+  if(!note)return;
+  if(writesEnabled&&situationEnabled){
+    note.textContent='PAINEL DE MORADORES: cadastro, edição e situação cadastral estão liberados. Todas as alterações permanecem registradas em auditoria.';
+    note.style.background='#e8f7ee';
+    note.style.borderColor='#9ed6b2';
+    note.style.color='#08723a';
+  }else if(writesEnabled){
+    note.textContent='PAINEL DE MORADORES: novo cadastro e edição estão liberados. Situação cadastral permanece protegida pelo servidor até a liberação definitiva.';
+    note.style.background='#fff6dd';
+    note.style.borderColor='#dfaa43';
+    note.style.color='#704900';
+  }
+}
+
+function ensureSituationUi(){
+  var form=el('residentForm');
+  if(!form||el('residentSituationBlock'))return;
+  var block=document.createElement('div');
+  block.id='residentSituationBlock';
+  block.className='wide';
+  block.innerHTML=''
+    +'<div class="status" style="margin-top:18px">'
+    +'<strong style="display:block;margin-bottom:8px">Situação cadastral</strong>'
+    +'<label for="residentSituation">Situação</label>'
+    +'<select id="residentSituation" class="field">'
+    +'<option value="ATIVO">ATIVO</option>'
+    +'<option value="FORA_DA_AREA">SAIU DA ÁREA</option>'
+    +'<option value="TRANSFERIDO">TRANSFERIDO</option>'
+    +'<option value="FALECIDO">FALECIDO</option>'
+    +'</select>'
+    +'<label for="residentSituationReason">Motivo / observação da situação</label>'
+    +'<textarea id="residentSituationReason" class="field" maxlength="500" placeholder="Opcional para ATIVO; recomendado nas demais situações."></textarea>'
+    +'<div class="actions"><button id="saveSituation" class="btn" type="button">Atualizar situação</button></div>'
+    +'<div id="situationHint" class="muted" style="margin-top:8px"></div>'
+    +'</div>';
+  var actions=form.querySelector('.actions');
+  if(actions)form.insertBefore(block,actions);else form.appendChild(block);
+  el('saveSituation').addEventListener('click',saveSituation);
+  syncControls();
+}
+
+function syncControls(){
+  var save=el('save');
+  var isEdit=Boolean(text(el('originRow')&&el('originRow').value));
+  if(save){
+    save.disabled=!writesEnabled;
+    save.textContent=writesEnabled?(isEdit?'Salvar alterações':'Salvar novo morador'):(isEdit?'Salvar alterações — bloqueado':'Salvar morador — bloqueado');
+  }
+  var lock=document.querySelector('#residentForm .lock');
+  if(lock){
+    lock.textContent=writesEnabled?'Gravação habilitada pelo servidor. Confira os dados antes de salvar.':'Gravação bloqueada pelo servidor.';
+    lock.style.borderStyle=writesEnabled?'solid':'dashed';
+    lock.style.borderColor=writesEnabled?'#9ed6b2':'#d4a246';
+    lock.style.background=writesEnabled?'#e8f7ee':'#fff9e9';
+    lock.style.color=writesEnabled?'#08723a':'#704900';
+  }
+  var block=el('residentSituationBlock');
+  if(block)block.classList.toggle('hidden',!isEdit);
+  var situationButton=el('saveSituation');
+  if(situationButton)situationButton.disabled=!situationEnabled||!isEdit;
+  var hint=el('situationHint');
+  if(hint){
+    hint.textContent=!isEdit?'A situação é definida após o cadastro existir.':(situationEnabled?'Situação liberada pelo servidor.':'Situação ainda bloqueada pelo servidor.');
+  }
+}
+
 function renderBase(r,message){
   if(!r||r.ok!==true){setStatus('loginStatus',text(r&&r.message||'Não foi possível carregar a base.'),'err');return false}
+  writesEnabled=r.escritaHabilitada===true;
+  situationEnabled=r.situacaoHabilitada===true;
   if(el('countResidents'))el('countResidents').textContent=String(r.totalRegistros);
   if(el('schema'))el('schema').textContent=r.schemaValido?'20/20':'ERRO';
-  if(el('write'))el('write').textContent=r.escritaHabilitada?'LIBERADO':'BLOQ.';
-  if(el('situation'))el('situation').textContent=r.situacaoHabilitada?'LIBERADA':'BLOQ.';
+  if(el('write'))el('write').textContent=writesEnabled?'LIBERADO':'BLOQ.';
+  if(el('situation'))el('situation').textContent=situationEnabled?'LIBERADA':'BLOQ.';
   if(el('summary'))el('summary').classList.remove('hidden');
   if(el('content'))el('content').classList.remove('hidden');
   if(el('logout'))el('logout').disabled=false;
+  ensureSituationUi();
+  updateNote();
+  syncControls();
   setStatus('loginStatus',message||'Sessão validada e base conferida.','ok');
   return true;
 }
@@ -187,6 +269,87 @@ function loginWithPin(pin){
   });
 }
 
+function collectResidentPayload(){
+  var isEdit=Boolean(text(el('originRow')&&el('originRow').value));
+  return {
+    moradorId:text(el('residentId')&&el('residentId').value),
+    origemAba:text(el('originSheet')&&el('originSheet').value),
+    origemLinha:text(el('originRow')&&el('originRow').value),
+    idPortal:text(el('residentId')&&el('residentId').value),
+    nome:text(el('name')&&el('name').value),
+    nascimento:text(el('birth')&&el('birth').value),
+    dataNascimento:text(el('birth')&&el('birth').value),
+    sexo:text(el('sex')&&el('sex').value),
+    cpf:digits(el('cpf')&&el('cpf').value),
+    cns:digits(el('cns')&&el('cns').value),
+    endereco:text(el('address')&&el('address').value),
+    celular:text(el('cell')&&el('cell').value),
+    telefoneContato:text(el('contact')&&el('contact').value),
+    microarea:text(el('microarea')&&el('microarea').value),
+    equipe:text(el('team')&&el('team').value),
+    observacoes:text(el('notes')&&el('notes').value),
+    operacao:isEdit?'EDITAR_MORADOR':'CRIAR_MORADOR',
+    modo:isEdit?'EDITAR_MORADOR':'NOVO_CADASTRO'
+  };
+}
+
+function validateResidentPayload(p){
+  if(!p.nome)return 'Informe o nome completo.';
+  if(!/^\d{2}\/\d{2}\/\d{4}$/.test(p.nascimento))return 'Informe a data de nascimento no formato DD/MM/AAAA.';
+  if(!p.sexo)return 'Selecione o sexo.';
+  if(p.cpf&&p.cpf.length!==11)return 'O CPF deve conter 11 números.';
+  if(p.cns&&p.cns.length!==15)return 'O CNS deve conter 15 números.';
+  return '';
+}
+
+function saveResident(){
+  if(!writesEnabled){setStatus('operationStatus','A gravação está bloqueada pelo servidor.','warn');return}
+  var payload=collectResidentPayload();
+  var error=validateResidentPayload(payload);
+  if(error){setStatus('operationStatus',error,'err');return}
+  var isEdit=Boolean(payload.origemLinha);
+  var actionLabel=isEdit?'Salvando alterações…':'Cadastrando morador…';
+  setStatus('operationStatus',actionLabel,'warn');
+  post('admin_morador_salvar',cloneSession({payload:JSON.stringify(payload)}),'admin_moradores_result',function(r){
+    if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'O servidor recusou a gravação.'),'err');return}
+    var morador=r.morador&&typeof r.morador==='object'?r.morador:null;
+    if(morador){
+      if(el('residentId'))el('residentId').value=text(morador.moradorId||morador.idPortal||payload.moradorId);
+      if(el('originSheet'))el('originSheet').value=text(morador.origemAba||payload.origemAba);
+      if(el('originRow'))el('originRow').value=text(morador.origemLinha||payload.origemLinha);
+      currentSituation=text(morador.situacao||currentSituation||'ATIVO').toUpperCase();
+      if(el('residentSituation'))el('residentSituation').value=currentSituation;
+    }
+    setStatus('operationStatus',text(r.message||(isEdit?'Cadastro atualizado.':'Morador cadastrado.')),'ok');
+    loadBase();
+    setTimeout(syncControls,0);
+  });
+}
+
+function saveSituation(){
+  if(!situationEnabled){setStatus('operationStatus','A alteração de situação ainda está bloqueada pelo servidor.','warn');return}
+  var origemAba=text(el('originSheet')&&el('originSheet').value);
+  var origemLinha=text(el('originRow')&&el('originRow').value);
+  if(!origemAba||!origemLinha){setStatus('operationStatus','Abra um morador existente antes de alterar a situação.','err');return}
+  var situacao=text(el('residentSituation')&&el('residentSituation').value).toUpperCase();
+  var motivo=text(el('residentSituationReason')&&el('residentSituationReason').value);
+  if(['ATIVO','FORA_DA_AREA','FALECIDO','TRANSFERIDO'].indexOf(situacao)===-1){setStatus('operationStatus','Situação cadastral inválida.','err');return}
+  var payload={
+    moradorId:text(el('residentId')&&el('residentId').value),
+    origemAba:origemAba,
+    origemLinha:origemLinha,
+    situacao:situacao,
+    motivo:motivo
+  };
+  setStatus('operationStatus','Atualizando situação cadastral…','warn');
+  post('admin_morador_situacao',cloneSession({payload:JSON.stringify(payload)}),'admin_moradores_result',function(r){
+    if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'O servidor recusou a alteração de situação.'),'err');return}
+    currentSituation=situacao;
+    setStatus('operationStatus',text(r.message||'Situação cadastral atualizada.'),'ok');
+    loadBase();
+  });
+}
+
 function onLoginCapture(event){
   var button=event.target&&event.target.closest?event.target.closest('#login'):null;
   if(!button)return;
@@ -200,7 +363,33 @@ function onLoginCapture(event){
   loginWithPin(pin);
 }
 
+function onResidentSubmitCapture(event){
+  var form=event.target;
+  if(!form||form.id!=='residentForm')return;
+  event.preventDefault();
+  event.stopPropagation();
+  if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+  saveResident();
+}
+
+function afterUiInteraction(event){
+  var target=event.target;
+  if(!target)return;
+  if(target.closest&&target.closest('#results .card button')){
+    setTimeout(function(){
+      var card=target.closest('#results .card');
+      var pill=card&&card.querySelector('.pill');
+      currentSituation=text(pill&&pill.textContent||'ATIVO').toUpperCase();
+      if(el('residentSituation'))el('residentSituation').value=currentSituation;
+      syncControls();
+    },0);
+  }
+  if(target.id==='tabNew'||target.id==='tabSearch')setTimeout(syncControls,0);
+}
+
 document.addEventListener('click',onLoginCapture,true);
+document.addEventListener('submit',onResidentSubmitCapture,true);
+document.addEventListener('click',afterUiInteraction,false);
 
 /* Pré-aquece a implantação sem autenticar nem escrever nada. */
 jsonp('admin_result',{requestId:'warmup_moradores_v2_'+Date.now()},function(){});
@@ -214,6 +403,9 @@ if(token){
 window.PortalTacsMoradoresTransportV2={
   post:post,
   loadBase:loadBase,
-  version:'2.0.0'
+  syncControls:syncControls,
+  saveResident:saveResident,
+  saveSituation:saveSituation,
+  version:'2.1.0'
 };
 }());
