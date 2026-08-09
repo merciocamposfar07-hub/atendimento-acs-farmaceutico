@@ -77,7 +77,7 @@ assert(publicDetectorScore(safeAuditHeaders)<8,'A aba de auditoria poderia ser c
 safeMetaHeaders.forEach(h=>has(backend,`'${h}'`));
 safeAuditHeaders.forEach(h=>has(backend,`'${h}'`));
 
-const keyFn=(backend.match(/function moradoresAdminV1ChaveRegistro_\(morador\)\{([\s\S]*?)\}/)||[])[1]||'';
+const keyFn=(backend.match(/function moradoresAdminV1ChaveRegistro_\(morador\)\{([\s\S]*?)\n\}/)||[])[1]||'';
 lacks(keyFn,'origem.linha');
 lacks(keyFn,'origem.aba');
 has(keyFn,'moradoresAdminV1ChaveIdentidade_(morador)');
@@ -90,7 +90,36 @@ has(backend,"acao:'ALTERAR_SITUACAO'");
 const diagnosticFn=(backend.match(/function testarConfiguracaoMoradoresAdminPortalV1\(\)\{([\s\S]*?)\n\}/)||[])[1]||'';
 lacks(diagnosticFn,'moradoresAdminV1GarantirMeta_');
 lacks(diagnosticFn,'moradoresAdminV1GarantirAuditoria_');
+has(diagnosticFn,'totalColunas:fonte.sheet.getLastColumn()');
+has(diagnosticFn,'colunasMapeadas:');
 has(diagnosticFn,'nenhumaAlteracaoRealizada:true');
+
+// Novo cadastro toca apenas as colunas reconhecidas e preserva colunas auxiliares desconhecidas.
+const addFn=(backend.match(/function moradoresAdminV1AdicionarLinha_\(fonte,dados\)\{([\s\S]*?)\n\}/)||[])[1]||'';
+has(addFn,'moradoresAdminV1SetCell_(sheet,row,fonte.map.nome,dados.nome)');
+has(addFn,'moradoresAdminV1SetCell_(sheet,row,fonte.map.nascimento');
+has(addFn,'moradoresAdminV1SetCell_(sheet,row,fonte.map.cpf');
+has(addFn,'moradoresAdminV1SetCell_(sheet,row,fonte.map.cns');
+lacks(addFn,'.setValues(','Novo cadastro não deve reescrever a linha inteira.');
+lacks(addFn,'new Array(','Novo cadastro não deve montar uma linha inteira artificial.');
+
+// Pré-validação técnica acontece antes de tocar no cadastro real.
+const saveFn=(backend.match(/function moradoresAdminV1Salvar_\(p,contexto\)\{([\s\S]*?)\n\}/)||[])[1]||'';
+const preMeta=saveFn.indexOf('moradoresAdminV1GarantirMeta_(fonte.ss)');
+const preAudit=saveFn.indexOf('moradoresAdminV1GarantirAuditoria_(fonte.ss)');
+const residentWrite=Math.min(...['moradoresAdminV1EscreverLinha_(','moradoresAdminV1AdicionarLinha_('].map(x=>{const i=saveFn.indexOf(x);return i<0?Number.MAX_SAFE_INTEGER:i}));
+assert(preMeta>=0&&preAudit>=0&&residentWrite<Number.MAX_SAFE_INTEGER&&preMeta<residentWrite&&preAudit<residentWrite,'Estruturas técnicas devem ser validadas antes da escrita do morador.');
+
+// Situação também é serializada por LockService.
+const situationFn=(backend.match(/function moradoresAdminV1Situacao_\(p,contexto\)\{([\s\S]*?)\n\}/)||[])[1]||'';
+has(situationFn,'LockService.getScriptLock()');
+has(situationFn,'lock.tryLock(15000)');
+has(situationFn,'lock.releaseLock()');
+
+// A resposta do iframe precisa gerar fechamento de script válido no HTML final.
+const responderFn=(backend.match(/function moradoresAdminV1ResponderPost_\(requestId,resultado\)\{([\s\S]*?)\n\}/)||[])[1]||'';
+has(responderFn,'<\\/script>','Responder POST deve usar o escape HTML já validado nos outros módulos.');
+lacks(responderFn,'<\\\\/script>','Responder POST não pode produzir barra extra antes de /script.');
 
 has(backend,"RESULT_PREFIX: 'tacs_moradores_v11_result_'");
 has(backend,"action!=='admin_moradores_result'");
@@ -142,4 +171,4 @@ assert.strictEqual(gate.multiAreaRuntime,'NOT_STARTED');
 assert.strictEqual(gate.mainMerge,'NOT_STARTED');
 assert.strictEqual(gate.releaseAllowed,false);
 
-console.log('OK — Moradores Admin V1.1: fundação multiárea, escopo servidor, identidade, auditoria e gates validados.');
+console.log('OK — Moradores Admin V1.1: escopo servidor, identidade, auditoria, escrita conservadora, iframe e gates validados.');
