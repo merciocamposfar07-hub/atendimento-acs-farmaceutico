@@ -12,7 +12,7 @@
 <style>body{margin:0;background:#eaf2f6;color:#102d40;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}.load{min-height:100vh;display:grid;place-items:center;padding:24px}.box{width:min(620px,92vw);background:#fff;border:2px solid #a9c0ca;border-radius:24px;padding:24px;text-align:center}.err{color:#a52d2d;font-weight:800}</style>
 </head>
 <body>
-<div class="load"><div class="box"><h1>Painel de Moradores</h1><p id="loading">Carregando versão estabilizada…</p></div></div>
+<div class="load"><div class="box"><h1>Painel de Moradores</h1><p id="loading">Carregando painel administrativo…</p></div></div>
 <script>
 (function(){
 'use strict';
@@ -21,9 +21,15 @@ fetch(source,{cache:'no-store'})
   .then(function(r){if(!r.ok)throw new Error('Não foi possível carregar a base visual do painel.');return r.text()})
   .then(function(html){
     html=html.replace('<title>Painel Moradores V1 • Portal TACS</title>','<title>Painel Moradores V2 • Portal TACS</title>');
-    html=html.replace('AMBIENTE ISOLADO • MORADORES','AMBIENTE ISOLADO • MORADORES V2');
-    html=html.replace('FASE DE ESTABILIZAÇÃO: esta tela está em modo somente leitura. Login, status e busca são reais; NOVO/EDITAR permanecem bloqueados nesta primeira validação.','FASE DE ESTABILIZAÇÃO V2: comunicação revisada para iPhone. Login, status e busca são reais; NOVO/EDITAR permanecem bloqueados.');
-    html=html.replace('</body>','<script src="painel-moradores-transport-v2.js?v=20260809-transport-v2"><\/script></body>');
+    html=html.replace('AMBIENTE ISOLADO • MORADORES','PAINEL ADMINISTRATIVO • MORADORES');
+    html=html.replace('FASE DE ESTABILIZAÇÃO: esta tela está em modo somente leitura. Login, status e busca são reais; NOVO/EDITAR permanecem bloqueados nesta primeira validação.','PAINEL DE MORADORES: as permissões de Novo/Editar e Situação são carregadas diretamente do servidor após o login.');
+    html=html.replace('🔒 Gravação bloqueada nesta fase. O formulário existe apenas para validar preenchimento e carregamento de um cadastro encontrado.','Aguardando confirmação das permissões do servidor.');
+    html=html.replace('Salvar morador — bloqueado','Salvar morador');
+    html=html.replace('Portal TACS • Painel de Moradores em estabilização','Portal TACS • Painel de Moradores');
+    var extra=''
+      +'<script src="painel-moradores-transport-v2.js?v=20260809-transport-v2-2"><\/script>'
+      +'<script>(function(){"use strict";var root=document.getElementById("results");if(!root)return;function n(v){return String(v||"").trim().toUpperCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/\\s+/g," ")}function scan(){var cards=[].slice.call(root.querySelectorAll(".card")),groups={};cards.forEach(function(c){var name=c.querySelector("strong"),sub=c.querySelector(".sub");if(!name||!sub)return;var m=sub.textContent.match(/\\b\\d{2}\\/\\d{2}\\/\\d{4}\\b/),key=n(name.textContent)+"|"+(m?m[0]:"");if(!key||key.slice(-1)==="|")return;(groups[key]||(groups[key]=[])).push(c)});var dup=0;Object.keys(groups).forEach(function(k){if(groups[k].length<2)return;dup+=groups[k].length;groups[k].forEach(function(c){if(c.querySelector(".dup-warning"))return;var d=document.createElement("div");d.className="dup-warning status warn";d.style.marginTop="10px";d.textContent="Possível duplicidade: mesmo nome e data de nascimento. Confira os cadastros antes de editar.";c.appendChild(d)})});if(dup){var s=document.getElementById("operationStatus");if(s){s.textContent=dup+" cadastro(s) com possível duplicidade encontrados. Nenhum registro foi apagado ou mesclado.";s.className="status warn"}}}new MutationObserver(scan).observe(root,{childList:true,subtree:true});scan()}());<\/script>';
+    html=html.replace('</body>',extra+'</body>');
     document.open();
     document.write(html);
     document.close();
