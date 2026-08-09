@@ -26,6 +26,9 @@ jobs:
       - name: Testar estrutura e regressões
         run: node scripts/test_moradores_admin_v1.js
 
+      - name: Testar execução sem escrita
+        run: node scripts/test_moradores_admin_runtime_v1.js
+
       - name: Garantir isolamento da branch
         shell: bash
         run: |
@@ -40,6 +43,7 @@ jobs:
               apps-script/ZZZZ_15_MoradoresAdminPortalV1.gs|\
               teste-v1/painel-moradores-v1.html|\
               scripts/test_moradores_admin_v1.js|\
+              scripts/test_moradores_admin_runtime_v1.js|\
               MORADORES_ADMIN_V1.md|\
               MORADORES_RELEASE_GATE_V1.json|\
               .github/workflows/moradores-admin-tests.yml)
