@@ -26,9 +26,39 @@ fetch(source,{cache:'no-store'})
     html=html.replace('🔒 Gravação bloqueada nesta fase. O formulário existe apenas para validar preenchimento e carregamento de um cadastro encontrado.','Aguardando confirmação das permissões do servidor.');
     html=html.replace('Salvar morador — bloqueado','Salvar morador');
     html=html.replace('Portal TACS • Painel de Moradores em estabilização','Portal TACS • Painel de Moradores');
+
     var extra=''
-      +'<script src="painel-moradores-transport-v2.js?v=20260809-transport-v2-2"><\/script>'
-      +'<script>(function(){"use strict";var root=document.getElementById("results");if(!root)return;function n(v){return String(v||"").trim().toUpperCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/\\s+/g," ")}function scan(){var cards=[].slice.call(root.querySelectorAll(".card")),groups={};cards.forEach(function(c){var name=c.querySelector("strong"),sub=c.querySelector(".sub");if(!name||!sub)return;var m=sub.textContent.match(/\\b\\d{2}\\/\\d{2}\\/\\d{4}\\b/),key=n(name.textContent)+"|"+(m?m[0]:"");if(!key||key.slice(-1)==="|")return;(groups[key]||(groups[key]=[])).push(c)});var dup=0;Object.keys(groups).forEach(function(k){if(groups[k].length<2)return;dup+=groups[k].length;groups[k].forEach(function(c){if(c.querySelector(".dup-warning"))return;var d=document.createElement("div");d.className="dup-warning status warn";d.style.marginTop="10px";d.textContent="Possível duplicidade: mesmo nome e data de nascimento. Confira os cadastros antes de editar.";c.appendChild(d)})});if(dup){var s=document.getElementById("operationStatus");if(s){s.textContent=dup+" cadastro(s) com possível duplicidade encontrados. Nenhum registro foi apagado ou mesclado.";s.className="status warn"}}}new MutationObserver(scan).observe(root,{childList:true,subtree:true});scan()}());<\/script>';
+      +'<script src="painel-moradores-transport-v2.js?v=20260809-transport-v2-2"><\\/script>'
+      +'<script>(function(){"use strict";'
+      +'var TOKEN_KEY="portalTacsAdminTokenV1",DEVICE_KEY="portalTacsDispositivoV1";'
+      +'function e(id){return document.getElementById(id)}'
+      +'function t(v){return String(v==null?"":v).trim()}'
+      +'function d(v){return t(v).replace(/\\D/g,"")}'
+      +'function n(v){return t(v).toUpperCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/\\s+/g," ")}'
+      +'function esc(v){return String(v==null?"":v).replace(/[&<>"\\\']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\\\"":"&quot;","\\\'":"&#39;"}[c]})}'
+      +'function setStatus(msg,type){var s=e("operationStatus");if(!s)return;s.textContent=msg;s.className="status"+(type?" "+type:"")}'
+      +'function load(item){'
+        +'e("residentId").value=t(item.moradorId);e("originSheet").value=t(item.origemAba);e("originRow").value=t(item.origemLinha);'
+        +'e("name").value=t(item.nome);e("birth").value=t(item.nascimento);e("sex").value=t(item.sexo);e("cpf").value=t(item.cpf);e("cns").value=t(item.cns);'
+        +'e("address").value=t(item.endereco);e("cell").value=t(item.celular);e("contact").value=t(item.telefoneContato);e("microarea").value=t(item.microarea)||"1";e("team").value=t(item.equipe)||"USF MATIAS CDS";e("notes").value=t(item.observacoes);'
+        +'e("formTitle").textContent="Editar morador • "+t(item.idPortal||item.nome);e("formArea").classList.remove("hidden");e("searchArea").classList.add("hidden");e("tabSearch").classList.remove("active");e("tabNew").classList.add("active");'
+        +'setStatus("Cadastro carregado para conferência. Nenhuma alteração realizada.","ok");if(window.PortalTacsMoradoresTransportV2)setTimeout(window.PortalTacsMoradoresTransportV2.syncControls,0)'
+      +'}'
+      +'function classify(list){'
+        +'var byNameBirth={};list.forEach(function(x){var k=n(x.nome)+"|"+t(x.nascimento);(byNameBirth[k]||(byNameBirth[k]=[])).push(x)});'
+        +'var map={};Object.keys(byNameBirth).forEach(function(k){var g=byNameBirth[k];if(g.length<2)return;g.forEach(function(x){var cpf=d(x.cpf),cns=d(x.cns),confirmed=g.some(function(y){if(y===x)return false;var ycpf=d(y.cpf),ycns=d(y.cns);return (cpf&&ycpf&&cpf===ycpf)||(cns&&ycns&&cns===ycns)});map[t(x.idPortal)+"|"+t(x.origemAba)+"|"+t(x.origemLinha)]=confirmed?"CONFIRMADA":"POSSIVEL"})});return map'
+      +'}'
+      +'function render(list){'
+        +'var root=e("results");root.innerHTML="";if(!list.length){root.innerHTML="<div class=\\"card\\"><strong>Nenhum morador encontrado</strong></div>";setStatus("Busca concluída sem resultados.","ok");return}'
+        +'var flags=classify(list),confirmed=0,possible=0;list.forEach(function(item){var key=t(item.idPortal)+"|"+t(item.origemAba)+"|"+t(item.origemLinha),flag=flags[key];if(flag==="CONFIRMADA")confirmed++;else if(flag==="POSSIVEL")possible++;var c=document.createElement("div");c.className="card";var b=document.createElement("button");b.type="button";b.innerHTML="<strong>"+esc(item.nome)+"</strong><div class=\\"sub\\">"+esc(item.idPortal||"Sem ID Portal")+" • CPF "+esc(item.cpf||"—")+" • CNS "+esc(item.cns||"—")+" • "+esc(item.nascimento||"—")+"</div><span class=\\"pill\\">"+esc(item.status||item.situacao||"ATIVO")+"</span>";b.addEventListener("click",function(){load(item)});c.appendChild(b);if(flag){var w=document.createElement("div");w.className="status warn";w.style.marginTop="10px";w.textContent=flag==="CONFIRMADA"?"DUPLICIDADE CONFIRMADA: mesmo cidadão encontrado em outro cadastro com CPF ou CNS coincidente. Não edite isoladamente antes da consolidação.":"Possível duplicidade: mesmo nome e data de nascimento, sem documento coincidente suficiente para confirmar.";c.appendChild(w)}root.appendChild(c)});'
+        +'if(confirmed)setStatus((confirmed/2)+" grupo(s) de duplicidade confirmada encontrado(s). Os registros continuam preservados até a consolidação auditada.","warn");else if(possible)setStatus("Há cadastros com possível duplicidade que precisam de conferência.","warn");else setStatus(list.length+" resultado(s) encontrado(s). Toque em um cadastro para conferir.","ok")'
+      +'}'
+      +'function search(){var q=t(e("query")&&e("query").value);if(q.length<2){setStatus("Digite pelo menos 2 caracteres.","err");return}var tr=window.PortalTacsMoradoresTransportV2;if(!tr){setStatus("Transporte do painel indisponível.","err");return}var token=sessionStorage.getItem(TOKEN_KEY)||"",device=localStorage.getItem(DEVICE_KEY)||"";if(!token){setStatus("Sessão administrativa ausente. Entre novamente com o PIN.","err");return}setStatus("Buscando na base real…","warn");tr.post("admin_moradores_buscar",{token:token,dispositivo:device,q:q},"admin_moradores_result",function(r){if(!r||r.ok!==true){setStatus(t(r&&r.message||"Busca recusada."),"err");return}render(Array.isArray(r.resultados)?r.resultados:[])})}'
+      +'document.addEventListener("click",function(ev){var b=ev.target&&ev.target.closest?ev.target.closest("#search"):null;if(!b)return;ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();search()},true);'
+      +'document.addEventListener("keydown",function(ev){if(ev.target&&ev.target.id==="query"&&ev.key==="Enter"){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();search()}},true);'
+      +'window.PortalTacsDuplicidadesV2={classify:classify,search:search,version:"1.0.0"};'
+      +'}());<\\/script>';
+
     html=html.replace('</body>',extra+'</body>');
     document.open();
     document.write(html);
