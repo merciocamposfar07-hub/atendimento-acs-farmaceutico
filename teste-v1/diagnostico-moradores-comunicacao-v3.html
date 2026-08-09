@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#073a55">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<title>Diagnóstico Moradores V3 • Portal TACS</title>
+<style>
+:root{--pet:#073a55;--bg:#eaf2f6;--text:#102d40;--muted:#536b78;--border:#a9c0ca;--ok:#08723a;--okbg:#e8f7ee;--warn:#805300;--warnbg:#fff6dd;--err:#a52d2d;--errbg:#fff0f0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}header{background:linear-gradient(145deg,#073a55,#0b5878);color:#fff;padding:calc(22px + env(safe-area-inset-top)) 20px 25px;border-bottom:4px solid #67c7a0}header span{display:inline-block;padding:8px 12px;border:2px solid #73c7e7;border-radius:999px;color:#8df0b4;font-weight:900}h1{margin:14px 0 6px;font-size:2rem}main{width:min(760px,100%);margin:auto;padding:18px 14px 60px}.panel{background:#fff;border:2px solid var(--border);border-radius:22px;padding:18px;margin-bottom:16px}.field{width:100%;min-height:56px;border:2px solid var(--border);border-radius:15px;padding:12px;font-size:18px}.btn{width:100%;min-height:58px;border:0;border-radius:16px;background:var(--pet);color:#fff;font-weight:900;font-size:18px;margin-top:12px}.btn:disabled{opacity:.5}.status{padding:13px 14px;border:2px solid #cad9df;border-radius:16px;background:#f5f8fa;margin-top:12px;font-weight:800;overflow-wrap:anywhere}.ok{border-color:#9ed6b2;background:var(--okbg);color:var(--ok)}.warn{border-color:#e1aa3f;background:var(--warnbg);color:var(--warn)}.err{border-color:#d88a8a;background:var(--errbg);color:var(--err)}.step{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start}.dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#dce8ed;font-weight:900}.step.ok .dot{background:#c9eed7;color:#08723a}.step.err .dot{background:#ffd8d8;color:#a52d2d}.step.warn .dot{background:#ffe7a8;color:#805300}.small{font-size:.9rem;color:var(--muted)}.bridge{position:fixed;left:-10000px;top:-10000px;width:2px;height:2px;border:0;opacity:.01;pointer-events:none}
+</style>
+</head>
+<body>
+<header><span>DIAGNÓSTICO ISOLADO • V3</span><h1>Comunicação do Painel de Moradores</h1><p>Somente login e leitura. Nenhuma escrita é executada.</p></header>
+<main>
+<section class="panel">
+  <label for="pin"><strong>PIN administrativo</strong></label>
+  <input id="pin" class="field" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" autocomplete="off">
+  <button id="run" class="btn" type="button">Testar comunicação completa</button>
+  <div id="overall" class="status">Aguardando teste.</div>
+</section>
+<section class="panel">
+  <div id="s1" class="step"><div class="dot">1</div><div><strong>Preparar conexão</strong><div class="small">Pré-aquecimento do Apps Script e criação do canal isolado.</div><div class="status">Aguardando.</div></div></div>
+  <div id="s2" class="step"><div class="dot">2</div><div><strong>Login administrativo</strong><div class="small">POST único. O PIN não é salvo e a operação não é reenviada.</div><div class="status">Aguardando.</div></div></div>
+  <div id="s3" class="step"><div class="dot">3</div><div><strong>Confirmar resposta do login</strong><div class="small">Aceita a resposta direta do iframe ou o resultado consultado pelo requestId.</div><div class="status">Aguardando.</div></div></div>
+  <div id="s4" class="step"><div class="dot">4</div><div><strong>Ler base de moradores</strong><div class="small">Consulta somente leitura: total de moradores, schema e travas.</div><div class="status">Aguardando.</div></div></div>
+</section>
+</main>
+<script>
+(function(){
+'use strict';
+var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var DEVICE_KEY='portalTacsDispositivoV1';
+var device='';
+try{device=localStorage.getItem(DEVICE_KEY)||''}catch(e){}
+if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);try{localStorage.setItem(DEVICE_KEY,device)}catch(e){}}
+var running=false;
+function el(id){return document.getElementById(id)}
+function clean(v){return String(v==null?'':v).trim()}
+function rid(prefix){return prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,9)}
+function mark(id,type,msg){var box=el(id);box.className='step '+type;var st=box.querySelector('.status');st.className='status '+type;st.textContent=msg}
+function overall(type,msg){var n=el('overall');n.className='status '+type;n.textContent=msg}
+function jsonp(action,extra,timeoutMs){return new Promise(function(resolve){var cb='diagMor'+Date.now()+Math.floor(Math.random()*100000),s=document.createElement('script'),done=false,t=setTimeout(function(){finish({ok:false,_transport:'timeout'})},timeoutMs||16000);function finish(v){if(done)return;done=true;clearTimeout(t);try{delete window[cb]}catch(e){}if(s.parentNode)s.remove();resolve(v)}window[cb]=function(v){finish(v||{})};s.onerror=function(){finish({ok:false,_transport:'script-error'})};var q='action='+encodeURIComponent(action)+'&callback='+encodeURIComponent(cb)+'&v='+Date.now();Object.keys(extra||{}).forEach(function(k){q+='&'+encodeURIComponent(k)+'='+encodeURIComponent(extra[k])});s.src=API+'?'+q;document.head.appendChild(s)})}
+function postOnce(action,fields,resultAction,totalMs){return new Promise(function(resolve){var requestId=rid('diag'),frame=document.createElement('iframe'),form=document.createElement('form'),settled=false,messageSeen=false,messageShape='',start=Date.now();frame.name='diagFrame'+Date.now()+Math.floor(Math.random()*1000);frame.className='bridge';frame.src='about:blank';form.method='POST';form.action=API+'?_='+Date.now();form.target=frame.name;form.className='bridge';var payload={};Object.keys(fields||{}).forEach(function(k){payload[k]=fields[k]});payload.action=action;payload.requestId=requestId;Object.keys(payload).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=String(payload[k]==null?'':payload[k]);form.appendChild(i)});function finish(result,via){if(settled)return;settled=true;window.removeEventListener('message',receive);if(form.parentNode)form.remove();setTimeout(function(){if(frame.parentNode)frame.remove()},300);resolve({result:result||{},via:via,requestId:requestId,messageSeen:messageSeen,messageShape:messageShape,elapsed:Date.now()-start})}function receive(event){if(event.source!==frame.contentWindow)return;messageSeen=true;var d=event.data;if(typeof d==='string'){try{d=JSON.parse(d)}catch(e){messageShape='string-nao-json';return}}if(!d||typeof d!=='object'){messageShape=typeof d;return}messageShape='obj:'+Object.keys(d).slice(0,8).join(',');var receivedId=clean(d.requestId||(d.result&&d.result.requestId));if(receivedId&&receivedId!==requestId)return;var r=Object.prototype.hasOwnProperty.call(d,'result')?d.result:d;if(r&&typeof r==='object'&&Object.prototype.hasOwnProperty.call(r,'ok'))finish(r,'postMessage')}
+window.addEventListener('message',receive);document.body.appendChild(frame);document.body.appendChild(form);form.submit();var deadline=Date.now()+(totalMs||65000);var wait=1400;function poll(){if(settled)return;if(Date.now()>=deadline){finish({ok:false,message:'Sem confirmação dentro do limite de diagnóstico.'},'timeout');return}setTimeout(function(){if(settled)return;jsonp(resultAction,{requestId:requestId},12000).then(function(env){if(settled)return;if(env&&env.ok===true&&env.pendente===false){finish(env.result||{},'poll');return}wait=Math.min(6000,wait+600);poll()})},wait)}poll()})}
+async function run(){if(running)return;var pin=clean(el('pin').value).replace(/\D/g,'');if(!/^\d{4,8}$/.test(pin)){overall('err','Digite o PIN numérico de 4 a 8 dígitos.');return}running=true;el('run').disabled=true;overall('warn','Diagnóstico em andamento. Nenhuma operação será repetida automaticamente.');mark('s1','warn','Preparando conexão…');mark('s2','','Aguardando.');mark('s3','','Aguardando.');mark('s4','','Aguardando.');try{
+  var warm=await jsonp('admin_result',{requestId:'diag_warm_'+Date.now()},8000);mark('s1','ok','Canal criado. Pré-aquecimento concluído; resposta de aquecimento: '+(warm&&warm.ok===true?'servidor alcançado':'rota respondeu sem resultado pendente válido')+'.');
+  mark('s2','warn','Enviando um único POST de login…');var login=await postOnce('admin_login',{pin:pin,dispositivo:device},'admin_result',70000);el('pin').value='';mark('s2',login.via==='timeout'?'err':'ok','POST concluído. Confirmação via '+login.via+' em '+Math.round(login.elapsed/1000)+' s.');mark('s3','warn','Validando conteúdo retornado…');if(!login.result||login.result.ok!==true||!login.result.token){mark('s3','err','O servidor respondeu, mas o login não foi validado. '+clean(login.result&&login.result.message||'Sem token de sessão.')+' | mensagem iframe: '+(login.messageSeen?'sim':'não')+' | formato: '+(login.messageShape||'nenhum'));overall('err','Comunicação localizada até o login, mas a autenticação não foi concluída. Nenhuma escrita ocorreu.');return}mark('s3','ok','Login confirmado. Token recebido apenas em memória para este teste. Resposta via '+login.via+'.');
+  mark('s4','warn','Consultando a base em modo somente leitura…');var stat=await postOnce('admin_moradores_status',{token:login.result.token,dispositivo:device},'admin_moradores_result',70000);if(!stat.result||stat.result.ok!==true){mark('s4','err','Login funcionou, mas a leitura de Moradores falhou. '+clean(stat.result&&stat.result.message||'Sem confirmação da rota de moradores.')+' | via '+stat.via);overall('err','Login estabilizado; falha isolada na rota de Moradores. Nenhuma escrita ocorreu.');return}mark('s4','ok','Base confirmada: '+stat.result.totalRegistros+' moradores • schema '+(stat.result.schemaValido?'20/20':'inválido')+' • Novo/Editar '+(stat.result.escritaHabilitada?'liberado no backend':'bloqueado')+' • Situação '+(stat.result.situacaoHabilitada?'liberada':'bloqueada')+'. Resposta via '+stat.via+'.');overall('ok','Comunicação completa aprovada. Login e leitura de Moradores responderam sem qualquer escrita.');
+}catch(e){overall('err','Falha inesperada do diagnóstico: '+clean(e&&e.message||e)+'. Nenhuma escrita ocorreu.')}finally{running=false;el('run').disabled=false}}
+el('run').addEventListener('click',run);
+}());
+</script>
+</body>
+</html>
