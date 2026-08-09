@@ -2,6 +2,9 @@
   "version": "1.1.0",
   "productionBase": "2f5136f52d59cc4a6cf188c0527f56cce3858c79",
   "branch": "stabilization/moradores-admin-v1",
+  "readOnlyInstallCandidate": "READY",
+  "candidateCodeBlobSha": "71d88914c3a748fa29343b1a083d99a5c9b166a3",
+  "candidateValidatedAtCommit": "55fcae4bcacc1a844961ed5e50bc2c9ead190118",
   "sourceAudit": "COMPLETED",
   "sameResidentSpreadsheetConfirmed": true,
   "architectureReview": "COMPLETED",
@@ -35,5 +38,5 @@
   "pushAreaSegmentation": "SPECIFIED_NOT_IMPLEMENTED",
   "mainMerge": "NOT_STARTED",
   "releaseAllowed": false,
-  "rule": "Japaranduba permanece intacta em produção. O escopo do morador é resolvido no servidor; futuras áreas terão fonte de moradores própria. O módulo só avança por gates: fundação, leitura real, novo/editar, filtro público+situacao, reconciliação CSV e então multiagente/multiárea. Nenhuma mudança na main é autorizada por este arquivo."
+  "rule": "Japaranduba permanece intacta em produção. O código blob 71d88914c3a748fa29343b1a083d99a5c9b166a3 está congelado como candidato à instalação somente-leitura. Durante a validação real não modificar esse arquivo. O escopo do morador é resolvido no servidor; futuras áreas terão fonte de moradores própria. O módulo só avança por gates: fundação, leitura real, novo/editar, filtro público+situacao, reconciliação CSV e então multiagente/multiárea. Nenhuma mudança na main é autorizada por este arquivo."
 }
