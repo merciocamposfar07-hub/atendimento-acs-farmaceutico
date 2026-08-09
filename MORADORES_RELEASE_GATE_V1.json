@@ -13,7 +13,7 @@
   "isolatedBackendCode": "COMPLETED",
   "generalAdminShell": "COMPLETED",
   "csvLocalPreview": "COMPLETED",
-  "staticTests": "PENDING_1_1_REVIEW",
+  "staticTests": "COMPLETED",
   "agentSelfRegistration": "SPECIFIED_NOT_IMPLEMENTED",
   "adminAssistedAgentSetup": "SPECIFIED_NOT_IMPLEMENTED",
   "simpleAgentPanel": "SPECIFIED_NOT_IMPLEMENTED",
