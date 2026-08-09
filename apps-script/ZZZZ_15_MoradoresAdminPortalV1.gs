@@ -1,29 +1,33 @@
 /**
  * ZZZZ_15_MoradoresAdminPortalV1.gs
- * Portal TACS — Administração de Moradores V1.1
+ * Portal TACS — Administração de Moradores V1.2
  *
- * Fundação segura do módulo Moradores e da futura Administração Geral.
+ * Modelo: cadastro individual de cidadão (uma pessoa por linha).
+ * Vínculos familiares serão uma camada própria e não criam colunas artificiais
+ * de mãe/pai na base MORADORES.
  *
- * Princípios:
- * - Japaranduba continua usando a mesma planilha de moradores já em produção;
- * - o escopo (agente/área/unidade) é resolvido no servidor, nunca pelo formulário;
- * - futuras áreas terão fonte de moradores própria, evitando mistura de bases públicas;
- * - o cadastro recebe identidade interna estável sem alterar as colunas públicas atuais;
- * - operações de escrita geram trilha de auditoria;
- * - nenhuma exclusão física de morador;
- * - escrita diária permanece bloqueada até validação real da leitura;
- * - situação (óbito/saída/transferência) permanece bloqueada até o filtro público existir;
+ * Segurança:
+ * - Japaranduba continua usando a mesma planilha já em produção;
+ * - o escopo agente/área/unidade é resolvido no servidor;
+ * - futuras áreas terão fonte própria de moradores;
+ * - reconhece o schema real A:T pelo nome exato dos cabeçalhos;
+ * - nunca adivinha coluna ausente;
+ * - nenhuma exclusão física;
+ * - escrita diária permanece bloqueada até validação real;
+ * - saída/transferência/óbito permanecem bloqueados até o filtro público existir;
  * - CSV real permanece fora deste módulo até o CRUD diário estar estabilizado;
  * - não altera agendas, odontologia, profissionais, recados, campanhas ou push.
  */
 var TACS_MORADORES_ADMIN_V1 = Object.freeze({
-  VERSAO: '1.1.0',
+  VERSAO: '1.2.0',
   DEFAULT_RESIDENT_SPREADSHEET_ID: '114ObXLQ8sQSDosauEbAdlhQRWNksJ20Kq57CucpKbTg',
   DEFAULT_AGENT_ID: 'AG001',
   DEFAULT_AREA_ID: 'JAPARANDUBA',
   DEFAULT_AREA_NAME: 'Sítio Japaranduba',
   DEFAULT_UNIT_ID: 'POSTO_MATIAS',
   DEFAULT_OPERATOR_ID: 'ADMIN_GERAL',
+  DEFAULT_MICROAREA: '1',
+  DEFAULT_EQUIPE: 'USF MATIAS CDS',
   META_SHEET: 'TACS_META_AREA',
   AUDIT_SHEET: 'TACS_AUDIT_MORADORES',
   TIMEZONE: 'America/Recife',
@@ -37,8 +41,14 @@ var TACS_MORADORES_ADMIN_V1 = Object.freeze({
   UNIT_PROPERTY: 'PORTAL_TACS_UNIDADE_ID',
   GENERAL_ADMIN_PROPERTY: 'PORTAL_TACS_ADMIN_GERAL_ID',
   RESIDENT_SOURCE_PROPERTY: 'PORTAL_TACS_MORADORES_PLANILHA_ID',
-  RESULT_PREFIX: 'tacs_moradores_v11_result_',
-  RESULT_SECONDS: 300
+  RESULT_PREFIX: 'tacs_moradores_v12_result_',
+  RESULT_SECONDS: 300,
+  SCHEMA_HEADERS: Object.freeze([
+    'ID_PORTAL','ID','CPF','CNS','NOME','DATA_NASCIMENTO','IDADE','SEXO',
+    'ENDERECO','CELULAR','TELEFONE_CONTATO','MICROAREA','EQUIPE','ORIGEM',
+    'ULTIMA_ATUALIZACAO','STATUS','CONSENTIMENTO_WHATSAPP','DATA_CONSENTIMENTO',
+    'DATA_CADASTRO_PORTAL','OBSERVACOES'
+  ])
 });
 
 var moradoresAdminV1DoGetAnterior_;
@@ -84,16 +94,24 @@ function moradoresAdminV1TratarGet_(e){
   try{
     var requestId=moradoresAdminV1ValidarRequestId_(p.requestId);
     var resultado=moradoresAdminV1LerResultado_(requestId);
-    return moradoresAdminV1ResponderJson_({ok:true,pendente:!resultado,requestId:requestId,result:resultado||null},p.callback);
+    return moradoresAdminV1ResponderJson_({
+      ok:true,pendente:!resultado,requestId:requestId,result:resultado||null
+    },p.callback);
   }catch(erro){
-    return moradoresAdminV1ResponderJson_({ok:false,message:moradoresAdminV1MensagemErro_(erro)},p.callback);
+    return moradoresAdminV1ResponderJson_({
+      ok:false,message:moradoresAdminV1MensagemErro_(erro)
+    },p.callback);
   }
 }
 
 function moradoresAdminV1TratarPost_(e){
   var p=e&&e.parameter?e.parameter:{};
   var action=moradoresAdminV1Texto_(p.action).toLowerCase();
-  if(['admin_moradores_status','admin_moradores_buscar','admin_morador_salvar','admin_morador_situacao'].indexOf(action)===-1)return null;
+  if([
+    'admin_moradores_status','admin_moradores_buscar',
+    'admin_morador_salvar','admin_morador_situacao'
+  ].indexOf(action)===-1)return null;
+
   var resultado;
   try{
     var sessao=moradoresAdminV1ValidarSessao_(p);
@@ -116,15 +134,14 @@ function moradoresAdminV1TratarPost_(e){
   }catch(erro){
     resultado={ok:false,message:moradoresAdminV1MensagemErro_(erro)};
   }
+
   var requestId=moradoresAdminV1Texto_(p.requestId);
-  if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId))moradoresAdminV1GuardarResultado_(requestId,resultado);
+  if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId)){
+    moradoresAdminV1GuardarResultado_(requestId,resultado);
+  }
   return moradoresAdminV1ResponderPost_(requestId,resultado);
 }
 
-/**
- * O navegador não escolhe seu próprio escopo. Somente dados devolvidos pela
- * validação de sessão ou a configuração interna do servidor entram aqui.
- */
 function moradoresAdminV1ResolverContexto_(sessao){
   sessao=sessao&&typeof sessao==='object'?sessao:{};
   var props=PropertiesService.getScriptProperties();
@@ -138,21 +155,23 @@ function moradoresAdminV1ResolverContexto_(sessao){
     unidadeId:moradoresAdminV1Texto_(sessao.unidadeId||escopo.unidadeId||props.getProperty(TACS_MORADORES_ADMIN_V1.UNIT_PROPERTY)||TACS_MORADORES_ADMIN_V1.DEFAULT_UNIT_ID),
     permissoes:Array.isArray(sessao.permissoes)?sessao.permissoes.slice():(Array.isArray(escopo.permissoes)?escopo.permissoes.slice():[])
   };
-  if(!contexto.operadorId||!contexto.agenteId||!contexto.areaId||!contexto.unidadeId)throw new Error('O escopo administrativo está incompleto.');
+  if(!contexto.operadorId||!contexto.agenteId||!contexto.areaId||!contexto.unidadeId){
+    throw new Error('O escopo administrativo está incompleto.');
+  }
   return contexto;
 }
 
 function moradoresAdminV1ExigirPermissao_(contexto,permissao){
   if(contexto.perfil==='ADMIN_GERAL'||contexto.perfil==='ADMIN_MUNICIPAL')return true;
-  var permitidas=(contexto.permissoes||[]).map(function(x){return moradoresAdminV1Texto_(x).toUpperCase();});
-  if(permitidas.indexOf(permissao)===-1)throw new Error('Seu acesso não possui permissão para esta operação.');
+  var permitidas=(contexto.permissoes||[]).map(function(x){
+    return moradoresAdminV1Texto_(x).toUpperCase();
+  });
+  if(permitidas.indexOf(permissao)===-1){
+    throw new Error('Seu acesso não possui permissão para esta operação.');
+  }
   return true;
 }
 
-/**
- * Hoje somente Japaranduba está autorizada. O futuro módulo de Áreas poderá
- * resolver outra fonte por tacsAreasV1ResolverFonteMoradores_(contexto).
- */
 function moradoresAdminV1ResolverPlanilhaId_(contexto){
   if(typeof tacsAreasV1ResolverFonteMoradores_==='function'){
     var externo=moradoresAdminV1Texto_(tacsAreasV1ResolverFonteMoradores_(contexto));
@@ -161,7 +180,10 @@ function moradoresAdminV1ResolverPlanilhaId_(contexto){
   if(contexto.areaId!==TACS_MORADORES_ADMIN_V1.DEFAULT_AREA_ID){
     throw new Error('Esta área ainda não possui uma fonte de moradores autorizada no servidor.');
   }
-  return moradoresAdminV1Texto_(PropertiesService.getScriptProperties().getProperty(TACS_MORADORES_ADMIN_V1.RESIDENT_SOURCE_PROPERTY)||TACS_MORADORES_ADMIN_V1.DEFAULT_RESIDENT_SPREADSHEET_ID);
+  return moradoresAdminV1Texto_(
+    PropertiesService.getScriptProperties().getProperty(TACS_MORADORES_ADMIN_V1.RESIDENT_SOURCE_PROPERTY)||
+    TACS_MORADORES_ADMIN_V1.DEFAULT_RESIDENT_SPREADSHEET_ID
+  );
 }
 
 function moradoresAdminV1Status_(contexto){
@@ -175,10 +197,13 @@ function moradoresAdminV1Status_(contexto){
     areaId:contexto.areaId,
     areaNome:contexto.areaNome,
     unidadeId:contexto.unidadeId,
-    planilhaConfigurada:true,
     abaFonte:fonte.sheet.getName(),
     linhaCabecalho:fonte.headerRow+1,
     totalRegistros:Math.max(0,fonte.sheet.getLastRow()-(fonte.headerRow+1)),
+    totalColunas:fonte.sheet.getLastColumn(),
+    schemaValido:true,
+    modeloCadastro:'CIDADAO_INDIVIDUAL',
+    vinculoFamiliar:'CAMADA_SEPARADA_PLANEJADA',
     metaExiste:Boolean(fonte.ss.getSheetByName(TACS_MORADORES_ADMIN_V1.META_SHEET)),
     auditoriaExiste:Boolean(fonte.ss.getSheetByName(TACS_MORADORES_ADMIN_V1.AUDIT_SHEET)),
     escritaHabilitada:moradoresAdminV1EscritaHabilitada_(),
@@ -193,14 +218,24 @@ function moradoresAdminV1Buscar_(busca,contexto){
   if(q.length<2)throw new Error('Digite pelo menos 2 caracteres para buscar.');
   var fonte=moradoresAdminV1LocalizarFonte_(contexto);
   var metaMap=moradoresAdminV1LerMetaMap_(fonte.ss,contexto);
-  var lastRow=fonte.sheet.getLastRow(),lastCol=fonte.sheet.getLastColumn();
-  if(lastRow<=fonte.headerRow+1)return {ok:true,resultados:[],total:0,limitado:false,areaId:contexto.areaId};
+  var lastRow=fonte.sheet.getLastRow();
+  var lastCol=fonte.sheet.getLastColumn();
+  if(lastRow<=fonte.headerRow+1){
+    return {ok:true,resultados:[],total:0,limitado:false,areaId:contexto.areaId};
+  }
   var range=fonte.sheet.getRange(fonte.headerRow+2,1,lastRow-(fonte.headerRow+1),lastCol);
-  var raw=range.getValues(),display=range.getDisplayValues(),resultados=[];
+  var raw=range.getValues();
+  var display=range.getDisplayValues();
+  var resultados=[];
   for(var i=0;i<display.length;i++){
     var morador=moradoresAdminV1MontarMorador_(display[i],raw[i],fonte.map);
     if(!morador.nome)continue;
-    var hay=moradoresAdminV1NormalizarBusca_([morador.nome,morador.cpf,morador.cns,morador.nascimento,morador.localidade,morador.nomeMae,morador.nomePai].join(' '));
+    var hay=moradoresAdminV1NormalizarBusca_([
+      morador.idPortal,morador.id,morador.nome,morador.cpf,morador.cns,
+      morador.nascimento,morador.endereco,morador.celular,
+      morador.telefoneContato,morador.microarea,morador.equipe,
+      morador.status,morador.observacoes
+    ].join(' '));
     if(hay.indexOf(q)===-1)continue;
     var origem={aba:fonte.sheet.getName(),linha:fonte.headerRow+2+i};
     var chave=moradoresAdminV1ChaveRegistro_(morador);
@@ -208,50 +243,73 @@ function moradoresAdminV1Buscar_(busca,contexto){
     resultados.push(moradoresAdminV1ComMeta_(morador,origem,meta,chave,contexto));
     if(resultados.length>=TACS_MORADORES_ADMIN_V1.MAX_SEARCH_RESULTS)break;
   }
-  return {ok:true,resultados:resultados,total:resultados.length,limitado:resultados.length>=TACS_MORADORES_ADMIN_V1.MAX_SEARCH_RESULTS,areaId:contexto.areaId};
+  return {
+    ok:true,resultados:resultados,total:resultados.length,
+    limitado:resultados.length>=TACS_MORADORES_ADMIN_V1.MAX_SEARCH_RESULTS,
+    areaId:contexto.areaId
+  };
 }
 
 function moradoresAdminV1Salvar_(p,contexto){
   var body=moradoresAdminV1ParsePayload_(p.payload);
   var fonte=moradoresAdminV1LocalizarFonte_(contexto);
-  var dados={
-    nome:moradoresAdminV1Texto_(body.nome),
-    nascimento:moradoresAdminV1DataBr_(body.nascimento),
-    cpf:moradoresAdminV1Digitos_(body.cpf),
-    cns:moradoresAdminV1Digitos_(body.cns),
-    localidade:moradoresAdminV1Texto_(body.localidade)||contexto.areaNome,
-    nomeMae:moradoresAdminV1Texto_(body.nomeMae),
-    nomePai:moradoresAdminV1Texto_(body.nomePai)
-  };
+  var dados=moradoresAdminV1NormalizarDadosEntrada_(body,contexto);
   moradoresAdminV1ValidarDadosMorador_(dados);
+
   var lock=LockService.getScriptLock();
-  if(!lock.tryLock(15000))throw new Error('O cadastro está sendo atualizado. Tente novamente.');
+  if(!lock.tryLock(15000)){
+    throw new Error('O cadastro está sendo atualizado. Tente novamente.');
+  }
+
   try{
-    // Pré-valida as estruturas técnicas antes de tocar na ficha do morador.
     moradoresAdminV1GarantirMeta_(fonte.ss);
     moradoresAdminV1GarantirAuditoria_(fonte.ss);
 
-    var origemAba=moradoresAdminV1Texto_(body.origemAba),origemLinha=Number(body.origemLinha||0),existing=null;
-    if(origemAba&&origemLinha>0)existing=moradoresAdminV1LerPorOrigem_(fonte.ss,origemAba,origemLinha);
+    var origemAba=moradoresAdminV1Texto_(body.origemAba);
+    var origemLinha=Number(body.origemLinha||0);
+    var existing=null;
+
+    if(origemAba&&origemLinha>0){
+      existing=moradoresAdminV1LerPorOrigem_(fonte.ss,origemAba,origemLinha);
+    }
+
     if(!existing&&(dados.cpf||dados.cns)){
       var porDocumento=moradoresAdminV1LocalizarTodosPorDocumento_(fonte.ss,dados.cpf,dados.cns);
-      if(porDocumento.length>1)throw new Error('Há mais de um cadastro com este CPF/CNS. Faça a revisão antes de editar.');
+      if(porDocumento.length>1){
+        throw new Error('Há mais de um cadastro com este CPF/CNS. Faça a revisão antes de editar.');
+      }
       if(porDocumento.length===1)existing=porDocumento[0];
     }
-    if(!existing&&!dados.cpf&&!dados.cns&&moradoresAdminV1LocalizarPorIdentidade_(fonte,dados)){
-      throw new Error('Existe um possível cadastro da mesma pessoa sem CPF/CNS. Abra esse cadastro e edite, em vez de criar outro.');
-    }
-    var ignorar=existing&&existing.origem?existing.origem:null;
-    if(moradoresAdminV1LocalizarDuplicado_(fonte.ss,dados.cpf,dados.cns,ignorar))throw new Error('Já existe outro cadastro com este CPF/CNS. Revise antes de salvar.');
 
-    var origem,criado=false,metaAnterior=null,chaveAnterior='',antes=null;
+    if(!existing&&!dados.cpf&&!dados.cns){
+      var possivel=moradoresAdminV1LocalizarPorIdentidade_(fonte,dados);
+      if(possivel){
+        throw new Error('Existe um possível cadastro com o mesmo nome, nascimento e endereço. Abra esse cadastro e revise antes de criar outro.');
+      }
+    }
+
+    var ignorar=existing&&existing.origem?existing.origem:null;
+    if(moradoresAdminV1LocalizarDuplicado_(fonte.ss,dados.cpf,dados.cns,ignorar)){
+      throw new Error('Já existe outro cadastro com este CPF/CNS. Revise antes de salvar.');
+    }
+
+    var origem;
+    var criado=false;
+    var metaAnterior=null;
+    var chaveAnterior='';
+    var antes=null;
+
     if(existing){
       origem=existing.origem;
       antes=existing.morador;
       chaveAnterior=moradoresAdminV1ChaveRegistro_(existing.morador);
-      metaAnterior=moradoresAdminV1EncontrarMeta_(fonte.ss,chaveAnterior,origem,moradoresAdminV1Texto_(body.moradorId),contexto);
-      moradoresAdminV1EscreverLinha_(fonte.ss,origem.aba,origem.linha,dados);
+      metaAnterior=moradoresAdminV1EncontrarMeta_(
+        fonte.ss,chaveAnterior,origem,moradoresAdminV1Texto_(body.moradorId),contexto
+      );
+      dados=moradoresAdminV1PreservarCamposSistema_(dados,existing.morador,false,fonte);
+      moradoresAdminV1EscreverLinha_(fonte,origem.linha,dados);
     }else{
+      dados=moradoresAdminV1PreservarCamposSistema_(dados,null,true,fonte);
       origem=moradoresAdminV1AdicionarLinha_(fonte,dados);
       criado=true;
     }
@@ -263,7 +321,7 @@ function moradoresAdminV1Salvar_(p,contexto){
       moradorId:moradoresAdminV1Texto_(body.moradorId)||(metaAnterior&&metaAnterior.moradorId)||'',
       origem:origem,
       dados:dados,
-      situacao:(metaAnterior&&metaAnterior.situacao)||'ATIVO',
+      situacao:dados.status||((metaAnterior&&metaAnterior.situacao)||'ATIVO'),
       motivo:(metaAnterior&&metaAnterior.motivo)||'',
       origemCadastro:criado?'PAINEL_MANUAL':((metaAnterior&&metaAnterior.origemCadastro)||'BASE_EXISTENTE')
     },contexto);
@@ -273,28 +331,104 @@ function moradoresAdminV1Salvar_(p,contexto){
       acao:criado?'CRIAR_MORADOR':'EDITAR_MORADOR',
       campos:criado?'NOVO_CADASTRO':moradoresAdminV1CamposAlterados_(antes,dados)
     },contexto);
+
     SpreadsheetApp.flush();
-    return {ok:true,criado:criado,message:criado?'Morador cadastrado.':'Cadastro do morador atualizado.',morador:moradoresAdminV1ComMeta_(dados,origem,meta,novaChave,contexto)};
+    return {
+      ok:true,
+      criado:criado,
+      message:criado?'Morador cadastrado.':'Cadastro do morador atualizado.',
+      morador:moradoresAdminV1ComMeta_(dados,origem,meta,novaChave,contexto)
+    };
   }finally{
     lock.releaseLock();
   }
 }
 
+function moradoresAdminV1NormalizarDadosEntrada_(body,contexto){
+  return {
+    idPortal:moradoresAdminV1Texto_(body.idPortal),
+    id:moradoresAdminV1Texto_(body.id),
+    cpf:moradoresAdminV1Digitos_(body.cpf),
+    cns:moradoresAdminV1Digitos_(body.cns),
+    nome:moradoresAdminV1Texto_(body.nome),
+    nascimento:moradoresAdminV1DataBr_(body.nascimento),
+    idade:'',
+    sexo:moradoresAdminV1NormalizarSexo_(body.sexo),
+    endereco:moradoresAdminV1Texto_(body.endereco||body.localidade)||contexto.areaNome,
+    celular:moradoresAdminV1Digitos_(body.celular),
+    telefoneContato:moradoresAdminV1Digitos_(body.telefoneContato),
+    microarea:moradoresAdminV1Texto_(body.microarea)||TACS_MORADORES_ADMIN_V1.DEFAULT_MICROAREA,
+    equipe:moradoresAdminV1Texto_(body.equipe)||TACS_MORADORES_ADMIN_V1.DEFAULT_EQUIPE,
+    origem:moradoresAdminV1Texto_(body.origem),
+    ultimaAtualizacao:null,
+    status:moradoresAdminV1Texto_(body.status).toUpperCase(),
+    consentimentoWhatsapp:moradoresAdminV1NormalizarConsentimento_(body.consentimentoWhatsapp),
+    dataConsentimento:moradoresAdminV1Texto_(body.dataConsentimento),
+    dataCadastroPortal:moradoresAdminV1Texto_(body.dataCadastroPortal),
+    observacoes:moradoresAdminV1Texto_(body.observacoes).slice(0,1000)
+  };
+}
+
+function moradoresAdminV1PreservarCamposSistema_(dados,anterior,novo,fonte){
+  var agora=new Date();
+  var out={};
+  Object.keys(dados).forEach(function(k){out[k]=dados[k];});
+
+  if(novo){
+    out.idPortal=moradoresAdminV1ProximoIdPortal_(fonte);
+    out.id='';
+    out.origem='PAINEL_TACS';
+    out.status='ATIVO';
+    out.consentimentoWhatsapp=out.consentimentoWhatsapp||'NÃO';
+    out.dataConsentimento='';
+    out.dataCadastroPortal=agora;
+  }else{
+    out.idPortal=anterior.idPortal;
+    out.id=anterior.id;
+    out.origem=anterior.origem;
+    out.status=anterior.status||'ATIVO';
+    out.consentimentoWhatsapp=anterior.consentimentoWhatsapp||'NÃO';
+    out.dataConsentimento=anterior.dataConsentimento;
+    out.dataCadastroPortal=anterior.dataCadastroPortal;
+  }
+
+  out.ultimaAtualizacao=agora;
+  out.idade=moradoresAdminV1IdadeTexto_(out.nascimento,agora);
+  return out;
+}
+
 function moradoresAdminV1Situacao_(p,contexto){
-  var body=moradoresAdminV1ParsePayload_(p.payload),situacao=moradoresAdminV1Texto_(body.situacao).toUpperCase();
-  if(['ATIVO','FORA_DA_AREA','FALECIDO','TRANSFERIDO'].indexOf(situacao)===-1)throw new Error('Situação cadastral inválida.');
+  var body=moradoresAdminV1ParsePayload_(p.payload);
+  var situacao=moradoresAdminV1Texto_(body.situacao).toUpperCase();
+  if(['ATIVO','FORA_DA_AREA','FALECIDO','TRANSFERIDO'].indexOf(situacao)===-1){
+    throw new Error('Situação cadastral inválida.');
+  }
+
   var origem={aba:moradoresAdminV1Texto_(body.origemAba),linha:Number(body.origemLinha||0)};
   if(!origem.aba||origem.linha<1)throw new Error('Origem do cadastro ausente.');
+
   var fonte=moradoresAdminV1LocalizarFonte_(contexto);
   var lock=LockService.getScriptLock();
-  if(!lock.tryLock(15000))throw new Error('O cadastro está sendo atualizado. Tente novamente.');
+  if(!lock.tryLock(15000)){
+    throw new Error('O cadastro está sendo atualizado. Tente novamente.');
+  }
+
   try{
     moradoresAdminV1GarantirMeta_(fonte.ss);
     moradoresAdminV1GarantirAuditoria_(fonte.ss);
     var registro=moradoresAdminV1LerPorOrigem_(fonte.ss,origem.aba,origem.linha);
     if(!registro)throw new Error('O cadastro não foi localizado na planilha.');
+
+    var antes=registro.morador.status||'ATIVO';
+    registro.morador.status=situacao;
+    registro.morador.ultimaAtualizacao=new Date();
+    moradoresAdminV1SetCell_(fonte.sheet,origem.linha,fonte.map.status,situacao);
+    moradoresAdminV1SetCell_(fonte.sheet,origem.linha,fonte.map.ultimaAtualizacao,new Date(),'dd/MM/yyyy');
+
     var chave=moradoresAdminV1ChaveRegistro_(registro.morador);
-    var anterior=moradoresAdminV1EncontrarMeta_(fonte.ss,chave,origem,moradoresAdminV1Texto_(body.moradorId),contexto);
+    var anterior=moradoresAdminV1EncontrarMeta_(
+      fonte.ss,chave,origem,moradoresAdminV1Texto_(body.moradorId),contexto
+    );
     var meta=moradoresAdminV1UpsertMeta_(fonte.ss,{
       chave:chave,
       chaveAnterior:chave,
@@ -305,9 +439,19 @@ function moradoresAdminV1Situacao_(p,contexto){
       motivo:moradoresAdminV1Texto_(body.motivo),
       origemCadastro:(anterior&&anterior.origemCadastro)||'BASE_EXISTENTE'
     },contexto);
-    moradoresAdminV1Auditar_(fonte.ss,{moradorId:meta.moradorId,acao:'ALTERAR_SITUACAO',campos:'SITUACAO:'+((anterior&&anterior.situacao)||'ATIVO')+'>'+situacao},contexto);
+
+    moradoresAdminV1Auditar_(fonte.ss,{
+      moradorId:meta.moradorId,
+      acao:'ALTERAR_SITUACAO',
+      campos:'STATUS:'+antes+'>'+situacao
+    },contexto);
+
     SpreadsheetApp.flush();
-    return {ok:true,message:'Situação cadastral atualizada.',morador:moradoresAdminV1ComMeta_(registro.morador,origem,meta,chave,contexto)};
+    return {
+      ok:true,
+      message:'Situação cadastral atualizada.',
+      morador:moradoresAdminV1ComMeta_(registro.morador,origem,meta,chave,contexto)
+    };
   }finally{
     lock.releaseLock();
   }
@@ -316,158 +460,192 @@ function moradoresAdminV1Situacao_(p,contexto){
 function moradoresAdminV1ValidarDadosMorador_(dados){
   if(!dados.nome)throw new Error('Informe o nome do morador.');
   if(!dados.nascimento)throw new Error('Informe uma data de nascimento válida.');
-  if(dados.cpf&&(!/^[0-9]{11}$/.test(dados.cpf)||!moradoresAdminV1CpfValido_(dados.cpf)))throw new Error('CPF inválido.');
-  if(dados.cns&&!/^[0-9]{15}$/.test(dados.cns))throw new Error('O CNS deve conter 15 números.');
-  if(!dados.cpf&&!dados.cns&&!dados.nomeMae)throw new Error('Morador sem CPF/CNS: informe ao menos o nome da mãe para reduzir risco de duplicidade.');
+  if(!dados.sexo)throw new Error('Informe o sexo do morador.');
+  if(!dados.endereco)throw new Error('Informe o endereço do morador.');
+  if(dados.cpf&&(!/^[0-9]{11}$/.test(dados.cpf)||!moradoresAdminV1CpfValido_(dados.cpf))){
+    throw new Error('CPF inválido.');
+  }
+  if(dados.cns&&!/^[0-9]{15}$/.test(dados.cns)){
+    throw new Error('O CNS deve conter 15 números.');
+  }
 }
 
 function moradoresAdminV1LocalizarFonte_(contexto){
   var planilhaId=moradoresAdminV1ResolverPlanilhaId_(contexto);
-  var ss=SpreadsheetApp.openById(planilhaId),sheets=ss.getSheets(),best=null;
+  var ss=SpreadsheetApp.openById(planilhaId);
+  var sheets=ss.getSheets();
+  var candidatos=[];
+
   sheets.forEach(function(sheet){
     if([TACS_MORADORES_ADMIN_V1.META_SHEET,TACS_MORADORES_ADMIN_V1.AUDIT_SHEET].indexOf(sheet.getName())!==-1)return;
-    var lastRow=sheet.getLastRow(),lastCol=sheet.getLastColumn();
-    if(lastRow<2||lastCol<2)return;
+    var lastRow=sheet.getLastRow();
+    var lastCol=sheet.getLastColumn();
+    if(lastRow<2||lastCol<20)return;
     var scan=sheet.getRange(1,1,Math.min(lastRow,TACS_MORADORES_ADMIN_V1.MAX_HEADER_ROWS),lastCol).getDisplayValues();
-    var header=moradoresAdminV1DetectarCabecalho_(scan);
-    if(!header)return;
-    var score=header.score+moradoresAdminV1PrioridadeAba_(sheet.getName());
-    if(!best||score>best.score)best={ss:ss,sheet:sheet,headerRow:header.row,map:moradoresAdminV1CompletarMapa_(header.map,lastCol),score:score};
+    for(var i=0;i<scan.length;i++){
+      var schema=moradoresAdminV1MapearSchemaReal_(scan[i]);
+      if(schema.ok){
+        candidatos.push({
+          ss:ss,sheet:sheet,headerRow:i,map:schema.map,
+          prioridade:moradoresAdminV1PrioridadeAba_(sheet.getName())
+        });
+        break;
+      }
+    }
   });
-  if(!best)throw new Error('Não foi possível localizar a tabela de moradores da área autorizada.');
-  return best;
-}
 
-function moradoresAdminV1DetectarCabecalho_(rows){
-  var best=null;
-  for(var i=0;i<rows.length;i++){
-    var map=moradoresAdminV1MapearCabecalhos_(rows[i]),score=0;
-    if(map.cpf>=0||map.cns>=0)score+=6;
-    if(map.nome>=0)score+=4;
-    if(map.nascimento>=0)score+=2;
-    if(map.localidade>=0)score+=1;
-    if(map.nomeMae>=0)score+=3;
-    if(map.nomePai>=0)score+=3;
-    if(!best||score>best.score)best={row:i,map:map,score:score};
+  if(!candidatos.length){
+    throw new Error('Não foi localizada uma aba com o schema oficial de 20 colunas de moradores. Nenhuma coluna será presumida.');
   }
-  return best&&best.score>=8?best:null;
+
+  candidatos.sort(function(a,b){return b.prioridade-a.prioridade;});
+  if(candidatos.length>1&&candidatos[0].prioridade===candidatos[1].prioridade){
+    throw new Error('Mais de uma aba possui o schema completo de moradores. Defina uma fonte única antes de continuar.');
+  }
+  return candidatos[0];
 }
 
-function moradoresAdminV1MapearCabecalhos_(headers){
-  return {
-    nome:moradoresAdminV1Coluna_(headers,['nome','nome completo','nome do morador','morador','nome da pessoa','usuario','usuário']),
-    nascimento:moradoresAdminV1Coluna_(headers,['data de nascimento','nascimento','data nascimento','dt nascimento','dn','data nasc']),
-    cpf:moradoresAdminV1Coluna_(headers,['cpf','numero do cpf','número do cpf','cpf do morador','documento cpf']),
-    cns:moradoresAdminV1Coluna_(headers,['cns','cartao nacional de saude','cartão nacional de saúde','cartao sus','cartão sus','numero do cns','número do cns','numero do cartao sus','número do cartão sus']),
-    localidade:moradoresAdminV1Coluna_(headers,['localidade','comunidade','endereco','endereço','endereco completo','endereço completo','onde mora','sitio','sítio','area','área','microarea','microárea']),
-    nomeMae:moradoresAdminV1Coluna_(headers,['nome da mae','nome da mãe','mae','mãe','nome mae','nome mãe','genitora','nome da genitora','filiacao mae','filiação mãe','filiacao materna','filiação materna','filiacao 1','filiação 1']),
-    nomePai:moradoresAdminV1Coluna_(headers,['nome do pai','pai','nome pai','genitor','nome do genitor','filiacao pai','filiação pai','filiacao paterna','filiação paterna','filiacao 2','filiação 2'])
-  };
-}
+function moradoresAdminV1MapearSchemaReal_(headers){
+  var porNome={};
+  var duplicados=[];
 
-function moradoresAdminV1Coluna_(headers,aliases){
-  var wanted=aliases.map(moradoresAdminV1NormalizarChave_);
   for(var i=0;i<headers.length;i++){
-    if(wanted.indexOf(moradoresAdminV1NormalizarChave_(headers[i]))!==-1)return i;
-  }
-  for(var c=0;c<headers.length;c++){
-    var key=moradoresAdminV1NormalizarChave_(headers[c]);
+    var key=moradoresAdminV1NormalizarChave_(headers[i]);
     if(!key)continue;
-    for(var a=0;a<wanted.length;a++){
-      if(wanted[a].length>=6&&(key.indexOf(wanted[a])!==-1||wanted[a].indexOf(key)!==-1))return c;
+    if(Object.prototype.hasOwnProperty.call(porNome,key)){
+      duplicados.push(key);
+    }else{
+      porNome[key]=i;
     }
   }
-  return -1;
-}
 
-function moradoresAdminV1CompletarMapa_(map,total){
-  var out={nome:map.nome,nascimento:map.nascimento,cpf:map.cpf,cns:map.cns,localidade:map.localidade,nomeMae:map.nomeMae,nomePai:map.nomePai};
-  if(total>=8){
-    if(out.nome<0)out.nome=0;
-    if(out.nascimento<0)out.nascimento=1;
-    if(out.cpf<0)out.cpf=2;
-    if(out.cns<0)out.cns=3;
-    if(out.localidade<0)out.localidade=4;
-    if(out.nomeMae<0)out.nomeMae=6;
-    if(out.nomePai<0)out.nomePai=7;
-  }
-  return out;
+  var spec={
+    idPortal:'IDPORTAL', id:'ID', cpf:'CPF', cns:'CNS', nome:'NOME',
+    nascimento:'DATANASCIMENTO', idade:'IDADE', sexo:'SEXO', endereco:'ENDERECO',
+    celular:'CELULAR', telefoneContato:'TELEFONECONTATO', microarea:'MICROAREA',
+    equipe:'EQUIPE', origem:'ORIGEM', ultimaAtualizacao:'ULTIMAATUALIZACAO',
+    status:'STATUS', consentimentoWhatsapp:'CONSENTIMENTOWHATSAPP',
+    dataConsentimento:'DATACONSENTIMENTO', dataCadastroPortal:'DATACADASTROPORTAL',
+    observacoes:'OBSERVACOES'
+  };
+
+  var map={};
+  var faltantes=[];
+  Object.keys(spec).forEach(function(campo){
+    var key=spec[campo];
+    if(!Object.prototype.hasOwnProperty.call(porNome,key)){
+      map[campo]=-1;
+      faltantes.push(key);
+    }else{
+      map[campo]=porNome[key];
+    }
+  });
+
+  return {
+    ok:faltantes.length===0&&duplicados.length===0,
+    map:map,
+    faltantes:faltantes,
+    duplicados:duplicados
+  };
 }
 
 function moradoresAdminV1PrioridadeAba_(name){
   var key=moradoresAdminV1NormalizarChave_(name);
-  if(key.indexOf('morador')!==-1)return 5;
-  if(key.indexOf('cadastro')!==-1)return 4;
-  if(key.indexOf('famil')!==-1)return 3;
-  if(key.indexOf('usuario')!==-1)return 2;
+  if(key==='moradores')return 100;
+  if(key.indexOf('morador')!==-1)return 50;
   return 0;
 }
 
 function moradoresAdminV1MontarMorador_(display,raw,map){
   return {
-    nome:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.nome)),
-    nascimento:moradoresAdminV1FormatarNascimento_(moradoresAdminV1Valor_(raw,map.nascimento),moradoresAdminV1Valor_(display,map.nascimento)),
+    idPortal:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.idPortal)),
+    id:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.id)),
     cpf:moradoresAdminV1Digitos_(moradoresAdminV1Valor_(display,map.cpf)),
     cns:moradoresAdminV1Digitos_(moradoresAdminV1Valor_(display,map.cns)),
-    localidade:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.localidade)),
-    nomeMae:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.nomeMae)),
-    nomePai:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.nomePai))
+    nome:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.nome)),
+    nascimento:moradoresAdminV1FormatarNascimento_(moradoresAdminV1Valor_(raw,map.nascimento),moradoresAdminV1Valor_(display,map.nascimento)),
+    idade:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.idade)),
+    sexo:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.sexo)),
+    endereco:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.endereco)),
+    celular:moradoresAdminV1Digitos_(moradoresAdminV1Valor_(display,map.celular)),
+    telefoneContato:moradoresAdminV1Digitos_(moradoresAdminV1Valor_(display,map.telefoneContato)),
+    microarea:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.microarea)),
+    equipe:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.equipe)),
+    origem:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.origem)),
+    ultimaAtualizacao:moradoresAdminV1Valor_(raw,map.ultimaAtualizacao)||moradoresAdminV1Valor_(display,map.ultimaAtualizacao),
+    status:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.status))||'ATIVO',
+    consentimentoWhatsapp:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.consentimentoWhatsapp))||'NÃO',
+    dataConsentimento:moradoresAdminV1Valor_(raw,map.dataConsentimento)||moradoresAdminV1Valor_(display,map.dataConsentimento),
+    dataCadastroPortal:moradoresAdminV1Valor_(raw,map.dataCadastroPortal)||moradoresAdminV1Valor_(display,map.dataCadastroPortal),
+    observacoes:moradoresAdminV1Texto_(moradoresAdminV1Valor_(display,map.observacoes))
   };
 }
 
-function moradoresAdminV1EscreverLinha_(ss,aba,row,dados){
-  var sheet=ss.getSheetByName(aba);
-  if(!sheet)throw new Error('A aba de origem não existe mais.');
-  var lastCol=sheet.getLastColumn();
-  var scan=sheet.getRange(1,1,Math.min(sheet.getLastRow(),TACS_MORADORES_ADMIN_V1.MAX_HEADER_ROWS),lastCol).getDisplayValues();
-  var header=moradoresAdminV1DetectarCabecalho_(scan);
-  if(!header)throw new Error('Cabeçalho de moradores não localizado.');
-  var map=moradoresAdminV1CompletarMapa_(header.map,lastCol);
-  if(row<=header.row+1||row>sheet.getLastRow())throw new Error('Linha de morador inválida.');
-  moradoresAdminV1SetCell_(sheet,row,map.nome,dados.nome);
-  moradoresAdminV1SetCell_(sheet,row,map.nascimento,moradoresAdminV1DataObjeto_(dados.nascimento),'dd/MM/yyyy');
-  moradoresAdminV1SetCell_(sheet,row,map.cpf,dados.cpf,'@');
-  moradoresAdminV1SetCell_(sheet,row,map.cns,dados.cns,'@');
-  moradoresAdminV1SetCell_(sheet,row,map.localidade,dados.localidade);
-  moradoresAdminV1SetCell_(sheet,row,map.nomeMae,dados.nomeMae);
-  moradoresAdminV1SetCell_(sheet,row,map.nomePai,dados.nomePai);
+function moradoresAdminV1EscreverLinha_(fonte,row,dados){
+  if(row<=fonte.headerRow+1||row>fonte.sheet.getLastRow()){
+    throw new Error('Linha de morador inválida.');
+  }
+  moradoresAdminV1EscreverCamposCidadao_(fonte.sheet,row,fonte.map,dados,false);
 }
 
-/**
- * Novo cadastro escreve somente nas colunas reconhecidas. Não reescreve a
- * linha inteira nem toca em colunas auxiliares desconhecidas da planilha.
- */
 function moradoresAdminV1AdicionarLinha_(fonte,dados){
-  var sheet=fonte.sheet;
-  var row=sheet.getLastRow()+1;
-  if(row>sheet.getMaxRows())sheet.insertRowsAfter(sheet.getMaxRows(),1);
-  moradoresAdminV1SetCell_(sheet,row,fonte.map.nome,dados.nome);
-  moradoresAdminV1SetCell_(sheet,row,fonte.map.nascimento,moradoresAdminV1DataObjeto_(dados.nascimento),'dd/MM/yyyy');
-  moradoresAdminV1SetCell_(sheet,row,fonte.map.cpf,dados.cpf,'@');
-  moradoresAdminV1SetCell_(sheet,row,fonte.map.cns,dados.cns,'@');
-  moradoresAdminV1SetCell_(sheet,row,fonte.map.localidade,dados.localidade);
-  moradoresAdminV1SetCell_(sheet,row,fonte.map.nomeMae,dados.nomeMae);
-  moradoresAdminV1SetCell_(sheet,row,fonte.map.nomePai,dados.nomePai);
-  return {aba:sheet.getName(),linha:row};
+  var row=fonte.sheet.getLastRow()+1;
+  if(row>fonte.sheet.getMaxRows())fonte.sheet.insertRowsAfter(fonte.sheet.getMaxRows(),1);
+  moradoresAdminV1EscreverCamposCidadao_(fonte.sheet,row,fonte.map,dados,true);
+  return {aba:fonte.sheet.getName(),linha:row};
+}
+
+function moradoresAdminV1EscreverCamposCidadao_(sheet,row,map,dados,novo){
+  if(novo){
+    moradoresAdminV1SetCell_(sheet,row,map.idPortal,dados.idPortal,'@');
+    moradoresAdminV1SetCell_(sheet,row,map.id,dados.id,'@');
+  }
+  moradoresAdminV1SetCell_(sheet,row,map.cpf,dados.cpf,'@');
+  moradoresAdminV1SetCell_(sheet,row,map.cns,dados.cns,'@');
+  moradoresAdminV1SetCell_(sheet,row,map.nome,dados.nome);
+  moradoresAdminV1SetCell_(sheet,row,map.nascimento,moradoresAdminV1DataObjeto_(dados.nascimento),'dd/MM/yyyy');
+  moradoresAdminV1SetCell_(sheet,row,map.idade,dados.idade);
+  moradoresAdminV1SetCell_(sheet,row,map.sexo,dados.sexo);
+  moradoresAdminV1SetCell_(sheet,row,map.endereco,dados.endereco);
+  moradoresAdminV1SetCell_(sheet,row,map.celular,dados.celular,'@');
+  moradoresAdminV1SetCell_(sheet,row,map.telefoneContato,dados.telefoneContato,'@');
+  moradoresAdminV1SetCell_(sheet,row,map.microarea,dados.microarea);
+  moradoresAdminV1SetCell_(sheet,row,map.equipe,dados.equipe);
+  if(novo)moradoresAdminV1SetCell_(sheet,row,map.origem,dados.origem);
+  moradoresAdminV1SetCell_(sheet,row,map.ultimaAtualizacao,dados.ultimaAtualizacao,'dd/MM/yyyy');
+  if(novo)moradoresAdminV1SetCell_(sheet,row,map.status,dados.status);
+  if(novo)moradoresAdminV1SetCell_(sheet,row,map.consentimentoWhatsapp,dados.consentimentoWhatsapp);
+  if(novo)moradoresAdminV1SetCell_(sheet,row,map.dataConsentimento,dados.dataConsentimento);
+  if(novo)moradoresAdminV1SetCell_(sheet,row,map.dataCadastroPortal,dados.dataCadastroPortal,'dd/MM/yyyy HH:mm');
+  moradoresAdminV1SetCell_(sheet,row,map.observacoes,dados.observacoes);
 }
 
 function moradoresAdminV1SetCell_(sheet,row,index,value,format){
-  if(index<0)return;
+  if(index<0)throw new Error('Tentativa de escrever em coluna não mapeada.');
   var cell=sheet.getRange(row,index+1);
-  cell.setValue(value);
+  cell.setValue(value==null?'':value);
   if(format)cell.setNumberFormat(format);
 }
 
 function moradoresAdminV1LerPorOrigem_(ss,aba,row){
   var sheet=ss.getSheetByName(aba);
-  if(!sheet||row<1||row>sheet.getLastRow()||[TACS_MORADORES_ADMIN_V1.META_SHEET,TACS_MORADORES_ADMIN_V1.AUDIT_SHEET].indexOf(aba)!==-1)return null;
+  if(!sheet||row<1||row>sheet.getLastRow()||[
+    TACS_MORADORES_ADMIN_V1.META_SHEET,TACS_MORADORES_ADMIN_V1.AUDIT_SHEET
+  ].indexOf(aba)!==-1)return null;
+
   var lastCol=sheet.getLastColumn();
   var scan=sheet.getRange(1,1,Math.min(sheet.getLastRow(),TACS_MORADORES_ADMIN_V1.MAX_HEADER_ROWS),lastCol).getDisplayValues();
-  var header=moradoresAdminV1DetectarCabecalho_(scan);
-  if(!header||row<=header.row+1)return null;
-  var map=moradoresAdminV1CompletarMapa_(header.map,lastCol);
+  var headerRow=-1;
+  var map=null;
+  for(var i=0;i<scan.length;i++){
+    var schema=moradoresAdminV1MapearSchemaReal_(scan[i]);
+    if(schema.ok){headerRow=i;map=schema.map;break;}
+  }
+  if(headerRow<0||row<=headerRow+1)return null;
+
   var range=sheet.getRange(row,1,1,lastCol);
-  var raw=range.getValues()[0],display=range.getDisplayValues()[0];
+  var raw=range.getValues()[0];
+  var display=range.getDisplayValues()[0];
   var morador=moradoresAdminV1MontarMorador_(display,raw,map);
   return morador.nome?{origem:{aba:aba,linha:row},morador:morador}:null;
 }
@@ -477,17 +655,27 @@ function moradoresAdminV1LocalizarTodosPorDocumento_(ss,cpf,cns){
   var out=[];
   ss.getSheets().forEach(function(sheet){
     if([TACS_MORADORES_ADMIN_V1.META_SHEET,TACS_MORADORES_ADMIN_V1.AUDIT_SHEET].indexOf(sheet.getName())!==-1)return;
-    var lastRow=sheet.getLastRow(),lastCol=sheet.getLastColumn();
-    if(lastRow<2||lastCol<2)return;
+    var lastRow=sheet.getLastRow();
+    var lastCol=sheet.getLastColumn();
+    if(lastRow<2||lastCol<20)return;
     var scan=sheet.getRange(1,1,Math.min(lastRow,TACS_MORADORES_ADMIN_V1.MAX_HEADER_ROWS),lastCol).getDisplayValues();
-    var header=moradoresAdminV1DetectarCabecalho_(scan);
-    if(!header)return;
-    var map=moradoresAdminV1CompletarMapa_(header.map,lastCol),count=lastRow-(header.row+1);
+    var headerRow=-1;
+    var map=null;
+    for(var h=0;h<scan.length;h++){
+      var schema=moradoresAdminV1MapearSchemaReal_(scan[h]);
+      if(schema.ok){headerRow=h;map=schema.map;break;}
+    }
+    if(headerRow<0)return;
+    var count=lastRow-(headerRow+1);
     if(count<=0)return;
-    var range=sheet.getRange(header.row+2,1,count,lastCol),raw=range.getValues(),display=range.getDisplayValues();
+    var range=sheet.getRange(headerRow+2,1,count,lastCol);
+    var raw=range.getValues();
+    var display=range.getDisplayValues();
     for(var i=0;i<display.length;i++){
       var morador=moradoresAdminV1MontarMorador_(display[i],raw[i],map);
-      if((cpf&&morador.cpf===cpf)||(cns&&morador.cns===cns))out.push({origem:{aba:sheet.getName(),linha:header.row+2+i},morador:morador});
+      if((cpf&&morador.cpf===cpf)||(cns&&morador.cns===cns)){
+        out.push({origem:{aba:sheet.getName(),linha:headerRow+2+i},morador:morador});
+      }
     }
   });
   return out;
@@ -503,22 +691,48 @@ function moradoresAdminV1LocalizarDuplicado_(ss,cpf,cns,ignore){
 function moradoresAdminV1LocalizarPorIdentidade_(fonte,dados){
   var target=moradoresAdminV1ChaveIdentidade_(dados);
   if(!target)return null;
-  var lastRow=fonte.sheet.getLastRow(),lastCol=fonte.sheet.getLastColumn();
+  var lastRow=fonte.sheet.getLastRow();
+  var lastCol=fonte.sheet.getLastColumn();
   if(lastRow<=fonte.headerRow+1)return null;
-  var range=fonte.sheet.getRange(fonte.headerRow+2,1,lastRow-(fonte.headerRow+1),lastCol),raw=range.getValues(),display=range.getDisplayValues();
+  var range=fonte.sheet.getRange(fonte.headerRow+2,1,lastRow-(fonte.headerRow+1),lastCol);
+  var raw=range.getValues();
+  var display=range.getDisplayValues();
   for(var i=0;i<display.length;i++){
     var morador=moradoresAdminV1MontarMorador_(display[i],raw[i],fonte.map);
-    if(moradoresAdminV1ChaveIdentidade_(morador)===target)return {origem:{aba:fonte.sheet.getName(),linha:fonte.headerRow+2+i},morador:morador};
+    if(moradoresAdminV1ChaveIdentidade_(morador)===target){
+      return {origem:{aba:fonte.sheet.getName(),linha:fonte.headerRow+2+i},morador:morador};
+    }
   }
   return null;
 }
 
-/** Cabeçalhos técnicos deliberadamente diferentes dos aliases da API pública antiga. */
-function moradoresAdminV1MetaHeaders_(){
-  return ['ID_INTERNO','CHAVE_INTERNA','ABA_ORIGEM','LINHA_ORIGEM','DOC_PRIMARIO','DOC_SECUNDARIO','SITUACAO_PORTAL','MOTIVO_SITUACAO','ESCOPO_A','ESCOPO_B','ESCOPO_C','CRIADO_EM','ATUALIZADO_EM','OPERADOR_INTERNO','ORIGEM_CADASTRO'];
+function moradoresAdminV1ProximoIdPortal_(fonte){
+  var lastRow=fonte.sheet.getLastRow();
+  if(lastRow<=fonte.headerRow+1)return 'TACS-000001';
+  var values=fonte.sheet.getRange(
+    fonte.headerRow+2,fonte.map.idPortal+1,lastRow-(fonte.headerRow+1),1
+  ).getDisplayValues();
+  var maior=0;
+  values.forEach(function(row){
+    var m=moradoresAdminV1Texto_(row[0]).match(/^TACS-(\d{1,12})$/i);
+    if(m)maior=Math.max(maior,Number(m[1]));
+  });
+  return 'TACS-'+('000000'+(maior+1)).slice(-6);
 }
+
+function moradoresAdminV1MetaHeaders_(){
+  return [
+    'ID_INTERNO','CHAVE_INTERNA','ABA_ORIGEM','LINHA_ORIGEM','DOC_PRIMARIO',
+    'DOC_SECUNDARIO','SITUACAO_PORTAL','MOTIVO_SITUACAO','ESCOPO_A','ESCOPO_B',
+    'ESCOPO_C','CRIADO_EM','ATUALIZADO_EM','OPERADOR_INTERNO','ORIGEM_CADASTRO'
+  ];
+}
+
 function moradoresAdminV1AuditHeaders_(){
-  return ['EVENTO_INTERNO','ID_REFERENCIA','TIPO_EVENTO','ESCOPO_A','ESCOPO_B','ESCOPO_C','OPERADOR_INTERNO','CAMPOS_EVENTO','REGISTRADO_EM'];
+  return [
+    'EVENTO_INTERNO','ID_REFERENCIA','TIPO_EVENTO','ESCOPO_A','ESCOPO_B',
+    'ESCOPO_C','OPERADOR_INTERNO','CAMPOS_EVENTO','REGISTRADO_EM'
+  ];
 }
 
 function moradoresAdminV1GarantirMeta_(ss){
@@ -529,7 +743,9 @@ function moradoresAdminV1GarantirMeta_(ss){
     sheet.getRange(1,1,1,headers.length).setValues([headers]);
   }else{
     var atual=sheet.getRange(1,1,1,headers.length).getDisplayValues()[0];
-    if(headers.some(function(v,i){return String(atual[i]||'')!==v;}))throw new Error('A aba de metadados existe com estrutura diferente. Nenhuma alteração foi feita.');
+    if(headers.some(function(v,i){return String(atual[i]||'')!==v;})){
+      throw new Error('A aba de metadados existe com estrutura diferente. Nenhuma alteração foi feita.');
+    }
   }
   sheet.setFrozenRows(1);
   return sheet;
@@ -543,7 +759,9 @@ function moradoresAdminV1GarantirAuditoria_(ss){
     sheet.getRange(1,1,1,headers.length).setValues([headers]);
   }else{
     var atual=sheet.getRange(1,1,1,headers.length).getDisplayValues()[0];
-    if(headers.some(function(v,i){return String(atual[i]||'')!==v;}))throw new Error('A aba de auditoria existe com estrutura diferente. Nenhuma alteração foi feita.');
+    if(headers.some(function(v,i){return String(atual[i]||'')!==v;})){
+      throw new Error('A aba de auditoria existe com estrutura diferente. Nenhuma alteração foi feita.');
+    }
   }
   sheet.setFrozenRows(1);
   return sheet;
@@ -558,7 +776,9 @@ function moradoresAdminV1LerMetaMap_(ss,contexto){
     var meta=moradoresAdminV1MetaDeLinha_(row,index+2);
     if(meta.areaId!==contexto.areaId)return;
     if(meta.chave)out.porChave[meta.chave]=meta;
-    if(meta.aba&&meta.linha>0)out.porOrigem[moradoresAdminV1ChaveOrigem_({aba:meta.aba,linha:meta.linha})]=meta;
+    if(meta.aba&&meta.linha>0){
+      out.porOrigem[moradoresAdminV1ChaveOrigem_({aba:meta.aba,linha:meta.linha})]=meta;
+    }
     if(meta.moradorId)out.porId[meta.moradorId]=meta;
   });
   return out;
@@ -594,7 +814,9 @@ function moradoresAdminV1EncontrarMeta_(ss,chave,origem,moradorId,contexto){
 }
 
 function moradoresAdminV1UpsertMeta_(ss,input,contexto){
-  var sheet=moradoresAdminV1GarantirMeta_(ss),map=moradoresAdminV1LerMetaMap_(ss,contexto),existing=null;
+  var sheet=moradoresAdminV1GarantirMeta_(ss);
+  var map=moradoresAdminV1LerMetaMap_(ss,contexto);
+  var existing=null;
   if(input.moradorId&&map.porId[input.moradorId])existing=map.porId[input.moradorId];
   else if(input.chaveAnterior&&map.porChave[input.chaveAnterior])existing=map.porChave[input.chaveAnterior];
   else if(input.chave&&map.porChave[input.chave])existing=map.porChave[input.chave];
@@ -602,26 +824,49 @@ function moradoresAdminV1UpsertMeta_(ss,input,contexto){
     var origemKey=moradoresAdminV1ChaveOrigem_(input.origem);
     if(origemKey&&map.porOrigem[origemKey])existing=map.porOrigem[origemKey];
   }
+
   var agora=new Date();
-  var moradorId=(existing&&existing.moradorId)||input.moradorId||('MOR-'+Utilities.getUuid().replace(/-/g,'').slice(0,16).toUpperCase());
+  var moradorId=(existing&&existing.moradorId)||input.moradorId||(
+    'MOR-'+Utilities.getUuid().replace(/-/g,'').slice(0,16).toUpperCase()
+  );
   var criadoEm=(existing&&existing.criadoEm)||agora;
-  var values=[moradorId,input.chave,input.origem.aba,input.origem.linha,input.dados.cpf||'',input.dados.cns||'',input.situacao||'ATIVO',input.motivo||'',contexto.agenteId,contexto.areaId,contexto.unidadeId,criadoEm,agora,contexto.operadorId,input.origemCadastro||'BASE_EXISTENTE'];
+  var values=[
+    moradorId,input.chave,input.origem.aba,input.origem.linha,
+    input.dados.cpf||'',input.dados.cns||'',input.situacao||'ATIVO',
+    input.motivo||'',contexto.agenteId,contexto.areaId,contexto.unidadeId,
+    criadoEm,agora,contexto.operadorId,input.origemCadastro||'BASE_EXISTENTE'
+  ];
   var row=existing&&existing.sheetRow?existing.sheetRow:sheet.getLastRow()+1;
   sheet.getRange(row,1,1,15).setValues([values]);
   sheet.getRange(row,12,1,2).setNumberFormat('dd/MM/yyyy HH:mm:ss');
-  return {moradorId:moradorId,chave:input.chave,aba:input.origem.aba,linha:input.origem.linha,situacao:input.situacao||'ATIVO',motivo:input.motivo||'',agenteId:contexto.agenteId,areaId:contexto.areaId,unidadeId:contexto.unidadeId,criadoEm:criadoEm,atualizadoEm:agora,operadorId:contexto.operadorId,origemCadastro:input.origemCadastro||'BASE_EXISTENTE'};
+  return {
+    moradorId:moradorId,chave:input.chave,aba:input.origem.aba,linha:input.origem.linha,
+    situacao:input.situacao||'ATIVO',motivo:input.motivo||'',agenteId:contexto.agenteId,
+    areaId:contexto.areaId,unidadeId:contexto.unidadeId,criadoEm:criadoEm,
+    atualizadoEm:agora,operadorId:contexto.operadorId,
+    origemCadastro:input.origemCadastro||'BASE_EXISTENTE'
+  };
 }
 
 function moradoresAdminV1Auditar_(ss,input,contexto){
-  var sheet=moradoresAdminV1GarantirAuditoria_(ss),agora=new Date();
-  sheet.appendRow(['EVT-'+Utilities.getUuid().replace(/-/g,'').slice(0,18).toUpperCase(),input.moradorId,input.acao,contexto.agenteId,contexto.areaId,contexto.unidadeId,contexto.operadorId,moradoresAdminV1Texto_(input.campos).slice(0,600),agora]);
+  var sheet=moradoresAdminV1GarantirAuditoria_(ss);
+  var agora=new Date();
+  sheet.appendRow([
+    'EVT-'+Utilities.getUuid().replace(/-/g,'').slice(0,18).toUpperCase(),
+    input.moradorId,input.acao,contexto.agenteId,contexto.areaId,
+    contexto.unidadeId,contexto.operadorId,
+    moradoresAdminV1Texto_(input.campos).slice(0,600),agora
+  ]);
   sheet.getRange(sheet.getLastRow(),9).setNumberFormat('dd/MM/yyyy HH:mm:ss');
 }
 
 function moradoresAdminV1CamposAlterados_(antes,depois){
   if(!antes)return 'NOVO_CADASTRO';
   var campos=[];
-  ['nome','nascimento','cpf','cns','localidade','nomeMae','nomePai'].forEach(function(k){
+  [
+    'cpf','cns','nome','nascimento','idade','sexo','endereco','celular',
+    'telefoneContato','microarea','equipe','observacoes'
+  ].forEach(function(k){
     if(moradoresAdminV1Texto_(antes[k])!==moradoresAdminV1Texto_(depois[k]))campos.push(k);
   });
   return campos.length?campos.join(','):'SEM_ALTERACAO_DE_CONTEUDO';
@@ -630,51 +875,109 @@ function moradoresAdminV1CamposAlterados_(antes,depois){
 function moradoresAdminV1ChaveRegistro_(morador){
   if(morador.cpf)return 'CPF:'+morador.cpf;
   if(morador.cns)return 'CNS:'+morador.cns;
+  if(morador.idPortal)return 'ID_PORTAL:'+morador.idPortal;
   return 'SEM_DOC:'+moradoresAdminV1Hash_(moradoresAdminV1ChaveIdentidade_(morador));
 }
+
 function moradoresAdminV1ChaveIdentidade_(morador){
-  return [moradoresAdminV1NormalizarBusca_(morador.nome),moradoresAdminV1DataBr_(morador.nascimento),moradoresAdminV1NormalizarBusca_(morador.nomeMae),moradoresAdminV1NormalizarBusca_(morador.localidade)].join('|');
+  return [
+    moradoresAdminV1NormalizarBusca_(morador.nome),
+    moradoresAdminV1DataBr_(morador.nascimento),
+    moradoresAdminV1NormalizarBusca_(morador.endereco)
+  ].join('|');
 }
+
 function moradoresAdminV1ChaveOrigem_(origem){
   if(!origem||!origem.aba||!Number(origem.linha||0))return '';
   return moradoresAdminV1Texto_(origem.aba)+'#'+Number(origem.linha);
 }
+
 function moradoresAdminV1ComMeta_(morador,origem,meta,chave,contexto){
-  return {moradorId:meta&&meta.moradorId||'',chave:chave,origemAba:origem.aba,origemLinha:origem.linha,nome:morador.nome,nascimento:morador.nascimento,cpf:morador.cpf,cns:morador.cns,localidade:morador.localidade,nomeMae:morador.nomeMae,nomePai:morador.nomePai,situacao:meta&&meta.situacao||'ATIVO',motivo:meta&&meta.motivo||'',agenteId:meta&&meta.agenteId||contexto.agenteId,areaId:meta&&meta.areaId||contexto.areaId,unidadeId:meta&&meta.unidadeId||contexto.unidadeId};
+  return {
+    moradorId:meta&&meta.moradorId||'',
+    chave:chave,
+    origemAba:origem.aba,
+    origemLinha:origem.linha,
+    idPortal:morador.idPortal,
+    id:morador.id,
+    cpf:morador.cpf,
+    cns:morador.cns,
+    nome:morador.nome,
+    nascimento:morador.nascimento,
+    idade:morador.idade,
+    sexo:morador.sexo,
+    endereco:morador.endereco,
+    celular:morador.celular,
+    telefoneContato:morador.telefoneContato,
+    microarea:morador.microarea,
+    equipe:morador.equipe,
+    origem:morador.origem,
+    ultimaAtualizacao:morador.ultimaAtualizacao,
+    status:morador.status,
+    consentimentoWhatsapp:morador.consentimentoWhatsapp,
+    dataConsentimento:morador.dataConsentimento,
+    dataCadastroPortal:morador.dataCadastroPortal,
+    observacoes:morador.observacoes,
+    agenteId:meta&&meta.agenteId||contexto.agenteId,
+    areaId:meta&&meta.areaId||contexto.areaId,
+    unidadeId:meta&&meta.unidadeId||contexto.unidadeId
+  };
 }
 
 function moradoresAdminV1EscritaHabilitada_(){
   return moradoresAdminV1FlagProperty_(TACS_MORADORES_ADMIN_V1.WRITES_PROPERTY);
 }
+
 function moradoresAdminV1SituacaoHabilitada_(){
   return moradoresAdminV1FlagProperty_(TACS_MORADORES_ADMIN_V1.STATUS_PROPERTY);
 }
+
 function moradoresAdminV1FlagProperty_(nome){
   var valor=String(PropertiesService.getScriptProperties().getProperty(nome)||'').trim().toUpperCase();
   return ['TRUE','1','SIM','YES','ATIVO','ATIVA'].indexOf(valor)!==-1;
 }
+
 function moradoresAdminV1ExigirEscrita_(){
-  if(!moradoresAdminV1EscritaHabilitada_())throw new Error('A escrita de moradores ainda está bloqueada pela etapa de estabilização.');
+  if(!moradoresAdminV1EscritaHabilitada_()){
+    throw new Error('A escrita de moradores ainda está bloqueada pela etapa de estabilização.');
+  }
 }
+
 function moradoresAdminV1ExigirSituacao_(){
   moradoresAdminV1ExigirEscrita_();
-  if(!moradoresAdminV1SituacaoHabilitada_())throw new Error('A mudança de situação ainda está bloqueada até o filtro do Portal do Morador ser validado.');
+  if(!moradoresAdminV1SituacaoHabilitada_()){
+    throw new Error('A mudança de situação ainda está bloqueada até o filtro do Portal do Morador ser validado.');
+  }
 }
 
 function moradoresAdminV1ValidarSessao_(p){
-  if(typeof profissionaisDinamicosV1ValidarSessao_==='function')return profissionaisDinamicosV1ValidarSessao_(p);
-  if(typeof tacsPushV1ValidarSessao_==='function')return tacsPushV1ValidarSessao_(p);
+  if(typeof profissionaisDinamicosV1ValidarSessao_==='function'){
+    return profissionaisDinamicosV1ValidarSessao_(p);
+  }
+  if(typeof tacsPushV1ValidarSessao_==='function'){
+    return tacsPushV1ValidarSessao_(p);
+  }
   throw new Error('Não foi possível validar a sessão administrativa. Entre novamente com o PIN.');
 }
 
 function moradoresAdminV1ValidarRequestId_(valor){
   var id=moradoresAdminV1Texto_(valor);
-  if(!/^[A-Za-z0-9_-]{8,160}$/.test(id))throw new Error('Identificador da operação de moradores inválido.');
+  if(!/^[A-Za-z0-9_-]{8,160}$/.test(id)){
+    throw new Error('Identificador da operação de moradores inválido.');
+  }
   return id;
 }
+
 function moradoresAdminV1GuardarResultado_(requestId,resultado){
-  try{CacheService.getScriptCache().put(TACS_MORADORES_ADMIN_V1.RESULT_PREFIX+requestId,JSON.stringify(resultado),TACS_MORADORES_ADMIN_V1.RESULT_SECONDS);}catch(erro){}
+  try{
+    CacheService.getScriptCache().put(
+      TACS_MORADORES_ADMIN_V1.RESULT_PREFIX+requestId,
+      JSON.stringify(resultado),
+      TACS_MORADORES_ADMIN_V1.RESULT_SECONDS
+    );
+  }catch(erro){}
 }
+
 function moradoresAdminV1LerResultado_(requestId){
   try{
     var texto=CacheService.getScriptCache().get(TACS_MORADORES_ADMIN_V1.RESULT_PREFIX+requestId);
@@ -686,63 +989,135 @@ function moradoresAdminV1LerResultado_(requestId){
 
 function moradoresAdminV1ResponderPost_(requestId,resultado){
   var mensagem={source:'admin-moradores-tacs-v1',requestId:requestId,result:resultado};
-  var html='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"></head><body><script>parent.postMessage('+JSON.stringify(mensagem).replace(/</g,'\\u003c')+',"*");<\/script></body></html>';
+  var html='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"></head><body><script>parent.postMessage('+
+    JSON.stringify(mensagem).replace(/</g,'\\u003c')+',"*");<\/script></body></html>';
   return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function moradoresAdminV1ResponderJson_(dados,callback){
-  var json=JSON.stringify(dados),cb=moradoresAdminV1Texto_(callback);
-  if(cb&&/^[A-Za-z_$][0-9A-Za-z_$.]{0,100}$/.test(cb))return ContentService.createTextOutput(cb+'('+json+');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+  var json=JSON.stringify(dados);
+  var cb=moradoresAdminV1Texto_(callback);
+  if(cb&&/^[A-Za-z_$][0-9A-Za-z_$.]{0,100}$/.test(cb)){
+    return ContentService.createTextOutput(cb+'('+json+');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
 
 function moradoresAdminV1ParsePayload_(text){
-  try{return JSON.parse(String(text||'{}'));}catch(erro){throw new Error('Dados enviados ao servidor são inválidos.');}
+  try{return JSON.parse(String(text||'{}'));}
+  catch(erro){throw new Error('Dados enviados ao servidor são inválidos.');}
 }
-function moradoresAdminV1Valor_(arr,index){return !arr||index<0||index>=arr.length?'':arr[index];}
-function moradoresAdminV1Texto_(valor){return String(valor==null?'':valor).replace(/\s+/g,' ').trim();}
-function moradoresAdminV1Digitos_(valor){return String(valor==null?'':valor).replace(/\D/g,'');}
+
+function moradoresAdminV1Valor_(arr,index){
+  return !arr||index<0||index>=arr.length?'':arr[index];
+}
+
+function moradoresAdminV1Texto_(valor){
+  return String(valor==null?'':valor).replace(/\s+/g,' ').trim();
+}
+
+function moradoresAdminV1Digitos_(valor){
+  return String(valor==null?'':valor).replace(/\D/g,'');
+}
+
 function moradoresAdminV1NormalizarChave_(valor){
-  var texto=String(valor==null?'':valor).toLowerCase();
+  var texto=String(valor==null?'':valor).toUpperCase();
   if(texto.normalize)texto=texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  return texto.replace(/[^a-z0-9]/g,'');
+  return texto.replace(/[^A-Z0-9]/g,'');
 }
+
 function moradoresAdminV1NormalizarBusca_(valor){
   var texto=String(valor==null?'':valor).toLowerCase();
   if(texto.normalize)texto=texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   return texto.replace(/[^a-z0-9]+/g,' ').trim();
 }
+
+function moradoresAdminV1NormalizarSexo_(valor){
+  var v=moradoresAdminV1Texto_(valor).toUpperCase();
+  if(['M','MASCULINO','HOMEM'].indexOf(v)!==-1)return 'Masculino';
+  if(['F','FEMININO','MULHER'].indexOf(v)!==-1)return 'Feminino';
+  if(['OUTRO','OUTROS'].indexOf(v)!==-1)return 'Outro';
+  return '';
+}
+
+function moradoresAdminV1NormalizarConsentimento_(valor){
+  var v=moradoresAdminV1Texto_(valor).toUpperCase();
+  if(['SIM','S','TRUE','1','YES'].indexOf(v)!==-1)return 'SIM';
+  if(['NAO','NÃO','N','FALSE','0','NO'].indexOf(v)!==-1)return 'NÃO';
+  return '';
+}
+
 function moradoresAdminV1DataBr_(valor){
-  var texto=moradoresAdminV1Texto_(valor),match=texto.match(/^(\d{2})[\/.\-](\d{2})[\/.\-](\d{4})$/);
+  if(Object.prototype.toString.call(valor)==='[object Date]'&&!isNaN(valor.getTime())){
+    return Utilities.formatDate(valor,TACS_MORADORES_ADMIN_V1.TIMEZONE,'dd/MM/yyyy');
+  }
+  var texto=moradoresAdminV1Texto_(valor);
+  var match=texto.match(/^(\d{2})[\/.\-](\d{2})[\/.\-](\d{4})$/);
   if(!match){
     var iso=texto.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if(iso)match=[texto,iso[3],iso[2],iso[1]];
   }
   if(!match)return '';
-  var dia=Number(match[1]),mes=Number(match[2]),ano=Number(match[3]),data=new Date(ano,mes-1,dia,12,0,0);
+  var dia=Number(match[1]);
+  var mes=Number(match[2]);
+  var ano=Number(match[3]);
+  var data=new Date(ano,mes-1,dia,12,0,0);
   if(data.getFullYear()!==ano||data.getMonth()!==mes-1||data.getDate()!==dia)return '';
   return ('0'+dia).slice(-2)+'/'+('0'+mes).slice(-2)+'/'+ano;
 }
+
 function moradoresAdminV1DataObjeto_(br){
   var partes=moradoresAdminV1DataBr_(br).split('/');
   if(partes.length!==3)return '';
   return new Date(Number(partes[2]),Number(partes[1])-1,Number(partes[0]),12,0,0);
 }
+
 function moradoresAdminV1FormatarNascimento_(raw,display){
-  if(Object.prototype.toString.call(raw)==='[object Date]'&&!isNaN(raw.getTime()))return Utilities.formatDate(raw,TACS_MORADORES_ADMIN_V1.TIMEZONE,'dd/MM/yyyy');
+  if(Object.prototype.toString.call(raw)==='[object Date]'&&!isNaN(raw.getTime())){
+    return Utilities.formatDate(raw,TACS_MORADORES_ADMIN_V1.TIMEZONE,'dd/MM/yyyy');
+  }
   return moradoresAdminV1DataBr_(display||raw)||moradoresAdminV1Texto_(display||raw);
 }
-function moradoresAdminV1Hash_(valor){
-  var bytes=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(valor),Utilities.Charset.UTF_8);
-  return bytes.map(function(byte){var n=byte<0?byte+256:byte;return ('0'+n.toString(16)).slice(-2);}).join('').slice(0,24);
+
+function moradoresAdminV1IdadeTexto_(nascimento,referencia){
+  var dataNasc=moradoresAdminV1DataObjeto_(nascimento);
+  if(Object.prototype.toString.call(dataNasc)!=='[object Date]'||isNaN(dataNasc.getTime()))return '';
+  var hoje=referencia instanceof Date?referencia:new Date();
+  var anos=hoje.getFullYear()-dataNasc.getFullYear();
+  var meses=hoje.getMonth()-dataNasc.getMonth();
+  if(hoje.getDate()<dataNasc.getDate())meses--;
+  if(meses<0){anos--;meses+=12;}
+  if(anos<0)return '';
+  if(anos===0){
+    if(meses===0){
+      var dias=Math.max(0,Math.floor((hoje.getTime()-dataNasc.getTime())/86400000));
+      return dias+' dia'+(dias===1?'':'s');
+    }
+    return meses+' '+(meses===1?'mês':'meses');
+  }
+  if(meses===0)return anos+' '+(anos===1?'ano':'anos');
+  return anos+' '+(anos===1?'ano':'anos')+' e '+meses+' '+(meses===1?'mês':'meses');
 }
+
+function moradoresAdminV1Hash_(valor){
+  var bytes=Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,String(valor),Utilities.Charset.UTF_8
+  );
+  return bytes.map(function(byte){
+    var n=byte<0?byte+256:byte;
+    return ('0'+n.toString(16)).slice(-2);
+  }).join('').slice(0,24);
+}
+
 function moradoresAdminV1MensagemErro_(erro){
   return moradoresAdminV1Texto_(erro&&erro.message?erro.message:erro||'Erro inesperado.').slice(0,500);
 }
+
 function moradoresAdminV1CpfValido_(cpf){
   var d=moradoresAdminV1Digitos_(cpf);
   if(!/^\d{11}$/.test(d)||/^(\d)\1{10}$/.test(d))return false;
-  var soma=0,i;
+  var soma=0;
+  var i;
   for(i=0;i<9;i++)soma+=Number(d.charAt(i))*(10-i);
   var primeiro=(soma*10)%11;
   if(primeiro===10)primeiro=0;
@@ -754,9 +1129,11 @@ function moradoresAdminV1CpfValido_(cpf){
   return segundo===Number(d.charAt(10));
 }
 
-/** Diagnóstico seguro: somente leitura, sem criação de abas. */
+/** Diagnóstico seguro: somente leitura e sem criação de abas. */
 function testarConfiguracaoMoradoresAdminPortalV1(){
-  var contexto=moradoresAdminV1ResolverContexto_({perfil:'ADMIN_GERAL'}),fonte=moradoresAdminV1LocalizarFonte_(contexto);
+  var contexto=moradoresAdminV1ResolverContexto_({perfil:'ADMIN_GERAL'});
+  var fonte=moradoresAdminV1LocalizarFonte_(contexto);
+  var m=fonte.map;
   var resultado={
     ok:true,
     versao:TACS_MORADORES_ADMIN_V1.VERSAO,
@@ -769,7 +1146,18 @@ function testarConfiguracaoMoradoresAdminPortalV1(){
     linhaCabecalho:fonte.headerRow+1,
     totalRegistros:Math.max(0,fonte.sheet.getLastRow()-(fonte.headerRow+1)),
     totalColunas:fonte.sheet.getLastColumn(),
-    colunasMapeadas:{nome:fonte.map.nome+1,nascimento:fonte.map.nascimento+1,cpf:fonte.map.cpf+1,cns:fonte.map.cns+1,localidade:fonte.map.localidade+1,nomeMae:fonte.map.nomeMae+1,nomePai:fonte.map.nomePai+1},
+    schemaValido:true,
+    modeloCadastro:'CIDADAO_INDIVIDUAL',
+    vinculoFamiliar:'CAMADA_SEPARADA_PLANEJADA',
+    colunasMapeadas:{
+      idPortal:m.idPortal+1,id:m.id+1,cpf:m.cpf+1,cns:m.cns+1,nome:m.nome+1,
+      nascimento:m.nascimento+1,idade:m.idade+1,sexo:m.sexo+1,endereco:m.endereco+1,
+      celular:m.celular+1,telefoneContato:m.telefoneContato+1,microarea:m.microarea+1,
+      equipe:m.equipe+1,origem:m.origem+1,ultimaAtualizacao:m.ultimaAtualizacao+1,
+      status:m.status+1,consentimentoWhatsapp:m.consentimentoWhatsapp+1,
+      dataConsentimento:m.dataConsentimento+1,dataCadastroPortal:m.dataCadastroPortal+1,
+      observacoes:m.observacoes+1
+    },
     metaExiste:Boolean(fonte.ss.getSheetByName(TACS_MORADORES_ADMIN_V1.META_SHEET)),
     auditoriaExiste:Boolean(fonte.ss.getSheetByName(TACS_MORADORES_ADMIN_V1.AUDIT_SHEET)),
     escritaHabilitada:moradoresAdminV1EscritaHabilitada_(),
@@ -782,18 +1170,22 @@ function testarConfiguracaoMoradoresAdminPortalV1(){
 }
 
 /**
- * Só executar depois do diagnóstico e da busca real passarem.
- * Prepara metadados/auditoria e libera apenas NOVO/EDITAR.
- * Situação continua bloqueada.
+ * Só executar depois de diagnóstico e busca real aprovados.
+ * Libera apenas NOVO/EDITAR; situação continua bloqueada.
  */
 function ativarEscritaMoradoresAdminPortalV1(){
   var teste=testarConfiguracaoMoradoresAdminPortalV1();
-  var contexto=moradoresAdminV1ResolverContexto_({perfil:'ADMIN_GERAL'}),fonte=moradoresAdminV1LocalizarFonte_(contexto);
+  var contexto=moradoresAdminV1ResolverContexto_({perfil:'ADMIN_GERAL'});
+  var fonte=moradoresAdminV1LocalizarFonte_(contexto);
   moradoresAdminV1GarantirMeta_(fonte.ss);
   moradoresAdminV1GarantirAuditoria_(fonte.ss);
   PropertiesService.getScriptProperties().setProperty(TACS_MORADORES_ADMIN_V1.WRITES_PROPERTY,'TRUE');
   PropertiesService.getScriptProperties().setProperty(TACS_MORADORES_ADMIN_V1.STATUS_PROPERTY,'FALSE');
-  return {ok:true,versao:teste.versao,message:'Escrita diária de moradores habilitada. Situação cadastral continua bloqueada.',situacaoContinuaBloqueada:true};
+  return {
+    ok:true,versao:teste.versao,
+    message:'Escrita diária de moradores habilitada. Situação cadastral continua bloqueada.',
+    situacaoContinuaBloqueada:true
+  };
 }
 
 function desativarEscritaMoradoresAdminPortalV1(){
