@@ -23,7 +23,7 @@ fetch(source,{cache:'no-store'})
     html=html.replace('<title>Painel Moradores V1 • Portal TACS</title>','<title>Painel Moradores V2 • Portal TACS</title>');
     html=html.replace('AMBIENTE ISOLADO • MORADORES','AMBIENTE ISOLADO • MORADORES V2');
     html=html.replace('FASE DE ESTABILIZAÇÃO: esta tela está em modo somente leitura. Login, status e busca são reais; NOVO/EDITAR permanecem bloqueados nesta primeira validação.','FASE DE ESTABILIZAÇÃO V2: comunicação revisada para iPhone. Login, status e busca são reais; NOVO/EDITAR permanecem bloqueados.');
-    html=html.replace('</body>','<script src="painel-moradores-transport-v2.js?v=20260809-transport-v2"><\\/script></body>');
+    html=html.replace('</body>','<script src="painel-moradores-transport-v2.js?v=20260809-transport-v2"><\/script></body>');
     document.open();
     document.write(html);
     document.close();
