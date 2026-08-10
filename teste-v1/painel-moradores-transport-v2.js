@@ -63,6 +63,41 @@ function validBirthDate(v){
   var date=new Date(year,month-1,day,12,0,0);
   return year>=1900&&date.getFullYear()===year&&date.getMonth()===month-1&&date.getDate()===day;
 }
+function recifeToday(){
+  var parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  var out={};
+  parts.forEach(function(part){if(part.type!=='literal')out[part.type]=Number(part.value)});
+  return {year:out.year,month:out.month,day:out.day};
+}
+function birthAgeText(v){
+  if(!validBirthDate(v))return '';
+  var match=String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  var birth={day:Number(match[1]),month:Number(match[2]),year:Number(match[3])};
+  var today=recifeToday();
+  var birthStamp=Date.UTC(birth.year,birth.month-1,birth.day);
+  var todayStamp=Date.UTC(today.year,today.month-1,today.day);
+  if(birthStamp>todayStamp)return '';
+  var years=today.year-birth.year;
+  var months=today.month-birth.month;
+  if(today.day<birth.day)months--;
+  if(months<0){years--;months+=12}
+  if(years===0&&months===0){
+    var days=Math.floor((todayStamp-birthStamp)/86400000);
+    return days+' dia'+(days===1?'':'s');
+  }
+  if(years===0)return months+' '+(months===1?'mês':'meses');
+  if(months===0)return years+' '+(years===1?'ano':'anos');
+  return years+' '+(years===1?'ano':'anos')+' e '+months+' '+(months===1?'mês':'meses');
+}
+function renderBirthAge(){
+  var input=el('birth');
+  var output=el('birthAge');
+  if(!input||!output)return;
+  var value=text(input.value);
+  var age=birthAgeText(value);
+  output.classList.toggle('invalid',Boolean(value.length===10&&!age));
+  output.textContent=age?'Idade: '+age:(value.length===10?'Data de nascimento inválida.':'Idade: —');
+}
 function normalize(v){
   var value=text(v).toUpperCase();
   if(value.normalize)value=value.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -414,6 +449,7 @@ function loadResident(item,flag){
   if(el('originRow'))el('originRow').value=text(item.origemLinha);
   if(el('name'))el('name').value=text(item.nome);
   if(el('birth'))el('birth').value=text(item.nascimento);
+  renderBirthAge();
   if(el('sex'))el('sex').value=text(item.sexo);
   if(el('cpf'))el('cpf').value=text(item.cpf);
   if(el('cns'))el('cns').value=text(item.cns);
@@ -452,6 +488,7 @@ function prepareNewResident(){
   if(el('originRow'))el('originRow').value='';
   if(el('name'))el('name').value='';
   if(el('birth'))el('birth').value='';
+  renderBirthAge();
   if(el('sex'))el('sex').selectedIndex=0;
   if(el('cpf'))el('cpf').value='';
   if(el('cns'))el('cns').value='';
@@ -784,6 +821,7 @@ function onTabCapture(event){
 function onBirthInput(event){
   if(!event.target||event.target.id!=='birth')return;
   event.target.value=formatBirthInput(event.target.value);
+  renderBirthAge();
 }
 
 function afterUiInteraction(event){
@@ -808,6 +846,7 @@ document.addEventListener('keydown',onSearchKeyCapture,true);
 document.addEventListener('input',onBirthInput,true);
 document.addEventListener('submit',onResidentSubmitCapture,true);
 document.addEventListener('click',afterUiInteraction,false);
+renderBirthAge();
 
 /* Pré-aquece a implantação sem autenticar nem escrever nada. */
 jsonp('admin_result',{requestId:'warmup_moradores_v2_'+Date.now()},function(){});
@@ -834,6 +873,6 @@ window.PortalTacsMoradoresTransportV2={
   showSearch:showSearch,
   prepareNewResident:prepareNewResident,
   consolidateGroup:consolidateGroup,
-  version:'3.3.1'
+  version:'3.3.2'
 };
 }());
