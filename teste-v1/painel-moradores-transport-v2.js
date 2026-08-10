@@ -261,7 +261,8 @@ function renderBase(r,message){
   if(el('countResidents'))el('countResidents').textContent=String(r.totalRegistros);
   if(el('schema'))el('schema').textContent=r.schemaValido?'20/20':'ERRO';
   if(el('write'))el('write').textContent=writesEnabled?'LIBERADO':'BLOQ.';
-  if(el('situation'))el('situation').textContent=situationEnabled?'LIBERADA':'BLOQ.';
+  if(el('consolidation'))el('consolidation').textContent=consolidationEnabled?'LIBERADA':'BLOQ.';
+  if(el('situation'))el('situation').textContent=situationEnabled?'LIBERADA':'PROTEGIDA';
   if(el('summary'))el('summary').classList.remove('hidden');
   if(el('content'))el('content').classList.remove('hidden');
   if(el('logout'))el('logout').disabled=false;
@@ -687,6 +688,6 @@ window.PortalTacsMoradoresTransportV2={
   renderSearchResults:renderSearchResults,
   loadResident:loadResident,
   consolidateGroup:consolidateGroup,
-  version:'3.0.0'
+  version:'3.1.0'
 };
 }());
