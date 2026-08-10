@@ -9,7 +9,20 @@ var device=localStorage.getItem(DEVICE_KEY)||'';
 var active=null;
 var writesEnabled=false;
 var situationEnabled=false;
+var consolidationEnabled=false;
 var currentSituation='ATIVO';
+var duplicateLock=false;
+var lastSearchQuery='';
+
+var COMPARISON_FIELDS=[
+  ['idPortal','ID Portal'],['id','ID original'],['cpf','CPF'],['cns','CNS'],
+  ['nome','Nome'],['nascimento','Nascimento'],['idade','Idade'],['sexo','Sexo'],
+  ['endereco','Endereço'],['celular','Celular'],['telefoneContato','Telefone de contato'],
+  ['microarea','Microárea'],['equipe','Equipe'],['origem','Origem'],
+  ['ultimaAtualizacao','Última atualização'],['status','Status'],
+  ['consentimentoWhatsapp','Consentimento WhatsApp'],['dataConsentimento','Data do consentimento'],
+  ['dataCadastroPortal','Data de cadastro no portal'],['observacoes','Observações']
+];
 
 if(!device){
   device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);
@@ -34,6 +47,16 @@ function cloneSession(extra){
   return out;
 }
 function digits(v){return String(v==null?'':v).replace(/\D/g,'')}
+function normalize(v){
+  var value=text(v).toUpperCase();
+  if(value.normalize)value=value.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return value.replace(/\s+/g,' ');
+}
+function escapeHtml(v){
+  return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]});
+}
+function itemKey(item){return text(item.idPortal)+'|'+text(item.origemAba)+'|'+text(item.origemLinha)}
+function itemLabel(item){return text(item.idPortal||item.moradorId||item.nome||'Cadastro sem ID')}
 
 function jsonp(action,extra,cb){
   var name='mrV2Cb'+Date.now()+Math.floor(Math.random()*100000);
@@ -166,12 +189,12 @@ function updateNote(){
   var note=document.querySelector('main > .note');
   if(!note)return;
   if(writesEnabled&&situationEnabled){
-    note.textContent='PAINEL DE MORADORES: cadastro, edição e situação cadastral estão liberados. Todas as alterações permanecem registradas em auditoria.';
+    note.textContent='PAINEL DE MORADORES: cadastro, edição, situação e consolidação de duplicidades estão liberados. Todas as alterações permanecem registradas em auditoria.';
     note.style.background='#e8f7ee';
     note.style.borderColor='#9ed6b2';
     note.style.color='#08723a';
   }else if(writesEnabled){
-    note.textContent='PAINEL DE MORADORES: novo cadastro e edição estão liberados. Situação cadastral permanece protegida pelo servidor até a liberação definitiva.';
+    note.textContent='PAINEL DE MORADORES: novo cadastro, edição e consolidação de duplicidades estão liberados. Situação cadastral permanece protegida pelo servidor.';
     note.style.background='#fff6dd';
     note.style.borderColor='#dfaa43';
     note.style.color='#704900';
@@ -209,8 +232,8 @@ function syncControls(){
   var save=el('save');
   var isEdit=Boolean(text(el('originRow')&&el('originRow').value));
   if(save){
-    save.disabled=!writesEnabled;
-    save.textContent=writesEnabled?(isEdit?'Salvar alterações':'Salvar novo morador'):(isEdit?'Salvar alterações — bloqueado':'Salvar morador — bloqueado');
+    save.disabled=!writesEnabled||duplicateLock;
+    save.textContent=duplicateLock?'Salvar bloqueado — duplicidade confirmada':(writesEnabled?(isEdit?'Salvar alterações':'Salvar novo morador'):(isEdit?'Salvar alterações — bloqueado':'Salvar morador — bloqueado'));
   }
   var lock=document.querySelector('#residentForm .lock');
   if(lock){
@@ -223,10 +246,10 @@ function syncControls(){
   var block=el('residentSituationBlock');
   if(block)block.classList.toggle('hidden',!isEdit);
   var situationButton=el('saveSituation');
-  if(situationButton)situationButton.disabled=!situationEnabled||!isEdit;
+  if(situationButton)situationButton.disabled=!situationEnabled||!isEdit||duplicateLock;
   var hint=el('situationHint');
   if(hint){
-    hint.textContent=!isEdit?'A situação é definida após o cadastro existir.':(situationEnabled?'Situação liberada pelo servidor.':'Situação ainda bloqueada pelo servidor.');
+    hint.textContent=!isEdit?'A situação é definida após o cadastro existir.':(duplicateLock?'Consolide a duplicidade antes de alterar este cadastro.':(situationEnabled?'Situação liberada pelo servidor.':'Situação ainda bloqueada pelo servidor.'));
   }
 }
 
@@ -234,6 +257,7 @@ function renderBase(r,message){
   if(!r||r.ok!==true){setStatus('loginStatus',text(r&&r.message||'Não foi possível carregar a base.'),'err');return false}
   writesEnabled=r.escritaHabilitada===true;
   situationEnabled=r.situacaoHabilitada===true;
+  consolidationEnabled=r.consolidacaoHabilitada===true;
   if(el('countResidents'))el('countResidents').textContent=String(r.totalRegistros);
   if(el('schema'))el('schema').textContent=r.schemaValido?'20/20':'ERRO';
   if(el('write'))el('write').textContent=writesEnabled?'LIBERADO':'BLOQ.';
@@ -266,6 +290,233 @@ function loginWithPin(pin){
     sessionStorage.setItem(TOKEN_KEY,token);
     setStatus('loginStatus','PIN validado. Conferindo a base de moradores…','warn');
     loadBase('PIN validado e base de moradores conferida.');
+  });
+}
+
+function confirmedDuplicatePair(a,b){
+  var cpfA=digits(a.cpf),cpfB=digits(b.cpf),cnsA=digits(a.cns),cnsB=digits(b.cns);
+  if((cpfA&&cpfB&&cpfA!==cpfB)||(cnsA&&cnsB&&cnsA!==cnsB))return false;
+  var cpfMatch=Boolean(cpfA&&cpfB&&cpfA===cpfB);
+  var cnsMatch=Boolean(cnsA&&cnsB&&cnsA===cnsB);
+  if(cpfMatch&&cnsMatch)return true;
+  return (cpfMatch||cnsMatch)&&normalize(a.nome)===normalize(b.nome)&&text(a.nascimento)===text(b.nascimento);
+}
+
+function classifyDuplicates(list){
+  var parent=list.map(function(_,i){return i});
+  function find(i){while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i]}return i}
+  function union(a,b){a=find(a);b=find(b);if(a!==b)parent[b]=a}
+  var i,j;
+  for(i=0;i<list.length;i++)for(j=i+1;j<list.length;j++)if(confirmedDuplicatePair(list[i],list[j]))union(i,j);
+  var buckets={};
+  for(i=0;i<list.length;i++){
+    var root=find(i);
+    (buckets[root]||(buckets[root]=[])).push(list[i]);
+  }
+  var confirmed=[],flags={};
+  Object.keys(buckets).forEach(function(k){
+    if(buckets[k].length<2)return;
+    confirmed.push(buckets[k]);
+    buckets[k].forEach(function(item){flags[itemKey(item)]='CONFIRMADA'});
+  });
+  var byNameBirth={};
+  list.forEach(function(item){
+    if(flags[itemKey(item)])return;
+    var key=normalize(item.nome)+'|'+text(item.nascimento);
+    (byNameBirth[key]||(byNameBirth[key]=[])).push(item);
+  });
+  Object.keys(byNameBirth).forEach(function(k){
+    if(byNameBirth[k].length<2)return;
+    byNameBirth[k].forEach(function(item){flags[itemKey(item)]='POSSIVEL'});
+  });
+  return {flags:flags,confirmedGroups:confirmed};
+}
+
+function residentSummary(item){
+  return '<strong>'+escapeHtml(item.nome)+'</strong>'+
+    '<div class="sub">'+escapeHtml(itemLabel(item))+' • CPF '+escapeHtml(item.cpf||'—')+' • CNS '+escapeHtml(item.cns||'—')+' • '+escapeHtml(item.nascimento||'—')+'</div>'+
+    '<span class="pill">'+escapeHtml(item.status||item.situacao||'ATIVO')+'</span>';
+}
+
+function loadResident(item,flag){
+  if(el('residentId'))el('residentId').value=text(item.moradorId);
+  if(el('originSheet'))el('originSheet').value=text(item.origemAba);
+  if(el('originRow'))el('originRow').value=text(item.origemLinha);
+  if(el('name'))el('name').value=text(item.nome);
+  if(el('birth'))el('birth').value=text(item.nascimento);
+  if(el('sex'))el('sex').value=text(item.sexo);
+  if(el('cpf'))el('cpf').value=text(item.cpf);
+  if(el('cns'))el('cns').value=text(item.cns);
+  if(el('address'))el('address').value=text(item.endereco);
+  if(el('cell'))el('cell').value=text(item.celular);
+  if(el('contact'))el('contact').value=text(item.telefoneContato);
+  if(el('microarea'))el('microarea').value=text(item.microarea)||'1';
+  if(el('team'))el('team').value=text(item.equipe)||'USF MATIAS CDS';
+  if(el('notes'))el('notes').value=text(item.observacoes);
+  if(el('formTitle'))el('formTitle').textContent='Editar morador • '+itemLabel(item);
+  if(el('formArea'))el('formArea').classList.remove('hidden');
+  if(el('searchArea'))el('searchArea').classList.add('hidden');
+  if(el('tabSearch'))el('tabSearch').classList.remove('active');
+  if(el('tabNew'))el('tabNew').classList.add('active');
+  currentSituation=text(item.status||item.situacao||'ATIVO').toUpperCase();
+  if(el('residentSituation'))el('residentSituation').value=currentSituation;
+  duplicateLock=flag==='CONFIRMADA';
+  setStatus('operationStatus',duplicateLock?'Duplicidade confirmada aberta somente para comparação. Escolha o registro principal no resultado da busca e consolide antes de editar.':'Cadastro carregado para conferência. Nenhuma alteração realizada.',duplicateLock?'warn':'ok');
+  syncControls();
+}
+
+function comparisonDetails(group){
+  var details=document.createElement('details');
+  details.style.marginTop='12px';
+  var summary=document.createElement('summary');
+  summary.textContent='Comparar os 20 campos antes de escolher o principal';
+  summary.style.fontWeight='900';
+  summary.style.cursor='pointer';
+  details.appendChild(summary);
+  var wrap=document.createElement('div');
+  wrap.style.overflowX='auto';
+  wrap.style.marginTop='10px';
+  var table=document.createElement('table');
+  table.style.width='100%';
+  table.style.borderCollapse='collapse';
+  table.style.minWidth=(220+group.length*210)+'px';
+  var head=document.createElement('tr');
+  ['Campo'].concat(group.map(itemLabel)).forEach(function(label){
+    var th=document.createElement('th');
+    th.textContent=label;
+    th.style.textAlign='left';th.style.padding='8px';th.style.borderBottom='2px solid #a9c0ca';
+    head.appendChild(th);
+  });
+  table.appendChild(head);
+  COMPARISON_FIELDS.forEach(function(spec){
+    var tr=document.createElement('tr');
+    var name=document.createElement('th');
+    name.textContent=spec[1];name.style.textAlign='left';name.style.padding='8px';name.style.borderBottom='1px solid #d8e3e8';
+    tr.appendChild(name);
+    group.forEach(function(item){
+      var td=document.createElement('td');
+      td.textContent=text(item[spec[0]])||'—';td.style.padding='8px';td.style.borderBottom='1px solid #d8e3e8';td.style.overflowWrap='anywhere';
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+  wrap.appendChild(table);details.appendChild(wrap);return details;
+}
+
+function consolidationPayload(principal,redundante){
+  return {
+    principal:{origemAba:text(principal.origemAba),origemLinha:Number(principal.origemLinha||0)},
+    redundante:{origemAba:text(redundante.origemAba),origemLinha:Number(redundante.origemLinha||0)},
+    principalMoradorId:text(principal.moradorId),
+    redundanteMoradorId:text(redundante.moradorId)
+  };
+}
+
+function consolidateGroup(principal,redundantes){
+  if(!consolidationEnabled){setStatus('operationStatus','A consolidação está bloqueada pelo servidor.','warn');return}
+  if(!redundantes.length)return;
+  var ids=redundantes.map(itemLabel).join(', ');
+  var confirmed=window.confirm('Confirmar consolidação?\n\nPrincipal preservado: '+itemLabel(principal)+'\nRegistro(s) redundante(s): '+ids+'\n\nA linha redundante não será apagada. Somente campos vazios do principal serão preenchidos; valores conflitantes permanecerão no principal e serão registrados na auditoria.');
+  if(!confirmed)return;
+  var index=0,totalFilled=[],totalConflicts=[];
+  duplicateLock=true;
+  function next(){
+    if(index>=redundantes.length){
+      duplicateLock=false;
+      var complement=totalFilled.length?' Campos preenchidos: '+Array.from(new Set(totalFilled)).join(', ')+'.':'';
+      var conflicts=totalConflicts.length?' Conflitos preservados no principal: '+Array.from(new Set(totalConflicts)).join(', ')+'.':'';
+      setStatus('operationStatus','Consolidação concluída sem apagar linhas.'+complement+conflicts,'ok');
+      loadBase();
+      setTimeout(function(){doSearch(lastSearchQuery)},300);
+      return;
+    }
+    var redundante=redundantes[index];
+    setStatus('operationStatus','Consolidando '+itemLabel(redundante)+' em '+itemLabel(principal)+'…','warn');
+    post('admin_morador_consolidar',cloneSession({payload:JSON.stringify(consolidationPayload(principal,redundante))}),'admin_moradores_result',function(r){
+      if(!r||r.ok!==true){duplicateLock=false;syncControls();setStatus('operationStatus',text(r&&r.message||'O servidor recusou a consolidação.'),'err');return}
+      if(r.principal&&typeof r.principal==='object')principal=r.principal;
+      totalFilled=totalFilled.concat(Array.isArray(r.camposPreenchidos)?r.camposPreenchidos:[]);
+      totalConflicts=totalConflicts.concat(Array.isArray(r.conflitosPreservadosNoPrincipal)?r.conflitosPreservadosNoPrincipal:[]);
+      index++;next();
+    });
+  }
+  next();
+}
+
+function confirmedGroupCard(group){
+  var card=document.createElement('div');
+  card.className='card';
+  card.style.borderColor='#d79a23';
+  card.style.background='#fff9e9';
+  var title=document.createElement('div');
+  title.className='status warn';
+  title.style.marginTop='0';
+  title.textContent='DUPLICIDADE CONFIRMADA: CPF ou CNS coincidente. Escolha abaixo qual ID será preservado como principal.';
+  card.appendChild(title);
+  var grid=document.createElement('div');
+  grid.style.display='grid';grid.style.gap='10px';grid.style.marginTop='12px';
+  group.forEach(function(item){
+    var option=document.createElement('div');
+    option.style.border='2px solid #c4d4db';option.style.borderRadius='15px';option.style.padding='12px';option.style.background='#fff';
+    var summary=document.createElement('div');summary.innerHTML=residentSummary(item);option.appendChild(summary);
+    var actions=document.createElement('div');actions.className='actions';
+    var open=document.createElement('button');open.type='button';open.className='btn gray';open.textContent='Abrir '+itemLabel(item)+' para conferir';open.dataset.duplicateAction='open';
+    open.addEventListener('click',function(){loadResident(item,'CONFIRMADA')});
+    var keep=document.createElement('button');keep.type='button';keep.className='btn green';keep.textContent='Manter '+itemLabel(item)+' como principal';keep.disabled=!consolidationEnabled;keep.dataset.duplicateAction='consolidate';
+    keep.addEventListener('click',function(){consolidateGroup(item,group.filter(function(other){return other!==item}))});
+    actions.appendChild(open);actions.appendChild(keep);option.appendChild(actions);grid.appendChild(option);
+  });
+  card.appendChild(grid);
+  card.appendChild(comparisonDetails(group));
+  if(!consolidationEnabled){var locked=document.createElement('p');locked.className='muted';locked.textContent='A comparação está disponível, mas a consolidação permanece bloqueada pelo servidor.';card.appendChild(locked)}
+  return card;
+}
+
+function ordinaryCard(item,flag){
+  var card=document.createElement('div');card.className='card';
+  var button=document.createElement('button');button.type='button';button.innerHTML=residentSummary(item);button.addEventListener('click',function(){loadResident(item,flag)});card.appendChild(button);
+  if(flag==='POSSIVEL'){
+    var warning=document.createElement('div');warning.className='status warn';warning.style.marginTop='10px';
+    warning.textContent='Possível duplicidade: mesmo nome e nascimento, mas sem documento coincidente suficiente para consolidação automática.';
+    card.appendChild(warning);
+  }
+  return card;
+}
+
+function renderSearchResults(list){
+  var root=el('results');
+  if(!root)return;
+  root.innerHTML='';
+  if(!list.length){root.innerHTML='<div class="card"><strong>Nenhum morador encontrado</strong></div>';setStatus('operationStatus','Busca concluída sem resultados.','ok');return}
+  var classified=classifyDuplicates(list),rendered={};
+  classified.confirmedGroups.forEach(function(group){
+    group.forEach(function(item){rendered[itemKey(item)]=true});
+    root.appendChild(confirmedGroupCard(group));
+  });
+  var possible=0;
+  list.forEach(function(item){
+    if(rendered[itemKey(item)])return;
+    var flag=classified.flags[itemKey(item)]||'';
+    if(flag==='POSSIVEL')possible++;
+    root.appendChild(ordinaryCard(item,flag));
+  });
+  if(classified.confirmedGroups.length)setStatus('operationStatus',classified.confirmedGroups.length+' grupo(s) de duplicidade confirmada. Compare os 20 campos e escolha o ID principal.','warn');
+  else if(possible)setStatus('operationStatus','Há cadastros com possível duplicidade que precisam de conferência.','warn');
+  else setStatus('operationStatus',list.length+' resultado(s) encontrado(s). Toque em um cadastro para conferir.','ok');
+}
+
+function doSearch(query){
+  var q=text(query!=null?query:(el('query')&&el('query').value));
+  if(q.length<2){setStatus('operationStatus','Digite pelo menos 2 caracteres.','err');return}
+  token=sessionStorage.getItem(TOKEN_KEY)||token||'';
+  if(!token){setStatus('operationStatus','Sessão administrativa ausente. Entre novamente com o PIN.','err');return}
+  lastSearchQuery=q;
+  duplicateLock=false;
+  syncControls();
+  setStatus('operationStatus','Buscando na base real…','warn');
+  post('admin_moradores_buscar',cloneSession({q:q}),'admin_moradores_result',function(r){
+    if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'Busca recusada.'),'err');return}
+    renderSearchResults(Array.isArray(r.resultados)?r.resultados:[]);
   });
 }
 
@@ -303,6 +554,7 @@ function validateResidentPayload(p){
 }
 
 function saveResident(){
+  if(duplicateLock){setStatus('operationStatus','Gravação bloqueada: consolide primeiro a duplicidade confirmada.','warn');return}
   if(!writesEnabled){setStatus('operationStatus','A gravação está bloqueada pelo servidor.','warn');return}
   var payload=collectResidentPayload();
   var error=validateResidentPayload(payload);
@@ -327,6 +579,7 @@ function saveResident(){
 }
 
 function saveSituation(){
+  if(duplicateLock){setStatus('operationStatus','Situação bloqueada: consolide primeiro a duplicidade confirmada.','warn');return}
   if(!situationEnabled){setStatus('operationStatus','A alteração de situação ainda está bloqueada pelo servidor.','warn');return}
   var origemAba=text(el('originSheet')&&el('originSheet').value);
   var origemLinha=text(el('originRow')&&el('originRow').value);
@@ -372,9 +625,27 @@ function onResidentSubmitCapture(event){
   saveResident();
 }
 
+function onSearchCapture(event){
+  var button=event.target&&event.target.closest?event.target.closest('#search'):null;
+  if(!button)return;
+  event.preventDefault();
+  event.stopPropagation();
+  if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+  doSearch();
+}
+
+function onSearchKeyCapture(event){
+  if(!event.target||event.target.id!=='query'||event.key!=='Enter')return;
+  event.preventDefault();
+  event.stopPropagation();
+  if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+  doSearch();
+}
+
 function afterUiInteraction(event){
   var target=event.target;
   if(!target)return;
+  if(target.closest&&target.closest('[data-duplicate-action]'))return;
   if(target.closest&&target.closest('#results .card button')){
     setTimeout(function(){
       var card=target.closest('#results .card');
@@ -384,10 +655,15 @@ function afterUiInteraction(event){
       syncControls();
     },0);
   }
-  if(target.id==='tabNew'||target.id==='tabSearch')setTimeout(syncControls,0);
+  if(target.id==='tabNew'||target.id==='tabSearch'){
+    duplicateLock=false;
+    setTimeout(syncControls,0);
+  }
 }
 
 document.addEventListener('click',onLoginCapture,true);
+document.addEventListener('click',onSearchCapture,true);
+document.addEventListener('keydown',onSearchKeyCapture,true);
 document.addEventListener('submit',onResidentSubmitCapture,true);
 document.addEventListener('click',afterUiInteraction,false);
 
@@ -406,6 +682,11 @@ window.PortalTacsMoradoresTransportV2={
   syncControls:syncControls,
   saveResident:saveResident,
   saveSituation:saveSituation,
-  version:'2.1.0'
+  search:doSearch,
+  classifyDuplicates:classifyDuplicates,
+  renderSearchResults:renderSearchResults,
+  loadResident:loadResident,
+  consolidateGroup:consolidateGroup,
+  version:'3.0.0'
 };
 }());
