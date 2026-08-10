@@ -195,9 +195,9 @@ function updateNote(){
     note.style.color='#08723a';
   }else if(writesEnabled){
     note.textContent='PAINEL DE MORADORES: novo cadastro, edição e consolidação de duplicidades estão liberados. Situação cadastral permanece protegida pelo servidor.';
-    note.style.background='#fff6dd';
-    note.style.borderColor='#dfaa43';
-    note.style.color='#704900';
+    note.style.background='#e7f3f7';
+    note.style.borderColor='#4f8da3';
+    note.style.color='#073a55';
   }
 }
 
@@ -357,12 +357,50 @@ function loadResident(item,flag){
   if(el('formTitle'))el('formTitle').textContent='Editar morador • '+itemLabel(item);
   if(el('formArea'))el('formArea').classList.remove('hidden');
   if(el('searchArea'))el('searchArea').classList.add('hidden');
-  if(el('tabSearch'))el('tabSearch').classList.remove('active');
-  if(el('tabNew'))el('tabNew').classList.add('active');
+  if(el('tabSearch'))el('tabSearch').classList.add('active');
+  if(el('tabNew'))el('tabNew').classList.remove('active');
   currentSituation=text(item.status||item.situacao||'ATIVO').toUpperCase();
   if(el('residentSituation'))el('residentSituation').value=currentSituation;
   duplicateLock=flag==='CONFIRMADA';
   setStatus('operationStatus',duplicateLock?'Duplicidade confirmada aberta somente para comparação. Escolha o registro principal no resultado da busca e consolide antes de editar.':'Cadastro carregado para conferência. Nenhuma alteração realizada.',duplicateLock?'warn':'ok');
+  syncControls();
+}
+
+function showSearch(){
+  duplicateLock=false;
+  if(el('tabSearch'))el('tabSearch').classList.add('active');
+  if(el('tabNew'))el('tabNew').classList.remove('active');
+  if(el('searchArea'))el('searchArea').classList.remove('hidden');
+  if(el('formArea'))el('formArea').classList.add('hidden');
+  setStatus('operationStatus','Busca reaberta. Nenhuma alteração do formulário foi salva.','ok');
+  syncControls();
+}
+
+function prepareNewResident(){
+  duplicateLock=false;
+  if(el('residentId'))el('residentId').value='';
+  if(el('originSheet'))el('originSheet').value='';
+  if(el('originRow'))el('originRow').value='';
+  if(el('name'))el('name').value='';
+  if(el('birth'))el('birth').value='';
+  if(el('sex'))el('sex').selectedIndex=0;
+  if(el('cpf'))el('cpf').value='';
+  if(el('cns'))el('cns').value='';
+  if(el('address'))el('address').value='';
+  if(el('cell'))el('cell').value='';
+  if(el('contact'))el('contact').value='';
+  if(el('microarea'))el('microarea').value='1';
+  if(el('team'))el('team').value='USF MATIAS CDS';
+  if(el('notes'))el('notes').value='';
+  if(el('residentSituation'))el('residentSituation').selectedIndex=0;
+  if(el('residentSituationReason'))el('residentSituationReason').value='';
+  if(el('formTitle'))el('formTitle').textContent='Novo morador';
+  if(el('tabSearch'))el('tabSearch').classList.remove('active');
+  if(el('tabNew'))el('tabNew').classList.add('active');
+  if(el('searchArea'))el('searchArea').classList.add('hidden');
+  if(el('formArea'))el('formArea').classList.remove('hidden');
+  currentSituation='ATIVO';
+  setStatus('operationStatus','Novo cadastro em branco. Você pode voltar à busca sem salvar.','ok');
   syncControls();
 }
 
@@ -643,6 +681,17 @@ function onSearchKeyCapture(event){
   doSearch();
 }
 
+function onTabCapture(event){
+  var target=event.target&&event.target.closest
+    ?event.target.closest('#tabSearch,#tabNew')
+    :null;
+  if(!target)return;
+  event.preventDefault();
+  event.stopPropagation();
+  if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+  if(target.id==='tabSearch')showSearch();else prepareNewResident();
+}
+
 function afterUiInteraction(event){
   var target=event.target;
   if(!target)return;
@@ -656,14 +705,11 @@ function afterUiInteraction(event){
       syncControls();
     },0);
   }
-  if(target.id==='tabNew'||target.id==='tabSearch'){
-    duplicateLock=false;
-    setTimeout(syncControls,0);
-  }
 }
 
 document.addEventListener('click',onLoginCapture,true);
 document.addEventListener('click',onSearchCapture,true);
+document.addEventListener('click',onTabCapture,true);
 document.addEventListener('keydown',onSearchKeyCapture,true);
 document.addEventListener('submit',onResidentSubmitCapture,true);
 document.addEventListener('click',afterUiInteraction,false);
@@ -687,7 +733,9 @@ window.PortalTacsMoradoresTransportV2={
   classifyDuplicates:classifyDuplicates,
   renderSearchResults:renderSearchResults,
   loadResident:loadResident,
+  showSearch:showSearch,
+  prepareNewResident:prepareNewResident,
   consolidateGroup:consolidateGroup,
-  version:'3.1.0'
+  version:'3.2.0'
 };
 }());
