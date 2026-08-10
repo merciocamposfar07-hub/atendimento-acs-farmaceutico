@@ -10,6 +10,7 @@ var active=null;
 var writesEnabled=false;
 var situationEnabled=false;
 var consolidationEnabled=false;
+var baseCheckPending=false;
 var currentSituation='ATIVO';
 var duplicateLock=false;
 var lastSearchQuery='';
@@ -201,6 +202,41 @@ function updateNote(){
   }
 }
 
+function setBaseLoading(loading){
+  baseCheckPending=Boolean(loading);
+  var searchButton=el('search');
+  if(searchButton){
+    searchButton.disabled=baseCheckPending;
+    searchButton.textContent=baseCheckPending?'Conferindo base…':'Buscar na base real';
+  }
+}
+
+function showAuthenticatedShell(message){
+  writesEnabled=false;
+  situationEnabled=false;
+  consolidationEnabled=false;
+  if(el('countResidents'))el('countResidents').textContent='…';
+  if(el('schema'))el('schema').textContent='…';
+  if(el('write'))el('write').textContent='AGUARDE';
+  if(el('consolidation'))el('consolidation').textContent='AGUARDE';
+  if(el('situation'))el('situation').textContent='AGUARDE';
+  if(el('summary'))el('summary').classList.remove('hidden');
+  if(el('content'))el('content').classList.remove('hidden');
+  if(el('logout'))el('logout').disabled=false;
+  ensureSituationUi();
+  setBaseLoading(true);
+  syncControls();
+  var note=document.querySelector('main > .note');
+  if(note){
+    note.textContent='PIN validado. O painel já foi aberto; dados da base e permissões estão sendo conferidos em segundo plano.';
+    note.style.background='#e7f3f7';
+    note.style.borderColor='#4f8da3';
+    note.style.color='#073a55';
+  }
+  setStatus('loginStatus',message||'PIN validado. Painel liberado; conferindo a base em segundo plano…','ok');
+  setStatus('operationStatus','Painel disponível. Aguarde apenas a conferência das permissões para gravar ou pesquisar.','warn');
+}
+
 function ensureSituationUi(){
   var form=el('residentForm');
   if(!form||el('residentSituationBlock'))return;
@@ -237,11 +273,11 @@ function syncControls(){
   }
   var lock=document.querySelector('#residentForm .lock');
   if(lock){
-    lock.textContent=writesEnabled?'Gravação habilitada pelo servidor. Confira os dados antes de salvar.':'Gravação bloqueada pelo servidor.';
-    lock.style.borderStyle=writesEnabled?'solid':'dashed';
-    lock.style.borderColor=writesEnabled?'#9ed6b2':'#d4a246';
-    lock.style.background=writesEnabled?'#e8f7ee':'#fff9e9';
-    lock.style.color=writesEnabled?'#08723a':'#704900';
+    lock.textContent=baseCheckPending?'Conferindo permissões em segundo plano…':(writesEnabled?'Gravação habilitada pelo servidor. Confira os dados antes de salvar.':'Gravação bloqueada pelo servidor.');
+    lock.style.borderStyle='solid';
+    lock.style.borderColor=baseCheckPending?'#4f8da3':(writesEnabled?'#9ed6b2':'#d4a246');
+    lock.style.background=baseCheckPending?'#e7f3f7':(writesEnabled?'#e8f7ee':'#fff9e9');
+    lock.style.color=baseCheckPending?'#073a55':(writesEnabled?'#08723a':'#704900');
   }
   var block=el('residentSituationBlock');
   if(block)block.classList.toggle('hidden',!isEdit);
@@ -254,7 +290,12 @@ function syncControls(){
 }
 
 function renderBase(r,message){
-  if(!r||r.ok!==true){setStatus('loginStatus',text(r&&r.message||'Não foi possível carregar a base.'),'err');return false}
+  if(!r||r.ok!==true){
+    setBaseLoading(false);
+    syncControls();
+    setStatus('loginStatus',text(r&&r.message||'Não foi possível carregar a base.'),'err');
+    return false;
+  }
   writesEnabled=r.escritaHabilitada===true;
   situationEnabled=r.situacaoHabilitada===true;
   consolidationEnabled=r.consolidacaoHabilitada===true;
@@ -267,14 +308,25 @@ function renderBase(r,message){
   if(el('content'))el('content').classList.remove('hidden');
   if(el('logout'))el('logout').disabled=false;
   ensureSituationUi();
+  setBaseLoading(false);
   updateNote();
   syncControls();
   setStatus('loginStatus',message||'Sessão validada e base conferida.','ok');
+  var operation=el('operationStatus');
+  if(
+    operation&&
+    text(operation.textContent).indexOf('conferência das permissões')!==-1
+  ){
+    setStatus('operationStatus','Base conferida. O painel está pronto para uso.','ok');
+  }
   return true;
 }
 
-function loadBase(message){
-  post('admin_moradores_status',session(),'admin_moradores_result',function(r){renderBase(r,message)});
+function loadBase(message,done){
+  post('admin_moradores_status',session(),'admin_moradores_result',function(r){
+    var ok=renderBase(r,message);
+    if(typeof done==='function')done(r,ok);
+  });
 }
 
 function loginWithPin(pin){
@@ -289,8 +341,10 @@ function loginWithPin(pin){
     }
     token=r.token;
     sessionStorage.setItem(TOKEN_KEY,token);
-    setStatus('loginStatus','PIN validado. Conferindo a base de moradores…','warn');
-    loadBase('PIN validado e base de moradores conferida.');
+    showAuthenticatedShell('PIN validado. Painel aberto imediatamente; conferindo a base em segundo plano…');
+    setTimeout(function(){
+      if(!active)loadBase('PIN validado e base de moradores conferida.');
+    },0);
   });
 }
 
@@ -464,9 +518,15 @@ function consolidateGroup(principal,redundantes){
       duplicateLock=false;
       var complement=totalFilled.length?' Campos preenchidos: '+Array.from(new Set(totalFilled)).join(', ')+'.':'';
       var conflicts=totalConflicts.length?' Conflitos preservados no principal: '+Array.from(new Set(totalConflicts)).join(', ')+'.':'';
-      setStatus('operationStatus','Consolidação concluída sem apagar linhas.'+complement+conflicts,'ok');
-      loadBase();
-      setTimeout(function(){doSearch(lastSearchQuery)},300);
+      var completionMessage='Consolidação concluída sem apagar linhas.'+complement+conflicts+' A lista e a contagem foram atualizadas automaticamente.';
+      setStatus('operationStatus',completionMessage,'ok');
+      loadBase(null,function(){
+        if(lastSearchQuery){
+          doSearch(lastSearchQuery,{successMessage:completionMessage});
+        }else{
+          setStatus('operationStatus',completionMessage,'ok');
+        }
+      });
       return;
     }
     var redundante=redundantes[index];
@@ -544,11 +604,16 @@ function renderSearchResults(list){
   else setStatus('operationStatus',list.length+' resultado(s) encontrado(s). Toque em um cadastro para conferir.','ok');
 }
 
-function doSearch(query){
+function doSearch(query,options){
+  options=options&&typeof options==='object'?options:{};
   var q=text(query!=null?query:(el('query')&&el('query').value));
   if(q.length<2){setStatus('operationStatus','Digite pelo menos 2 caracteres.','err');return}
   token=sessionStorage.getItem(TOKEN_KEY)||token||'';
   if(!token){setStatus('operationStatus','Sessão administrativa ausente. Entre novamente com o PIN.','err');return}
+  if(baseCheckPending){
+    setStatus('operationStatus','O painel já está aberto. Aguarde somente a conferência da base terminar.','warn');
+    return;
+  }
   lastSearchQuery=q;
   duplicateLock=false;
   syncControls();
@@ -556,6 +621,7 @@ function doSearch(query){
   post('admin_moradores_buscar',cloneSession({q:q}),'admin_moradores_result',function(r){
     if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'Busca recusada.'),'err');return}
     renderSearchResults(Array.isArray(r.resultados)?r.resultados:[]);
+    if(options.successMessage)setStatus('operationStatus',options.successMessage,'ok');
   });
 }
 
@@ -650,7 +716,13 @@ function onLoginCapture(event){
   if(event.stopImmediatePropagation)event.stopImmediatePropagation();
   var pin=text(el('pin')&&el('pin').value).replace(/\D/g,'');
   token=sessionStorage.getItem(TOKEN_KEY)||token||'';
-  if(token&&!pin){loadBase('Sessão existente validada e base conferida.');return}
+  if(token&&!pin){
+    showAuthenticatedShell('Sessão encontrada. Painel aberto; conferindo a base em segundo plano…');
+    setTimeout(function(){
+      if(!active)loadBase('Sessão existente validada e base conferida.');
+    },0);
+    return;
+  }
   if(!/^\d{4,8}$/.test(pin)){setStatus('loginStatus','Digite um PIN numérico de 4 a 8 dígitos.','err');return}
   loginWithPin(pin);
 }
@@ -718,14 +790,17 @@ document.addEventListener('click',afterUiInteraction,false);
 jsonp('admin_result',{requestId:'warmup_moradores_v2_'+Date.now()},function(){});
 
 if(token){
+  showAuthenticatedShell('Sessão administrativa encontrada. Painel aberto; conferindo a base em segundo plano…');
   setTimeout(function(){
     if(!active)loadBase('Sessão administrativa existente validada e base conferida.');
-  },350);
+  },100);
 }
 
 window.PortalTacsMoradoresTransportV2={
   post:post,
   loadBase:loadBase,
+  renderBase:renderBase,
+  showAuthenticatedShell:showAuthenticatedShell,
   syncControls:syncControls,
   saveResident:saveResident,
   saveSituation:saveSituation,
@@ -736,6 +811,6 @@ window.PortalTacsMoradoresTransportV2={
   showSearch:showSearch,
   prepareNewResident:prepareNewResident,
   consolidateGroup:consolidateGroup,
-  version:'3.2.0'
+  version:'3.3.0'
 };
 }());
