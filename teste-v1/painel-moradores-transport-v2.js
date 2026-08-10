@@ -48,6 +48,21 @@ function cloneSession(extra){
   return out;
 }
 function digits(v){return String(v==null?'':v).replace(/\D/g,'')}
+function formatBirthInput(v){
+  var d=digits(v).slice(0,8);
+  if(d.length>4)return d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4);
+  if(d.length>2)return d.slice(0,2)+'/'+d.slice(2);
+  return d;
+}
+function validBirthDate(v){
+  var match=String(v||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(!match)return false;
+  var day=Number(match[1]);
+  var month=Number(match[2]);
+  var year=Number(match[3]);
+  var date=new Date(year,month-1,day,12,0,0);
+  return year>=1900&&date.getFullYear()===year&&date.getMonth()===month-1&&date.getDate()===day;
+}
 function normalize(v){
   var value=text(v).toUpperCase();
   if(value.normalize)value=value.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -627,14 +642,16 @@ function doSearch(query,options){
 
 function collectResidentPayload(){
   var isEdit=Boolean(text(el('originRow')&&el('originRow').value));
+  var birth=formatBirthInput(el('birth')&&el('birth').value);
+  if(el('birth'))el('birth').value=birth;
   return {
     moradorId:text(el('residentId')&&el('residentId').value),
     origemAba:text(el('originSheet')&&el('originSheet').value),
     origemLinha:text(el('originRow')&&el('originRow').value),
     idPortal:text(el('residentId')&&el('residentId').value),
     nome:text(el('name')&&el('name').value),
-    nascimento:text(el('birth')&&el('birth').value),
-    dataNascimento:text(el('birth')&&el('birth').value),
+    nascimento:birth,
+    dataNascimento:birth,
     sexo:text(el('sex')&&el('sex').value),
     cpf:digits(el('cpf')&&el('cpf').value),
     cns:digits(el('cns')&&el('cns').value),
@@ -651,7 +668,7 @@ function collectResidentPayload(){
 
 function validateResidentPayload(p){
   if(!p.nome)return 'Informe o nome completo.';
-  if(!/^\d{2}\/\d{2}\/\d{4}$/.test(p.nascimento))return 'Informe a data de nascimento no formato DD/MM/AAAA.';
+  if(!validBirthDate(p.nascimento))return 'Informe uma data de nascimento válida no formato DD/MM/AAAA.';
   if(!p.sexo)return 'Selecione o sexo.';
   if(p.cpf&&p.cpf.length!==11)return 'O CPF deve conter 11 números.';
   if(p.cns&&p.cns.length!==15)return 'O CNS deve conter 15 números.';
@@ -764,6 +781,11 @@ function onTabCapture(event){
   if(target.id==='tabSearch')showSearch();else prepareNewResident();
 }
 
+function onBirthInput(event){
+  if(!event.target||event.target.id!=='birth')return;
+  event.target.value=formatBirthInput(event.target.value);
+}
+
 function afterUiInteraction(event){
   var target=event.target;
   if(!target)return;
@@ -783,6 +805,7 @@ document.addEventListener('click',onLoginCapture,true);
 document.addEventListener('click',onSearchCapture,true);
 document.addEventListener('click',onTabCapture,true);
 document.addEventListener('keydown',onSearchKeyCapture,true);
+document.addEventListener('input',onBirthInput,true);
 document.addEventListener('submit',onResidentSubmitCapture,true);
 document.addEventListener('click',afterUiInteraction,false);
 
@@ -811,6 +834,6 @@ window.PortalTacsMoradoresTransportV2={
   showSearch:showSearch,
   prepareNewResident:prepareNewResident,
   consolidateGroup:consolidateGroup,
-  version:'3.3.0'
+  version:'3.3.1'
 };
 }());
