@@ -1,0 +1,13 @@
+{
+  "name": "Administração de TACS e Áreas",
+  "short_name": "TACS e Áreas",
+  "start_url": "/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html",
+  "scope": "/atendimento-acs-farmaceutico/",
+  "display": "standalone",
+  "background_color": "#dfeef3",
+  "theme_color": "#073a55",
+  "icons": [
+    {"src":"/atendimento-acs-farmaceutico/icons/painel-tacs-areas-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"/atendimento-acs-farmaceutico/icons/painel-tacs-areas-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}

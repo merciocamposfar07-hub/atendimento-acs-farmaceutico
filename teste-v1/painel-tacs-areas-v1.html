@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#073a55">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<link rel="icon" type="image/svg+xml" href="../icons/painel-tacs-areas.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="../icons/painel-tacs-areas-180.png">
+<link rel="manifest" href="../manifest-tacs-areas.webmanifest">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<title>Administração de TACS e áreas • Portal TACS</title>
+<style>
+:root{--pet:#073a55;--pet2:#0b5878;--green:#148a46;--greenbg:#e8f7ee;--bg:#dfeef3;--text:#102d40;--muted:#536b78;--border:#8fb4c2;--red:#a52d2d;--redbg:#fff0f0;--amber:#805300;--amberbg:#fff6dd;--white:#fff}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}button,input,select,textarea{font:inherit}button{cursor:pointer}header{padding:calc(22px + env(safe-area-inset-top)) 20px 26px;background:linear-gradient(145deg,var(--pet),var(--pet2));color:#fff;border-bottom:4px solid #67c7a0}.seal{display:inline-block;border:2px solid #69c7e7;border-radius:999px;padding:7px 11px;color:#8df0b4;font-weight:950}h1{font-size:clamp(2rem,8vw,3rem);line-height:1.05;margin:16px 0 8px}header p{margin:0;font-size:1.06rem}main{width:min(950px,100%);margin:auto;padding:18px 14px 70px}.panel{background:#fff;border:2px solid var(--border);border-radius:23px;padding:17px;margin-bottom:16px;box-shadow:0 10px 25px rgba(7,58,85,.1)}h2{margin:0 0 11px;color:var(--pet);font-size:1.65rem}h3{margin:0 0 8px;color:var(--pet)}.muted{color:var(--muted)}label{display:block;margin:12px 0 6px;font-weight:850}.field{width:100%;min-height:54px;border:2px solid #a9c0ca;border-radius:15px;background:#fff;padding:11px 13px;color:var(--text)}textarea.field{min-height:90px}.field:focus{outline:3px solid rgba(11,88,120,.16);border-color:var(--pet2)}.actions{display:grid;gap:9px;margin-top:14px}.btn{min-height:56px;border:0;border-radius:16px;padding:13px 15px;background:var(--pet);color:#fff;font-weight:900}.btn.green{background:var(--green)}.btn.gray{background:#537383}.btn.red{background:#972f2f}.btn:disabled{opacity:.45;cursor:not-allowed}.status{margin-top:12px;border:2px solid #a9c0ca;border-radius:15px;padding:13px;background:#edf6f9;font-weight:800;overflow-wrap:anywhere}.status.ok{border-color:#9ed6b2;background:var(--greenbg);color:#08723a}.status.err{border-color:#d88a8a;background:var(--redbg);color:var(--red)}.status.warn{border-color:#e1aa3f;background:var(--amberbg);color:var(--amber)}.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}.tab{min-width:0;min-height:52px;border:2px solid #6f9bab;border-radius:15px;background:#e8f3f7;color:var(--pet);font-weight:900;padding:9px;overflow-wrap:anywhere}.tab.active{background:var(--pet);color:#fff}.hidden{display:none!important}.grid{display:grid;grid-template-columns:1fr;gap:0}.check{display:flex;gap:10px;align-items:center;border:2px solid #cbd9df;border-radius:14px;padding:11px;margin-top:11px;font-weight:800}.check input{width:23px;height:23px}.list{display:grid;gap:11px;margin-top:14px}.card{border:2px solid #a9c0ca;border-radius:18px;padding:14px;background:#fbfdfe}.card strong{display:block;font-size:1.12rem}.sub{color:var(--muted);font-weight:700;font-size:.92rem;overflow-wrap:anywhere}.pill{display:inline-block;margin-top:7px;border-radius:999px;padding:5px 9px;background:var(--greenbg);color:#08723a;font-weight:900;font-size:.82rem}.pill.off{background:var(--redbg);color:var(--red)}.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:13px}.number{min-width:0;border:2px solid #0b5878;border-radius:17px;padding:12px;background:linear-gradient(145deg,var(--pet),var(--pet2));color:#fff;text-align:center}.number strong{display:block;font-size:1.5rem;overflow-wrap:anywhere}.number span{font-size:.8rem;font-weight:800;color:#dceff5}.mapping,.permission-grid{display:grid;grid-template-columns:1fr;gap:8px}.permission-grid{margin-top:8px}.maprow{border:2px solid #c9d9df;border-radius:13px;padding:10px;background:#f8fbfc}.maprow label{margin:0 0 5px}.tablewrap{overflow:auto;margin-top:12px;border:2px solid #cbd9df;border-radius:15px}table{width:100%;border-collapse:collapse;min-width:760px}th,td{padding:9px;border-bottom:1px solid #dce6ea;text-align:left;vertical-align:top;font-size:.9rem}th{background:#e8f3f7;color:var(--pet)}.bridge{position:fixed!important;left:-10000px!important;top:-10000px!important;width:2px!important;height:2px!important;border:0!important;opacity:.01!important}footer{background:var(--pet);color:#fff;text-align:center;padding:24px 18px calc(24px + env(safe-area-inset-bottom))}
+@media(min-width:680px){.actions.two{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr 1fr;gap:0 13px}.wide{grid-column:1/-1}.tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.summary{grid-template-columns:repeat(4,minmax(0,1fr))}.mapping{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header><span class="seal">GESTÃO TERRITORIAL • ACESSO PROTEGIDO</span><h1>TACS, áreas e moradores</h1><p>Cadastro dos agentes, fontes isoladas e importação CSV.</p></header>
+<main>
+<section id="loginPanel" class="panel">
+  <h2>Entrar</h2>
+  <div class="tabs"><button id="loginAdminTab" class="tab active" type="button">Administrador geral</button><button id="loginTacsTab" class="tab" type="button">TACS da área</button></div>
+  <div id="adminLogin"><label for="adminPin">PIN administrativo</label><input id="adminPin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="actions"><button id="adminLoginButton" class="btn" type="button">Entrar como administrador</button></div></div>
+  <div id="tacsLogin" class="hidden"><label for="tacsCnsLogin">CNS profissional</label><input id="tacsCnsLogin" class="field" inputmode="numeric" maxlength="18"><label for="tacsPinLogin">PIN individual</label><input id="tacsPinLogin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="actions"><button id="tacsLoginButton" class="btn" type="button">Entrar na minha área</button></div></div>
+  <div class="actions"><button id="logoutButton" class="btn red" type="button" disabled>Encerrar sessão</button></div>
+  <div id="loginStatus" class="status">Aguardando acesso.</div>
+</section>
+
+<section id="dashboard" class="panel hidden">
+  <h2>Gestão territorial</h2>
+  <div id="summary" class="summary"><div class="number"><strong id="tacsCount">0</strong><span>TACS</span></div><div class="number"><strong id="areasCount">0</strong><span>Áreas</span></div><div class="number"><strong id="activeAreasCount">0</strong><span>Áreas ativas</span></div><div class="number"><strong id="profileLabel">—</strong><span>Perfil</span></div></div>
+  <div class="tabs"><button class="tab sectionTab active" data-section="tacsSection" type="button">TACS</button><button class="tab sectionTab" data-section="areasSection" type="button">Áreas</button><button class="tab sectionTab" data-section="csvSection" type="button">Importar CSV</button></div>
+  <div id="operationStatus" class="status">Dados carregados. Nenhuma alteração realizada.</div>
+
+  <div id="tacsSection" class="section">
+    <div id="tacsAdminActions" class="actions"><button id="newTacsButton" class="btn green" type="button">Cadastrar novo TACS</button></div>
+    <form id="tacsForm" class="card hidden" autocomplete="off">
+      <input id="tacsId" type="hidden"><h3 id="tacsFormTitle">Novo TACS</h3>
+      <div class="grid"><div class="wide"><label for="tacsName">Nome completo</label><input id="tacsName" class="field" maxlength="180" required></div><div><label for="tacsCns">CNS profissional</label><input id="tacsCns" class="field" inputmode="numeric" maxlength="18" required></div><div><label for="tacsCpf">CPF</label><input id="tacsCpf" class="field" inputmode="numeric" maxlength="14"></div><div><label for="tacsRegistration">Matrícula</label><input id="tacsRegistration" class="field"></div><div><label for="tacsPhone">Telefone</label><input id="tacsPhone" class="field" inputmode="tel"></div><div><label for="tacsEmail">E-mail</label><input id="tacsEmail" class="field" type="email"></div><div><label for="tacsArea">Área</label><input id="tacsArea" class="field"></div><div><label for="tacsUnit">Unidade</label><input id="tacsUnit" class="field"></div><div><label for="tacsMicroarea">Microárea</label><input id="tacsMicroarea" class="field"></div><div><label for="tacsPin">Novo PIN individual</label><input id="tacsPin" class="field" type="password" inputmode="numeric" maxlength="8"><small class="muted">Na edição, deixe vazio para manter o PIN atual.</small></div></div>
+      <strong>Permissões do painel de moradores</strong>
+      <div class="permission-grid"><label class="check"><input id="permRead" type="checkbox"> Buscar e consultar moradores</label><label class="check"><input id="permEdit" type="checkbox"> Criar e editar cadastros</label><label class="check"><input id="permStatus" type="checkbox"> Alterar situação cadastral</label><label class="check"><input id="permCsv" type="checkbox"> Importar CSV da área</label></div>
+      <label class="check"><input id="tacsActive" type="checkbox"> Cadastro e acesso ativos</label>
+      <div class="actions two"><button class="btn green" type="submit">Salvar cadastro completo</button><button id="cancelTacsButton" class="btn gray" type="button">Cancelar</button></div>
+    </form>
+    <div id="tacsList" class="list"></div>
+  </div>
+
+  <div id="areasSection" class="section hidden">
+    <div id="areasAdminActions" class="actions"><button id="newAreaButton" class="btn green" type="button">Cadastrar nova área</button></div>
+    <form id="areaForm" class="card hidden" autocomplete="off">
+      <input id="areaId" type="hidden"><h3 id="areaFormTitle">Nova área</h3>
+      <div class="grid"><div class="wide"><label for="areaName">Nome da área/localidade</label><input id="areaName" class="field" required></div><div><label for="areaUnitId">ID da unidade</label><input id="areaUnitId" class="field" required></div><div><label for="areaUnitName">Nome da unidade de saúde</label><input id="areaUnitName" class="field" required></div><div><label for="areaTacsId">TACS responsável</label><select id="areaTacsId" class="field" required></select></div><div><label for="areaMicroarea">Microárea padrão</label><input id="areaMicroarea" class="field" value="1"></div><div class="wide"><label for="areaTeam">Equipe</label><input id="areaTeam" class="field"></div><div class="wide"><label for="areaSpreadsheet">Link ou ID da planilha de moradores</label><input id="areaSpreadsheet" class="field"></div></div>
+      <label class="check"><input id="areaCreateSource" type="checkbox"> Criar automaticamente uma nova planilha com schema 20/20</label>
+      <label class="check"><input id="areaDocumentLookup" type="checkbox" checked> Permitir localização automática por CPF/CNS</label>
+      <label class="check"><input id="areaActive" type="checkbox"> Ativar a área depois de validar TACS, CNS, unidade e fonte</label>
+      <div class="actions two"><button class="btn green" type="submit">Salvar e validar área</button><button id="cancelAreaButton" class="btn gray" type="button">Cancelar</button></div>
+    </form>
+    <div id="areasList" class="list"></div>
+  </div>
+
+  <div id="csvSection" class="section hidden">
+    <h3>Importar moradores por CSV</h3><p class="muted">A prévia não grava nada. Conflitos e duplicidades ficam ignorados até você corrigir o arquivo e gerar outra prévia.</p>
+    <label for="csvArea">Área de destino</label><select id="csvArea" class="field"></select>
+    <label for="csvFile">Arquivo CSV</label><input id="csvFile" class="field" type="file" accept=".csv,text/csv">
+    <div id="mappingBox" class="hidden"><h3>Confirmar colunas</h3><div id="mappingFields" class="mapping"></div><div class="actions"><button id="previewCsvButton" class="btn" type="button">Gerar prévia no servidor</button></div></div>
+    <div id="csvPreview" class="hidden"><div id="csvSummary" class="summary"></div><div id="csvRows" class="tablewrap"></div><div class="actions"><button id="importCsvButton" class="btn green" type="button">Confirmar importação selecionada</button></div></div>
+    <h3 style="margin-top:22px">Últimos lotes</h3><div id="batchList" class="list"></div>
+  </div>
+</section>
+</main>
+<footer>Portal TACS • Administração de TACS, áreas e importações</footer>
+<script src="painel-tacs-areas-v1.js?v=20260811-territorio-v2"></script>
+</body>
+</html>

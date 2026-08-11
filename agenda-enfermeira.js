@@ -933,7 +933,7 @@
     box.className = 'notification-offer';
     box.innerHTML =
       '<h3>🔔 Receber recados e avisos da Unidade</h3>' +
-      '<p>Ative para ser avisado quando um novo recado, campanha ou alteração de agenda for publicado no Portal TACS.</p>' +
+      '<p>Ative para ser avisado sempre que um recado, campanha ou alteração de agenda for publicado ou republicado no Portal TACS.</p>' +
       '<p class="notification-status" id="notificationStatus">Verificando este aparelho...</p>' +
       '<button type="button" id="notificationButton">Configurar recebimento de avisos</button>' +
       '<p class="notification-help" id="notificationHelp"></p>';
@@ -972,7 +972,32 @@
           allowLocalhostAsSecureOrigin: false
         });
 
+        function areaAtualDaUnidade() {
+          var morador = window.TACS_MORADOR_ATUAL;
+          var area = String(morador && morador.areaId || 'JAPARANDUBA')
+            .toUpperCase()
+            .replace(/[^A-Z0-9_-]/g, '');
+          return area || 'JAPARANDUBA';
+        }
+
+        async function marcarAreaDaUnidade(areaInformada) {
+          var area = String(areaInformada || areaAtualDaUnidade())
+            .toUpperCase()
+            .replace(/[^A-Z0-9_-]/g, '');
+          if (OneSignal.User && typeof OneSignal.User.addTag === 'function') {
+            await OneSignal.User.addTag('area_tacs', area || 'JAPARANDUBA');
+          }
+        }
+
+        window.PortalTacsMarcarAreaNotificacao = marcarAreaDaUnidade;
+        document.addEventListener('tacs:morador', function (event) {
+          var morador = event && event.detail;
+          if (!OneSignal.Notifications.permission || !morador || !morador.areaId) return;
+          marcarAreaDaUnidade(morador.areaId).catch(function () {});
+        });
+
         if (OneSignal.Notifications.permission) {
+          await marcarAreaDaUnidade();
           status.textContent = 'Avisos ativados neste aparelho.';
           button.textContent = 'Avisos ativados';
           button.disabled = true;
@@ -992,6 +1017,7 @@
           try {
             await OneSignal.Notifications.requestPermission();
             if (OneSignal.Notifications.permission) {
+              await marcarAreaDaUnidade();
               status.textContent = 'Avisos ativados neste aparelho.';
               button.textContent = 'Avisos ativados';
               help.textContent =
@@ -1067,4 +1093,3 @@
     install();
   }
 }());
-

@@ -3,8 +3,11 @@
 
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var TOKEN_KEY='portalTacsAdminTokenV1';
+var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
 var token=sessionStorage.getItem(TOKEN_KEY)||'';
+var territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'';
+var accessMode=territoryToken?'tacs':(token?'admin':'');
 var device=localStorage.getItem(DEVICE_KEY)||'';
 var active=null;
 var writesEnabled=false;
@@ -13,7 +16,11 @@ var consolidationEnabled=false;
 var baseCheckPending=false;
 var currentSituation='ATIVO';
 var duplicateLock=false;
+var duplicateEditMode=false;
 var lastSearchQuery='';
+var selectedAreaId='';
+var availableAreas=[];
+var statusActivationAttempted=false;
 var backendVersion='';
 
 var COMPARISON_FIELDS=[
@@ -42,7 +49,13 @@ function setStatus(id,msg,type){
 function requestId(action){
   return 'morv2_'+String(action||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
 }
-function session(){return{token:token,dispositivo:device}}
+function session(){
+  var out={dispositivo:device};
+  if(accessMode==='tacs'&&territoryToken)out.territorioToken=territoryToken;
+  else out.token=token;
+  if(selectedAreaId)out.areaId=selectedAreaId;
+  return out;
+}
 function cloneSession(extra){
   var out=session();
   Object.keys(extra||{}).forEach(function(k){out[k]=extra[k]});
@@ -82,8 +95,8 @@ function validBirthDate(v){
   var day=Number(match[1]);
   var month=Number(match[2]);
   var year=Number(match[3]);
-  var date=new Date(year,month-1,day,12,0,0);
-  return year>=1900&&date.getFullYear()===year&&date.getMonth()===month-1&&date.getDate()===day;
+  var date=new Date(Date.UTC(year,month-1,day,12,0,0));
+  return year>=1800&&date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day;
 }
 function recifeToday(){
   var parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
@@ -162,9 +175,11 @@ function finish(result){
   active=null;
   if(frame&&frame.parentNode){setTimeout(function(){if(frame.parentNode)frame.remove()},250)}
   var login=el('login');
+  var loginTacs=el('loginTacs');
   var logout=el('logout');
   if(login)login.disabled=false;
-  if(logout)logout.disabled=!token;
+  if(loginTacs)loginTacs.disabled=false;
+  if(logout)logout.disabled=!(token||territoryToken);
   cb(result||{ok:false,message:'Resposta vazia do servidor.'});
 }
 
@@ -249,13 +264,83 @@ function post(action,payload,resultAction,cb){
   };
 
   var login=el('login');
+  var loginTacs=el('loginTacs');
   var logout=el('logout');
   if(login)login.disabled=true;
+  if(loginTacs)loginTacs.disabled=true;
   if(logout)logout.disabled=true;
   document.body.appendChild(frame);
   document.body.appendChild(form);
   form.submit();
   schedulePoll();
+}
+
+function updateAreaHeading(areaName){
+  var heading=el('areaHeading');
+  if(heading)heading.textContent='Cadastro individual de cidadãos • '+(text(areaName)||'Área selecionada')+'.';
+}
+
+function renderAreaSelector(areas,currentAreaId,currentAreaName){
+  availableAreas=Array.isArray(areas)?areas.slice():[];
+  selectedAreaId=text(currentAreaId||selectedAreaId);
+  var control=el('areaControl');
+  var select=el('areaSelect');
+  if(!control||!select){updateAreaHeading(currentAreaName);return}
+
+  select.innerHTML='';
+  if(!availableAreas.length&&selectedAreaId){
+    availableAreas=[{areaId:selectedAreaId,areaNome:currentAreaName||selectedAreaId}];
+  }
+  availableAreas.forEach(function(area){
+    var option=document.createElement('option');
+    option.value=text(area.areaId);
+    option.textContent=text(area.areaNome||area.areaId);
+    if(option.value===selectedAreaId)option.selected=true;
+    select.appendChild(option);
+  });
+  control.classList.toggle('hidden',availableAreas.length<2);
+  select.disabled=baseCheckPending||availableAreas.length<2;
+  var chosen=availableAreas.filter(function(area){return text(area.areaId)===selectedAreaId})[0];
+  updateAreaHeading(chosen&&chosen.areaNome||currentAreaName);
+}
+
+function changeArea(areaId){
+  var next=text(areaId);
+  if(!next||next===selectedAreaId)return;
+  if(active){
+    if(el('areaSelect'))el('areaSelect').value=selectedAreaId;
+    setStatus('operationStatus','Aguarde a operação atual terminar antes de trocar de área.','warn');
+    return;
+  }
+  selectedAreaId=next;
+  lastSearchQuery='';
+  duplicateLock=false;
+  duplicateEditMode=false;
+  if(el('results'))el('results').innerHTML='';
+  showSearch();
+  showAuthenticatedShell('Área selecionada. Conferindo a fonte de moradores em segundo plano…');
+  loadBase('Área de moradores alterada e fonte conferida.');
+}
+
+function maybeActivateSituation(r){
+  if(
+    statusActivationAttempted||
+    !r||
+    r.situacaoHabilitada===true||
+    r.filtroPublicoSituacao!==true||
+    r.podeAtivarSituacao!==true
+  )return;
+
+  statusActivationAttempted=true;
+  setStatus('operationStatus','Filtro público confirmado. Liberando a situação cadastral…','warn');
+  post('admin_moradores_ativar_situacao',session(),'admin_moradores_result',function(result){
+    if(!result||result.ok!==true){
+      statusActivationAttempted=false;
+      setStatus('operationStatus',text(result&&result.message||'Não foi possível liberar a situação cadastral.'),'err');
+      return;
+    }
+    loadBase('Situação cadastral liberada com filtro público ativo.');
+  });
 }
 
 function updateNote(){
@@ -281,12 +366,16 @@ function setBaseLoading(loading){
     searchButton.disabled=baseCheckPending;
     searchButton.textContent=baseCheckPending?'Conferindo base…':'Buscar na base real';
   }
+  var areaSelect=el('areaSelect');
+  if(areaSelect)areaSelect.disabled=baseCheckPending||availableAreas.length<2;
 }
 
 function showAuthenticatedShell(message){
   writesEnabled=false;
   situationEnabled=false;
   consolidationEnabled=false;
+  duplicateLock=false;
+  duplicateEditMode=false;
   backendVersion='';
   if(el('countResidents'))el('countResidents').textContent='…';
   if(el('schema'))el('schema').textContent='…';
@@ -301,12 +390,12 @@ function showAuthenticatedShell(message){
   syncControls();
   var note=document.querySelector('main > .note');
   if(note){
-    note.textContent='PIN validado. O painel já foi aberto; dados da base e permissões estão sendo conferidos em segundo plano.';
+    note.textContent='Acesso validado. O painel já foi aberto; dados da base e permissões estão sendo conferidos em segundo plano.';
     note.style.background='#e7f3f7';
     note.style.borderColor='#4f8da3';
     note.style.color='#073a55';
   }
-  setStatus('loginStatus',message||'PIN validado. Painel liberado; conferindo a base em segundo plano…','ok');
+  setStatus('loginStatus',message||'Acesso validado. Painel liberado; conferindo a base em segundo plano…','ok');
   setStatus('operationStatus','Painel disponível. Aguarde apenas a conferência das permissões para gravar ou pesquisar.','warn');
 }
 
@@ -342,23 +431,35 @@ function syncControls(){
   var isEdit=Boolean(text(el('originRow')&&el('originRow').value));
   if(save){
     save.disabled=!writesEnabled||duplicateLock;
-    save.textContent=duplicateLock?'Salvar bloqueado — duplicidade confirmada':(writesEnabled?(isEdit?'Salvar alterações':'Salvar novo morador'):(isEdit?'Salvar alterações — bloqueado':'Salvar morador — bloqueado'));
+    save.textContent=duplicateLock
+      ?'Salvar bloqueado — duplicidade confirmada'
+      :(duplicateEditMode
+        ?'Salvar correção e atualizar comparação'
+        :(writesEnabled?(isEdit?'Salvar alterações':'Salvar novo morador'):(isEdit?'Salvar alterações — bloqueado':'Salvar morador — bloqueado')));
   }
   var lock=document.querySelector('#residentForm .lock');
   if(lock){
-    lock.textContent=baseCheckPending?'Conferindo permissões em segundo plano…':(writesEnabled?'Gravação habilitada pelo servidor. Confira os dados antes de salvar.':'Gravação bloqueada pelo servidor.');
+    lock.textContent=baseCheckPending
+      ?'Conferindo permissões em segundo plano…'
+      :(duplicateEditMode
+        ?'Correção anterior à unificação: ao salvar, esta linha será atualizada na planilha e registrada na auditoria.'
+        :(writesEnabled?'Gravação habilitada pelo servidor. Confira os dados antes de salvar.':'Gravação bloqueada pelo servidor.'));
     lock.style.borderStyle='solid';
-    lock.style.borderColor=baseCheckPending?'#4f8da3':(writesEnabled?'#9ed6b2':'#d4a246');
-    lock.style.background=baseCheckPending?'#e7f3f7':(writesEnabled?'#e8f7ee':'#fff9e9');
-    lock.style.color=baseCheckPending?'#073a55':(writesEnabled?'#08723a':'#704900');
+    lock.style.borderColor=baseCheckPending?'#4f8da3':(duplicateEditMode?'#d4a246':(writesEnabled?'#9ed6b2':'#d4a246'));
+    lock.style.background=baseCheckPending?'#e7f3f7':(duplicateEditMode?'#fff9e9':(writesEnabled?'#e8f7ee':'#fff9e9'));
+    lock.style.color=baseCheckPending?'#073a55':(duplicateEditMode?'#704900':(writesEnabled?'#08723a':'#704900'));
   }
   var block=el('residentSituationBlock');
   if(block)block.classList.toggle('hidden',!isEdit);
   var situationButton=el('saveSituation');
-  if(situationButton)situationButton.disabled=!situationEnabled||!isEdit||duplicateLock;
+  if(situationButton)situationButton.disabled=!situationEnabled||!isEdit||duplicateLock||duplicateEditMode;
   var hint=el('situationHint');
   if(hint){
-    hint.textContent=!isEdit?'A situação é definida após o cadastro existir.':(duplicateLock?'Consolide a duplicidade antes de alterar este cadastro.':(situationEnabled?'Situação liberada pelo servidor.':'Situação ainda bloqueada pelo servidor.'));
+    hint.textContent=!isEdit
+      ?'A situação é definida após o cadastro existir.'
+      :(duplicateEditMode
+        ?'Conclua a correção e volte à comparação antes de alterar a situação.'
+        :(duplicateLock?'Consolide a duplicidade antes de alterar este cadastro.':(situationEnabled?'Situação liberada pelo servidor.':'Situação ainda bloqueada pelo servidor.')));
   }
 }
 
@@ -373,6 +474,7 @@ function renderBase(r,message){
   situationEnabled=r.situacaoHabilitada===true;
   consolidationEnabled=r.consolidacaoHabilitada===true;
   backendVersion=text(r.versao);
+  renderAreaSelector(r.areas,r.areaId,r.areaNome);
   if(el('countResidents'))el('countResidents').textContent=String(r.totalRegistros);
   if(el('schema'))el('schema').textContent=r.schemaValido?'20/20':'ERRO';
   if(el('write'))el('write').textContent=writesEnabled?'LIBERADO':'BLOQ.';
@@ -393,6 +495,7 @@ function renderBase(r,message){
   ){
     setStatus('operationStatus','Base conferida. O painel está pronto para uso.','ok');
   }
+  setTimeout(function(){maybeActivateSituation(r)},0);
   return true;
 }
 
@@ -414,11 +517,50 @@ function loginWithPin(pin){
       return;
     }
     token=r.token;
+    territoryToken='';
+    accessMode='admin';
+    sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
     sessionStorage.setItem(TOKEN_KEY,token);
     showAuthenticatedShell('PIN validado. Painel aberto imediatamente; conferindo a base em segundo plano…');
     setTimeout(function(){
       if(!active)loadBase('PIN validado e base de moradores conferida.');
     },0);
+  });
+}
+
+function loginWithTacs(cns,pin){
+  setStatus('loginStatus','Validando CNS profissional e PIN individual…','warn');
+  post('admin_territorio_login_tacs',{cns:cns,pin:pin,dispositivo:device},'admin_territorio_result',function(r){
+    if(el('tacsPinAccess'))el('tacsPinAccess').value='';
+    if(!r||r.ok!==true||!r.token){
+      territoryToken='';
+      sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
+      setStatus('loginStatus',text(r&&r.message||'Acesso individual recusado pelo servidor.'),'err');
+      return;
+    }
+    token='';
+    territoryToken=r.token;
+    accessMode='tacs';
+    selectedAreaId=text(r.areaId);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);
+    showAuthenticatedShell('Acesso individual validado. Painel aberto somente para '+text(r.areaNome||r.areaId)+'.');
+    setTimeout(function(){if(!active)loadBase('Área do TACS e base de moradores conferidas.');},0);
+  });
+}
+
+function logoutCurrent(){
+  if(!(token||territoryToken))return;
+  var action=accessMode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout';
+  var resultAction=accessMode==='tacs'?'admin_territorio_result':'admin_result';
+  post(action,session(),resultAction,function(){
+    token='';territoryToken='';accessMode='';selectedAreaId='';
+    sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
+    if(el('content'))el('content').classList.add('hidden');
+    if(el('summary'))el('summary').classList.add('hidden');
+    if(el('areaControl'))el('areaControl').classList.add('hidden');
+    if(el('logout'))el('logout').disabled=true;
+    setStatus('loginStatus','Sessão encerrada.','ok');
   });
 }
 
@@ -500,7 +642,8 @@ function loadResident(item,flag){
   if(el('microarea'))el('microarea').value=text(item.microarea)||'1';
   if(el('team'))el('team').value=text(item.equipe)||'USF MATIAS CDS';
   if(el('notes'))el('notes').value=text(item.observacoes);
-  if(el('formTitle'))el('formTitle').textContent='Editar morador • '+itemLabel(item);
+  duplicateEditMode=flag==='CONFIRMADA_EDITAVEL';
+  if(el('formTitle'))el('formTitle').textContent=(duplicateEditMode?'Corrigir antes de unificar • ':'Editar morador • ')+itemLabel(item);
   if(el('formArea'))el('formArea').classList.remove('hidden');
   if(el('searchArea'))el('searchArea').classList.add('hidden');
   if(el('tabSearch'))el('tabSearch').classList.add('active');
@@ -508,12 +651,33 @@ function loadResident(item,flag){
   currentSituation=text(item.status||item.situacao||'ATIVO').toUpperCase();
   if(el('residentSituation'))el('residentSituation').value=currentSituation;
   duplicateLock=flag==='CONFIRMADA';
-  setStatus('operationStatus',duplicateLock?'Duplicidade confirmada aberta somente para comparação. Escolha o registro principal no resultado da busca e consolide antes de editar.':'Cadastro carregado para conferência. Nenhuma alteração realizada.',duplicateLock?'warn':'ok');
+  setStatus(
+    'operationStatus',
+    duplicateLock
+      ?'Duplicidade confirmada aberta somente para conferência. Use o botão “Editar antes de unificar” para corrigir esta linha.'
+      :(duplicateEditMode
+        ?'Modo de correção anterior à unificação. Revise os dados e salve para atualizar a planilha e refazer a comparação.'
+        :'Cadastro carregado para conferência. Nenhuma alteração realizada.'),
+    duplicateLock||duplicateEditMode?'warn':'ok'
+  );
   syncControls();
+}
+
+function editDuplicateResident(item){
+  if(!writesEnabled){
+    setStatus('operationStatus','A edição está bloqueada pelo servidor.','warn');
+    return;
+  }
+  if(!serverVersionAtLeast(1,4,4)){
+    setStatus('operationStatus','A edição segura antes da unificação exige o backend de moradores 1.4.4 ou superior.','err');
+    return;
+  }
+  loadResident(item,'CONFIRMADA_EDITAVEL');
 }
 
 function showSearch(){
   duplicateLock=false;
+  duplicateEditMode=false;
   if(el('tabSearch'))el('tabSearch').classList.add('active');
   if(el('tabNew'))el('tabNew').classList.remove('active');
   if(el('searchArea'))el('searchArea').classList.remove('hidden');
@@ -524,6 +688,7 @@ function showSearch(){
 
 function prepareNewResident(){
   duplicateLock=false;
+  duplicateEditMode=false;
   if(el('residentId'))el('residentId').value='';
   if(el('originSheet'))el('originSheet').value='';
   if(el('originRow'))el('originRow').value='';
@@ -602,7 +767,7 @@ function consolidateGroup(principal,redundantes){
   if(!consolidationEnabled){setStatus('operationStatus','A consolidação está bloqueada pelo servidor.','warn');return}
   if(!redundantes.length)return;
   if(groupHasLegacyCpf([principal].concat(redundantes))&&!serverVersionAtLeast(1,4,2)){
-    setStatus('operationStatus','A unificação deste CPF com zero inicial perdido exige o backend de moradores 1.4.2. Atualize a implantação do Apps Script e entre novamente.','err');
+    setStatus('operationStatus','A unificação deste CPF com zero inicial perdido exige o backend de moradores 1.4.2 ou superior. Atualize a implantação do Apps Script e entre novamente.','err');
     return;
   }
   var ids=redundantes.map(itemLabel).join(', ');
@@ -649,6 +814,7 @@ function confirmedGroupCard(group){
   title.style.marginTop='0';
   var legacyGroup=groupHasLegacyCpf(group);
   var legacyServerReady=!legacyGroup||serverVersionAtLeast(1,4,2);
+  var duplicateEditReady=serverVersionAtLeast(1,4,4);
   title.textContent=legacyGroup
     ?'DUPLICIDADE CONFIRMADA: o CSV perdeu o zero inicial de um CPF. Nome e nascimento também coincidem. Escolha qual ID será preservado.'
     :'DUPLICIDADE CONFIRMADA: CPF ou CNS coincidente. Escolha abaixo qual ID será preservado como principal.';
@@ -662,18 +828,25 @@ function confirmedGroupCard(group){
     var actions=document.createElement('div');actions.className='actions';
     var open=document.createElement('button');open.type='button';open.className='btn gray';open.textContent='Abrir '+itemLabel(item)+' para conferir';open.dataset.duplicateAction='open';
     open.addEventListener('click',function(){loadResident(item,'CONFIRMADA')});
+    var edit=document.createElement('button');edit.type='button';edit.className='btn';edit.textContent='Editar '+itemLabel(item)+' antes de unificar';edit.disabled=!writesEnabled||!duplicateEditReady;edit.dataset.duplicateAction='edit';
+    edit.addEventListener('click',function(){editDuplicateResident(item)});
     var keep=document.createElement('button');keep.type='button';keep.className='btn green';keep.textContent='Unificar e manter '+itemLabel(item)+' como principal';keep.disabled=!consolidationEnabled||!legacyServerReady;keep.dataset.duplicateAction='consolidate';
     keep.addEventListener('click',function(){consolidateGroup(item,group.filter(function(other){return other!==item}))});
-    actions.appendChild(open);actions.appendChild(keep);option.appendChild(actions);grid.appendChild(option);
+    actions.appendChild(open);actions.appendChild(edit);actions.appendChild(keep);option.appendChild(actions);grid.appendChild(option);
   });
   card.appendChild(grid);
   card.appendChild(comparisonDetails(group));
   if(!consolidationEnabled||!legacyServerReady){
     var locked=document.createElement('p');locked.className='muted';
     locked.textContent=!legacyServerReady
-      ?'O botão está pronto, mas será liberado após a implantação do backend de moradores 1.4.2.'
+      ?'O botão está pronto, mas será liberado após a implantação do backend de moradores 1.4.2 ou superior.'
       :'A comparação está disponível, mas a consolidação permanece bloqueada pelo servidor.';
     card.appendChild(locked);
+  }
+  if(!duplicateEditReady){
+    var editLocked=document.createElement('p');editLocked.className='muted';
+    editLocked.textContent='O botão de edição anterior à unificação será liberado após a implantação do backend de moradores 1.4.4.';
+    card.appendChild(editLocked);
   }
   return card;
 }
@@ -716,7 +889,8 @@ function doSearch(query,options){
   var q=text(query!=null?query:(el('query')&&el('query').value));
   if(q.length<2){setStatus('operationStatus','Digite pelo menos 2 caracteres.','err');return}
   token=sessionStorage.getItem(TOKEN_KEY)||token||'';
-  if(!token){setStatus('operationStatus','Sessão administrativa ausente. Entre novamente com o PIN.','err');return}
+  territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||territoryToken||'';
+  if(!(token||territoryToken)){setStatus('operationStatus','Sessão administrativa ausente. Entre novamente.','err');return}
   if(baseCheckPending){
     setStatus('operationStatus','O painel já está aberto. Aguarde somente a conferência da base terminar.','warn');
     return;
@@ -753,6 +927,7 @@ function collectResidentPayload(){
     microarea:text(el('microarea')&&el('microarea').value),
     equipe:text(el('team')&&el('team').value),
     observacoes:text(el('notes')&&el('notes').value),
+    revisaoDuplicidade:duplicateEditMode,
     operacao:isEdit?'EDITAR_MORADOR':'CRIAR_MORADOR',
     modo:isEdit?'EDITAR_MORADOR':'NOVO_CADASTRO'
   };
@@ -774,7 +949,12 @@ function saveResident(){
   var error=validateResidentPayload(payload);
   if(error){setStatus('operationStatus',error,'err');return}
   var isEdit=Boolean(payload.origemLinha);
-  var actionLabel=isEdit?'Salvando alterações…':'Cadastrando morador…';
+  var wasDuplicateEdit=duplicateEditMode;
+  if(
+    wasDuplicateEdit&&
+    !window.confirm('Salvar esta correção na planilha antes da unificação?\n\nA linha selecionada será atualizada imediatamente e a alteração ficará registrada na auditoria. Depois, a comparação será refeita.')
+  )return;
+  var actionLabel=wasDuplicateEdit?'Salvando correção e atualizando comparação…':(isEdit?'Salvando alterações…':'Cadastrando morador…');
   setStatus('operationStatus',actionLabel,'warn');
   post('admin_morador_salvar',cloneSession({payload:JSON.stringify(payload)}),'admin_moradores_result',function(r){
     if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'O servidor recusou a gravação.'),'err');return}
@@ -786,7 +966,19 @@ function saveResident(){
       currentSituation=text(morador.situacao||currentSituation||'ATIVO').toUpperCase();
       if(el('residentSituation'))el('residentSituation').value=currentSituation;
     }
-    setStatus('operationStatus',text(r.message||(isEdit?'Cadastro atualizado.':'Morador cadastrado.')),'ok');
+    var message=text(r.message||(isEdit?'Cadastro atualizado.':'Morador cadastrado.'));
+    setStatus('operationStatus',message,'ok');
+    if(wasDuplicateEdit){
+      var refreshQuery=lastSearchQuery||payload.nome||payload.cpf||payload.cns;
+      duplicateEditMode=false;
+      duplicateLock=false;
+      showSearch();
+      loadBase(null,function(){
+        if(refreshQuery)doSearch(refreshQuery,{successMessage:message+' Comparação atualizada.'});
+        else setStatus('operationStatus',message,'ok');
+      });
+      return;
+    }
     loadBase();
     setTimeout(syncControls,0);
   });
@@ -794,6 +986,7 @@ function saveResident(){
 
 function saveSituation(){
   if(duplicateLock){setStatus('operationStatus','Situação bloqueada: consolide primeiro a duplicidade confirmada.','warn');return}
+  if(duplicateEditMode){setStatus('operationStatus','Salve ou cancele a correção anterior à unificação antes de alterar a situação.','warn');return}
   if(!situationEnabled){setStatus('operationStatus','A alteração de situação ainda está bloqueada pelo servidor.','warn');return}
   var origemAba=text(el('originSheet')&&el('originSheet').value);
   var origemLinha=text(el('originRow')&&el('originRow').value);
@@ -836,6 +1029,43 @@ function onLoginCapture(event){
   loginWithPin(pin);
 }
 
+function onTacsLoginCapture(event){
+  var button=event.target&&event.target.closest?event.target.closest('#loginTacs'):null;
+  if(!button)return;
+  event.preventDefault();
+  event.stopPropagation();
+  if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+  var cns=digits(el('tacsCnsAccess')&&el('tacsCnsAccess').value);
+  var pin=digits(el('tacsPinAccess')&&el('tacsPinAccess').value);
+  territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||territoryToken||'';
+  if(territoryToken&&!cns&&!pin){
+    accessMode='tacs';
+    showAuthenticatedShell('Sessão individual encontrada. Painel aberto somente para a área vinculada; conferindo a base…');
+    setTimeout(function(){
+      if(!active)loadBase('Sessão individual validada e base da área conferida.');
+    },0);
+    return;
+  }
+  if(!/^\d{15}$/.test(cns)){
+    setStatus('loginStatus','Digite os 15 números do CNS profissional.','err');
+    return;
+  }
+  if(!/^\d{4,8}$/.test(pin)){
+    setStatus('loginStatus','Digite o PIN individual numérico de 4 a 8 dígitos.','err');
+    return;
+  }
+  loginWithTacs(cns,pin);
+}
+
+function onLogoutCapture(event){
+  var button=event.target&&event.target.closest?event.target.closest('#logout'):null;
+  if(!button)return;
+  event.preventDefault();
+  event.stopPropagation();
+  if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+  logoutCurrent();
+}
+
 function onResidentSubmitCapture(event){
   var form=event.target;
   if(!form||form.id!=='residentForm')return;
@@ -862,6 +1092,17 @@ function onSearchKeyCapture(event){
   doSearch();
 }
 
+function onAreaChange(event){
+  if(!event.target||event.target.id!=='areaSelect')return;
+  changeArea(event.target.value);
+}
+
+function onBirthInput(event){
+  if(!event.target||event.target.id!=='birth')return;
+  event.target.value=formatBirthInput(event.target.value);
+  renderBirthAge();
+}
+
 function onTabCapture(event){
   var target=event.target&&event.target.closest
     ?event.target.closest('#tabSearch,#tabNew')
@@ -871,12 +1112,6 @@ function onTabCapture(event){
   event.stopPropagation();
   if(event.stopImmediatePropagation)event.stopImmediatePropagation();
   if(target.id==='tabSearch')showSearch();else prepareNewResident();
-}
-
-function onBirthInput(event){
-  if(!event.target||event.target.id!=='birth')return;
-  event.target.value=formatBirthInput(event.target.value);
-  renderBirthAge();
 }
 
 function afterUiInteraction(event){
@@ -895,9 +1130,12 @@ function afterUiInteraction(event){
 }
 
 document.addEventListener('click',onLoginCapture,true);
+document.addEventListener('click',onTacsLoginCapture,true);
+document.addEventListener('click',onLogoutCapture,true);
 document.addEventListener('click',onSearchCapture,true);
 document.addEventListener('click',onTabCapture,true);
 document.addEventListener('keydown',onSearchKeyCapture,true);
+document.addEventListener('change',onAreaChange,true);
 document.addEventListener('input',onBirthInput,true);
 document.addEventListener('submit',onResidentSubmitCapture,true);
 document.addEventListener('click',afterUiInteraction,false);
@@ -906,10 +1144,14 @@ renderBirthAge();
 /* Pré-aquece a implantação sem autenticar nem escrever nada. */
 jsonp('admin_result',{requestId:'warmup_moradores_v2_'+Date.now()},function(){});
 
-if(token){
-  showAuthenticatedShell('Sessão administrativa encontrada. Painel aberto; conferindo a base em segundo plano…');
+if(token||territoryToken){
+  showAuthenticatedShell(accessMode==='tacs'
+    ?'Sessão individual encontrada. Painel aberto somente para a área vinculada; conferindo a base em segundo plano…'
+    :'Sessão administrativa encontrada. Painel aberto; conferindo a base em segundo plano…');
   setTimeout(function(){
-    if(!active)loadBase('Sessão administrativa existente validada e base conferida.');
+    if(!active)loadBase(accessMode==='tacs'
+      ?'Sessão individual existente validada e base da área conferida.'
+      :'Sessão administrativa existente validada e base conferida.');
   },100);
 }
 
@@ -925,9 +1167,12 @@ window.PortalTacsMoradoresTransportV2={
   classifyDuplicates:classifyDuplicates,
   renderSearchResults:renderSearchResults,
   loadResident:loadResident,
+  editDuplicateResident:editDuplicateResident,
   showSearch:showSearch,
   prepareNewResident:prepareNewResident,
   consolidateGroup:consolidateGroup,
-  version:'3.3.5'
+  changeArea:changeArea,
+  maybeActivateSituation:maybeActivateSituation,
+  version:'3.6.0'
 };
 }());

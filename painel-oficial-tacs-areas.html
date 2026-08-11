@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#073a55">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/painel-tacs-areas.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/atendimento-acs-farmaceutico/icons/painel-tacs-areas-180.png">
+<link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-tacs-areas.webmanifest">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260811-territorio-v1"></script>
+<title>Administração de TACS e áreas • Portal TACS</title>
+<style>body{margin:0;background:#dfeef3;color:#102d40;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}.loading{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center}.box{max-width:620px;background:#fff;border:2px solid #8fb4c2;border-radius:24px;padding:24px}.error{color:#a52d2d}</style>
+</head>
+<body>
+<div class="loading"><div class="box"><h1>Painel administrativo</h1><p id="message">Carregando TACS, áreas e importações…</p></div></div>
+<script>
+(function(){
+'use strict';
+var source='/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?v=20260811-territorio-v2';
+fetch(source,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text();}).then(function(html){
+  html=html.replace('<head>','<head><base href="/atendimento-acs-farmaceutico/teste-v1/">');
+  document.open();document.write(html);document.close();
+}).catch(function(error){var node=document.getElementById('message');node.className='error';node.textContent=error.message+' Atualize a página.';});
+}());
+</script>
+</body>
+</html>

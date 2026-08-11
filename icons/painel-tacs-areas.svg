@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Administração de TACS e áreas">
+  <rect width="512" height="512" rx="108" fill="#073a55"/>
+  <path d="M100 388h312v38H100z" fill="#69c7e7"/>
+  <path d="M128 208l128-94 128 94v180H128z" fill="#fff"/>
+  <circle cx="256" cy="245" r="48" fill="#8df0b4"/>
+  <path d="M177 370c8-60 35-92 79-92s71 32 79 92" fill="#0b5878"/>
+  <path d="M380 86v92M334 132h92" stroke="#fff" stroke-width="24" stroke-linecap="round"/>
+</svg>

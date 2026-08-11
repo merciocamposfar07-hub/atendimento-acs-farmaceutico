@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Portal Administrativo de Moradores">
+  <rect width="512" height="512" rx="108" fill="#073a55"/>
+  <circle cx="256" cy="170" r="78" fill="#8df0b4"/>
+  <path d="M104 420c10-99 63-150 152-150s142 51 152 150" fill="#fff"/>
+  <path d="M104 420h304" stroke="#69c7e7" stroke-width="28" stroke-linecap="round"/>
+  <path d="M388 80v100M338 130h100" stroke="#fff" stroke-width="24" stroke-linecap="round"/>
+</svg>

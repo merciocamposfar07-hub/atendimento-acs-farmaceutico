@@ -25,7 +25,12 @@ const CASES = [
   {
     file: 'teste-v1/painel-recados-campanhas-v1.html',
     frame: 'ponteConteudoV1',
-    actions: ['admin_login', 'admin_dados'],
+    actions: [
+      'admin_login',
+      'admin_dados',
+      'admin_moradores_areas',
+      'admin_portal_manutencao_status'
+    ],
     success: /Sessão validada e conteúdo carregado/,
     official: 'painel-oficial-recados-campanhas.html'
   }
@@ -65,6 +70,21 @@ function responseFor(action) {
       agendas: [],
       recados: [],
       campanhas: []
+    };
+  }
+  if (action === 'admin_portal_manutencao_status') {
+    return {ok: true, ativa: false, areaId: 'JAPARANDUBA'};
+  }
+  if (action === 'admin_moradores_areas') {
+    return {
+      ok: true,
+      areaId: 'JAPARANDUBA',
+      areas: [
+        {
+          areaId: 'JAPARANDUBA',
+          areaNome: 'Sítio Japaranduba'
+        }
+      ]
     };
   }
   throw new Error(`Ação não prevista no teste administrativo: ${action}`);
@@ -107,10 +127,10 @@ function verifyStaticSource(config) {
   assert.doesNotMatch(base, /jsonp\('admin_status',\{\},pronto\)/);
   assert.doesNotMatch(base, /Preparando a conexão com o Google Apps Script/);
   assert.match(base, /A sessão anterior não pôde ser reutilizada/);
-  assert.match(official, /20260806-desempenho-v5/);
+  assert.match(official, /v=202608/);
   assert.match(
     official,
-    /admin-warmup\.js\?v=20260806-desempenho-v5/
+    /admin-warmup\.js\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1)/
   );
   assert.match(official, /rel="preconnect" href="https:\/\/script\.google\.com"/);
   assert.doesNotMatch(official, /Promise\.all\(\[painel,conexao/);
