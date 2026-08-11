@@ -1,6 +1,6 @@
 /**
  * ZZZZ_19_NotificacoesSegmentadasV1.gs
- * Portal TACS — envio de notificações segmentadas por área V1.0.1
+ * Portal TACS — envio de notificações segmentadas por área V1.0.2
  *
  * A área e a tag são resolvidas no servidor. O navegador não pode fornecer um
  * filtro livre. Quando houver mais de uma área ativa, o envio é bloqueado se a
@@ -9,9 +9,9 @@
  * não envia duas vezes.
  */
 var TACS_NOTIFICACOES_AREA_V1 = Object.freeze({
-  VERSAO:'1.0.1',
+  VERSAO:'1.0.2',
   DEFAULT_AREA_ID:'JAPARANDUBA',
-  DEFAULT_APP_ID:'4bead971-106d-461b-853f-83aecbd62d40',
+  DEFAULT_APP_ID:'e2294b98-c72b-4f8c-a055-de28979676dc',
   MAINTENANCE_TITLE:'PORTAL EM MANUTENÇÃO',
   MAINTENANCE_MESSAGE:'O Portal TACS está temporariamente em manutenção. Aguarde a liberação para fazer novas solicitações.',
   APP_ID_PROPERTIES:Object.freeze(['TACS_ONESIGNAL_APP_ID','ONESIGNAL_APP_ID']),
@@ -33,19 +33,41 @@ var TACS_NOTIFICACOES_AREA_V1 = Object.freeze({
   IDEMPOTENCY_PREFIX:'tacs_notificacao_area_v1_evento_'
 });
 
+var notificacoesAreaV1DoGetAnterior_;
 var notificacoesAreaV1DoPostAnterior_;
+var notificacoesAreaV1GetAnterior_;
 var notificacoesAreaV1PostAnterior_;
 
 (function instalarNotificacoesAreaV1_(){
+  if(typeof doGet==='function'){
+    notificacoesAreaV1DoGetAnterior_=doGet;
+    doGet=function(e){var r=notificacoesAreaV1TratarGet_(e);return r||notificacoesAreaV1DoGetAnterior_(e);};
+  }
   if(typeof doPost==='function'){
     notificacoesAreaV1DoPostAnterior_=doPost;
     doPost=function(e){var r=notificacoesAreaV1TratarPost_(e);return r||notificacoesAreaV1DoPostAnterior_(e);};
+  }
+  if(typeof tratarGetPainelTacs_==='function'){
+    notificacoesAreaV1GetAnterior_=tratarGetPainelTacs_;
+    tratarGetPainelTacs_=function(e){var r=notificacoesAreaV1TratarGet_(e);return r||notificacoesAreaV1GetAnterior_(e);};
   }
   if(typeof tratarPostPainelTacs_==='function'){
     notificacoesAreaV1PostAnterior_=tratarPostPainelTacs_;
     tratarPostPainelTacs_=function(e){var r=notificacoesAreaV1TratarPost_(e);return r||notificacoesAreaV1PostAnterior_(e);};
   }
 })();
+
+function notificacoesAreaV1TratarGet_(e){
+  var p=e&&e.parameter?e.parameter:{};
+  if(notificacoesAreaV1Texto_(p.action).toLowerCase()!=='admin_result')return null;
+  var requestId=notificacoesAreaV1Texto_(p.requestId);
+  if(!/^[A-Za-z0-9_-]{8,160}$/.test(requestId))return null;
+  var resultado=notificacoesAreaV1LerResultado_(requestId);
+  if(!resultado)return null;
+  return notificacoesAreaV1ResponderJson_({
+    ok:true,pendente:false,requestId:requestId,result:resultado
+  },p.callback);
+}
 
 function notificacoesAreaV1TratarPost_(e){
   var p=e&&e.parameter?e.parameter:{};
@@ -125,15 +147,29 @@ function notificacoesAreaV1Enviar_(appId,apiKey,contexto,acesso,input){
     var code=Number(resposta.getResponseCode());
     var texto=resposta.getContentText();
     var data={};try{data=JSON.parse(texto||'{}');}catch(erroJson){}
-    if(code<200||code>=300||!data.id){
+    if(code<200||code>=300){
       var detalhe=data&&data.errors?JSON.stringify(data.errors):('HTTP '+code);
       notificacoesAreaV1Auditar_(contexto,acesso,input,'',0,'ERRO:'+detalhe);
       throw new Error('O OneSignal recusou o envio segmentado: '+detalhe);
     }
+    if(!data.id){
+      var semDestinatarios={
+        ok:true,push:false,skipped:true,zeroAudience:true,areaId:contexto.areaId,
+        appId:appId,filtro:{campo:'area_tacs',valor:contexto.areaId},
+        onesignalId:'',destinatarios:0,
+        message:'Nenhum aparelho com inscrição ativa foi encontrado para a área '+contexto.areaNome+'.'
+      };
+      cache.put(chave,JSON.stringify(semDestinatarios),TACS_NOTIFICACOES_AREA_V1.RESULT_SECONDS);
+      notificacoesAreaV1Auditar_(contexto,acesso,input,'',0,'SEM_DESTINATARIOS');
+      return semDestinatarios;
+    }
+    var destinatarios=(data.recipients===null||typeof data.recipients==='undefined'||data.recipients==='')
+      ?null
+      :Number(data.recipients);
     var resultado={
       ok:true,push:true,skipped:false,areaId:contexto.areaId,
-      filtro:{campo:'area_tacs',valor:contexto.areaId},onesignalId:String(data.id),
-      destinatarios:Number(data.recipients||0),message:'Notificação enviada somente para a área '+contexto.areaNome+'.'
+      appId:appId,filtro:{campo:'area_tacs',valor:contexto.areaId},onesignalId:String(data.id),
+      destinatarios:destinatarios,message:'O OneSignal aceitou a notificação destinada à área '+contexto.areaNome+'.'
     };
     cache.put(chave,JSON.stringify(resultado),TACS_NOTIFICACOES_AREA_V1.RESULT_SECONDS);
     notificacoesAreaV1Auditar_(contexto,acesso,input,resultado.onesignalId,resultado.destinatarios,'ENVIADA');
@@ -167,5 +203,7 @@ function notificacoesAreaV1Booleano_(valor){return valor===true||['TRUE','1','SI
 function notificacoesAreaV1Texto_(valor){return String(valor==null?'':valor).replace(/\s+/g,' ').trim();}
 function notificacoesAreaV1ValidarRequestId_(valor){var id=notificacoesAreaV1Texto_(valor);if(!/^[A-Za-z0-9_-]{8,160}$/.test(id))throw new Error('Identificador da notificação inválido.');return id;}
 function notificacoesAreaV1GuardarResultado_(id,r){try{CacheService.getScriptCache().put(TACS_NOTIFICACOES_AREA_V1.RESULT_PREFIX+id,JSON.stringify(r),TACS_NOTIFICACOES_AREA_V1.RESULT_SECONDS);}catch(erro){}}
+function notificacoesAreaV1LerResultado_(id){try{var raw=CacheService.getScriptCache().get(TACS_NOTIFICACOES_AREA_V1.RESULT_PREFIX+id);return raw?JSON.parse(raw):null;}catch(erro){return null;}}
 function notificacoesAreaV1ResponderPost_(requestId,resultado){var msg={source:'notificacoes-area-tacs-v1',requestId:requestId,result:resultado};var html='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"></head><body><script>parent.postMessage('+JSON.stringify(msg).replace(/</g,'\\u003c')+',"*");<\/script></body></html>';return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
+function notificacoesAreaV1ResponderJson_(dados,callback){var json=JSON.stringify(dados),cb=notificacoesAreaV1Texto_(callback);if(cb&&/^[A-Za-z_$][0-9A-Za-z_$.]{0,100}$/.test(cb))return ContentService.createTextOutput(cb+'('+json+');').setMimeType(ContentService.MimeType.JAVASCRIPT);return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);}
 function notificacoesAreaV1Erro_(erro){return notificacoesAreaV1Texto_(erro&&erro.message?erro.message:erro||'Erro inesperado.').slice(0,700);}

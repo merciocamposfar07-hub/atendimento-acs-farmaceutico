@@ -67,7 +67,8 @@ function installRouteProbes(context) {
     moradoresAdminV1TratarGet_: '__probe_15_get',
     portalManutencaoV1TratarGet_: '__probe_16_get',
     tacsTerritorioV1TratarGet_: '__probe_17_get',
-    csvMoradoresV1TratarGet_: '__probe_18_get'
+    csvMoradoresV1TratarGet_: '__probe_18_get',
+    notificacoesAreaV1TratarGet_: '__probe_19_get'
   };
   const postRoutes = {
     profissionaisDinamicosV1TratarPost_: '__probe_13_post',

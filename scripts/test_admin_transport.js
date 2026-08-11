@@ -98,11 +98,22 @@ function verifyStaticSource(config) {
     if (match[1].trim()) new vm.Script(match[1], {filename: `${config.official}#script-${index + 1}`});
   }
 
-  assert.match(base, new RegExp(`event\\.source!==frame\\.contentWindow`));
+  if (config.file === 'teste-v1/painel-recados-campanhas-v1.html') {
+    assert.match(base, /event\.source!==ativa\.frame\.contentWindow/);
+    assert.match(base, /frame\.setAttribute\('name',frameName\)/);
+    assert.match(base, /requestAnimationFrame\(function\(\)\{window\.requestAnimationFrame\(enviarUmaVez\)\}\)/);
+    assert.match(base, /submitTimer=setTimeout\(enviarUmaVez,180\)/);
+  } else {
+    assert.match(base, new RegExp(`event\\.source!==frame\\.contentWindow`));
+  }
   assert.match(base, /proximaEspera:2500/);
   assert.match(base, /Math\.min\(8000,[^)]*\+1000\)/);
   assert.match(base, /},25000\)/);
-  assert.match(base, /limite:Date\.now\(\)\+74000/);
+  if (config.file === 'teste-v1/painel-recados-campanhas-v1.html') {
+    assert.match(base, /ativa\.limite=Date\.now\(\)\+74000/);
+  } else {
+    assert.match(base, /limite:Date\.now\(\)\+74000/);
+  }
   assert.match(base, /},75000\)/);
   assert.match(base, /portalTacsPublicDataV3/);
   assert.match(base, /portalTacsPublicInvalidateAtV1/);
@@ -412,13 +423,133 @@ async function testExpiredStoredSession(config) {
   window.close();
 }
 
+async function testNewNoticeWithoutReturnedId() {
+  const config = CASES.find(item => item.file === 'teste-v1/painel-recados-campanhas-v1.html');
+  const submissions = [];
+  const errors = [];
+  let dataReads = 0;
+  const savedNotice = {
+    ID: 'REC-NOVO-001',
+    TITULO: 'Atendimento médico sexta-feira',
+    MENSAGEM: 'Atendimento confirmado das 08h às 11h.',
+    PRIORIDADE: 'INFORMATIVO',
+    VALIDADE: '',
+    ATIVO: true
+  };
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on('jsdomError', error => errors.push(error.message));
+
+  const dom = new JSDOM(baseHtml(config), {
+    url: 'https://portal.test/' + config.file,
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    virtualConsole,
+    beforeParse(window) {
+      window.PortalTacsAdminPreload = {ok: true};
+      window.confirm = () => true;
+      window.CSS = window.CSS || {};
+      window.CSS.escape = window.CSS.escape || (value => String(value));
+      window.HTMLFormElement.prototype.submit = function submit() {
+        const payload = fields(this);
+        const frame = Array.from(window.document.querySelectorAll('iframe')).find(
+          item => item.name === this.target
+        );
+        if (!frame) {
+          errors.push('Iframe não encontrado: ' + this.target);
+          return;
+        }
+        submissions.push(payload);
+        let result;
+        if (payload.action === 'admin_login') {
+          result = {ok: true, token: 'token-interno-valido'};
+        } else if (payload.action === 'admin_dados') {
+          dataReads += 1;
+          result = {
+            ok: true,
+            recados: dataReads >= 3 ? [savedNotice] : [],
+            campanhas: []
+          };
+        } else if (payload.action === 'admin_moradores_areas') {
+          result = {
+            ok: true,
+            areaId: 'JAPARANDUBA',
+            areas: [{areaId: 'JAPARANDUBA', areaNome: 'Sítio Japaranduba'}]
+          };
+        } else if (payload.action === 'admin_portal_manutencao_status') {
+          result = {ok: true, ativa: false, areaId: 'JAPARANDUBA'};
+        } else if (payload.action === 'admin_salvar_recado') {
+          result = {ok: true};
+        } else if (payload.action === 'admin_publicar_notificacao') {
+          result = {ok: true, push: true, onesignalId: 'push-001', destinatarios: 1};
+        } else {
+          errors.push('Ação não prevista: ' + payload.action);
+          return;
+        }
+        setTimeout(() => {
+          window.dispatchEvent(new window.MessageEvent('message', {
+            source: frame.contentWindow,
+            data: {requestId: payload.requestId, result}
+          }));
+        }, 10);
+      };
+    }
+  });
+
+  const {window} = dom;
+  await waitFor(
+    () => /Digite o PIN/.test(window.document.getElementById('loginStatus').textContent),
+    'O painel de recados não ficou pronto para o login.'
+  );
+  window.document.getElementById('pin').value = '1234';
+  window.document.getElementById('entrar').click();
+  await waitFor(
+    () => /Sessão validada e conteúdo carregado/.test(
+      window.document.getElementById('loginStatus').textContent
+    ),
+    'O contexto do painel de recados não foi validado.'
+  );
+
+  window.document.getElementById('novoRecado').click();
+  const form = window.document.getElementById('formNovoRecado');
+  form.querySelector('[name="titulo"]').value = savedNotice.TITULO;
+  form.querySelector('[name="mensagem"]').value = savedNotice.MENSAGEM;
+  form.querySelector('[name="prioridade"]').value = savedNotice.PRIORIDADE;
+  form.querySelector('[name="validade"]').value = '';
+  form.querySelector('[name="ativo"]').checked = true;
+  form.querySelector('.salvarNovoRecado').click();
+
+  await waitFor(
+    () => /OneSignal aceitou a notificação/.test(
+      window.document.getElementById('statusOperacao').textContent
+    ),
+    'O salvamento sem ID retornado não concluiu a releitura e o push.',
+    6000
+  );
+
+  const saves = submissions.filter(item => item.action === 'admin_salvar_recado');
+  const pushes = submissions.filter(item => item.action === 'admin_publicar_notificacao');
+  assert.equal(saves.length, 1, 'O painel reenviou o salvamento durante a releitura.');
+  assert.equal(pushes.length, 1, 'O painel enviou a notificação mais de uma vez.');
+  assert.equal(pushes[0].id, savedNotice.ID, 'A notificação não recebeu o ID confirmado pela releitura.');
+  assert.equal(dataReads, 3, 'O painel não tratou a primeira releitura ainda desatualizada.');
+  assert.doesNotMatch(window.document.getElementById('statusOperacao').textContent, /releitura divergiu/i);
+  assert.equal(
+    JSON.parse(window.sessionStorage.getItem('portalTacsUndoConteudoV1')).id,
+    savedNotice.ID,
+    'O desfazer não guardou o ID confirmado do novo recado.'
+  );
+  assert.deepEqual(errors, [], 'O teste do novo recado produziu erros internos: ' + errors.join(' | '));
+  window.close();
+}
+
 async function main() {
   CASES.forEach(verifyStaticSource);
   await testWarmupRoute();
   await Promise.all(CASES.map(testImmediatePanel));
   await Promise.all(CASES.map(testDirectResponse));
   await Promise.all(CASES.map(testExpiredStoredSession));
-  console.log('OK: abertura imediata, pré-aquecimento, transporte direto e sessão antiga aprovados nos 3 painéis.');
+  await testNewNoticeWithoutReturnedId();
+  console.log('OK: abertura imediata, transporte Safari, sessão antiga e releitura de novo recado aprovados.');
 }
 
 main().catch(error => {

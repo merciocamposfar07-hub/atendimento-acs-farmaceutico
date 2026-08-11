@@ -247,6 +247,12 @@ function testAreaTagClient() {
   assert.match(client, /morador && morador\.areaId/);
   assert.match(client, /document\.addEventListener\('tacs:morador'/);
   assert.match(client, /OneSignal\.User\.addTag\('area_tacs', area/);
+  assert.match(client, /serviceWorkerPath:\s*'\/atendimento-acs-farmaceutico\/push\/OneSignalSDKWorker\.js'/);
+  assert.match(client, /autoResubscribe:\s*true/);
+  assert.match(client, /PushSubscription/);
+  assert.match(client, /push && push\.optedIn === true/);
+  assert.match(client, /push && push\.id \|\| ''/);
+  assert.match(client, /Reparar recebimento de avisos/);
   assert.doesNotMatch(client, /addTag\('area_tacs', 'JAPARANDUBA'\)/);
 }
 

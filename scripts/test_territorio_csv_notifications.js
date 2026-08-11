@@ -149,6 +149,7 @@ function makeContext() {
   const cache = new Map();
   const spreadsheets = new Map();
   const fetched = [];
+  let nextFetchResponse = null;
   let uuid = 0;
   let maintenance = false;
   let created = 0;
@@ -260,9 +261,11 @@ function makeContext() {
     UrlFetchApp: {
       fetch(url, options) {
         fetched.push({url, options});
+        const body = nextFetchResponse || {id: 'push-' + fetched.length, recipients: 7};
+        nextFetchResponse = null;
         return {
           getResponseCode() { return 200; },
-          getContentText() { return JSON.stringify({id: `push-${fetched.length}`, recipients: 7}); }
+          getContentText() { return JSON.stringify(body); }
         };
       }
     },
@@ -281,6 +284,7 @@ function makeContext() {
   context.__spreadsheets = spreadsheets;
   context.__adminSpreadsheet = adminSpreadsheet;
   context.__fetched = fetched;
+  context.__setFetchResponse = value => { nextFetchResponse = value; };
   context.__created = () => created;
   context.__setMaintenance = value => { maintenance = Boolean(value); };
   context.portalManutencaoV1Estado_ = () => ({ativa: maintenance});
@@ -439,6 +443,10 @@ function resultFromHtml(output) {
   const end = output.content.indexOf(',"*");', start);
   assert.ok(start >= marker.length && end > start, 'Envelope HTML de resposta inválido.');
   return JSON.parse(output.content.slice(start, end)).result;
+}
+
+function resultFromJson(output) {
+  return JSON.parse(output.content);
 }
 
 function saveTacs(context, body) {
@@ -811,7 +819,11 @@ function testNotifications(context, territory) {
   // Compatibilidade com o nome já utilizado no Apps Script em produção.
   context.__properties.set('ONESIGNAL_APP_API_KEY', 'private-key-for-test');
   vm.runInContext(read(FILES.notifications), context);
-  assert.equal(context.TACS_NOTIFICACOES_AREA_V1.VERSAO, '1.0.1');
+  assert.equal(context.TACS_NOTIFICACOES_AREA_V1.VERSAO, '1.0.2');
+  assert.equal(
+    context.TACS_NOTIFICACOES_AREA_V1.DEFAULT_APP_ID,
+    'e2294b98-c72b-4f8c-a055-de28979676dc'
+  );
 
   const base = {
     action: 'admin_publicar_notificacao', token: 'admin-token', dispositivo: 'iphone-admin',
@@ -825,12 +837,19 @@ function testNotifications(context, territory) {
   assert.equal(first.areaId, territory.area.areaId);
   assert.equal(context.__fetched.length, 1);
   const sent = JSON.parse(context.__fetched[0].options.payload);
+  assert.equal(sent.app_id, 'e2294b98-c72b-4f8c-a055-de28979676dc');
   assert.deepEqual(JSON.parse(JSON.stringify(sent.filters)), [
     {field: 'tag', key: 'area_tacs', relation: '=', value: territory.area.areaId}
   ]);
   assert.equal(sent.data.areaId, territory.area.areaId);
   assert.equal(JSON.stringify(sent).includes('OUTRA_AREA'), false, 'O servidor aceitou o filtro livre enviado pelo navegador.');
   assert.equal(context.__fetched[0].options.headers.Authorization, 'Key private-key-for-test');
+  const polled = resultFromJson(context.notificacoesAreaV1TratarGet_(event({
+    action: 'admin_result', requestId: 'push_area_000001'
+  })));
+  assert.equal(polled.ok, true);
+  assert.equal(polled.pendente, false);
+  assert.equal(polled.result.onesignalId, first.onesignalId);
 
   const sameEvent = notification(context, Object.assign({}, base, {
     requestId: 'push_area_000002', eventoPublicacao: 'evento-recado-1'
@@ -874,6 +893,26 @@ function testNotifications(context, territory) {
   assert.equal(tacsDenied.ok, false);
   assert.match(tacsDenied.message, /administrador geral/);
   assert.equal(context.__fetched.length, 3);
+
+  context.__setMaintenance(false);
+  context.__setFetchResponse({recipients: 0});
+  const zeroAudience = notification(context, Object.assign({}, base, {
+    requestId: 'push_area_000008', eventoPublicacao: 'evento-sem-destinatario'
+  }));
+  assert.equal(zeroAudience.ok, true);
+  assert.equal(zeroAudience.push, false);
+  assert.equal(zeroAudience.zeroAudience, true);
+  assert.equal(zeroAudience.destinatarios, 0);
+  assert.equal(context.__fetched.length, 4);
+
+  context.__setFetchResponse({id: 'push-sem-contagem'});
+  const acceptedWithoutCount = notification(context, Object.assign({}, base, {
+    requestId: 'push_area_000009', eventoPublicacao: 'evento-sem-contagem'
+  }));
+  assert.equal(acceptedWithoutCount.push, true);
+  assert.equal(acceptedWithoutCount.onesignalId, 'push-sem-contagem');
+  assert.equal(acceptedWithoutCount.destinatarios, null);
+  assert.equal(context.__fetched.length, 5);
 }
 
 function testWrappedRoutes(context) {

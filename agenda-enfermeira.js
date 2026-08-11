@@ -964,10 +964,11 @@
           appId: ONE_SIGNAL_APP_ID,
           safari_web_id: ONE_SIGNAL_SAFARI_ID,
           serviceWorkerPath:
-            'atendimento-acs-farmaceutico/push/OneSignalSDKWorker.js',
+            '/atendimento-acs-farmaceutico/push/OneSignalSDKWorker.js',
           serviceWorkerParam: {
             scope: '/atendimento-acs-farmaceutico/push/'
           },
+          autoResubscribe: true,
           notifyButton: { enable: false },
           allowLocalhostAsSecureOrigin: false
         });
@@ -980,61 +981,160 @@
           return area || 'JAPARANDUBA';
         }
 
+        function estadoInscricao() {
+          var push = OneSignal.User && OneSignal.User.PushSubscription;
+          return {
+            permission: OneSignal.Notifications.permission === true,
+            optedIn: Boolean(push && push.optedIn === true),
+            subscriptionId: String(push && push.id || '')
+          };
+        }
+
+        function inscricaoAtiva(estado) {
+          var atual = estado || estadoInscricao();
+          return Boolean(
+            atual.permission &&
+            atual.optedIn &&
+            atual.subscriptionId
+          );
+        }
+
         async function marcarAreaDaUnidade(areaInformada) {
+          if (!inscricaoAtiva()) return false;
           var area = String(areaInformada || areaAtualDaUnidade())
             .toUpperCase()
             .replace(/[^A-Z0-9_-]/g, '');
           if (OneSignal.User && typeof OneSignal.User.addTag === 'function') {
             await OneSignal.User.addTag('area_tacs', area || 'JAPARANDUBA');
           }
+          return true;
+        }
+
+        function mostrarEstado(estado) {
+          var atual = estado || estadoInscricao();
+          if (inscricaoAtiva(atual)) {
+            status.textContent = 'Avisos ativados neste aparelho.';
+            button.textContent = 'Avisos ativados';
+            button.disabled = true;
+            help.textContent =
+              'Inscrição ativa e vinculada à área deste morador.';
+            return;
+          }
+          button.disabled = false;
+          if (atual.permission) {
+            status.textContent =
+              'A permissão existe, mas a inscrição de avisos precisa ser reparada.';
+            button.textContent = 'Reparar recebimento de avisos';
+            help.textContent =
+              'Toque para registrar novamente este ícone do Portal TACS no serviço de notificações.';
+            return;
+          }
+          status.textContent =
+            'Toque no botão para autorizar os avisos neste aparelho.';
+          button.textContent = 'Ativar avisos neste aparelho';
+          help.textContent =
+            'O aparelho mostrará a janela oficial de permissão.';
+        }
+
+        function aguardarInscricao(limiteMs) {
+          return new Promise(function (resolve) {
+            var push = OneSignal.User && OneSignal.User.PushSubscription;
+            var encerrado = false;
+            var intervalo = null;
+            var limite = null;
+            function limpar() {
+              if (intervalo) clearInterval(intervalo);
+              if (limite) clearTimeout(limite);
+              if (push && typeof push.removeEventListener === 'function') {
+                push.removeEventListener('change', conferir);
+              }
+            }
+            function terminar(estado) {
+              if (encerrado) return;
+              encerrado = true;
+              limpar();
+              resolve(estado);
+            }
+            function conferir() {
+              var atual = estadoInscricao();
+              if (inscricaoAtiva(atual)) terminar(atual);
+            }
+            if (inscricaoAtiva()) {
+              terminar(estadoInscricao());
+              return;
+            }
+            if (push && typeof push.addEventListener === 'function') {
+              push.addEventListener('change', conferir);
+            }
+            intervalo = setInterval(conferir, 250);
+            limite = setTimeout(function () {
+              terminar(estadoInscricao());
+            }, limiteMs || 8000);
+          });
+        }
+
+        async function sincronizarEstado() {
+          var atual = estadoInscricao();
+          if (inscricaoAtiva(atual)) {
+            await marcarAreaDaUnidade();
+            atual = estadoInscricao();
+          }
+          mostrarEstado(atual);
+          return atual;
         }
 
         window.PortalTacsMarcarAreaNotificacao = marcarAreaDaUnidade;
         document.addEventListener('tacs:morador', function (event) {
           var morador = event && event.detail;
-          if (!OneSignal.Notifications.permission || !morador || !morador.areaId) return;
+          if (!inscricaoAtiva() || !morador || !morador.areaId) return;
           marcarAreaDaUnidade(morador.areaId).catch(function () {});
         });
 
-        if (OneSignal.Notifications.permission) {
-          await marcarAreaDaUnidade();
-          status.textContent = 'Avisos ativados neste aparelho.';
-          button.textContent = 'Avisos ativados';
-          button.disabled = true;
-          help.textContent =
-            'Este aparelho está configurado para receber novas publicações.';
-          return;
+        var pushSubscription =
+          OneSignal.User && OneSignal.User.PushSubscription;
+        if (
+          pushSubscription &&
+          typeof pushSubscription.addEventListener === 'function'
+        ) {
+          pushSubscription.addEventListener('change', function () {
+            sincronizarEstado().catch(function () {
+              mostrarEstado();
+            });
+          });
         }
-
-        status.textContent =
-          'Toque no botão para autorizar os avisos neste aparelho.';
-        help.textContent =
-          'O navegador mostrará a janela oficial de permissão.';
 
         button.addEventListener('click', async function () {
           button.disabled = true;
-          status.textContent = 'Aguardando sua autorização...';
+          status.textContent = 'Confirmando a inscrição deste aparelho...';
           try {
-            await OneSignal.Notifications.requestPermission();
-            if (OneSignal.Notifications.permission) {
+            if (!OneSignal.Notifications.permission) {
+              await OneSignal.Notifications.requestPermission();
+            }
+            var push = OneSignal.User && OneSignal.User.PushSubscription;
+            if (
+              OneSignal.Notifications.permission &&
+              push &&
+              push.optedIn !== true &&
+              typeof push.optIn === 'function'
+            ) {
+              await push.optIn();
+            }
+            var atual = await aguardarInscricao(8000);
+            if (inscricaoAtiva(atual)) {
               await marcarAreaDaUnidade();
-              status.textContent = 'Avisos ativados neste aparelho.';
-              button.textContent = 'Avisos ativados';
-              help.textContent =
-                'Este aparelho receberá as novas publicações do Portal TACS.';
+              mostrarEstado(estadoInscricao());
             } else {
-              status.textContent = 'A permissão não foi concedida.';
-              help.textContent =
-                'Confira as permissões de notificações nas configurações do aparelho.';
-              button.disabled = false;
+              mostrarEstado(atual);
             }
           } catch (error) {
-            status.textContent = 'Não foi possível ativar os avisos agora.';
+            status.textContent = 'Não foi possível concluir a inscrição agora.';
             help.textContent =
-              'Atualize a página e tente novamente pelo navegador recomendado.';
+              'Feche e abra novamente o ícone do Portal TACS e toque em reparar.';
             button.disabled = false;
           }
         });
+
+        await sincronizarEstado();
       } catch (error) {
         status.textContent =
           'O serviço de avisos não conseguiu iniciar neste navegador.';
