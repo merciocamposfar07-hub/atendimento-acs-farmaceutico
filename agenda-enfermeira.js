@@ -999,6 +999,17 @@
           );
         }
 
+        function areaMarcadaDaUnidade(areaInformada) {
+          var area = String(areaInformada || areaAtualDaUnidade())
+            .toUpperCase()
+            .replace(/[^A-Z0-9_-]/g, '') || 'JAPARANDUBA';
+          if (!OneSignal.User || typeof OneSignal.User.getTags !== 'function') {
+            return false;
+          }
+          var tags = OneSignal.User.getTags() || {};
+          return String(tags.area_tacs || '').toUpperCase() === area;
+        }
+
         async function marcarAreaDaUnidade(areaInformada) {
           if (!inscricaoAtiva()) return false;
           var area = String(areaInformada || areaAtualDaUnidade())
@@ -1007,12 +1018,12 @@
           if (OneSignal.User && typeof OneSignal.User.addTag === 'function') {
             await OneSignal.User.addTag('area_tacs', area || 'JAPARANDUBA');
           }
-          return true;
+          return areaMarcadaDaUnidade(area);
         }
 
-        function mostrarEstado(estado) {
+        function mostrarEstado(estado, areaConfirmada) {
           var atual = estado || estadoInscricao();
-          if (inscricaoAtiva(atual)) {
+          if (inscricaoAtiva(atual) && areaConfirmada === true) {
             status.textContent = 'Avisos ativados neste aparelho.';
             button.textContent = 'Avisos ativados';
             button.disabled = true;
@@ -1021,6 +1032,14 @@
             return;
           }
           button.disabled = false;
+          if (inscricaoAtiva(atual)) {
+            status.textContent =
+              'Os avisos estão autorizados, mas a área precisa ser vinculada.';
+            button.textContent = 'Reparar vínculo da área';
+            help.textContent =
+              'Toque para concluir a migração deste aparelho e voltar a receber recados da sua área.';
+            return;
+          }
           if (atual.permission) {
             status.textContent =
               'A permissão existe, mas a inscrição de avisos precisa ser reparada.';
@@ -1075,11 +1094,12 @@
 
         async function sincronizarEstado() {
           var atual = estadoInscricao();
+          var areaConfirmada = false;
           if (inscricaoAtiva(atual)) {
-            await marcarAreaDaUnidade();
+            areaConfirmada = await marcarAreaDaUnidade();
             atual = estadoInscricao();
           }
-          mostrarEstado(atual);
+          mostrarEstado(atual, areaConfirmada);
           return atual;
         }
 
@@ -1121,10 +1141,10 @@
             }
             var atual = await aguardarInscricao(8000);
             if (inscricaoAtiva(atual)) {
-              await marcarAreaDaUnidade();
-              mostrarEstado(estadoInscricao());
+              var areaConfirmada = await marcarAreaDaUnidade();
+              mostrarEstado(estadoInscricao(), areaConfirmada);
             } else {
-              mostrarEstado(atual);
+              mostrarEstado(atual, false);
             }
           } catch (error) {
             status.textContent = 'Não foi possível concluir a inscrição agora.';
