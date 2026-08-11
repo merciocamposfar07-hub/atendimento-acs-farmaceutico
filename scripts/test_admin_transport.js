@@ -423,7 +423,7 @@ async function testExpiredStoredSession(config) {
   window.close();
 }
 
-async function testNewNoticeWithoutReturnedId() {
+async function testNewNoticeWithoutReturnedId(eventuallyVisible) {
   const config = CASES.find(item => item.file === 'teste-v1/painel-recados-campanhas-v1.html');
   const submissions = [];
   const errors = [];
@@ -433,7 +433,7 @@ async function testNewNoticeWithoutReturnedId() {
     TITULO: 'Atendimento médico sexta-feira',
     MENSAGEM: 'Atendimento confirmado das 08h às 11h.',
     PRIORIDADE: 'INFORMATIVO',
-    VALIDADE: '',
+    VALIDADE: '12/08/2026',
     ATIVO: true
   };
   const virtualConsole = new VirtualConsole();
@@ -466,7 +466,7 @@ async function testNewNoticeWithoutReturnedId() {
           dataReads += 1;
           result = {
             ok: true,
-            recados: dataReads >= 3 ? [savedNotice] : [],
+            recados: eventuallyVisible && dataReads >= 3 ? [savedNotice] : [],
             campanhas: []
           };
         } else if (payload.action === 'admin_moradores_areas') {
@@ -514,15 +514,17 @@ async function testNewNoticeWithoutReturnedId() {
   form.querySelector('[name="titulo"]').value = savedNotice.TITULO;
   form.querySelector('[name="mensagem"]').value = savedNotice.MENSAGEM;
   form.querySelector('[name="prioridade"]').value = savedNotice.PRIORIDADE;
-  form.querySelector('[name="validade"]').value = '';
+  form.querySelector('[name="validade"]').value = '2026-08-12';
   form.querySelector('[name="ativo"]').checked = true;
   form.querySelector('.salvarNovoRecado').click();
 
   await waitFor(
-    () => /OneSignal aceitou a notificação/.test(
+    () => (eventuallyVisible ? /opção Desfazer preparada/ : /lista ainda está sincronizando/i).test(
       window.document.getElementById('statusOperacao').textContent
     ),
-    'O salvamento sem ID retornado não concluiu a releitura e o push.',
+    eventuallyVisible
+      ? 'O salvamento com data brasileira não concluiu o push e a sincronização.'
+      : 'O atraso total da releitura bloqueou o push ou não encerrou a sincronização.',
     6000
   );
 
@@ -530,14 +532,37 @@ async function testNewNoticeWithoutReturnedId() {
   const pushes = submissions.filter(item => item.action === 'admin_publicar_notificacao');
   assert.equal(saves.length, 1, 'O painel reenviou o salvamento durante a releitura.');
   assert.equal(pushes.length, 1, 'O painel enviou a notificação mais de uma vez.');
-  assert.equal(pushes[0].id, savedNotice.ID, 'A notificação não recebeu o ID confirmado pela releitura.');
-  assert.equal(dataReads, 3, 'O painel não tratou a primeira releitura ainda desatualizada.');
-  assert.doesNotMatch(window.document.getElementById('statusOperacao').textContent, /releitura divergiu/i);
+  assert.match(pushes[0].id, /^publicacao_[a-f0-9]{48}$/, 'A notificação não recebeu a referência idempotente da publicação.');
+  assert.equal(pushes[0].eventoPublicacao, pushes[0].id, 'A referência e o evento idempotente divergiram.');
   assert.equal(
-    JSON.parse(window.sessionStorage.getItem('portalTacsUndoConteudoV1')).id,
-    savedNotice.ID,
-    'O desfazer não guardou o ID confirmado do novo recado.'
+    dataReads,
+    eventuallyVisible ? 3 : 5,
+    'O painel não executou a quantidade esperada de releituras sem reenviar o salvamento.'
   );
+  const saveIndex = submissions.findIndex(item => item.action === 'admin_salvar_recado');
+  const pushIndex = submissions.findIndex(item => item.action === 'admin_publicar_notificacao');
+  const rereadIndex = submissions.findIndex((item, index) => index > saveIndex && item.action === 'admin_dados');
+  assert.ok(saveIndex >= 0 && pushIndex > saveIndex, 'O push não ocorreu depois da confirmação do salvamento.');
+  assert.ok(rereadIndex > pushIndex, 'A releitura voltou a atrasar ou bloquear o push.');
+  assert.doesNotMatch(window.document.getElementById('statusOperacao').textContent, /nenhuma notificação foi enviada/i);
+  if (eventuallyVisible) {
+    assert.equal(
+      JSON.parse(window.sessionStorage.getItem('portalTacsUndoConteudoV1')).id,
+      savedNotice.ID,
+      'O desfazer não guardou o ID confirmado do novo recado.'
+    );
+  } else {
+    assert.equal(
+      window.sessionStorage.getItem('portalTacsUndoConteudoV1'),
+      null,
+      'O painel habilitou Desfazer sem conhecer o ID real do novo registro.'
+    );
+    assert.equal(
+      window.document.getElementById('statusOperacao').classList.contains('erro'),
+      false,
+      'O atraso de sincronização foi apresentado como falha de gravação ou push.'
+    );
+  }
   assert.deepEqual(errors, [], 'O teste do novo recado produziu erros internos: ' + errors.join(' | '));
   window.close();
 }
@@ -548,8 +573,9 @@ async function main() {
   await Promise.all(CASES.map(testImmediatePanel));
   await Promise.all(CASES.map(testDirectResponse));
   await Promise.all(CASES.map(testExpiredStoredSession));
-  await testNewNoticeWithoutReturnedId();
-  console.log('OK: abertura imediata, transporte Safari, sessão antiga e releitura de novo recado aprovados.');
+  await testNewNoticeWithoutReturnedId(true);
+  await testNewNoticeWithoutReturnedId(false);
+  console.log('OK: abertura imediata, transporte Safari, data brasileira, push antecipado e releitura atrasada aprovados.');
 }
 
 main().catch(error => {
