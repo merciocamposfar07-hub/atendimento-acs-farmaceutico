@@ -36,6 +36,15 @@ async function wait(ms = 15) {
   await new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function waitFor(check, timeout = 8000) {
+  const limit = Date.now() + timeout;
+  while (Date.now() < limit) {
+    if (check()) return;
+    await wait(25);
+  }
+  throw new Error('Tempo esgotado aguardando a condição do teste.');
+}
+
 async function testResidentPanel() {
   const html = source('teste-v1/painel-moradores-v2.html');
   assert.match(html, /rel="icon"[^>]+painel-moradores\.svg/);
@@ -55,7 +64,7 @@ async function testResidentPanel() {
   await wait();
 
   const api = window.PortalTacsMoradoresTransportV2;
-  assert.equal(api.version, '3.6.0');
+  assert.equal(api.version, '3.6.1');
   api.prepareNewResident();
   assert.equal(window.document.getElementById('formArea').classList.contains('hidden'), false);
   assert.equal(window.document.getElementById('searchArea').classList.contains('hidden'), true);
@@ -74,6 +83,104 @@ async function testResidentPanel() {
   window.document.getElementById('tacsPinAccess').value = '1234';
   window.document.getElementById('loginTacs').click();
   assert.match(window.document.getElementById('loginStatus').textContent, /15 números do CNS/);
+  dom.window.close();
+}
+
+async function testSafariPostTargetRegistration() {
+  const html = source('teste-v1/painel-moradores-v2.html');
+  const dom = new JSDOM(html, {
+    url: 'https://portal.test/teste-v1/painel-moradores-v2.html',
+    runScripts: 'outside-only',
+    pretendToBeVisual: true
+  });
+  const {window} = dom;
+  const submissions = [];
+  const results = new Map();
+  let prematureSubmits = 0;
+
+  const originalBodyAppend = window.document.body.appendChild.bind(window.document.body);
+  window.document.body.appendChild = node => {
+    const appended = originalBodyAppend(node);
+    if (node && node.tagName === 'IFRAME') {
+      node.__safariTargetReady = false;
+      setTimeout(() => { node.__safariTargetReady = true; }, 8);
+    }
+    return appended;
+  };
+
+  window.HTMLFormElement.prototype.submit = function submit() {
+    const target = this.getAttribute('target') || this.target;
+    const frame = Array.from(window.document.querySelectorAll('iframe'))
+      .find(item => item.getAttribute('name') === target || item.name === target);
+    if (!frame || frame.__safariTargetReady !== true) {
+      prematureSubmits++;
+      return;
+    }
+
+    const fields = {};
+    Array.from(this.querySelectorAll('input[name]')).forEach(input => {
+      fields[input.name] = input.value;
+    });
+    submissions.push({action: fields.action, requestId: fields.requestId, targetReady: true});
+
+    if (fields.action === 'admin_login') {
+      results.set(fields.requestId, {ok: true, token: 'token-admin-safari'});
+    } else if (fields.action === 'admin_moradores_status') {
+      results.set(fields.requestId, {
+        ok: true,
+        versao: '1.4.5',
+        perfil: 'ADMIN_GERAL',
+        areaId: 'JAPARANDUBA',
+        areaNome: 'Sítio Japaranduba',
+        totalRegistros: 10,
+        totalColunas: 20,
+        schemaValido: true,
+        escritaHabilitada: true,
+        situacaoHabilitada: true,
+        consolidacaoHabilitada: true,
+        filtroPublicoSituacao: true,
+        podeAtivarSituacao: true,
+        areas: [{areaId: 'JAPARANDUBA', areaNome: 'Sítio Japaranduba'}]
+      });
+    }
+  };
+
+  window.document.head.appendChild = node => {
+    if (node && node.tagName === 'SCRIPT') {
+      const url = new URL(node.src);
+      const callback = url.searchParams.get('callback');
+      const requestId = url.searchParams.get('requestId');
+      const result = results.get(requestId);
+      setTimeout(() => {
+        if (typeof window[callback] !== 'function') return;
+        window[callback](result
+          ? {ok: true, pendente: false, requestId, result}
+          : {ok: true, pendente: true, requestId, result: null});
+      }, 0);
+      return node;
+    }
+    return node;
+  };
+
+  window.eval(source('teste-v1/painel-moradores-transport-v2.js'));
+  window.document.getElementById('pin').value = '1234';
+  window.document.getElementById('login').click();
+
+  await waitFor(() => /base de moradores conferida/i.test(
+    window.document.getElementById('loginStatus').textContent
+  ));
+
+  assert.equal(prematureSubmits, 0, 'O formulário foi enviado antes de o Safari registrar o iframe.');
+  assert.deepEqual(submissions.map(item => item.action), [
+    'admin_login',
+    'admin_moradores_status'
+  ]);
+  assert.equal(new Set(submissions.map(item => item.requestId)).size, submissions.length);
+  assert.ok(submissions.every(item => item.targetReady));
+  assert.equal(window.sessionStorage.getItem('portalTacsAdminTokenV1'), 'token-admin-safari');
+  assert.equal(window.document.getElementById('schema').textContent, '20/20');
+  assert.equal(window.document.getElementById('content').classList.contains('hidden'), false);
+  assert.doesNotMatch(window.document.getElementById('loginStatus').textContent, /ainda está em processamento/i);
   dom.window.close();
 }
 
@@ -145,6 +252,7 @@ function testAreaTagClient() {
 
 async function main() {
   await testResidentPanel();
+  await testSafariPostTargetRegistration();
   testTerritoryPanel();
   testIconsAndManifests();
   testAreaTagClient();
