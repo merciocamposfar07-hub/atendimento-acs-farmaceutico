@@ -115,16 +115,18 @@ jobs:
             trap - ERR
             if [ "$DEPLOYED" = '1' ]; then
               npx --yes @google/clasp@3.3.0 redeploy \
-                "$DEPLOYMENT_ID" "$PREVIOUS_VERSION" \
-                "Rollback automático após falha de validação" || true
+                --versionNumber "$PREVIOUS_VERSION" \
+                --description "Rollback automático após falha de validação" \
+                "$DEPLOYMENT_ID" || true
             fi
             exit "$code"
           }
           trap rollback ERR
 
           npx --yes @google/clasp@3.3.0 redeploy \
-            "$DEPLOYMENT_ID" "$NEW_VERSION" \
-            "Moradores 1.4.5 e painel 3.6.0"
+            --versionNumber "$NEW_VERSION" \
+            --description "Moradores 1.4.5 e painel 3.6.0" \
+            "$DEPLOYMENT_ID"
           DEPLOYED=1
 
           BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
