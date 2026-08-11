@@ -41,9 +41,15 @@ function listFiles(directory, extensions) {
   return out;
 }
 
+function moduleDeclarationPattern(marker) {
+  const escaped = marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\bvar\\s+${escaped}\\s*=\\s*Object\\.freeze\\s*\\(`);
+}
+
 function filesWithMarker(directory, marker) {
+  const declaration = moduleDeclarationPattern(marker);
   return listFiles(directory, SCRIPT_EXTENSIONS).filter((file) =>
-    fs.readFileSync(file, 'utf8').includes(marker)
+    declaration.test(fs.readFileSync(file, 'utf8'))
   );
 }
 
@@ -112,4 +118,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = {buildRelease, MODULES, SCRIPT_EXTENSIONS};
+module.exports = {buildRelease, MODULES, SCRIPT_EXTENSIONS, moduleDeclarationPattern};

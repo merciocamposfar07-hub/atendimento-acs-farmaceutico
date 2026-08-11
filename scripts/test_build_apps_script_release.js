@@ -2,15 +2,27 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const {buildRelease, MODULES, SCRIPT_EXTENSIONS} = require('./build_apps_script_release');
+const {
+  buildRelease,
+  MODULES,
+  SCRIPT_EXTENSIONS,
+  moduleDeclarationPattern
+} = require('./build_apps_script_release');
 
 function project(extension = '.js') {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tacs-apps-script-'));
   fs.writeFileSync(path.join(directory, 'appsscript.json'), '{"runtimeVersion":"V8"}\n');
-  fs.writeFileSync(path.join(directory, `Portal${extension}`), 'function doGet() { return true; }\n');
+  fs.writeFileSync(
+    path.join(directory, `Portal${extension}`),
+    [
+      'function doGet() { return true; }',
+      'function diagnostico() { return TACS_MORADORES_ADMIN_V1.VERSAO; }',
+      ''
+    ].join('\n')
+  );
   fs.writeFileSync(
     path.join(directory, `ZZZZ_15_ArquivoRealDoServidor${extension}`),
-    'var TACS_MORADORES_ADMIN_V1 = {VERSAO: "ANTIGA"};\n'
+    'var TACS_MORADORES_ADMIN_V1 = Object.freeze({VERSAO: "ANTIGA"});\n'
   );
   return directory;
 }
@@ -32,15 +44,16 @@ try {
   const second = buildRelease(target);
   assert.ok(second.every((item) => item.operation === 'substituido'));
   MODULES.forEach((module) => {
+    const declaration = moduleDeclarationPattern(module.marker);
     const occurrences = fs.readdirSync(target)
       .filter((name) => SCRIPT_EXTENSIONS.some((extension) => name.endsWith(extension)))
-      .filter((name) => fs.readFileSync(path.join(target, name), 'utf8').includes(module.marker));
+      .filter((name) => declaration.test(fs.readFileSync(path.join(target, name), 'utf8')));
     assert.strictEqual(occurrences.length, 1);
   });
 
   fs.writeFileSync(
     path.join(target, 'Duplicado.gs'),
-    'var TACS_MORADORES_ADMIN_V1 = {VERSAO: "DUPLICADA"};\n'
+    'var TACS_MORADORES_ADMIN_V1 = Object.freeze({VERSAO: "DUPLICADA"});\n'
   );
   assert.throws(() => buildRelease(target), /Mais de um arquivo contém TACS_MORADORES_ADMIN_V1/);
 } finally {
