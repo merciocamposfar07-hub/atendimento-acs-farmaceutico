@@ -808,9 +808,10 @@ function notification(context, parameters) {
 }
 
 function testNotifications(context, territory) {
-  context.__properties.set('TACS_ONESIGNAL_API_KEY', 'private-key-for-test');
+  // Compatibilidade com o nome já utilizado no Apps Script em produção.
+  context.__properties.set('ONESIGNAL_APP_API_KEY', 'private-key-for-test');
   vm.runInContext(read(FILES.notifications), context);
-  assert.equal(context.TACS_NOTIFICACOES_AREA_V1.VERSAO, '1.0.0');
+  assert.equal(context.TACS_NOTIFICACOES_AREA_V1.VERSAO, '1.0.1');
 
   const base = {
     action: 'admin_publicar_notificacao', token: 'admin-token', dispositivo: 'iphone-admin',

@@ -1,6 +1,6 @@
 /**
  * ZZZZ_19_NotificacoesSegmentadasV1.gs
- * Portal TACS — envio de notificações segmentadas por área V1.0.0
+ * Portal TACS — envio de notificações segmentadas por área V1.0.1
  *
  * A área e a tag são resolvidas no servidor. O navegador não pode fornecer um
  * filtro livre. Quando houver mais de uma área ativa, o envio é bloqueado se a
@@ -9,13 +9,18 @@
  * não envia duas vezes.
  */
 var TACS_NOTIFICACOES_AREA_V1 = Object.freeze({
-  VERSAO:'1.0.0',
+  VERSAO:'1.0.1',
   DEFAULT_AREA_ID:'JAPARANDUBA',
   DEFAULT_APP_ID:'4bead971-106d-461b-853f-83aecbd62d40',
   MAINTENANCE_TITLE:'PORTAL EM MANUTENÇÃO',
   MAINTENANCE_MESSAGE:'O Portal TACS está temporariamente em manutenção. Aguarde a liberação para fazer novas solicitações.',
   APP_ID_PROPERTIES:Object.freeze(['TACS_ONESIGNAL_APP_ID','ONESIGNAL_APP_ID']),
-  API_KEY_PROPERTIES:Object.freeze(['TACS_ONESIGNAL_API_KEY','ONESIGNAL_REST_API_KEY','ONESIGNAL_API_KEY']),
+  API_KEY_PROPERTIES:Object.freeze([
+    'TACS_ONESIGNAL_API_KEY',
+    'ONESIGNAL_APP_API_KEY',
+    'ONESIGNAL_REST_API_KEY',
+    'ONESIGNAL_API_KEY'
+  ]),
   ENDPOINT:'https://api.onesignal.com/notifications',
   PORTAL_URL:'https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/',
   AUDIT_SHEET:'TACS_AUDIT_NOTIFICACOES',
