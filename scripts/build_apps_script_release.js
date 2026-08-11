@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
+const SCRIPT_EXTENSIONS = ['.js', '.gs'];
 const MODULES = [
   {
     source: 'apps-script/ZZZZ_15_MoradoresAdminPortalV1.gs',
@@ -26,21 +27,31 @@ const MODULES = [
   }
 ];
 
-function listFiles(directory, extension) {
+function listFiles(directory, extensions) {
+  const allowed = Array.isArray(extensions) ? extensions : [extensions];
   const out = [];
   fs.readdirSync(directory, {withFileTypes: true}).forEach((entry) => {
     if (entry.name === '.git' || entry.name === 'node_modules') return;
     const full = path.join(directory, entry.name);
-    if (entry.isDirectory()) out.push(...listFiles(full, extension));
-    else if (entry.isFile() && full.endsWith(extension)) out.push(full);
+    if (entry.isDirectory()) out.push(...listFiles(full, allowed));
+    else if (entry.isFile() && allowed.some((extension) => full.endsWith(extension))) {
+      out.push(full);
+    }
   });
   return out;
 }
 
 function filesWithMarker(directory, marker) {
-  return listFiles(directory, '.gs').filter((file) =>
+  return listFiles(directory, SCRIPT_EXTENSIONS).filter((file) =>
     fs.readFileSync(file, 'utf8').includes(marker)
   );
+}
+
+function preferredScriptExtension(directory) {
+  const scripts = listFiles(directory, SCRIPT_EXTENSIONS);
+  const jsCount = scripts.filter((file) => file.endsWith('.js')).length;
+  const gsCount = scripts.filter((file) => file.endsWith('.gs')).length;
+  return jsCount > gsCount ? '.js' : '.gs';
 }
 
 function buildRelease(targetDirectory) {
@@ -53,6 +64,7 @@ function buildRelease(targetDirectory) {
   }
 
   const report = [];
+  const targetExtension = preferredScriptExtension(target);
   MODULES.forEach((module) => {
     const sourceFile = path.join(ROOT, module.source);
     const source = fs.readFileSync(sourceFile, 'utf8');
@@ -68,7 +80,11 @@ function buildRelease(targetDirectory) {
       );
     }
 
-    const destination = found[0] || path.join(target, path.basename(module.source));
+    const sourceExtension = path.extname(module.source);
+    const destination = found[0] || path.join(
+      target,
+      path.basename(module.source, sourceExtension) + targetExtension
+    );
     fs.writeFileSync(destination, source, 'utf8');
     report.push({
       marker: module.marker,
@@ -96,4 +112,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = {buildRelease, MODULES};
+module.exports = {buildRelease, MODULES, SCRIPT_EXTENSIONS};
