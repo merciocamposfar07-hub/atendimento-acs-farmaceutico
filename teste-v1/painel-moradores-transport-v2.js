@@ -14,6 +14,7 @@ var baseCheckPending=false;
 var currentSituation='ATIVO';
 var duplicateLock=false;
 var lastSearchQuery='';
+var backendVersion='';
 
 var COMPARISON_FIELDS=[
   ['idPortal','ID Portal'],['id','ID original'],['cpf','CPF'],['cns','CNS'],
@@ -286,6 +287,7 @@ function showAuthenticatedShell(message){
   writesEnabled=false;
   situationEnabled=false;
   consolidationEnabled=false;
+  backendVersion='';
   if(el('countResidents'))el('countResidents').textContent='…';
   if(el('schema'))el('schema').textContent='…';
   if(el('write'))el('write').textContent='AGUARDE';
@@ -370,6 +372,7 @@ function renderBase(r,message){
   writesEnabled=r.escritaHabilitada===true;
   situationEnabled=r.situacaoHabilitada===true;
   consolidationEnabled=r.consolidacaoHabilitada===true;
+  backendVersion=text(r.versao);
   if(el('countResidents'))el('countResidents').textContent=String(r.totalRegistros);
   if(el('schema'))el('schema').textContent=r.schemaValido?'20/20':'ERRO';
   if(el('write'))el('write').textContent=writesEnabled?'LIBERADO':'BLOQ.';
@@ -439,7 +442,7 @@ function groupHasLegacyCpf(group){
 }
 
 function serverVersionAtLeast(major,minor,patch){
-  var parts=text(active&&active.versao).split('.').map(function(v){return Number(v)||0});
+  var parts=text(backendVersion).split('.').map(function(v){return Number(v)||0});
   var current=(parts[0]||0)*1000000+(parts[1]||0)*1000+(parts[2]||0);
   var required=Number(major||0)*1000000+Number(minor||0)*1000+Number(patch||0);
   return current>=required;
@@ -925,6 +928,6 @@ window.PortalTacsMoradoresTransportV2={
   showSearch:showSearch,
   prepareNewResident:prepareNewResident,
   consolidateGroup:consolidateGroup,
-  version:'3.3.4'
+  version:'3.3.5'
 };
 }());
