@@ -169,6 +169,7 @@ function finish(result){
   if(!active)return;
   clearTimeout(active.timeout);
   clearTimeout(active.pollTimer);
+  clearTimeout(active.submitTimer);
   var cb=active.callback;
   if(active.form&&active.form.parentNode)active.form.remove();
   var frame=active.frame;
@@ -233,13 +234,16 @@ function post(action,payload,resultAction,cb){
 
   var frame=document.createElement('iframe');
   var form=document.createElement('form');
-  frame.name='mrV2Frame'+Date.now()+Math.floor(Math.random()*1000);
+  var frameName='mrV2Frame'+Date.now()+Math.floor(Math.random()*1000);
+  frame.name=frameName;
+  frame.setAttribute('name',frameName);
   frame.className='bridge';
   frame.setAttribute('aria-hidden','true');
   frame.src='about:blank';
   form.method='POST';
   form.action=API+'?_='+Date.now();
-  form.target=frame.name;
+  form.target=frameName;
+  form.setAttribute('target',frameName);
   form.className='bridge';
 
   Object.keys(fields).forEach(function(k){
@@ -257,11 +261,41 @@ function post(action,payload,resultAction,cb){
     callback:cb,
     frame:frame,
     form:form,
+    submitTimer:null,
     pollTimer:null,
     nextWait:2500,
-    limit:Date.now()+74000,
-    timeout:setTimeout(function(){finish({ok:false,message:'A confirmação do servidor ainda está em processamento. A operação não foi reenviada.'})},75000)
+    limit:0,
+    timeout:null
   };
+
+  var submitted=false;
+  function submitOnce(){
+    if(submitted||!active||active.id!==rid)return;
+    submitted=true;
+    clearTimeout(active.submitTimer);
+    active.submitTimer=null;
+    active.limit=Date.now()+74000;
+    active.timeout=setTimeout(function(){
+      finish({ok:false,message:'A confirmação do servidor ainda está em processamento. A operação não foi reenviada.'});
+    },75000);
+    try{
+      form.submit();
+    }catch(erro){
+      finish({ok:false,message:'O Safari não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});
+      return;
+    }
+    schedulePoll();
+  }
+
+  function submitAfterTargetRegistration(){
+    if(typeof window.requestAnimationFrame==='function'){
+      window.requestAnimationFrame(function(){
+        window.requestAnimationFrame(submitOnce);
+      });
+      return;
+    }
+    setTimeout(submitOnce,60);
+  }
 
   var login=el('login');
   var loginTacs=el('loginTacs');
@@ -269,10 +303,11 @@ function post(action,payload,resultAction,cb){
   if(login)login.disabled=true;
   if(loginTacs)loginTacs.disabled=true;
   if(logout)logout.disabled=true;
+  frame.addEventListener('load',submitAfterTargetRegistration,{once:true});
   document.body.appendChild(frame);
   document.body.appendChild(form);
-  form.submit();
-  schedulePoll();
+  submitAfterTargetRegistration();
+  active.submitTimer=setTimeout(submitOnce,180);
 }
 
 function updateAreaHeading(areaName){
@@ -1173,6 +1208,6 @@ window.PortalTacsMoradoresTransportV2={
   consolidateGroup:consolidateGroup,
   changeArea:changeArea,
   maybeActivateSituation:maybeActivateSituation,
-  version:'3.6.0'
+  version:'3.6.1'
 };
 }());
