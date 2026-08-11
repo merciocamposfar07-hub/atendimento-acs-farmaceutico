@@ -77,4 +77,24 @@ try {
   fs.rmSync(legacyGs, {recursive: true, force: true});
 }
 
-console.log('Montagem Apps Script: .js/.gs, projeto real preservado, módulos únicos e falhas seguras validados.');
+const workflow = fs.readFileSync(
+  path.join(__dirname, '..', '.github', 'workflows', 'deploy-apps-script-moradores.yml'),
+  'utf8'
+);
+assert.strictEqual(
+  (workflow.match(/@google\/clasp@3\.3\.0 redeploy/g) || []).length,
+  2,
+  'O fluxo deve conter exatamente a implantação e a reversão automática.'
+);
+assert.match(
+  workflow,
+  /redeploy \\\n\s+--versionNumber "\$PREVIOUS_VERSION" \\\n\s+--description "Rollback automático após falha de validação" \\\n\s+"\$DEPLOYMENT_ID" \|\| true/,
+  'A reversão deve usar as opções aceitas pelo clasp 3.3.0.'
+);
+assert.match(
+  workflow,
+  /redeploy \\\n\s+--versionNumber "\$NEW_VERSION" \\\n\s+--description "Moradores 1\.4\.5 e painel 3\.6\.0" \\\n\s+"\$DEPLOYMENT_ID"/,
+  'A implantação deve usar as opções aceitas pelo clasp 3.3.0.'
+);
+
+console.log('Montagem Apps Script: .js/.gs, projeto real preservado, módulos únicos, clasp 3.3.0 e falhas seguras validados.');
