@@ -438,6 +438,13 @@ function groupHasLegacyCpf(group){
   return false;
 }
 
+function serverVersionAtLeast(major,minor,patch){
+  var parts=text(active&&active.versao).split('.').map(function(v){return Number(v)||0});
+  var current=(parts[0]||0)*1000000+(parts[1]||0)*1000+(parts[2]||0);
+  var required=Number(major||0)*1000000+Number(minor||0)*1000+Number(patch||0);
+  return current>=required;
+}
+
 function classifyDuplicates(list){
   var parent=list.map(function(_,i){return i});
   function find(i){while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i]}return i}
@@ -591,6 +598,10 @@ function consolidationPayload(principal,redundante){
 function consolidateGroup(principal,redundantes){
   if(!consolidationEnabled){setStatus('operationStatus','A consolidação está bloqueada pelo servidor.','warn');return}
   if(!redundantes.length)return;
+  if(groupHasLegacyCpf([principal].concat(redundantes))&&!serverVersionAtLeast(1,4,2)){
+    setStatus('operationStatus','A unificação deste CPF com zero inicial perdido exige o backend de moradores 1.4.2. Atualize a implantação do Apps Script e entre novamente.','err');
+    return;
+  }
   var ids=redundantes.map(itemLabel).join(', ');
   var confirmed=window.confirm('Confirmar unificação?\n\nPrincipal preservado: '+itemLabel(principal)+'\nRegistro(s) redundante(s): '+ids+'\n\nA linha redundante não será apagada. Somente campos vazios do principal serão preenchidos; o CPF válido de 11 dígitos será preservado e tudo será registrado na auditoria.');
   if(!confirmed)return;
@@ -633,7 +644,9 @@ function confirmedGroupCard(group){
   var title=document.createElement('div');
   title.className='status warn';
   title.style.marginTop='0';
-  title.textContent=groupHasLegacyCpf(group)
+  var legacyGroup=groupHasLegacyCpf(group);
+  var legacyServerReady=!legacyGroup||serverVersionAtLeast(1,4,2);
+  title.textContent=legacyGroup
     ?'DUPLICIDADE CONFIRMADA: o CSV perdeu o zero inicial de um CPF. Nome e nascimento também coincidem. Escolha qual ID será preservado.'
     :'DUPLICIDADE CONFIRMADA: CPF ou CNS coincidente. Escolha abaixo qual ID será preservado como principal.';
   card.appendChild(title);
@@ -646,13 +659,19 @@ function confirmedGroupCard(group){
     var actions=document.createElement('div');actions.className='actions';
     var open=document.createElement('button');open.type='button';open.className='btn gray';open.textContent='Abrir '+itemLabel(item)+' para conferir';open.dataset.duplicateAction='open';
     open.addEventListener('click',function(){loadResident(item,'CONFIRMADA')});
-    var keep=document.createElement('button');keep.type='button';keep.className='btn green';keep.textContent='Unificar e manter '+itemLabel(item)+' como principal';keep.disabled=!consolidationEnabled;keep.dataset.duplicateAction='consolidate';
+    var keep=document.createElement('button');keep.type='button';keep.className='btn green';keep.textContent='Unificar e manter '+itemLabel(item)+' como principal';keep.disabled=!consolidationEnabled||!legacyServerReady;keep.dataset.duplicateAction='consolidate';
     keep.addEventListener('click',function(){consolidateGroup(item,group.filter(function(other){return other!==item}))});
     actions.appendChild(open);actions.appendChild(keep);option.appendChild(actions);grid.appendChild(option);
   });
   card.appendChild(grid);
   card.appendChild(comparisonDetails(group));
-  if(!consolidationEnabled){var locked=document.createElement('p');locked.className='muted';locked.textContent='A comparação está disponível, mas a consolidação permanece bloqueada pelo servidor.';card.appendChild(locked)}
+  if(!consolidationEnabled||!legacyServerReady){
+    var locked=document.createElement('p');locked.className='muted';
+    locked.textContent=!legacyServerReady
+      ?'O botão está pronto, mas será liberado após a implantação do backend de moradores 1.4.2.'
+      :'A comparação está disponível, mas a consolidação permanece bloqueada pelo servidor.';
+    card.appendChild(locked);
+  }
   return card;
 }
 
@@ -906,6 +925,6 @@ window.PortalTacsMoradoresTransportV2={
   showSearch:showSearch,
   prepareNewResident:prepareNewResident,
   consolidateGroup:consolidateGroup,
-  version:'3.3.3'
+  version:'3.3.4'
 };
 }());
