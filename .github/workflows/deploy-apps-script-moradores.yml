@@ -1,0 +1,160 @@
+name: Implantar Apps Script de Moradores
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/apps-script-release-request'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  testar-e-implantar:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NO_COLOR: '1'
+
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Testar toda a integração
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+
+      - name: Validar credenciais sem exibi-las
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar o projeto real antes de alterar
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const config = JSON.parse(process.env.CLASP_JSON);
+          if (!config.scriptId || !/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId)) {
+            throw new Error('CLASP_JSON não contém um scriptId válido.');
+          }
+          config.rootDir = '.';
+          fs.writeFileSync(
+            path.join(process.env.LIVE_DIR, '.clasp.json'),
+            JSON.stringify(config, null, 2) + '\n'
+          );
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Substituir somente os módulos autorizados
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          node scripts/build_apps_script_release.js "$LIVE_DIR"
+          for file in "$LIVE_DIR"/*.gs; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done
+
+      - name: Criar versão, atualizar a mesma implantação e validar
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE_DIR"
+
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" '
+            index($0,id) {
+              for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}
+            }')
+          test -n "$PREVIOUS_VERSION"
+
+          npx --yes @google/clasp@3.3.0 version "Backup antes de moradores 1.4.5 - ${GITHUB_SHA::7}"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Moradores 1.4.5 e painel 3.6.0 - ${GITHUB_SHA::7}")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+
+          DEPLOYED=0
+          rollback() {
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy \
+                "$DEPLOYMENT_ID" "$PREVIOUS_VERSION" \
+                "Rollback automático após falha de validação" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+
+          npx --yes @google/clasp@3.3.0 redeploy \
+            "$DEPLOYMENT_ID" "$NEW_VERSION" \
+            "Moradores 1.4.5 e painel 3.6.0"
+          DEPLOYED=1
+
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          ok=0
+          for tentativa in $(seq 1 18); do
+            moradores=$(curl -L --fail --silent --show-error --max-time 30 \
+              "$BASE?action=admin_moradores_result&requestId=healthMoradores145") || true
+            territorio=$(curl -L --fail --silent --show-error --max-time 30 \
+              "$BASE?action=admin_territorio_result&requestId=healthTerritorio10") || true
+            csv=$(curl -L --fail --silent --show-error --max-time 30 \
+              "$BASE?action=admin_csv_result&requestId=healthCsvMoradores10") || true
+            manutencao=$(curl -L --fail --silent --show-error --max-time 30 \
+              "$BASE?action=portal_manutencao_status&areaId=JAPARANDUBA") || true
+
+            if printf '%s' "$moradores" | grep -q '"ok":true' && \
+               printf '%s' "$territorio" | grep -q '"ok":true' && \
+               printf '%s' "$csv" | grep -q '"ok":true' && \
+               printf '%s' "$manutencao" | grep -q '"ok":true'; then
+              ok=1
+              break
+            fi
+            sleep 10
+          done
+          test "$ok" = '1'
+          trap - ERR
+          printf 'Implantação validada: versão %s, deployment %s\n' "$NEW_VERSION" "$DEPLOYMENT_ID"
+
+      - name: Remover credenciais temporárias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
