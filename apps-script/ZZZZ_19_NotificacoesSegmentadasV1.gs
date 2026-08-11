@@ -1,6 +1,6 @@
 /**
  * ZZZZ_19_NotificacoesSegmentadasV1.gs
- * Portal TACS — envio de notificações segmentadas por área V1.0.2
+ * Portal TACS — envio de notificações segmentadas por área V1.0.3
  *
  * A área e a tag são resolvidas no servidor. O navegador não pode fornecer um
  * filtro livre. Quando houver mais de uma área ativa, o envio é bloqueado se a
@@ -9,7 +9,7 @@
  * não envia duas vezes.
  */
 var TACS_NOTIFICACOES_AREA_V1 = Object.freeze({
-  VERSAO:'1.0.2',
+  VERSAO:'1.0.3',
   DEFAULT_AREA_ID:'JAPARANDUBA',
   DEFAULT_APP_ID:'e2294b98-c72b-4f8c-a055-de28979676dc',
   MAINTENANCE_TITLE:'PORTAL EM MANUTENÇÃO',
@@ -105,7 +105,7 @@ function notificacoesAreaV1TratarPost_(e){
     }else{
       resultado=notificacoesAreaV1Enviar_(appId,apiKey,contexto,acesso,{
         titulo:titulo,mensagem:mensagem,tipo:tipo,referencia:referencia,evento:evento,
-        manutencao:comunicadoManutencao
+        manutencao:comunicadoManutencao,quantidadeAreas:quantidadeAreas
       });
     }
   }catch(erro){resultado={ok:false,message:notificacoesAreaV1Erro_(erro)};}
@@ -131,12 +131,14 @@ function notificacoesAreaV1Enviar_(appId,apiKey,contexto,acesso,input){
   try{
     anterior=cache.get(chave);
     if(anterior){try{return JSON.parse(anterior);}catch(erroCache2){}}
+    var filtros=notificacoesAreaV1Filtros_(contexto.areaId,input.quantidadeAreas);
+    var incluiLegadoSemArea=filtros.length>1;
     var payload={
       app_id:appId,
       target_channel:'push',
       headings:{pt:input.titulo,en:input.titulo},
       contents:{pt:input.mensagem,en:input.mensagem},
-      filters:[{field:'tag',key:'area_tacs',relation:'=',value:contexto.areaId}],
+      filters:filtros,
       url:TACS_NOTIFICACOES_AREA_V1.PORTAL_URL,
       data:{areaId:contexto.areaId,tipo:input.tipo,referenciaId:input.referencia,evento:input.evento}
     };
@@ -155,7 +157,7 @@ function notificacoesAreaV1Enviar_(appId,apiKey,contexto,acesso,input){
     if(!data.id){
       var semDestinatarios={
         ok:true,push:false,skipped:true,zeroAudience:true,areaId:contexto.areaId,
-        appId:appId,filtro:{campo:'area_tacs',valor:contexto.areaId},
+        appId:appId,filtro:{campo:'area_tacs',valor:contexto.areaId,incluiLegadoSemArea:incluiLegadoSemArea},
         onesignalId:'',destinatarios:0,
         message:'Nenhum aparelho com inscrição ativa foi encontrado para a área '+contexto.areaNome+'.'
       };
@@ -168,13 +170,35 @@ function notificacoesAreaV1Enviar_(appId,apiKey,contexto,acesso,input){
       :Number(data.recipients);
     var resultado={
       ok:true,push:true,skipped:false,areaId:contexto.areaId,
-      appId:appId,filtro:{campo:'area_tacs',valor:contexto.areaId},onesignalId:String(data.id),
+      appId:appId,filtro:{campo:'area_tacs',valor:contexto.areaId,incluiLegadoSemArea:incluiLegadoSemArea},onesignalId:String(data.id),
       destinatarios:destinatarios,message:'O OneSignal aceitou a notificação destinada à área '+contexto.areaNome+'.'
     };
     cache.put(chave,JSON.stringify(resultado),TACS_NOTIFICACOES_AREA_V1.RESULT_SECONDS);
     notificacoesAreaV1Auditar_(contexto,acesso,input,resultado.onesignalId,resultado.destinatarios,'ENVIADA');
     return resultado;
   }finally{lock.releaseLock();}
+}
+
+function notificacoesAreaV1Filtros_(areaId,quantidadeAreas){
+  var area=notificacoesAreaV1Texto_(areaId).toUpperCase();
+  var filtroArea={field:'tag',key:'area_tacs',relation:'=',value:area};
+
+  // Migração segura das inscrições criadas antes da segmentação. Enquanto
+  // Japaranduba for a única área cadastrada, aparelhos antigos sem a tag ainda
+  // pertencem necessariamente a ela. Assim que existir outra área, o fallback
+  // é removido automaticamente e somente tags explícitas recebem o envio.
+  if(
+    area===TACS_NOTIFICACOES_AREA_V1.DEFAULT_AREA_ID&&
+    Number(quantidadeAreas||1)<=1
+  ){
+    return [
+      filtroArea,
+      {operator:'OR'},
+      {field:'tag',key:'area_tacs',relation:'not_exists'}
+    ];
+  }
+
+  return [filtroArea];
 }
 
 function notificacoesAreaV1QuantidadeAreas_(){
