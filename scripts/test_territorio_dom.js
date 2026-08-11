@@ -247,6 +247,8 @@ function testAreaTagClient() {
   assert.match(client, /morador && morador\.areaId/);
   assert.match(client, /document\.addEventListener\('tacs:morador'/);
   assert.match(client, /OneSignal\.User\.addTag\('area_tacs', area/);
+  assert.match(client, /OneSignal\.User\.getTags\(\)/);
+  assert.match(client, /Reparar vínculo da área/);
   assert.match(client, /serviceWorkerPath:\s*'\/atendimento-acs-farmaceutico\/push\/OneSignalSDKWorker\.js'/);
   assert.match(client, /autoResubscribe:\s*true/);
   assert.match(client, /PushSubscription/);
