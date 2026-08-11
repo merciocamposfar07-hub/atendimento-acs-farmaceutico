@@ -48,6 +48,27 @@ function cloneSession(extra){
   return out;
 }
 function digits(v){return String(v==null?'':v).replace(/\D/g,'')}
+function validCpf(v){
+  var d=digits(v);
+  if(!/^\d{11}$/.test(d)||/^(\d)\1{10}$/.test(d))return false;
+  var sum=0,i;
+  for(i=0;i<9;i++)sum+=Number(d.charAt(i))*(10-i);
+  var first=(sum*10)%11;
+  if(first===10)first=0;
+  if(first!==Number(d.charAt(9)))return false;
+  sum=0;
+  for(i=0;i<10;i++)sum+=Number(d.charAt(i))*(11-i);
+  var second=(sum*10)%11;
+  if(second===10)second=0;
+  return second===Number(d.charAt(10));
+}
+function legacyCpfZeroInitial(a,b){
+  var cpfA=digits(a),cpfB=digits(b),full='',short='';
+  if(cpfA.length===11&&cpfB.length===10){full=cpfA;short=cpfB}
+  else if(cpfB.length===11&&cpfA.length===10){full=cpfB;short=cpfA}
+  else return '';
+  return full.charAt(0)==='0'&&full.slice(1)===short&&validCpf(full)?full:'';
+}
 function formatBirthInput(v){
   var d=digits(v).slice(0,8);
   if(d.length>4)return d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4);
@@ -400,11 +421,21 @@ function loginWithPin(pin){
 
 function confirmedDuplicatePair(a,b){
   var cpfA=digits(a.cpf),cpfB=digits(b.cpf),cnsA=digits(a.cns),cnsB=digits(b.cns);
-  if((cpfA&&cpfB&&cpfA!==cpfB)||(cnsA&&cnsB&&cnsA!==cnsB))return false;
-  var cpfMatch=Boolean(cpfA&&cpfB&&cpfA===cpfB);
+  var cpfLegado=legacyCpfZeroInitial(cpfA,cpfB);
+  if((cpfA&&cpfB&&cpfA!==cpfB&&!cpfLegado)||(cnsA&&cnsB&&cnsA!==cnsB))return false;
+  var cpfMatch=Boolean(cpfA&&cpfB&&cpfA===cpfB)||Boolean(cpfLegado);
   var cnsMatch=Boolean(cnsA&&cnsB&&cnsA===cnsB);
   if(cpfMatch&&cnsMatch)return true;
   return (cpfMatch||cnsMatch)&&normalize(a.nome)===normalize(b.nome)&&text(a.nascimento)===text(b.nascimento);
+}
+
+function groupHasLegacyCpf(group){
+  for(var i=0;i<group.length;i++){
+    for(var j=i+1;j<group.length;j++){
+      if(legacyCpfZeroInitial(group[i].cpf,group[j].cpf))return true;
+    }
+  }
+  return false;
 }
 
 function classifyDuplicates(list){
@@ -561,7 +592,7 @@ function consolidateGroup(principal,redundantes){
   if(!consolidationEnabled){setStatus('operationStatus','A consolidação está bloqueada pelo servidor.','warn');return}
   if(!redundantes.length)return;
   var ids=redundantes.map(itemLabel).join(', ');
-  var confirmed=window.confirm('Confirmar consolidação?\n\nPrincipal preservado: '+itemLabel(principal)+'\nRegistro(s) redundante(s): '+ids+'\n\nA linha redundante não será apagada. Somente campos vazios do principal serão preenchidos; valores conflitantes permanecerão no principal e serão registrados na auditoria.');
+  var confirmed=window.confirm('Confirmar unificação?\n\nPrincipal preservado: '+itemLabel(principal)+'\nRegistro(s) redundante(s): '+ids+'\n\nA linha redundante não será apagada. Somente campos vazios do principal serão preenchidos; o CPF válido de 11 dígitos será preservado e tudo será registrado na auditoria.');
   if(!confirmed)return;
   var index=0,totalFilled=[],totalConflicts=[];
   duplicateLock=true;
@@ -602,7 +633,9 @@ function confirmedGroupCard(group){
   var title=document.createElement('div');
   title.className='status warn';
   title.style.marginTop='0';
-  title.textContent='DUPLICIDADE CONFIRMADA: CPF ou CNS coincidente. Escolha abaixo qual ID será preservado como principal.';
+  title.textContent=groupHasLegacyCpf(group)
+    ?'DUPLICIDADE CONFIRMADA: o CSV perdeu o zero inicial de um CPF. Nome e nascimento também coincidem. Escolha qual ID será preservado.'
+    :'DUPLICIDADE CONFIRMADA: CPF ou CNS coincidente. Escolha abaixo qual ID será preservado como principal.';
   card.appendChild(title);
   var grid=document.createElement('div');
   grid.style.display='grid';grid.style.gap='10px';grid.style.marginTop='12px';
@@ -613,7 +646,7 @@ function confirmedGroupCard(group){
     var actions=document.createElement('div');actions.className='actions';
     var open=document.createElement('button');open.type='button';open.className='btn gray';open.textContent='Abrir '+itemLabel(item)+' para conferir';open.dataset.duplicateAction='open';
     open.addEventListener('click',function(){loadResident(item,'CONFIRMADA')});
-    var keep=document.createElement('button');keep.type='button';keep.className='btn green';keep.textContent='Manter '+itemLabel(item)+' como principal';keep.disabled=!consolidationEnabled;keep.dataset.duplicateAction='consolidate';
+    var keep=document.createElement('button');keep.type='button';keep.className='btn green';keep.textContent='Unificar e manter '+itemLabel(item)+' como principal';keep.disabled=!consolidationEnabled;keep.dataset.duplicateAction='consolidate';
     keep.addEventListener('click',function(){consolidateGroup(item,group.filter(function(other){return other!==item}))});
     actions.appendChild(open);actions.appendChild(keep);option.appendChild(actions);grid.appendChild(option);
   });
@@ -873,6 +906,6 @@ window.PortalTacsMoradoresTransportV2={
   showSearch:showSearch,
   prepareNewResident:prepareNewResident,
   consolidateGroup:consolidateGroup,
-  version:'3.3.2'
+  version:'3.3.3'
 };
 }());
