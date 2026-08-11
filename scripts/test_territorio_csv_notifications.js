@@ -819,10 +819,24 @@ function testNotifications(context, territory) {
   // Compatibilidade com o nome já utilizado no Apps Script em produção.
   context.__properties.set('ONESIGNAL_APP_API_KEY', 'private-key-for-test');
   vm.runInContext(read(FILES.notifications), context);
-  assert.equal(context.TACS_NOTIFICACOES_AREA_V1.VERSAO, '1.0.2');
+  assert.equal(context.TACS_NOTIFICACOES_AREA_V1.VERSAO, '1.0.3');
   assert.equal(
     context.TACS_NOTIFICACOES_AREA_V1.DEFAULT_APP_ID,
     'e2294b98-c72b-4f8c-a055-de28979676dc'
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.notificacoesAreaV1Filtros_('JAPARANDUBA', 1))),
+    [
+      {field: 'tag', key: 'area_tacs', relation: '=', value: 'JAPARANDUBA'},
+      {operator: 'OR'},
+      {field: 'tag', key: 'area_tacs', relation: 'not_exists'}
+    ],
+    'Inscrições antigas de Japaranduba ficaram excluídas durante a migração.'
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.notificacoesAreaV1Filtros_('JAPARANDUBA', 2))),
+    [{field: 'tag', key: 'area_tacs', relation: '=', value: 'JAPARANDUBA'}],
+    'O fallback legado continuou ativo depois da criação de outra área.'
   );
 
   const base = {
