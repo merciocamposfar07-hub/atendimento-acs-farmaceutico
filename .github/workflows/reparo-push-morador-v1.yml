@@ -158,7 +158,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git diff --name-only | sort > /tmp/changed.txt
+          git status --porcelain | sed -E 's/^.. //' | sort > /tmp/changed.txt
           printf '%s\n' \
             'agenda-enfermeira.js' \
             'index.html' \
