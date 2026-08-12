@@ -1,0 +1,29 @@
+name: Verificar publicações territoriais em produção
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verificar-publicacoes-producao-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Conferir rota pública segura do módulo territorial
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec?action=publicacoes_territoriais_status'
+          resposta="$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 20 "$URL")"
+          RESPOSTA="$resposta" node - <<'NODE'
+          const r=JSON.parse(process.env.RESPOSTA||'{}');
+          if(r.ok!==true)throw new Error('A rota territorial não retornou ok=true.');
+          if(r.versao!=='1.0.0')throw new Error('Versão territorial inesperada: '+String(r.versao));
+          if(r.isolamento!=='AREA_ID')throw new Error('Isolamento territorial não confirmado.');
+          console.log('Produção confirmada: publicações territoriais v1.0.0 com isolamento AREA_ID.');
+          NODE
