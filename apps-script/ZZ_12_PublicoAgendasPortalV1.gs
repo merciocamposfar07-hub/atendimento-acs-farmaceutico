@@ -222,12 +222,18 @@ function publicoAgendasV1Indices_(cabecalhos, permitirAusentes) {
 }
 
 function publicoAgendasV1Planilha_() {
+  if (typeof adminTacsV1Planilha_ === 'function') {
+    return adminTacsV1Planilha_();
+  }
+  if (typeof getPlanilha === 'function') {
+    return getPlanilha();
+  }
   var id = String(
     PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || ''
   ).trim();
   if (id) return SpreadsheetApp.openById(id);
   var planilha = SpreadsheetApp.getActiveSpreadsheet();
-  if (!planilha) throw new Error('A planilha do Portal TACS não está configurada.');
+  if (!planilha) throw new Error('A planilha do Portal TACS não está disponível.');
   return planilha;
 }
 

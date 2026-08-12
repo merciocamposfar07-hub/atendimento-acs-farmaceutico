@@ -64,11 +64,13 @@ const context = {
   String,
   isFinite,
   isNaN,
+  adminTacsV1Planilha_: () => ({getSheets: () => [sheet]}),
   PropertiesService: {
-    getScriptProperties: () => ({getProperty: () => ''})
+    getScriptProperties: () => { throw new Error('Não deve consultar SPREADSHEET_ID quando a fonte compartilhada existe.'); }
   },
   SpreadsheetApp: {
-    getActiveSpreadsheet: () => ({getSheets: () => [sheet]})
+    openById: () => { throw new Error('Não deve abrir por ID quando a fonte compartilhada existe.'); },
+    getActiveSpreadsheet: () => { throw new Error('Não deve depender de planilha ativa no Web App.'); }
   },
   Utilities: {formatDate},
   ContentService: {
