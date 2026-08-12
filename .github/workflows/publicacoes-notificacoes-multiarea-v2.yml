@@ -45,6 +45,7 @@ jobs:
           node --check scripts/build_apps_script_release.js
           node --check scripts/test_publicacoes_territoriais.js
           node --check scripts/test_admin_transport.js
+          node --check scripts/test_territorio_csv_notifications.js
           node scripts/check_recados_inline.js
       - name: Executar testes completos
         run: |
@@ -56,7 +57,7 @@ jobs:
           set -euo pipefail
           changed="$(git status --porcelain=v1 | cut -c4-)"
           printf '%s\n' "$changed"
-          bad="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -Ev '^(apps-script/ZZZZ_17_TacsAreasAdminV1\.gs|apps-script/ZZZZ_19_NotificacoesSegmentadasV1\.gs|agenda-enfermeira\.js|scripts/build_apps_script_release\.js|teste-v1/painel-tacs-areas-v1\.html|teste-v1/painel-tacs-areas-v1\.js|teste-v1/painel-recados-campanhas-v1\.html|painel-oficial-tacs-areas\.html|painel-oficial-recados-campanhas\.html|painel-recados-campanhas\.html|scripts/test_territorio_dom\.js|scripts/test_admin_transport\.js|package\.json|scripts/apply_publicacoes_notificacoes_multiarea_v1\.py)$' || true)"
+          bad="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -Ev '^(apps-script/ZZZZ_17_TacsAreasAdminV1\.gs|apps-script/ZZZZ_19_NotificacoesSegmentadasV1\.gs|agenda-enfermeira\.js|scripts/build_apps_script_release\.js|teste-v1/painel-tacs-areas-v1\.html|teste-v1/painel-tacs-areas-v1\.js|teste-v1/painel-recados-campanhas-v1\.html|painel-oficial-tacs-areas\.html|painel-oficial-recados-campanhas\.html|painel-recados-campanhas\.html|scripts/test_territorio_dom\.js|scripts/test_admin_transport\.js|scripts/test_territorio_csv_notifications\.js|package\.json|scripts/apply_publicacoes_notificacoes_multiarea_v1\.py)$' || true)"
           if [ -n "$bad" ]; then echo "$bad"; exit 1; fi
       - name: Publicar codigo testado
         shell: bash
