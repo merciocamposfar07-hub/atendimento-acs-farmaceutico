@@ -32,7 +32,13 @@ jobs:
           cache: npm
 
       - name: Aplicar camada multiárea
-        run: python3 scripts/apply_multi_area_phase1_bootstrap.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apply_multi_area_phase1_bootstrap.py
+          # O workflow de produção já foi atualizado diretamente pelo conector
+          # com permissão própria. O token interno não pode alterar workflows.
+          git checkout -- .github/workflows/deploy-apps-script-moradores.yml
 
       - name: Alinhar testes legados sem alterar a odontologia
         run: python3 scripts/fix_phase1_tests.py
@@ -65,7 +71,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ALLOWED='^(agenda-config\.js|portal-public-data\.js|portal-manutencao\.js|assets/js/portal-conteudo-publico-v1\.js|apps-script/ZZ_11_PublicoConteudoPortalV1\.gs|apps-script/ZZ_12_PublicoAgendasPortalV1\.gs|scripts/build_apps_script_release\.js|scripts/test_build_apps_script_release\.js|scripts/test_dom_flows\.js|scripts/test_public_data_transport\.js|scripts/test_public_agendas_apps_script\.js|scripts/test_public_content_multiarea\.js|package\.json|index\.html|\.github/workflows/deploy-apps-script-moradores\.yml|\.github/apps-script-release-request)$'
+          ALLOWED='^(agenda-config\.js|portal-public-data\.js|portal-manutencao\.js|assets/js/portal-conteudo-publico-v1\.js|apps-script/ZZ_11_PublicoConteudoPortalV1\.gs|apps-script/ZZ_12_PublicoAgendasPortalV1\.gs|scripts/build_apps_script_release\.js|scripts/test_build_apps_script_release\.js|scripts/test_dom_flows\.js|scripts/test_public_data_transport\.js|scripts/test_public_agendas_apps_script\.js|scripts/test_public_content_multiarea\.js|package\.json|index\.html|\.github/apps-script-release-request)$'
           changed="$(git status --porcelain=v1 | cut -c4-)"
           printf '%s\n' "$changed"
           bad="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -Ev "$ALLOWED" || true)"
@@ -76,13 +82,13 @@ jobs:
           fi
           test -n "$changed"
 
-      - name: Publicar fase 1 e remover auxiliares temporários
+      - name: Publicar fase 1 sem tocar em workflows
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          rm -f scripts/apply_multi_area_phase1_bootstrap.py scripts/fix_phase1_tests.py .github/workflows/multi-area-phase1.yml
+          rm -f scripts/apply_multi_area_phase1_bootstrap.py scripts/fix_phase1_tests.py
           git add -A
           git commit -m 'Prepara Portal TACS público para múltiplas áreas'
           git push origin HEAD:main
