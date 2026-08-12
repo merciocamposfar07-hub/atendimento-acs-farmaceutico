@@ -19,3 +19,11 @@ new = "assert.equal(context.TACS_NOTIFICACOES_AREA_V1.VERSAO, '1.0.4');"
 if text.count(old) != 1:
     raise SystemExit('O teste legado de notificações não contém exatamente a versão 1.0.3 esperada.')
 legacy.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+button_test = Path('scripts/test_notification_repair_button.js')
+button_text = button_test.read_text(encoding='utf-8')
+old_helper = "assert.match(source, /async function confirmarReparoPorPush\\(subscriptionId, areaId\\)/);"
+new_helper = "assert.match(source, /function confirmarReparoPorPush\\(subscriptionId, areaId\\)/);"
+if button_text.count(old_helper) != 1:
+    raise SystemExit('O teste do botão não contém exatamente a assinatura async esperada para correção.')
+button_test.write_text(button_text.replace(old_helper, new_helper, 1), encoding='utf-8')
