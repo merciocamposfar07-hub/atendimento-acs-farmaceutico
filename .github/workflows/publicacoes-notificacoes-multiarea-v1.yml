@@ -1,0 +1,96 @@
+name: Validar publicações e notificações multiárea
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply_publicacoes_notificacoes_multiarea_v1.py'
+      - '.github/workflows/publicacoes-notificacoes-multiarea-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: portal-tacs-publicacoes-multiarea-v1
+  cancel-in-progress: false
+
+jobs:
+  aplicar-testar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar isolamento de publicações e push
+        run: python3 scripts/apply_publicacoes_notificacoes_multiarea_v1.py
+
+      - name: Validar sintaxe dos módulos alterados
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_17_TacsAreasAdminV1.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_20_PublicacoesTerritoriaisV1.gs
+          node --check agenda-enfermeira.js
+          node --check teste-v1/painel-tacs-areas-v1.js
+          node --check scripts/build_apps_script_release.js
+          node --check scripts/test_publicacoes_territoriais.js
+          node --check scripts/test_territorio_dom.js
+
+      - name: Validar JavaScript inline do painel de recados
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('teste-v1/painel-recados-campanhas-v1.html').read_text(encoding='utf-8')
+          scripts=[];pos=0
+          while True:
+            i=s.find('<script',pos)
+            if i<0:break
+            a=s.find('>',i);b=s.find('</script>',a)
+            if a<0 or b<0:raise SystemExit('script HTML incompleto')
+            tag=s[i:a+1]
+            if 'src=' not in tag:scripts.append(s[a+1:b])
+            pos=b+9
+          Path('/tmp/recados-inline.js').write_text('\n'.join(scripts),encoding='utf-8')
+          PY
+          node --check /tmp/recados-inline.js
+
+      - name: Executar bateria completa
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+
+      - name: Validar escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git status --porcelain=v1 | cut -c4-)"
+          printf '%s\n' "$changed"
+          bad="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -Ev '^(apps-script/ZZZZ_17_TacsAreasAdminV1\.gs|apps-script/ZZZZ_19_NotificacoesSegmentadasV1\.gs|agenda-enfermeira\.js|scripts/build_apps_script_release\.js|teste-v1/painel-tacs-areas-v1\.html|teste-v1/painel-tacs-areas-v1\.js|teste-v1/painel-recados-campanhas-v1\.html|painel-oficial-tacs-areas\.html|painel-oficial-recados-campanhas\.html|painel-recados-campanhas\.html|scripts/test_territorio_dom\.js|package\.json)$' || true)"
+          if [ -n "$bad" ]; then echo 'Alteração fora do escopo:'; echo "$bad"; exit 1; fi
+          test -n "$changed"
+
+      - name: Publicar código testado
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm -f scripts/apply_publicacoes_notificacoes_multiarea_v1.py
+          git add -A
+          git reset .github/workflows/publicacoes-notificacoes-multiarea-v1.yml || true
+          git commit -m 'Isola publicações e notificações por área'
+          git push origin HEAD:main
