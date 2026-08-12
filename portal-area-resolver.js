@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-from pathlib import Path
-
-CLIENT = r'''(function(){
+(function(){
   'use strict';
   if(window.PortalTacsAreaResolver)return;
 
@@ -163,8 +160,9 @@ CLIENT = r'''(function(){
   }
   function navigateArea(id){
     var next=normalizeArea(id);if(!next)return;
-    setArea(next);
-    if(next===currentArea()){updateButton();return;}
+    var previous=currentArea();
+    setArea(next);updateButton();
+    if(next===previous)return;
     try{
       var url=new URL(window.location.href);
       url.searchParams.delete('areaId');url.searchParams.delete('area');url.searchParams.delete('territorio');
@@ -197,7 +195,7 @@ CLIENT = r'''(function(){
     var content=document.querySelector('.content');if(!content||document.getElementById('portalAreaButton'))return;
     var style=document.createElement('style');style.id='portal-area-resolver-style';style.textContent=[
       '.portal-area-access{margin:0 0 15px}.portal-area-btn{width:100%;min-height:52px;border:2px solid #6f9bab;border-radius:15px;padding:11px 15px;background:#edf6f9;color:#073a55;font-weight:900;text-align:left}',
-      '.portal-area-btn:focus-visible,.portal-area-option:focus-visible,.portal-area-primary:focus-visible,.portal-area-secondary:focus-visible{outline:3px solid rgba(11,88,120,.22);outline-offset:2px}',
+      'body.tema-petroleo .portal-area-btn{background:#073a55;border-color:#69c7e7;color:#fff}.portal-area-btn:focus-visible,.portal-area-option:focus-visible,.portal-area-primary:focus-visible,.portal-area-secondary:focus-visible{outline:3px solid rgba(11,88,120,.22);outline-offset:2px}',
       '.portal-area-overlay{position:fixed;inset:0;z-index:12000;display:grid;place-items:center;padding:18px;background:rgba(2,25,40,.66)}.portal-area-overlay[hidden]{display:none!important}',
       '.portal-area-dialog{width:min(100%,560px);max-height:min(760px,calc(100vh - 36px));overflow:auto;border:2px solid #69c7e7;border-radius:23px;background:#fff;padding:21px;color:#102d40;box-shadow:0 24px 70px rgba(0,0,0,.34)}',
       '.portal-area-dialog h2{margin:0;color:#073a55;font-size:clamp(27px,6vw,36px)}.portal-area-dialog p{line-height:1.5}.portal-area-close{float:right;border:0;background:transparent;color:#073a55;font-size:30px;line-height:1;padding:0 0 8px 15px}',
@@ -221,8 +219,8 @@ CLIENT = r'''(function(){
       identify(doc).then(function(result){
         if(!result||result.ok!==true){setStatus('Não foi possível conferir sua área agora. Tente novamente.','err');return;}
         if(result.encontrado===true&&normalizeArea(result.areaId)){
-          var found=normalizeArea(result.areaId);setArea(found);updateButton();
-          if(found===currentArea()){setStatus('Área confirmada: '+(text(result.areaNome)||areaName(found))+'.','ok');return;}
+          var found=normalizeArea(result.areaId);var previous=currentArea();
+          if(found===previous){setArea(found);updateButton();setStatus('Área confirmada: '+(text(result.areaNome)||areaName(found))+'.','ok');return;}
           setStatus('Área localizada: '+(text(result.areaNome)||areaName(found))+'. Abrindo o portal correto…','ok');navigateArea(found);return;
         }
         if(result.ambiguo===true){setStatus('Seu cadastro aparece em mais de uma área. Procure seu TACS para corrigir o cadastro.','err');return;}
@@ -238,68 +236,6 @@ CLIENT = r'''(function(){
     var cached=readAreaCache();if(cached.length)updateButton();
     fetchAreas(false).then(function(){updateButton();}).catch(function(){});
   }
-  window.PortalTacsAreaResolver=Object.freeze({open:openModal,areas:function(){return fetchAreas(false);},identify:identify,currentArea:currentArea});
+  window.PortalTacsAreaResolver=Object.freeze({open:openModal,areas:function(){return fetchAreas(false);},identify:identify,currentArea:currentArea,selectArea:navigateArea});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 }());
-'''
-Path('portal-area-resolver.js').write_text(CLIENT,encoding='utf-8')
-
-index=Path('index.html')
-s=index.read_text(encoding='utf-8')
-old='''  <script src="agenda-config.js?v=20260812-multiarea-v1"></script>\n  <script src="portal-public-data.js?v=20260812-multiarea-v1"></script>'''
-new='''  <script src="agenda-config.js?v=20260812-multiarea-v1"></script>\n  <script src="portal-area-resolver.js?v=20260812-area-identificacao-v1"></script>\n  <script src="portal-public-data.js?v=20260812-multiarea-v1"></script>'''
-if old not in s: raise SystemExit('Ordem de scripts do portal não encontrada')
-index.write_text(s.replace(old,new,1),encoding='utf-8')
-
-TEST=r'''\'use strict\';
-const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const path=require('node:path');
-const {JSDOM}=require('jsdom');
-const source=fs.readFileSync(path.join(__dirname,'..','portal-area-resolver.js'),'utf8');
-const index=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
-assert.ok(index.indexOf('agenda-config.js')<index.indexOf('portal-area-resolver.js'));
-assert.ok(index.indexOf('portal-area-resolver.js')<index.indexOf('portal-public-data.js'));
-
-(async()=>{
-  const dom=new JSDOM('<!doctype html><html><head></head><body><main><div class="content"><div class="portal-visual-pref"></div></div></main></body></html>',{url:'https://example.test/atendimento-acs-farmaceutico/',runScripts:'outside-only'});
-  const {window}=dom;let current='JAPARANDUBA';const sets=[];const pending=new Map();
-  window.TACS_ADMIN_API_URL='https://api.example.test/exec';window.TACS_DEFAULT_AREA_ID='JAPARANDUBA';
-  window.PortalTacsArea={id:()=>current,defaultId:'JAPARANDUBA',normalize:v=>String(v||'').toUpperCase().replace(/[^A-Z0-9_-]/g,'_'),set:v=>{current=v;sets.push(v);return v;}};
-  const originalAppend=window.document.head.appendChild.bind(window.document.head);
-  window.document.head.appendChild=function(node){
-    if(node.tagName==='SCRIPT'){
-      const url=new URL(node.src);const cb=url.searchParams.get('callback');const action=url.searchParams.get('action');
-      setTimeout(()=>{
-        if(action==='publico_areas_ativas')window[cb]({ok:true,areas:[{areaId:'JAPARANDUBA',areaNome:'Sítio Japaranduba'},{areaId:'MUNTUNS',areaNome:'Sítio Muntuns'}]});
-        else if(action==='publico_area_result')window[cb]({ok:true,pendente:false,result:pending.get(url.searchParams.get('requestId'))||null});
-      },0);return node;
-    }
-    return originalAppend(node);
-  };
-  window.HTMLFormElement.prototype.submit=function(){
-    const fields={};this.querySelectorAll('input').forEach(input=>{fields[input.name]=input.value;});
-    pending.set(fields.requestId,fields.documento==='12345678901'?{ok:true,encontrado:true,ambiguo:false,areaId:'JAPARANDUBA',areaNome:'Sítio Japaranduba'}:{ok:true,encontrado:false,ambiguo:false});
-  };
-  window.eval(source);window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
-  await new Promise(r=>setTimeout(r,30));
-  const button=window.document.getElementById('portalAreaButton');assert.ok(button);assert.match(button.textContent,/Sítio Japaranduba/);
-  const modal=window.document.querySelector('.portal-area-overlay');assert.equal(modal.hidden,true,'Japaranduba não pode ganhar tela obrigatória ao abrir');
-  button.click();assert.equal(modal.hidden,false);const input=window.document.getElementById('portalAreaDocumento');input.value='12345678901';window.document.getElementById('portalAreaLocate').click();
-  await new Promise(r=>setTimeout(r,1150));
-  assert.equal(sets.at(-1),'JAPARANDUBA');assert.match(window.document.getElementById('portalAreaStatus').textContent,/Área confirmada/);
-  window.document.getElementById('portalAreaFallback').click();await new Promise(r=>setTimeout(r,30));
-  assert.equal(window.document.querySelectorAll('.portal-area-option').length,2);assert.match(window.document.querySelector('.portal-area-option').textContent,/Japaranduba/);
-  assert.ok(window.localStorage.getItem('portalTacsMoradorDispositivoV1'));
-  console.log('Portal público: Minha área, identificação opcional, fallback e compatibilidade com Japaranduba validados.');
-  dom.window.close();
-})().catch(error=>{console.error(error);process.exitCode=1;});
-'''.replace("\\'use strict\\';","'use strict';")
-Path('scripts/test_public_area_resolver.js').write_text(TEST,encoding='utf-8')
-
-pkg=Path('package.json');p=pkg.read_text(encoding='utf-8')
-needle='node scripts/test_public_area_identification.js && node scripts/test_territorio_dom.js'
-replacement='node scripts/test_public_area_identification.js && node scripts/test_public_area_resolver.js && node scripts/test_territorio_dom.js'
-if needle not in p:raise SystemExit('Ponto de inclusão do teste do resolver não encontrado')
-pkg.write_text(p.replace(needle,replacement,1),encoding='utf-8')
-print('Cliente de identificação de área preparado.')
