@@ -1,3 +1,4 @@
+# executar v99
 name: Otimizar painel agendas e vagas v99
 
 on:
@@ -31,7 +32,6 @@ jobs:
           destino = Path('painel-oficial-agendas-vagas.html')
           s = fonte.read_text(encoding='utf-8')
 
-          # Identidade oficial: somente o painel de Agendas e Vagas.
           s = s.replace(
               '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">',
               '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n'
@@ -57,55 +57,29 @@ jobs:
           for antigo, novo in trocas.items():
               s = s.replace(antigo, novo)
 
-          # Consulta de resultado: timeout curto por tentativa, sem esperar 25 s por cada JSONP.
           novo_jsonp = "function jsonp(action,parametros,receber){contador++;var nome='__ag_fast_'+Date.now()+'_'+contador,s=document.createElement('script'),p=parametros||{},fim=false,timer=setTimeout(function(){encerrar({ok:false,temporario:true,message:'Consulta temporariamente indisponível.'})},7000);function limpar(){clearTimeout(timer);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}function encerrar(r){if(fim)return;fim=true;limpar();receber(r)}window[nome]=function(r){encerrar(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(p).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(txt(p[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){encerrar({ok:false,temporario:true,message:'Falha de rede ao consultar o servidor.'})};document.head.appendChild(s)}"
-          s, n1 = re.subn(
-              r"function jsonp\(action,parametros,receber\)\{[\s\S]*?\}\nfunction mutacaoPublica",
-              novo_jsonp + "\nfunction mutacaoPublica",
-              s,
-              count=1
-          )
+          s, n1 = re.subn(r"function jsonp\(action,parametros,receber\)\{[\s\S]*?\}\nfunction mutacaoPublica", novo_jsonp + "\nfunction mutacaoPublica", s, count=1)
           if n1 != 1:
               raise SystemExit('Rotina JSONP do painel não localizada exatamente uma vez.')
 
-          # POST continua idempotente pelo mesmo requestId. O painel apenas consulta o resultado mais cedo.
           novo_bloco = """function agendarConsultaResultado(espera){if(!ativa)return;clearTimeout(ativa.pollTimer);ativa.pollTimer=setTimeout(consultarResultado,Number(espera||ativa.proximaEspera||700))}
 function consultarResultado(){if(!ativa)return;jsonp('admin_result',{requestId:ativa.id},function(r){if(!ativa)return;if(r&&r.ok===true&&r.pendente===false){finalizar(r.result);return}if(Date.now()>=ativa.limite){finalizar({ok:false,temporario:true,message:'A conexão demorou mais que o esperado. Toque novamente em Entrar e carregar agendas.'});return}if(r&&r.ok===true&&r.pendente===true){ativa.falhas=0;ativa.proximaEspera=Math.min(1600,Math.max(700,ativa.proximaEspera+150))}else{ativa.falhas=(ativa.falhas||0)+1;ativa.proximaEspera=Math.min(2200,900+ativa.falhas*250)}agendarConsultaResultado()})}
 function post(action,payload,receber){if(ativa){receber({ok:false,message:'Aguarde a operação anterior terminar.'});return}var id=requestId(action),campos={};Object.keys(payload||{}).forEach(function(k){campos[k]=payload[k]});campos.action=action;campos.requestId=id;var acesso=action==='admin_login'||action==='admin_dados'||action==='admin_logout',duracao=acesso?30000:60000;ativa={id:id,action:action,callback:receber,pollTimer:null,proximaEspera:650,falhas:0,limite:Date.now()+duracao,timeout:setTimeout(function(){finalizar({ok:false,temporario:true,message:acesso?'A conexão demorou mais que o esperado. Toque novamente em Entrar e carregar agendas.':'O servidor está demorando para confirmar a alteração. Aguarde alguns segundos antes de tentar novamente.'})},duracao+1000)};entrar.disabled=true;sair.disabled=true;var form=document.createElement('form');form.method='POST';form.action=API+'?_='+Date.now();form.target='ponteAgendaV1';form.className='ponte';Object.keys(campos).forEach(function(k){var input=document.createElement('input');input.type='hidden';input.name=k;input.value=txt(campos[k]);form.appendChild(input)});document.body.appendChild(form);form.submit();setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form)},4000);agendarConsultaResultado(650)}"""
-          s, n2 = re.subn(
-              r"function agendarConsultaResultado\(\)\{[\s\S]*?\}\nfunction consultarResultado\(\)\{[\s\S]*?\}\nfunction post\(action,payload,receber\)\{[\s\S]*?\}\nfunction sessao",
-              novo_bloco + "\nfunction sessao",
-              s,
-              count=1
-          )
+          s, n2 = re.subn(r"function agendarConsultaResultado\(\)\{[\s\S]*?\}\nfunction consultarResultado\(\)\{[\s\S]*?\}\nfunction post\(action,payload,receber\)\{[\s\S]*?\}\nfunction sessao", novo_bloco + "\nfunction sessao", s, count=1)
           if n2 != 1:
               raise SystemExit('Bloco POST/confirmacao do painel não localizado exatamente uma vez.')
 
-          # Em falha temporária de leitura, não destruir uma sessão válida nem apagar dados já visíveis.
           antigo_carregar = "function carregarDados(mensagem,depois,silencioso){post('admin_dados',sessao(),function(r){if(!r||r.ok!==true){token='';sessionStorage.removeItem(TOKEN_KEY);document.getElementById('conteudo').classList.add('oculto');document.getElementById('resumo').classList.add('oculto');sair.disabled=true;status('loginStatus',silencioso?'Conexão preparada. A sessão anterior não pôde ser reutilizada; digite o PIN.':txt(r&&r.message||'Sessão inválida.'),silencioso?'ok':'erro');if(depois)depois(false,r);return}aplicarDados(r);status('loginStatus',mensagem||'Sessão validada e agendas carregadas.','ok');if(depois)depois(true,r)})}"
           novo_carregar = "function carregarDados(mensagem,depois,silencioso){post('admin_dados',sessao(),function(r){if(!r||r.ok!==true){if(r&&r.temporario===true){status('loginStatus',txt(r.message||'A conexão demorou mais que o esperado. Tente novamente.'),'erro');if(depois)depois(false,r);return}token='';sessionStorage.removeItem(TOKEN_KEY);document.getElementById('conteudo').classList.add('oculto');document.getElementById('resumo').classList.add('oculto');sair.disabled=true;status('loginStatus',silencioso?'Conexão preparada. A sessão anterior não pôde ser reutilizada; digite o PIN.':txt(r&&r.message||'Sessão inválida.'),silencioso?'ok':'erro');if(depois)depois(false,r);return}aplicarDados(r);status('loginStatus',mensagem||'Sessão validada e agendas carregadas.','ok');if(depois)depois(true,r)})}"
           if antigo_carregar not in s:
               raise SystemExit('Rotina carregarDados não localizada.')
           s = s.replace(antigo_carregar, novo_carregar, 1)
 
-          # Garantias de escopo e de regressão.
-          proibidos = [
-              'teste-v1/painel-agendas-v1.html',
-              'fetch(origem',
-              'document.write(html)',
-              'A confirmação do servidor ainda está em processamento. A operação não será reenviada automaticamente.'
-          ]
+          proibidos = ['teste-v1/painel-agendas-v1.html','fetch(origem','document.write(html)','A confirmação do servidor ainda está em processamento. A operação não será reenviada automaticamente.']
           for trecho in proibidos:
               if trecho in s:
                   raise SystemExit('Trecho antigo ainda presente: ' + trecho)
-          obrigatorios = [
-              'PAINEL ADMINISTRATIVO OFICIAL',
-              '<h1>Agendas e vagas</h1>',
-              "action==='admin_login'||action==='admin_dados'||action==='admin_logout'",
-              'duracao=acesso?30000:60000',
-              'agendarConsultaResultado(650)',
-              'admin-warmup.js?v=20260812-agendas-direto-v99'
-          ]
+          obrigatorios = ['PAINEL ADMINISTRATIVO OFICIAL','<h1>Agendas e vagas</h1>',"action==='admin_login'||action==='admin_dados'||action==='admin_logout'",'duracao=acesso?30000:60000','agendarConsultaResultado(650)','admin-warmup.js?v=20260812-agendas-direto-v99']
           for trecho in obrigatorios:
               if trecho not in s:
                   raise SystemExit('Validação ausente: ' + trecho)
@@ -113,7 +87,6 @@ function post(action,payload,receber){if(ativa){receber({ok:false,message:'Aguar
           destino.write_text(s, encoding='utf-8')
           PY
 
-          # Validação final restrita ao arquivo solicitado.
           ! grep -Fq 'teste-v1/painel-agendas-v1.html' painel-oficial-agendas-vagas.html
           ! grep -Fq 'fetch(origem' painel-oficial-agendas-vagas.html
           grep -Fq 'PAINEL ADMINISTRATIVO OFICIAL' painel-oficial-agendas-vagas.html
