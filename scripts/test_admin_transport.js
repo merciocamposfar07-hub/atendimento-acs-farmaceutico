@@ -104,6 +104,8 @@ function verifyStaticSource(config) {
     assert.match(base, /requestAnimationFrame\(function\(\)\{window\.requestAnimationFrame\(enviarUmaVez\)\}\)/);
     assert.match(base, /submitTimer=setTimeout\(enviarUmaVez,180\)/);
     assert.match(base, /input\[type="date"\]\.campo\{[^}]*min-inline-size:0[^}]*max-inline-size:100%/);
+    assert.match(base, /\.validadeCampo\{[^}]*overflow:hidden[^}]*contain:inline-size/);
+    assert.equal((base.match(/class="validadeCampo"/g) || []).length, 2);
     assert.match(base, /id="alternarContraste"[^>]*aria-pressed="false"/);
     assert.match(base, /TEMA_KEY='portalTacsTemaRecadosV1'/);
     assert.match(base, /dataVisual:dataExibicao\('2026-08-12'\)==='12\/08\/2026'/);
@@ -404,7 +406,9 @@ async function testVisualPreferences() {
 
   const button = window.document.getElementById('alternarContraste');
   const dateField = window.document.querySelector('#formNovoRecado input[type="date"]');
+  const dateShell = dateField.closest('.validadeCampo');
   const dateStyle = window.getComputedStyle(dateField);
+  const dateShellStyle = window.getComputedStyle(dateShell);
 
   assert.equal(window.document.body.classList.contains('tema-petroleo'), true);
   assert.equal(button.getAttribute('aria-pressed'), 'true');
@@ -412,6 +416,9 @@ async function testVisualPreferences() {
   assert.equal(dateStyle.width, '100%');
   assert.equal(dateStyle.minWidth, '0');
   assert.equal(dateStyle.maxWidth, '100%');
+  assert.equal(dateShellStyle.width, '100%');
+  assert.equal(dateShellStyle.maxWidth, '100%');
+  assert.equal(dateShellStyle.overflow, 'hidden');
 
   button.click();
   assert.equal(window.document.body.classList.contains('tema-petroleo'), false);
