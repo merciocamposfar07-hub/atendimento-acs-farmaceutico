@@ -60,6 +60,7 @@
       verificacao.id='portalManutencaoVerificacao';
       verificacao.className='portal-manutencao-verificacao';
       verificacao.setAttribute('role','status');
+      verificacao.hidden=true;
       verificacao.textContent='Verificando a disponibilidade do Portal TACS…';
       document.body.insertBefore(verificacao,document.body.firstChild);
     }
@@ -91,11 +92,7 @@
       atualizadoEm:texto(novo.atualizadoEm)
     };
     var e=elementos();
-    e.verificacao.hidden=estado.conhecido;
-    if(!estado.conhecido){
-      e.verificacao.hidden=false;
-      e.verificacao.textContent='Não foi possível confirmar a disponibilidade do Portal TACS. Aguarde e tente novamente.';
-    }
+    e.verificacao.hidden=true;
     e.tela.hidden=!estado.ativa;
     if(estado.ativa){
       document.getElementById('portalManutencaoMensagem').textContent=estado.mensagem||'O Portal TACS está temporariamente indisponível.';
@@ -154,12 +151,66 @@
     return consulta;
   }
 
-  function disponivel(){return estado.conhecido&&!estado.ativa}
+  function disponivel(){return !estado.ativa}
   function obter(){return Object.assign({},estado)}
+
+  function instalarCorrecaoOdontologicaCns_(){
+    if(window.__portalTacsCorrecaoOdontologicaCnsV97)return;
+    window.__portalTacsCorrecaoOdontologicaCnsV97=true;
+
+    function digitos(valor){return String(valor||'').replace(/\D/g,'')}
+    function ehCns(valor){return /^\d{15}$/.test(digitos(valor))}
+    function ehOdontologia(){
+      var categoria=document.getElementById('category');
+      return categoria&&String(categoria.value||'').toLowerCase().indexOf('odontol')!==-1;
+    }
+    function nascimentoValido(valor){return /^\d{2}\/\d{2}\/\d{4}$/.test(String(valor||'').trim())}
+
+    function reparar(){
+      if(!ehOdontologia())return;
+      var status=document.getElementById('dentalStatus');
+      var selecionada=document.querySelector('#dentalSlots .sheet-dental-choice.selected');
+      var envio=document.getElementById('send');
+      var documento=document.getElementById('cpf');
+      if(!status||!selecionada||!envio||!documento)return;
+
+      var reservada=String(status.textContent||'').indexOf('Vaga reservada.')===0;
+      var pendente=envio.dataset&&envio.dataset.dentalReservationPending==='1';
+      if(!reservada||pendente)return;
+
+      if(selecionada.disabled)selecionada.disabled=false;
+      if(!ehCns(documento.value))return;
+
+      var nome=document.getElementById('name');
+      var nascimento=document.getElementById('birth');
+      var localidade=document.getElementById('locality');
+      var assunto=document.getElementById('subject');
+      var pronto=
+        nome&&String(nome.value||'').trim().length>=3&&
+        nascimento&&nascimentoValido(nascimento.value)&&
+        localidade&&String(localidade.value||'').trim().length>0&&
+        assunto&&String(assunto.value||'').trim().length>0;
+      if(pronto)envio.disabled=false;
+    }
+
+    document.addEventListener('input',function(){setTimeout(reparar,0)},true);
+    document.addEventListener('change',function(){setTimeout(reparar,0)},true);
+    document.addEventListener('click',function(){setTimeout(reparar,0)},true);
+
+    var observador=new MutationObserver(function(){setTimeout(reparar,0)});
+    observador.observe(document.documentElement,{
+      childList:true,
+      subtree:true,
+      attributes:true,
+      attributeFilter:['disabled','class','data-dental-reservation-pending']
+    });
+    reparar();
+  }
 
   function iniciar(){
     var salva=lerAtivaSalva();
     elementos();
+    instalarCorrecaoOdontologicaCns_();
     if(salva){
       aplicar({conhecido:true,ativa:true,mensagem:salva.mensagem,atualizadoEm:salva.atualizadoEm});
     }
