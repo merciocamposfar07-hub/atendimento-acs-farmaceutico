@@ -1,0 +1,177 @@
+name: Reparar push do morador V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/reparo-push-morador-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: reparo-push-morador-v1
+  cancel-in-progress: false
+
+jobs:
+  testar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar somente o reparo permanente de push
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('agenda-enfermeira.js')
+          s = p.read_text(encoding='utf-8')
+
+          def rep(old, new, label):
+              global s
+              if old not in s:
+                  raise SystemExit(f'Trecho não encontrado: {label}')
+              if s.count(old) != 1:
+                  raise SystemExit(f'Trecho ambíguo ({s.count(old)} ocorrências): {label}')
+              s = s.replace(old, new, 1)
+
+          rep(
+              "      '.notification-offer button:disabled{opacity:.6}',\n      '.notification-status{font-weight:850}',",
+              "      '.notification-offer button:disabled{opacity:.6}',\n      '.notification-repair{margin-top:10px!important;border:2px solid #0d5f8a!important;background:#fff!important;color:#073a55!important}',\n      '.notification-repair[hidden]{display:none!important}',\n      '.notification-status{font-weight:850}',",
+              'estilo do botão de reparo'
+          )
+
+          rep(
+              "      '<button type=\"button\" id=\"notificationButton\">Configurar recebimento de avisos</button>' +\n      '<p class=\"notification-help\" id=\"notificationHelp\"></p>';",
+              "      '<button type=\"button\" id=\"notificationButton\">Configurar recebimento de avisos</button>' +\n      '<button type=\"button\" id=\"notificationRepairButton\" class=\"notification-repair\" hidden>🔧 Reparar recebimento de avisos</button>' +\n      '<p class=\"notification-help\" id=\"notificationHelp\"></p>';",
+              'HTML do botão de reparo'
+          )
+
+          rep(
+              "    var button = id('notificationButton');\n    var status = id('notificationStatus');",
+              "    var button = id('notificationButton');\n    var repairButton = id('notificationRepairButton');\n    var status = id('notificationStatus');",
+              'referência do botão de reparo'
+          )
+
+          rep(
+              "          allowLocalhostAsSecureOrigin: false\n        });\n\n        function areaAtualDaUnidade() {",
+              "          allowLocalhostAsSecureOrigin: false\n        });\n\n        var repairInProgress = false;\n\n        function areaAtualDaUnidade() {",
+              'estado de reparo'
+          )
+
+          rep(
+              "        function mostrarEstado(estado, areaConfirmada) {\n          var atual = estado || estadoInscricao();\n          if (inscricaoAtiva(atual) && areaConfirmada === true) {\n            status.textContent = 'Avisos ativados neste aparelho.';\n            button.textContent = 'Avisos ativados';\n            button.disabled = true;\n            help.textContent =\n              'Inscrição ativa e vinculada à área deste morador.';\n            return;\n          }\n          button.disabled = false;",
+              "        function mostrarEstado(estado, areaConfirmada) {\n          var atual = estado || estadoInscricao();\n          if (repairButton) {\n            repairButton.hidden = true;\n            repairButton.disabled = repairInProgress;\n          }\n          if (inscricaoAtiva(atual) && areaConfirmada === true) {\n            status.textContent = 'Avisos ativados neste aparelho.';\n            button.textContent = 'Avisos ativados';\n            button.disabled = true;\n            if (repairButton) {\n              repairButton.hidden = false;\n              repairButton.disabled = false;\n            }\n            help.textContent =\n              'Inscrição ativa e vinculada à área deste morador. Se os avisos não estiverem chegando, use o botão Reparar recebimento de avisos.';\n            return;\n          }\n          button.disabled = false;",
+              'estado saudável com reparo permanente'
+          )
+
+          rep(
+              "        async function sincronizarEstado() {",
+              "        function aguardarToken(limiteMs) {\n          return new Promise(function (resolve) {\n            var inicio = Date.now();\n            function conferirToken() {\n              var push = OneSignal.User && OneSignal.User.PushSubscription;\n              var token = String(push && push.token || '');\n              if (token || Date.now() - inicio >= (limiteMs || 8000)) {\n                resolve(token);\n                return;\n              }\n              setTimeout(conferirToken, 250);\n            }\n            conferirToken();\n          });\n        }\n\n        async function repararRecebimento() {\n          if (repairInProgress) return;\n          repairInProgress = true;\n          button.disabled = true;\n          if (repairButton) repairButton.disabled = true;\n          status.textContent = 'Reparando o recebimento de avisos...';\n          help.textContent = 'Aguarde enquanto este aparelho renova a inscrição e o vínculo da área.';\n          try {\n            if (!OneSignal.Notifications.permission) {\n              await OneSignal.Notifications.requestPermission();\n            }\n            var push = OneSignal.User && OneSignal.User.PushSubscription;\n            if (!OneSignal.Notifications.permission || !push) {\n              throw new Error('Permissão de notificações não disponível.');\n            }\n            if (push.optedIn === true && typeof push.optOut === 'function') {\n              await push.optOut();\n            }\n            if (typeof push.optIn !== 'function') {\n              throw new Error('O navegador não permitiu renovar a inscrição.');\n            }\n            await push.optIn();\n            var atual = await aguardarInscricao(12000);\n            var token = await aguardarToken(8000);\n            if (!inscricaoAtiva(atual) || !token) {\n              throw new Error('A inscrição não ficou pronta para receber avisos.');\n            }\n            var areaConfirmada = await marcarAreaDaUnidade();\n            if (!areaConfirmada) {\n              throw new Error('A área do aparelho não pôde ser confirmada.');\n            }\n            repairInProgress = false;\n            mostrarEstado(estadoInscricao(), true);\n            help.textContent =\n              'Reparo concluído. A inscrição foi renovada e este aparelho está vinculado à área do morador.';\n          } catch (error) {\n            repairInProgress = false;\n            status.textContent = 'Não foi possível concluir o reparo agora.';\n            help.textContent =\n              'Feche e abra novamente o Portal TACS e tente outra vez. Se o aviso continuar sem chegar, confira também a permissão de notificações do navegador ou do sistema.';\n            button.disabled = false;\n            if (repairButton) {\n              repairButton.hidden = false;\n              repairButton.disabled = false;\n            }\n          }\n        }\n\n        async function sincronizarEstado() {",
+              'função funcional de reparo'
+          )
+
+          rep(
+              "          pushSubscription.addEventListener('change', function () {\n            sincronizarEstado().catch(function () {",
+              "          pushSubscription.addEventListener('change', function () {\n            if (repairInProgress) return;\n            sincronizarEstado().catch(function () {",
+              'proteção durante renovação'
+          )
+
+          rep(
+              "        button.addEventListener('click', async function () {",
+              "        if (repairButton) {\n          repairButton.addEventListener('click', repararRecebimento);\n        }\n\n        button.addEventListener('click', async function () {",
+              'evento do botão de reparo'
+          )
+
+          rep(
+              "        help.textContent =\n          'No iPhone, use o portal instalado na Tela de Início. No Android, use o Chrome.';\n        button.disabled = false;",
+              "        help.textContent =\n          'No iPhone, use o portal instalado na Tela de Início. No Android, use o Chrome.';\n        button.disabled = false;\n        if (repairButton) repairButton.hidden = true;",
+              'falha de inicialização'
+          )
+
+          p.write_text(s, encoding='utf-8')
+
+          index = Path('index.html')
+          h = index.read_text(encoding='utf-8')
+          old = 'agenda-enfermeira.js?v=20260811-notificacoes-estaveis-v3'
+          new = 'agenda-enfermeira.js?v=20260812-reparo-push-v4'
+          if h.count(old) != 1:
+              raise SystemExit(f'Versão antiga do agenda-enfermeira.js esperada 1 vez; encontrada {h.count(old)}.')
+          index.write_text(h.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Adicionar teste permanente do reparo
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > scripts/test_notification_repair_button.js <<'NODE'
+          'use strict';
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const source = fs.readFileSync('agenda-enfermeira.js', 'utf8');
+          const index = fs.readFileSync('index.html', 'utf8');
+
+          assert.match(source, /id="notificationRepairButton"[^>]*hidden>🔧 Reparar recebimento de avisos<\/button>/);
+          assert.match(source, /repairButton\.hidden = false;\s*repairButton\.disabled = false;/);
+          assert.match(source, /async function repararRecebimento\(\)/);
+          assert.match(source, /await push\.optOut\(\)/);
+          assert.match(source, /await push\.optIn\(\)/);
+          assert.match(source, /await aguardarInscricao\(12000\)/);
+          assert.match(source, /await aguardarToken\(8000\)/);
+          assert.match(source, /await marcarAreaDaUnidade\(\)/);
+          assert.match(source, /if \(repairInProgress\) return;/);
+          assert.match(source, /Reparo concluído\. A inscrição foi renovada/);
+          assert.match(index, /agenda-enfermeira\.js\?v=20260812-reparo-push-v4/);
+          console.log('Push do morador: botão permanente e renovação optOut/optIn + token + área validados.');
+          NODE
+
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const extra = 'node scripts/test_notification_repair_button.js';
+          if (!p.scripts.test.includes(extra)) p.scripts.test += ' && ' + extra;
+          fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+          NODE
+
+      - name: Validar sintaxe e bateria completa
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check agenda-enfermeira.js
+          node --check scripts/test_notification_repair_button.js
+          npm ci
+          npm test
+
+      - name: Validar escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only | sort > /tmp/changed.txt
+          printf '%s\n' \
+            'agenda-enfermeira.js' \
+            'index.html' \
+            'package.json' \
+            'scripts/test_notification_repair_button.js' | sort > /tmp/expected.txt
+          diff -u /tmp/expected.txt /tmp/changed.txt
+
+      - name: Publicar alteração testada
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add agenda-enfermeira.js index.html package.json scripts/test_notification_repair_button.js
+          git commit -m 'Adiciona reparo permanente das notificações do morador'
+          git push origin HEAD:main
