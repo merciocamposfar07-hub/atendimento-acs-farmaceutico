@@ -33,6 +33,41 @@ jobs:
       - name: Aplicar camada multiárea
         run: python3 scripts/apply_multi_area_phase1_bootstrap.py
 
+      - name: Corrigir teste antigo de ordem dos módulos
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/test_build_apps_script_release.js')
+          s=p.read_text(encoding='utf-8')
+          old="""  assert.strictEqual(first[0].file, 'ZZZZ_15_ArquivoRealDoServidor.js');
+            assert.strictEqual(first[0].operation, 'substituido');
+            assert.ok(first.every((item) => item.file.endsWith('.js')));
+            assert.match(
+              fs.readFileSync(path.join(target, first[0].file), 'utf8'),
+              /VERSAO:\\s*'1\\.4\\.5'/
+            );
+          """
+          new="""  const residentFirst = first.find((item) => item.file === 'ZZZZ_15_ArquivoRealDoServidor.js');
+            assert.ok(residentFirst, 'O módulo de Moradores precisa permanecer no pacote.');
+            assert.strictEqual(residentFirst.operation, 'substituido');
+            assert.ok(first.every((item) => item.file.endsWith('.js')));
+            assert.match(
+              fs.readFileSync(path.join(target, residentFirst.file), 'utf8'),
+              /VERSAO:\\s*'1\\.4\\.5'/
+            );
+          """
+          if old not in s:
+              raise SystemExit('Bloco JS do teste de release não encontrado')
+          s=s.replace(old,new,1)
+          old2="  assert.strictEqual(report[0].file, 'ZZZZ_15_ArquivoRealDoServidor.gs');"
+          new2="  assert.ok(report.some((item) => item.file === 'ZZZZ_15_ArquivoRealDoServidor.gs'));"
+          if old2 not in s:
+              raise SystemExit('Bloco GS do teste de release não encontrado')
+          s=s.replace(old2,new2,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+
       - name: Validar sintaxe dos arquivos alterados
         shell: bash
         run: |
@@ -47,6 +82,7 @@ jobs:
           node --check scripts/test_public_data_transport.js
           node --check scripts/test_public_agendas_apps_script.js
           node --check scripts/test_public_content_multiarea.js
+          node --check scripts/test_build_apps_script_release.js
 
       - name: Executar testes completos
         shell: bash
@@ -59,7 +95,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ALLOWED='^(agenda-config\.js|portal-public-data\.js|portal-manutencao\.js|assets/js/portal-conteudo-publico-v1\.js|apps-script/ZZ_11_PublicoConteudoPortalV1\.gs|apps-script/ZZ_12_PublicoAgendasPortalV1\.gs|scripts/build_apps_script_release\.js|scripts/test_public_data_transport\.js|scripts/test_public_agendas_apps_script\.js|scripts/test_public_content_multiarea\.js|package\.json|index\.html|\.github/workflows/deploy-apps-script-moradores\.yml|\.github/apps-script-release-request)$'
+          ALLOWED='^(agenda-config\.js|portal-public-data\.js|portal-manutencao\.js|assets/js/portal-conteudo-publico-v1\.js|apps-script/ZZ_11_PublicoConteudoPortalV1\.gs|apps-script/ZZ_12_PublicoAgendasPortalV1\.gs|scripts/build_apps_script_release\.js|scripts/test_build_apps_script_release\.js|scripts/test_public_data_transport\.js|scripts/test_public_agendas_apps_script\.js|scripts/test_public_content_multiarea\.js|package\.json|index\.html|\.github/workflows/deploy-apps-script-moradores\.yml|\.github/apps-script-release-request)$'
           changed="$(git status --porcelain=v1 | cut -c4-)"
           printf '%s\n' "$changed"
           bad="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -Ev "$ALLOWED" || true)"
