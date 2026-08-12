@@ -36,11 +36,11 @@ jobs:
         run: |
           set -euo pipefail
           WORKFLOW='.github/workflows/deploy-apps-script-moradores.yml'
-          CHANGE_COMMIT="$(git log -1 --format=%H -- "$WORKFLOW")"
-          test -n "$CHANGE_COMMIT"
-          git show "${CHANGE_COMMIT}^:${WORKFLOW}" > "$WORKFLOW"
+          # 2b3574 foi a primeira atualização direta desse workflow. O pai
+          # contém exatamente a base que o aplicador temporário espera.
+          git show "2b3574f3b39a5b0fd3beaf0bf4074b0fdbcb7564^:${WORKFLOW}" > "$WORKFLOW"
           python3 scripts/apply_multi_area_phase1_bootstrap.py
-          # Restaura a versão nova, já aplicada diretamente pelo conector.
+          # Restaura a versão atual, já corrigida diretamente pelo conector.
           git checkout HEAD -- "$WORKFLOW"
 
       - name: Alinhar testes legados sem alterar a odontologia
