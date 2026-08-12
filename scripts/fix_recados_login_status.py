@@ -73,4 +73,65 @@ if old_poll in s:
 elif new_poll not in s:
     raise SystemExit('Detector de polling administrativo não encontrado')
 
+old_exp="""  assert.deepEqual(actions, ['admin_dados'], `${config.file} fez consultas extras ao validar a sessão antiga.`);"""
+new_exp="""  const expectedStoredSessionAction = config.file === 'teste-v1/painel-recados-campanhas-v1.html'
+    ? 'admin_publicacoes_dados'
+    : 'admin_dados';
+  assert.deepEqual(actions, [expectedStoredSessionAction], `${config.file} fez consultas extras ao validar a sessão antiga.`);"""
+if old_exp in s:
+    s=s.replace(old_exp,new_exp,1)
+elif new_exp not in s:
+    raise SystemExit('Expectativa de sessão antiga não encontrada')
+
+old_flow="""        } else if (payload.action === 'admin_dados') {
+          dataReads += 1;
+          result = {
+            ok: true,
+            recados: eventuallyVisible && dataReads >= 3 ? [savedNotice] : [],
+            campanhas: []
+          };
+        } else if (payload.action === 'admin_moradores_areas') {
+          result = {
+            ok: true,
+            areaId: 'JAPARANDUBA',
+            areas: [{areaId: 'JAPARANDUBA', areaNome: 'Sítio Japaranduba'}]
+          };
+        } else if (payload.action === 'admin_portal_manutencao_status') {
+          result = {ok: true, ativa: false, areaId: 'JAPARANDUBA'};
+        } else if (payload.action === 'admin_salvar_recado') {
+          result = {ok: true};
+"""
+new_flow="""        } else if (payload.action === 'admin_publicacoes_dados') {
+          dataReads += 1;
+          result = {
+            ok: true,
+            recados: eventuallyVisible && dataReads >= 3 ? [savedNotice] : [],
+            campanhas: [],
+            areaId: 'JAPARANDUBA',
+            areaNome: 'Sítio Japaranduba',
+            areas: [{areaId: 'JAPARANDUBA', areaNome: 'Sítio Japaranduba'}],
+            podeAdministrar: true,
+            perfil: 'ADMIN_GERAL',
+            manutencao: {ativa: false, areaId: 'JAPARANDUBA'}
+          };
+        } else if (payload.action === 'admin_publicacoes_salvar_recado') {
+          result = {ok: true};
+"""
+if old_flow in s:
+    s=s.replace(old_flow,new_flow,1)
+elif new_flow not in s:
+    raise SystemExit('Fluxo simulado do novo recado não encontrado')
+
+s=s.replace(
+"""    () => /Sessão validada e conteúdo carregado/.test(
+      window.document.getElementById('loginStatus').textContent
+    ),""",
+"""    () => /Acesso de administrador validado/.test(
+      window.document.getElementById('loginStatus').textContent
+    ),""",
+1
+)
+s=s.replace("item.action === 'admin_salvar_recado'", "item.action === 'admin_publicacoes_salvar_recado'")
+s=s.replace("item.action === 'admin_dados'", "item.action === 'admin_publicacoes_dados'")
+
 p.write_text(s,encoding='utf-8')
