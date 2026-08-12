@@ -1,5 +1,6 @@
 name: Confirmacao individual de reparo push V1
 
+# Reexecucao com executor estrutural corrigido.
 on:
   push:
     branches: [main]
