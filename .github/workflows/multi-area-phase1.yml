@@ -33,11 +33,12 @@ jobs:
       - name: Aplicar camada multiárea
         run: python3 scripts/apply_multi_area_phase1_bootstrap.py
 
-      - name: Corrigir teste antigo de ordem dos módulos
+      - name: Corrigir testes antigos sem alterar a odontologia
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+
           p=Path('scripts/test_build_apps_script_release.js')
           s=p.read_text(encoding='utf-8')
           old="""  assert.strictEqual(first[0].file, 'ZZZZ_15_ArquivoRealDoServidor.js');
@@ -66,6 +67,128 @@ jobs:
               raise SystemExit('Bloco GS do teste de release não encontrado')
           s=s.replace(old2,new2,1)
           p.write_text(s,encoding='utf-8')
+
+          p=Path('scripts/test_dom_flows.js')
+          s=p.read_text(encoding='utf-8')
+
+          old="""    slots[0].click();
+            await fillPatient(
+          """
+          new="""    const reservationsBeforeClick = harness.records.dentalReservations.length;
+            slots[0].click();
+            await waitFor(
+              () => harness.records.dentalReservations.length === reservationsBeforeClick + 1,
+              'A vaga comum não foi reservada no clique'
+            );
+            const reservation = harness.records.dentalReservations.at(-1);
+            assert.equal(reservation.action, 'reservar');
+            assert.equal(reservation.date, '2099-08-03');
+            assert.equal(reservation.type, 'comum');
+            assert.match(reservation.requestId, /^MATIAS-/);
+            assert.equal(harness.dental[0].vagasComuns, 1, 'A vaga comum não foi abatida no clique');
+            await fillPatient(
+          """
+          if old not in s:
+              raise SystemExit('Seleção comum do teste odontológico não encontrada')
+          s=s.replace(old,new,1)
+
+          old="""    const before = harness.records.whatsAppMessages.length;
+            send.click();
+            await wait(40);
+            assert.equal(
+              harness.records.whatsAppMessages.length,
+              before,
+              'O WhatsApp abriu antes da confirmação da reserva comum'
+            );
+            await waitFor(
+              () => harness.records.whatsAppMessages.length === before + 1,
+              'O WhatsApp não abriu após a reserva comum'
+            );
+
+            assert.equal(harness.records.dentalReservations.length, 1);
+            const reservation = harness.records.dentalReservations[0];
+            assert.equal(reservation.action, 'reservar');
+            assert.equal(reservation.date, '2099-08-03');
+            assert.equal(reservation.type, 'comum');
+            assert.match(reservation.requestId, /^MATIAS-/);
+            assert.equal(harness.dental[0].vagasComuns, 1, 'A vaga comum não foi abatida exatamente uma vez');
+          """
+          new="""    const before = harness.records.whatsAppMessages.length;
+            const reservationsBeforeSend = harness.records.dentalReservations.length;
+            send.click();
+            await waitFor(
+              () => harness.records.whatsAppMessages.length === before + 1,
+              'O WhatsApp não abriu após a vaga comum já reservada'
+            );
+            assert.equal(
+              harness.records.dentalReservations.length,
+              reservationsBeforeSend,
+              'O envio pelo WhatsApp não pode descontar outra vaga comum'
+            );
+          """
+          if old not in s:
+              raise SystemExit('Envio comum antigo do teste odontológico não encontrado')
+          s=s.replace(old,new,1)
+
+          old="""    slots[1].click();
+            await fillPatient(
+          """
+          new="""    const emergencyReservationsBeforeClick = harness.records.dentalReservations.length;
+            slots[1].click();
+            await waitFor(
+              () => harness.records.dentalReservations.length === emergencyReservationsBeforeClick + 1,
+              'A vaga emergencial não foi reservada no clique'
+            );
+            const reservation = harness.records.dentalReservations.at(-1);
+            assert.equal(reservation.date, '2099-08-04');
+            assert.equal(reservation.type, 'emergencial');
+            assert.equal(harness.dental[1].vagasEmergenciais, 1, 'A vaga emergencial não foi abatida no clique');
+            await fillPatient(
+          """
+          if old not in s:
+              raise SystemExit('Seleção emergencial do teste odontológico não encontrada')
+          s=s.replace(old,new,1)
+
+          old="""    const before = harness.records.whatsAppMessages.length;
+            send.click();
+            await wait(40);
+            assert.equal(
+              harness.records.whatsAppMessages.length,
+              before,
+              'O WhatsApp abriu antes da confirmação da reserva emergencial'
+            );
+            await waitFor(
+              () => harness.records.whatsAppMessages.length === before + 1,
+              'O WhatsApp não abriu após a reserva emergencial'
+            );
+
+            assert.equal(harness.records.dentalReservations.length, 2);
+            const reservation = harness.records.dentalReservations.at(-1);
+            assert.equal(reservation.date, '2099-08-04');
+            assert.equal(reservation.type, 'emergencial');
+            assert.equal(
+              harness.dental[1].vagasEmergenciais,
+              1,
+              'A vaga emergencial não foi abatida exatamente uma vez'
+            );
+          """
+          new="""    const before = harness.records.whatsAppMessages.length;
+            const emergencyReservationsBeforeSend = harness.records.dentalReservations.length;
+            send.click();
+            await waitFor(
+              () => harness.records.whatsAppMessages.length === before + 1,
+              'O WhatsApp não abriu após a vaga emergencial já reservada'
+            );
+            assert.equal(
+              harness.records.dentalReservations.length,
+              emergencyReservationsBeforeSend,
+              'O envio pelo WhatsApp não pode descontar outra vaga emergencial'
+            );
+          """
+          if old not in s:
+              raise SystemExit('Envio emergencial antigo do teste odontológico não encontrado')
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
           PY
 
       - name: Validar sintaxe dos arquivos alterados
@@ -83,6 +206,7 @@ jobs:
           node --check scripts/test_public_agendas_apps_script.js
           node --check scripts/test_public_content_multiarea.js
           node --check scripts/test_build_apps_script_release.js
+          node --check scripts/test_dom_flows.js
 
       - name: Executar testes completos
         shell: bash
@@ -95,7 +219,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ALLOWED='^(agenda-config\.js|portal-public-data\.js|portal-manutencao\.js|assets/js/portal-conteudo-publico-v1\.js|apps-script/ZZ_11_PublicoConteudoPortalV1\.gs|apps-script/ZZ_12_PublicoAgendasPortalV1\.gs|scripts/build_apps_script_release\.js|scripts/test_build_apps_script_release\.js|scripts/test_public_data_transport\.js|scripts/test_public_agendas_apps_script\.js|scripts/test_public_content_multiarea\.js|package\.json|index\.html|\.github/workflows/deploy-apps-script-moradores\.yml|\.github/apps-script-release-request)$'
+          ALLOWED='^(agenda-config\.js|portal-public-data\.js|portal-manutencao\.js|assets/js/portal-conteudo-publico-v1\.js|apps-script/ZZ_11_PublicoConteudoPortalV1\.gs|apps-script/ZZ_12_PublicoAgendasPortalV1\.gs|scripts/build_apps_script_release\.js|scripts/test_build_apps_script_release\.js|scripts/test_dom_flows\.js|scripts/test_public_data_transport\.js|scripts/test_public_agendas_apps_script\.js|scripts/test_public_content_multiarea\.js|package\.json|index\.html|\.github/workflows/deploy-apps-script-moradores\.yml|\.github/apps-script-release-request)$'
           changed="$(git status --porcelain=v1 | cut -c4-)"
           printf '%s\n' "$changed"
           bad="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -Ev "$ALLOWED" || true)"
