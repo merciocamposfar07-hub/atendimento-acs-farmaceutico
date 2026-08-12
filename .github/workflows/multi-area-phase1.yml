@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/apply_multi_area_phase1_bootstrap.py'
+      - 'scripts/fix_phase1_tests.py'
       - '.github/workflows/multi-area-phase1.yml'
 
 permissions:
@@ -33,163 +34,8 @@ jobs:
       - name: Aplicar camada multiárea
         run: python3 scripts/apply_multi_area_phase1_bootstrap.py
 
-      - name: Corrigir testes antigos sem alterar a odontologia
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p=Path('scripts/test_build_apps_script_release.js')
-          s=p.read_text(encoding='utf-8')
-          old="""  assert.strictEqual(first[0].file, 'ZZZZ_15_ArquivoRealDoServidor.js');
-            assert.strictEqual(first[0].operation, 'substituido');
-            assert.ok(first.every((item) => item.file.endsWith('.js')));
-            assert.match(
-              fs.readFileSync(path.join(target, first[0].file), 'utf8'),
-              /VERSAO:\\s*'1\\.4\\.5'/
-            );
-          """
-          new="""  const residentFirst = first.find((item) => item.file === 'ZZZZ_15_ArquivoRealDoServidor.js');
-            assert.ok(residentFirst, 'O módulo de Moradores precisa permanecer no pacote.');
-            assert.strictEqual(residentFirst.operation, 'substituido');
-            assert.ok(first.every((item) => item.file.endsWith('.js')));
-            assert.match(
-              fs.readFileSync(path.join(target, residentFirst.file), 'utf8'),
-              /VERSAO:\\s*'1\\.4\\.5'/
-            );
-          """
-          if old not in s:
-              raise SystemExit('Bloco JS do teste de release não encontrado')
-          s=s.replace(old,new,1)
-          old2="  assert.strictEqual(report[0].file, 'ZZZZ_15_ArquivoRealDoServidor.gs');"
-          new2="  assert.ok(report.some((item) => item.file === 'ZZZZ_15_ArquivoRealDoServidor.gs'));"
-          if old2 not in s:
-              raise SystemExit('Bloco GS do teste de release não encontrado')
-          s=s.replace(old2,new2,1)
-          p.write_text(s,encoding='utf-8')
-
-          p=Path('scripts/test_dom_flows.js')
-          s=p.read_text(encoding='utf-8')
-
-          old="""    slots[0].click();
-            await fillPatient(
-          """
-          new="""    const reservationsBeforeClick = harness.records.dentalReservations.length;
-            slots[0].click();
-            await waitFor(
-              () => harness.records.dentalReservations.length === reservationsBeforeClick + 1,
-              'A vaga comum não foi reservada no clique'
-            );
-            const reservation = harness.records.dentalReservations.at(-1);
-            assert.equal(reservation.action, 'reservar');
-            assert.equal(reservation.date, '2099-08-03');
-            assert.equal(reservation.type, 'comum');
-            assert.match(reservation.requestId, /^MATIAS-/);
-            assert.equal(harness.dental[0].vagasComuns, 1, 'A vaga comum não foi abatida no clique');
-            await fillPatient(
-          """
-          if old not in s:
-              raise SystemExit('Seleção comum do teste odontológico não encontrada')
-          s=s.replace(old,new,1)
-
-          old="""    const before = harness.records.whatsAppMessages.length;
-            send.click();
-            await wait(40);
-            assert.equal(
-              harness.records.whatsAppMessages.length,
-              before,
-              'O WhatsApp abriu antes da confirmação da reserva comum'
-            );
-            await waitFor(
-              () => harness.records.whatsAppMessages.length === before + 1,
-              'O WhatsApp não abriu após a reserva comum'
-            );
-
-            assert.equal(harness.records.dentalReservations.length, 1);
-            const reservation = harness.records.dentalReservations[0];
-            assert.equal(reservation.action, 'reservar');
-            assert.equal(reservation.date, '2099-08-03');
-            assert.equal(reservation.type, 'comum');
-            assert.match(reservation.requestId, /^MATIAS-/);
-            assert.equal(harness.dental[0].vagasComuns, 1, 'A vaga comum não foi abatida exatamente uma vez');
-          """
-          new="""    const before = harness.records.whatsAppMessages.length;
-            const reservationsBeforeSend = harness.records.dentalReservations.length;
-            send.click();
-            await waitFor(
-              () => harness.records.whatsAppMessages.length === before + 1,
-              'O WhatsApp não abriu após a vaga comum já reservada'
-            );
-            assert.equal(
-              harness.records.dentalReservations.length,
-              reservationsBeforeSend,
-              'O envio pelo WhatsApp não pode descontar outra vaga comum'
-            );
-          """
-          if old not in s:
-              raise SystemExit('Envio comum antigo do teste odontológico não encontrado')
-          s=s.replace(old,new,1)
-
-          old="""    slots[1].click();
-            await fillPatient(
-          """
-          new="""    const emergencyReservationsBeforeClick = harness.records.dentalReservations.length;
-            slots[1].click();
-            await waitFor(
-              () => harness.records.dentalReservations.length === emergencyReservationsBeforeClick + 1,
-              'A vaga emergencial não foi reservada no clique'
-            );
-            const reservation = harness.records.dentalReservations.at(-1);
-            assert.equal(reservation.date, '2099-08-04');
-            assert.equal(reservation.type, 'emergencial');
-            assert.equal(harness.dental[1].vagasEmergenciais, 1, 'A vaga emergencial não foi abatida no clique');
-            await fillPatient(
-          """
-          if old not in s:
-              raise SystemExit('Seleção emergencial do teste odontológico não encontrada')
-          s=s.replace(old,new,1)
-
-          old="""    const before = harness.records.whatsAppMessages.length;
-            send.click();
-            await wait(40);
-            assert.equal(
-              harness.records.whatsAppMessages.length,
-              before,
-              'O WhatsApp abriu antes da confirmação da reserva emergencial'
-            );
-            await waitFor(
-              () => harness.records.whatsAppMessages.length === before + 1,
-              'O WhatsApp não abriu após a reserva emergencial'
-            );
-
-            assert.equal(harness.records.dentalReservations.length, 2);
-            const reservation = harness.records.dentalReservations.at(-1);
-            assert.equal(reservation.date, '2099-08-04');
-            assert.equal(reservation.type, 'emergencial');
-            assert.equal(
-              harness.dental[1].vagasEmergenciais,
-              1,
-              'A vaga emergencial não foi abatida exatamente uma vez'
-            );
-          """
-          new="""    const before = harness.records.whatsAppMessages.length;
-            const emergencyReservationsBeforeSend = harness.records.dentalReservations.length;
-            send.click();
-            await waitFor(
-              () => harness.records.whatsAppMessages.length === before + 1,
-              'O WhatsApp não abriu após a vaga emergencial já reservada'
-            );
-            assert.equal(
-              harness.records.dentalReservations.length,
-              emergencyReservationsBeforeSend,
-              'O envio pelo WhatsApp não pode descontar outra vaga emergencial'
-            );
-          """
-          if old not in s:
-              raise SystemExit('Envio emergencial antigo do teste odontológico não encontrado')
-          s=s.replace(old,new,1)
-          p.write_text(s,encoding='utf-8')
-          PY
+      - name: Alinhar testes legados sem alterar a odontologia
+        run: python3 scripts/fix_phase1_tests.py
 
       - name: Validar sintaxe dos arquivos alterados
         shell: bash
@@ -236,7 +82,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          rm -f scripts/apply_multi_area_phase1_bootstrap.py .github/workflows/multi-area-phase1.yml
+          rm -f scripts/apply_multi_area_phase1_bootstrap.py scripts/fix_phase1_tests.py .github/workflows/multi-area-phase1.yml
           git add -A
           git commit -m 'Prepara Portal TACS público para múltiplas áreas'
           git push origin HEAD:main
