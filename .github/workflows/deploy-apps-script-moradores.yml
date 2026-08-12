@@ -105,7 +105,7 @@ jobs:
 
           npx --yes @google/clasp@3.3.0 version "Backup antes de moradores 1.4.5 - ${GITHUB_SHA::7}"
           npx --yes @google/clasp@3.3.0 push --force
-          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Moradores 1.4.5 e portal público multiárea - ${GITHUB_SHA::7}")
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Moradores 1.4.5 e painel 3.6.0 - ${GITHUB_SHA::7}")
           NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
           test -n "$NEW_VERSION"
 
@@ -125,7 +125,7 @@ jobs:
 
           npx --yes @google/clasp@3.3.0 redeploy \
             --versionNumber "$NEW_VERSION" \
-            --description "Moradores 1.4.5 e portal público multiárea" \
+            --description "Moradores 1.4.5 e painel 3.6.0" \
             "$DEPLOYMENT_ID"
           DEPLOYED=1
 
