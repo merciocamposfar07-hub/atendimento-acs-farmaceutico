@@ -1,6 +1,6 @@
 name: Confirmacao individual de reparo push V1
 
-# Reexecucao com o teste legado alinhado a versao 1.0.4.
+# Reexecucao com os testes da versao 1.0.4 alinhados ao helper Promise.
 on:
   push:
     branches: [main]
