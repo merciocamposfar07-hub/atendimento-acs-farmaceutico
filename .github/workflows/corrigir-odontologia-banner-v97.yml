@@ -1,0 +1,140 @@
+name: Corrigir odontologia e aviso do portal v97
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-odontologia-banner-v97.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: correcao-odontologia-banner-v97
+  cancel-in-progress: false
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Aplicar somente as duas correções autorizadas
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          dental_path = Path('portal-odontologia-segunda-sexta.js')
+          dental = dental_path.read_text(encoding='utf-8')
+
+          old_button = "        button.disabled = reservationPending || value === null || value <= 0 || Boolean(selected && selected.reserved && !sameReserved);"
+          new_button = "        button.disabled = reservationPending || (!sameReserved && (value === null || value <= 0 || Boolean(selected && selected.reserved)));"
+          if old_button in dental:
+              dental = dental.replace(old_button, new_button, 1)
+          elif new_button not in dental:
+              raise SystemExit('Regra do botão da vaga odontológica não localizada.')
+
+          if '  function validCns(value) {' not in dental:
+              anchor = "\n  function birthDate(value) {"
+              if anchor not in dental:
+                  raise SystemExit('Âncora de validação de documento não localizada.')
+              compatibility = r'''
+  function validCns(value) {
+    return /^\d{15}$/.test(clean(value).replace(/\D/g, ''));
+  }
+
+  function validDocument(value) {
+    return validCpf(value) || validCns(value);
+  }
+'''
+              dental = dental.replace(anchor, '\n' + compatibility + '  function birthDate(value) {', 1)
+
+          old_form = "    return Boolean(selected && clean(el('name') && el('name').value).length >= 3 && clean(el('locality') && el('locality').value) && validCpf(el('cpf') && el('cpf').value) && ageLabel(el('birth') && el('birth').value) && clean(el('subject') && el('subject').value));"
+          new_form = "    return Boolean(selected && clean(el('name') && el('name').value).length >= 3 && clean(el('locality') && el('locality').value) && validDocument(el('cpf') && el('cpf').value) && ageLabel(el('birth') && el('birth').value) && clean(el('subject') && el('subject').value));"
+          if old_form in dental:
+              dental = dental.replace(old_form, new_form, 1)
+          elif new_form not in dental:
+              raise SystemExit('Validação do formulário odontológico não localizada.')
+
+          dental = dental.replace(
+              "      'CPF: ' + clean(el('cpf').value) + '\\n' +",
+              "      'CPF ou CNS: ' + clean(el('cpf').value) + '\\n' +",
+              1
+          )
+          dental_path.write_text(dental, encoding='utf-8')
+
+          manut_path = Path('portal-manutencao.js')
+          manut = manut_path.read_text(encoding='utf-8')
+
+          create_anchor = "      verificacao.setAttribute('role','status');\n      verificacao.textContent='Verificando a disponibilidade do Portal TACS…';\n      document.body.insertBefore(verificacao,document.body.firstChild);"
+          create_new = "      verificacao.setAttribute('role','status');\n      verificacao.hidden=true;\n      verificacao.textContent='Verificando a disponibilidade do Portal TACS…';\n      document.body.insertBefore(verificacao,document.body.firstChild);"
+          if create_anchor in manut:
+              manut = manut.replace(create_anchor, create_new, 1)
+          elif create_new not in manut:
+              raise SystemExit('Criação do aviso de disponibilidade não localizada.')
+
+          old_unknown = "    e.verificacao.hidden=estado.conhecido;\n    if(!estado.conhecido){\n      e.verificacao.hidden=false;\n      e.verificacao.textContent='Não foi possível confirmar a disponibilidade do Portal TACS. Aguarde e tente novamente.';\n    }"
+          new_unknown = "    e.verificacao.hidden=true;"
+          if old_unknown in manut:
+              manut = manut.replace(old_unknown, new_unknown, 1)
+          elif new_unknown not in manut:
+              raise SystemExit('Tratamento do aviso indevido não localizado.')
+
+          manut = manut.replace(
+              "  function disponivel(){return estado.conhecido&&!estado.ativa}",
+              "  function disponivel(){return !estado.ativa}",
+              1
+          )
+          manut_path.write_text(manut, encoding='utf-8')
+
+          index_path = Path('index.html')
+          index = index_path.read_text(encoding='utf-8')
+          index, count_m = re.subn(
+              r'portal-manutencao\.js\?v=[^\"\']+',
+              'portal-manutencao.js?v=20260812-correcao-odontologia-banner-v97',
+              index,
+              count=1
+          )
+          index, count_d = re.subn(
+              r'portal-odontologia-segunda-sexta\.js\?v=[^\"\']+',
+              'portal-odontologia-segunda-sexta.js?v=20260812-correcao-odontologia-banner-v97',
+              index,
+              count=1
+          )
+          if count_m != 1 or count_d != 1:
+              raise SystemExit('Referências de cache do portal não foram localizadas exatamente uma vez.')
+          index_path.write_text(index, encoding='utf-8')
+          PY
+
+      - name: Validar sintaxe e escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check portal-odontologia-segunda-sexta.js
+          node --check portal-manutencao.js
+          grep -Fq "function validCns(value)" portal-odontologia-segunda-sexta.js
+          grep -Fq "validDocument(el('cpf') && el('cpf').value)" portal-odontologia-segunda-sexta.js
+          grep -Fq "button.disabled = reservationPending || (!sameReserved" portal-odontologia-segunda-sexta.js
+          grep -Fq "CPF ou CNS:" portal-odontologia-segunda-sexta.js
+          ! grep -Fq "Não foi possível confirmar a disponibilidade do Portal TACS" portal-manutencao.js
+          grep -Fq "function disponivel(){return !estado.ativa}" portal-manutencao.js
+          grep -Fq "portal-manutencao.js?v=20260812-correcao-odontologia-banner-v97" index.html
+          grep -Fq "portal-odontologia-segunda-sexta.js?v=20260812-correcao-odontologia-banner-v97" index.html
+          CHANGED="$(git diff --name-only | sort | tr '\n' ' ')"
+          test "$CHANGED" = "index.html portal-manutencao.js portal-odontologia-segunda-sexta.js "
+
+      - name: Publicar correção e remover executor temporário
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/corrigir-odontologia-banner-v97.yml
+          git config user.name "Portal TACS"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html portal-manutencao.js portal-odontologia-segunda-sexta.js .github/workflows/corrigir-odontologia-banner-v97.yml
+          git commit -m "Corrige reserva odontológica com CNS e remove aviso indevido"
+          git push
