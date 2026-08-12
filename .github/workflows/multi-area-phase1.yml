@@ -35,10 +35,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          WORKFLOW='.github/workflows/deploy-apps-script-moradores.yml'
+          CHANGE_COMMIT="$(git log -1 --format=%H -- "$WORKFLOW")"
+          test -n "$CHANGE_COMMIT"
+          git show "${CHANGE_COMMIT}^:${WORKFLOW}" > "$WORKFLOW"
           python3 scripts/apply_multi_area_phase1_bootstrap.py
-          # O workflow de produção já foi atualizado diretamente pelo conector
-          # com permissão própria. O token interno não pode alterar workflows.
-          git checkout -- .github/workflows/deploy-apps-script-moradores.yml
+          # Restaura a versão nova, já aplicada diretamente pelo conector.
+          git checkout HEAD -- "$WORKFLOW"
 
       - name: Alinhar testes legados sem alterar a odontologia
         run: python3 scripts/fix_phase1_tests.py
