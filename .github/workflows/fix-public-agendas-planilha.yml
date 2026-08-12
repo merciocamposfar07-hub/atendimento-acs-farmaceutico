@@ -66,14 +66,11 @@ jobs:
 
           p=Path('scripts/test_public_agendas_apps_script.js')
           s=p.read_text(encoding='utf-8')
-          old="""  PropertiesService: {
-            getScriptProperties: () => ({getProperty: () => ''})
-          },
-            SpreadsheetApp: {
-              getActiveSpreadsheet: () => ({getSheets: () => [sheet]})
-            },
-          """
-          new="""  adminTacsV1Planilha_: () => ({getSheets: () => [sheet]}),
+          inicio=s.find('  PropertiesService: {')
+          fim=s.find('  Utilities:', inicio)
+          if inicio < 0 or fim < 0:
+              raise SystemExit('Bloco de serviços do teste não encontrado; nenhuma alteração aplicada.')
+          novo="""  adminTacsV1Planilha_: () => ({getSheets: () => [sheet]}),
             PropertiesService: {
               getScriptProperties: () => { throw new Error('Não deve consultar SPREADSHEET_ID quando a fonte compartilhada existe.'); }
             },
@@ -82,9 +79,7 @@ jobs:
               getActiveSpreadsheet: () => { throw new Error('Não deve depender de planilha ativa no Web App.'); }
             },
           """
-          if old not in s:
-              raise SystemExit('Contexto antigo do teste não encontrado; nenhuma alteração aplicada.')
-          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          p.write_text(s[:inicio]+novo+s[fim:],encoding='utf-8')
           PY
 
       - name: Validar sintaxe e testes completos
