@@ -1,0 +1,82 @@
+name: Estabilizar Portal TACS multiárea fase 1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply_multi_area_phase1_bootstrap.py'
+      - '.github/workflows/multi-area-phase1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: portal-tacs-multiarea-fase1
+  cancel-in-progress: false
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar camada multiárea
+        run: python3 scripts/apply_multi_area_phase1_bootstrap.py
+
+      - name: Validar sintaxe dos arquivos alterados
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check agenda-config.js
+          node --check portal-public-data.js
+          node --check portal-manutencao.js
+          node --check assets/js/portal-conteudo-publico-v1.js
+          node --check --input-type=commonjs < apps-script/ZZ_11_PublicoConteudoPortalV1.gs
+          node --check --input-type=commonjs < apps-script/ZZ_12_PublicoAgendasPortalV1.gs
+          node --check scripts/build_apps_script_release.js
+          node --check scripts/test_public_data_transport.js
+          node --check scripts/test_public_agendas_apps_script.js
+          node --check scripts/test_public_content_multiarea.js
+
+      - name: Executar testes completos
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+
+      - name: Validar escopo da alteração
+        shell: bash
+        run: |
+          set -euo pipefail
+          ALLOWED='^(agenda-config\.js|portal-public-data\.js|portal-manutencao\.js|assets/js/portal-conteudo-publico-v1\.js|apps-script/ZZ_11_PublicoConteudoPortalV1\.gs|apps-script/ZZ_12_PublicoAgendasPortalV1\.gs|scripts/build_apps_script_release\.js|scripts/test_public_data_transport\.js|scripts/test_public_agendas_apps_script\.js|scripts/test_public_content_multiarea\.js|package\.json|index\.html|\.github/workflows/deploy-apps-script-moradores\.yml|\.github/apps-script-release-request)$'
+          changed="$(git status --porcelain=v1 | cut -c4-)"
+          printf '%s\n' "$changed"
+          bad="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -Ev "$ALLOWED" || true)"
+          if [ -n "$bad" ]; then
+            echo 'Alteração fora do escopo:'
+            echo "$bad"
+            exit 1
+          fi
+          test -n "$changed"
+
+      - name: Publicar fase 1 e remover auxiliares temporários
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm -f scripts/apply_multi_area_phase1_bootstrap.py .github/workflows/multi-area-phase1.yml
+          git add -A
+          git commit -m 'Prepara Portal TACS público para múltiplas áreas'
+          git push origin HEAD:main
