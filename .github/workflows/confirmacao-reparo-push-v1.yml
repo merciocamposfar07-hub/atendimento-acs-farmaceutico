@@ -1,6 +1,6 @@
 name: Confirmacao individual de reparo push V1
 
-# Reexecucao com executor estrutural corrigido.
+# Reexecucao com o teste legado alinhado a versao 1.0.4.
 on:
   push:
     branches: [main]
@@ -55,7 +55,8 @@ jobs:
             'index.html' \
             'package.json' \
             'scripts/test_notification_repair_button.js' \
-            'scripts/test_notification_repair_confirmation.js' | sort > /tmp/expected.txt
+            'scripts/test_notification_repair_confirmation.js' \
+            'scripts/test_territorio_csv_notifications.js' | sort > /tmp/expected.txt
           diff -u /tmp/expected.txt /tmp/changed.txt
 
       - name: Publicar alteracao testada
@@ -64,6 +65,6 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add agenda-enfermeira.js apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs index.html package.json scripts/test_notification_repair_button.js scripts/test_notification_repair_confirmation.js
+          git add agenda-enfermeira.js apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs index.html package.json scripts/test_notification_repair_button.js scripts/test_notification_repair_confirmation.js scripts/test_territorio_csv_notifications.js
           git commit -m 'Confirma reparo de notificacoes no proprio aparelho'
           git push origin HEAD:main
