@@ -25,13 +25,8 @@ const CASES = [
   {
     file: 'teste-v1/painel-recados-campanhas-v1.html',
     frame: 'ponteConteudoV1',
-    actions: [
-      'admin_login',
-      'admin_dados',
-      'admin_moradores_areas',
-      'admin_portal_manutencao_status'
-    ],
-    success: /Sessão validada e conteúdo carregado/,
+    actions: ['admin_login', 'admin_publicacoes_dados'],
+    success: /Acesso de administrador validado/,
     official: 'painel-oficial-recados-campanhas.html'
   }
 ];
@@ -70,6 +65,19 @@ function responseFor(action) {
       agendas: [],
       recados: [],
       campanhas: []
+    };
+  }
+  if (action === 'admin_publicacoes_dados') {
+    return {
+      ok: true,
+      recados: [],
+      campanhas: [],
+      areaId: 'JAPARANDUBA',
+      areaNome: 'Sítio Japaranduba',
+      areas: [{areaId: 'JAPARANDUBA', areaNome: 'Sítio Japaranduba'}],
+      podeAdministrar: true,
+      perfil: 'ADMIN_GERAL',
+      manutencao: {ativa: false, areaId: 'JAPARANDUBA'}
     };
   }
   if (action === 'admin_portal_manutencao_status') {
@@ -285,7 +293,8 @@ async function testDirectResponse(config) {
           node &&
           node.tagName === 'SCRIPT' &&
           typeof node.src === 'string' &&
-          node.src.includes('action=admin_result')
+          (node.src.includes('action=admin_result') ||
+            node.src.includes('action=admin_publicacoes_result'))
         ) {
           jsonpPolls.push(node.src);
         }
@@ -471,7 +480,10 @@ async function testExpiredStoredSession(config) {
   }, `A sessão antiga não foi tratada silenciosamente em ${config.file}.`);
 
   const status = window.document.getElementById('loginStatus');
-  assert.deepEqual(actions, ['admin_dados'], `${config.file} fez consultas extras ao validar a sessão antiga.`);
+  const expectedStoredSessionAction = config.file === 'teste-v1/painel-recados-campanhas-v1.html'
+    ? 'admin_publicacoes_dados'
+    : 'admin_dados';
+  assert.deepEqual(actions, [expectedStoredSessionAction], `${config.file} fez consultas extras ao validar a sessão antiga.`);
   assert.equal(status.classList.contains('erro'), false, `${config.file} exibiu alerta vermelho antes do PIN.`);
   assert.equal(status.classList.contains('ok'), true, `${config.file} não voltou ao estado pronto para novo PIN.`);
   assert.equal(window.sessionStorage.getItem('portalTacsAdminTokenV1'), null);
@@ -519,22 +531,20 @@ async function testNewNoticeWithoutReturnedId(eventuallyVisible) {
         let result;
         if (payload.action === 'admin_login') {
           result = {ok: true, token: 'token-interno-valido'};
-        } else if (payload.action === 'admin_dados') {
+        } else if (payload.action === 'admin_publicacoes_dados') {
           dataReads += 1;
           result = {
             ok: true,
             recados: eventuallyVisible && dataReads >= 3 ? [savedNotice] : [],
-            campanhas: []
-          };
-        } else if (payload.action === 'admin_moradores_areas') {
-          result = {
-            ok: true,
+            campanhas: [],
             areaId: 'JAPARANDUBA',
-            areas: [{areaId: 'JAPARANDUBA', areaNome: 'Sítio Japaranduba'}]
+            areaNome: 'Sítio Japaranduba',
+            areas: [{areaId: 'JAPARANDUBA', areaNome: 'Sítio Japaranduba'}],
+            podeAdministrar: true,
+            perfil: 'ADMIN_GERAL',
+            manutencao: {ativa: false, areaId: 'JAPARANDUBA'}
           };
-        } else if (payload.action === 'admin_portal_manutencao_status') {
-          result = {ok: true, ativa: false, areaId: 'JAPARANDUBA'};
-        } else if (payload.action === 'admin_salvar_recado') {
+        } else if (payload.action === 'admin_publicacoes_salvar_recado') {
           result = {ok: true};
         } else if (payload.action === 'admin_publicar_notificacao') {
           result = {ok: true, push: true, onesignalId: 'push-001', destinatarios: 1};
@@ -560,7 +570,7 @@ async function testNewNoticeWithoutReturnedId(eventuallyVisible) {
   window.document.getElementById('pin').value = '1234';
   window.document.getElementById('entrar').click();
   await waitFor(
-    () => /Sessão validada e conteúdo carregado/.test(
+    () => /Acesso de administrador validado/.test(
       window.document.getElementById('loginStatus').textContent
     ),
     'O contexto do painel de recados não foi validado.'
@@ -585,7 +595,7 @@ async function testNewNoticeWithoutReturnedId(eventuallyVisible) {
     6000
   );
 
-  const saves = submissions.filter(item => item.action === 'admin_salvar_recado');
+  const saves = submissions.filter(item => item.action === 'admin_publicacoes_salvar_recado');
   const pushes = submissions.filter(item => item.action === 'admin_publicar_notificacao');
   assert.equal(saves.length, 1, 'O painel reenviou o salvamento durante a releitura.');
   assert.equal(pushes.length, 1, 'O painel enviou a notificação mais de uma vez.');
@@ -596,9 +606,9 @@ async function testNewNoticeWithoutReturnedId(eventuallyVisible) {
     eventuallyVisible ? 3 : 5,
     'O painel não executou a quantidade esperada de releituras sem reenviar o salvamento.'
   );
-  const saveIndex = submissions.findIndex(item => item.action === 'admin_salvar_recado');
+  const saveIndex = submissions.findIndex(item => item.action === 'admin_publicacoes_salvar_recado');
   const pushIndex = submissions.findIndex(item => item.action === 'admin_publicar_notificacao');
-  const rereadIndex = submissions.findIndex((item, index) => index > saveIndex && item.action === 'admin_dados');
+  const rereadIndex = submissions.findIndex((item, index) => index > saveIndex && item.action === 'admin_publicacoes_dados');
   assert.ok(saveIndex >= 0 && pushIndex > saveIndex, 'O push não ocorreu depois da confirmação do salvamento.');
   assert.ok(rereadIndex > pushIndex, 'A releitura voltou a atrasar ou bloquear o push.');
   assert.doesNotMatch(window.document.getElementById('statusOperacao').textContent, /nenhuma notificação foi enviada/i);

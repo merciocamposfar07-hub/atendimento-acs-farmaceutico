@@ -22,7 +22,8 @@ var TACS_PERMISSIONS=[
   ['permRead','MORADORES_LER'],
   ['permEdit','MORADORES_EDITAR'],
   ['permStatus','MORADORES_SITUACAO'],
-  ['permCsv','MORADORES_IMPORTAR_CSV']
+  ['permCsv','MORADORES_IMPORTAR_CSV'],
+  ['permPublish','PUBLICACOES_GERENCIAR']
 ];
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device);}
 function el(id){return document.getElementById(id);}

@@ -88,7 +88,7 @@ function notificacoesAreaV1TratarPost_(e){
     requestId=notificacoesAreaV1ValidarRequestId_(requestId);
     if(!apiKey)throw new Error('A chave privada do OneSignal precisa ser configurada antes de enviar para múltiplas áreas.');
     var acesso=tacsTerritorioV1ValidarAcesso_(p,false);
-    tacsTerritorioV1ExigirAdmin_(acesso);
+    notificacoesAreaV1ExigirPublicacao_(acesso);
     var contexto=moradoresAdminV1ResolverContexto_(acesso,p.areaId||p.area||'');
     var titulo=notificacoesAreaV1Texto_(p.titulo).slice(0,120);
     var mensagem=notificacoesAreaV1Texto_(p.mensagem).slice(0,1000);
@@ -111,6 +111,17 @@ function notificacoesAreaV1TratarPost_(e){
   }catch(erro){resultado={ok:false,message:notificacoesAreaV1Erro_(erro)};}
   if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId))notificacoesAreaV1GuardarResultado_(requestId,resultado);
   return notificacoesAreaV1ResponderPost_(requestId,resultado);
+}
+
+function notificacoesAreaV1ExigirPublicacao_(acesso){
+  if(acesso&&acesso.perfil==='TACS'){
+    if((acesso.permissoes||[]).indexOf('PUBLICACOES_GERENCIAR')===-1){
+      throw new Error('Seu cadastro não possui permissão para publicar notificações.');
+    }
+    return true;
+  }
+  tacsTerritorioV1ExigirAdmin_(acesso);
+  return true;
 }
 
 function notificacoesAreaV1Enviar_(appId,apiKey,contexto,acesso,input){

@@ -901,32 +901,76 @@ function testNotifications(context, territory) {
   assert.equal(context.__fetched.length, 3);
 
   const tacsDenied = notification(context, Object.assign({}, base, {
-    requestId: 'push_area_000007', eventoPublicacao: 'evento-tacs', token: '',
+    requestId: 'push_area_000007', eventoPublicacao: 'evento-tacs-sem-permissao', token: '',
     territorioToken: territory.login.token, dispositivo: 'iphone-tacs'
   }));
   assert.equal(tacsDenied.ok, false);
-  assert.match(tacsDenied.message, /administrador geral/);
+  assert.match(tacsDenied.message, /não possui permissão/i);
   assert.equal(context.__fetched.length, 3);
 
+  const updatedTacs = saveTacs(context, {
+    tacsId: territory.tacsId,
+    nomeCompleto: 'Ana Agente Corrigida',
+    cnsProfissional: '123456789012346',
+    matricula: 'M-02',
+    telefone: '81988880000',
+    email: 'ana.corrigida@example.org',
+    areaId: territory.area.areaId,
+    unidadeId: 'USF_LAGOA',
+    microarea: '3',
+    permissoes: [
+      'MORADORES_LER','MORADORES_EDITAR','MORADORES_SITUACAO',
+      'MORADORES_IMPORTAR_CSV','PUBLICACOES_GERENCIAR'
+    ],
+    ativo: true
+  });
+  assert.ok(Array.from(updatedTacs.tacs.permissoes).includes('PUBLICACOES_GERENCIAR'));
+  const publishingLogin = context.tacsTerritorioV1LoginTacs_({
+    cns: '123456789012346', pin: '4321', dispositivo: 'iphone-tacs-publicacoes'
+  });
+
   context.__setMaintenance(false);
+  const tacsAllowed = notification(context, Object.assign({}, base, {
+    requestId: 'push_area_000008', eventoPublicacao: 'evento-tacs-permitido', token: '',
+    territorioToken: publishingLogin.token, dispositivo: 'iphone-tacs-publicacoes',
+    areaId: territory.area.areaId
+  }));
+  assert.equal(tacsAllowed.ok, true);
+  assert.equal(tacsAllowed.push, true);
+  assert.equal(tacsAllowed.areaId, territory.area.areaId);
+  assert.equal(context.__fetched.length, 4);
+  const tacsSent = JSON.parse(context.__fetched[3].options.payload);
+  assert.deepEqual(JSON.parse(JSON.stringify(tacsSent.filters)), [
+    {field: 'tag', key: 'area_tacs', relation: '=', value: territory.area.areaId}
+  ]);
+
+  const crossAreaDenied = notification(context, Object.assign({}, base, {
+    requestId: 'push_area_000009', eventoPublicacao: 'evento-tacs-outra-area', token: '',
+    territorioToken: publishingLogin.token, dispositivo: 'iphone-tacs-publicacoes',
+    areaId: 'JAPARANDUBA'
+  }));
+  assert.equal(crossAreaDenied.ok, false);
+  assert.match(crossAreaDenied.message, /troca de área bloqueada/i);
+  assert.equal(context.__fetched.length, 4, 'A tentativa do TACS em outra área chegou ao OneSignal.');
+
   context.__setFetchResponse({recipients: 0});
   const zeroAudience = notification(context, Object.assign({}, base, {
-    requestId: 'push_area_000008', eventoPublicacao: 'evento-sem-destinatario'
+    requestId: 'push_area_000010', eventoPublicacao: 'evento-sem-destinatario'
   }));
   assert.equal(zeroAudience.ok, true);
   assert.equal(zeroAudience.push, false);
   assert.equal(zeroAudience.zeroAudience, true);
   assert.equal(zeroAudience.destinatarios, 0);
-  assert.equal(context.__fetched.length, 4);
+  assert.equal(context.__fetched.length, 5);
 
   context.__setFetchResponse({id: 'push-sem-contagem'});
   const acceptedWithoutCount = notification(context, Object.assign({}, base, {
-    requestId: 'push_area_000009', eventoPublicacao: 'evento-sem-contagem'
+    requestId: 'push_area_000011', eventoPublicacao: 'evento-sem-contagem'
   }));
   assert.equal(acceptedWithoutCount.push, true);
   assert.equal(acceptedWithoutCount.onesignalId, 'push-sem-contagem');
   assert.equal(acceptedWithoutCount.destinatarios, null);
-  assert.equal(context.__fetched.length, 5);
+  assert.equal(context.__fetched.length, 6);
 }
 
 function testWrappedRoutes(context) {

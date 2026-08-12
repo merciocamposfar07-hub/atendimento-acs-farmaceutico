@@ -39,7 +39,8 @@ var TACS_TERRITORIO_V1 = Object.freeze({
   MAX_TACS:500,
   MAX_AREAS:500,
   DEFAULT_PERMISSIONS:Object.freeze([
-    'MORADORES_LER','MORADORES_EDITAR','MORADORES_SITUACAO','MORADORES_IMPORTAR_CSV'
+    'MORADORES_LER','MORADORES_EDITAR','MORADORES_SITUACAO','MORADORES_IMPORTAR_CSV',
+    'PUBLICACOES_GERENCIAR'
   ]),
   TACS_HEADERS:Object.freeze([
     'TACS_ID','NOME_COMPLETO','CNS_PROFISSIONAL','CPF','MATRICULA','TELEFONE','EMAIL',
@@ -821,7 +822,7 @@ function tacsTerritorioV1CompararSeguro_(a,b){
 
 function tacsTerritorioV1Permissoes_(valor){
   var lista=Array.isArray(valor)?valor:String(valor||'').split(/[;,]/);
-  var permitidas=['MORADORES_LER','MORADORES_EDITAR','MORADORES_SITUACAO','MORADORES_IMPORTAR_CSV'];
+  var permitidas=['MORADORES_LER','MORADORES_EDITAR','MORADORES_SITUACAO','MORADORES_IMPORTAR_CSV','PUBLICACOES_GERENCIAR'];
   var out=[];
   lista.forEach(function(item){var p=tacsTerritorioV1Texto_(item).toUpperCase();if(permitidas.indexOf(p)!==-1&&out.indexOf(p)===-1)out.push(p);});
   return out;

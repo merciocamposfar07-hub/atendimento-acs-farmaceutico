@@ -218,7 +218,7 @@ function testTerritoryPanel() {
   assert.match(window.document.getElementById('loginStatus').textContent, /CNS profissional com 15 números/);
   window.document.getElementById('newTacsButton').click();
   assert.equal(window.document.getElementById('tacsForm').classList.contains('hidden'), false);
-  for (const id of ['permRead', 'permEdit', 'permStatus', 'permCsv']) {
+  for (const id of ['permRead', 'permEdit', 'permStatus', 'permCsv', 'permPublish']) {
     assert.equal(window.document.getElementById(id).checked, true, `Permissão inicial ausente: ${id}`);
   }
   dom.window.close();

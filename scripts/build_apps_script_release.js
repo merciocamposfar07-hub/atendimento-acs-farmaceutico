@@ -32,6 +32,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs',
     marker: 'TACS_NOTIFICACOES_AREA_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_20_PublicacoesTerritoriaisV1.gs',
+    marker: 'TACS_PUBLICACOES_TERRITORIAIS_V1'
   }
 ];
 

@@ -974,8 +974,19 @@
         });
 
         function areaAtualDaUnidade() {
-          var morador = window.TACS_MORADOR_ATUAL;
-          var area = String(morador && morador.areaId || 'JAPARANDUBA')
+          var area = '';
+          try {
+            if (window.PortalTacsArea && typeof window.PortalTacsArea.id === 'function') {
+              area = window.PortalTacsArea.id();
+            }
+          } catch (erroArea) {}
+          if (!area) area = window.TACS_AREA_ID || '';
+          if (!area) {
+            var morador = window.TACS_MORADOR_ATUAL;
+            area = morador && morador.areaId || '';
+          }
+          area = String(area || 'JAPARANDUBA')
+            .trim()
             .toUpperCase()
             .replace(/[^A-Z0-9_-]/g, '');
           return area || 'JAPARANDUBA';
