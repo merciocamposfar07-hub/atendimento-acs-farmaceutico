@@ -1133,6 +1133,112 @@
           });
         }
 
+
+        function confirmarReparoPorPush(subscriptionId, areaId) {
+          return new Promise(function (resolve, reject) {
+            var sub = String(subscriptionId || '').trim().toLowerCase();
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(sub)) {
+              reject(new Error('A inscrição deste aparelho ainda não está pronta para confirmação.'));
+              return;
+            }
+            var requestId = 'reparo_push_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+            var frame = document.createElement('iframe');
+            var form = document.createElement('form');
+            var frameName = 'portalReparoPush' + Date.now() + Math.floor(Math.random() * 1000);
+            var finished = false;
+            var submitted = false;
+            var pollTimer = null;
+            var timeout = null;
+            frame.name = frameName;
+            frame.setAttribute('name', frameName);
+            frame.setAttribute('aria-hidden', 'true');
+            frame.style.cssText = 'position:fixed;left:-10000px;top:-10000px;width:2px;height:2px;border:0;opacity:.01;pointer-events:none';
+            frame.src = 'about:blank';
+            form.method = 'POST';
+            form.action = API + '?_=' + Date.now();
+            form.target = frameName;
+            form.style.display = 'none';
+            function add(name, value) {
+              var input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = name;
+              input.value = value;
+              form.appendChild(input);
+            }
+            function cleanup() {
+              clearTimeout(pollTimer);
+              clearTimeout(timeout);
+              window.removeEventListener('message', onMessage);
+              if (form.parentNode) form.remove();
+              setTimeout(function () { if (frame.parentNode) frame.remove(); }, 100);
+            }
+            function finish(error, result) {
+              if (finished) return;
+              finished = true;
+              cleanup();
+              if (error) reject(error); else resolve(result);
+            }
+            function acceptResult(result) {
+              if (!result || result.ok !== true || result.push !== true) {
+                finish(new Error((result && result.message) || 'A notificação de confirmação não foi aceita.'));
+                return;
+              }
+              finish(null, result);
+            }
+            function onMessage(event) {
+              if (event.source !== frame.contentWindow) return;
+              var data = event.data;
+              if (typeof data === 'string') {
+                try { data = JSON.parse(data); } catch (error) { return; }
+              }
+              if (!data || data.source !== 'notificacoes-area-tacs-v1' || data.requestId !== requestId) return;
+              acceptResult(data.result);
+            }
+            function poll() {
+              if (finished) return;
+              var callback = '__portalReparoPush_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+              var script = document.createElement('script');
+              var settled = false;
+              var pollTimeout = setTimeout(function () { settle(null); }, 5000);
+              function settle(data) {
+                if (settled) return;
+                settled = true;
+                clearTimeout(pollTimeout);
+                try { delete window[callback]; } catch (error) { window[callback] = undefined; }
+                if (script.parentNode) script.remove();
+                if (data && data.ok === true && data.pendente === false && data.result) {
+                  acceptResult(data.result);
+                  return;
+                }
+                if (!finished) pollTimer = setTimeout(poll, 1200);
+              }
+              window[callback] = settle;
+              script.onerror = function () { settle(null); };
+              script.src = API + (API.indexOf('?') === -1 ? '?' : '&') +
+                'action=publico_notificacao_reparo_result&requestId=' + encodeURIComponent(requestId) +
+                '&callback=' + encodeURIComponent(callback) + '&_=' + Date.now();
+              document.head.appendChild(script);
+            }
+            function submitOnce() {
+              if (submitted || finished) return;
+              submitted = true;
+              try { form.submit(); }
+              catch (error) { finish(new Error('Não foi possível solicitar a confirmação do aparelho.')); return; }
+              pollTimer = setTimeout(poll, 900);
+            }
+            add('action', 'publico_confirmar_reparo_notificacao');
+            add('requestId', requestId);
+            add('subscriptionId', sub);
+            add('areaId', areaId || 'JAPARANDUBA');
+            window.addEventListener('message', onMessage);
+            document.body.appendChild(frame);
+            document.body.appendChild(form);
+            frame.addEventListener('load', submitOnce, { once: true });
+            setTimeout(submitOnce, 160);
+            timeout = setTimeout(function () { finish(new Error('A confirmação por notificação demorou demais.')); }, 25000);
+          });
+        }
+
         async function repararRecebimento() {
           if (repairInProgress) return;
           repairInProgress = true;
@@ -1164,10 +1270,19 @@
             if (!areaConfirmada) {
               throw new Error('A área do aparelho não pôde ser confirmada.');
             }
+            var confirmacaoErro = '';
+            try {
+              await confirmarReparoPorPush(estadoInscricao().subscriptionId, areaAtualDaUnidade());
+            } catch (erroConfirmacao) {
+              confirmacaoErro = erroConfirmacao && erroConfirmacao.message
+                ? erroConfirmacao.message
+                : 'A confirmação por notificação não foi concluída.';
+            }
             repairInProgress = false;
             mostrarEstado(estadoInscricao(), true);
-            help.textContent =
-              'Reparo concluído. A inscrição foi renovada e este aparelho está vinculado à área do morador.';
+            help.textContent = confirmacaoErro
+              ? 'A inscrição foi renovada e a área foi vinculada, mas a notificação de confirmação não chegou a ser enviada agora. Tente o reparo novamente em alguns instantes.'
+              : 'Reparo concluído. Enviamos uma notificação de confirmação somente para este aparelho. Se ela aparecer, o canal de avisos está funcionando.';
           } catch (error) {
             repairInProgress = false;
             status.textContent = 'Não foi possível concluir o reparo agora.';
@@ -1218,6 +1333,8 @@
         }
 
         button.addEventListener('click', async function () {
+          var estadoAntes = estadoInscricao();
+          var deveConfirmarReparo = estadoAntes.permission || inscricaoAtiva(estadoAntes);
           button.disabled = true;
           status.textContent = 'Confirmando a inscrição deste aparelho...';
           try {
@@ -1237,6 +1354,16 @@
             if (inscricaoAtiva(atual)) {
               var areaConfirmada = await marcarAreaDaUnidade();
               mostrarEstado(estadoInscricao(), areaConfirmada);
+              if (deveConfirmarReparo && areaConfirmada) {
+                try {
+                  await confirmarReparoPorPush(estadoInscricao().subscriptionId, areaAtualDaUnidade());
+                  help.textContent =
+                    'Conexão restabelecida. Enviamos uma notificação de confirmação somente para este aparelho. Se ela aparecer, o canal de avisos está funcionando.';
+                } catch (erroConfirmacao) {
+                  help.textContent =
+                    'O vínculo foi reparado, mas a notificação de confirmação não pôde ser enviada agora. Tente o reparo novamente em alguns instantes.';
+                }
+              }
             } else {
               mostrarEstado(atual, false);
             }

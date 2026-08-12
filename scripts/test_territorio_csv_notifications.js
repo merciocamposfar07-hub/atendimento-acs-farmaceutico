@@ -819,7 +819,7 @@ function testNotifications(context, territory) {
   // Compatibilidade com o nome já utilizado no Apps Script em produção.
   context.__properties.set('ONESIGNAL_APP_API_KEY', 'private-key-for-test');
   vm.runInContext(read(FILES.notifications), context);
-  assert.equal(context.TACS_NOTIFICACOES_AREA_V1.VERSAO, '1.0.3');
+  assert.equal(context.TACS_NOTIFICACOES_AREA_V1.VERSAO, '1.0.4');
   assert.equal(
     context.TACS_NOTIFICACOES_AREA_V1.DEFAULT_APP_ID,
     'e2294b98-c72b-4f8c-a055-de28979676dc'

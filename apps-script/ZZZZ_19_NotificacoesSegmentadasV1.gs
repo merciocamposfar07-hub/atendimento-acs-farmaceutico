@@ -9,7 +9,7 @@
  * não envia duas vezes.
  */
 var TACS_NOTIFICACOES_AREA_V1 = Object.freeze({
-  VERSAO:'1.0.3',
+  VERSAO:'1.0.4',
   DEFAULT_AREA_ID:'JAPARANDUBA',
   DEFAULT_APP_ID:'e2294b98-c72b-4f8c-a055-de28979676dc',
   MAINTENANCE_TITLE:'PORTAL EM MANUTENÇÃO',
@@ -30,7 +30,11 @@ var TACS_NOTIFICACOES_AREA_V1 = Object.freeze({
   ]),
   RESULT_PREFIX:'tacs_notificacao_area_v1_result_',
   RESULT_SECONDS:300,
-  IDEMPOTENCY_PREFIX:'tacs_notificacao_area_v1_evento_'
+  IDEMPOTENCY_PREFIX:'tacs_notificacao_area_v1_evento_',
+  REPAIR_RATE_PREFIX:'tacs_notificacao_reparo_v1_',
+  REPAIR_RATE_SECONDS:20,
+  REPAIR_TITLE:'Portal TACS — avisos restabelecidos',
+  REPAIR_MESSAGE:'Conexão restabelecida. Este aparelho está pronto para receber novos recados e avisos do Portal TACS.'
 });
 
 var notificacoesAreaV1DoGetAnterior_;
@@ -59,7 +63,8 @@ var notificacoesAreaV1PostAnterior_;
 
 function notificacoesAreaV1TratarGet_(e){
   var p=e&&e.parameter?e.parameter:{};
-  if(notificacoesAreaV1Texto_(p.action).toLowerCase()!=='admin_result')return null;
+  var action=notificacoesAreaV1Texto_(p.action).toLowerCase();
+  if(['admin_result','publico_notificacao_reparo_result'].indexOf(action)===-1)return null;
   var requestId=notificacoesAreaV1Texto_(p.requestId);
   if(!/^[A-Za-z0-9_-]{8,160}$/.test(requestId))return null;
   var resultado=notificacoesAreaV1LerResultado_(requestId);
@@ -71,7 +76,9 @@ function notificacoesAreaV1TratarGet_(e){
 
 function notificacoesAreaV1TratarPost_(e){
   var p=e&&e.parameter?e.parameter:{};
-  if(notificacoesAreaV1Texto_(p.action).toLowerCase()!=='admin_publicar_notificacao')return null;
+  var action=notificacoesAreaV1Texto_(p.action).toLowerCase();
+  if(action==='publico_confirmar_reparo_notificacao')return notificacoesAreaV1ConfirmarReparoPost_(p);
+  if(action!=='admin_publicar_notificacao')return null;
 
   var props=PropertiesService.getScriptProperties();
   var appId=notificacoesAreaV1PrimeiraPropriedade_(props,TACS_NOTIFICACOES_AREA_V1.APP_ID_PROPERTIES)||TACS_NOTIFICACOES_AREA_V1.DEFAULT_APP_ID;
@@ -111,6 +118,75 @@ function notificacoesAreaV1TratarPost_(e){
   }catch(erro){resultado={ok:false,message:notificacoesAreaV1Erro_(erro)};}
   if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId))notificacoesAreaV1GuardarResultado_(requestId,resultado);
   return notificacoesAreaV1ResponderPost_(requestId,resultado);
+}
+
+
+function notificacoesAreaV1ConfirmarReparoPost_(p){
+  var props=PropertiesService.getScriptProperties();
+  var appId=notificacoesAreaV1PrimeiraPropriedade_(props,TACS_NOTIFICACOES_AREA_V1.APP_ID_PROPERTIES)||TACS_NOTIFICACOES_AREA_V1.DEFAULT_APP_ID;
+  var apiKey=notificacoesAreaV1PrimeiraPropriedade_(props,TACS_NOTIFICACOES_AREA_V1.API_KEY_PROPERTIES);
+  var requestId=notificacoesAreaV1Texto_(p.requestId);
+  var resultado;
+  try{
+    requestId=notificacoesAreaV1ValidarRequestId_(requestId);
+    if(!apiKey)throw new Error('O serviço de confirmação das notificações não está configurado.');
+    var subscriptionId=notificacoesAreaV1Texto_(p.subscriptionId||p.subscription_id).toLowerCase();
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(subscriptionId)){
+      throw new Error('A inscrição deste aparelho não pôde ser validada.');
+    }
+    var areaId=moradoresAdminV1NormalizarAreaId_(p.areaId||p.area||TACS_NOTIFICACOES_AREA_V1.DEFAULT_AREA_ID);
+    var area=moradoresAdminV1EncontrarAreaConfigurada_(areaId);
+    if(!area||area.publica===false)throw new Error('A área deste aparelho não está disponível para notificações.');
+    resultado=notificacoesAreaV1EnviarConfirmacaoReparo_(appId,apiKey,subscriptionId,area);
+  }catch(erro){
+    resultado={ok:false,push:false,message:notificacoesAreaV1Erro_(erro)};
+  }
+  if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId))notificacoesAreaV1GuardarResultado_(requestId,resultado);
+  return notificacoesAreaV1ResponderPost_(requestId,resultado);
+}
+
+function notificacoesAreaV1EnviarConfirmacaoReparo_(appId,apiKey,subscriptionId,area){
+  var cache=CacheService.getScriptCache();
+  var hash=(typeof moradoresAdminV1Hash_==='function')
+    ?moradoresAdminV1Hash_(subscriptionId)
+    :subscriptionId.replace(/-/g,'').slice(0,32);
+  var chave=TACS_NOTIFICACOES_AREA_V1.REPAIR_RATE_PREFIX+hash;
+  var anterior=cache.get(chave);
+  if(anterior){
+    try{return JSON.parse(anterior);}catch(erroCache){}
+  }
+  var payload={
+    app_id:appId,
+    target_channel:'push',
+    headings:{pt:TACS_NOTIFICACOES_AREA_V1.REPAIR_TITLE,en:TACS_NOTIFICACOES_AREA_V1.REPAIR_TITLE},
+    contents:{pt:TACS_NOTIFICACOES_AREA_V1.REPAIR_MESSAGE,en:TACS_NOTIFICACOES_AREA_V1.REPAIR_MESSAGE},
+    include_subscription_ids:[subscriptionId],
+    url:TACS_NOTIFICACOES_AREA_V1.PORTAL_URL,
+    data:{tipo:'REPARO_NOTIFICACAO',areaId:area.areaId}
+  };
+  var resposta=UrlFetchApp.fetch(TACS_NOTIFICACOES_AREA_V1.ENDPOINT,{
+    method:'post',contentType:'application/json',payload:JSON.stringify(payload),
+    headers:{Authorization:'Key '+apiKey},muteHttpExceptions:true
+  });
+  var code=Number(resposta.getResponseCode());
+  var texto=resposta.getContentText();
+  var data={};try{data=JSON.parse(texto||'{}');}catch(erroJson){}
+  if(code<200||code>=300){
+    var detalhe=data&&data.errors?JSON.stringify(data.errors):('HTTP '+code);
+    throw new Error('O OneSignal recusou a confirmação individual: '+detalhe);
+  }
+  var destinatarios=(data.recipients===null||typeof data.recipients==='undefined'||data.recipients==='')
+    ?null:Number(data.recipients);
+  if(!data.id||destinatarios===0){
+    throw new Error('O OneSignal não encontrou uma inscrição ativa para este aparelho.');
+  }
+  var resultado={
+    ok:true,push:true,areaId:area.areaId,onesignalId:String(data.id),
+    destinatarios:destinatarios,
+    message:'A notificação de confirmação foi enviada somente para este aparelho.'
+  };
+  cache.put(chave,JSON.stringify(resultado),TACS_NOTIFICACOES_AREA_V1.REPAIR_RATE_SECONDS);
+  return resultado;
 }
 
 function notificacoesAreaV1ExigirPublicacao_(acesso){
