@@ -30,7 +30,7 @@ jobs:
           cache: npm
 
       - name: Aplicar alteracao controlada
-        run: python3 scripts/apply_confirmacao_reparo_push_v1.py
+        run: python3 scripts/run_apply_confirmacao_reparo_push_v1.py
 
       - name: Validar sintaxe e bateria completa
         shell: bash
