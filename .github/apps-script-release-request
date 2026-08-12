@@ -1,3 +1,4 @@
-release=publico-multiarea-1.2.0
-requested_at=2026-08-12T13:31:00Z
-source=identificacao-publica-area-cpf-cns
+release=publicacoes-notificacoes-multiarea-1.0.0
+requested_at=2026-08-12T14:59:00Z
+source=publicacoes-notificacoes-territoriais
+commit=4430003
