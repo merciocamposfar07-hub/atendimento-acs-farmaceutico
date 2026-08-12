@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/fix_apply_onesignal_helper.py'
+      - 'scripts/fix_recados_login_status.py'
       - 'scripts/check_recados_inline.js'
       - '.github/workflows/publicacoes-notificacoes-multiarea-v2.yml'
 
@@ -33,6 +34,7 @@ jobs:
         run: |
           python3 scripts/fix_apply_onesignal_helper.py
           python3 scripts/apply_publicacoes_notificacoes_multiarea_v1.py
+          python3 scripts/fix_recados_login_status.py
       - name: Validar sintaxe
         run: |
           node --check --input-type=commonjs < apps-script/ZZZZ_17_TacsAreasAdminV1.gs
@@ -61,7 +63,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          rm -f scripts/apply_publicacoes_notificacoes_multiarea_v1.py scripts/fix_apply_onesignal_helper.py scripts/check_recados_inline.js
+          rm -f scripts/apply_publicacoes_notificacoes_multiarea_v1.py scripts/fix_apply_onesignal_helper.py scripts/fix_recados_login_status.py scripts/check_recados_inline.js
           git add -A
           git reset .github/workflows/publicacoes-notificacoes-multiarea-v2.yml || true
           git commit -m 'Isola publicacoes e notificacoes por area'
