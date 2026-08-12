@@ -25,7 +25,11 @@ var TACS_TERRITORIO_V1 = Object.freeze({
   AREAS_PROPERTY:'PORTAL_TACS_MORADORES_AREAS_JSON',
   PEPPER_PROPERTY:'PORTAL_TACS_TERRITORIO_PEPPER',
   RESULT_PREFIX:'tacs_territorio_v1_result_',
+  PUBLIC_RESULT_PREFIX:'tacs_territorio_v1_public_result_',
+  PUBLIC_RATE_PREFIX:'tacs_territorio_v1_public_rate_',
   RESULT_SECONDS:300,
+  PUBLIC_RATE_SECONDS:900,
+  PUBLIC_RATE_MAX:12,
   SESSION_PREFIX:'tacs_territorio_v1_sessao_',
   SESSION_SECONDS:21600,
   LOGIN_ATTEMPT_PREFIX:'tacs_territorio_v1_login_',
@@ -97,7 +101,28 @@ var tacsTerritorioV1PostAnterior_;
 
 function tacsTerritorioV1TratarGet_(e){
   var p=e&&e.parameter?e.parameter:{};
-  if(tacsTerritorioV1Texto_(p.action).toLowerCase()!=='admin_territorio_result')return null;
+  var action=tacsTerritorioV1Texto_(p.action).toLowerCase();
+  if(action==='publico_areas_ativas'){
+    try{
+      return tacsTerritorioV1ResponderJson_({
+        ok:true,areas:tacsTerritorioV1AreasPublicas_(),areaPadrao:'JAPARANDUBA'
+      },p.callback);
+    }catch(erroPublico){
+      return tacsTerritorioV1ResponderJson_({ok:false,message:'Não foi possível carregar as áreas agora.'},p.callback);
+    }
+  }
+  if(action==='publico_area_result'){
+    try{
+      var requestIdPublico=tacsTerritorioV1ValidarRequestId_(p.requestId);
+      var resultadoPublico=tacsTerritorioV1LerResultadoPublico_(requestIdPublico);
+      return tacsTerritorioV1ResponderJson_({
+        ok:true,pendente:!resultadoPublico,requestId:requestIdPublico,result:resultadoPublico||null
+      },p.callback);
+    }catch(erroResultadoPublico){
+      return tacsTerritorioV1ResponderJson_({ok:false,message:'Não foi possível confirmar a identificação agora.'},p.callback);
+    }
+  }
+  if(action!=='admin_territorio_result')return null;
   try{
     var requestId=tacsTerritorioV1ValidarRequestId_(p.requestId);
     var resultado=tacsTerritorioV1LerResultado_(requestId);
@@ -108,11 +133,11 @@ function tacsTerritorioV1TratarGet_(e){
     return tacsTerritorioV1ResponderJson_({ok:false,message:tacsTerritorioV1Erro_(erro)},p.callback);
   }
 }
-
 function tacsTerritorioV1TratarPost_(e){
   var p=e&&e.parameter?e.parameter:{};
   var action=tacsTerritorioV1Texto_(p.action).toLowerCase();
   var aceitas=[
+    'publico_identificar_area',
     'admin_territorio_login_tacs','admin_territorio_dados','admin_territorio_salvar_tacs',
     'admin_territorio_salvar_area','admin_territorio_validar_area',
     'admin_territorio_encerrar_sessao'
@@ -120,7 +145,9 @@ function tacsTerritorioV1TratarPost_(e){
   if(aceitas.indexOf(action)===-1)return null;
   var resultado;
   try{
-    if(action==='admin_territorio_login_tacs'){
+    if(action==='publico_identificar_area'){
+      resultado=tacsTerritorioV1IdentificarAreaPublica_(p);
+    }else if(action==='admin_territorio_login_tacs'){
       resultado=tacsTerritorioV1LoginTacs_(p);
     }else if(action==='admin_territorio_encerrar_sessao'){
       resultado=tacsTerritorioV1EncerrarSessao_(p);
@@ -139,11 +166,106 @@ function tacsTerritorioV1TratarPost_(e){
       }
     }
   }catch(erro){
-    resultado={ok:false,message:tacsTerritorioV1Erro_(erro)};
+    resultado=action==='publico_identificar_area'
+      ?{ok:false,message:'Não foi possível conferir sua área agora. Tente novamente.'}
+      :{ok:false,message:tacsTerritorioV1Erro_(erro)};
   }
   var requestId=tacsTerritorioV1Texto_(p.requestId);
-  if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId))tacsTerritorioV1GuardarResultado_(requestId,resultado);
+  if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId)){
+    if(action==='publico_identificar_area')tacsTerritorioV1GuardarResultadoPublico_(requestId,resultado);
+    else tacsTerritorioV1GuardarResultado_(requestId,resultado);
+  }
   return tacsTerritorioV1ResponderPost_(requestId,resultado);
+}
+
+function tacsTerritorioV1AreasPublicas_(){
+  return tacsTerritorioV1LerAreas_().filter(function(area){
+    return area&&area.ativa===true&&!!tacsTerritorioV1Id_(area.areaId);
+  }).map(function(area){
+    return {areaId:tacsTerritorioV1Id_(area.areaId),areaNome:tacsTerritorioV1Texto_(area.areaNome||area.areaId)};
+  }).sort(function(a,b){
+    return a.areaNome.localeCompare? a.areaNome.localeCompare(b.areaNome,'pt-BR') : (a.areaNome>b.areaNome?1:-1);
+  });
+}
+
+function tacsTerritorioV1IdentificarAreaPublica_(p){
+  p=p&&typeof p==='object'?p:{};
+  var dispositivo=tacsTerritorioV1Texto_(p.dispositivo);
+  if(!dispositivo||dispositivo.length>180)throw new Error('Dispositivo inválido.');
+  tacsTerritorioV1LimitarConsultaPublica_(dispositivo);
+
+  var documento=tacsTerritorioV1Digitos_(p.documento||p.cpf||p.cns);
+  var tipo='';
+  if(documento.length===11){
+    if(/^(\d)\1{10}$/.test(documento))throw new Error('Documento inválido.');
+    if(typeof moradoresAdminV1CpfValido_==='function'&&!moradoresAdminV1CpfValido_(documento))throw new Error('Documento inválido.');
+    tipo='CPF';
+  }else if(documento.length===15){
+    if(/^(\d)\1{14}$/.test(documento))throw new Error('Documento inválido.');
+    tipo='CNS';
+  }else{
+    throw new Error('Documento inválido.');
+  }
+
+  var encontradas=[];
+  tacsTerritorioV1LerAreas_().forEach(function(area){
+    if(!area||area.ativa!==true||area.consultaPorDocumento===false)return;
+    if(tacsTerritorioV1AreaContemDocumento_(area,tipo,documento)){
+      encontradas.push({
+        areaId:tacsTerritorioV1Id_(area.areaId),
+        areaNome:tacsTerritorioV1Texto_(area.areaNome||area.areaId)
+      });
+    }
+  });
+
+  if(encontradas.length===1){
+    return {ok:true,encontrado:true,ambiguo:false,areaId:encontradas[0].areaId,areaNome:encontradas[0].areaNome};
+  }
+  if(encontradas.length>1){
+    return {ok:true,encontrado:false,ambiguo:true,message:'Seu cadastro aparece em mais de uma área. Procure seu TACS para corrigir o cadastro.'};
+  }
+  return {ok:true,encontrado:false,ambiguo:false,message:'Documento não localizado nas áreas disponíveis.'};
+}
+
+function tacsTerritorioV1AreaContemDocumento_(area,tipo,documento){
+  var fonte=tacsTerritorioV1ConferirFonte_(area.planilhaId);
+  var ss=SpreadsheetApp.openById(area.planilhaId);
+  var sheet=ss.getSheetByName(fonte.aba);
+  if(!sheet)return false;
+  var ultimaLinha=sheet.getLastRow();
+  if(ultimaLinha<=fonte.linhaCabecalho)return false;
+  var ultimaColuna=Math.max(20,sheet.getLastColumn());
+  var cabecalho=sheet.getRange(fonte.linhaCabecalho,1,1,ultimaColuna).getDisplayValues()[0].map(tacsTerritorioV1Chave_);
+  var indiceDocumento=cabecalho.indexOf(tipo);
+  var indiceStatus=cabecalho.indexOf('STATUS');
+  if(indiceDocumento<0)return false;
+  var total=ultimaLinha-fonte.linhaCabecalho;
+  var documentos=sheet.getRange(fonte.linhaCabecalho+1,indiceDocumento+1,total,1).getDisplayValues();
+  var status=indiceStatus>=0
+    ?sheet.getRange(fonte.linhaCabecalho+1,indiceStatus+1,total,1).getDisplayValues()
+    :[];
+  var bloqueados=['FORA_DA_AREA','TRANSFERIDO','FALECIDO','IMPORTACAO_DESFEITA'];
+  for(var i=0;i<documentos.length;i++){
+    if(tacsTerritorioV1Digitos_(documentos[i][0])!==documento)continue;
+    var situacao=indiceStatus>=0?tacsTerritorioV1Id_(status[i][0]):'';
+    if(bloqueados.indexOf(situacao)===-1)return true;
+  }
+  return false;
+}
+
+function tacsTerritorioV1LimitarConsultaPublica_(dispositivo){
+  var cache=CacheService.getScriptCache();
+  var chave=TACS_TERRITORIO_V1.PUBLIC_RATE_PREFIX+tacsTerritorioV1Hash_(dispositivo).slice(0,32);
+  var estado={tentativas:0};
+  try{
+    var raw=cache.get(chave);
+    if(raw)estado=JSON.parse(raw);
+  }catch(erroLeitura){estado={tentativas:0};}
+  estado.tentativas=Number(estado.tentativas||0)+1;
+  if(estado.tentativas>TACS_TERRITORIO_V1.PUBLIC_RATE_MAX){
+    throw new Error('Muitas tentativas de identificação.');
+  }
+  cache.put(chave,JSON.stringify(estado),TACS_TERRITORIO_V1.PUBLIC_RATE_SECONDS);
 }
 
 function tacsTerritorioV1LoginTacs_(p){
@@ -731,6 +853,22 @@ function tacsTerritorioV1Payload_(texto){
 
 function tacsTerritorioV1ValidarRequestId_(valor){
   var id=tacsTerritorioV1Texto_(valor);if(!/^[A-Za-z0-9_-]{8,160}$/.test(id))throw new Error('Identificador da operação territorial inválido.');return id;
+}
+
+function tacsTerritorioV1GuardarResultadoPublico_(id,resultado){
+  try{
+    CacheService.getScriptCache().put(
+      TACS_TERRITORIO_V1.PUBLIC_RESULT_PREFIX+id,
+      JSON.stringify(resultado),
+      TACS_TERRITORIO_V1.RESULT_SECONDS
+    );
+  }catch(erro){}
+}
+function tacsTerritorioV1LerResultadoPublico_(id){
+  try{
+    var raw=CacheService.getScriptCache().get(TACS_TERRITORIO_V1.PUBLIC_RESULT_PREFIX+id);
+    return raw?JSON.parse(raw):null;
+  }catch(erro){return null;}
 }
 
 function tacsTerritorioV1GuardarResultado_(id,resultado){try{CacheService.getScriptCache().put(TACS_TERRITORIO_V1.RESULT_PREFIX+id,JSON.stringify(resultado),TACS_TERRITORIO_V1.RESULT_SECONDS);}catch(erro){}}
