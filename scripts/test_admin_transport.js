@@ -103,6 +103,11 @@ function verifyStaticSource(config) {
     assert.match(base, /frame\.setAttribute\('name',frameName\)/);
     assert.match(base, /requestAnimationFrame\(function\(\)\{window\.requestAnimationFrame\(enviarUmaVez\)\}\)/);
     assert.match(base, /submitTimer=setTimeout\(enviarUmaVez,180\)/);
+    assert.match(base, /input\[type="date"\]\.campo\{[^}]*min-inline-size:0[^}]*max-inline-size:100%/);
+    assert.match(base, /id="alternarContraste"[^>]*aria-pressed="false"/);
+    assert.match(base, /TEMA_KEY='portalTacsTemaRecadosV1'/);
+    assert.match(base, /dataVisual:dataExibicao\('2026-08-12'\)==='12\/08\/2026'/);
+    assert.match(base, /\.tema-petroleo \.numero,\.tema-petroleo \.areaEnvio,\.tema-petroleo \.item/);
   } else {
     assert.match(base, new RegExp(`event\\.source!==frame\\.contentWindow`));
   }
@@ -372,6 +377,51 @@ async function testImmediatePanel(config) {
   window.close();
 }
 
+async function testVisualPreferences() {
+  const config = CASES.find(item => item.file === 'teste-v1/painel-recados-campanhas-v1.html');
+  const errors = [];
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on('jsdomError', error => errors.push(error.message));
+
+  const dom = new JSDOM(baseHtml(config), {
+    url: `https://portal.test/${config.file}`,
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    virtualConsole,
+    beforeParse(window) {
+      window.localStorage.setItem('portalTacsTemaRecadosV1', 'petroleo');
+      window.HTMLFormElement.prototype.submit = function submit() {
+        errors.push('A preferência visual iniciou uma operação administrativa.');
+      };
+    }
+  });
+
+  const {window} = dom;
+  await waitFor(
+    () => /Digite o PIN/.test(window.document.getElementById('loginStatus').textContent),
+    'O painel não ficou pronto durante o teste de contraste.'
+  );
+
+  const button = window.document.getElementById('alternarContraste');
+  const dateField = window.document.querySelector('#formNovoRecado input[type="date"]');
+  const dateStyle = window.getComputedStyle(dateField);
+
+  assert.equal(window.document.body.classList.contains('tema-petroleo'), true);
+  assert.equal(button.getAttribute('aria-pressed'), 'true');
+  assert.match(button.textContent, /cartões claros/);
+  assert.equal(dateStyle.width, '100%');
+  assert.equal(dateStyle.minWidth, '0');
+  assert.equal(dateStyle.maxWidth, '100%');
+
+  button.click();
+  assert.equal(window.document.body.classList.contains('tema-petroleo'), false);
+  assert.equal(button.getAttribute('aria-pressed'), 'false');
+  assert.match(button.textContent, /azul-petróleo/);
+  assert.equal(window.localStorage.getItem('portalTacsTemaRecadosV1'), 'claro');
+  assert.deepEqual(errors, [], 'O contraste alterou comportamento administrativo: ' + errors.join(' | '));
+  window.close();
+}
+
 async function testExpiredStoredSession(config) {
   const actions = [];
   const errors = [];
@@ -571,6 +621,7 @@ async function main() {
   CASES.forEach(verifyStaticSource);
   await testWarmupRoute();
   await Promise.all(CASES.map(testImmediatePanel));
+  await testVisualPreferences();
   await Promise.all(CASES.map(testDirectResponse));
   await Promise.all(CASES.map(testExpiredStoredSession));
   await testNewNoticeWithoutReturnedId(true);
