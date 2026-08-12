@@ -13,6 +13,7 @@
   var rendering = false;
   var selecting = false;
   var requestCode = '';
+  var reservationPending = false;
 
   function el(id) { return document.getElementById(id); }
   function clean(value) { return String(value == null ? '' : value).trim(); }
@@ -185,7 +186,8 @@
         button.className = 'sheet-dental-choice ' + (type === 'emergencial' ? 'emergency' : 'common');
         button.dataset.id = slot.id;
         button.dataset.type = type;
-        button.disabled = value === null || value <= 0;
+        var sameReserved = Boolean(selected && selected.reserved && selected.id === slot.id && selected.type === type);
+        button.disabled = reservationPending || value === null || value <= 0 || Boolean(selected && selected.reserved && !sameReserved);
         button.textContent = vacancyLabel(value, type);
         if (selected && selected.id === slot.id && selected.type === type) button.classList.add('selected');
         actions.appendChild(button);
@@ -197,9 +199,12 @@
 
     status.className = 'dental-status';
     if (loading) status.textContent = 'Atualizando a agenda odontológica pela planilha...';
+    else if (reservationPending && selected) status.textContent = 'Reservando a vaga escolhida e atualizando a quantidade...';
     else if (!slots.length) {
       status.textContent = 'Nenhum dia está publicado na planilha odontológica.';
       status.classList.add('error');
+    } else if (selected && selected.reserved) {
+      status.textContent = 'Vaga reservada. A quantidade foi atualizada automaticamente. Agora envie sua solicitação pelo WhatsApp.';
     } else if (selected) {
       status.textContent = 'Selecionado: ' + selected.day + ' — vaga ' + (selected.type === 'emergencial' ? 'de emergência' : 'comum') + '.';
     } else status.textContent = 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
@@ -265,10 +270,11 @@
   }
 
   function selectSlot(button) {
+    if (reservationPending || (selected && selected.reserved)) return;
     var slot = slots.find(function (item) { return item.id === button.dataset.id; });
     var type = clean(button.dataset.type);
     if (!slot || button.disabled) return;
-    selected = { id: slot.id, day: slot.day, date: slot.date, type: type };
+    selected = { id: slot.id, day: slot.day, date: slot.date, type: type, reserved: false };
 
     var category = el('category');
     if (category) {
@@ -281,8 +287,52 @@
     var warning = el('dentalEmergency');
     if (warning) warning.hidden = type !== 'emergencial';
     setSubject(descriptionForSelection());
+
+    var send = el('send');
+    var originalSendHtml = send ? send.innerHTML : '';
+    reservationPending = true;
+    if (send) {
+      send.disabled = true;
+      send.dataset.dentalReservationPending = '1';
+      send.textContent = 'Reservando a vaga...';
+    }
     renderAgenda();
     refreshSend();
+
+    reserveSlot().then(function (result) {
+      if (result && result.alreadyReserved && (normalizeDate(result.date) !== selected.date || clean(result.type) !== selected.type)) {
+        throw new Error('Este formulário já reservou outra data. Reabra o portal para escolher uma nova vaga.');
+      }
+      var remaining = result && Number.isFinite(Number(result.remaining)) ? Number(result.remaining) : null;
+      if (remaining !== null) {
+        if (type === 'emergencial') slot.emergency = remaining;
+        else slot.common = remaining;
+      }
+      selected.reserved = true;
+      reservationPending = false;
+      if (send) {
+        send.innerHTML = originalSendHtml;
+        delete send.dataset.dentalReservationPending;
+      }
+      renderAgenda();
+      refreshSend();
+    }).catch(function (error) {
+      reservationPending = false;
+      selected = null;
+      if (send) {
+        send.innerHTML = originalSendHtml;
+        delete send.dataset.dentalReservationPending;
+      }
+      setSubject('');
+      renderAgenda();
+      refreshSend();
+      var status = el('dentalStatus');
+      if (status) {
+        status.textContent = error && error.message ? error.message : 'Não foi possível reservar a vaga. Tente novamente.';
+        status.className = 'dental-status error';
+      }
+      loadAgenda();
+    });
   }
 
   function validCpf(value) {
@@ -330,7 +380,7 @@
 
   function refreshSend() {
     var send = el('send');
-    if (send && isDental()) send.disabled = !formReady();
+    if (send && isDental()) send.disabled = reservationPending || !formReady();
   }
 
   function makeCode() {
@@ -411,19 +461,37 @@
     if (!isDental() || !selected) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (!formReady()) { refreshSend(); return; }
+    if (reservationPending || !formReady()) { refreshSend(); return; }
+    if (selected.reserved) {
+      openWhatsApp();
+      return;
+    }
+
     var send = el('send');
     var original = send.innerHTML;
     send.disabled = true;
-    send.textContent = 'Reservando a vaga na planilha...';
-    reserveSlot().then(function () {
+    send.textContent = 'Confirmando a vaga na planilha...';
+    reservationPending = true;
+    reserveSlot().then(function (result) {
+      if (result && result.alreadyReserved && (normalizeDate(result.date) !== selected.date || clean(result.type) !== selected.type)) {
+        throw new Error('Este formulário já reservou outra data. Reabra o portal para escolher uma nova vaga.');
+      }
+      var slot = slots.find(function (item) { return item.id === selected.id; });
+      if (slot && result && Number.isFinite(Number(result.remaining))) {
+        if (selected.type === 'emergencial') slot.emergency = Number(result.remaining);
+        else slot.common = Number(result.remaining);
+      }
+      selected.reserved = true;
+      reservationPending = false;
       send.innerHTML = original;
+      renderAgenda();
       openWhatsApp();
     }).catch(function (error) {
+      reservationPending = false;
       send.innerHTML = original;
       refreshSend();
       var status = el('dentalStatus');
-      if (status) { status.textContent = error.message || 'Não foi possível reservar a vaga.'; status.className = 'dental-status error'; }
+      if (status) { status.textContent = error.message || 'Não foi possível confirmar a vaga.'; status.className = 'dental-status error'; }
       loadAgenda();
     });
   }

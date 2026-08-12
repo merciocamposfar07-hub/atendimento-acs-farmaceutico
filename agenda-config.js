@@ -71,6 +71,56 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
     document.head.appendChild(style);
   }
 
+
+  function installPortalContrast() {
+    if (document.getElementById('portal-tacs-contrast-style')) return;
+    var style = document.createElement('style');
+    style.id = 'portal-tacs-contrast-style';
+    style.textContent = [
+      '.portal-visual-pref{display:flex;justify-content:flex-end;margin:0 0 15px}',
+      '.portal-contrast-btn{width:auto;min-height:48px;border:2px solid #0b5878;border-radius:15px;padding:10px 14px;background:#fff;color:#073a55;font-weight:900;box-shadow:0 6px 15px rgba(7,58,85,.09)}',
+      'body.tema-petroleo .hero-actions,body.tema-petroleo .action-card,body.tema-petroleo .notice-board,body.tema-petroleo .notice-card,body.tema-petroleo .form-panel{background:linear-gradient(145deg,#073a55,#0b5878)!important;border-color:#69c7e7!important;color:#fff!important;box-shadow:0 10px 24px rgba(7,58,85,.18)!important}',
+      'body.tema-petroleo .action-card+ .action-card{border-left-color:rgba(216,238,247,.35)!important}',
+      'body.tema-petroleo .action-card strong,body.tema-petroleo .action-card p,body.tema-petroleo .notice-board h2,body.tema-petroleo .notice-updated,body.tema-petroleo .notice-card strong,body.tema-petroleo .notice-card p,body.tema-petroleo .notice-card small,body.tema-petroleo .form-panel .section-title,body.tema-petroleo .form-panel label{color:#fff!important}',
+      'body.tema-petroleo .action-card small,body.tema-petroleo .form-panel .help.valid{color:#8df0b4!important}',
+      'body.tema-petroleo .form-panel .help,body.tema-petroleo .privacy{color:#d8eef7!important}',
+      'body.tema-petroleo .form-panel .help.invalid{color:#ffd5d2!important}',
+      'body.tema-petroleo .portal-contrast-btn{background:#073a55;border-color:#69c7e7;color:#fff}',
+      '@media(max-width:720px){.portal-visual-pref{margin-bottom:13px}.portal-contrast-btn{width:100%}body.tema-petroleo .action-card+ .action-card{border-left:0!important;border-top-color:rgba(216,238,247,.35)!important}}'
+    ].join('');
+    document.head.appendChild(style);
+
+    var content = document.querySelector('.content');
+    if (!content || document.getElementById('alternarContrastePortal')) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'portal-visual-pref';
+    var button = document.createElement('button');
+    button.id = 'alternarContrastePortal';
+    button.className = 'portal-contrast-btn';
+    button.type = 'button';
+    button.setAttribute('aria-pressed', 'false');
+    wrap.appendChild(button);
+    content.insertBefore(wrap, content.firstChild);
+
+    var key = 'portalTacsTemaPublicoV1';
+    function readTheme() {
+      try { return localStorage.getItem(key) === 'petroleo' ? 'petroleo' : 'claro'; }
+      catch (error) { return 'claro'; }
+    }
+    function applyTheme(theme) {
+      var dark = theme === 'petroleo';
+      document.body.classList.toggle('tema-petroleo', dark);
+      button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+      button.textContent = dark ? '◐ Usar cartões claros' : '◐ Usar cartões azul-petróleo';
+    }
+    button.addEventListener('click', function () {
+      var next = document.body.classList.contains('tema-petroleo') ? 'claro' : 'petroleo';
+      try { localStorage.setItem(key, next); } catch (error) {}
+      applyTheme(next);
+    });
+    applyTheme(readTheme());
+  }
+
   function installOfflineBanner() {
     if (document.querySelector('.offline-tacs')) return;
     var style = document.createElement('style');
@@ -339,6 +389,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
   installCompactWhatsappMessage();
 
   function init() {
+    installPortalContrast();
     installOfflineBanner();
     installDescriptionRules();
     installFormPersistence();
