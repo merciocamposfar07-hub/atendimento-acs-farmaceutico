@@ -130,29 +130,53 @@ jobs:
           DEPLOYED=1
 
           BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+
+          has_ok() {
+            printf '%s' "$1" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'
+          }
+          area_of() {
+            printf '%s' "$1" | grep -Eo '"areaId"[[:space:]]*:[[:space:]]*"[^"]+"' | head -n 1 | sed -E 's/.*"([^"]+)"$/\1/' || true
+          }
+          flag_ok() {
+            if has_ok "$1"; then printf 'sim'; else printf 'não'; fi
+          }
+
           ok=0
-          for tentativa in $(seq 1 18); do
-            moradores=$(curl -L --fail --silent --show-error --max-time 30 \
+          for tentativa in $(seq 1 12); do
+            moradores=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 \
               "$BASE?action=admin_moradores_result&requestId=healthMoradores145") || true
-            territorio=$(curl -L --fail --silent --show-error --max-time 30 \
+            territorio=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 \
               "$BASE?action=admin_territorio_result&requestId=healthTerritorio10") || true
-            csv=$(curl -L --fail --silent --show-error --max-time 30 \
+            csv=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 \
               "$BASE?action=admin_csv_result&requestId=healthCsvMoradores10") || true
-            manutencao=$(curl -L --fail --silent --show-error --max-time 30 \
+            manutencao=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 \
               "$BASE?action=portal_manutencao_status&areaId=JAPARANDUBA") || true
-            publico=$(curl -L --fail --silent --show-error --max-time 30 \
+            publico=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 \
               "$BASE?action=painel_publico&areaId=JAPARANDUBA") || true
-            conteudo=$(curl -L --fail --silent --show-error --max-time 30 \
+            conteudo=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 \
               "$BASE?action=publico_conteudo&areaId=JAPARANDUBA") || true
 
-            if printf '%s' "$moradores" | grep -q '"ok":true' && \
-               printf '%s' "$territorio" | grep -q '"ok":true' && \
-               printf '%s' "$csv" | grep -q '"ok":true' && \
-               printf '%s' "$manutencao" | grep -q '"ok":true' && \
-               printf '%s' "$publico" | grep -q '"ok":true' && \
-               printf '%s' "$publico" | grep -q '"areaId":"JAPARANDUBA"' && \
-               printf '%s' "$conteudo" | grep -q '"ok":true' && \
-               printf '%s' "$conteudo" | grep -q '"areaId":"JAPARANDUBA"'; then
+            publico_area=$(area_of "$publico")
+            conteudo_area=$(area_of "$conteudo")
+            printf 'Health %s: moradores=%s territorio=%s csv=%s manutencao=%s publico=%s publico_area=%s conteudo=%s conteudo_area=%s\n' \
+              "$tentativa" \
+              "$(flag_ok "$moradores")" \
+              "$(flag_ok "$territorio")" \
+              "$(flag_ok "$csv")" \
+              "$(flag_ok "$manutencao")" \
+              "$(flag_ok "$publico")" \
+              "${publico_area:-ausente}" \
+              "$(flag_ok "$conteudo")" \
+              "${conteudo_area:-ausente}"
+
+            if has_ok "$moradores" && \
+               has_ok "$territorio" && \
+               has_ok "$csv" && \
+               has_ok "$manutencao" && \
+               has_ok "$publico" && \
+               [ "$publico_area" = 'JAPARANDUBA' ] && \
+               has_ok "$conteudo" && \
+               [ "$conteudo_area" = 'JAPARANDUBA' ]; then
               ok=1
               break
             fi
