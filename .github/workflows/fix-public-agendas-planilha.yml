@@ -1,0 +1,116 @@
+name: Corrigir fonte das agendas públicas
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-public-agendas-planilha.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir-validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Corrigir somente a resolução da planilha pública
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p=Path('apps-script/ZZ_12_PublicoAgendasPortalV1.gs')
+          s=p.read_text(encoding='utf-8')
+          old="""function publicoAgendasV1Planilha_() {
+            var id = String(
+              PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || ''
+            ).trim();
+            if (id) return SpreadsheetApp.openById(id);
+            var planilha = SpreadsheetApp.getActiveSpreadsheet();
+            if (!planilha) throw new Error('A planilha do Portal TACS não está configurada.');
+            return planilha;
+          }
+          """
+          new="""function publicoAgendasV1Planilha_() {
+            if (typeof adminTacsV1Planilha_ === 'function') {
+              return adminTacsV1Planilha_();
+            }
+            if (typeof getPlanilha === 'function') {
+              return getPlanilha();
+            }
+            var id = String(
+              PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || ''
+            ).trim();
+            if (id) return SpreadsheetApp.openById(id);
+            var planilha = SpreadsheetApp.getActiveSpreadsheet();
+            if (!planilha) throw new Error('A planilha do Portal TACS não está disponível.');
+            return planilha;
+          }
+          """
+          if old not in s:
+              raise SystemExit('Função antiga de planilha não encontrada; nenhuma alteração aplicada.')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+
+          p=Path('scripts/test_public_agendas_apps_script.js')
+          s=p.read_text(encoding='utf-8')
+          old="""  PropertiesService: {
+            getScriptProperties: () => ({getProperty: () => ''})
+          },
+            SpreadsheetApp: {
+              getActiveSpreadsheet: () => ({getSheets: () => [sheet]})
+            },
+          """
+          new="""  adminTacsV1Planilha_: () => ({getSheets: () => [sheet]}),
+            PropertiesService: {
+              getScriptProperties: () => { throw new Error('Não deve consultar SPREADSHEET_ID quando a fonte compartilhada existe.'); }
+            },
+            SpreadsheetApp: {
+              openById: () => { throw new Error('Não deve abrir por ID quando a fonte compartilhada existe.'); },
+              getActiveSpreadsheet: () => { throw new Error('Não deve depender de planilha ativa no Web App.'); }
+            },
+          """
+          if old not in s:
+              raise SystemExit('Contexto antigo do teste não encontrado; nenhuma alteração aplicada.')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+
+      - name: Validar sintaxe e testes completos
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZ_12_PublicoAgendasPortalV1.gs
+          node --check scripts/test_public_agendas_apps_script.js
+          npm ci
+          npm test
+
+      - name: Validar escopo e publicar código
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git status --porcelain=v1 | cut -c4-)"
+          printf '%s\n' "$changed"
+          bad="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -Ev '^(apps-script/ZZ_12_PublicoAgendasPortalV1\.gs|scripts/test_public_agendas_apps_script\.js)$' || true)"
+          if [ -n "$bad" ]; then
+            echo 'Alteração fora do escopo:'
+            echo "$bad"
+            exit 1
+          fi
+          test -n "$changed"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps-script/ZZ_12_PublicoAgendasPortalV1.gs scripts/test_public_agendas_apps_script.js
+          git commit -m 'Corrige fonte da rota pública de agendas'
+          git push origin HEAD:main
