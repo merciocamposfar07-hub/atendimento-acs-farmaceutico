@@ -3,9 +3,18 @@
 
   if(window.PortalTacsPublicData)return;
 
+  function normalizeArea(value){
+    var area=String(value==null?'':value).trim().toUpperCase();
+    if(area.normalize)area=area.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    area=area.replace(/[^A-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,64);
+    return /^[A-Z0-9][A-Z0-9_-]{1,63}$/.test(area)?area:'';
+  }
+
   var API=String(window.TACS_ADMIN_API_URL||'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec').trim();
-  var CACHE_KEY='portalTacsPublicDataV3';
-  var LEGACY_CACHE_KEY='portalTacsPublicDataV2';
+  var DEFAULT_AREA_ID=normalizeArea(window.TACS_DEFAULT_AREA_ID||'JAPARANDUBA')||'JAPARANDUBA';
+  var AREA_ID=normalizeArea(window.TACS_AREA_ID)||DEFAULT_AREA_ID;
+  var CACHE_KEY='portalTacsPublicDataV4:'+AREA_ID;
+  var LEGACY_CACHE_KEY=AREA_ID===DEFAULT_AREA_ID?'portalTacsPublicDataV3':'';
   var INVALIDATE_KEY='portalTacsPublicInvalidateAtV1';
   var WARM_KEY='portalTacsAppsScriptWarmAtV1';
   var CACHE_MAX_MS=15*60*1000;
@@ -21,12 +30,26 @@
     return Date.now()-Number(item.salvoEm||0)<=CACHE_MAX_MS;
   }
 
-  function lerCache(){
+  function lerItem(chave){
+    if(!chave)return null;
     try{
-      var item=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
+      var raw=localStorage.getItem(chave);
+      if(!raw)return null;
+      var item=JSON.parse(raw);
       if(itemValido(item))return item;
-      if(item)localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(chave);
     }catch(e){}
+    return null;
+  }
+
+  function lerCache(){
+    var item=lerItem(CACHE_KEY);
+    if(item)return item;
+    var legado=lerItem(LEGACY_CACHE_KEY);
+    if(legado){
+      try{localStorage.setItem(CACHE_KEY,JSON.stringify(legado))}catch(e){}
+      return legado;
+    }
     return null;
   }
 
@@ -40,13 +63,25 @@
     memoria={salvoEm:Date.now(),data:data};
     try{
       localStorage.setItem(CACHE_KEY,JSON.stringify(memoria));
-      localStorage.removeItem(LEGACY_CACHE_KEY);
+      if(LEGACY_CACHE_KEY)localStorage.removeItem(LEGACY_CACHE_KEY);
       localStorage.setItem(WARM_KEY,String(Date.now()));
     }catch(e){}
   }
 
   function emitir(data){
     try{window.dispatchEvent(new CustomEvent('portal-tacs-public-data',{detail:data}))}catch(e){}
+  }
+
+  function validarAreaResposta(data){
+    var resposta=normalizeArea(data&&data.areaId);
+    var efetiva=resposta||DEFAULT_AREA_ID;
+    if(AREA_ID!==DEFAULT_AREA_ID&&!resposta){
+      throw new Error('A resposta pública não confirmou a área solicitada.');
+    }
+    if(efetiva!==AREA_ID){
+      throw new Error('A resposta pública pertence a outra área.');
+    }
+    return true;
   }
 
   function consultar(){
@@ -81,10 +116,13 @@
           finalizar(new Error(data&&data.message||'Leitura pública recusada.'));
           return;
         }
+        try{validarAreaResposta(data)}catch(error){finalizar(error);return}
         finalizar(null,data);
       };
       script.onerror=function(){finalizar(new Error('Falha ao consultar o servidor.'))};
-      script.src=API+(API.indexOf('?')<0?'?':'&')+'action=painel_publico&callback='+encodeURIComponent(nome)+'&_='+Date.now();
+      script.src=API+(API.indexOf('?')<0?'?':'&')+
+        'action=painel_publico&areaId='+encodeURIComponent(AREA_ID)+
+        '&callback='+encodeURIComponent(nome)+'&_='+Date.now();
       document.head.appendChild(script);
       timer=setTimeout(function(){
         finalizar(new Error('O servidor demorou para responder.'));
@@ -125,7 +163,7 @@
     memoria=null;
     try{
       localStorage.removeItem(CACHE_KEY);
-      localStorage.removeItem(LEGACY_CACHE_KEY);
+      if(LEGACY_CACHE_KEY)localStorage.removeItem(LEGACY_CACHE_KEY);
       localStorage.setItem(INVALIDATE_KEY,String(Date.now()));
     }catch(e){}
     return atualizarAgora?consultar():Promise.resolve(null);
@@ -161,8 +199,8 @@
     cached:cached,
     invalidate:invalidate,
     api:API,
+    areaId:AREA_ID,
     cacheKey:CACHE_KEY,
     timeout:TIMEOUT_MS
   };
 }());
-

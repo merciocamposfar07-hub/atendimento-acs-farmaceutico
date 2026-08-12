@@ -10,8 +10,9 @@
  */
 
 var PUBLICO_AGENDAS_PORTAL_V1 = Object.freeze({
-  VERSAO: '1.0.0',
+  VERSAO: '1.1.0',
   ACAO: 'painel_publico',
+  AREA_PADRAO: 'JAPARANDUBA',
   FUSO: 'America/Recife',
   ABAS_PREFERIDAS: ['AGENDAS', 'PAINEL_PROFISSIONAIS']
 });
@@ -26,7 +27,7 @@ doGet = function (e) {
   if (acao === PUBLICO_AGENDAS_PORTAL_V1.ACAO) {
     try {
       return publicoAgendasV1Responder_(
-        publicoAgendasV1Montar_(),
+        publicoAgendasV1Montar_(parametros.areaId || parametros.area || parametros.territorio || ''),
         parametros.callback
       );
     } catch (erro) {
@@ -50,7 +51,8 @@ doGet = function (e) {
   );
 };
 
-function publicoAgendasV1Montar_() {
+function publicoAgendasV1Montar_(areaId) {
+  areaId = publicoAgendasV1AreaId_(areaId) || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
   var planilha = publicoAgendasV1Planilha_();
   var aba = publicoAgendasV1LocalizarAba_(planilha);
   var modulos = {
@@ -61,7 +63,7 @@ function publicoAgendasV1Montar_() {
   };
 
   if (!aba || aba.getLastRow() < 2) {
-    return publicoAgendasV1Resposta_(modulos, aba ? aba.getName() : '');
+    return publicoAgendasV1Resposta_(modulos, aba ? aba.getName() : '', areaId);
   }
 
   var totalLinhas = aba.getLastRow();
@@ -72,6 +74,12 @@ function publicoAgendasV1Montar_() {
   var indices = publicoAgendasV1Indices_(cabecalhos);
 
   for (var linha = 1; linha < valores.length; linha += 1) {
+    var areaLinha = indices.area >= 0
+      ? publicoAgendasV1AreaId_(publicoAgendasV1Valor_(exibidos[linha], indices.area))
+      : '';
+    areaLinha = areaLinha || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
+    if (areaLinha !== areaId) continue;
+
     var modulo = publicoAgendasV1Modulo_(
       publicoAgendasV1Valor_(exibidos[linha], indices.modulo)
     );
@@ -131,15 +139,17 @@ function publicoAgendasV1Montar_() {
     });
   });
 
-  return publicoAgendasV1Resposta_(modulos, aba.getName());
+  return publicoAgendasV1Resposta_(modulos, aba.getName(), areaId);
 }
 
-function publicoAgendasV1Resposta_(modulos, aba) {
+function publicoAgendasV1Resposta_(modulos, aba, areaId) {
+  areaId = publicoAgendasV1AreaId_(areaId) || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
   return {
     ok: true,
     modulo: 'Agendas públicas do Portal TACS',
     versao: PUBLICO_AGENDAS_PORTAL_V1.VERSAO,
     somenteLeitura: true,
+    areaId: areaId,
     atualizadoEm: Utilities.formatDate(
       new Date(),
       PUBLICO_AGENDAS_PORTAL_V1.FUSO,
@@ -195,6 +205,7 @@ function publicoAgendasV1Indices_(cabecalhos, permitirAusentes) {
   }
 
   return {
+    area: indice(['AREA_ID', 'AREA', 'TERRITORIO'], false),
     modulo: indice(['MODULO', 'PROFISSIONAL', 'PROFISSIONAL_ID'], true),
     ordem: indice(['ORDEM'], false),
     dia: indice(['DIA', 'DIA_SEMANA'], true),
@@ -218,6 +229,11 @@ function publicoAgendasV1Planilha_() {
   var planilha = SpreadsheetApp.getActiveSpreadsheet();
   if (!planilha) throw new Error('A planilha do Portal TACS não está configurada.');
   return planilha;
+}
+
+function publicoAgendasV1AreaId_(valor) {
+  var area = publicoAgendasV1Normalizar_(valor);
+  return /^[A-Z0-9][A-Z0-9_-]{1,63}$/.test(area) ? area.slice(0, 64) : '';
 }
 
 function publicoAgendasV1Modulo_(valor) {

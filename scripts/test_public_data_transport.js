@@ -18,7 +18,7 @@ function storage(initial) {
   };
 }
 
-function environment(initial) {
+function environment(initial, areaId) {
   const requests = [];
   const events = [];
   const windowListeners = {};
@@ -41,6 +41,8 @@ function environment(initial) {
     setTimeout,
     clearTimeout,
     localStorage,
+    TACS_AREA_ID: areaId || '',
+    TACS_DEFAULT_AREA_ID: 'JAPARANDUBA',
     CustomEvent: function CustomEvent(type, options) {
       this.type = type;
       this.detail = options && options.detail;
@@ -79,17 +81,18 @@ async function main() {
   const first = fresh.context.PortalTacsPublicData.get();
   const second = fresh.context.PortalTacsPublicData.get();
   assert.equal(fresh.requests.length, 1, 'Duas telas abriram duas consultas públicas concorrentes.');
-  const live = {ok: true, atualizadoEm: '06/08/2026 00:10', modules: {medica: []}};
+  const live = {ok: true, areaId: 'JAPARANDUBA', atualizadoEm: '06/08/2026 00:10', modules: {medica: []}};
+  assert.equal(new URL(fresh.requests[0].src).searchParams.get('areaId'), 'JAPARANDUBA');
   answer(fresh, 0, live);
   const results = await Promise.all([first, second]);
   assert.equal(results[0].atualizadoEm, live.atualizadoEm);
   assert.equal(results[1].atualizadoEm, live.atualizadoEm);
-  assert.ok(fresh.localStorage.value('portalTacsPublicDataV3'));
+  assert.ok(fresh.localStorage.value('portalTacsPublicDataV4:JAPARANDUBA'));
   assert.ok(Number(fresh.localStorage.value('portalTacsAppsScriptWarmAtV1')) > 0);
   assert.equal(fresh.events.length, 1, 'A atualização pública não foi anunciada às duas telas.');
 
   const cacheItem = JSON.stringify({salvoEm: Date.now(), data: live});
-  const cached = environment({portalTacsPublicDataV3: cacheItem});
+  const cached = environment({'portalTacsPublicDataV4:JAPARANDUBA': cacheItem});
   const cachedResult = await cached.context.PortalTacsPublicData.get();
   assert.equal(cachedResult.atualizadoEm, live.atualizadoEm);
   assert.equal(cached.requests.length, 0, 'O cache não foi exibido antes da atualização.');
@@ -98,7 +101,7 @@ async function main() {
   answer(cached, 0, live);
 
   const staleItem = JSON.stringify({salvoEm: Date.now() - 31000, data: live});
-  const stale = environment({portalTacsPublicDataV3: staleItem});
+  const stale = environment({'portalTacsPublicDataV4:JAPARANDUBA': staleItem});
   const start = Date.now();
   const staleResult = await stale.context.PortalTacsPublicData.get();
   assert.equal(staleResult.atualizadoEm, live.atualizadoEm);
@@ -122,20 +125,37 @@ async function main() {
   answer(stale, 2, {...live, atualizadoEm: '06/08/2026 00:13'});
 
   const expiredItem = JSON.stringify({salvoEm: Date.now() - 16 * 60 * 1000, data: live});
-  const expired = environment({portalTacsPublicDataV3: expiredItem});
+  const expired = environment({'portalTacsPublicDataV4:JAPARANDUBA': expiredItem});
   const expiredRead = expired.context.PortalTacsPublicData.get();
   assert.equal(expired.requests.length, 1, 'Cache vencido foi tratado como dado atual.');
   answer(expired, 0, {...live, atualizadoEm: '06/08/2026 00:14'});
   await expiredRead;
 
+  const muntuns = environment({}, 'MUNTUNS');
+  const muntunsRead = muntuns.context.PortalTacsPublicData.get();
+  assert.equal(new URL(muntuns.requests[0].src).searchParams.get('areaId'), 'MUNTUNS');
+  answer(muntuns, 0, {...live, areaId: 'MUNTUNS', atualizadoEm: '06/08/2026 00:15'});
+  const muntunsResult = await muntunsRead;
+  assert.equal(muntunsResult.areaId, 'MUNTUNS');
+  assert.ok(muntuns.localStorage.value('portalTacsPublicDataV4:MUNTUNS'));
+  assert.equal(muntuns.localStorage.value('portalTacsPublicDataV4:JAPARANDUBA'), undefined);
+
+  const wrongArea = environment({}, 'MUNTUNS');
+  const wrongRead = wrongArea.context.PortalTacsPublicData.get();
+  answer(wrongArea, 0, {...live, areaId: 'JAPARANDUBA'});
+  await assert.rejects(wrongRead, /outra área/);
+  assert.equal(wrongArea.localStorage.value('portalTacsPublicDataV4:MUNTUNS'), undefined);
+
   const index = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   assert.ok(index.indexOf('portal-public-data.js') < index.indexOf('agenda-enfermeira.js'));
   assert.ok(index.indexOf('portal-public-data.js') < index.indexOf('portal-controle-integral.js'));
   assert.match(index, /rel="preconnect" href="https:\/\/script\.google\.com"/);
-  assert.match(index, /20260806-desempenho-v5/);
+  assert.match(index, /20260812-multiarea-v1/);
   assert.match(source, /TIMEOUT_MS=25000/);
   assert.match(source, /REFRESH_MIN_MS=30\*1000/);
   assert.match(source, /portalTacsPublicInvalidateAtV1/);
+  assert.match(source, /portalTacsPublicDataV4:/);
+  assert.match(source, /areaId='\+encodeURIComponent\(AREA_ID\)/);
   assert.match(fs.readFileSync(path.join(ROOT, 'agenda-enfermeira.js'), 'utf8'), /PortalTacsPublicData\.get/);
   assert.match(fs.readFileSync(path.join(ROOT, 'agenda-enfermeira.js'), 'utf8'), /portal-tacs-public-data/);
   assert.match(fs.readFileSync(path.join(ROOT, 'portal-controle-integral.js'), 'utf8'), /PortalTacsPublicData\.get/);

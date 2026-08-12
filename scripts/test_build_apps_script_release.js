@@ -32,11 +32,12 @@ try {
   const portalBefore = fs.readFileSync(path.join(target, 'Portal.js'), 'utf8');
   const first = buildRelease(target);
   assert.strictEqual(first.length, MODULES.length);
-  assert.strictEqual(first[0].file, 'ZZZZ_15_ArquivoRealDoServidor.js');
-  assert.strictEqual(first[0].operation, 'substituido');
+  const residentFirst = first.find((item) => item.file === 'ZZZZ_15_ArquivoRealDoServidor.js');
+  assert.ok(residentFirst, 'O módulo de Moradores precisa permanecer no pacote.');
+  assert.strictEqual(residentFirst.operation, 'substituido');
   assert.ok(first.every((item) => item.file.endsWith('.js')));
   assert.match(
-    fs.readFileSync(path.join(target, first[0].file), 'utf8'),
+    fs.readFileSync(path.join(target, residentFirst.file), 'utf8'),
     /VERSAO:\s*'1\.4\.5'/
   );
   assert.strictEqual(fs.readFileSync(path.join(target, 'Portal.js'), 'utf8'), portalBefore);
@@ -72,7 +73,7 @@ const legacyGs = project('.gs');
 try {
   const report = buildRelease(legacyGs);
   assert.ok(report.every((item) => item.file.endsWith('.gs')));
-  assert.strictEqual(report[0].file, 'ZZZZ_15_ArquivoRealDoServidor.gs');
+  assert.ok(report.some((item) => item.file === 'ZZZZ_15_ArquivoRealDoServidor.gs'));
 } finally {
   fs.rmSync(legacyGs, {recursive: true, force: true});
 }

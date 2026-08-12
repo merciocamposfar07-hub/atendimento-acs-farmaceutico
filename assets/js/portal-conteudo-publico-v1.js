@@ -10,6 +10,16 @@
     return valor === null || valor === undefined ? '' : String(valor).trim();
   }
 
+  function normalizarArea(valor) {
+    var area = texto(valor).toUpperCase();
+    if (area.normalize) area = area.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    area = area.replace(/[^A-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+    return /^[A-Z0-9][A-Z0-9_-]{1,63}$/.test(area) ? area : '';
+  }
+
+  var DEFAULT_AREA_ID = normalizarArea(window.TACS_DEFAULT_AREA_ID || 'JAPARANDUBA') || 'JAPARANDUBA';
+  var AREA_ID = normalizarArea(window.TACS_AREA_ID) || DEFAULT_AREA_ID;
+
   function primeiro(obj, chaves) {
     for (var i = 0; i < chaves.length; i += 1) {
       var valor = obj && obj[chaves[i]];
@@ -48,9 +58,13 @@
     resposta = resposta || {};
     var recadosBrutos = Array.isArray(resposta.recados) ? resposta.recados : [];
     var campanhasBrutas = Array.isArray(resposta.campanhas) ? resposta.campanhas : [];
+    var areaResposta = normalizarArea(resposta.areaId);
+    var areaEfetiva = areaResposta || DEFAULT_AREA_ID;
 
     return {
-      ok: resposta.ok === true,
+      ok: resposta.ok === true && areaEfetiva === AREA_ID && (AREA_ID === DEFAULT_AREA_ID || Boolean(areaResposta)),
+      areaId: areaEfetiva,
+      areaConfirmada: Boolean(areaResposta) || AREA_ID === DEFAULT_AREA_ID,
       geradoEm: texto(resposta.geradoEm),
       recados: recadosBrutos.map(function (item) { return normalizarItem(item, 'recado'); }),
       campanhas: campanhasBrutas.map(function (item) { return normalizarItem(item, 'campanha'); })
@@ -105,13 +119,23 @@
 
     alvo.replaceChildren();
 
-    if (!dados.ok || (dados.recados.length === 0 && dados.campanhas.length === 0)) {
+    if (!dados.ok) {
       alvo.hidden = true;
       return {
-        ok: dados.ok,
+        ok: false,
+        motivo: dados.areaId !== AREA_ID || !dados.areaConfirmada ? 'area_divergente' : 'resposta_invalida',
+        areaId: dados.areaId
+      };
+    }
+
+    if (dados.recados.length === 0 && dados.campanhas.length === 0) {
+      alvo.hidden = true;
+      return {
+        ok: true,
         visivel: false,
-        recados: dados.recados.length,
-        campanhas: dados.campanhas.length
+        areaId: dados.areaId,
+        recados: 0,
+        campanhas: 0
       };
     }
 
@@ -131,6 +155,7 @@
     return {
       ok: true,
       visivel: true,
+      areaId: dados.areaId,
       recados: dados.recados.length,
       campanhas: dados.campanhas.length
     };
@@ -169,8 +194,10 @@
             ok: dados.ok,
             visivel: false,
             renderizado: false,
-            recados: dados.recados.length,
-            campanhas: dados.campanhas.length
+            areaId: dados.areaId,
+            motivo: dados.ok ? '' : 'area_divergente',
+            recados: dados.ok ? dados.recados.length : 0,
+            campanhas: dados.ok ? dados.campanhas.length : 0
           });
         } catch (erro) {
           if (alvo) alvo.hidden = true;
@@ -189,6 +216,7 @@
       }, TIMEOUT_MS);
 
       script.src = API_URL + '?action=' + encodeURIComponent(ACTION) +
+        '&areaId=' + encodeURIComponent(AREA_ID) +
         '&callback=' + encodeURIComponent(callback) +
         '&_=' + Date.now();
       script.async = true;
@@ -197,10 +225,11 @@
   }
 
   window.PortalTacsConteudoPublicoV1 = Object.freeze({
-    versao: '1.0.2',
+    versao: '1.1.0',
     somenteLeitura: true,
     renderizacaoAutomatica: false,
     leituraAutomatica: true,
+    areaId: AREA_ID,
     normalizarResposta: normalizarResposta,
     renderizar: renderizar,
     carregar: carregar

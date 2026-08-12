@@ -320,7 +320,18 @@ async function testRegularDental(harness) {
     assert.match(cards[2].textContent, /Quinta-feira[\s\S]*1 vaga comum disponível/);
     assert.match(cards[3].textContent, /Sexta-feira[\s\S]*5 vagas comuns disponíveis/);
 
+    const reservationsBeforeClick = harness.records.dentalReservations.length;
     slots[0].click();
+    await waitFor(
+      () => harness.records.dentalReservations.length === reservationsBeforeClick + 1,
+      'A vaga comum não foi reservada no clique'
+    );
+    const reservation = harness.records.dentalReservations.at(-1);
+    assert.equal(reservation.action, 'reservar');
+    assert.equal(reservation.date, '2099-08-03');
+    assert.equal(reservation.type, 'comum');
+    assert.match(reservation.requestId, /^MATIAS-/);
+    assert.equal(harness.dental[0].vagasComuns, 1, 'A vaga comum não foi abatida no clique');
     await fillPatient(
       window,
       'Maria Teste da Silva',
@@ -330,25 +341,17 @@ async function testRegularDental(harness) {
     await waitFor(() => !send.disabled, 'O botão de envio comum não foi habilitado');
 
     const before = harness.records.whatsAppMessages.length;
+    const reservationsBeforeSend = harness.records.dentalReservations.length;
     send.click();
-    await wait(40);
-    assert.equal(
-      harness.records.whatsAppMessages.length,
-      before,
-      'O WhatsApp abriu antes da confirmação da reserva comum'
-    );
     await waitFor(
       () => harness.records.whatsAppMessages.length === before + 1,
-      'O WhatsApp não abriu após a reserva comum'
+      'O WhatsApp não abriu após a vaga comum já reservada'
     );
-
-    assert.equal(harness.records.dentalReservations.length, 1);
-    const reservation = harness.records.dentalReservations[0];
-    assert.equal(reservation.action, 'reservar');
-    assert.equal(reservation.date, '2099-08-03');
-    assert.equal(reservation.type, 'comum');
-    assert.match(reservation.requestId, /^MATIAS-/);
-    assert.equal(harness.dental[0].vagasComuns, 1, 'A vaga comum não foi abatida exatamente uma vez');
+    assert.equal(
+      harness.records.dentalReservations.length,
+      reservationsBeforeSend,
+      'O envio pelo WhatsApp não pode descontar outra vaga comum'
+    );
     const message = harness.records.whatsAppMessages.at(-1);
     assert.match(message, /Maria Teste da Silva/);
     assert.match(message, /Tipo de vaga odontológica: comum/);
@@ -379,7 +382,16 @@ async function testEmergencyDental(harness) {
     assert.equal(slots[2].disabled, true);
     assert.match(cards[3].textContent, /Sexta-feira[\s\S]*5 vagas de emergência disponíveis/);
 
+    const emergencyReservationsBeforeClick = harness.records.dentalReservations.length;
     slots[1].click();
+    await waitFor(
+      () => harness.records.dentalReservations.length === emergencyReservationsBeforeClick + 1,
+      'A vaga emergencial não foi reservada no clique'
+    );
+    const reservation = harness.records.dentalReservations.at(-1);
+    assert.equal(reservation.date, '2099-08-04');
+    assert.equal(reservation.type, 'emergencial');
+    assert.equal(harness.dental[1].vagasEmergenciais, 1, 'A vaga emergencial não foi abatida no clique');
     await fillPatient(
       window,
       'Joana Teste da Silva',
@@ -389,26 +401,16 @@ async function testEmergencyDental(harness) {
     await waitFor(() => !send.disabled, 'O botão de envio emergencial não foi habilitado');
 
     const before = harness.records.whatsAppMessages.length;
+    const emergencyReservationsBeforeSend = harness.records.dentalReservations.length;
     send.click();
-    await wait(40);
-    assert.equal(
-      harness.records.whatsAppMessages.length,
-      before,
-      'O WhatsApp abriu antes da confirmação da reserva emergencial'
-    );
     await waitFor(
       () => harness.records.whatsAppMessages.length === before + 1,
-      'O WhatsApp não abriu após a reserva emergencial'
+      'O WhatsApp não abriu após a vaga emergencial já reservada'
     );
-
-    assert.equal(harness.records.dentalReservations.length, 2);
-    const reservation = harness.records.dentalReservations.at(-1);
-    assert.equal(reservation.date, '2099-08-04');
-    assert.equal(reservation.type, 'emergencial');
     assert.equal(
-      harness.dental[1].vagasEmergenciais,
-      1,
-      'A vaga emergencial não foi abatida exatamente uma vez'
+      harness.records.dentalReservations.length,
+      emergencyReservationsBeforeSend,
+      'O envio pelo WhatsApp não pode descontar outra vaga emergencial'
     );
     const message = harness.records.whatsAppMessages.at(-1);
     assert.match(message, /Joana Teste da Silva/);

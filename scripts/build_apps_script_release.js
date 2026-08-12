@@ -5,6 +5,14 @@ const ROOT = path.resolve(__dirname, '..');
 const SCRIPT_EXTENSIONS = ['.js', '.gs'];
 const MODULES = [
   {
+    source: 'apps-script/ZZ_11_PublicoConteudoPortalV1.gs',
+    marker: 'PUBLICO_CONTEUDO_PORTAL_V1'
+  },
+  {
+    source: 'apps-script/ZZ_12_PublicoAgendasPortalV1.gs',
+    marker: 'PUBLICO_AGENDAS_PORTAL_V1'
+  },
+  {
     source: 'apps-script/ZZZZ_15_MoradoresAdminPortalV1.gs',
     marker: 'TACS_MORADORES_ADMIN_V1',
     existingRequired: true

@@ -14,6 +14,52 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
 (function () {
   'use strict';
 
+  var PORTAL_AREA_STORAGE_KEY = 'portalTacsAreaIdV1';
+  var PORTAL_DEFAULT_AREA_ID = 'JAPARANDUBA';
+
+  function normalizePortalAreaId(value) {
+    var area = String(value == null ? '' : value).trim().toUpperCase();
+    if (area.normalize) area = area.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    area = area.replace(/[^A-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+    return /^[A-Z0-9][A-Z0-9_-]{1,63}$/.test(area) ? area : '';
+  }
+
+  function resolvePortalAreaId() {
+    var fromUrl = '';
+    try {
+      var params = new URLSearchParams(window.location.search || '');
+      fromUrl = normalizePortalAreaId(
+        params.get('areaId') || params.get('area') || params.get('territorio')
+      );
+    } catch (error) {}
+    if (fromUrl) {
+      try { localStorage.setItem(PORTAL_AREA_STORAGE_KEY, fromUrl); } catch (error) {}
+      return fromUrl;
+    }
+
+    var saved = '';
+    try { saved = normalizePortalAreaId(localStorage.getItem(PORTAL_AREA_STORAGE_KEY)); }
+    catch (error) {}
+    return saved || PORTAL_DEFAULT_AREA_ID;
+  }
+
+  function setPortalAreaId(value) {
+    var next = normalizePortalAreaId(value) || PORTAL_DEFAULT_AREA_ID;
+    window.TACS_AREA_ID = next;
+    try { localStorage.setItem(PORTAL_AREA_STORAGE_KEY, next); } catch (error) {}
+    return next;
+  }
+
+  window.TACS_DEFAULT_AREA_ID = PORTAL_DEFAULT_AREA_ID;
+  window.TACS_AREA_ID = normalizePortalAreaId(window.TACS_AREA_ID) || resolvePortalAreaId();
+  window.PortalTacsArea = Object.freeze({
+    id: function () { return window.TACS_AREA_ID; },
+    defaultId: PORTAL_DEFAULT_AREA_ID,
+    storageKey: PORTAL_AREA_STORAGE_KEY,
+    set: setPortalAreaId,
+    normalize: normalizePortalAreaId
+  });
+
   var base = new URL('.', window.location.href);
 
   function addLink(rel, href, extra) {
@@ -39,7 +85,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
     var script = document.createElement('script');
     script.id = 'portal-conteudo-publico-v1-script';
     script.src = new URL(
-      'assets/js/portal-conteudo-publico-v1.js?v=20260802-2247',
+      'assets/js/portal-conteudo-publico-v1.js?v=20260812-multiarea-v1',
       base
     ).href;
     script.async = true;

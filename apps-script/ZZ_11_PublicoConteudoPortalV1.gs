@@ -11,7 +11,8 @@
  */
 
 var PUBLICO_CONTEUDO_PORTAL_V1 = Object.freeze({
-  VERSAO: '1.0.0',
+  VERSAO: '1.1.0',
+  AREA_PADRAO: 'JAPARANDUBA',
   ABA_RECADOS: 'RECADOS_PORTAL',
   ABA_CAMPANHAS: 'CAMPANHAS_PORTAL',
   FUSO: 'America/Recife'
@@ -41,7 +42,7 @@ doGet = function (e) {
   if (action === 'publico_conteudo') {
     try {
       return publicoConteudoPortalV1Responder_(
-        publicoConteudoPortalV1Montar_(),
+        publicoConteudoPortalV1Montar_(parametros.areaId || parametros.area || parametros.territorio || ''),
         parametros.callback
       );
     } catch (erro) {
@@ -65,7 +66,8 @@ doGet = function (e) {
   );
 };
 
-function publicoConteudoPortalV1Montar_() {
+function publicoConteudoPortalV1Montar_(areaId) {
+  areaId = publicoConteudoPortalV1AreaId_(areaId) || PUBLICO_CONTEUDO_PORTAL_V1.AREA_PADRAO;
   var ss = publicoConteudoPortalV1Planilha_();
   var hoje = Utilities.formatDate(
     new Date(),
@@ -82,14 +84,15 @@ function publicoConteudoPortalV1Montar_() {
     PUBLICO_CONTEUDO_PORTAL_V1.ABA_CAMPANHAS
   );
 
-  var recados = publicoConteudoPortalV1PrepararRecados_(recadosBrutos, hoje);
-  var campanhas = publicoConteudoPortalV1PrepararCampanhas_(campanhasBrutas, hoje);
+  var recados = publicoConteudoPortalV1PrepararRecados_(recadosBrutos, hoje, areaId);
+  var campanhas = publicoConteudoPortalV1PrepararCampanhas_(campanhasBrutas, hoje, areaId);
 
   return {
     ok: true,
     modulo: 'Conteúdo público do Portal TACS',
     versao: PUBLICO_CONTEUDO_PORTAL_V1.VERSAO,
     somenteLeitura: true,
+    areaId: areaId,
     hoje: hoje,
     geradoEm: publicoConteudoPortalV1AgoraIso_(),
     totais: {
@@ -131,10 +134,12 @@ function publicoConteudoPortalV1LerAba_(ss, nomeAba) {
   return linhas;
 }
 
-function publicoConteudoPortalV1PrepararRecados_(linhas, hoje) {
+function publicoConteudoPortalV1PrepararRecados_(linhas, hoje, areaId) {
+  areaId = publicoConteudoPortalV1AreaId_(areaId) || PUBLICO_CONTEUDO_PORTAL_V1.AREA_PADRAO;
   var saida = [];
 
   (Array.isArray(linhas) ? linhas : []).forEach(function (linha) {
+    if (!publicoConteudoPortalV1LinhaDaArea_(linha, areaId)) return;
     var ativo = publicoConteudoPortalV1Booleano_(
       publicoConteudoPortalV1Campo_(linha, ['ATIVO', 'RECADO_ATIVO', 'PUBLICAR'])
     );
@@ -177,10 +182,12 @@ function publicoConteudoPortalV1PrepararRecados_(linhas, hoje) {
   return saida;
 }
 
-function publicoConteudoPortalV1PrepararCampanhas_(linhas, hoje) {
+function publicoConteudoPortalV1PrepararCampanhas_(linhas, hoje, areaId) {
+  areaId = publicoConteudoPortalV1AreaId_(areaId) || PUBLICO_CONTEUDO_PORTAL_V1.AREA_PADRAO;
   var saida = [];
 
   (Array.isArray(linhas) ? linhas : []).forEach(function (linha) {
+    if (!publicoConteudoPortalV1LinhaDaArea_(linha, areaId)) return;
     var ativo = publicoConteudoPortalV1Booleano_(
       publicoConteudoPortalV1Campo_(linha, ['ATIVO', 'CAMPANHA_ATIVA', 'PUBLICAR'])
     );
@@ -213,6 +220,18 @@ function publicoConteudoPortalV1PrepararCampanhas_(linhas, hoje) {
   });
 
   return saida;
+}
+
+function publicoConteudoPortalV1AreaId_(valor) {
+  var area = publicoConteudoPortalV1Normalizar_(valor);
+  return /^[A-Z0-9][A-Z0-9_-]{1,63}$/.test(area) ? area.slice(0, 64) : '';
+}
+
+function publicoConteudoPortalV1LinhaDaArea_(linha, areaId) {
+  var areaLinha = publicoConteudoPortalV1AreaId_(
+    publicoConteudoPortalV1Campo_(linha, ['AREA_ID', 'AREA', 'TERRITORIO'])
+  ) || PUBLICO_CONTEUDO_PORTAL_V1.AREA_PADRAO;
+  return areaLinha === areaId;
 }
 
 function publicoConteudoPortalV1Campo_(registro, nomes) {
