@@ -2,7 +2,7 @@
   "name": "portal-tacs-posto-matias",
   "private": true,
   "scripts": {
-    "test": "node scripts/test_agenda_apps_script.js && node scripts/test_public_agendas_apps_script.js && node scripts/test_public_content_multiarea.js && node scripts/test_dynamic_professionals_apps_script.js && node scripts/test_apps_script_module_chain.js && node scripts/test_build_apps_script_release.js && node scripts/test_dom_flows.js && node scripts/test_admin_transport.js && node scripts/test_dynamic_professionals_dom.js && node scripts/test_public_data_transport.js && node scripts/test_moradores_v145.js && node scripts/test_portal_maintenance.js && node scripts/test_territorio_csv_notifications.js && node scripts/test_public_area_identification.js && node scripts/test_public_area_resolver.js && node scripts/test_publicacoes_territoriais.js && node scripts/test_territorio_dom.js"
+    "test": "node scripts/test_agenda_apps_script.js && node scripts/test_public_agendas_apps_script.js && node scripts/test_public_content_multiarea.js && node scripts/test_dynamic_professionals_apps_script.js && node scripts/test_apps_script_module_chain.js && node scripts/test_build_apps_script_release.js && node scripts/test_dom_flows.js && node scripts/test_admin_transport.js && node scripts/test_dynamic_professionals_dom.js && node scripts/test_public_data_transport.js && node scripts/test_moradores_v145.js && node scripts/test_portal_maintenance.js && node scripts/test_territorio_csv_notifications.js && node scripts/test_public_area_identification.js && node scripts/test_public_area_resolver.js && node scripts/test_publicacoes_territoriais.js && node scripts/test_territorio_dom.js && node scripts/test_notification_repair_button.js"
   },
   "devDependencies": {
     "jsdom": "27.0.1"

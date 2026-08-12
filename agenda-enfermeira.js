@@ -130,6 +130,8 @@
       '.notification-offer p{margin:8px 0;line-height:1.5}',
       '.notification-offer button{width:100%;margin-top:12px;padding:15px 18px;border:0;border-radius:14px;background:#086b9b;color:#fff;font-size:18px;font-weight:900}',
       '.notification-offer button:disabled{opacity:.6}',
+      '.notification-repair{margin-top:10px!important;border:2px solid #0d5f8a!important;background:#fff!important;color:#073a55!important}',
+      '.notification-repair[hidden]{display:none!important}',
       '.notification-status{font-weight:850}',
       '.notification-help{font-size:15px;color:#405866}',
       'footer.portal-footer-fixed{display:block!important;padding:22px 20px calc(34px + env(safe-area-inset-bottom))!important;text-align:center!important;overflow-wrap:anywhere!important}',
@@ -936,11 +938,13 @@
       '<p>Ative para ser avisado sempre que um recado, campanha ou alteração de agenda for publicado ou republicado no Portal TACS.</p>' +
       '<p class="notification-status" id="notificationStatus">Verificando este aparelho...</p>' +
       '<button type="button" id="notificationButton">Configurar recebimento de avisos</button>' +
+      '<button type="button" id="notificationRepairButton" class="notification-repair" hidden>🔧 Reparar recebimento de avisos</button>' +
       '<p class="notification-help" id="notificationHelp"></p>';
 
     anchor.insertAdjacentElement('afterend', box);
 
     var button = id('notificationButton');
+    var repairButton = id('notificationRepairButton');
     var status = id('notificationStatus');
     var help = id('notificationHelp');
 
@@ -972,6 +976,8 @@
           notifyButton: { enable: false },
           allowLocalhostAsSecureOrigin: false
         });
+
+        var repairInProgress = false;
 
         function areaAtualDaUnidade() {
           var area = '';
@@ -1034,12 +1040,20 @@
 
         function mostrarEstado(estado, areaConfirmada) {
           var atual = estado || estadoInscricao();
+          if (repairButton) {
+            repairButton.hidden = true;
+            repairButton.disabled = repairInProgress;
+          }
           if (inscricaoAtiva(atual) && areaConfirmada === true) {
             status.textContent = 'Avisos ativados neste aparelho.';
             button.textContent = 'Avisos ativados';
             button.disabled = true;
+            if (repairButton) {
+              repairButton.hidden = false;
+              repairButton.disabled = false;
+            }
             help.textContent =
-              'Inscrição ativa e vinculada à área deste morador.';
+              'Inscrição ativa e vinculada à área deste morador. Se os avisos não estiverem chegando, use o botão Reparar recebimento de avisos.';
             return;
           }
           button.disabled = false;
@@ -1103,6 +1117,70 @@
           });
         }
 
+        function aguardarToken(limiteMs) {
+          return new Promise(function (resolve) {
+            var inicio = Date.now();
+            function conferirToken() {
+              var push = OneSignal.User && OneSignal.User.PushSubscription;
+              var token = String(push && push.token || '');
+              if (token || Date.now() - inicio >= (limiteMs || 8000)) {
+                resolve(token);
+                return;
+              }
+              setTimeout(conferirToken, 250);
+            }
+            conferirToken();
+          });
+        }
+
+        async function repararRecebimento() {
+          if (repairInProgress) return;
+          repairInProgress = true;
+          button.disabled = true;
+          if (repairButton) repairButton.disabled = true;
+          status.textContent = 'Reparando o recebimento de avisos...';
+          help.textContent = 'Aguarde enquanto este aparelho renova a inscrição e o vínculo da área.';
+          try {
+            if (!OneSignal.Notifications.permission) {
+              await OneSignal.Notifications.requestPermission();
+            }
+            var push = OneSignal.User && OneSignal.User.PushSubscription;
+            if (!OneSignal.Notifications.permission || !push) {
+              throw new Error('Permissão de notificações não disponível.');
+            }
+            if (push.optedIn === true && typeof push.optOut === 'function') {
+              await push.optOut();
+            }
+            if (typeof push.optIn !== 'function') {
+              throw new Error('O navegador não permitiu renovar a inscrição.');
+            }
+            await push.optIn();
+            var atual = await aguardarInscricao(12000);
+            var token = await aguardarToken(8000);
+            if (!inscricaoAtiva(atual) || !token) {
+              throw new Error('A inscrição não ficou pronta para receber avisos.');
+            }
+            var areaConfirmada = await marcarAreaDaUnidade();
+            if (!areaConfirmada) {
+              throw new Error('A área do aparelho não pôde ser confirmada.');
+            }
+            repairInProgress = false;
+            mostrarEstado(estadoInscricao(), true);
+            help.textContent =
+              'Reparo concluído. A inscrição foi renovada e este aparelho está vinculado à área do morador.';
+          } catch (error) {
+            repairInProgress = false;
+            status.textContent = 'Não foi possível concluir o reparo agora.';
+            help.textContent =
+              'Feche e abra novamente o Portal TACS e tente outra vez. Se o aviso continuar sem chegar, confira também a permissão de notificações do navegador ou do sistema.';
+            button.disabled = false;
+            if (repairButton) {
+              repairButton.hidden = false;
+              repairButton.disabled = false;
+            }
+          }
+        }
+
         async function sincronizarEstado() {
           var atual = estadoInscricao();
           var areaConfirmada = false;
@@ -1128,10 +1206,15 @@
           typeof pushSubscription.addEventListener === 'function'
         ) {
           pushSubscription.addEventListener('change', function () {
+            if (repairInProgress) return;
             sincronizarEstado().catch(function () {
               mostrarEstado();
             });
           });
+        }
+
+        if (repairButton) {
+          repairButton.addEventListener('click', repararRecebimento);
         }
 
         button.addEventListener('click', async function () {
@@ -1172,6 +1255,7 @@
         help.textContent =
           'No iPhone, use o portal instalado na Tela de Início. No Android, use o Chrome.';
         button.disabled = false;
+        if (repairButton) repairButton.hidden = true;
       }
     });
 
