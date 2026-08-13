@@ -30,7 +30,7 @@ assert.match(agenda,/window\.PortalTacsPublicData\.get\(\)/,'Agenda deve continu
 
 // Aparência mais viva sem usar opacity global nos dias indisponíveis.
 assert.match(agenda,/\.portal-agenda\{[^}]*background:#e7f5fb/);
-assert.match(agenda,/data-module=\\"nutricionista\\"[^}]*background:#e9f9ef/);
+assert.match(agenda,/data-module="nutricionista"[^}]*background:#e9f9ef/);
 assert.match(agenda,/\.agenda-day:disabled\{opacity:1;background:#fff3f2/);
 assert.doesNotMatch(agenda,/\.agenda-day:disabled\{opacity:\.58/);
 assert.match(agenda,/\.agenda-day:disabled b\{color:#b54039\}/);
