@@ -52,6 +52,29 @@ const sheet = {
       )
     };
   }
+ };
+
+const noticeRows = [
+  ['ID', 'TITULO', 'MENSAGEM', 'PRIORIDADE', 'VALIDADE', 'ATIVO', 'ATUALIZADO_EM', 'AREA_ID'],
+  ['RECADO_JAPARANDUBA_1', 'Horário da dentista', 'O atendimento com a dentista é até as 11:00 hs!', 'IMPORTANTE', '31/12/2099', true, '', 'JAPARANDUBA'],
+  ['RECADO_MUNTUNS_1', 'Outro território', 'Não pode aparecer em Japaranduba.', 'INFORMATIVO', '31/12/2099', true, '', 'MUNTUNS']
+];
+const noticeSheet = {
+  getName: () => 'RECADOS_PORTAL',
+  getLastRow: () => noticeRows.length,
+  getLastColumn: () => noticeRows[0].length,
+  getRange: (row, column, rowCount, columnCount) => {
+    const selected = noticeRows
+      .slice(row - 1, row - 1 + rowCount)
+      .map(values => values.slice(column - 1, column - 1 + columnCount));
+    return {
+      getDisplayValues: () => selected.map(values => values.map(value => String(value)))
+    };
+  }
+};
+const sharedSpreadsheet = {
+  getSheets: () => [sheet, noticeSheet],
+  getSheetByName: name => name === 'RECADOS_PORTAL' ? noticeSheet : null
 };
 
 const context = {
@@ -64,7 +87,7 @@ const context = {
   String,
   isFinite,
   isNaN,
-  adminTacsV1Planilha_: () => ({getSheets: () => [sheet]}),
+  adminTacsV1Planilha_: () => sharedSpreadsheet,
   PropertiesService: {
     getScriptProperties: () => { throw new Error('Não deve consultar SPREADSHEET_ID quando a fonte compartilhada existe.'); }
   },
@@ -100,11 +123,17 @@ assert.equal(result.modules.medica[0].date, '2099-08-07');
 assert.equal(result.modules.medica[0].common, 15);
 assert.equal(result.areaId, 'JAPARANDUBA');
 assert.equal(result.modules.medica.length, 1);
+assert.equal(result.recados.length, 1);
+assert.equal(result.recados[0].title, 'Horário da dentista');
+assert.match(result.recados[0].message, /dentista é até as 11:00/);
+assert.equal(result.recados[0].active, true);
 
 const muntunsResult = context.publicoAgendasV1Montar_('MUNTUNS');
 assert.equal(muntunsResult.areaId, 'MUNTUNS');
 assert.equal(muntunsResult.modules.medica.length, 1);
 assert.equal(muntunsResult.modules.medica[0].message, 'Atendimento Muntuns');
+assert.equal(muntunsResult.recados.length, 1);
+assert.equal(muntunsResult.recados[0].title, 'Outro território');
 assert.equal(result.modules.MEDICA, undefined);
 
 const response = context.doGet({
@@ -119,4 +148,4 @@ assert.equal(context.publicoAgendasV1Modulo_('Nutricionista'), 'nutricionista');
 assert.equal(context.publicoAgendasV1Booleano_('TRUE'), true);
 assert.equal(context.publicoAgendasV1Booleano_('false'), false);
 
-console.log('Apps Script público: MEDICA normalizada e agenda cancelada publicada sem dados privados.');
+console.log('Apps Script público: agendas preservadas e recados ativos publicados por área.');
