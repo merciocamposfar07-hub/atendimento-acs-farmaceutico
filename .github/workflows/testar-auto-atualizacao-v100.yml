@@ -1,0 +1,64 @@
+name: Testar autoatualizacao v100
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/triggers/testar-auto-v100'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar páginas publicadas e endpoint do Apps Script
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico'
+          TMP="$(mktemp -d)"
+          trap 'rm -rf "$TMP"' EXIT
+          bust="$(date +%s)"
+
+          get(){
+            local path="$1" out="$2"
+            curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 35 "$BASE/$path?t=$bust" -o "$out"
+            test -s "$out"
+          }
+
+          get '' "$TMP/index.html"
+          get 'portal-auto-update.js' "$TMP/auto.js"
+          get 'portal-version.json' "$TMP/version.json"
+          get 'painel-oficial-agendas-vagas.html' "$TMP/agendas.html"
+          get 'painel-oficial-profissionais-servicos.html' "$TMP/profissionais.html"
+          get 'painel-oficial-recados-campanhas.html' "$TMP/recados.html"
+          get 'teste-v1/painel-moradores-v2.html' "$TMP/moradores.html"
+
+          grep -Fq 'portal-auto-update.js?v=20260812-v100' "$TMP/index.html"
+          grep -Fq 'portal-odontologia-segunda-sexta.js?v=20260812-odontologia-imediata-v98' "$TMP/index.html"
+          grep -Fq 'portal-controle-integral.js?v=20260806-desempenho-v5' "$TMP/index.html"
+          grep -Fq 'admin-warmup.js?v=20260812-auto-v100' "$TMP/agendas.html"
+          grep -Fq 'admin-warmup.js?v=20260812-auto-v100' "$TMP/profissionais.html"
+          grep -Fq 'admin-warmup.js?v=20260812-auto-v100' "$TMP/recados.html"
+          grep -Fq '../portal-auto-update.js?v=20260812-v100' "$TMP/moradores.html"
+          grep -Fq 'painel-moradores-transport-v2.js?v=20260811-v361-safari' "$TMP/moradores.html"
+          grep -Fq '↻ Atualizar página' "$TMP/auto.js"
+          grep -Fq "cache:'no-store'" "$TMP/auto.js"
+          grep -Fq 'PAGE_VERSION_KEY' "$TMP/auto.js"
+          node --check "$TMP/auto.js"
+          python - "$TMP/version.json" <<'PY'
+          import json,sys
+          p=json.load(open(sys.argv[1],encoding='utf-8'))
+          assert p.get('version'), p
+          print('VERSAO_PUBLICADA='+p['version'])
+          PY
+
+          API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+          curl -fsSL --retry 2 --connect-timeout 10 --max-time 35 "$API?action=admin_status&callback=__smoke_${bust}&_=$bust" -o "$TMP/apps.txt"
+          test -s "$TMP/apps.txt"
+          grep -Fq "__smoke_${bust}" "$TMP/apps.txt"
+
+          echo 'LIVE_AUTO_UPDATE_V100_OK'
