@@ -214,7 +214,6 @@
 
   function statusText() {
     if (loading) return slots.length ? 'Agenda exibida. Confirmando as vagas atuais…' : 'Atualizando a agenda odontológica pela planilha...';
-    if (cachedSnapshot) return 'Última agenda recebida exibida. Confirmando a disponibilidade atual ao selecionar uma vaga.';
     if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
     if (selection) {
       if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
@@ -222,6 +221,7 @@
       if (selection.slowSync) return 'Vaga selecionada. A atualização da planilha está demorando, mas o envio pelo WhatsApp já está liberado.';
       return 'Vaga selecionada. A quantidade foi reduzida no portal e o envio pelo WhatsApp já está liberado.';
     }
+    if (cachedSnapshot) return 'Última agenda recebida exibida. Confirmando a disponibilidade atual ao selecionar uma vaga.';
     return 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
   }
 
@@ -322,8 +322,16 @@
     if (!preserveSelection) selection = null;
     renderAgenda();
     loadPromise = fetchAgenda().then(function (data) {
+      var pendingSelection = selection;
       applyAgendaData(data, false, Date.now());
       saveAgendaCache(data);
+      if (pendingSelection && selection && selection.requestId === pendingSelection.requestId) {
+        var selectedSlot = slotForSelection(pendingSelection);
+        if (selectedSlot) {
+          if (pendingSelection.type === 'emergencial') selectedSlot.emergency = Math.min(Number(selectedSlot.emergency), pendingSelection.optimisticRemaining);
+          else selectedSlot.common = Math.min(Number(selectedSlot.common), pendingSelection.optimisticRemaining);
+        }
+      }
       loading = false;
       loadPromise = null;
       renderAgenda();
