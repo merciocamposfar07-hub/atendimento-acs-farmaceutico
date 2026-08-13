@@ -96,7 +96,12 @@ function tacsPerformanceV101EhMutacao_(acao) {
   if (!acao) return false;
   if (acao === 'reservar' || acao === 'reservar_odontologia') return true;
   if (/^(salvar_|cancelar_)/.test(acao)) return true;
-  return /^admin_(salvar|criar|remover|restaurar|ativar|desativar)_/.test(acao);
+  if (!/^admin_/.test(acao)) return false;
+
+  // As rotinas administrativas existentes não usam todas o mesmo prefixo verbal.
+  // Ex.: admin_salvar_agenda e admin_publicacoes_salvar_recado. Qualquer verbo de
+  // escrita em uma ação admin invalida somente o cache de leitura; não muda a ação.
+  return /(?:^|_)(salvar|criar|remover|restaurar|ativar|desativar|publicar|cancelar)(?:_|$)/.test(acao);
 }
 
 function tacsPerformanceV101Invalidar_() {
