@@ -1,4 +1,4 @@
-release=desempenho-v101
-requested_at=2026-08-13T01:50:00Z
-source=performance-cache-v101
-commit=8aacf1b
+release=desempenho-v101-estabilidade
+requested_at=2026-08-13T02:05:00Z
+source=performance-stability-v101-1
+commit=3c0d602
