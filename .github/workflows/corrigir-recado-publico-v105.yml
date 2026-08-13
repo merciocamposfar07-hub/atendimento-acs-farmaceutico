@@ -1,0 +1,58 @@
+name: Homologar recado público Portal TACS v105
+
+on:
+  push:
+    branches: [corrigir-recado-publico-v105]
+    paths:
+      - '.github/workflows/corrigir-recado-publico-v105.yml'
+      - 'scripts/_tmp_corrigir_recado_v105.py'
+
+permissions:
+  contents: write
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: corrigir-recado-publico-v105
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar somente correção do recado público
+        run: python3 scripts/_tmp_corrigir_recado_v105.py
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Regressão completa existente
+        run: npm test
+
+      - name: Auditar escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only HEAD | sort | tee /tmp/diff.txt
+          grep -Fx 'apps-script/ZZ_12_PublicoAgendasPortalV1.gs' /tmp/diff.txt
+          grep -Fx 'scripts/test_public_agendas_apps_script.js' /tmp/diff.txt
+          if grep -Ev '^(apps-script/ZZ_12_PublicoAgendasPortalV1.gs|scripts/test_public_agendas_apps_script.js)$' /tmp/diff.txt | grep -q .; then
+            echo 'ERRO: arquivo funcional fora do escopo de recados foi alterado.'
+            exit 1
+          fi
+          ! git diff -- apps-script/ZZ_12_PublicoAgendasPortalV1.gs | grep -E '^[-+].*(odont|WhatsApp|moradores|portal-manutencao|portal-auto-update)'
+
+      - name: Gravar somente arquivos homologados
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add apps-script/ZZ_12_PublicoAgendasPortalV1.gs scripts/test_public_agendas_apps_script.js
+          git commit -m 'Publicar recados ativos no painel_publico v105'
+          git push origin HEAD:corrigir-recado-publico-v105
