@@ -1,0 +1,59 @@
+name: Aplicar acesso admin v102c
+
+on:
+  push:
+    branches: [corrigir-acesso-admin-v102]
+    paths:
+      - '.github/workflows/aplicar-acesso-admin-v102c.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir-e-testar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: corrigir-acesso-admin-v102
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Aplicar correção restrita aos quatro painéis
+        run: |
+          python3 scripts/aplicar_acesso_admin_v102.py
+          python3 scripts/ajustar_testes_admin_v102.py
+      - name: Instalar dependências
+        run: npm ci
+      - name: Testes completos
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm test
+          node --check admin-warmup.js
+          node --check teste-v1/painel-moradores-transport-v2.js
+          node --check scripts/test_admin_fast_v102.js
+      - name: Auditoria rígida de escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only | tee /tmp/escopo-v102.txt
+          INVALIDOS=$(grep -Ev '^(admin-warmup.js|painel-oficial-agendas-vagas.html|painel-oficial-profissionais-servicos.html|painel-oficial-recados-campanhas.html|teste-v1/painel-agendas-v1.html|teste-v1/painel-profissionais-servicos-v1.html|teste-v1/painel-recados-campanhas-v1.html|teste-v1/painel-moradores-v2.html|teste-v1/painel-moradores-transport-v2.js|scripts/test_admin_transport.js|scripts/test_admin_fast_v102.js|scripts/test_quality_gate_v101.js|package.json)$' /tmp/escopo-v102.txt || true)
+          if [ -n "$INVALIDOS" ]; then echo 'Arquivos fora do escopo:'; echo "$INVALIDOS"; exit 1; fi
+          if git diff --name-only | grep -Eq '^(index.html|portal-|agenda-config.js|agenda-enfermeira.js|moradores-autofill.js)'; then
+            echo 'Falha: arquivo do Portal TACS público apareceu no diff.'; exit 1
+          fi
+      - name: Gravar somente após aprovação
+        shell: bash
+        run: |
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add admin-warmup.js painel-oficial-agendas-vagas.html painel-oficial-profissionais-servicos.html painel-oficial-recados-campanhas.html \
+            teste-v1/painel-agendas-v1.html teste-v1/painel-profissionais-servicos-v1.html teste-v1/painel-recados-campanhas-v1.html \
+            teste-v1/painel-moradores-v2.html teste-v1/painel-moradores-transport-v2.js scripts/test_admin_transport.js \
+            scripts/test_admin_fast_v102.js scripts/test_quality_gate_v101.js package.json
+          git commit -m 'Acelerar acesso dos quatro painéis administrativos v102'
+          git push origin HEAD:corrigir-acesso-admin-v102
