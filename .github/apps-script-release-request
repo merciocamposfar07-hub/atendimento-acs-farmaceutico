@@ -1,4 +1,4 @@
-release=confirmacao-individual-reparo-push-1.0.4
-requested_at=2026-08-12T17:22:00Z
-source=confirmacao-reparo-notificacoes
-commit=d9b20447
+release=desempenho-v101
+requested_at=2026-08-13T01:50:00Z
+source=performance-cache-v101
+commit=8aacf1b
