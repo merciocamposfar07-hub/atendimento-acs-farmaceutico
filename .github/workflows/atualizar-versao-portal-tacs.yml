@@ -1,0 +1,59 @@
+name: Atualizar versao do Portal TACS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'portal-*.js'
+      - 'agenda-config.js'
+      - 'moradores-autofill.js'
+      - 'painel-oficial-agendas-vagas.html'
+      - 'painel-oficial-profissionais-servicos.html'
+      - 'painel-oficial-recados-campanhas.html'
+      - 'teste-v1/painel-moradores-v2.html'
+      - 'teste-v1/painel-moradores-transport-v2.js'
+      - 'teste-v1/painel-profissionais-servicos-v1.html'
+      - 'teste-v1/painel-recados-campanhas-v1.html'
+      - 'admin-warmup.js'
+      - 'portal-auto-update.js'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: atualizar-versao-portal-tacs
+  cancel-in-progress: false
+
+jobs:
+  versionar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Registrar nova versao para autoatualizacao
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, datetime
+          sha=os.environ.get('GITHUB_SHA','')[:12] or 'manual'
+          now=datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z')
+          data={'version': sha, 'releasedAt': now, 'scope': 'Portal TACS e painéis administrativos'}
+          with open('portal-version.json','w',encoding='utf-8') as f:
+              json.dump(data,f,ensure_ascii=False,indent=2)
+              f.write('\n')
+          PY
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add portal-version.json
+          git diff --cached --quiet && exit 0
+          git commit -m 'Atualiza versão automática do Portal TACS'
+          for tentativa in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((tentativa*2))
+          done
+          exit 1
