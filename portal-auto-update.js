@@ -109,11 +109,18 @@
         var remote=String(data&&data.version||'').trim();
         if(!remote)return null;
         var pageSeen=readStorage(localStorage,PAGE_VERSION_KEY);
-        var currentUrl=new URL(window.location.href).searchParams.get('ptv')||'';
         writeStorage(localStorage,GLOBAL_VERSION_KEY,remote);
-        if(pageSeen!==remote||currentUrl!==remote){
+
+        // Primeira leitura: apenas registra a versão que esta página recebeu.
+        // Nas próximas aberturas, a ausência de ?ptv na start_url do iOS não deve
+        // causar uma recarga extra. Só recarrega quando a versão publicada mudou.
+        if(!pageSeen){
           writeStorage(localStorage,PAGE_VERSION_KEY,remote);
-          if(currentUrl!==remote){reloadFresh(remote);return remote}
+          return remote;
+        }
+        if(pageSeen!==remote){
+          writeStorage(localStorage,PAGE_VERSION_KEY,remote);
+          reloadFresh(remote);
         }
         return remote;
       })
