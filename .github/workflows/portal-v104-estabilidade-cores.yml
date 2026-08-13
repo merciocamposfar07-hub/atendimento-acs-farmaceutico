@@ -1,0 +1,75 @@
+name: Homologar Portal TACS v104
+
+on:
+  push:
+    branches: [portal-estabilidade-cores-v104]
+    paths:
+      - '.github/workflows/portal-v104-estabilidade-cores.yml'
+      - 'scripts/_tmp_portal_v104.py'
+
+permissions:
+  contents: write
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: portal-estabilidade-cores-v104
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar somente o pacote autorizado
+        run: python3 scripts/_tmp_portal_v104.py
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Regressão completa existente
+        run: npm test
+
+      - name: Regressão específica Portal v104
+        run: node scripts/test_portal_v104.js
+
+      - name: Testar leitura pública real do Apps Script
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+          OK=0
+          for I in 1 2 3 4 5; do
+            OUT="/tmp/publico-$I.json"
+            curl -L -sS --connect-timeout 5 --max-time 25 "$BASE?action=painel_publico&areaId=JAPARANDUBA&callback=&_=$RANDOM" > "$OUT" || true
+            if grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' "$OUT"; then OK=$((OK+1)); fi
+          done
+          echo "PUBLIC_READ_OK=$OK/5"
+          test "$OK" -ge 4
+
+      - name: Auditar escopo funcional
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only HEAD | sort | tee /tmp/diff.txt
+          grep -Fx 'agenda-enfermeira.js' /tmp/diff.txt
+          grep -Fx 'index.html' /tmp/diff.txt
+          grep -Fx 'portal-controle-integral.js' /tmp/diff.txt
+          if grep -E '^(portal-odontologia-segunda-sexta.js|portal-ajustes-finais.js|agenda-config.js|portal-manutencao.js|moradores-autofill.js|portal-public-data.js|portal-auto-update.js)$' /tmp/diff.txt; then
+            echo 'ERRO: arquivo funcional fora do pacote foi alterado.'
+            exit 1
+          fi
+
+      - name: Gravar somente alteração aprovada
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add agenda-enfermeira.js index.html portal-controle-integral.js scripts/test_portal_v104.js
+          git commit -m 'Estabilizar agendas e cores do Portal TACS v104'
+          git push origin HEAD:portal-estabilidade-cores-v104
