@@ -1,4 +1,4 @@
-release=desempenho-v101-estabilidade
-requested_at=2026-08-13T02:05:00Z
-source=performance-stability-v101-1
-commit=3c0d602
+release=recado-publico-v105
+requested_at=2026-08-13T11:04:00Z
+source=portal-recados-publicos
+commit=fefc9cc
