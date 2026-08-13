@@ -1,0 +1,37 @@
+name: Finalizar desempenho v101
+
+on:
+  push:
+    branches: [desempenho-v101]
+    paths:
+      - 'scripts/finalize_performance_v101.js'
+      - '.github/workflows/finalizar-desempenho-v101.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finalizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: desempenho-v101
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Aplicar refinamentos com assertions
+        run: node scripts/finalize_performance_v101.js
+      - name: Validar sintaxe
+        run: |
+          node --check portal-odontologia-segunda-sexta.js
+          node --check --input-type=commonjs < <(sed -n '/<script>/,/<\/script>/p' index.html | tail -n +2 | head -n -1) || true
+      - name: Gravar na branch isolada
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Refinar desempenho v101 com fallback seguro'
+          git push origin HEAD:desempenho-v101
