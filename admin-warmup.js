@@ -2,6 +2,7 @@
   'use strict';
 
   function garantirAutoAtualizacao(){
+    if(typeof document==='undefined'||typeof document.getElementById!=='function'||typeof document.createElement!=='function')return;
     function ativar(){
       try{
         var a=window.PortalTacsAtualizacao;
