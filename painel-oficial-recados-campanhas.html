@@ -63,7 +63,7 @@
     painel.then(function(html){
       var aquecimento=window.PortalTacsAdminWarmup;
       var conexaoSegura=JSON.stringify(aquecimento&&aquecimento.resultado||{ok:false,preparando:true}).replace(/</g,'\\u003c');
-      var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt><scr'+'ipt src="../admin-warmup.js?v=20260813-admin-v102"></scr'+'ipt>';
+      var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt>';
       html=substituir(html,'<head>',bootstrap);
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
       html=substituir(html,'</body>',complementoStatus()+'</body>');
