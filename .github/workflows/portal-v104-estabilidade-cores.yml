@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/portal-v104-estabilidade-cores.yml'
       - 'scripts/_tmp_portal_v104.py'
+      - 'scripts/test_notification_repair_button.js'
 
 permissions:
   contents: write
