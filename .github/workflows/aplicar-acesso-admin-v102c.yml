@@ -8,6 +8,7 @@ on:
       - 'scripts/aplicar_acesso_admin_v102.py'
       - 'scripts/ajustar_testes_admin_v102.py'
       - 'scripts/ajustar_fallback_safari_admin_v102.py'
+      - 'scripts/ajustar_warmup_gate_admin_v102.py'
 
 permissions:
   contents: write
@@ -30,6 +31,7 @@ jobs:
           python3 scripts/aplicar_acesso_admin_v102.py
           python3 scripts/ajustar_fallback_safari_admin_v102.py
           python3 scripts/ajustar_testes_admin_v102.py
+          python3 scripts/ajustar_warmup_gate_admin_v102.py
       - name: Instalar dependências
         run: npm ci
       - name: Testes completos
