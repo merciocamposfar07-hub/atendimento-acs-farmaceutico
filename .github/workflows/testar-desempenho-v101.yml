@@ -2,13 +2,17 @@ name: Testar desempenho v101
 
 on:
   push:
-    branches: [desempenho-v101]
+    branches: [desempenho-v101, main]
     paths:
       - '.github/workflows/testar-desempenho-v101.yml'
+      - '.github/workflows/benchmark-desempenho-v101.yml'
+      - '.github/apps-script-release-request'
       - 'admin-warmup.js'
       - 'portal-auto-update.js'
       - 'portal-odontologia-segunda-sexta.js'
       - 'painel-oficial-agendas-vagas.html'
+      - 'painel-oficial-profissionais-servicos.html'
+      - 'painel-oficial-recados-campanhas.html'
       - 'index.html'
       - 'apps-script/ZZZZ_21_PerformanceCacheV101.gs'
       - 'scripts/test_performance_v101.js'
@@ -24,10 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - name: Baixar branch de homologação
+      - name: Baixar versão em teste
         uses: actions/checkout@v4
         with:
-          ref: desempenho-v101
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
 
       - name: Preparar Node
@@ -54,11 +58,12 @@ jobs:
           node --check --input-type=commonjs < apps-script/ZZZZ_21_PerformanceCacheV101.gs
 
       - name: Auditoria de escopo — bloquear alterações fora do pacote autorizado
+        if: github.ref_name == 'desempenho-v101'
         run: |
           set -euo pipefail
           git fetch origin main --quiet
           git diff --name-only origin/main...HEAD | tee /tmp/escopo.txt
-          INVALIDOS=$(grep -Ev '^(admin-warmup.js|portal-auto-update.js|portal-odontologia-segunda-sexta.js|painel-oficial-agendas-vagas.html|painel-oficial-profissionais-servicos.html|painel-oficial-recados-campanhas.html|index.html|apps-script/ZZZZ_21_PerformanceCacheV101.gs|scripts/build_apps_script_release.js|scripts/test_performance_v101.js|scripts/test_admin_transport.js|package.json|.github/workflows/testar-desempenho-v101.yml)$' /tmp/escopo.txt || true)
+          INVALIDOS=$(grep -Ev '^(admin-warmup.js|portal-auto-update.js|portal-odontologia-segunda-sexta.js|painel-oficial-agendas-vagas.html|painel-oficial-profissionais-servicos.html|painel-oficial-recados-campanhas.html|index.html|apps-script/ZZZZ_21_PerformanceCacheV101.gs|scripts/build_apps_script_release.js|scripts/test_performance_v101.js|scripts/test_admin_transport.js|package.json|.github/apps-script-release-request|.github/workflows/testar-desempenho-v101.yml|.github/workflows/benchmark-desempenho-v101.yml)$' /tmp/escopo.txt || true)
           if [ -n "$INVALIDOS" ]; then
             echo 'Arquivos fora do escopo autorizado:'
             echo "$INVALIDOS"
@@ -83,6 +88,7 @@ jobs:
           fi
 
       - name: Medir linha de base do Apps Script atualmente em produção
+        if: github.ref_name == 'desempenho-v101'
         shell: bash
         run: |
           set -euo pipefail
