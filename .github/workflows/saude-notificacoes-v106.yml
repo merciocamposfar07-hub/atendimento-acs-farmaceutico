@@ -1,5 +1,6 @@
 name: Saude das notificacoes V106
 
+# Reexecução após alinhar o cache-buster do módulo de reparo.
 on:
   push:
     branches: [notificacoes-saude-v106]
