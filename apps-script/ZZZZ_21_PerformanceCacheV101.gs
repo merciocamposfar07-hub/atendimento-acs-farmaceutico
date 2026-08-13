@@ -77,13 +77,19 @@ doPost = function (e) {
 
   var parametros = e && e.parameter ? e.parameter : {};
   var acao = String(parametros.action || '').trim().toLowerCase();
-  var resposta = tacsPerformanceV101DoPostAnterior_(e);
+  var invalida = tacsPerformanceV101EhMutacao_(acao);
 
-  if (tacsPerformanceV101EhMutacao_(acao)) {
-    tacsPerformanceV101Invalidar_();
+  if (!invalida) {
+    return tacsPerformanceV101DoPostAnterior_(e);
   }
 
-  return resposta;
+  try {
+    return tacsPerformanceV101DoPostAnterior_(e);
+  } finally {
+    // Mesmo se uma rotina de gravação lançar erro depois de uma alteração parcial,
+    // a próxima leitura não reutiliza um snapshot potencialmente antigo.
+    tacsPerformanceV101Invalidar_();
+  }
 };
 
 function tacsPerformanceV101EhMutacao_(acao) {
