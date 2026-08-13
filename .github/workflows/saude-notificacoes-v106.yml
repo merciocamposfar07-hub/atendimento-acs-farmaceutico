@@ -30,7 +30,19 @@ jobs:
           cache: npm
 
       - name: Aplicar alteracoes controladas
-        run: python3 scripts/apply_saude_notificacoes_v106.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apply_saude_notificacoes_v106.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('painel-oficial-recados-campanhas.html')
+          s=p.read_text(encoding='utf-8')
+          old='admin-warmup.js?v=20260813-notif-health-v106'
+          if s.count(old)!=1:
+              raise SystemExit('Warm-up temporariamente alterado não apareceu exatamente uma vez.')
+          p.write_text(s.replace(old,'admin-warmup.js?v=20260813-admin-v103',1),encoding='utf-8')
+          PY
 
       - name: Validar sintaxe
         shell: bash
