@@ -160,8 +160,13 @@ function verifyStaticSource(config) {
   );
   assert.match(official, /rel="preconnect" href="https:\/\/script\.google\.com"/);
   assert.doesNotMatch(official, /Promise\.all\(\[painel,conexao/);
-  assert.match(official, /painel\.then\(function\(html\)/);
-  assert.match(official, /window\.PortalTacsAdminPreload=/);
+  if (config.official === 'painel-oficial-agendas-vagas.html') {
+    assert.doesNotMatch(official, /fetch\([^)]*teste-v1\/painel-agendas-v1\.html/);
+    assert.match(official, /DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV101'/);
+  } else {
+    assert.match(official, /painel\.then\(function\(html\)/);
+    assert.match(official, /window\.PortalTacsAdminPreload=/);
+  }
   assert.doesNotMatch(official, /aplicarRetry|aplicarConexao|aplicarReconexao|reenviarOperacao/);
 }
 
