@@ -148,7 +148,7 @@ function jsonp(action,extra,cb){
   var name='mrV2Cb'+Date.now()+Math.floor(Math.random()*100000);
   var script=document.createElement('script');
   var done=false;
-  var timer=setTimeout(function(){finish({ok:false,message:'O servidor demorou para responder à consulta.'})},18000);
+  var timer=setTimeout(function(){finish({ok:false,message:'O servidor demorou para responder à consulta.'})},5500);
   function finish(result){
     if(done)return;
     done=true;
@@ -219,95 +219,42 @@ function pollResult(){
       finish({ok:false,message:'A confirmação do servidor ainda está em processamento. A operação não foi reenviada.'});
       return;
     }
-    current.nextWait=Math.min(8000,current.nextWait+1000);
+    current.nextWait=Math.min(1800,Math.max(550,current.nextWait+150));
     schedulePoll();
   });
 }
 
+function enviarPostRapidoV102(campos){
+  if(typeof window.fetch!=='function'||typeof window.URLSearchParams!=='function')return false;
+  try{
+    var corpo=new URLSearchParams();
+    Object.keys(campos||{}).forEach(function(k){corpo.append(k,String(campos[k]==null?'':campos[k]))});
+    window.fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',cache:'no-store',credentials:'omit',body:corpo}).catch(function(){});
+    return true;
+  }catch(e){return false}
+}
 function post(action,payload,resultAction,cb){
   if(active){cb({ok:false,message:'Aguarde a operação anterior terminar.'});return}
-  var rid=requestId(action);
-  var fields={};
-  Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});
-  fields.action=action;
-  fields.requestId=rid;
-
-  var frame=document.createElement('iframe');
-  var form=document.createElement('form');
-  var frameName='mrV2Frame'+Date.now()+Math.floor(Math.random()*1000);
-  frame.name=frameName;
-  frame.setAttribute('name',frameName);
-  frame.className='bridge';
-  frame.setAttribute('aria-hidden','true');
-  frame.src='about:blank';
-  form.method='POST';
-  form.action=API+'?_='+Date.now();
-  form.target=frameName;
-  form.setAttribute('target',frameName);
-  form.className='bridge';
-
-  Object.keys(fields).forEach(function(k){
-    var input=document.createElement('input');
-    input.type='hidden';
-    input.name=k;
-    input.value=String(fields[k]==null?'':fields[k]);
-    form.appendChild(input);
-  });
-
-  active={
-    id:rid,
-    action:action,
-    resultAction:resultAction,
-    callback:cb,
-    frame:frame,
-    form:form,
-    submitTimer:null,
-    pollTimer:null,
-    nextWait:2500,
-    limit:0,
-    timeout:null
-  };
-
-  var submitted=false;
-  function submitOnce(){
-    if(submitted||!active||active.id!==rid)return;
-    submitted=true;
-    clearTimeout(active.submitTimer);
-    active.submitTimer=null;
-    active.limit=Date.now()+74000;
-    active.timeout=setTimeout(function(){
-      finish({ok:false,message:'A confirmação do servidor ainda está em processamento. A operação não foi reenviada.'});
-    },75000);
-    try{
-      form.submit();
-    }catch(erro){
-      finish({ok:false,message:'O Safari não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});
-      return;
-    }
-    schedulePoll();
+  var rid=requestId(action),fields={};Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});fields.action=action;fields.requestId=rid;
+  var escrita=/(?:salvar|situacao|consolid|ativar|remover|restaurar|criar)/i.test(action);
+  var duration=escrita?55000:20000;
+  active={id:rid,action:action,resultAction:resultAction,callback:cb,frame:null,form:null,submitTimer:null,pollTimer:null,nextWait:350,limit:Date.now()+duration,timeout:setTimeout(function(){finish({ok:false,message:escrita?'O servidor ainda está confirmando a alteração. Aguarde antes de tentar outra vez.':'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'})},duration+500)};
+  var login=el('login'),loginTacs=el('loginTacs'),logout=el('logout');if(login)login.disabled=true;if(loginTacs)loginTacs.disabled=true;if(logout)logout.disabled=true;
+  if(enviarPostRapidoV102(fields)){schedulePoll();return}
+  var frame=document.createElement('iframe'),form=document.createElement('form'),frameName='mrV102Frame'+Date.now()+Math.floor(Math.random()*1000);
+  frame.name=frameName;frame.setAttribute('name',frameName);frame.className='bridge';frame.setAttribute('aria-hidden','true');frame.src='about:blank';
+  form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.setAttribute('target',frameName);form.className='bridge';
+  Object.keys(fields).forEach(function(k){var input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(fields[k]==null?'':fields[k]);form.appendChild(input)});
+  active.frame=frame;active.form=form;document.body.appendChild(frame);document.body.appendChild(form);
+  var enviado=false;
+  function enviarUmaVez(){
+    if(enviado)return;
+    enviado=true;
+    try{form.submit()}catch(erro){finish({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'})}
   }
-
-  function submitAfterTargetRegistration(){
-    if(typeof window.requestAnimationFrame==='function'){
-      window.requestAnimationFrame(function(){
-        window.requestAnimationFrame(submitOnce);
-      });
-      return;
-    }
-    setTimeout(submitOnce,60);
-  }
-
-  var login=el('login');
-  var loginTacs=el('loginTacs');
-  var logout=el('logout');
-  if(login)login.disabled=true;
-  if(loginTacs)loginTacs.disabled=true;
-  if(logout)logout.disabled=true;
-  frame.addEventListener('load',submitAfterTargetRegistration,{once:true});
-  document.body.appendChild(frame);
-  document.body.appendChild(form);
-  submitAfterTargetRegistration();
-  active.submitTimer=setTimeout(submitOnce,180);
+  if(window.requestAnimationFrame){window.requestAnimationFrame(function(){window.requestAnimationFrame(enviarUmaVez)})}
+  active.submitTimer=setTimeout(enviarUmaVez,180);
+  schedulePoll();
 }
 
 function updateAreaHeading(areaName){

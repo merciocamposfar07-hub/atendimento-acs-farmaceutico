@@ -109,8 +109,8 @@ function verifyStaticSource(config) {
   if (config.file === 'teste-v1/painel-recados-campanhas-v1.html') {
     assert.match(base, /event\.source!==ativa\.frame\.contentWindow/);
     assert.match(base, /frame\.setAttribute\('name',frameName\)/);
-    assert.match(base, /requestAnimationFrame\(function\(\)\{window\.requestAnimationFrame\(enviarUmaVez\)\}\)/);
-    assert.match(base, /submitTimer=setTimeout\(enviarUmaVez,180\)/);
+    assert.match(base, /mode:'no-cors'/);
+    assert.match(base, /if\(enviarPostRapidoV102\(campos\)\)\{agendarConsulta\(\);return\}/);
     assert.match(base, /input\[type="date"\]\.campo\{[^}]*min-inline-size:0[^}]*max-inline-size:100%/);
     assert.match(base, /\.validadeCampo\{[^}]*overflow:hidden[^}]*contain:inline-size/);
     assert.equal((base.match(/class="validadeCampo"/g) || []).length, 2);
@@ -121,15 +121,11 @@ function verifyStaticSource(config) {
   } else {
     assert.match(base, new RegExp(`event\\.source!==frame\\.contentWindow`));
   }
-  assert.match(base, /proximaEspera:2500/);
-  assert.match(base, /Math\.min\(8000,[^)]*\+1000\)/);
-  assert.match(base, /},25000\)/);
-  if (config.file === 'teste-v1/painel-recados-campanhas-v1.html') {
-    assert.match(base, /ativa\.limite=Date\.now\(\)\+74000/);
-  } else {
-    assert.match(base, /limite:Date\.now\(\)\+74000/);
-  }
-  assert.match(base, /},75000\)/);
+  assert.match(base, /mode:'no-cors'/, `${config.file} não possui POST rápido sem iframe no caminho principal.`);
+  assert.match(base, /proximaEspera:350/, `${config.file} não inicia a confirmação rapidamente.`);
+  assert.match(base, /credentials:'omit'/, `${config.file} não preserva o POST administrativo sem credenciais Google.`);
+  assert.doesNotMatch(base, /proximaEspera:2500/);
+  assert.doesNotMatch(base, /74000|75000/);
   assert.match(base, /portalTacsPublicDataV3/);
   assert.match(base, /portalTacsPublicInvalidateAtV1/);
   assert.match(base, /if\(ativa\)/);
@@ -156,7 +152,7 @@ function verifyStaticSource(config) {
   assert.match(official, /v=202608/);
   assert.match(
     official,
-    /admin-warmup\.js\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101)/
+    /admin-warmup\.js\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v102)/
   );
   assert.match(official, /rel="preconnect" href="https:\/\/script\.google\.com"/);
   assert.doesNotMatch(official, /Promise\.all\(\[painel,conexao/);

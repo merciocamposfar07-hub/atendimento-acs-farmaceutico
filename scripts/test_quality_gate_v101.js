@@ -25,7 +25,7 @@ const comandoTestes = packageJson.scripts && packageJson.scripts.test || '';
 const testesEsperados = [
   'test_agenda_apps_script.js','test_public_agendas_apps_script.js','test_public_content_multiarea.js',
   'test_dynamic_professionals_apps_script.js','test_apps_script_module_chain.js','test_build_apps_script_release.js',
-  'test_dom_flows.js','test_admin_transport.js','test_dynamic_professionals_dom.js','test_public_data_transport.js',
+  'test_dom_flows.js','test_admin_transport.js','test_admin_fast_v102.js','test_dynamic_professionals_dom.js','test_public_data_transport.js',
   'test_moradores_v145.js','test_portal_maintenance.js','test_territorio_csv_notifications.js',
   'test_public_area_identification.js','test_public_area_resolver.js','test_publicacoes_territoriais.js',
   'test_territorio_dom.js','test_notification_repair_button.js','test_notification_repair_confirmation.js',
@@ -72,12 +72,12 @@ registrar('desempenho', 'Arquivo neutro do backend é incluído no release para 
 // Compatibilidade e resiliência, especialmente Safari/iPhone.
 registrar('resiliencia', 'Fluxo Safari/iframe possui teste dedicado', contem(adminTransport, 'transporte Safari'));
 registrar('resiliencia', 'Resposta direta encerra polling duplicado', contem(adminTransport, 'iniciou polling mesmo após a resposta direta'));
-registrar('resiliencia', 'Pré-aquecimento tolera DOM mínimo', contem(warmup, "typeof document.getElementById!=='function'"));
+registrar('resiliencia', 'Pré-aquecimento tolera DOM mínimo', contem(warmup, "typeof document==='undefined'||typeof document.createElement!=='function'||!document.head"));
 registrar('resiliencia', 'Atualização funciona mesmo sem fetch nativo', contem(auto, "if(typeof fetch!=='function')return Promise.resolve(null);"));
 registrar('resiliencia', 'Painéis fazem preconnect com Apps Script', [agenda, profissionais, recados].every(t => contem(t, 'rel="preconnect" href="https://script.google.com"')));
 registrar('resiliencia', 'Falha de rede não duplica envio administrativo', contem(adminTransport, 'deve enviar cada operação uma única vez'));
 registrar('resiliencia', 'Sessão expirada volta ao PIN sem alerta falso', contem(adminTransport, 'sessão anterior não pôde ser reutilizada'));
-registrar('resiliencia', 'Autoatualização é carregada nos painéis', [agenda, profissionais, recados].every(t => contem(t, 'admin-warmup.js?v=20260812-auto-v101')));
+registrar('resiliencia', 'Pré-aquecimento administrativo é carregado sem UI do Portal', contem(agenda, 'admin-warmup.js?v=20260812-auto-v101') && contem(profissionais, 'admin-warmup.js?v=20260813-admin-v102') && contem(recados, 'admin-warmup.js?v=20260813-admin-v102') && !contem(warmup, 'portal-auto-update.js'));
 
 // Usabilidade e acessibilidade voltadas a agentes leigos e uso móvel.
 registrar('usabilidade', 'Viewport móvel preservado nos três painéis', [agenda, profissionais, recados].every(t => contem(t, 'width=device-width,initial-scale=1,viewport-fit=cover')));
