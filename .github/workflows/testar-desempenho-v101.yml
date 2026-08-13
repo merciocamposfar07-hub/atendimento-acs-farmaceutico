@@ -75,6 +75,12 @@ jobs:
           grep -Fq "Solicitar atendimento odontológico de emergência (dentista)" portal-odontologia-segunda-sexta.js
           grep -Fq "TACS_PERFORMANCE_CACHE_V101" apps-script/ZZZZ_21_PerformanceCacheV101.gs
           grep -Fq "Aguarde a confirmação dos dados atuais antes de salvar." painel-oficial-agendas-vagas.html
+          grep -Fq "if(!pageSeen)" portal-auto-update.js
+          grep -Fq "if(pageSeen!==remote)" portal-auto-update.js
+          if grep -Fq "currentUrl=new URL" portal-auto-update.js; then
+            echo 'Falha: a ausência de ?ptv ainda provocaria recarga desnecessária.'
+            exit 1
+          fi
 
       - name: Medir linha de base do Apps Script atualmente em produção
         shell: bash
