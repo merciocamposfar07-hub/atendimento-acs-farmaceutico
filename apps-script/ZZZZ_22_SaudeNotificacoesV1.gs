@@ -1,0 +1,351 @@
+/**
+ * ZZZZ_22_SaudeNotificacoesV1.gs
+ * Portal TACS — Saúde das notificações por morador/aparelho V1.0.0
+ *
+ * Objetivo:
+ * - associar uma Subscription ID do OneSignal a um morador ATIVO sem expor
+ *   CPF/CNS, telefone ou token push ao OneSignal como identidade do morador;
+ * - permitir ao administrador/TACS autorizado visualizar o estado técnico dos
+ *   aparelhos da própria área;
+ * - permitir solicitar reparo geral da área sem tentar alterar remotamente a
+ *   permissão do navegador. O reparo é executado no aparelho quando o Portal
+ *   volta a ser aberto.
+ */
+var TACS_SAUDE_NOTIFICACOES_V1 = Object.freeze({
+  VERSAO:'1.0.0',
+  DEFAULT_AREA_ID:'JAPARANDUBA',
+  DEFAULT_APP_ID:'e2294b98-c72b-4f8c-a055-de28979676dc',
+  APP_ID_PROPERTIES:Object.freeze(['TACS_ONESIGNAL_APP_ID','ONESIGNAL_APP_ID']),
+  API_KEY_PROPERTIES:Object.freeze([
+    'TACS_ONESIGNAL_API_KEY','ONESIGNAL_APP_API_KEY','ONESIGNAL_REST_API_KEY','ONESIGNAL_API_KEY'
+  ]),
+  REGISTRY_SHEET:'TACS_NOTIFICACOES_DISPOSITIVOS',
+  REGISTRY_HEADERS:Object.freeze([
+    'SUBSCRIPTION_ID','AREA_ID','ID_PORTAL','ONESIGNAL_ID','TIPO_APARELHO','NAVEGADOR','SISTEMA',
+    'PERMISSAO','OPTED_IN','TOKEN_ATIVO','AREA_CONFIRMADA','ESTADO_LOCAL','ULTIMO_CHECKIN',
+    'REPARO_ID_APLICADO','CRIADO_EM','ATUALIZADO_EM'
+  ]),
+  REPAIR_SHEET:'TACS_REPAROS_NOTIFICACOES_AREA',
+  REPAIR_HEADERS:Object.freeze(['AREA_ID','REPARO_ID','SOLICITADO_EM','OPERADOR_ID']),
+  RESULT_PREFIX:'tacs_saude_notificacoes_v1_',
+  RESULT_SECONDS:300,
+  USER_CACHE_PREFIX:'tacs_saude_onesignal_user_v1_',
+  USER_CACHE_SECONDS:90,
+  MAX_DEVICES:120,
+  STALE_DAYS:30,
+  ONESIGNAL_BASE:'https://api.onesignal.com'
+});
+
+var saudeNotificacoesV1DoGetAnterior_;
+var saudeNotificacoesV1DoPostAnterior_;
+var saudeNotificacoesV1GetAnterior_;
+var saudeNotificacoesV1PostAnterior_;
+
+(function instalarSaudeNotificacoesV1_(){
+  if(typeof doGet==='function'){
+    saudeNotificacoesV1DoGetAnterior_=doGet;
+    doGet=function(e){var r=saudeNotificacoesV1TratarGet_(e);return r||saudeNotificacoesV1DoGetAnterior_(e);};
+  }
+  if(typeof doPost==='function'){
+    saudeNotificacoesV1DoPostAnterior_=doPost;
+    doPost=function(e){var r=saudeNotificacoesV1TratarPost_(e);return r||saudeNotificacoesV1DoPostAnterior_(e);};
+  }
+  if(typeof tratarGetPainelTacs_==='function'){
+    saudeNotificacoesV1GetAnterior_=tratarGetPainelTacs_;
+    tratarGetPainelTacs_=function(e){var r=saudeNotificacoesV1TratarGet_(e);return r||saudeNotificacoesV1GetAnterior_(e);};
+  }
+  if(typeof tratarPostPainelTacs_==='function'){
+    saudeNotificacoesV1PostAnterior_=tratarPostPainelTacs_;
+    tratarPostPainelTacs_=function(e){var r=saudeNotificacoesV1TratarPost_(e);return r||saudeNotificacoesV1PostAnterior_(e);};
+  }
+})();
+
+function saudeNotificacoesV1TratarGet_(e){
+  var p=e&&e.parameter?e.parameter:{};
+  var action=saudeNotificacoesV1Texto_(p.action).toLowerCase();
+  if(['publico_notificacao_checkin_result','admin_notificacoes_saude_result'].indexOf(action)===-1)return null;
+  var requestId=saudeNotificacoesV1Texto_(p.requestId);
+  if(!/^[A-Za-z0-9_-]{8,160}$/.test(requestId))return null;
+  var resultado=saudeNotificacoesV1LerResultado_(requestId);
+  if(!resultado)return null;
+  return saudeNotificacoesV1ResponderJson_({ok:true,pendente:false,requestId:requestId,result:resultado},p.callback);
+}
+
+function saudeNotificacoesV1TratarPost_(e){
+  var p=e&&e.parameter?e.parameter:{};
+  var action=saudeNotificacoesV1Texto_(p.action).toLowerCase();
+  if(['publico_notificacao_checkin','admin_notificacoes_saude','admin_notificacoes_solicitar_reparo_area'].indexOf(action)===-1)return null;
+  var requestId=saudeNotificacoesV1Texto_(p.requestId),resultado;
+  try{
+    requestId=saudeNotificacoesV1ValidarRequestId_(requestId);
+    if(action==='publico_notificacao_checkin'){
+      resultado=saudeNotificacoesV1CheckinPublico_(p);
+    }else{
+      var acesso=tacsTerritorioV1ValidarAcesso_(p,false);
+      saudeNotificacoesV1ExigirAcesso_(acesso);
+      var contexto=moradoresAdminV1ResolverContexto_(acesso,p.areaId||p.area||'');
+      resultado=action==='admin_notificacoes_saude'
+        ?saudeNotificacoesV1SaudeAdmin_(contexto,acesso)
+        :saudeNotificacoesV1SolicitarReparoArea_(contexto,acesso);
+    }
+  }catch(erro){resultado={ok:false,message:saudeNotificacoesV1Erro_(erro)};}
+  if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId))saudeNotificacoesV1GuardarResultado_(requestId,resultado);
+  return saudeNotificacoesV1ResponderPost_(requestId,resultado);
+}
+
+function saudeNotificacoesV1CheckinPublico_(p){
+  var subscriptionId=saudeNotificacoesV1Texto_(p.subscriptionId||p.subscription_id).toLowerCase();
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(subscriptionId)){
+    throw new Error('A inscrição deste aparelho ainda não está pronta para ser vinculada.');
+  }
+  var areaId=moradoresAdminV1NormalizarAreaId_(p.areaId||p.area||TACS_SAUDE_NOTIFICACOES_V1.DEFAULT_AREA_ID);
+  var morador=saudeNotificacoesV1ResolverMoradorAtivo_(p.documento||p.cpf||p.cns||'',areaId);
+  var agora=new Date(),agoraIso=saudeNotificacoesV1Data_(agora);
+  var permission=saudeNotificacoesV1Booleano_(p.permission||p.permissao);
+  var optedIn=saudeNotificacoesV1Booleano_(p.optedIn||p.opted_in);
+  var tokenAtivo=saudeNotificacoesV1Booleano_(p.tokenAtivo||p.token_ativo);
+  var areaConfirmada=saudeNotificacoesV1Booleano_(p.areaConfirmada||p.area_confirmada);
+  var reparoAplicado=saudeNotificacoesV1Texto_(p.reparoAplicado||p.reparo_id_aplicado).slice(0,160);
+  var estadoLocal=saudeNotificacoesV1EstadoLocal_(permission,optedIn,tokenAtivo,areaConfirmada);
+  var props=PropertiesService.getScriptProperties();
+  var appId=saudeNotificacoesV1PrimeiraPropriedade_(props,TACS_SAUDE_NOTIFICACOES_V1.APP_ID_PROPERTIES)||TACS_SAUDE_NOTIFICACOES_V1.DEFAULT_APP_ID;
+  var apiKey=saudeNotificacoesV1PrimeiraPropriedade_(props,TACS_SAUDE_NOTIFICACOES_V1.API_KEY_PROPERTIES);
+  var onesignalId='';
+  if(apiKey){
+    try{onesignalId=saudeNotificacoesV1IdentidadePorSubscription_(appId,apiKey,subscriptionId);}catch(erroOneSignal){}
+  }
+  var atual=saudeNotificacoesV1UpsertRegistro_({
+    subscriptionId:subscriptionId,areaId:areaId,idPortal:morador.idPortal,onesignalId:onesignalId,
+    tipoAparelho:saudeNotificacoesV1Texto_(p.tipoAparelho||p.device).slice(0,60),
+    navegador:saudeNotificacoesV1Texto_(p.navegador||p.browser).slice(0,60),
+    sistema:saudeNotificacoesV1Texto_(p.sistema||p.os).slice(0,80),
+    permission:permission,optedIn:optedIn,tokenAtivo:tokenAtivo,areaConfirmada:areaConfirmada,
+    estadoLocal:estadoLocal,ultimoCheckin:agoraIso,reparoAplicado:reparoAplicado,atualizadoEm:agoraIso
+  });
+  var reparo=saudeNotificacoesV1UltimoReparoArea_(areaId);
+  var pendente=Boolean(reparo&&reparo.reparoId&&reparo.reparoId!==atual.reparoAplicado);
+  return {
+    ok:true,areaId:areaId,registrado:true,estadoLocal:estadoLocal,
+    reparoPendente:pendente,reparoId:pendente?reparo.reparoId:'',
+    solicitadoEm:pendente?reparo.solicitadoEm:'',
+    message:pendente?'Há uma atualização de avisos solicitada para este aparelho.':'A situação deste aparelho foi registrada.'
+  };
+}
+
+function saudeNotificacoesV1ResolverMoradorAtivo_(documento,areaId){
+  var doc=moradoresAdminV1Digitos_(documento);
+  var cpf=/^[0-9]{11}$/.test(doc)&&moradoresAdminV1CpfValido_(doc)?doc:'';
+  var cns=/^[0-9]{15}$/.test(doc)?doc:'';
+  if(!cpf&&!cns)throw new Error('Informe um CPF válido ou os 15 números do CNS para vincular este aparelho.');
+  var area=moradoresAdminV1EncontrarAreaConfigurada_(areaId);
+  if(!area||area.publica===false)throw new Error('A área deste morador não está disponível.');
+  var contexto={perfil:'PUBLICO',operadorId:'PUBLICO',agenteId:area.agenteId,areaId:area.areaId,areaNome:area.areaNome,unidadeId:area.unidadeId,planilhaId:area.planilhaId,permissoes:[]};
+  var fonte=moradoresAdminV1LocalizarFonte_(contexto);
+  var metaMap=moradoresAdminV1LerMetaMap_(fonte.ss,contexto);
+  var encontrados=[];
+  moradoresAdminV1LocalizarTodosPorDocumento_(fonte,cpf,cns).forEach(function(registro){
+    var origemKey=moradoresAdminV1ChaveOrigem_(registro.origem);
+    var chave=moradoresAdminV1ChaveRegistro_(registro.morador);
+    var meta=metaMap.porOrigem[origemKey]||metaMap.porChave[chave]||null;
+    var situacao=moradoresAdminV1Texto_((meta&&meta.situacao)||registro.morador.status||'ATIVO').toUpperCase();
+    if(situacao==='ATIVO')encontrados.push(registro.morador);
+  });
+  if(encontrados.length!==1)throw new Error(encontrados.length>1?'O cadastro precisa de conferência administrativa antes de vincular o aparelho.':'Cadastro ativo não encontrado nesta área.');
+  var idPortal=moradoresAdminV1Texto_(encontrados[0].idPortal||encontrados[0].id);
+  if(!idPortal)throw new Error('O cadastro do morador não possui identificador interno válido.');
+  return {idPortal:idPortal};
+}
+
+function saudeNotificacoesV1UpsertRegistro_(input){
+  var ss=tacsTerritorioV1Planilha_();
+  var sheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_HEADERS);
+  var lock=LockService.getScriptLock();
+  if(!lock.tryLock(10000))throw new Error('O registro de notificações está sendo atualizado. Tente novamente.');
+  try{
+    var last=sheet.getLastRow(),linha=0,criadoEm=input.atualizadoEm;
+    if(last>1){
+      var ids=sheet.getRange(2,1,last-1,1).getDisplayValues();
+      for(var i=0;i<ids.length;i++)if(saudeNotificacoesV1Texto_(ids[i][0]).toLowerCase()===input.subscriptionId){linha=i+2;break;}
+    }
+    if(linha){
+      criadoEm=saudeNotificacoesV1Texto_(sheet.getRange(linha,15).getDisplayValue())||input.atualizadoEm;
+      if(!input.onesignalId)input.onesignalId=saudeNotificacoesV1Texto_(sheet.getRange(linha,4).getDisplayValue());
+    }
+    var values=[
+      input.subscriptionId,input.areaId,input.idPortal,input.onesignalId||'',input.tipoAparelho||'',input.navegador||'',input.sistema||'',
+      input.permission?'SIM':'NAO',input.optedIn?'SIM':'NAO',input.tokenAtivo?'SIM':'NAO',input.areaConfirmada?'SIM':'NAO',
+      input.estadoLocal,input.ultimoCheckin,input.reparoAplicado||'',criadoEm,input.atualizadoEm
+    ];
+    if(linha)sheet.getRange(linha,1,1,values.length).setValues([values]);
+    else{sheet.appendRow(values);linha=sheet.getLastRow();}
+    return {linha:linha,reparoAplicado:input.reparoAplicado||''};
+  }finally{lock.releaseLock();}
+}
+
+function saudeNotificacoesV1SaudeAdmin_(contexto,acesso){
+  var ss=tacsTerritorioV1Planilha_();
+  var sheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_HEADERS);
+  var reparo=saudeNotificacoesV1UltimoReparoArea_(contexto.areaId);
+  var moradores=saudeNotificacoesV1MapaMoradores_(contexto);
+  var props=PropertiesService.getScriptProperties();
+  var appId=saudeNotificacoesV1PrimeiraPropriedade_(props,TACS_SAUDE_NOTIFICACOES_V1.APP_ID_PROPERTIES)||TACS_SAUDE_NOTIFICACOES_V1.DEFAULT_APP_ID;
+  var apiKey=saudeNotificacoesV1PrimeiraPropriedade_(props,TACS_SAUDE_NOTIFICACOES_V1.API_KEY_PROPERTIES);
+  var registros=[],last=sheet.getLastRow();
+  if(last>1){
+    sheet.getRange(2,1,last-1,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_HEADERS.length).getDisplayValues().forEach(function(row){
+      if(moradoresAdminV1NormalizarAreaId_(row[1])!==contexto.areaId)return;
+      registros.push(saudeNotificacoesV1RegistroDaLinha_(row));
+    });
+  }
+  registros.sort(function(a,b){return String(b.ultimoCheckin).localeCompare(String(a.ultimoCheckin));});
+  if(registros.length>TACS_SAUDE_NOTIFICACOES_V1.MAX_DEVICES)registros=registros.slice(0,TACS_SAUDE_NOTIFICACOES_V1.MAX_DEVICES);
+  var cacheUsuarios={},contagens={ativos:0,inativos:0,reparo:0,semConfirmacao:0,total:registros.length};
+  var aparelhos=registros.map(function(reg){
+    var morador=moradores[reg.idPortal]||{nome:'Morador não localizado',celular:'',telefoneContato:''};
+    var pending=Boolean(reparo&&reparo.reparoId&&reparo.reparoId!==reg.reparoAplicado);
+    var remoto=null,onesignalId=reg.onesignalId;
+    if(apiKey){
+      try{
+        if(!onesignalId)onesignalId=saudeNotificacoesV1IdentidadePorSubscription_(appId,apiKey,reg.subscriptionId);
+        if(onesignalId){
+          if(!Object.prototype.hasOwnProperty.call(cacheUsuarios,onesignalId))cacheUsuarios[onesignalId]=saudeNotificacoesV1ViewUser_(appId,apiKey,onesignalId);
+          remoto=saudeNotificacoesV1EncontrarSubscription_(cacheUsuarios[onesignalId],reg.subscriptionId);
+        }
+      }catch(erroRemoto){remoto=null;}
+    }
+    var classificacao=saudeNotificacoesV1Classificar_(reg,remoto,pending);
+    if(classificacao.status==='ATIVO')contagens.ativos++;
+    else if(classificacao.status==='INATIVO')contagens.inativos++;
+    else if(classificacao.status==='REPARO')contagens.reparo++;
+    else contagens.semConfirmacao++;
+    var telefone=moradoresAdminV1Texto_(morador.celular||morador.telefoneContato);
+    return {
+      nome:moradoresAdminV1Texto_(morador.nome)||'Morador não localizado',telefone:telefone,
+      dispositivo:reg.tipoAparelho||'Aparelho',navegador:reg.navegador||'',sistema:reg.sistema||'',
+      status:classificacao.status,statusTexto:classificacao.texto,motivo:classificacao.motivo,
+      ultimoCheckin:reg.ultimoCheckin,subscriptionRef:reg.subscriptionId.slice(-8),
+      reparoPendente:pending
+    };
+  });
+  return {
+    ok:true,versao:TACS_SAUDE_NOTIFICACOES_V1.VERSAO,areaId:contexto.areaId,areaNome:contexto.areaNome,
+    contagens:contagens,aparelhos:aparelhos,oneSignalConsultado:Boolean(apiKey),
+    reparoArea:reparo||null,limitado:contagens.total>TACS_SAUDE_NOTIFICACOES_V1.MAX_DEVICES,
+    observacao:'O estado técnico não comprova a entrega física de cada notificação.'
+  };
+}
+
+function saudeNotificacoesV1SolicitarReparoArea_(contexto,acesso){
+  var ss=tacsTerritorioV1Planilha_();
+  var sheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_HEADERS);
+  var reparoId='reparo_'+contexto.areaId.toLowerCase()+'_'+Utilities.getUuid().replace(/-/g,'');
+  var quando=saudeNotificacoesV1Data_(new Date());
+  sheet.appendRow([contexto.areaId,reparoId,quando,saudeNotificacoesV1Texto_(acesso.operadorId||acesso.tacsId||contexto.operadorId||'ADMIN')]);
+  return {ok:true,areaId:contexto.areaId,areaNome:contexto.areaNome,reparoId:reparoId,solicitadoEm:quando,message:'A solicitação de reparo foi registrada. Cada aparelho será orientado quando abrir o Portal TACS.'};
+}
+
+function saudeNotificacoesV1UltimoReparoArea_(areaId){
+  var ss=tacsTerritorioV1Planilha_();
+  var sheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_HEADERS);
+  var last=sheet.getLastRow();if(last<=1)return null;
+  var rows=sheet.getRange(2,1,last-1,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_HEADERS.length).getDisplayValues();
+  for(var i=rows.length-1;i>=0;i--){
+    if(moradoresAdminV1NormalizarAreaId_(rows[i][0])===areaId)return {areaId:areaId,reparoId:rows[i][1],solicitadoEm:rows[i][2]};
+  }
+  return null;
+}
+
+function saudeNotificacoesV1MapaMoradores_(contexto){
+  var fonte=moradoresAdminV1LocalizarFonte_(contexto),mapa={},last=fonte.sheet.getLastRow(),lastCol=fonte.sheet.getLastColumn();
+  if(last<=fonte.headerRow+1)return mapa;
+  var range=fonte.sheet.getRange(fonte.headerRow+2,1,last-(fonte.headerRow+1),lastCol);
+  var raw=range.getValues(),display=range.getDisplayValues();
+  for(var i=0;i<display.length;i++){
+    var m=moradoresAdminV1MontarMorador_(display[i],raw[i],fonte.map);if(!m.nome)continue;
+    var id=moradoresAdminV1Texto_(m.idPortal||m.id);if(!id)continue;
+    mapa[id]=m;
+  }
+  return mapa;
+}
+
+function saudeNotificacoesV1RegistroDaLinha_(r){
+  return {subscriptionId:r[0],areaId:r[1],idPortal:r[2],onesignalId:r[3],tipoAparelho:r[4],navegador:r[5],sistema:r[6],permission:r[7]==='SIM',optedIn:r[8]==='SIM',tokenAtivo:r[9]==='SIM',areaConfirmada:r[10]==='SIM',estadoLocal:r[11],ultimoCheckin:r[12],reparoAplicado:r[13]};
+}
+
+function saudeNotificacoesV1Classificar_(reg,remoto,reparoPendente){
+  if(reparoPendente)return {status:'REPARO',texto:'Reparo solicitado',motivo:'Existe uma atualização de avisos pendente para este aparelho.'};
+  if(remoto){
+    var nt=Number(remoto.notification_types),enabled=remoto.enabled===true;
+    if(enabled&&Number.isFinite(nt)&&nt>0)return {status:'ATIVO',texto:'Ativo',motivo:'Inscrição ativa no OneSignal e vínculo local conferido.'};
+    return {status:'INATIVO',texto:'Inativo',motivo:'O OneSignal informa que esta inscrição não está apta a receber Push.'};
+  }
+  if(!reg.permission)return {status:'REPARO',texto:'Reparo necessário',motivo:'Permissão de notificações não está ativa no último check-in.'};
+  if(!reg.optedIn||!reg.tokenAtivo||!reg.areaConfirmada)return {status:'REPARO',texto:'Reparo necessário',motivo:'Inscrição, token ou vínculo da área está incompleto.'};
+  var stamp=Date.parse(String(reg.ultimoCheckin||'').replace(' ','T'));
+  if(!isNaN(stamp)&&Date.now()-stamp>TACS_SAUDE_NOTIFICACOES_V1.STALE_DAYS*86400000)return {status:'SEM_CONFIRMACAO',texto:'Sem confirmação recente',motivo:'O aparelho não faz uma checagem no Portal há mais de '+TACS_SAUDE_NOTIFICACOES_V1.STALE_DAYS+' dias.'};
+  return {status:'SEM_CONFIRMACAO',texto:'Aguardando confirmação',motivo:'O último check-in local está correto, mas o estado atual do OneSignal não pôde ser confirmado agora.'};
+}
+
+function saudeNotificacoesV1IdentidadePorSubscription_(appId,apiKey,subscriptionId){
+  var url=TACS_SAUDE_NOTIFICACOES_V1.ONESIGNAL_BASE+'/apps/'+encodeURIComponent(appId)+'/subscriptions/'+encodeURIComponent(subscriptionId)+'/user/identity';
+  var data=saudeNotificacoesV1FetchOneSignal_(url,apiKey);
+  return saudeNotificacoesV1Texto_(data&&data.identity&&data.identity.onesignal_id);
+}
+
+function saudeNotificacoesV1ViewUser_(appId,apiKey,onesignalId){
+  var cache=CacheService.getScriptCache(),key=TACS_SAUDE_NOTIFICACOES_V1.USER_CACHE_PREFIX+onesignalId,raw=cache.get(key);
+  if(raw){try{return JSON.parse(raw);}catch(e){}}
+  var url=TACS_SAUDE_NOTIFICACOES_V1.ONESIGNAL_BASE+'/apps/'+encodeURIComponent(appId)+'/users/by/onesignal_id/'+encodeURIComponent(onesignalId);
+  var data=saudeNotificacoesV1FetchOneSignal_(url,apiKey);
+  try{cache.put(key,JSON.stringify(data),TACS_SAUDE_NOTIFICACOES_V1.USER_CACHE_SECONDS);}catch(e){}
+  return data;
+}
+
+function saudeNotificacoesV1EncontrarSubscription_(user,subscriptionId){
+  var lista=user&&Array.isArray(user.subscriptions)?user.subscriptions:[];
+  for(var i=0;i<lista.length;i++)if(saudeNotificacoesV1Texto_(lista[i].id).toLowerCase()===subscriptionId.toLowerCase())return lista[i];
+  return null;
+}
+
+function saudeNotificacoesV1FetchOneSignal_(url,apiKey){
+  var resp=UrlFetchApp.fetch(url,{method:'get',headers:{Authorization:'Key '+apiKey},muteHttpExceptions:true});
+  var code=Number(resp.getResponseCode()),body=resp.getContentText(),data={};
+  try{data=JSON.parse(body||'{}');}catch(e){}
+  if(code<200||code>=300)throw new Error('Consulta técnica ao OneSignal indisponível (HTTP '+code+').');
+  return data;
+}
+
+function saudeNotificacoesV1EstadoLocal_(permission,optedIn,tokenAtivo,areaConfirmada){
+  if(!permission)return 'SEM_PERMISSAO';
+  if(!optedIn)return 'SEM_INSCRICAO';
+  if(!tokenAtivo)return 'SEM_TOKEN';
+  if(!areaConfirmada)return 'SEM_AREA';
+  return 'ATIVO_LOCAL';
+}
+
+function saudeNotificacoesV1ExigirAcesso_(acesso){
+  if(acesso&&acesso.perfil==='TACS'){
+    if((acesso.permissoes||[]).indexOf('PUBLICACOES_GERENCIAR')===-1)throw new Error('Seu cadastro não possui permissão para gerenciar notificações.');
+    return true;
+  }
+  tacsTerritorioV1ExigirAdmin_(acesso);return true;
+}
+
+function saudeNotificacoesV1GarantirSheet_(ss,nome,headers){
+  var sheet=ss.getSheetByName(nome);if(!sheet)sheet=ss.insertSheet(nome);
+  if(sheet.getLastRow()===0){sheet.getRange(1,1,1,headers.length).setValues([headers.slice()]);sheet.setFrozenRows(1);}
+  var atual=sheet.getRange(1,1,1,headers.length).getDisplayValues()[0];
+  if(headers.some(function(v,i){return atual[i]!==v;}))throw new Error('A estrutura da planilha '+nome+' é diferente da versão esperada.');
+  return sheet;
+}
+
+function saudeNotificacoesV1PrimeiraPropriedade_(props,nomes){for(var i=0;i<nomes.length;i++){var v=saudeNotificacoesV1Texto_(props.getProperty(nomes[i]));if(v)return v;}return '';}
+function saudeNotificacoesV1Booleano_(v){if(v===true||v===1)return true;return ['true','1','sim','yes','ativo'].indexOf(saudeNotificacoesV1Texto_(v).toLowerCase())!==-1;}
+function saudeNotificacoesV1Texto_(v){return String(v==null?'':v).trim();}
+function saudeNotificacoesV1Data_(d){return Utilities.formatDate(d,'America/Recife','yyyy-MM-dd HH:mm:ss');}
+function saudeNotificacoesV1Erro_(e){return e&&e.message?String(e.message):'Não foi possível processar a saúde das notificações.';}
+function saudeNotificacoesV1ValidarRequestId_(v){v=saudeNotificacoesV1Texto_(v);if(!/^[A-Za-z0-9_-]{8,160}$/.test(v))throw new Error('Identificador da requisição inválido.');return v;}
+function saudeNotificacoesV1GuardarResultado_(requestId,result){CacheService.getScriptCache().put(TACS_SAUDE_NOTIFICACOES_V1.RESULT_PREFIX+requestId,JSON.stringify(result),TACS_SAUDE_NOTIFICACOES_V1.RESULT_SECONDS);}
+function saudeNotificacoesV1LerResultado_(requestId){var raw=CacheService.getScriptCache().get(TACS_SAUDE_NOTIFICACOES_V1.RESULT_PREFIX+requestId);if(!raw)return null;try{return JSON.parse(raw);}catch(e){return null;}}
+function saudeNotificacoesV1ResponderJson_(obj,callback){var json=JSON.stringify(obj);if(callback&&/^[A-Za-z_$][A-Za-z0-9_$\.]{0,120}$/.test(callback))return ContentService.createTextOutput(callback+'('+json+');').setMimeType(ContentService.MimeType.JAVASCRIPT);return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);}
+function saudeNotificacoesV1ResponderPost_(requestId,result){var payload={source:'notificacao-saude-tacs-v1',requestId:requestId,result:result};var html='<!doctype html><html><head><meta charset="utf-8"></head><body><script>parent.postMessage('+JSON.stringify(payload).replace(/</g,'\\u003c')+',"*");<\/script></body></html>';return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}

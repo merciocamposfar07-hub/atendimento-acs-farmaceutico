@@ -1280,6 +1280,7 @@
             }
             repairInProgress = false;
             mostrarEstado(estadoInscricao(), true);
+            document.dispatchEvent(new CustomEvent('tacs:notificacao-reparo-concluido',{detail:{areaId:areaAtualDaUnidade(),subscriptionId:estadoInscricao().subscriptionId}}));
             help.textContent = confirmacaoErro
               ? 'A inscrição foi renovada e a área foi vinculada, mas a notificação de confirmação não chegou a ser enviada agora. Tente o reparo novamente em alguns instantes.'
               : 'Reparo concluído. Enviamos uma notificação de confirmação somente para este aparelho. Se ela aparecer, o canal de avisos está funcionando.';
@@ -1355,6 +1356,7 @@
               var areaConfirmada = await marcarAreaDaUnidade();
               mostrarEstado(estadoInscricao(), areaConfirmada);
               if (deveConfirmarReparo && areaConfirmada) {
+                document.dispatchEvent(new CustomEvent('tacs:notificacao-reparo-concluido',{detail:{areaId:areaAtualDaUnidade(),subscriptionId:estadoInscricao().subscriptionId}}));
                 try {
                   await confirmarReparoPorPush(estadoInscricao().subscriptionId, areaAtualDaUnidade());
                   help.textContent =
