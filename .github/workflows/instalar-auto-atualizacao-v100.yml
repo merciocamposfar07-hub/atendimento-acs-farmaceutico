@@ -1,0 +1,317 @@
+name: Instalar autoatualizacao v100
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/instalar-auto-atualizacao-v100.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: instalar-auto-atualizacao-v100
+  cancel-in-progress: false
+
+jobs:
+  instalar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Instalar autoatualizacao sem alterar regras dos modulos
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > portal-auto-update.js <<'JS'
+          (function(){
+            'use strict';
+
+            var VERSION_URL='/atendimento-acs-farmaceutico/portal-version.json';
+            var VERSION_KEY='portalTacsAutoVersionV1';
+            var CHECK_KEY='portalTacsAutoVersionCheckAtV1';
+            var UPDATED_FLAG='portalTacsAtualizadoAgoraV1';
+            var BUTTON_ID='portalTacsAtualizarPaginaV1';
+            var STYLE_ID='portalTacsAtualizarPaginaStyleV1';
+            var CHECK_INTERVAL=15000;
+            var checking=false;
+
+            function readStorage(storage,key){try{return storage.getItem(key)||''}catch(e){return ''}}
+            function writeStorage(storage,key,value){try{storage.setItem(key,String(value))}catch(e){}}
+            function removeStorage(storage,key){try{storage.removeItem(key)}catch(e){}}
+
+            function clearTransientConnectionState(){
+              [
+                'portalTacsAdminStatusV5',
+                'portalTacsAppsScriptWarmAtV1',
+                'portalTacsPublicDataV3',
+                'portalTacsPublicDataV2',
+                'portalTacsPublicDataV1'
+              ].forEach(function(key){removeStorage(localStorage,key)});
+            }
+
+            function freshUrl(version){
+              var url=new URL(window.location.href);
+              url.searchParams.set('ptv',String(version||Date.now()));
+              url.searchParams.set('ptrefresh','1');
+              return url.toString();
+            }
+
+            function reloadFresh(version,reason){
+              clearTransientConnectionState();
+              writeStorage(sessionStorage,UPDATED_FLAG,reason||'manual');
+              window.location.replace(freshUrl(version||Date.now()));
+            }
+
+            function ensureStyle(){
+              if(document.getElementById(STYLE_ID))return;
+              var style=document.createElement('style');
+              style.id=STYLE_ID;
+              style.textContent='#'+BUTTON_ID+'{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:2147483000;min-height:46px;border:2px solid rgba(255,255,255,.88);border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;-webkit-tap-highlight-color:transparent}#'+BUTTON_ID+':active{transform:translateY(1px)}@media(max-width:430px){#'+BUTTON_ID+'{right:10px;bottom:calc(10px + env(safe-area-inset-bottom));min-height:44px;padding:9px 13px;font-size:14px}}';
+              (document.head||document.documentElement).appendChild(style);
+            }
+
+            function installUI(){
+              if(!document.body){setTimeout(installUI,40);return}
+              ensureStyle();
+              var button=document.getElementById(BUTTON_ID);
+              if(!button){
+                button=document.createElement('button');
+                button.id=BUTTON_ID;
+                button.type='button';
+                button.setAttribute('aria-label','Atualizar esta página e refazer a conexão');
+                button.title='Atualizar esta página e refazer a conexão';
+                button.textContent='↻ Atualizar página';
+                button.addEventListener('click',function(){reloadFresh(Date.now(),'manual')});
+                document.body.appendChild(button);
+              }
+            }
+
+            function wakeConnection(){
+              try{
+                var warm=window.PortalTacsAdminWarmup;
+                if(warm&&typeof warm.iniciar==='function')warm.iniciar(true);
+              }catch(e){}
+            }
+
+            function fetchVersion(force){
+              var now=Date.now();
+              var last=Number(readStorage(sessionStorage,CHECK_KEY)||0);
+              if(!force&&now-last<CHECK_INTERVAL)return Promise.resolve(null);
+              if(checking)return Promise.resolve(null);
+              checking=true;
+              writeStorage(sessionStorage,CHECK_KEY,now);
+              return fetch(VERSION_URL+'?t='+now,{cache:'no-store',credentials:'same-origin'})
+                .then(function(response){if(!response.ok)throw new Error('version');return response.json()})
+                .then(function(data){
+                  var remote=String(data&&data.version||'').trim();
+                  if(!remote)return null;
+                  var stored=readStorage(localStorage,VERSION_KEY);
+                  var currentUrl=new URL(window.location.href).searchParams.get('ptv')||'';
+                  if(!stored){
+                    writeStorage(localStorage,VERSION_KEY,remote);
+                    if(currentUrl!==remote){reloadFresh(remote,'primeira-sincronizacao');return remote}
+                    return remote;
+                  }
+                  if(stored!==remote){
+                    writeStorage(localStorage,VERSION_KEY,remote);
+                    reloadFresh(remote,'nova-versao');
+                    return remote;
+                  }
+                  return remote;
+                })
+                .catch(function(){return null})
+                .finally(function(){checking=false});
+            }
+
+            function onVisible(){
+              if(document.visibilityState==='visible'){
+                installUI();
+                fetchVersion(false);
+              }
+            }
+
+            var api={
+              instalarUI:installUI,
+              verificar:function(force){return fetchVersion(!!force)},
+              atualizar:function(){reloadFresh(Date.now(),'manual')},
+              reconectar:wakeConnection,
+              limparTemporarios:clearTransientConnectionState
+            };
+            window.PortalTacsAtualizacao=api;
+
+            if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installUI,{once:true});
+            else installUI();
+            fetchVersion(true);
+            window.addEventListener('pageshow',function(){installUI();fetchVersion(false)});
+            window.addEventListener('online',function(){clearTransientConnectionState();wakeConnection();fetchVersion(true)});
+            document.addEventListener('visibilitychange',onVisible);
+          }());
+          JS
+
+          cat > portal-version.json <<'JSON'
+          {
+            "version": "20260812-v100",
+            "releasedAt": "2026-08-12T21:09:00-03:00",
+            "scope": "Portal TACS e painéis administrativos"
+          }
+          JSON
+
+          mkdir -p .github/workflows
+          cat > .github/workflows/atualizar-versao-portal-tacs.yml <<'YAML'
+          name: Atualizar versao do Portal TACS
+
+          on:
+            push:
+              branches: [main]
+              paths:
+                - 'index.html'
+                - 'portal-*.js'
+                - 'agenda-config.js'
+                - 'moradores-autofill.js'
+                - 'painel-oficial-agendas-vagas.html'
+                - 'painel-oficial-profissionais-servicos.html'
+                - 'painel-oficial-recados-campanhas.html'
+                - 'teste-v1/painel-moradores-v2.html'
+                - 'teste-v1/painel-moradores-transport-v2.js'
+                - 'teste-v1/painel-profissionais-servicos-v1.html'
+                - 'teste-v1/painel-recados-campanhas-v1.html'
+                - 'admin-warmup.js'
+                - 'portal-auto-update.js'
+            workflow_dispatch:
+
+          permissions:
+            contents: write
+
+          concurrency:
+            group: atualizar-versao-portal-tacs
+            cancel-in-progress: false
+
+          jobs:
+            versionar:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                  with:
+                    fetch-depth: 0
+                - name: Registrar nova versao para autoatualizacao
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    python - <<'PY'
+                    import json, os, datetime
+                    sha=os.environ.get('GITHUB_SHA','')[:12] or 'manual'
+                    now=datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z')
+                    data={'version': sha, 'releasedAt': now, 'scope': 'Portal TACS e painéis administrativos'}
+                    with open('portal-version.json','w',encoding='utf-8') as f:
+                        json.dump(data,f,ensure_ascii=False,indent=2)
+                        f.write('\n')
+                    PY
+                    git config user.name 'Portal TACS'
+                    git config user.email 'actions@users.noreply.github.com'
+                    git add portal-version.json
+                    git diff --cached --quiet && exit 0
+                    git commit -m 'Atualiza versão automática do Portal TACS'
+                    for tentativa in 1 2 3; do
+                      git pull --rebase origin main || true
+                      if git push origin HEAD:main; then exit 0; fi
+                      sleep $((tentativa*2))
+                    done
+                    exit 1
+          YAML
+
+          python - <<'PY'
+          from pathlib import Path
+
+          # 1) Portal do Morador: somente carrega a camada de atualização/recuperação.
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          tag='<script src="portal-auto-update.js?v=20260812-v100"></script>'
+          marker='<script src="portal-controle-integral.js?v=20260806-desempenho-v5"></script>'
+          if tag not in s:
+              if marker not in s: raise SystemExit('Marcador do Portal TACS não encontrado.')
+              s=s.replace(marker,tag+'\n  '+marker,1)
+          p.write_text(s,encoding='utf-8')
+
+          # 2) Moradores: mesma camada, sem tocar no transporte nem nas regras do cadastro.
+          p=Path('teste-v1/painel-moradores-v2.html')
+          s=p.read_text(encoding='utf-8')
+          tag='<script src="../portal-auto-update.js?v=20260812-v100"></script>'
+          marker='<script src="painel-moradores-transport-v2.js?v=20260811-v361-safari"></script>'
+          if tag not in s:
+              if marker not in s: raise SystemExit('Marcador do painel de Moradores não encontrado.')
+              s=s.replace(marker,tag+'\n'+marker,1)
+          p.write_text(s,encoding='utf-8')
+
+          # 3) Admin warmup: adiciona atualização comum aos painéis e reaquece ao voltar a rede.
+          p=Path('admin-warmup.js')
+          s=p.read_text(encoding='utf-8')
+          loader="""\n  function garantirAutoAtualizacao(){\n    function ativar(){\n      try{\n        var a=window.PortalTacsAtualizacao;\n        if(a){a.instalarUI();a.verificar(false);}\n      }catch(e){}\n    }\n    if(window.PortalTacsAtualizacao){ativar();return;}\n    var id='portal-tacs-auto-update-script',existenteScript=document.getElementById(id);\n    if(existenteScript){existenteScript.addEventListener('load',ativar,{once:true});return;}\n    var script=document.createElement('script');\n    script.id=id;script.async=true;\n    script.src='/atendimento-acs-farmaceutico/portal-auto-update.js?v=20260812-v100';\n    script.onload=ativar;\n    (document.head||document.documentElement).appendChild(script);\n  }\n  garantirAutoAtualizacao();\n"""
+          if 'function garantirAutoAtualizacao()' not in s:
+              needle="  'use strict';\n"
+              if needle not in s: raise SystemExit('Inicio do admin-warmup não encontrado.')
+              s=s.replace(needle,needle+loader,1)
+          online="  window.addEventListener('online',function(){ iniciar(true); });\n"
+          if online not in s:
+              needle="  document.addEventListener('visibilitychange',reaquecerAoVoltar);\n"
+              if needle not in s: raise SystemExit('Evento de visibilidade do admin-warmup não encontrado.')
+              s=s.replace(needle,online+needle,1)
+          p.write_text(s,encoding='utf-8')
+
+          # 4) Força os três painéis oficiais a buscar o warmup que contém a camada nova.
+          arquivos=['painel-oficial-agendas-vagas.html','painel-oficial-profissionais-servicos.html','painel-oficial-recados-campanhas.html']
+          for nome in arquivos:
+              p=Path(nome); s=p.read_text(encoding='utf-8')
+              import re
+              s,n=re.subn(r'admin-warmup\.js\?v=[^"<]+','admin-warmup.js?v=20260812-auto-v100',s)
+              if n<1: raise SystemExit('admin-warmup não encontrado em '+nome)
+              p.write_text(s,encoding='utf-8')
+          PY
+
+          # Testes estáticos: escopo, sintaxe e presença em todas as superfícies pedidas.
+          node --check portal-auto-update.js
+          node --check admin-warmup.js
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          checks={
+            'index.html':['portal-auto-update.js?v=20260812-v100'],
+            'teste-v1/painel-moradores-v2.html':['../portal-auto-update.js?v=20260812-v100','painel-moradores-transport-v2.js?v=20260811-v361-safari'],
+            'painel-oficial-agendas-vagas.html':['admin-warmup.js?v=20260812-auto-v100'],
+            'painel-oficial-profissionais-servicos.html':['admin-warmup.js?v=20260812-auto-v100'],
+            'painel-oficial-recados-campanhas.html':['admin-warmup.js?v=20260812-auto-v100'],
+            'admin-warmup.js':['garantirAutoAtualizacao','window.addEventListener(\'online\''],
+            'portal-auto-update.js':['↻ Atualizar página','cache:\'no-store\'','location.replace','PortalTacsAtualizacao']
+          }
+          for filename,needles in checks.items():
+              text=Path(filename).read_text(encoding='utf-8')
+              for needle in needles:
+                  if needle not in text: raise SystemExit(f'Falha de teste: {needle} ausente em {filename}')
+          data=json.loads(Path('portal-version.json').read_text(encoding='utf-8'))
+          if not data.get('version'): raise SystemExit('portal-version.json sem versão')
+
+          # Garantias de não alteração das regras solicitadas.
+          portal=Path('index.html').read_text(encoding='utf-8')
+          for required in ['portal-odontologia-segunda-sexta.js?v=20260812-odontologia-imediata-v98','portal-controle-integral.js?v=20260806-desempenho-v5']:
+              if required not in portal: raise SystemExit('Regra/script existente foi alterado: '+required)
+          moradores=Path('teste-v1/painel-moradores-v2.html').read_text(encoding='utf-8')
+          if 'painel-moradores-transport-v2.js?v=20260811-v361-safari' not in moradores:
+              raise SystemExit('Transporte de moradores foi alterado indevidamente.')
+          print('TESTES_AUTO_ATUALIZACAO_V100_OK')
+          PY
+
+      - name: Publicar pacote restrito de estabilidade
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add portal-auto-update.js portal-version.json admin-warmup.js index.html teste-v1/painel-moradores-v2.html painel-oficial-agendas-vagas.html painel-oficial-profissionais-servicos.html painel-oficial-recados-campanhas.html .github/workflows/atualizar-versao-portal-tacs.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'Adiciona autoatualização e recuperação de conexão aos painéis TACS'
+          git push origin HEAD:main
