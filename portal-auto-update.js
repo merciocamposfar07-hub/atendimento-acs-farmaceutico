@@ -96,6 +96,7 @@
   }
 
   function fetchVersion(force){
+    if(typeof fetch!=='function')return Promise.resolve(null);
     var now=Date.now();
     var last=Number(readStorage(sessionStorage,CHECK_KEY)||0);
     if(!force&&now-last<CHECK_INTERVAL)return Promise.resolve(null);
