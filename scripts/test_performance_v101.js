@@ -103,6 +103,15 @@ function testBackendCache() {
   context.doGet({parameter: {action: 'painel_publico', areaId: 'JAPARANDUBA', callback: 'cbF'}});
   assert.equal(calls.get, 4, 'Salvamento administrativo deve criar nova geração de cache');
 
+  const publicacao1 = parseJsonp(context.doGet({parameter: {action: 'publico_conteudo', areaId: 'JAPARANDUBA', callback: 'pub1'}}).getContent(), 'pub1');
+  const publicacao2 = parseJsonp(context.doGet({parameter: {action: 'publico_conteudo', areaId: 'JAPARANDUBA', callback: 'pub2'}}).getContent(), 'pub2');
+  assert.equal(publicacao1.sequence, publicacao2.sequence, 'Conteúdo público deve aproveitar cache entre leituras');
+  const beforePublicacaoSave = calls.get;
+  context.doPost({parameter: {action: 'admin_publicacoes_salvar_recado'}});
+  const publicacao3 = parseJsonp(context.doGet({parameter: {action: 'publico_conteudo', areaId: 'JAPARANDUBA', callback: 'pub3'}}).getContent(), 'pub3');
+  assert.equal(calls.get, beforePublicacaoSave + 1, 'Salvar recado deve invalidar o snapshot público');
+  assert.notEqual(publicacao3.sequence, publicacao2.sequence, 'Nova publicação não pode reutilizar conteúdo anterior');
+
   const status1 = parseJsonp(context.doGet({parameter: {action: 'admin_status', callback: 's1'}}).getContent(), 's1');
   const status2 = parseJsonp(context.doGet({parameter: {action: 'admin_status', callback: 's2'}}).getContent(), 's2');
   assert.equal(status1.sequence, status2.sequence, 'admin_status deve aproveitar cache curto');
@@ -188,6 +197,9 @@ function testStaticSafety() {
 
   const release = read('scripts/build_apps_script_release.js');
   assert.ok(release.includes("marker: 'TACS_PERFORMANCE_CACHE_V101'"));
+
+  const backend = read('apps-script/ZZZZ_21_PerformanceCacheV101.gs');
+  assert.ok(backend.includes('(salvar|criar|remover|restaurar|ativar|desativar|publicar|cancelar)'), 'Cache deve reconhecer verbos de escrita em ações administrativas compostas');
 
   const dental = read('portal-odontologia-segunda-sexta.js');
   assert.ok(dental.includes("var REGULAR = 'Solicitar atendimento odontológico (dentista)'"));
