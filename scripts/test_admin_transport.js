@@ -80,26 +80,6 @@ function responseFor(action) {
       manutencao: {ativa: false, areaId: 'JAPARANDUBA'}
     };
   }
-  if (action === 'admin_notificacoes_saude') {
-    return {
-      ok: true,
-      areaId: 'JAPARANDUBA',
-      areaNome: 'Sítio Japaranduba',
-      contagens: {ativos: 0, inativos: 0, reparo: 0, semConfirmacao: 0, total: 0},
-      aparelhos: [],
-      oneSignalConsultado: true,
-      reparoArea: null
-    };
-  }
-  if (action === 'admin_notificacoes_solicitar_reparo_area') {
-    return {
-      ok: true,
-      areaId: 'JAPARANDUBA',
-      areaNome: 'Sítio Japaranduba',
-      reparoId: 'reparo_japaranduba_teste',
-      solicitadoEm: '2026-08-13 08:00:00'
-    };
-  }
   if (action === 'admin_portal_manutencao_status') {
     return {ok: true, ativa: false, areaId: 'JAPARANDUBA'};
   }

@@ -40,10 +40,6 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_21_PerformanceCacheV101.gs',
     marker: 'TACS_PERFORMANCE_CACHE_V101'
-  },
-  {
-    source: 'apps-script/ZZZZ_22_SaudeNotificacoesV1.gs',
-    marker: 'TACS_SAUDE_NOTIFICACOES_V1'
   }
 ];
 

@@ -17,5 +17,5 @@ assert.match(source, /function confirmarReparoPorPush\(subscriptionId, areaId\)/
 assert.match(source, /publico_confirmar_reparo_notificacao/);
 assert.match(source, /publico_notificacao_reparo_result/);
 assert.match(source, /Reparo concluído\. Enviamos uma notificação de confirmação/);
-assert.match(index, /agenda-enfermeira\.js\?v=(?:20260812-confirmacao-reparo-push-v5|20260813-portal-v104|20260813-notif-health-v106)/);
+assert.match(index, /agenda-enfermeira\.js\?v=(?:20260812-confirmacao-reparo-push-v5|20260813-portal-v104)/);
 console.log('Push do morador: botão permanente e renovação optOut/optIn + token + área validados.');

@@ -1,4 +1,4 @@
-release=saude-notificacoes-v1.0.0
-requested_at=2026-08-13T11:40:00Z
-source=saude-notificacoes-morador-aparelho
-commit=8e4228c
+release=recado-publico-v105
+requested_at=2026-08-13T11:04:00Z
+source=portal-recados-publicos
+commit=fefc9cc
