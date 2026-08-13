@@ -14,24 +14,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Comparar leituras públicas reais sem gravar
+      - name: Validar recados na saída pública real sem gravar
         shell: bash
         run: |
           set -euo pipefail
           BASE='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
           TS=$(date +%s)
           curl -L -sS --connect-timeout 8 --max-time 35 "$BASE?action=painel_publico&areaId=JAPARANDUBA&_=$TS" -o /tmp/painel.json
-          curl -L -sS --connect-timeout 8 --max-time 35 "$BASE?action=publico_conteudo&areaId=JAPARANDUBA&_=$TS" -o /tmp/conteudo.json
           python3 - <<'PY'
           import json
-          for nome,path in [('PAINEL','/tmp/painel.json'),('CONTEUDO','/tmp/conteudo.json')]:
-              raw=open(path,encoding='utf-8').read()
-              data=json.loads(raw)
-              recados=data.get('recados') or []
-              print(nome+'_OK=',data.get('ok'))
-              print(nome+'_AREA=',data.get('areaId'))
-              print(nome+'_VERSAO=',data.get('versao'))
-              print(nome+'_RECADOS_TOTAL=',len(recados))
-              for i,r in enumerate(recados):
-                  print(nome+'_RECADO',i,json.dumps(r,ensure_ascii=False))
+          data=json.load(open('/tmp/painel.json',encoding='utf-8'))
+          recados=data.get('recados') or []
+          print('PAINEL_OK=',data.get('ok'))
+          print('PAINEL_AREA=',data.get('areaId'))
+          print('RECADOS_TOTAL=',len(recados))
+          for i,r in enumerate(recados):
+              print('RECADO',i,json.dumps({
+                  'id':r.get('id'),
+                  'title':r.get('title') or r.get('titulo'),
+                  'message':r.get('message') or r.get('mensagem'),
+                  'validity':r.get('validity') or r.get('validade'),
+                  'active':r.get('active') if 'active' in r else r.get('ativo')
+              },ensure_ascii=False))
+          assert data.get('ok') is True
+          assert data.get('areaId') == 'JAPARANDUBA'
+          assert len(recados) >= 1, 'A saída painel_publico ainda não contém recados ativos.'
           PY
