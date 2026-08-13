@@ -1,0 +1,74 @@
+name: Saude das notificacoes V106
+
+on:
+  push:
+    branches: [notificacoes-saude-v106]
+    paths:
+      - '.github/workflows/saude-notificacoes-v106.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: saude-notificacoes-v106
+  cancel-in-progress: false
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar ramificacao
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar alteracoes controladas
+        run: python3 scripts/apply_saude_notificacoes_v106.py
+
+      - name: Validar sintaxe
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check agenda-enfermeira.js
+          node --check portal-notification-health.js
+          node --check scripts/test_notification_health_registry.js
+          node --check --input-type=commonjs < apps-script/ZZZZ_22_SaudeNotificacoesV1.gs
+
+      - name: Rodar bateria completa
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+
+      - name: Validar escopo aplicado
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --porcelain | sed -E 's/^.. //' | sort > /tmp/changed.txt
+          printf '%s\n' \
+            'agenda-enfermeira.js' \
+            'index.html' \
+            'package.json' \
+            'painel-oficial-recados-campanhas.html' \
+            'scripts/build_apps_script_release.js' \
+            'scripts/test_notification_health_registry.js' \
+            'teste-v1/painel-recados-campanhas-v1.html' | sort > /tmp/expected.txt
+          diff -u /tmp/expected.txt /tmp/changed.txt
+
+      - name: Gravar somente alteracoes testadas
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add agenda-enfermeira.js index.html package.json painel-oficial-recados-campanhas.html scripts/build_apps_script_release.js scripts/test_notification_health_registry.js teste-v1/painel-recados-campanhas-v1.html
+          git commit -m 'Adiciona saude das notificacoes por morador e aparelho'
+          git push origin HEAD:notificacoes-saude-v106
