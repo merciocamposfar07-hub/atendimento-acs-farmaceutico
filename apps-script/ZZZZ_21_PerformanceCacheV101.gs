@@ -106,9 +106,13 @@ function tacsPerformanceV101EhMutacao_(acao) {
 
 function tacsPerformanceV101Invalidar_() {
   try {
-    CacheService.getScriptCache().put(
+    var cache = CacheService.getScriptCache();
+    var anterior = Number(cache.get(TACS_PERFORMANCE_CACHE_V101.EPOCH_KEY) || 0);
+    var agora = new Date().getTime();
+    var proxima = Math.max(agora, anterior + 1);
+    cache.put(
       TACS_PERFORMANCE_CACHE_V101.EPOCH_KEY,
-      String(new Date().getTime()),
+      String(proxima),
       TACS_PERFORMANCE_CACHE_V101.EPOCH_SEGUNDOS
     );
   } catch (erro) {}
