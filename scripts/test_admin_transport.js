@@ -156,12 +156,17 @@ function verifyStaticSource(config) {
   assert.match(official, /v=202608/);
   assert.match(
     official,
-    /admin-warmup\.js\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1)/
+    /admin-warmup\.js\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101)/
   );
   assert.match(official, /rel="preconnect" href="https:\/\/script\.google\.com"/);
   assert.doesNotMatch(official, /Promise\.all\(\[painel,conexao/);
-  assert.match(official, /painel\.then\(function\(html\)/);
-  assert.match(official, /window\.PortalTacsAdminPreload=/);
+  if (config.official === 'painel-oficial-agendas-vagas.html') {
+    assert.doesNotMatch(official, /fetch\([^)]*teste-v1\/painel-agendas-v1\.html/);
+    assert.match(official, /DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV101'/);
+  } else {
+    assert.match(official, /painel\.then\(function\(html\)/);
+    assert.match(official, /window\.PortalTacsAdminPreload=/);
+  }
   assert.doesNotMatch(official, /aplicarRetry|aplicarConexao|aplicarReconexao|reenviarOperacao/);
 }
 

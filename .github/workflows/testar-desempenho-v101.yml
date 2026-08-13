@@ -1,0 +1,127 @@
+name: Testar desempenho v101
+
+on:
+  push:
+    branches: [desempenho-v101, main]
+    paths:
+      - '.github/workflows/testar-desempenho-v101.yml'
+      - '.github/workflows/benchmark-desempenho-v101.yml'
+      - '.github/apps-script-release-request'
+      - 'admin-warmup.js'
+      - 'portal-auto-update.js'
+      - 'portal-odontologia-segunda-sexta.js'
+      - 'painel-oficial-agendas-vagas.html'
+      - 'painel-oficial-profissionais-servicos.html'
+      - 'painel-oficial-recados-campanhas.html'
+      - 'index.html'
+      - 'apps-script/ZZZZ_21_PerformanceCacheV101.gs'
+      - 'scripts/test_performance_v101.js'
+      - 'scripts/test_quality_gate_v101.js'
+      - 'scripts/test_admin_transport.js'
+      - 'scripts/build_apps_script_release.js'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  rigor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Baixar versão em teste
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependências reproduzíveis
+        run: npm ci
+
+      - name: Rodar regressão completa + desempenho + gate percentual
+        run: npm test
+
+      - name: Validar sintaxe dos componentes de desempenho
+        run: |
+          set -euo pipefail
+          node --check admin-warmup.js
+          node --check portal-auto-update.js
+          node --check portal-odontologia-segunda-sexta.js
+          node --check scripts/test_performance_v101.js
+          node --check scripts/test_quality_gate_v101.js
+          node --check scripts/test_admin_transport.js
+          node --check scripts/build_apps_script_release.js
+          node --check --input-type=commonjs < apps-script/ZZZZ_21_PerformanceCacheV101.gs
+
+      - name: Auditoria de escopo — bloquear alterações fora do pacote autorizado
+        if: github.ref_name == 'desempenho-v101'
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          git diff --name-only origin/main...HEAD | tee /tmp/escopo.txt
+          INVALIDOS=$(grep -Ev '^(admin-warmup.js|portal-auto-update.js|portal-odontologia-segunda-sexta.js|painel-oficial-agendas-vagas.html|painel-oficial-profissionais-servicos.html|painel-oficial-recados-campanhas.html|index.html|apps-script/ZZZZ_21_PerformanceCacheV101.gs|scripts/build_apps_script_release.js|scripts/test_performance_v101.js|scripts/test_quality_gate_v101.js|scripts/test_admin_transport.js|package.json|.github/apps-script-release-request|.github/workflows/testar-desempenho-v101.yml|.github/workflows/benchmark-desempenho-v101.yml)$' /tmp/escopo.txt || true)
+          if [ -n "$INVALIDOS" ]; then
+            echo 'Arquivos fora do escopo autorizado:'
+            echo "$INVALIDOS"
+            exit 1
+          fi
+
+      - name: Confirmar que regras críticas continuam presentes
+        run: |
+          set -euo pipefail
+          grep -Fq "add('action', 'reservar')" portal-odontologia-segunda-sexta.js
+          grep -Fq "optimisticRemaining: Math.max(0, Number(available) - 1)" portal-odontologia-segunda-sexta.js
+          grep -Fq "validDocument(el('cpf') && el('cpf').value)" portal-odontologia-segunda-sexta.js
+          grep -Fq "Solicitar atendimento odontológico (dentista)" portal-odontologia-segunda-sexta.js
+          grep -Fq "Solicitar atendimento odontológico de emergência (dentista)" portal-odontologia-segunda-sexta.js
+          grep -Fq "TACS_PERFORMANCE_CACHE_V101" apps-script/ZZZZ_21_PerformanceCacheV101.gs
+          grep -Fq "Aguarde a confirmação dos dados atuais antes de salvar." painel-oficial-agendas-vagas.html
+          grep -Fq "if(!pageSeen)" portal-auto-update.js
+          grep -Fq "if(pageSeen!==remote)" portal-auto-update.js
+          grep -Fq "QUALITY_GATE_V101_OK" scripts/test_quality_gate_v101.js
+          if grep -Fq "currentUrl=new URL" portal-auto-update.js; then
+            echo 'Falha: a ausência de ?ptv ainda provocaria recarga desnecessária.'
+            exit 1
+          fi
+
+      - name: Medir linha de base do Apps Script atualmente em produção
+        if: github.ref_name == 'desempenho-v101'
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+          measure() {
+            action="$1"; url="$2"; file="/tmp/${action}.times"; : > "$file"
+            ok=0
+            for i in 1 2 3 4 5; do
+              metrics=$(curl -L -sS --connect-timeout 5 --max-time 20 -o "/tmp/${action}-${i}.out" -w '%{http_code} %{time_total}' "$url" || printf '000 20.000')
+              code=$(printf '%s' "$metrics" | awk '{print $1}')
+              time=$(printf '%s' "$metrics" | awk '{print $2}')
+              printf '%s\n' "$time" >> "$file"
+              if [ "$code" = '200' ] && grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' "/tmp/${action}-${i}.out"; then ok=$((ok+1)); fi
+              printf 'BASELINE %s tentativa=%s http=%s tempo=%ss ok=%s\n' "$action" "$i" "$code" "$time" "$ok"
+            done
+            median=$(sort -n "$file" | sed -n '3p')
+            printf 'BASELINE_RESUMO %s mediana=%ss sucessos=%s/5\n' "$action" "$median" "$ok"
+            if [ "$ok" -ne 5 ]; then
+              echo "BASELINE_ESTABILIDADE_FALHOU: $action respondeu corretamente em apenas $ok/5 tentativas."
+              exit 1
+            fi
+          }
+          measure agenda "$BASE?action=agenda"
+          measure painel_publico "$BASE?action=painel_publico&areaId=JAPARANDUBA"
+          measure publico_conteudo "$BASE?action=publico_conteudo&areaId=JAPARANDUBA"
+          measure admin_status "$BASE?action=admin_status"
+          echo 'BASELINE_ESTABILIDADE=20/20=100%'
+
+      - name: Resultado da homologação interna
+        run: |
+          echo 'V101_INTERNO_APROVADO=SIM'
+          echo 'EXIGENCIA_GATE_INTERNO=100%'
+          echo 'Critério interno: regressão funcional + integridade dos dados + desempenho + Safari/resiliência + usabilidade/acessibilidade + escopo + estabilidade real.'

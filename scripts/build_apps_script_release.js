@@ -36,6 +36,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_20_PublicacoesTerritoriaisV1.gs',
     marker: 'TACS_PUBLICACOES_TERRITORIAIS_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_21_PerformanceCacheV101.gs',
+    marker: 'TACS_PERFORMANCE_CACHE_V101'
   }
 ];
 

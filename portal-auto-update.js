@@ -7,7 +7,7 @@
   var CHECK_KEY='portalTacsAutoVersionCheckAtV1';
   var BUTTON_ID='portalTacsAtualizarPaginaV1';
   var STYLE_ID='portalTacsAtualizarPaginaStyleV1';
-  var CHECK_INTERVAL=15000;
+  var CHECK_INTERVAL=60000;
   var checking=false;
 
   function readStorage(storage,key){try{return storage.getItem(key)||''}catch(e){return ''}}
@@ -17,10 +17,7 @@
   function clearTransientConnectionState(){
     [
       'portalTacsAdminStatusV5',
-      'portalTacsAppsScriptWarmAtV1',
-      'portalTacsPublicDataV3',
-      'portalTacsPublicDataV2',
-      'portalTacsPublicDataV1'
+      'portalTacsAppsScriptWarmAtV1'
     ].forEach(function(key){removeStorage(localStorage,key)});
   }
 
@@ -44,6 +41,38 @@
     (document.head||document.documentElement).appendChild(style);
   }
 
+  function isAdminPage(){
+    return /(?:^|\/)(?:painel-oficial-|teste-v1\/painel-|admin)/.test(window.location.pathname||'');
+  }
+
+  function smartRefresh(button){
+    if(isAdminPage()){
+      clearTransientConnectionState();
+      reloadFresh(Date.now());
+      return;
+    }
+
+    var original=button&&button.textContent;
+    if(button){button.disabled=true;button.textContent='↻ Atualizando…'}
+    var tasks=[];
+    try{
+      var publico=window.PortalTacsPublicData;
+      if(publico&&typeof publico.refresh==='function')tasks.push(Promise.resolve(publico.refresh()).catch(function(){return null}));
+    }catch(e){}
+    try{
+      var dental=window.PortalTacsOdontologiaV98;
+      if(dental&&typeof dental.atualizar==='function')tasks.push(Promise.resolve(dental.atualizar()).catch(function(){return null}));
+    }catch(e){}
+    try{
+      var warm=window.PortalTacsAdminWarmup;
+      if(warm&&typeof warm.iniciar==='function')tasks.push(Promise.resolve(warm.iniciar(true)).catch(function(){return null}));
+    }catch(e){}
+    tasks.push(Promise.resolve(fetchVersion(true)).catch(function(){return null}));
+    Promise.all(tasks).finally(function(){
+      if(button){button.disabled=false;button.textContent=original||'↻ Atualizar página'}
+    });
+  }
+
   function installUI(){
     if(!document.body){setTimeout(installUI,40);return}
     ensureStyle();
@@ -55,7 +84,7 @@
     button.setAttribute('aria-label','Atualizar esta página e refazer a conexão');
     button.title='Atualizar esta página e refazer a conexão';
     button.textContent='↻ Atualizar página';
-    button.addEventListener('click',function(){reloadFresh(Date.now())});
+    button.addEventListener('click',function(){smartRefresh(button)});
     document.body.appendChild(button);
   }
 
@@ -67,6 +96,7 @@
   }
 
   function fetchVersion(force){
+    if(typeof fetch!=='function')return Promise.resolve(null);
     var now=Date.now();
     var last=Number(readStorage(sessionStorage,CHECK_KEY)||0);
     if(!force&&now-last<CHECK_INTERVAL)return Promise.resolve(null);
@@ -79,11 +109,18 @@
         var remote=String(data&&data.version||'').trim();
         if(!remote)return null;
         var pageSeen=readStorage(localStorage,PAGE_VERSION_KEY);
-        var currentUrl=new URL(window.location.href).searchParams.get('ptv')||'';
         writeStorage(localStorage,GLOBAL_VERSION_KEY,remote);
-        if(pageSeen!==remote||currentUrl!==remote){
+
+        // Primeira leitura: apenas registra a versão que esta página recebeu.
+        // Nas próximas aberturas, a ausência de ?ptv na start_url do iOS não deve
+        // causar uma recarga extra. Só recarrega quando a versão publicada mudou.
+        if(!pageSeen){
           writeStorage(localStorage,PAGE_VERSION_KEY,remote);
-          if(currentUrl!==remote){reloadFresh(remote);return remote}
+          return remote;
+        }
+        if(pageSeen!==remote){
+          writeStorage(localStorage,PAGE_VERSION_KEY,remote);
+          reloadFresh(remote);
         }
         return remote;
       })
@@ -110,6 +147,6 @@
   else installUI();
   fetchVersion(true);
   window.addEventListener('pageshow',function(){installUI();fetchVersion(false)});
-  window.addEventListener('online',function(){clearTransientConnectionState();wakeConnection();fetchVersion(true)});
+  window.addEventListener('online',function(){wakeConnection();fetchVersion(true)});
   document.addEventListener('visibilitychange',onVisible);
 }());

@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://script.google.com">
   <link rel="preconnect" href="https://script.googleusercontent.com">
   <link rel="dns-prefetch" href="//script.google.com">
-  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260812-auto-v100"></script>
+  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260812-auto-v101"></script>
   <meta name="color-scheme" content="light">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Painel oficial de recados e campanhas • Portal TACS</title>
@@ -66,7 +66,7 @@
     painel.then(function(html){
       var aquecimento=window.PortalTacsAdminWarmup;
       var conexaoSegura=JSON.stringify(aquecimento&&aquecimento.resultado||{ok:false,preparando:true}).replace(/</g,'\\u003c');
-      var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt><scr'+'ipt src="../admin-warmup.js?v=20260812-auto-v100"></scr'+'ipt>';
+      var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt><scr'+'ipt src="../admin-warmup.js?v=20260812-auto-v101"></scr'+'ipt>';
       html=substituir(html,'<head>',bootstrap);
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
       html=substituir(html,'</body>',complementoStatus()+'</body>');
