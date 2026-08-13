@@ -12,6 +12,7 @@ on:
       - 'index.html'
       - 'apps-script/ZZZZ_21_PerformanceCacheV101.gs'
       - 'scripts/test_performance_v101.js'
+      - 'scripts/test_admin_transport.js'
       - 'scripts/build_apps_script_release.js'
       - 'package.json'
 
@@ -48,6 +49,7 @@ jobs:
           node --check portal-auto-update.js
           node --check portal-odontologia-segunda-sexta.js
           node --check scripts/test_performance_v101.js
+          node --check scripts/test_admin_transport.js
           node --check scripts/build_apps_script_release.js
           node --check --input-type=commonjs < apps-script/ZZZZ_21_PerformanceCacheV101.gs
 
@@ -56,7 +58,7 @@ jobs:
           set -euo pipefail
           git fetch origin main --quiet
           git diff --name-only origin/main...HEAD | tee /tmp/escopo.txt
-          INVALIDOS=$(grep -Ev '^(admin-warmup.js|portal-auto-update.js|portal-odontologia-segunda-sexta.js|painel-oficial-agendas-vagas.html|painel-oficial-profissionais-servicos.html|painel-oficial-recados-campanhas.html|index.html|apps-script/ZZZZ_21_PerformanceCacheV101.gs|scripts/build_apps_script_release.js|scripts/test_performance_v101.js|package.json|.github/workflows/testar-desempenho-v101.yml)$' /tmp/escopo.txt || true)
+          INVALIDOS=$(grep -Ev '^(admin-warmup.js|portal-auto-update.js|portal-odontologia-segunda-sexta.js|painel-oficial-agendas-vagas.html|painel-oficial-profissionais-servicos.html|painel-oficial-recados-campanhas.html|index.html|apps-script/ZZZZ_21_PerformanceCacheV101.gs|scripts/build_apps_script_release.js|scripts/test_performance_v101.js|scripts/test_admin_transport.js|package.json|.github/workflows/testar-desempenho-v101.yml)$' /tmp/escopo.txt || true)
           if [ -n "$INVALIDOS" ]; then
             echo 'Arquivos fora do escopo autorizado:'
             echo "$INVALIDOS"
@@ -72,6 +74,7 @@ jobs:
           grep -Fq "Solicitar atendimento odontológico (dentista)" portal-odontologia-segunda-sexta.js
           grep -Fq "Solicitar atendimento odontológico de emergência (dentista)" portal-odontologia-segunda-sexta.js
           grep -Fq "TACS_PERFORMANCE_CACHE_V101" apps-script/ZZZZ_21_PerformanceCacheV101.gs
+          grep -Fq "Aguarde a confirmação dos dados atuais antes de salvar." painel-oficial-agendas-vagas.html
 
       - name: Medir linha de base do Apps Script atualmente em produção
         shell: bash
