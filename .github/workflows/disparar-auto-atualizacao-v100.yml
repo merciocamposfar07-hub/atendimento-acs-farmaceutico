@@ -1,0 +1,20 @@
+name: Disparar autoatualizacao v100
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/triggers/auto-atualizacao-v100'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  disparar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Executar instalador v100
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run instalar-auto-atualizacao-v100.yml --repo "${{ github.repository }}" --ref main
