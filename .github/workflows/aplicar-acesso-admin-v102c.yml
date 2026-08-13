@@ -7,6 +7,7 @@ on:
       - '.github/workflows/aplicar-acesso-admin-v102c.yml'
       - 'scripts/aplicar_acesso_admin_v102.py'
       - 'scripts/ajustar_testes_admin_v102.py'
+      - 'scripts/ajustar_fallback_safari_admin_v102.py'
 
 permissions:
   contents: write
@@ -27,6 +28,7 @@ jobs:
       - name: Aplicar correção restrita aos quatro painéis
         run: |
           python3 scripts/aplicar_acesso_admin_v102.py
+          python3 scripts/ajustar_fallback_safari_admin_v102.py
           python3 scripts/ajustar_testes_admin_v102.py
       - name: Instalar dependências
         run: npm ci
