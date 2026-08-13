@@ -63,7 +63,7 @@ function publicoAgendasV1Montar_(areaId) {
   };
 
   if (!aba || aba.getLastRow() < 2) {
-    return publicoAgendasV1Resposta_(modulos, aba ? aba.getName() : '', areaId);
+    return publicoAgendasV1Resposta_(modulos, aba ? aba.getName() : '', areaId, planilha);
   }
 
   var totalLinhas = aba.getLastRow();
@@ -139,10 +139,10 @@ function publicoAgendasV1Montar_(areaId) {
     });
   });
 
-  return publicoAgendasV1Resposta_(modulos, aba.getName(), areaId);
+  return publicoAgendasV1Resposta_(modulos, aba.getName(), areaId, planilha);
 }
 
-function publicoAgendasV1Resposta_(modulos, aba, areaId) {
+function publicoAgendasV1Resposta_(modulos, aba, areaId, planilha) {
   areaId = publicoAgendasV1AreaId_(areaId) || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
   return {
     ok: true,
@@ -157,9 +157,85 @@ function publicoAgendasV1Resposta_(modulos, aba, areaId) {
     ),
     origem: aba,
     modules: modulos,
-    recados: [],
+    recados: publicoAgendasV1LerRecados_(planilha, areaId),
     campanhas: []
   };
+}
+
+function publicoAgendasV1LerRecados_(planilha, areaId) {
+  areaId = publicoAgendasV1AreaId_(areaId) || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
+  if (!planilha || typeof planilha.getSheetByName !== 'function') return [];
+
+  var aba = planilha.getSheetByName('RECADOS_PORTAL');
+  if (!aba || aba.getLastRow() < 2 || aba.getLastColumn() < 1) return [];
+
+  var valores = aba
+    .getRange(1, 1, aba.getLastRow(), aba.getLastColumn())
+    .getDisplayValues();
+  var cabecalhos = valores[0].map(publicoAgendasV1Normalizar_);
+
+  function indice(nomes) {
+    for (var i = 0; i < nomes.length; i += 1) {
+      var encontrado = cabecalhos.indexOf(publicoAgendasV1Normalizar_(nomes[i]));
+      if (encontrado >= 0) return encontrado;
+    }
+    return -1;
+  }
+
+  var idx = {
+    id: indice(['ID', 'CODIGO', 'RECADO_ID']),
+    area: indice(['AREA_ID', 'AREA', 'TERRITORIO']),
+    titulo: indice(['TITULO', 'TITULO_PUBLICO', 'NOME']),
+    mensagem: indice(['MENSAGEM', 'TEXTO', 'CONTEUDO']),
+    prioridade: indice(['PRIORIDADE', 'TIPO']),
+    validade: indice(['VALIDADE', 'DATA_VALIDADE', 'ATE']),
+    ativo: indice(['ATIVO', 'RECADO_ATIVO', 'PUBLICAR'])
+  };
+
+  if (idx.mensagem < 0 || idx.ativo < 0) return [];
+
+  var hoje = Utilities.formatDate(
+    new Date(),
+    PUBLICO_AGENDAS_PORTAL_V1.FUSO,
+    'yyyy-MM-dd'
+  );
+  var recados = [];
+
+  for (var linha = 1; linha < valores.length; linha += 1) {
+    var registro = valores[linha];
+    var areaLinha = idx.area >= 0
+      ? publicoAgendasV1AreaId_(registro[idx.area])
+      : '';
+    areaLinha = areaLinha || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
+    if (areaLinha !== areaId) continue;
+    if (!publicoAgendasV1Booleano_(registro[idx.ativo])) continue;
+
+    var validade = idx.validade >= 0
+      ? publicoAgendasV1DataIso_(registro[idx.validade])
+      : '';
+    if (validade && validade < hoje) continue;
+
+    var mensagem = String(registro[idx.mensagem] || '').trim();
+    if (!mensagem) continue;
+
+    var titulo = idx.titulo >= 0
+      ? String(registro[idx.titulo] || '').trim()
+      : '';
+    var prioridade = idx.prioridade >= 0
+      ? String(registro[idx.prioridade] || '').trim()
+      : '';
+
+    recados.push({
+      id: idx.id >= 0 ? String(registro[idx.id] || '').trim() : '',
+      title: titulo || 'Recado da Unidade',
+      message: mensagem,
+      priority: prioridade || 'INFORMATIVO',
+      validity: validade,
+      active: true
+    });
+  }
+
+  return recados;
 }
 
 function publicoAgendasV1LocalizarAba_(planilha) {
