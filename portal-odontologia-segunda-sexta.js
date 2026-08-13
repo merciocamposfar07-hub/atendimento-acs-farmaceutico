@@ -16,6 +16,12 @@
   var rendering = false;
   var internalCategoryChange = false;
   var verifyTimer = null;
+  var loadPromise = null;
+  var CACHE_KEY = 'portalTacsDentalAgendaV101';
+  var CACHE_MAX_MS = 6 * 60 * 60 * 1000;
+  var CACHE_ACTIONABLE_MS = 90 * 1000;
+  var cacheSavedAt = 0;
+  var cachedSnapshot = false;
 
   function el(id) { return document.getElementById(id); }
   function clean(value) { return String(value == null ? '' : value).trim(); }
@@ -100,6 +106,65 @@
     };
   }
 
+  function normalizeAgendaData(data) {
+    var normalized = [];
+    (Array.isArray(data && data.dias) ? data.dias : []).forEach(function (row, index) {
+      var slot = normalizeSlot(row, index);
+      if (slot) normalized.push(slot);
+    });
+    normalized.sort(function (a, b) { return dateStamp(a.date) - dateStamp(b.date); });
+    return normalized;
+  }
+
+  function readAgendaCache() {
+    try {
+      var item = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (!item || !item.data || item.data.ok === false) return null;
+      var age = Date.now() - Number(item.savedAt || 0);
+      if (age < 0 || age > CACHE_MAX_MS) return null;
+      return { data: item.data, savedAt: Number(item.savedAt || 0) };
+    } catch (error) { return null; }
+  }
+
+  function saveAgendaCache(data) {
+    if (!data || data.ok === false) return;
+    cacheSavedAt = Date.now();
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: cacheSavedAt, data: data })); }
+    catch (error) {}
+  }
+
+  function saveSlotsCache() {
+    var data = {
+      ok: true,
+      dias: slots.map(function (slot) {
+        return {
+          id: slot.id, dia: slot.day, data: slot.date,
+          vagasComuns: slot.common, vagasEmergenciais: slot.emergency
+        };
+      })
+    };
+    saveAgendaCache(data);
+  }
+
+  function applyAgendaData(data, fromCache, savedAt) {
+    slots = normalizeAgendaData(data);
+    cachedSnapshot = Boolean(fromCache);
+    cacheSavedAt = Number(savedAt || (fromCache ? 0 : Date.now()));
+  }
+
+  function cachedIsActionable() {
+    return !cachedSnapshot || (cacheSavedAt > 0 && Date.now() - cacheSavedAt <= CACHE_ACTIONABLE_MS);
+  }
+
+  function loadCachedAgenda() {
+    var item = readAgendaCache();
+    if (!item) return false;
+    applyAgendaData(item.data, true, item.savedAt);
+    loading = false;
+    renderAgenda();
+    return slots.length > 0;
+  }
+
   function setSubject(value) {
     var subject = el('subject');
     if (!subject || subject.value === value) return;
@@ -148,7 +213,8 @@
   }
 
   function statusText() {
-    if (loading) return 'Atualizando a agenda odontológica pela planilha...';
+    if (loading) return slots.length ? 'Agenda exibida. Confirmando as vagas atuais…' : 'Atualizando a agenda odontológica pela planilha...';
+    if (cachedSnapshot) return 'Última agenda recebida exibida. Confirmando a disponibilidade atual ao selecionar uma vaga.';
     if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
     if (selection) {
       if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
@@ -202,7 +268,7 @@
         button.dataset.id = slot.id;
         button.dataset.type = type;
         button.dataset.value = value === null ? '' : String(value);
-        button.disabled = Boolean(selection && !same) || (!same && (value === null || value <= 0));
+        button.disabled = Boolean(selection && !same) || (!same && (value === null || value <= 0 || !cachedIsActionable()));
         button.textContent = vacancyLabel(value, type);
         if (same) button.classList.add('selected');
         actions.appendChild(button);
@@ -224,7 +290,8 @@
       var callbackName = 'dentalV98Agenda' + Date.now() + Math.floor(Math.random() * 10000);
       var script = document.createElement('script');
       var finished = false;
-      var timer = setTimeout(function () { finish(new Error('Tempo de resposta excedido.')); }, 12000);
+      var timeoutMs = slots.length ? 4500 : 12000;
+      var timer = setTimeout(function () { finish(new Error('Tempo de resposta excedido.')); }, timeoutMs);
 
       function cleanup() {
         clearTimeout(timer);
@@ -249,32 +316,38 @@
   }
 
   function loadAgenda(preserveSelection) {
-    if (!isDental() || loading) return;
+    if (!isDental()) return Promise.resolve(null);
+    if (loading && loadPromise) return loadPromise;
     loading = true;
     if (!preserveSelection) selection = null;
     renderAgenda();
-    fetchAgenda().then(function (data) {
-      var normalized = [];
-      (Array.isArray(data.dias) ? data.dias : []).forEach(function (row, index) {
-        var slot = normalizeSlot(row, index);
-        if (slot) normalized.push(slot);
-      });
-      normalized.sort(function (a, b) { return dateStamp(a.date) - dateStamp(b.date); });
-      slots = normalized;
+    loadPromise = fetchAgenda().then(function (data) {
+      applyAgendaData(data, false, Date.now());
+      saveAgendaCache(data);
       loading = false;
+      loadPromise = null;
       renderAgenda();
       refreshSend();
+      return data;
     }).catch(function (error) {
       loading = false;
-      if (!preserveSelection) slots = [];
+      loadPromise = null;
       renderAgenda();
       var status = el('dentalStatus');
       if (status && !selection) {
-        status.textContent = error.message || 'Não foi possível consultar a planilha odontológica.';
-        status.className = 'dental-status error';
+        if (slots.length) {
+          cachedSnapshot = true;
+          status.textContent = 'Não foi possível confirmar a agenda agora. A última leitura recebida continua visível.';
+          status.className = 'dental-status';
+        } else {
+          status.textContent = error.message || 'Não foi possível consultar a planilha odontológica.';
+          status.className = 'dental-status error';
+        }
       }
       refreshSend();
+      return null;
     });
+    return loadPromise;
   }
 
   function validCpf(value) {
@@ -433,6 +506,7 @@
     if (item.type === 'emergencial') slot.emergency = Math.max(0, Number(remaining));
     else slot.common = Math.max(0, Number(remaining));
     item.optimisticRemaining = Math.max(0, Number(remaining));
+    saveSlotsCache();
   }
 
   function verifyReservation(item, attempt) {
@@ -670,8 +744,17 @@
       if (isDental()) loadAgenda(false);
     });
 
-    if (isDental()) loadAgenda(false);
+    if (isDental()) {
+      loadCachedAgenda();
+      loadAgenda(false);
+    }
   }
+
+  window.PortalTacsOdontologiaV98 = Object.freeze({
+    atualizar: function () { return loadAgenda(false); },
+    temCache: function () { return Boolean(readAgendaCache()); },
+    cacheKey: CACHE_KEY
+  });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();

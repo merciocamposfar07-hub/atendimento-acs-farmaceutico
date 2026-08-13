@@ -13,7 +13,7 @@
     if(existenteScript){existenteScript.addEventListener('load',ativar,{once:true});return;}
     var script=document.createElement('script');
     script.id=id;script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-auto-update.js?v=20260812-v100';
+    script.src='/atendimento-acs-farmaceutico/portal-auto-update.js?v=20260812-v101';
     script.onload=ativar;
     (document.head||document.documentElement).appendChild(script);
   }
@@ -28,9 +28,9 @@
   var API=String(window.TACS_ADMIN_API_URL||'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec').trim();
   var CACHE_KEY='portalTacsAdminStatusV5';
   var WARM_KEY='portalTacsAppsScriptWarmAtV1';
-  var CACHE_MS=2*60*1000;
-  var WARM_MS=45*1000;
-  var TIMEOUT_MS=25000;
+  var CACHE_MS=5*60*1000;
+  var WARM_MS=3*60*1000;
+  var TIMEOUT_MS=6000;
   var emCurso=null;
   var ultimaConclusao=lerInstanteAquecido();
   var cacheInicial=lerCache();
@@ -136,7 +136,7 @@
   }
 
   function reaquecerAoVoltar(){
-    if(document.visibilityState==='visible'&&Date.now()-ultimaConclusao>=2*60*1000){
+    if(document.visibilityState==='visible'&&Date.now()-ultimaConclusao>=5*60*1000){
       iniciar(true);
     }
   }
