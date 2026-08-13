@@ -109,8 +109,9 @@ function verifyStaticSource(config) {
   if (config.file === 'teste-v1/painel-recados-campanhas-v1.html') {
     assert.match(base, /event\.source!==ativa\.frame\.contentWindow/);
     assert.match(base, /frame\.setAttribute\('name',frameName\)/);
-    assert.match(base, /mode:'no-cors'/);
-    assert.match(base, /if\(enviarPostRapidoV102\(campos\)\)\{agendarConsulta\(\);return\}/);
+    assert.doesNotMatch(base, /mode:'no-cors'/);
+    assert.doesNotMatch(base, /enviarPostRapidoV102/);
+    assert.match(base, /frame\.addEventListener\('load',enviarDepoisDoRegistro,\{once:true\}\)/);
     assert.match(base, /input\[type="date"\]\.campo\{[^}]*min-inline-size:0[^}]*max-inline-size:100%/);
     assert.match(base, /\.validadeCampo\{[^}]*overflow:hidden[^}]*contain:inline-size/);
     assert.equal((base.match(/class="validadeCampo"/g) || []).length, 2);
@@ -121,9 +122,10 @@ function verifyStaticSource(config) {
   } else {
     assert.match(base, new RegExp(`event\\.source!==frame\\.contentWindow`));
   }
-  assert.match(base, /mode:'no-cors'/, `${config.file} não possui POST rápido sem iframe no caminho principal.`);
-  assert.match(base, /proximaEspera:350/, `${config.file} não inicia a confirmação rapidamente.`);
-  assert.match(base, /credentials:'omit'/, `${config.file} não preserva o POST administrativo sem credenciais Google.`);
+  assert.doesNotMatch(base, /mode:'no-cors'/, `${config.file} não pode usar fetch no-cors no caminho administrativo.`);
+  assert.doesNotMatch(base, /enviarPostRapidoV102/, `${config.file} ainda contém o transporte v102 que falhou no Safari real.`);
+  assert.match(base, /proximaEspera:450/, `${config.file} não inicia a confirmação rapidamente.`);
+  assert.match(base, /form\.method='POST'|f\.method='POST'/, `${config.file} não preserva POST por formulário compatível com Safari.`);
   assert.doesNotMatch(base, /proximaEspera:2500/);
   assert.doesNotMatch(base, /74000|75000/);
   assert.match(base, /portalTacsPublicDataV3/);
@@ -152,7 +154,7 @@ function verifyStaticSource(config) {
   assert.match(official, /v=202608/);
   assert.match(
     official,
-    /admin-warmup\.js\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v102)/
+    /admin-warmup\.js\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v103)/
   );
   assert.match(official, /rel="preconnect" href="https:\/\/script\.google\.com"/);
   assert.doesNotMatch(official, /Promise\.all\(\[painel,conexao/);
@@ -244,6 +246,7 @@ async function testDirectResponse(config) {
     virtualConsole,
     beforeParse(window) {
       window.PortalTacsAdminPreload = {ok: true};
+      window.fetch = function(){ errors.push('O fluxo administrativo tentou usar fetch no-cors.'); return Promise.reject(new Error('fetch administrativo proibido neste teste')); };
       window.HTMLFormElement.prototype.submit = function submit() {
         const form = this;
         const payload = fields(form);

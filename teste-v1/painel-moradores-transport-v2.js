@@ -148,7 +148,7 @@ function jsonp(action,extra,cb){
   var name='mrV2Cb'+Date.now()+Math.floor(Math.random()*100000);
   var script=document.createElement('script');
   var done=false;
-  var timer=setTimeout(function(){finish({ok:false,message:'O servidor demorou para responder à consulta.'})},5500);
+  var timer=setTimeout(function(){finish({ok:false,message:'O servidor demorou para responder à consulta.'})},12000);
   function finish(result){
     if(done)return;
     done=true;
@@ -224,23 +224,13 @@ function pollResult(){
   });
 }
 
-function enviarPostRapidoV102(campos){
-  if(typeof window.fetch!=='function'||typeof window.URLSearchParams!=='function')return false;
-  try{
-    var corpo=new URLSearchParams();
-    Object.keys(campos||{}).forEach(function(k){corpo.append(k,String(campos[k]==null?'':campos[k]))});
-    window.fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',cache:'no-store',credentials:'omit',body:corpo}).catch(function(){});
-    return true;
-  }catch(e){return false}
-}
 function post(action,payload,resultAction,cb){
   if(active){cb({ok:false,message:'Aguarde a operação anterior terminar.'});return}
   var rid=requestId(action),fields={};Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});fields.action=action;fields.requestId=rid;
   var escrita=/(?:salvar|situacao|consolid|ativar|remover|restaurar|criar)/i.test(action);
-  var duration=escrita?55000:20000;
-  active={id:rid,action:action,resultAction:resultAction,callback:cb,frame:null,form:null,submitTimer:null,pollTimer:null,nextWait:350,limit:Date.now()+duration,timeout:setTimeout(function(){finish({ok:false,message:escrita?'O servidor ainda está confirmando a alteração. Aguarde antes de tentar outra vez.':'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'})},duration+500)};
+  var duration=escrita?60000:30000;
+  active={id:rid,action:action,resultAction:resultAction,callback:cb,frame:null,form:null,submitTimer:null,pollTimer:null,nextWait:450,limit:Date.now()+duration,timeout:setTimeout(function(){finish({ok:false,message:escrita?'O servidor ainda está confirmando a alteração. Aguarde antes de tentar outra vez.':'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'})},duration+500)};
   var login=el('login'),loginTacs=el('loginTacs'),logout=el('logout');if(login)login.disabled=true;if(loginTacs)loginTacs.disabled=true;if(logout)logout.disabled=true;
-  if(enviarPostRapidoV102(fields)){schedulePoll();return}
   var frame=document.createElement('iframe'),form=document.createElement('form'),frameName='mrV102Frame'+Date.now()+Math.floor(Math.random()*1000);
   frame.name=frameName;frame.setAttribute('name',frameName);frame.className='bridge';frame.setAttribute('aria-hidden','true');frame.src='about:blank';
   form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.setAttribute('target',frameName);form.className='bridge';
@@ -248,13 +238,22 @@ function post(action,payload,resultAction,cb){
   active.frame=frame;active.form=form;document.body.appendChild(frame);document.body.appendChild(form);
   var enviado=false;
   function enviarUmaVez(){
-    if(enviado)return;
+    if(enviado||!active||active.id!==rid)return;
     enviado=true;
-    try{form.submit()}catch(erro){finish({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'})}
+    clearTimeout(active.submitTimer);active.submitTimer=null;
+    try{form.submit()}catch(erro){finish({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});return}
+    schedulePoll();
   }
-  if(window.requestAnimationFrame){window.requestAnimationFrame(function(){window.requestAnimationFrame(enviarUmaVez)})}
+  function enviarDepoisDoRegistro(){
+    if(typeof window.requestAnimationFrame==='function'){
+      window.requestAnimationFrame(function(){window.requestAnimationFrame(enviarUmaVez)});
+      return;
+    }
+    setTimeout(enviarUmaVez,60);
+  }
+  frame.addEventListener('load',enviarDepoisDoRegistro,{once:true});
+  enviarDepoisDoRegistro();
   active.submitTimer=setTimeout(enviarUmaVez,180);
-  schedulePoll();
 }
 
 function updateAreaHeading(areaName){
