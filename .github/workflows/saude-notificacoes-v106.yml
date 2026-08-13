@@ -34,6 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/apply_saude_notificacoes_v106.py
+          python3 scripts/patch_test_admin_notification_health_v106.py
           python3 - <<'PY'
           from pathlib import Path
           p=Path('painel-oficial-recados-campanhas.html')
@@ -50,6 +51,7 @@ jobs:
           set -euo pipefail
           node --check agenda-enfermeira.js
           node --check portal-notification-health.js
+          node --check scripts/test_admin_transport.js
           node --check scripts/test_notification_health_registry.js
           node --check --input-type=commonjs < apps-script/ZZZZ_22_SaudeNotificacoesV1.gs
 
@@ -71,6 +73,7 @@ jobs:
             'package.json' \
             'painel-oficial-recados-campanhas.html' \
             'scripts/build_apps_script_release.js' \
+            'scripts/test_admin_transport.js' \
             'scripts/test_notification_health_registry.js' \
             'teste-v1/painel-recados-campanhas-v1.html' | sort > /tmp/expected.txt
           diff -u /tmp/expected.txt /tmp/changed.txt
@@ -81,6 +84,6 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add agenda-enfermeira.js index.html package.json painel-oficial-recados-campanhas.html scripts/build_apps_script_release.js scripts/test_notification_health_registry.js teste-v1/painel-recados-campanhas-v1.html
+          git add agenda-enfermeira.js index.html package.json painel-oficial-recados-campanhas.html scripts/build_apps_script_release.js scripts/test_admin_transport.js scripts/test_notification_health_registry.js teste-v1/painel-recados-campanhas-v1.html
           git commit -m 'Adiciona saude das notificacoes por morador e aparelho'
           git push origin HEAD:notificacoes-saude-v106
