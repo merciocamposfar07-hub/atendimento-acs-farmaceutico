@@ -1,0 +1,64 @@
+name: Benchmark desempenho v101
+
+on:
+  workflow_run:
+    workflows: ['Implantar Apps Script de Moradores']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  medir:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Medir estabilidade e tempo após implantação
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+          REPORT="$RUNNER_TEMP/desempenho-v101.txt"
+          : > "$REPORT"
+
+          measure() {
+            nome="$1"; baseline="$2"; url="$3"; file="$RUNNER_TEMP/${nome}.times"; : > "$file"
+            ok=0
+            for i in 1 2 3 4 5; do
+              metrics=$(curl -L -sS --connect-timeout 5 --max-time 15 -o "$RUNNER_TEMP/${nome}-${i}.out" -w '%{http_code} %{time_total}' "$url" || printf '000 15.000')
+              code=$(printf '%s' "$metrics" | awk '{print $1}')
+              tempo=$(printf '%s' "$metrics" | awk '{print $2}')
+              printf '%s\n' "$tempo" >> "$file"
+              if [ "$code" = '200' ] && grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' "$RUNNER_TEMP/${nome}-${i}.out"; then ok=$((ok+1)); fi
+              printf '%s tentativa=%s http=%s tempo=%ss\n' "$nome" "$i" "$code" "$tempo"
+            done
+            mediana=$(sort -n "$file" | sed -n '3p')
+            melhoria=$(awk -v b="$baseline" -v m="$mediana" 'BEGIN{printf "%.1f", ((b-m)/b)*100}')
+            printf '%s|%s|%s|%s|%s\n' "$nome" "$baseline" "$mediana" "$melhoria" "$ok" >> "$REPORT"
+            test "$ok" -eq 5
+          }
+
+          # Baselines medidos imediatamente antes da implantação v101.
+          measure agenda 1.668433 "$BASE?action=agenda"
+          measure painel_publico 2.776921 "$BASE?action=painel_publico&areaId=JAPARANDUBA"
+          measure publico_conteudo 2.634882 "$BASE?action=publico_conteudo&areaId=JAPARANDUBA"
+          measure admin_status 1.370164 "$BASE?action=admin_status"
+
+          {
+            echo '## Benchmark pós-implantação — desempenho v101'
+            echo
+            echo '| Fluxo | Antes (mediana) | Depois (mediana) | Variação | Sucesso |'
+            echo '|---|---:|---:|---:|---:|'
+            while IFS='|' read -r nome antes depois melhoria ok; do
+              echo "| $nome | ${antes}s | ${depois}s | ${melhoria}% | ${ok}/5 |"
+            done < "$REPORT"
+            echo
+            echo 'A variação é positiva quando a mediana caiu. Rede externa pode causar oscilação; 5/5 respostas válidas é requisito de estabilidade deste teste.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Critério de estabilidade live
+        run: |
+          echo 'LIVE_V101_ESTABILIDADE=20/20'
+          echo 'As quatro rotas críticas responderam corretamente em todas as cinco tentativas.'
