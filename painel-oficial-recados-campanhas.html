@@ -3,9 +3,6 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
   <meta name="theme-color" content="#073A55">
   <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/painel-recados.svg">
   <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/painel-recados.svg">
@@ -13,7 +10,7 @@
   <link rel="preconnect" href="https://script.google.com">
   <link rel="preconnect" href="https://script.googleusercontent.com">
   <link rel="dns-prefetch" href="//script.google.com">
-  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260812-auto-v101"></script>
+  <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260813-admin-v102"></script>
   <meta name="color-scheme" content="light">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Painel oficial de recados e campanhas • Portal TACS</title>
@@ -29,7 +26,7 @@
   <script>
   (function(){
     'use strict';
-    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-recados-campanhas-v1.html?v=20260812-validade-safari-v6';
+    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-recados-campanhas-v1.html?v=20260813-admin-v102';
     var trocas=[
       ['<title>Recados e campanhas V1 • Portal TACS</title>','<title>Painel oficial de recados e campanhas • Portal TACS</title>'],
       ['AMBIENTE ISOLADO • FASE 4','PAINEL ADMINISTRATIVO OFICIAL'],
@@ -62,11 +59,11 @@
         "}());";
       return css+'<scr'+'ipt>'+codigo+'</scr'+'ipt>';
     }
-    var painel=fetch(origem,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text()});
+    var painel=fetch(origem,{cache:'default'}).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text()});
     painel.then(function(html){
       var aquecimento=window.PortalTacsAdminWarmup;
       var conexaoSegura=JSON.stringify(aquecimento&&aquecimento.resultado||{ok:false,preparando:true}).replace(/</g,'\\u003c');
-      var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt><scr'+'ipt src="../admin-warmup.js?v=20260812-auto-v101"></scr'+'ipt>';
+      var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt><scr'+'ipt src="../admin-warmup.js?v=20260813-admin-v102"></scr'+'ipt>';
       html=substituir(html,'<head>',bootstrap);
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
       html=substituir(html,'</body>',complementoStatus()+'</body>');
