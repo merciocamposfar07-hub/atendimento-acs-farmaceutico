@@ -21,7 +21,7 @@
       var st=state();if(!uuid(st.subscriptionId)||!pendingRepairId)return;
       var body=new URLSearchParams();
       body.set('action','publico_notificacao_reparo_estado');body.set('requestId',repairStateRequestId());
-      body.set('subscriptionId',st.subscriptionId);body.set('areaId',areaId());body.set('estado',estado);
+      body.set('subscriptionId',st.subscriptionId);body.set('areaId',areaId());body.set('reparoId',pendingRepairId);body.set('estado',estado);
       if(detalhe)body.set('detalhe',text(detalhe).slice(0,220));
       fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});
     }catch(e){}
