@@ -6,6 +6,7 @@ const root=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(root,f),'utf8');
 const html=read('central-administrativa-tacs.html');
 const js=read('central-administrativa-tacs.js');
+const notificationHealthPage=read('painel-oficial-saude-notificacoes.html');
 const notificationHealthBackend=read('apps-script/ZZZZ_22_SaudeNotificacoesV1.gs');
 const manifest=JSON.parse(read('manifest-central-admin.webmanifest'));
 assert.equal(manifest.name,'Central Administrativa TACS');
@@ -27,6 +28,19 @@ assert.match(js,/admin_territorio_login_tacs/);
 assert.match(js,/admin_territorio_dados/);
 assert.match(js,/admin_notificacoes_saude/);
 assert.match(js,/painel-oficial-recados-campanhas\.html\?area=/);
+assert.match(js,/if\(name==='notificacoes'\)return '\/atendimento-acs-farmaceutico\/painel-oficial-saude-notificacoes\.html\?area='/,
+  'Saúde das notificações deve abrir o painel exclusivo.');
+assert.doesNotMatch(js,/if\(name==='notificacoes'\)return '[^']*painel-oficial-recados-campanhas/,
+  'Saúde das notificações não pode abrir o painel de recados e campanhas.');
+assert.match(html,/central-administrativa-tacs\.js\?v=20260814-v3/,
+  'A Central deve invalidar o cache da rota antiga.');
+assert.match(notificationHealthPage,/<title>Saúde das notificações • Portal TACS<\/title>/);
+assert.match(notificationHealthPage,/main>section\.card:not\(#saudeNotificacoes\)/,
+  'O painel exclusivo deve ocultar os módulos de recados e campanhas.');
+assert.match(notificationHealthPage,/saudeNotificacoesCarregando/);
+Array.from(notificationHealthPage.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi),function(m){return m[1]}).forEach(function(codigo){
+  assert.doesNotThrow(function(){new Function(codigo)},'O JavaScript do painel exclusivo deve ter sintaxe válida.');
+});
 assert.match(js,/teste-v1\/painel-moradores-v2\.html/);
 assert.match(js,/filter\(function\(a\)\{return a&&a\.ativa!==false\}\)/);
 assert.match(js,/post\('admin_moradores_status'[\s\S]*post\('admin_notificacoes_saude'/,
