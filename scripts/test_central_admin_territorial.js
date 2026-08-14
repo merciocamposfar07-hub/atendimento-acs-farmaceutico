@@ -8,6 +8,10 @@ const html=read('central-administrativa-tacs.html');
 const js=read('central-administrativa-tacs.js');
 const notificationHealthPage=read('painel-oficial-saude-notificacoes.html');
 const notificationHealthBackend=read('apps-script/ZZZZ_22_SaudeNotificacoesV1.gs');
+const notificationHealthSource=read('teste-v1/painel-recados-campanhas-v1.html');
+const professionalsPage=read('teste-v1/painel-profissionais-servicos-v1.html');
+const professionalsWrapper=read('painel-oficial-profissionais-servicos.html');
+const publicPortal=read('index.html');
 const manifest=JSON.parse(read('manifest-central-admin.webmanifest'));
 assert.equal(manifest.name,'Central Administrativa TACS');
 assert.match(manifest.start_url,/central-administrativa-tacs\.html$/);
@@ -32,12 +36,26 @@ assert.match(js,/if\(name==='notificacoes'\)return '\/atendimento-acs-farmaceuti
   'Saúde das notificações deve abrir o painel exclusivo.');
 assert.doesNotMatch(js,/if\(name==='notificacoes'\)return '[^']*painel-oficial-recados-campanhas/,
   'Saúde das notificações não pode abrir o painel de recados e campanhas.');
-assert.match(html,/central-administrativa-tacs\.js\?v=20260814-v3/,
-  'A Central deve invalidar o cache da rota antiga.');
+assert.match(html,/central-administrativa-tacs\.js\?v=20260814-v4/,
+  'A Central deve invalidar o cache dos ajustes visuais.');
+assert.match(html,/\.health-card\{[^}]*background:linear-gradient\(145deg,var\(--p\),var\(--p2\)\)/,
+  'Os cartões de Saúde geral devem usar fundo azul-petróleo.');
+assert.match(html,/\.health-card strong\{[^}]*color:#fff/,
+  'Os títulos dos cartões azul-petróleo devem permanecer legíveis.');
 assert.match(notificationHealthPage,/<title>Saúde das notificações • Portal TACS<\/title>/);
+assert.match(notificationHealthPage,/painel-recados-campanhas-v1\.html\?v=20260814-visual-v107/);
 assert.match(notificationHealthPage,/main>section\.card:not\(#saudeNotificacoes\)/,
   'O painel exclusivo deve ocultar os módulos de recados e campanhas.');
 assert.match(notificationHealthPage,/saudeNotificacoesCarregando/);
+assert.doesNotMatch(notificationHealthSource,/O estado técnico não comprova a entrega física/,
+  'A observação quase invisível deve ser removida da Saúde das notificações.');
+assert.match(professionalsPage,/\.aba\{[^}]*min-height:76px[^}]*font-size:clamp\(\.78rem,3\.3vw,\.95rem\)[^}]*overflow-wrap:anywhere/,
+  'Os botões de Profissionais devem conter os textos no iPhone.');
+assert.match(professionalsWrapper,/painel-profissionais-servicos-v1\.html\?v=20260814-tabs-v104/);
+assert.match(js,/painel-oficial-profissionais-servicos\.html\?v=20260814-tabs-v104/,
+  'A Central deve carregar a versão corrigida do painel de Profissionais.');
+assert.match(publicPortal,/\.hero-actions\{grid-template-columns:1fr;margin:0;border-left:0;border-right:0;border-radius:0\}/,
+  'O quadro inferior do Portal TACS deve alinhar com a largura do quadro superior no celular.');
 Array.from(notificationHealthPage.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi),function(m){return m[1]}).forEach(function(codigo){
   assert.doesNotThrow(function(){new Function(codigo)},'O JavaScript do painel exclusivo deve ter sintaxe válida.');
 });
