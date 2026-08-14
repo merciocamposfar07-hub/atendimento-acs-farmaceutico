@@ -6,6 +6,7 @@ const root=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(root,f),'utf8');
 const html=read('central-administrativa-tacs.html');
 const js=read('central-administrativa-tacs.js');
+const notificationHealthBackend=read('apps-script/ZZZZ_22_SaudeNotificacoesV1.gs');
 const manifest=JSON.parse(read('manifest-central-admin.webmanifest'));
 assert.equal(manifest.name,'Central Administrativa TACS');
 assert.match(manifest.start_url,/central-administrativa-tacs\.html$/);
@@ -30,5 +31,11 @@ assert.match(js,/teste-v1\/painel-moradores-v2\.html/);
 assert.match(js,/filter\(function\(a\)\{return a&&a\.ativa!==false\}\)/);
 assert.match(js,/post\('admin_moradores_status'[\s\S]*post\('admin_notificacoes_saude'/,
   'Saúde de moradores deve terminar antes da consulta autenticada das notificações.');
+assert.match(notificationHealthBackend,/contagens=\{ativos:0,inativos:0,reparo:0,semConfirmacao:0,total:0\}/,
+  'O contrato do backend deve expor a quantidade apta em contagens.ativos.');
+assert.match(js,/Number\(c\.ativos\|\|0\)\+' aptos/,
+  'A Central deve ler os aptos do campo contagens.ativos retornado pelo backend.');
+assert.doesNotMatch(js,/Number\(c\.aptos\|\|0\)\+' aptos/,
+  'A Central não pode usar contagens.aptos, pois esse campo não existe no backend.');
 assert.doesNotMatch(js,/subscriptionId\s*[:=]\s*['"][0-9a-f-]{20,}/i);
 console.log('Central Administrativa TACS: um ícone, sessão territorial, permissões e Saúde Geral validados.');
