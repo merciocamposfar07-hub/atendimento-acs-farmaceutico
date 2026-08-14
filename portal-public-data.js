@@ -207,7 +207,8 @@
 
 (function(){
   'use strict';
-  if(window.PortalTacsTerritoryBranding||document.getElementById('portal-territory-branding-script'))return;
+  if(typeof document==='undefined'||typeof document.createElement!=='function'||!document.head||typeof document.head.appendChild!=='function'||!window.location||!window.location.href)return;
+  if(window.PortalTacsTerritoryBranding||(typeof document.getElementById==='function'&&document.getElementById('portal-territory-branding-script')))return;
   var script=document.createElement('script');
   script.id='portal-territory-branding-script';
   script.src=new URL('portal-territory-branding.js?v=20260814-v1',window.location.href).href;
