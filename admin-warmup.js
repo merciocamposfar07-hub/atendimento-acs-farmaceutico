@@ -157,7 +157,8 @@
   }
   function nomeCartao(cartao){var h=cartao&&cartao.querySelector('h3');return texto(h&&h.textContent)||'este aparelho'}
   function sessao(){
-    var area=(new URLSearchParams(location.search).get('area')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA';
+    var seletor=document.getElementById('areaEnvio');
+    var area=(texto(seletor&&seletor.value)||new URLSearchParams(location.search).get('area')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA';
     var s={dispositivo:localStorage.getItem(DEVICE_KEY)||'',areaId:area};
     var territorio=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'';
     var token=sessionStorage.getItem(TOKEN_KEY)||'';
