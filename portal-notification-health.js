@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-  var currentResident=null,oneSignal=null,pendingRepairId='',activeRequest='',lastFingerprint='',counter=0,openCounter=0;
+  var currentResident=null,oneSignal=null,pendingRepairId='',pendingRepairSubscriptionId='',activeRequest='',lastFingerprint='',counter=0,openCounter=0;
   var autoRepairTried={},repairCompleted={},repairMode='',repairStateCounter=0;
   function text(v){return String(v==null?'':v).trim()}
   function digits(v){return text(v).replace(/\D/g,'')}
@@ -18,10 +18,10 @@
   function postCheckin(payload){return new Promise(function(resolve,reject){if(activeRequest){reject(new Error('Checagem anterior ainda em andamento.'));return}var id=requestId(),body=new URLSearchParams();activeRequest=id;body.set('action','publico_notificacao_checkin');body.set('requestId',id);Object.keys(payload).forEach(function(k){body.set(k,payload[k])});fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){}).then(function(){setTimeout(function(){pollResult(id,resolve,reject,Date.now())},700)})})}
   function postRepairState(estado,detalhe){
     try{
-      var st=state();if(!uuid(st.subscriptionId)||!pendingRepairId)return;
+      var sub=pendingRepairSubscriptionId||state().subscriptionId;if(!uuid(sub)||!pendingRepairId)return;
       var body=new URLSearchParams();
       body.set('action','publico_notificacao_reparo_estado');body.set('requestId',repairStateRequestId());
-      body.set('subscriptionId',st.subscriptionId);body.set('areaId',areaId());body.set('reparoId',pendingRepairId);body.set('estado',estado);
+      body.set('subscriptionId',sub);body.set('areaId',areaId());body.set('reparoId',pendingRepairId);body.set('estado',estado);
       if(detalhe)body.set('detalhe',text(detalhe).slice(0,220));
       fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});
     }catch(e){}
@@ -38,53 +38,56 @@
       fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});
     }catch(e){}
   }
+  function waitAutomaticState(limitMs){return new Promise(function(resolve){var start=Date.now();function test(){var st=state();if(st.permission&&st.optedIn&&uuid(st.subscriptionId)&&st.token){resolve(st);return}if(Date.now()-start>=Number(limitMs||9000)){resolve(st);return}setTimeout(test,250)}test()})}
+  function confirmAreaTag(){return Promise.resolve().then(async function(){var st=state();if(!st.permission||!st.optedIn||!oneSignal||!oneSignal.User)return false;if(typeof oneSignal.User.addTag==='function')await oneSignal.User.addTag('area_tacs',areaId());var atual=state();return atual.areaConfirmed===true})}
+  function pollRepairPushResult(id,resolve,reject,started){
+    var cb='__notifAutoRepairPush_'+Date.now()+'_'+Math.floor(Math.random()*100000),s=document.createElement('script'),done=false,t=setTimeout(function(){finish(null)},4500);
+    function finish(data){if(done)return;done=true;clearTimeout(t);try{delete window[cb]}catch(e){window[cb]=undefined}if(s.parentNode)s.remove();if(data&&data.ok===true&&data.pendente===false&&data.result){if(data.result.ok===true&&data.result.push===true){resolve(data.result);return}reject(new Error(text(data.result.message)||'A notificação técnica de teste não foi aceita.'));return}if(Date.now()-started>22000){reject(new Error('A confirmação técnica demorou demais.'));return}setTimeout(function(){pollRepairPushResult(id,resolve,reject,started)},1000)}
+    window[cb]=finish;s.onerror=function(){finish(null)};s.src=API+'?action=publico_notificacao_reparo_result&requestId='+encodeURIComponent(id)+'&callback='+encodeURIComponent(cb)+'&_='+Date.now();document.head.appendChild(s)
+  }
+  function confirmAutomaticRepairPush(subscriptionId){
+    return new Promise(function(resolve,reject){
+      var sub=text(subscriptionId).toLowerCase();if(!uuid(sub)){reject(new Error('A inscrição renovada não ficou disponível.'));return}
+      var id='reparo_auto_push_'+Date.now()+'_'+Math.random().toString(36).slice(2,10),body=new URLSearchParams();
+      body.set('action','publico_confirmar_reparo_notificacao');body.set('requestId',id);body.set('subscriptionId',sub);body.set('areaId',areaId());
+      fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){}).then(function(){setTimeout(function(){pollRepairPushResult(id,resolve,reject,Date.now())},700)})
+    })
+  }
   function attemptAutomaticRepair(){
     if(!pendingRepairId||autoRepairTried[pendingRepairId]||!oneSignal)return;
-    var id=pendingRepairId,st=state(),repair=document.getElementById('notificationRepairButton');
-    autoRepairTried[id]=true;
-    if(!st.permission){
-      repairMode='';
-      postRepairState('ACAO_MORADOR_NECESSARIA','A permissão de notificações não está ativa; o navegador exige ação do morador.');
-      return;
-    }
-    if(!repair||repair.disabled){
-      repairMode='';
-      postRepairState('AUTO_FALHOU','O botão de reparo não ficou disponível para iniciar a tentativa automática.');
-      return;
-    }
-    repairMode='AUTO';
-    postRepairState('AUTO_INICIADO','O Portal iniciou o reparo automaticamente após detectar a pendência.');
-    setTimeout(function(){
+    var id=pendingRepairId,st=state();autoRepairTried[id]=true;
+    if(!st.permission){repairMode='';postRepairState('ACAO_MORADOR_NECESSARIA','A permissão de notificações não está ativa; o navegador exige ação do morador.');return}
+    repairMode='AUTO';postRepairState('AUTO_INICIADO','O Portal iniciou a renovação automática da inscrição e do vínculo da área.');
+    Promise.resolve().then(async function(){
+      var push=oneSignal.User&&oneSignal.User.PushSubscription;if(!push)throw new Error('A inscrição Push não está disponível neste navegador.');
+      if(typeof push.optIn==='function')await push.optIn();
+      var atual=await waitAutomaticState(9000);if(!atual.permission||!atual.optedIn||!uuid(atual.subscriptionId)||!atual.token)throw new Error('A inscrição não ficou pronta automaticamente.');
+      var areaOk=await confirmAreaTag();if(!areaOk)throw new Error('O vínculo da área não pôde ser confirmado automaticamente.');
+      atual=state();await confirmAutomaticRepairPush(atual.subscriptionId);
+      if(pendingRepairId!==id)return;
+      repairCompleted[id]=true;document.dispatchEvent(new CustomEvent('tacs:notificacao-reparo-concluido',{detail:{areaId:areaId(),subscriptionId:atual.subscriptionId,automatico:true}}));
+    }).catch(function(error){
       if(pendingRepairId!==id||repairCompleted[id])return;
-      try{repair.click();}catch(e){repairMode='';postRepairState('AUTO_FALHOU','A tentativa automática não conseguiu acionar o reparo local.');return}
-      setTimeout(function(){
-        if(pendingRepairId===id&&!repairCompleted[id]){
-          repairMode='';
-          postRepairState('AUTO_FALHOU','A tentativa automática não foi confirmada; o botão manual permanece disponível.');
-        }
-      },35000);
-    },220);
+      repairMode='';postRepairState('AUTO_FALHOU',text(error&&error.message)||'A tentativa automática não foi concluída.');
+      var repair=document.getElementById('notificationRepairButton'),help=document.getElementById('notificationHelp');if(repair){repair.hidden=false;repair.disabled=false;repair.textContent='🔧 Reparar agora'}if(help)help.textContent='A atualização automática não conseguiu terminar. Toque em Reparar agora para concluir o reparo neste aparelho.';
+    })
   }
   function showPendingRepair(result){
-    pendingRepairId=text(result&&result.reparoId);if(!pendingRepairId)return;
+    pendingRepairId=text(result&&result.reparoId);if(!pendingRepairId)return;pendingRepairSubscriptionId=state().subscriptionId;
     var box=document.getElementById('notificationOffer'),repair=document.getElementById('notificationRepairButton'),help=document.getElementById('notificationHelp');
-    if(box)box.setAttribute('data-reparo-area','pendente');
-    if(repair){repair.hidden=false;repair.disabled=false;repair.textContent='🔧 Reparar agora'}
+    if(box)box.setAttribute('data-reparo-area','pendente');if(repair){repair.hidden=false;repair.disabled=false;repair.textContent='🔧 Reparar agora'}
     if(help)help.textContent='O TACS identificou que os avisos deste aparelho precisam ser atualizados. O Portal tentará reparar automaticamente; se não conseguir, toque em Reparar agora.';
-    setTimeout(attemptAutomaticRepair,120);
+    setTimeout(attemptAutomaticRepair,120)
   }
-  function clearPendingRepair(){pendingRepairId='';repairMode='';var box=document.getElementById('notificationOffer');if(box)box.removeAttribute('data-reparo-area')}
-  function checkin(options){options=options||{};if(!oneSignal)return Promise.resolve(null);var st=state();if(!uuid(st.subscriptionId))return Promise.resolve(null);var info=deviceInfo(),doc=documentValue(),payload={subscriptionId:st.subscriptionId,areaId:areaId(),permission:st.permission?'true':'false',optedIn:st.optedIn?'true':'false',tokenAtivo:st.token?'true':'false',areaConfirmada:st.areaConfirmed?'true':'false',tipoAparelho:info.device,navegador:info.browser,sistema:info.os,reparoAplicado:text(options.reparoAplicado||'')};if(validDocument(doc))payload.documento=doc;var fp=[payload.subscriptionId,payload.areaId,payload.permission,payload.optedIn,payload.tokenAtivo,payload.areaConfirmada,payload.reparoAplicado,payload.documento||''].join('|');if(!options.force&&fp===lastFingerprint)return Promise.resolve(null);lastFingerprint=fp;return postCheckin(payload).then(function(result){if(result&&result.reparoPendente)showPendingRepair(result);else if(result&&payload.reparoAplicado)clearPendingRepair();return result}).catch(function(){lastFingerprint='';activeRequest='';return null})}
+  function clearPendingRepair(){pendingRepairId='';pendingRepairSubscriptionId='';repairMode='';var box=document.getElementById('notificationOffer');if(box)box.removeAttribute('data-reparo-area')}
+  function checkin(options){options=options||{};if(!oneSignal)return Promise.resolve(null);var st=state();if(!uuid(st.subscriptionId))return Promise.resolve(null);var info=deviceInfo(),doc=documentValue(),payload={subscriptionId:st.subscriptionId,areaId:areaId(),permission:st.permission?'true':'false',optedIn:st.optedIn?'true':'false',tokenAtivo:st.token?'true':'false',areaConfirmada:st.areaConfirmed?'true':'false',tipoAparelho:info.device,navegador:info.browser,sistema:info.os,reparoAplicado:text(options.reparoAplicado||'')};if(validDocument(doc))payload.documento=doc;if(options.reparoAplicado&&pendingRepairSubscriptionId)payload.reparoSubscriptionOriginal=pendingRepairSubscriptionId;var fp=[payload.subscriptionId,payload.areaId,payload.permission,payload.optedIn,payload.tokenAtivo,payload.areaConfirmada,payload.reparoAplicado,payload.reparoSubscriptionOriginal||'',payload.documento||''].join('|');if(!options.force&&fp===lastFingerprint)return Promise.resolve(null);lastFingerprint=fp;return postCheckin(payload).then(function(result){if(result&&result.reparoPendente)showPendingRepair(result);else if(result&&payload.reparoAplicado)clearPendingRepair();return result}).catch(function(){lastFingerprint='';activeRequest='';return null})}
   function scheduleCheckin(force){setTimeout(function(){checkin({force:Boolean(force)})},350)}
-  document.addEventListener('click',function(event){
-    var alvo=event&&event.target;if(!alvo||alvo.id!=='notificationRepairButton'||event.isTrusted!==true||!pendingRepairId)return;
-    repairMode='MANUAL';postRepairState('MANUAL_INICIADO','O morador tocou no botão Reparar agora.');
-  },true);
+  document.addEventListener('click',function(event){var alvo=event&&event.target;if(!alvo||alvo.id!=='notificationRepairButton'||event.isTrusted!==true||!pendingRepairId)return;repairMode='MANUAL';postRepairState('MANUAL_INICIADO','O morador tocou no botão Reparar agora.')},true);
   document.addEventListener('tacs:morador',function(event){currentResident=event&&event.detail||null;scheduleCheckin(true)});
-  document.addEventListener('tacs:notificacao-reparo-concluido',function(){
+  document.addEventListener('tacs:notificacao-reparo-concluido',function(event){
     if(!pendingRepairId){scheduleCheckin(true);return}
-    var id=pendingRepairId,modo=repairMode==='AUTO'?'AUTO':'MANUAL';repairCompleted[id]=true;
-    postRepairState(modo==='AUTO'?'CONCLUIDO_AUTO':'CONCLUIDO_MANUAL',modo==='AUTO'?'A renovação automática terminou no aparelho.':'O reparo manual terminou no aparelho.');
+    var id=pendingRepairId,automatico=Boolean(event&&event.detail&&event.detail.automatico),modo=automatico||repairMode==='AUTO'?'AUTO':'MANUAL';repairCompleted[id]=true;
+    postRepairState(modo==='AUTO'?'CONCLUIDO_AUTO':'CONCLUIDO_MANUAL',modo==='AUTO'?'A renovação automática e a notificação técnica de teste foram aceitas.':'O reparo manual terminou no aparelho.');
     setTimeout(function(){checkin({force:true,reparoAplicado:id}).then(function(r){if(r&&r.ok===true&&!r.reparoPendente)clearPendingRepair()})},500)
   });
   window.OneSignalDeferred=window.OneSignalDeferred||[];
