@@ -134,7 +134,7 @@
 
 (function(){
   'use strict';
-  if(typeof window==='undefined'||typeof document==='undefined')return;
+  if(typeof window==='undefined'||typeof document==='undefined'||typeof location==='undefined')return;
   if(!/\/painel-oficial-recados-campanhas\.html$/.test(String(location.pathname||'')))return;
 
   var instalado=false,tentativas=0,timer=null;
