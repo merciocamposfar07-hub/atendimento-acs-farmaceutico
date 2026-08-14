@@ -44,6 +44,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_22_SaudeNotificacoesV1.gs',
     marker: 'TACS_SAUDE_NOTIFICACOES_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_23_CorrecaoNascimentoMaisUmDiaV1.gs',
+    marker: 'TACS_CORRECAO_NASCIMENTO_V1'
   }
 ];
 
