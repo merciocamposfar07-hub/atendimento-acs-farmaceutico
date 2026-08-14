@@ -27,7 +27,7 @@ assert(agenda.includes("document.dispatchEvent(new CustomEvent('tacs:notificacao
 assert(index.includes('portal-notification-health.js?v=20260813-notif-health-v106'));
 assert(panel.includes('Saúde das notificações'));assert(panel.includes('Solicitar reparo das notificações da área'));assert(panel.includes("post('admin_notificacoes_saude'"));assert(panel.includes("post('admin_notificacoes_solicitar_reparo_area'"));
 assert(!panel.includes('SUBSCRIPTION_ID</'));assert(official.includes('20260813-notif-health-v106'));assert(builder.includes("marker: 'TACS_SAUDE_NOTIFICACOES_V1'"));
-const context={Object:Object,Number:Number,String:String,Boolean:Boolean,Array:Array,Date:Date,JSON:JSON,Math:Math,RegExp:RegExp,Error:Error,console:console};vm.createContext(context);vm.runInContext(backend,context);
+const context={Object:Object,Number:Number,String:String,Boolean:Boolean,Array:Array,Date:Date,JSON:JSON,Math:Math,RegExp:RegExp,Error:Error,console:console,moradoresAdminV1Digitos_:function(v){return String(v==null?'':v).replace(/\D/g,'')}};vm.createContext(context);vm.runInContext(backend,context);
 let x=context.saudeNotificacoesV1ClassificarExport_({invalid_identifier:'f',notification_types:'1'},false);assert.equal(x.status,'ATIVO');
 x=context.saudeNotificacoesV1ClassificarExport_({invalid_identifier:'t',notification_types:'-2'},false);assert.equal(x.status,'INATIVO');
 x=context.saudeNotificacoesV1ClassificarExport_({invalid_identifier:'f',notification_types:'1'},true);assert.equal(x.status,'REPARO');
