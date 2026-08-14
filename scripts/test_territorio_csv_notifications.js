@@ -464,8 +464,14 @@ function saveArea(context, body) {
 }
 
 function testTerritory(context) {
+  const legacyHeaders = [
+    'TACS_ID','NOME_COMPLETO','CNS_PROFISSIONAL','CPF','MATRICULA','TELEFONE','EMAIL',
+    'AREA_ID','UNIDADE_ID','MICROAREA','PERFIL','PERMISSOES','ATIVO','PIN_SALT',
+    'PIN_HASH','CRIADO_EM','ATUALIZADO_EM','OPERADOR_ATUALIZACAO'
+  ];
+  context.__adminSpreadsheet.insertSheet('TACS_PROFISSIONAIS_AREA').appendRow(legacyHeaders);
   vm.runInContext(read(FILES.territory), context);
-  assert.equal(context.TACS_TERRITORIO_V1.VERSAO, '1.0.0');
+  assert.equal(context.TACS_TERRITORIO_V1.VERSAO, '1.1.0');
 
   const createdBeforeInvalid = context.__created();
   assert.throws(() => saveArea(context, {
@@ -475,27 +481,30 @@ function testTerritory(context) {
   assert.equal(context.__created(), createdBeforeInvalid, 'Uma planilha órfã foi criada antes da validação do TACS.');
 
   const first = saveTacs(context, {
-    nomeCompleto: 'Ana Agente', cnsProfissional: '123456789012345', matricula: 'M-01',
-    telefone: '(81) 99999-0000', email: 'ana@example.org', microarea: '2', pin: '4321', ativo: true
+    nomeCompleto: 'Ana Agente', dataNascimento: '01/05/1988', cnsProfissional: '123456789012345', matricula: 'M-01',
+    cpf: '12345678901', telefone: '(81) 99999-0000', email: 'ana@example.org', unidadeId: 'POSTO_MATIAS', microarea: '2', pin: '4321', ativo: true
   });
   const tacsId = first.tacs.tacsId;
   assert.ok(tacsId.startsWith('TACS_'));
   assert.equal(first.tacs.pinConfigurado, true);
+  assert.equal(first.tacs.dataNascimento, '01/05/1988');
+  assert.equal(context.__adminSpreadsheet.getSheetByName('TACS_PROFISSIONAIS_AREA').rows[0][18], 'DATA_NASCIMENTO', 'A coluna de nascimento não foi anexada com segurança ao cadastro existente.');
   assert.equal(Object.prototype.hasOwnProperty.call(first.tacs, 'pinHash'), false);
 
   const corrected = saveTacs(context, {
-    tacsId, nomeCompleto: 'Ana Agente Corrigida', cnsProfissional: '123456789012346',
+    tacsId, nomeCompleto: 'Ana Agente Corrigida', dataNascimento: '01/05/1988', cnsProfissional: '123456789012346', cpf: '12345678901',
     matricula: 'M-02', telefone: '81988880000', email: 'ana.corrigida@example.org',
-    microarea: '3', ativo: true
+    unidadeId: 'POSTO_MATIAS', microarea: '3', ativo: true
   });
   assert.equal(corrected.tacs.cnsProfissional, '123456789012346');
   assert.equal(corrected.tacs.nomeCompleto, 'Ana Agente Corrigida');
+  assert.equal(corrected.tacs.dataNascimento, '01/05/1988');
   assert.equal(corrected.tacs.pinConfigurado, true, 'Editar sem novo PIN deve preservar o PIN atual.');
 
   const withoutPermissions = saveTacs(context, {
-    tacsId, nomeCompleto: 'Ana Agente Corrigida', cnsProfissional: '123456789012346',
+    tacsId, nomeCompleto: 'Ana Agente Corrigida', dataNascimento: '01/05/1988', cnsProfissional: '123456789012346', cpf: '12345678901',
     matricula: 'M-02', telefone: '81988880000', email: 'ana.corrigida@example.org',
-    microarea: '3', permissoes: [], ativo: true
+    unidadeId: 'POSTO_MATIAS', microarea: '3', permissoes: [], ativo: true
   });
   assert.deepEqual(
     Array.from(withoutPermissions.tacs.permissoes),
@@ -503,19 +512,39 @@ function testTerritory(context) {
     'Retirar todas as permissões não pode reativá-las silenciosamente.'
   );
   saveTacs(context, {
-    tacsId, nomeCompleto: 'Ana Agente Corrigida', cnsProfissional: '123456789012346',
+    tacsId, nomeCompleto: 'Ana Agente Corrigida', dataNascimento: '01/05/1988', cnsProfissional: '123456789012346', cpf: '12345678901',
     matricula: 'M-02', telefone: '81988880000', email: 'ana.corrigida@example.org',
-    microarea: '3', permissoes: [
+    unidadeId: 'POSTO_MATIAS', microarea: '3', permissoes: [
       'MORADORES_LER','MORADORES_EDITAR','MORADORES_SITUACAO','MORADORES_IMPORTAR_CSV'
     ], ativo: true
   });
 
   assert.throws(() => saveTacs(context, {
-    nomeCompleto: 'Outro TACS', cnsProfissional: '123456789012346', ativo: false
+    nomeCompleto: 'Outro TACS', dataNascimento: '02/06/1990', cnsProfissional: '123456789012346', cpf: '22345678901', telefone: '81977776666', email: 'outro@example.org', unidadeId: 'POSTO_MATIAS', microarea: '4', pin: '5678', ativo: false
   }), /já pertence a outro TACS/);
 
+  assert.throws(() => saveTacs(context, {
+    nomeCompleto: 'Data Inválida', dataNascimento: '31/02/2000', cnsProfissional: '323456789012345', ativo: false
+  }), /data de nascimento válida/);
+
+  const requiredTacs = {
+    nomeCompleto: 'Cadastro Obrigatório', dataNascimento: '04/08/1993',
+    cnsProfissional: '423456789012345', cpf: '52998224725', telefone: '81955554444',
+    email: 'cadastro@example.org', microarea: '6', unidadeId: 'POSTO_MATIAS', pin: '2468', ativo: false
+  };
+  [
+    ['nomeCompleto', /nome completo/i], ['dataNascimento', /data de nascimento/i],
+    ['cnsProfissional', /CNS profissional/i], ['cpf', /CPF válido/i],
+    ['telefone', /celular com DDD/i], ['email', /e-mail válido/i],
+    ['microarea', /microárea/i], ['unidadeId', /unidade de saúde/i], ['pin', /PIN de acesso/i]
+  ].forEach(([field, message]) => {
+    const candidate = Object.assign({}, requiredTacs);
+    delete candidate[field];
+    assert.throws(() => saveTacs(context, candidate), message, `O servidor aceitou o novo TACS sem ${field}.`);
+  });
+
   const second = saveTacs(context, {
-    nomeCompleto: 'Bruno Agente', cnsProfissional: '223456789012345', pin: '1234', ativo: true
+    nomeCompleto: 'Bruno Agente', dataNascimento: '03/07/1992', cnsProfissional: '223456789012345', cpf: '32345678901', telefone: '81966665555', email: 'bruno@example.org', unidadeId: 'USF_LAGOA', microarea: '5', pin: '1234', ativo: true
   });
   const area = saveArea(context, {
     areaNome: 'Sítio Lagoa Nova', unidadeId: 'USF_LAGOA', unidadeNome: 'USF Lagoa',
@@ -911,7 +940,9 @@ function testNotifications(context, territory) {
   const updatedTacs = saveTacs(context, {
     tacsId: territory.tacsId,
     nomeCompleto: 'Ana Agente Corrigida',
+    dataNascimento: '01/05/1988',
     cnsProfissional: '123456789012346',
+    cpf: '12345678901',
     matricula: 'M-02',
     telefone: '81988880000',
     email: 'ana.corrigida@example.org',

@@ -190,6 +190,16 @@ function testTerritoryPanel() {
   assert.match(html, /painel-tacs-areas\.svg/);
   assert.match(html, /painel-tacs-areas-180\.png/);
   assert.match(html, /id="tacsCns"/);
+  assert.match(html, /<label for="tacsBirth">Data de nascimento<\/label>/);
+  assert.match(html, /<label for="tacsCns">CNS \(Cartão SUS\)<\/label>/);
+  assert.match(html, /<label for="tacsPhone">Celular<\/label>/);
+  assert.match(html, /<label for="tacsUnit">Unidade de saúde<\/label>/);
+  assert.match(html, /<label for="tacsPin">PIN de acesso aos painéis<\/label>/);
+  assert.doesNotMatch(html, /<label for="tacsRegistration">/);
+  assert.doesNotMatch(html, /<label for="tacsArea">/);
+  assert.match(html, /id="tacsRegistration" type="hidden"/);
+  assert.match(html, /id="tacsArea" type="hidden"/);
+  assert.match(html, /\.card,\.check,\.maprow\{[^}]*background:linear-gradient\(145deg,var\(--pet\),var\(--pet2\)\)[^}]*color:#fff/);
   assert.match(html, /id="areaSpreadsheet"/);
   assert.match(html, /id="areaCreateSource"/);
   assert.match(html, /id="permRead"/);
@@ -200,6 +210,7 @@ function testTerritoryPanel() {
   assert.match(html, /id="batchList"/);
   assert.match(js, /confirmarTodosImportaveis/);
   assert.match(js, /Desfazer este lote sem excluir linhas/);
+  assert.match(js, /dataNascimento:birth/);
 
   const dom = new JSDOM(html, {
     url: 'https://portal.test/teste-v1/painel-tacs-areas-v1.html',
@@ -218,6 +229,10 @@ function testTerritoryPanel() {
   assert.match(window.document.getElementById('loginStatus').textContent, /CNS profissional com 15 números/);
   window.document.getElementById('newTacsButton').click();
   assert.equal(window.document.getElementById('tacsForm').classList.contains('hidden'), false);
+  assert.equal(window.document.getElementById('tacsPin').required, true);
+  for (const id of ['tacsName', 'tacsBirth', 'tacsCns', 'tacsCpf', 'tacsPhone', 'tacsEmail', 'tacsMicroarea', 'tacsUnit']) {
+    assert.equal(window.document.getElementById(id).required, true, `Campo obrigatório ausente: ${id}`);
+  }
   for (const id of ['permRead', 'permEdit', 'permStatus', 'permCsv', 'permPublish']) {
     assert.equal(window.document.getElementById(id).checked, true, `Permissão inicial ausente: ${id}`);
   }

@@ -19,7 +19,7 @@
 <script>
 (function(){
 'use strict';
-var source='/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?v=20260812-publicacoes-v1';
+var source='/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?v=20260814-cadastro-v2';
 fetch(source,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text();}).then(function(html){
   html=html.replace('<head>','<head><base href="/atendimento-acs-farmaceutico/teste-v1/">');
   document.open();document.write(html);document.close();
