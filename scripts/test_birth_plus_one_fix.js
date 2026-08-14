@@ -88,6 +88,12 @@ assert.match(page, /admin_nascimento_corrigir/);
 assert.match(page, /CORRIGIR 1 DIA/);
 assert.match(page, /CORRIGIR_UM_DIA_JAPARANDUBA/);
 assert.match(page, /não altera outras colunas/i);
+assert.match(page, /id="invalidList"/);
+assert.match(page, /Array\.isArray\(r\.invalidas\)/);
+assert.match(page, /Datas inválidas encontradas/);
+assert.match(page, /Linha da planilha/);
+assert.match(page, /Valor encontrado/);
+assert.match(page, /corrigir somente essas datas antes de repetir a prévia/);
 
 const restorePage = fs.readFileSync(path.join(__dirname, '..', 'restaurar-backup-nascimentos-japaranduba.html'), 'utf8');
 assert.match(restorePage, /admin_nascimento_restaurar_preview/);
@@ -101,4 +107,4 @@ const build = fs.readFileSync(path.join(__dirname, 'build_apps_script_release.js
 assert.match(build, /ZZZZ_24_RestauracaoNascimentoBackupV1\.gs/);
 assert.match(build, /TACS_RESTAURACAO_NASCIMENTO_V1/);
 
-console.log('Correção +1 dia e restauração: data civil, backup, conferência integral, bloqueio por divergência e travas contra repetição validados.');
+console.log('Correção +1 dia e restauração: data civil, backup, conferência integral, datas inválidas visíveis, bloqueio por divergência e travas contra repetição validados.');
