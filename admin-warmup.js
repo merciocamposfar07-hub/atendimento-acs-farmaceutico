@@ -132,3 +132,80 @@
   estado.ready=iniciar();
 }());
 
+(function(){
+  'use strict';
+  if(typeof window==='undefined'||typeof document==='undefined')return;
+  if(!/\/painel-oficial-recados-campanhas\.html$/.test(String(location.pathname||'')))return;
+
+  var instalado=false,tentativas=0,timer=null;
+  var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1';
+
+  function texto(v){return String(v==null?'':v).trim()}
+  function estadoCartao(cartao){
+    var s=cartao&&cartao.querySelector('.saude-status');
+    if(!s)return'';
+    if(s.classList.contains('ATIVO'))return'ATIVO';
+    if(s.classList.contains('INATIVO'))return'INATIVO';
+    if(s.classList.contains('REPARO'))return'REPARO';
+    if(s.classList.contains('SEM_CONFIRMACAO'))return'SEM_CONFIRMACAO';
+    return texto(s.textContent).toUpperCase();
+  }
+  function referenciaCartao(cartao){
+    var m=texto(cartao&&cartao.textContent).match(/Referência técnica:\s*…([0-9a-f]{8})/i);
+    return m?m[1].toLowerCase():'';
+  }
+  function nomeCartao(cartao){var h=cartao&&cartao.querySelector('h3');return texto(h&&h.textContent)||'este aparelho'}
+  function sessao(){
+    var area=(new URLSearchParams(location.search).get('area')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA';
+    var s={dispositivo:localStorage.getItem(DEVICE_KEY)||'',areaId:area};
+    var territorio=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'';
+    var token=sessionStorage.getItem(TOKEN_KEY)||'';
+    if(territorio)s.territorioToken=territorio;else if(token)s.token=token;
+    return s;
+  }
+  function status(msg,tipo){
+    var e=document.getElementById('saudeNotificacoesStatus');if(!e)return;
+    e.textContent=msg;e.className='status'+(tipo?' '+tipo:'');
+  }
+  function botaoPara(cartao){
+    if(!cartao||cartao.querySelector('.saude-reparo-individual'))return;
+    var estado=estadoCartao(cartao),ref=referenciaCartao(cartao);
+    if(!ref||estado==='ATIVO')return;
+    var wrap=document.createElement('div');wrap.className='acoes saude-reparo-individual';
+    var b=document.createElement('button');b.type='button';b.className='botao';b.dataset.ref=ref;b.dataset.nome=nomeCartao(cartao);
+    if(estado==='REPARO'){
+      b.classList.add('cinza');b.disabled=true;b.textContent='✓ Reparo já solicitado para este aparelho';
+    }else{
+      b.classList.add('verde');b.textContent='🔧 Solicitar reparo deste aparelho';
+    }
+    wrap.appendChild(b);cartao.appendChild(wrap);
+  }
+  function aplicar(){document.querySelectorAll('#saudeNotificacoesLista .saude-aparelho').forEach(botaoPara)}
+  function solicitar(botao){
+    if(!botao||botao.disabled)return;
+    var ref=texto(botao.dataset.ref).toLowerCase(),nome=texto(botao.dataset.nome)||'este aparelho';
+    if(!/^[0-9a-f]{8}$/.test(ref)){status('Referência técnica inválida. Atualize a situação e tente novamente.','erro');return}
+    var api=window.PortalTacsRecadosCampanhasV12;
+    if(!api||typeof api.post!=='function'){status('O painel ainda está preparando a conexão. Tente novamente em alguns segundos.','aviso');return}
+    if(!window.confirm('Solicitar reparo somente para '+nome+'? Os demais aparelhos não serão alterados.'))return;
+    botao.disabled=true;botao.textContent='Solicitando reparo…';status('Solicitando reparo somente para '+nome+'…','aviso');
+    var payload=sessao();payload.subscriptionRef=ref;
+    api.post('admin_notificacoes_solicitar_reparo_aparelho',payload,function(r){
+      if(!r||r.ok!==true){botao.disabled=false;botao.textContent='🔧 Solicitar reparo deste aparelho';status(texto(r&&r.message||'Não foi possível solicitar o reparo deste aparelho.'),'erro');return}
+      status(texto(r.message||'Reparo solicitado somente para este aparelho.'),'ok');
+      var atualizar=document.getElementById('atualizarSaudeNotificacoes');if(atualizar)setTimeout(function(){atualizar.click()},250);
+    },'admin_notificacoes_saude_result');
+  }
+  function instalar(){
+    tentativas++;
+    var lista=document.getElementById('saudeNotificacoesLista');
+    if(!lista||!window.PortalTacsRecadosCampanhasV12){if(tentativas<160)return;clearInterval(timer);return}
+    if(!instalado){
+      instalado=true;
+      lista.addEventListener('click',function(e){var b=e.target.closest('.saude-reparo-individual button');if(b)solicitar(b)});
+      if(typeof MutationObserver==='function')new MutationObserver(aplicar).observe(lista,{childList:true,subtree:true});
+    }
+    aplicar();clearInterval(timer);
+  }
+  timer=setInterval(instalar,300);instalar();
+}());
