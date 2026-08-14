@@ -1,4 +1,4 @@
-release=saude-notificacoes-v1.0.0
-requested_at=2026-08-13T11:50:30Z
-source=saude-notificacoes-morador-aparelho-validada
-commit=b5e3f258
+release=moradores-1.4.5-identidade-territorial-v1
+requested_at=2026-08-14T18:38:55Z
+source=correcao-guarda-identidade-territorial-validada
+commit=1ef6d339
