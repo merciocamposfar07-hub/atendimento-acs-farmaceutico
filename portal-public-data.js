@@ -204,3 +204,13 @@
     timeout:TIMEOUT_MS
   };
 }());
+
+(function(){
+  'use strict';
+  if(window.PortalTacsTerritoryBranding||document.getElementById('portal-territory-branding-script'))return;
+  var script=document.createElement('script');
+  script.id='portal-territory-branding-script';
+  script.src=new URL('portal-territory-branding.js?v=20260814-v1',window.location.href).href;
+  script.async=true;
+  document.head.appendChild(script);
+}());
