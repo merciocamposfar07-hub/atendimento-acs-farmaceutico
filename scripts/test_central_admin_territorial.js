@@ -11,6 +11,7 @@ const notificationHealthBackend=read('apps-script/ZZZZ_22_SaudeNotificacoesV1.gs
 const notificationHealthSource=read('teste-v1/painel-recados-campanhas-v1.html');
 const professionalsPage=read('teste-v1/painel-profissionais-servicos-v1.html');
 const professionalsWrapper=read('painel-oficial-profissionais-servicos.html');
+const territoryWrapper=read('painel-oficial-tacs-areas.html');
 const publicPortal=read('index.html');
 const manifest=JSON.parse(read('manifest-central-admin.webmanifest'));
 assert.equal(manifest.name,'Central Administrativa TACS');
@@ -36,8 +37,8 @@ assert.match(js,/if\(name==='notificacoes'\)return '\/atendimento-acs-farmaceuti
   'Saúde das notificações deve abrir o painel exclusivo.');
 assert.doesNotMatch(js,/if\(name==='notificacoes'\)return '[^']*painel-oficial-recados-campanhas/,
   'Saúde das notificações não pode abrir o painel de recados e campanhas.');
-assert.match(html,/central-administrativa-tacs\.js\?v=20260814-v4/,
-  'A Central deve invalidar o cache dos ajustes visuais.');
+assert.match(html,/central-administrativa-tacs\.js\?v=20260814-v5/,
+  'A Central deve invalidar o cache do cadastro territorial atualizado.');
 assert.match(html,/\.health-card\{[^}]*background:linear-gradient\(145deg,var\(--p\),var\(--p2\)\)/,
   'Os cartões de Saúde geral devem usar fundo azul-petróleo.');
 assert.match(html,/\.health-card strong\{[^}]*color:#fff/,
@@ -54,6 +55,10 @@ assert.match(professionalsPage,/\.aba\{[^}]*min-height:76px[^}]*font-size:clamp\
 assert.match(professionalsWrapper,/painel-profissionais-servicos-v1\.html\?v=20260814-tabs-v104/);
 assert.match(js,/painel-oficial-profissionais-servicos\.html\?v=20260814-tabs-v104/,
   'A Central deve carregar a versão corrigida do painel de Profissionais.');
+assert.match(js,/painel-oficial-tacs-areas\.html\?v=20260814-cadastro-v2/,
+  'A Central deve carregar a versão atualizada do cadastro de TACS.');
+assert.match(territoryWrapper,/painel-tacs-areas-v1\.html\?v=20260814-cadastro-v2/,
+  'O painel oficial deve invalidar o cache do novo cadastro de TACS.');
 assert.match(publicPortal,/\.hero-actions\{grid-template-columns:1fr;margin:0;border-left:0;border-right:0;border-radius:0\}/,
   'O quadro inferior do Portal TACS deve alinhar com a largura do quadro superior no celular.');
 Array.from(notificationHealthPage.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi),function(m){return m[1]}).forEach(function(codigo){

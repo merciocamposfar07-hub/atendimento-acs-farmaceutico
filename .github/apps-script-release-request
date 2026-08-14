@@ -1,4 +1,4 @@
-release=moradores-1.4.5-identidade-territorial-v1
-requested_at=2026-08-14T18:38:55Z
-source=correcao-guarda-identidade-territorial-validada
-commit=1ef6d339
+release=tacs-territorio-1.1.0-cadastro-completo
+requested_at=2026-08-14T23:02:54Z
+source=cadastro-tacs-nove-campos-e-data-nascimento
+commit=pending-pr

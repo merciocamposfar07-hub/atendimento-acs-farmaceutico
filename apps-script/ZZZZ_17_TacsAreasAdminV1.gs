@@ -1,6 +1,6 @@
 /**
  * ZZZZ_17_TacsAreasAdminV1.gs
- * Portal TACS — cadastro territorial e acesso individual V1.0.0
+ * Portal TACS — cadastro territorial e acesso individual V1.1.0
  *
  * Mantém TACS e áreas em tabelas próprias, sem misturar esses dados à base de
  * moradores. Todos os campos cadastrais humanos podem ser corrigidos depois
@@ -17,7 +17,7 @@
  * - o PIN individual nunca é devolvido e é salvo somente como hash com salt.
  */
 var TACS_TERRITORIO_V1 = Object.freeze({
-  VERSAO:'1.0.0',
+  VERSAO:'1.1.0',
   TACS_SHEET:'TACS_PROFISSIONAIS_AREA',
   AREAS_SHEET:'TACS_AREAS',
   AUDIT_SHEET:'TACS_AUDIT_TERRITORIO',
@@ -45,7 +45,7 @@ var TACS_TERRITORIO_V1 = Object.freeze({
   TACS_HEADERS:Object.freeze([
     'TACS_ID','NOME_COMPLETO','CNS_PROFISSIONAL','CPF','MATRICULA','TELEFONE','EMAIL',
     'AREA_ID','UNIDADE_ID','MICROAREA','PERFIL','PERMISSOES','ATIVO','PIN_SALT',
-    'PIN_HASH','CRIADO_EM','ATUALIZADO_EM','OPERADOR_ATUALIZACAO'
+    'PIN_HASH','CRIADO_EM','ATUALIZADO_EM','OPERADOR_ATUALIZACAO','DATA_NASCIMENTO'
   ]),
   AREA_HEADERS:Object.freeze([
     'AREA_ID','AREA_NOME','UNIDADE_ID','UNIDADE_NOME','TACS_ID','PLANILHA_MORADORES_ID',
@@ -404,14 +404,22 @@ function tacsTerritorioV1SalvarTacs_(p,acesso){
     var cns=tacsTerritorioV1Digitos_(body.cnsProfissional||body.cns);
     var cpf=tacsTerritorioV1Digitos_(body.cpf);
     var email=tacsTerritorioV1Texto_(body.email).toLowerCase();
+    var dataNascimento=tacsTerritorioV1DataNascimento_(body.dataNascimento||body.nascimento);
+    var telefone=tacsTerritorioV1Digitos_(body.telefone||body.celular);
+    var unidadeId=tacsTerritorioV1Id_(body.unidadeId||body.unidadeSaude);
+    var microarea=tacsTerritorioV1Texto_(body.microarea);
     var ativo=tacsTerritorioV1Booleano_(body.ativo);
     var pin=tacsTerritorioV1Texto_(body.pin);
     if(!nome)throw new Error('Informe o nome completo do TACS.');
+    if(!dataNascimento)throw new Error('Informe a data de nascimento do TACS.');
     if(!/^[0-9]{15}$/.test(cns)||/^(\d)\1{14}$/.test(cns))throw new Error('O CNS profissional deve conter 15 números válidos.');
-    if(cpf&&(!/^[0-9]{11}$/.test(cpf)||(typeof moradoresAdminV1CpfValido_==='function'&&!moradoresAdminV1CpfValido_(cpf))))throw new Error('CPF do TACS inválido.');
-    if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error('E-mail do TACS inválido.');
+    if(!/^[0-9]{11}$/.test(cpf)||(typeof moradoresAdminV1CpfValido_==='function'&&!moradoresAdminV1CpfValido_(cpf)))throw new Error('Informe um CPF válido para o TACS.');
+    if(!/^[0-9]{10,11}$/.test(telefone))throw new Error('Informe um celular com DDD para o TACS.');
+    if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error('Informe um e-mail válido para o TACS.');
+    if(!microarea)throw new Error('Informe a microárea do TACS.');
+    if(!unidadeId)throw new Error('Informe a unidade de saúde do TACS.');
     if(pin&&!/^[0-9]{4,8}$/.test(pin))throw new Error('O PIN individual deve conter de 4 a 8 números.');
-    if(!existente&&ativo&&!pin)throw new Error('Defina um PIN individual para ativar o acesso do novo TACS.');
+    if(!existente&&!pin)throw new Error('Defina um PIN de acesso para o novo TACS.');
     var repetido=tacsTerritorioV1LinhaPor_(tabela,'CNS_PROFISSIONAL',cns);
     if(repetido&&repetido.row!==(existente&&existente.row))throw new Error('Este CNS profissional já pertence a outro TACS.');
     var agora=new Date();
@@ -423,15 +431,16 @@ function tacsTerritorioV1SalvarTacs_(p,acesso){
     var dados={
       TACS_ID:id,NOME_COMPLETO:nome,CNS_PROFISSIONAL:cns,CPF:cpf,
       MATRICULA:tacsTerritorioV1Texto_(body.matricula),
-      TELEFONE:tacsTerritorioV1Digitos_(body.telefone),EMAIL:email,
-      AREA_ID:tacsTerritorioV1Id_(body.areaId),UNIDADE_ID:tacsTerritorioV1Id_(body.unidadeId),
-      MICROAREA:tacsTerritorioV1Texto_(body.microarea),PERFIL:'TACS',
+      TELEFONE:telefone,EMAIL:email,
+      AREA_ID:tacsTerritorioV1Id_(body.areaId),UNIDADE_ID:unidadeId,
+      MICROAREA:microarea,PERFIL:'TACS',
       PERMISSOES:(Object.prototype.hasOwnProperty.call(body,'permissoes')
         ?tacsTerritorioV1Permissoes_(body.permissoes)
         :(anterior&&anterior.permissoes||TACS_TERRITORIO_V1.DEFAULT_PERMISSIONS.slice())).join(','),
       ATIVO:ativo,
       PIN_SALT:salt,PIN_HASH:hash,CRIADO_EM:anterior&&anterior.criadoEm||agora,
-      ATUALIZADO_EM:agora,OPERADOR_ATUALIZACAO:acesso.operadorId
+      ATUALIZADO_EM:agora,OPERADOR_ATUALIZACAO:acesso.operadorId,
+      DATA_NASCIMENTO:dataNascimento||(anterior&&anterior.dataNascimento||'')
     };
     tacsTerritorioV1Gravar_(tabela,existente,dados);
     var depois=tacsTerritorioV1EncontrarTacs_(id);
@@ -647,7 +656,7 @@ function tacsTerritorioV1PublicarTacs_(item){
   if(!item)return null;
   return {
     tacsId:item.tacsId,nomeCompleto:item.nomeCompleto,cnsProfissional:item.cnsProfissional,
-    cpf:item.cpf,matricula:item.matricula,telefone:item.telefone,email:item.email,
+    dataNascimento:item.dataNascimento,cpf:item.cpf,matricula:item.matricula,telefone:item.telefone,email:item.email,
     areaId:item.areaId,unidadeId:item.unidadeId,microarea:item.microarea,
     perfil:item.perfil,permissoes:item.permissoes.slice(),ativo:item.ativo,
     pinConfigurado:Boolean(item.pinHash),criadoEm:item.criadoEm,atualizadoEm:item.atualizadoEm
@@ -658,6 +667,7 @@ function tacsTerritorioV1TacsDeLinha_(tabela,row){
   return {
     tacsId:tacsTerritorioV1Texto_(tacsTerritorioV1Valor_(tabela,row,'TACS_ID')),
     nomeCompleto:tacsTerritorioV1Texto_(tacsTerritorioV1Valor_(tabela,row,'NOME_COMPLETO')),
+    dataNascimento:tacsTerritorioV1Texto_(tacsTerritorioV1Valor_(tabela,row,'DATA_NASCIMENTO')),
     cnsProfissional:tacsTerritorioV1Digitos_(tacsTerritorioV1Valor_(tabela,row,'CNS_PROFISSIONAL')),
     cpf:tacsTerritorioV1Digitos_(tacsTerritorioV1Valor_(tabela,row,'CPF')),
     matricula:tacsTerritorioV1Texto_(tacsTerritorioV1Valor_(tabela,row,'MATRICULA')),
@@ -706,8 +716,14 @@ function tacsTerritorioV1Tabela_(nome,headers,criar){
     sheet.getRange(1,1,1,headers.length).setValues([headers.slice()]);
     sheet.setFrozenRows(1);
   }
-  var atuais=sheet.getRange(1,1,1,Math.max(sheet.getLastColumn(),headers.length)).getDisplayValues()[0];
-  for(var h=0;h<headers.length;h++)if(tacsTerritorioV1Texto_(atuais[h])!==headers[h])throw new Error('A aba '+nome+' existe com estrutura diferente na coluna '+(h+1)+'.');
+  var ultimaColuna=sheet.getLastColumn();
+  var atuais=sheet.getRange(1,1,1,Math.max(ultimaColuna,headers.length)).getDisplayValues()[0];
+  for(var h=0;h<headers.length;h++){
+    var atual=tacsTerritorioV1Texto_(atuais[h]);
+    if(atual===headers[h])continue;
+    if(h>=ultimaColuna&&!atual){sheet.getRange(1,h+1).setValue(headers[h]);atuais[h]=headers[h];continue;}
+    throw new Error('A aba '+nome+' existe com estrutura diferente na coluna '+(h+1)+'.');
+  }
   var values=sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,headers.length).getValues():[];
   var display=sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,headers.length).getDisplayValues():[];
   var map={};headers.forEach(function(header,index){map[header]=index;});
@@ -735,6 +751,8 @@ function tacsTerritorioV1Gravar_(tabela,row,dados,parcial){
     if(Object.prototype.hasOwnProperty.call(tabela.map,campo))values[tabela.map[campo]]=dados[campo];
   });
   var numero=row?row.row:tabela.sheet.getLastRow()+1;
+  var nascimento=tabela.map.DATA_NASCIMENTO;
+  if(nascimento!=null)tabela.sheet.getRange(numero,nascimento+1).setNumberFormat('@');
   tabela.sheet.getRange(numero,1,1,tabela.headers.length).setValues([values]);
   var criado=tabela.map.CRIADO_EM;
   var atualizado=tabela.map.ATUALIZADO_EM;
@@ -845,6 +863,13 @@ function tacsTerritorioV1Id_(valor){
 function tacsTerritorioV1Chave_(valor){return tacsTerritorioV1Id_(valor).replace(/_/g,'');}
 function tacsTerritorioV1Texto_(valor){return String(valor==null?'':valor).replace(/\s+/g,' ').trim();}
 function tacsTerritorioV1Digitos_(valor){return String(valor==null?'':valor).replace(/\D/g,'');}
+function tacsTerritorioV1DataNascimento_(valor){
+  var texto=tacsTerritorioV1Texto_(valor);if(!texto)return '';
+  var match=texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!match)throw new Error('A data de nascimento deve estar no formato DD/MM/AAAA.');
+  var dia=Number(match[1]),mes=Number(match[2]),ano=Number(match[3]),data=new Date(Date.UTC(ano,mes-1,dia)),hoje=new Date();
+  if(data.getUTCFullYear()!==ano||data.getUTCMonth()!==mes-1||data.getUTCDate()!==dia||data.getTime()>Date.UTC(hoje.getUTCFullYear(),hoje.getUTCMonth(),hoje.getUTCDate()))throw new Error('Informe uma data de nascimento válida.');
+  return match[1]+'/'+match[2]+'/'+match[3];
+}
 function tacsTerritorioV1Booleano_(valor){return valor===true||['TRUE','1','SIM','YES','ATIVO','ATIVA'].indexOf(tacsTerritorioV1Texto_(valor).toUpperCase())!==-1;}
 
 function tacsTerritorioV1Payload_(texto){
