@@ -1,16 +1,15 @@
 /**
  * ZZZZ_22_SaudeNotificacoesV1.gs
- * Portal TACS — Saúde das notificações por morador/aparelho V1.1.1
+ * Portal TACS — Saúde das notificações por morador/aparelho V1.1.2
  *
- * Ajustes V1.1.1:
- * - check-in técnico funciona sem CPF/CNS;
- * - CPF/CNS, quando informado, apenas enriquece o vínculo Subscription ID ↔ ID_PORTAL;
- * - check-in anônimo nunca apaga vínculo nominal já existente;
- * - reparo por área seleciona somente inscrições que realmente precisam de correção;
- * - aparelhos saudáveis permanecem ATIVOS após uma solicitação de reparo da área.
+ * Ajustes V1.1.2:
+ * - mantém check-in técnico sem exigir CPF/CNS e vínculo nominal preservado;
+ * - mantém reparo coletivo seletivo, sem afetar inscrições saudáveis;
+ * - adiciona reparo individual por referência técnica curta, resolvida somente no servidor;
+ * - múltiplos reparos individuais pendentes coexistem sem apagar alvos anteriores.
  */
 var TACS_SAUDE_NOTIFICACOES_V1 = Object.freeze({
-  VERSAO:'1.1.1',
+  VERSAO:'1.1.2',
   DEFAULT_AREA_ID:'JAPARANDUBA',
   DEFAULT_APP_ID:'e2294b98-c72b-4f8c-a055-de28979676dc',
   APP_ID_PROPERTIES:Object.freeze(['TACS_ONESIGNAL_APP_ID','ONESIGNAL_APP_ID']),
@@ -77,7 +76,7 @@ function saudeNotificacoesV1TratarGet_(e){
 function saudeNotificacoesV1TratarPost_(e){
   var p=e&&e.parameter?e.parameter:{};
   var action=saudeNotificacoesV1Texto_(p.action).toLowerCase();
-  if(['publico_notificacao_checkin','admin_notificacoes_saude','admin_notificacoes_solicitar_reparo_area'].indexOf(action)===-1)return null;
+  if(['publico_notificacao_checkin','admin_notificacoes_saude','admin_notificacoes_solicitar_reparo_area','admin_notificacoes_solicitar_reparo_aparelho'].indexOf(action)===-1)return null;
   var requestId=saudeNotificacoesV1Texto_(p.requestId),resultado;
   try{
     requestId=saudeNotificacoesV1ValidarRequestId_(requestId);
@@ -87,9 +86,9 @@ function saudeNotificacoesV1TratarPost_(e){
       var acesso=tacsTerritorioV1ValidarAcesso_(p,false);
       saudeNotificacoesV1ExigirAcesso_(acesso);
       var contexto=moradoresAdminV1ResolverContexto_(acesso,p.areaId||p.area||'');
-      resultado=action==='admin_notificacoes_saude'
-        ?saudeNotificacoesV1SaudeAdmin_(contexto,acesso)
-        :saudeNotificacoesV1SolicitarReparoArea_(contexto,acesso);
+      if(action==='admin_notificacoes_saude')resultado=saudeNotificacoesV1SaudeAdmin_(contexto,acesso);
+      else if(action==='admin_notificacoes_solicitar_reparo_aparelho')resultado=saudeNotificacoesV1SolicitarReparoAparelho_(contexto,acesso,p);
+      else resultado=saudeNotificacoesV1SolicitarReparoArea_(contexto,acesso);
     }
   }catch(erro){resultado={ok:false,message:saudeNotificacoesV1Erro_(erro)};}
   if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId))saudeNotificacoesV1GuardarResultado_(requestId,resultado);
@@ -276,7 +275,7 @@ function saudeNotificacoesV1SaudeAdmin_(contexto,acesso){
     ok:true,versao:TACS_SAUDE_NOTIFICACOES_V1.VERSAO,areaId:contexto.areaId,areaNome:contexto.areaNome,
     contagens:contagens,aparelhos:aparelhos,oneSignalConsultado:true,audienciaFonte:'ONESIGNAL_EXPORT',
     reparoArea:reparo||null,limitado:limitado,
-    observacao:'Aptos e inativos são apurados na audiência atual do OneSignal. O nome aparece quando a inscrição já foi vinculada ao cadastro do morador. Reparo coletivo só marca inscrições problemáticas; aparelhos saudáveis permanecem ativos.'
+    observacao:'Aptos e inativos são apurados na audiência atual do OneSignal. O nome aparece quando a inscrição já foi vinculada ao cadastro do morador. Reparos coletivos e individuais só marcam inscrições problemáticas; aparelhos saudáveis permanecem ativos.'
   };
 }
 
@@ -418,6 +417,57 @@ function saudeNotificacoesV1SolicitarReparoArea_(contexto,acesso){
   return {ok:true,areaId:contexto.areaId,areaNome:contexto.areaNome,reparoId:reparoId,solicitadoEm:quando,alvos:alvos.length,message:alvos.length?'Reparo solicitado somente para '+alvos.length+' inscrição(ões) com problema. Aparelhos aptos foram preservados.':'Nenhuma inscrição com problema foi encontrada; os aparelhos aptos foram preservados.'};
 }
 
+function saudeNotificacoesV1NormalizarRef_(valor){
+  var ref=saudeNotificacoesV1Texto_(valor).toLowerCase().replace(/^…/,'').replace(/^\.\.\./,'');
+  if(!/^[0-9a-f]{8}$/.test(ref))throw new Error('Referência técnica do aparelho inválida. Atualize a situação e tente novamente.');
+  return ref;
+}
+
+function saudeNotificacoesV1SolicitarReparoAparelho_(contexto,acesso,p){
+  var ref=saudeNotificacoesV1NormalizarRef_(p.subscriptionRef||p.referencia||p.ref||'');
+  var props=PropertiesService.getScriptProperties();
+  var appId=saudeNotificacoesV1PrimeiraPropriedade_(props,TACS_SAUDE_NOTIFICACOES_V1.APP_ID_PROPERTIES)||TACS_SAUDE_NOTIFICACOES_V1.DEFAULT_APP_ID;
+  var apiKey=saudeNotificacoesV1PrimeiraPropriedade_(props,TACS_SAUDE_NOTIFICACOES_V1.API_KEY_PROPERTIES);
+  if(!apiKey)throw new Error('A consulta da audiência Push não está configurada no OneSignal.');
+  var ss=tacsTerritorioV1Planilha_();
+  var quantidadeAreas=saudeNotificacoesV1QuantidadeAreas_();
+  var encontrados={},remotoPorId={},registroPorId={};
+  saudeNotificacoesV1ExportarSubscriptions_(appId,apiKey).forEach(function(sub){
+    var id=saudeNotificacoesV1Texto_(sub.id).toLowerCase();
+    if(!id||id.slice(-8)!==ref||!saudeNotificacoesV1EhPush_(sub.device_type)||!saudeNotificacoesV1PertenceArea_(sub,contexto.areaId,quantidadeAreas))return;
+    encontrados[id]=true;remotoPorId[id]=sub;
+  });
+  var registry=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_HEADERS);
+  if(registry.getLastRow()>1){
+    registry.getRange(2,1,registry.getLastRow()-1,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_HEADERS.length).getDisplayValues().forEach(function(row){
+      if(moradoresAdminV1NormalizarAreaId_(row[1])!==contexto.areaId)return;
+      var reg=saudeNotificacoesV1RegistroDaLinha_(row),id=saudeNotificacoesV1Texto_(reg.subscriptionId).toLowerCase();
+      if(!id||id.slice(-8)!==ref)return;
+      encontrados[id]=true;registroPorId[id]=reg;
+    });
+  }
+  var ids=Object.keys(encontrados);
+  if(ids.length===0)throw new Error('Este aparelho não foi localizado na área. Atualize a situação e tente novamente.');
+  if(ids.length!==1)throw new Error('A referência técnica não é única nesta área. Nenhum reparo foi solicitado.');
+  var id=ids[0],reg=registroPorId[id]||null,remoto=remotoPorId[id]||null;
+  var pendente=saudeNotificacoesV1ReparoPendenteSubscription_(contexto.areaId,id,reg?reg.reparoAplicado:'');
+  if(pendente&&pendente.reparoId){
+    return {ok:true,areaId:contexto.areaId,areaNome:contexto.areaNome,subscriptionRef:ref,reparoId:pendente.reparoId,solicitadoEm:pendente.solicitadoEm,alreadyPending:true,message:'Este aparelho já possui reparo solicitado. Nenhuma solicitação duplicada foi criada.'};
+  }
+  var classificacao=remoto?saudeNotificacoesV1ClassificarExport_(remoto,false):saudeNotificacoesV1Classificar_(reg,null,false);
+  if(classificacao.status==='ATIVO'){
+    return {ok:true,areaId:contexto.areaId,areaNome:contexto.areaNome,subscriptionRef:ref,skipped:true,message:'O OneSignal informa que este aparelho já está apto. Nenhum reparo foi solicitado.'};
+  }
+  var sheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_HEADERS);
+  var targetSheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_TARGET_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_TARGET_HEADERS);
+  var reparoId='reparo_individual_'+contexto.areaId.toLowerCase()+'_'+Utilities.getUuid().replace(/-/g,'');
+  var quando=saudeNotificacoesV1Data_(new Date());
+  var operador=saudeNotificacoesV1Texto_(acesso.operadorId||acesso.tacsId||contexto.operadorId||'ADMIN');
+  sheet.appendRow([contexto.areaId,reparoId,quando,operador]);
+  targetSheet.appendRow([reparoId,contexto.areaId,id,'INDIVIDUAL_'+classificacao.status,quando]);
+  return {ok:true,areaId:contexto.areaId,areaNome:contexto.areaNome,subscriptionRef:ref,reparoId:reparoId,solicitadoEm:quando,alvos:1,message:'Reparo solicitado somente para este aparelho. Os demais aparelhos não foram alterados.'};
+}
+
 function saudeNotificacoesV1UltimoReparoArea_(areaId){
   var ss=tacsTerritorioV1Planilha_();
   var sheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_HEADERS);
@@ -427,16 +477,31 @@ function saudeNotificacoesV1UltimoReparoArea_(areaId){
   return null;
 }
 
+function saudeNotificacoesV1ReparoPorId_(areaId,reparoId){
+  var ss=tacsTerritorioV1Planilha_();
+  var sheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_HEADERS);
+  var last=sheet.getLastRow();if(last<=1)return null;
+  var rows=sheet.getRange(2,1,last-1,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_HEADERS.length).getDisplayValues();
+  for(var i=rows.length-1;i>=0;i--){
+    if(moradoresAdminV1NormalizarAreaId_(rows[i][0])===areaId&&saudeNotificacoesV1Texto_(rows[i][1])===reparoId){
+      return {areaId:areaId,reparoId:reparoId,solicitadoEm:rows[i][2]};
+    }
+  }
+  return null;
+}
+
 function saudeNotificacoesV1ReparoPendenteSubscription_(areaId,subscriptionId,reparoAplicado){
-  var reparo=saudeNotificacoesV1UltimoReparoArea_(areaId);
-  if(!reparo||!reparo.reparoId||reparo.reparoId===reparoAplicado)return null;
   var ss=tacsTerritorioV1Planilha_();
   var sheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_TARGET_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_TARGET_HEADERS);
   var last=sheet.getLastRow();if(last<=1)return null;
   var rows=sheet.getRange(2,1,last-1,TACS_SAUDE_NOTIFICACOES_V1.REPAIR_TARGET_HEADERS.length).getDisplayValues();
   var id=saudeNotificacoesV1Texto_(subscriptionId).toLowerCase();
+  var aplicado=saudeNotificacoesV1Texto_(reparoAplicado);
   for(var i=rows.length-1;i>=0;i--){
-    if(rows[i][0]===reparo.reparoId&&moradoresAdminV1NormalizarAreaId_(rows[i][1])===areaId&&saudeNotificacoesV1Texto_(rows[i][2]).toLowerCase()===id)return reparo;
+    if(moradoresAdminV1NormalizarAreaId_(rows[i][1])!==areaId||saudeNotificacoesV1Texto_(rows[i][2]).toLowerCase()!==id)continue;
+    var reparoId=saudeNotificacoesV1Texto_(rows[i][0]);
+    if(reparoId===aplicado)return null;
+    return saudeNotificacoesV1ReparoPorId_(areaId,reparoId)||{areaId:areaId,reparoId:reparoId,solicitadoEm:rows[i][4]};
   }
   return null;
 }
