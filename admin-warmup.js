@@ -141,6 +141,7 @@
   var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1';
 
   function texto(v){return String(v==null?'':v).trim()}
+  function esc(v){return texto(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function estadoCartao(cartao){
     var s=cartao&&cartao.querySelector('.saude-status');
     if(!s)return'';
@@ -196,16 +197,69 @@
       var atualizar=document.getElementById('atualizarSaudeNotificacoes');if(atualizar)setTimeout(function(){atualizar.click()},250);
     },'admin_notificacoes_saude_result');
   }
+
+  function instalarEstiloEntrega(){
+    if(document.getElementById('rastreamentoEntregaNotificacaoEstilo'))return;
+    var s=document.createElement('style');s.id='rastreamentoEntregaNotificacaoEstilo';
+    s.textContent='.notificacao-entrega{margin-top:14px;padding-top:14px;border-top:1px solid #cbd9df}.notificacao-entrega-resultado{margin-top:10px;padding:12px;border:2px solid #bad0da;border-radius:15px;background:#f5fafc;color:#16384a}.notificacao-entrega-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.notificacao-entrega-num{padding:10px;border:1px solid #c6d8df;border-radius:12px;background:#fff}.notificacao-entrega-num strong{display:block;font-size:1.35rem;color:#073a55}.notificacao-entrega-num span{font-size:.78rem;font-weight:850;color:#526d7b}.notificacao-entrega-lista{margin:8px 0 0;padding-left:20px}.notificacao-entrega-nota{font-size:.82rem;line-height:1.4;color:#526d7b;margin-top:9px}body.tema-petroleo .notificacao-entrega-resultado,body.tema-petroleo .notificacao-entrega-num{background:#073a55;border-color:#0b5878;color:#fff}body.tema-petroleo .notificacao-entrega-num strong{color:#9de8ff}body.tema-petroleo .notificacao-entrega-num span,body.tema-petroleo .notificacao-entrega-nota{color:#d8edf5}@media(max-width:520px){.notificacao-entrega-grid{grid-template-columns:1fr 1fr}}';
+    document.head.appendChild(s);
+  }
+  function adicionarEntrega(item,tipo){
+    if(!item||item.querySelector('.notificacao-entrega'))return;
+    var id=texto(item.dataset&&item.dataset.id),corpo=item.querySelector('.corpo');if(!id||!corpo)return;
+    var wrap=document.createElement('div');wrap.className='notificacao-entrega';
+    var b=document.createElement('button');b.type='button';b.className='botao cinza notificacao-entrega-botao';b.dataset.id=id;b.dataset.tipo=tipo;b.textContent='📊 Ver entrega desta notificação';
+    var r=document.createElement('div');r.className='notificacao-entrega-resultado';r.hidden=true;
+    wrap.appendChild(b);wrap.appendChild(r);corpo.appendChild(wrap);
+  }
+  function aplicarEntrega(){
+    var rec=document.getElementById('listaRecados'),cam=document.getElementById('listaCampanhas');
+    if(rec)rec.querySelectorAll('.item[data-id]').forEach(function(i){adicionarEntrega(i,'recado')});
+    if(cam)cam.querySelectorAll('.item[data-id]').forEach(function(i){adicionarEntrega(i,'campanha')});
+  }
+  function numero(v){return v===null||typeof v==='undefined'||v===''?'—':String(v)}
+  function renderEntrega(resultado,r){
+    r.hidden=false;
+    if(!resultado||resultado.ok!==true){r.innerHTML='<strong>Não foi possível consultar.</strong><div class="notificacao-entrega-nota">'+esc(resultado&&resultado.message||'Resultado indisponível.')+'</div>';return}
+    if(resultado.encontrada!==true){r.innerHTML='<strong>Nenhum envio Push encontrado.</strong><div class="notificacao-entrega-nota">'+esc(resultado.message||'Esta publicação ainda não possui notificação auditada.')+'</div>';return}
+    var m=resultado.metricas||{},a=resultado.aberturas||{},envio=resultado.envio||{},lista=Array.isArray(a.aparelhos)?a.aparelhos:[];
+    var html='<strong>Resultado desta notificação</strong><div class="notificacao-entrega-grid">'+
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(m.aceitos))+'</strong><span>Aceitos pelo serviço Push</span></div>'+
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(m.confirmados))+'</strong><span>Confirmações no aparelho*</span></div>'+
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(m.falhas))+'</strong><span>Falhas de entrega</span></div>'+
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(m.canceladas))+'</strong><span>Inscrições inativas/canceladas</span></div>'+
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(m.cliques))+'</strong><span>Cliques no aviso</span></div>'+
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(a.total||0))+'</strong><span>Abriram no Portal TACS</span></div></div>';
+    html+='<div class="notificacao-entrega-nota">Envio …'+esc(texto(envio.onesignalId).slice(-8))+(envio.registradoEm?' • '+esc(envio.registradoEm):'')+'</div>';
+    if(lista.length){html+='<div class="notificacao-entrega-nota"><strong>Aberturas identificadas:</strong></div><ul class="notificacao-entrega-lista">'+lista.map(function(x){var nome=texto(x.nome)||('Aparelho …'+texto(x.referenciaTecnica));return'<li>'+esc(nome)+(x.abertoEm?' — '+esc(x.abertoEm):'')+'</li>'}).join('')+'</ul>'}else{html+='<div class="notificacao-entrega-nota">Nenhuma abertura individual registrada ainda.</div>'}
+    html+='<div class="notificacao-entrega-nota">* “Aceito” significa aceito pelo serviço Push. “Confirmação no aparelho” só aparece quando o OneSignal e a plataforma oferecem esse retorno; Safari não oferece Confirmed Receipt. “Abriu no Portal” registra o clique capturado pelo Portal TACS e pode ser associado ao nome quando o aparelho já está identificado.</div>';
+    r.innerHTML=html;
+  }
+  function consultarEntrega(botao){
+    if(!botao||botao.disabled)return;
+    var api=window.PortalTacsRecadosCampanhasV12,id=texto(botao.dataset.id),tipo=texto(botao.dataset.tipo),wrap=botao.closest('.notificacao-entrega'),r=wrap&&wrap.querySelector('.notificacao-entrega-resultado');
+    if(!api||typeof api.post!=='function'||!id||!r)return;
+    var original=botao.textContent;botao.disabled=true;botao.textContent='Consultando OneSignal…';r.hidden=false;r.textContent='Consultando o resultado real desta notificação…';
+    var payload=sessao();payload.id=id;payload.tipo=tipo;
+    api.post('admin_notificacao_resultado',payload,function(res){botao.disabled=false;botao.textContent=original;renderEntrega(res,r)},'admin_result');
+  }
+
   function instalar(){
     tentativas++;
     var lista=document.getElementById('saudeNotificacoesLista');
     if(!lista||!window.PortalTacsRecadosCampanhasV12){if(tentativas<160)return;clearInterval(timer);return}
     if(!instalado){
-      instalado=true;
+      instalado=true;instalarEstiloEntrega();
       lista.addEventListener('click',function(e){var b=e.target.closest('.saude-reparo-individual button');if(b)solicitar(b)});
-      if(typeof MutationObserver==='function')new MutationObserver(aplicar).observe(lista,{childList:true,subtree:true});
+      document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('.notificacao-entrega-botao'):null;if(b)consultarEntrega(b)});
+      if(typeof MutationObserver==='function'){
+        new MutationObserver(aplicar).observe(lista,{childList:true,subtree:true});
+        var rec=document.getElementById('listaRecados'),cam=document.getElementById('listaCampanhas');
+        if(rec)new MutationObserver(aplicarEntrega).observe(rec,{childList:true,subtree:true});
+        if(cam)new MutationObserver(aplicarEntrega).observe(cam,{childList:true,subtree:true});
+      }
     }
-    aplicar();clearInterval(timer);
+    aplicar();aplicarEntrega();clearInterval(timer);
   }
   timer=setInterval(instalar,300);instalar();
 }());
