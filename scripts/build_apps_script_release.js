@@ -52,6 +52,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_24_RestauracaoNascimentoBackupV1.gs',
     marker: 'TACS_RESTAURACAO_NASCIMENTO_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_25_ReparoAutomaticoFeedbackV1.gs',
+    marker: 'TACS_REPARO_AUTO_FEEDBACK_V1'
   }
 ];
 
