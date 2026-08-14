@@ -35,8 +35,8 @@ label{display:block;font-weight:850;margin:12px 0 6px}.campo{display:block;width
 .saude-lista{display:grid;gap:10px;margin-top:14px}.saude-aparelho{border:2px solid #bfd1da;border-radius:16px;padding:13px;background:#fff}
 .saude-aparelho-topo{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.saude-aparelho h3{margin:0;font-size:1.05rem}.saude-meta{margin-top:5px;color:#526d7b;font-size:.9rem;line-height:1.4}
 .saude-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 9px;font-size:.78rem;font-weight:950;white-space:nowrap}.saude-status.ATIVO{background:#d9f4e2;color:#17602e}.saude-status.INATIVO{background:#fde1e1;color:#9b2828}.saude-status.REPARO{background:#fff0c7;color:#805b00}.saude-status.SEM_CONFIRMACAO{background:#e5eef4;color:#36586a}
-.saude-vazio{border:2px dashed #b9cbd4;border-radius:16px;padding:18px;text-align:center;color:#526d7b}.saude-nota{font-size:.86rem;color:#526d7b;line-height:1.45}
-body.tema-petroleo .saude-resumo .saude-numero,body.tema-petroleo .saude-aparelho,body.tema-petroleo .saude-vazio{background:#073a55;border-color:#0b5878;color:#fff}body.tema-petroleo .saude-resumo strong{color:#9de8ff}body.tema-petroleo .saude-meta,body.tema-petroleo .saude-nota{color:#d8edf5}
+.saude-vazio{border:2px dashed #b9cbd4;border-radius:16px;padding:18px;text-align:center;color:#526d7b}
+body.tema-petroleo .saude-resumo .saude-numero,body.tema-petroleo .saude-aparelho,body.tema-petroleo .saude-vazio{background:#073a55;border-color:#0b5878;color:#fff}body.tema-petroleo .saude-resumo strong{color:#9de8ff}body.tema-petroleo .saude-meta{color:#d8edf5}
 @media(max-width:650px){.saude-resumo{grid-template-columns:1fr 1fr}.saude-acoes{grid-template-columns:1fr}.saude-aparelho-topo{display:block}.saude-status{margin-top:8px}}
 </style>
 </head>
@@ -62,7 +62,6 @@ body.tema-petroleo .saude-resumo .saude-numero,body.tema-petroleo .saude-aparelh
 <div class="saude-resumo"><div class="saude-numero"><strong id="saudeAtivos">0</strong><span>Aptos</span></div><div class="saude-numero"><strong id="saudeInativos">0</strong><span>Inativos</span></div><div class="saude-numero"><strong id="saudeReparo">0</strong><span>Precisam de reparo</span></div><div class="saude-numero"><strong id="saudeSemConfirmacao">0</strong><span>Sem confirmação</span></div></div>
 <div class="saude-acoes"><button id="atualizarSaudeNotificacoes" class="botao" type="button">↻ Atualizar situação</button><button id="solicitarReparoNotificacoes" class="botao verde" type="button">🔧 Solicitar reparo das notificações da área</button></div>
 <div id="saudeNotificacoesStatus" class="status">Entre no painel para consultar os aparelhos desta área.</div>
-<p class="saude-nota">O estado técnico não comprova a entrega física de cada mensagem. O telefone exibido vem do cadastro de moradores, não do OneSignal.</p>
 <div id="saudeNotificacoesLista" class="saude-lista"></div>
 </section>
 <section id="conteudo" class="card oculto">
