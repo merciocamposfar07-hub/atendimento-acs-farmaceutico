@@ -1,0 +1,11 @@
+'use strict';
+const fs=require('node:fs');
+const path=require('node:path');
+const file=path.resolve(__dirname,'..','teste-v1','painel-moradores-v2.html');
+let html=fs.readFileSync(file,'utf8');
+const from='painel-moradores-transport-v2.js?v=20260815-stabilization-v1';
+const to='painel-moradores-transport-v2.js?v=20260813-admin-v103';
+if(!html.includes(from))throw new Error('Versão temporária do transporte não encontrada.');
+html=html.replace(from,to);
+fs.writeFileSync(file,html,'utf8');
+console.log('Compatibilidade do transporte de moradores preservada.');
