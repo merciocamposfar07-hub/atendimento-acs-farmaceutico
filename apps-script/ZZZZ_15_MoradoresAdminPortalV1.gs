@@ -1039,7 +1039,7 @@ function moradoresAdminV1LocalizarFonte_(contexto){
           abaMemo&&
           headerMemo>=0&&
           headerMemo<TACS_MORADORES_ADMIN_V1.MAX_HEADER_ROWS&&
-          abaMemo.getLastRow()>headerMemo+1&&
+          abaMemo.getLastRow()>headerMemo&&
           abaMemo.getLastColumn()>=20
         ){
           var cabecalhoMemo=abaMemo.getRange(
@@ -1069,7 +1069,7 @@ function moradoresAdminV1LocalizarFonte_(contexto){
   ss.getSheets().forEach(function(sheet){
     if([TACS_MORADORES_ADMIN_V1.META_SHEET,TACS_MORADORES_ADMIN_V1.AUDIT_SHEET].indexOf(sheet.getName())!==-1)return;
     var lastRow=sheet.getLastRow(),lastCol=sheet.getLastColumn();
-    if(lastRow<2||lastCol<20)return;
+    if(lastRow<1||lastCol<20)return;
     var scan=sheet.getRange(1,1,Math.min(lastRow,TACS_MORADORES_ADMIN_V1.MAX_HEADER_ROWS),lastCol).getDisplayValues();
     for(var i=0;i<scan.length;i++){
       var schema=moradoresAdminV1MapearSchemaReal_(scan[i]);

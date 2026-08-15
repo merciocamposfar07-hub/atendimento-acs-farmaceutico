@@ -171,6 +171,47 @@ function testSourceCache(context) {
   assert.equal(second.map.status, 15);
 }
 
+function testEmptySourceWithOfficialHeader(context) {
+  const headers = [
+    'ID_PORTAL','ID','CPF','CNS','NOME','DATA_NASCIMENTO','IDADE','SEXO',
+    'ENDERECO','CELULAR','TELEFONE_CONTATO','MICROAREA','EQUIPE','ORIGEM',
+    'ULTIMA_ATUALIZACAO','STATUS','CONSENTIMENTO_WHATSAPP','DATA_CONSENTIMENTO',
+    'DATA_CADASTRO_PORTAL','OBSERVACOES'
+  ];
+  let scans = 0;
+  const sheet = {
+    getName() { return 'MORADORES'; },
+    getLastRow() { return 1; },
+    getLastColumn() { return 20; },
+    getRange(row, _column, rowCount) {
+      return {
+        getDisplayValues() {
+          if (row === 1 && rowCount === 1) return [headers.slice()];
+          throw new Error('A fonte vazia deve ler somente o cabeçalho oficial.');
+        }
+      };
+    }
+  };
+  context.__setSpreadsheet({
+    getSheets() { scans += 1; return [sheet]; },
+    getSheetByName(name) { return name === 'MORADORES' ? sheet : null; }
+  });
+  const contexto = {
+    areaId: 'SITIO_MATIAS',
+    planilhaId: '1eZkJDXwCkYDbb0WovzYi2FU6ecg7cJ0z-nyD2f6bGDA'
+  };
+
+  const first = context.moradoresAdminV1LocalizarFonte_(contexto);
+  assert.equal(first.cacheFonte, false);
+  assert.equal(first.headerRow, 0);
+  assert.equal(first.map.nome, 4);
+  assert.equal(scans, 1, 'A primeira leitura deve reconhecer a planilha ainda vazia.');
+
+  const second = context.moradoresAdminV1LocalizarFonte_(contexto);
+  assert.equal(second.cacheFonte, true);
+  assert.equal(scans, 1, 'O cabeçalho da planilha vazia também deve ser reutilizado do cache.');
+}
+
 function main() {
   new vm.Script(SOURCE, {filename: 'ZZZZ_15_MoradoresAdminPortalV1.gs'});
   const context = makeContext();
@@ -202,7 +243,8 @@ function main() {
   );
   testLightweightCountAndSummary(context);
   testSourceCache(context);
-  console.log('Moradores 1.4.5: leitura leve, cache validado e invalidação após escrita aprovados.');
+  testEmptySourceWithOfficialHeader(context);
+  console.log('Moradores 1.4.5: leitura leve, fonte vazia 20/20, cache e invalidação após escrita aprovados.');
 }
 
 main();
