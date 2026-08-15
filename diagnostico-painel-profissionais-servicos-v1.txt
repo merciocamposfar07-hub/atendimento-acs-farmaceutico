@@ -1,6 +1,6 @@
-executado_em_utc=2026-08-13T03:30:25Z
+executado_em_utc=2026-08-15T18:15:37Z
 pagina_http=200
 pagina_titulo=Painel administrativo V1
 javascript_sintaxe=ok
 api_configurada=https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec
-admin_status={"ok":true,"versaoAdmin":"1.0.0","pinConfigurado":true,"setupTemporarioAtivo":false,"geradoEm":"2026-08-13T00:30:25-03:00"}
+admin_status={"ok":true,"versaoAdmin":"1.0.0","pinConfigurado":true,"setupTemporarioAtivo":false,"geradoEm":"2026-08-15T15:15:37-03:00"}
