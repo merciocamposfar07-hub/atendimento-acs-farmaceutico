@@ -77,7 +77,7 @@ registrar('resiliencia', 'Atualização funciona mesmo sem fetch nativo', contem
 registrar('resiliencia', 'Painéis fazem preconnect com Apps Script', [agenda, profissionais, recados].every(t => contem(t, 'rel="preconnect" href="https://script.google.com"')));
 registrar('resiliencia', 'Falha de rede não duplica envio administrativo', contem(adminTransport, 'deve enviar cada operação uma única vez'));
 registrar('resiliencia', 'Sessão expirada volta ao PIN sem alerta falso', contem(adminTransport, 'sessão anterior não pôde ser reutilizada'));
-registrar('resiliencia', 'Pré-aquecimento administrativo é carregado sem UI do Portal', contem(agenda, 'admin-warmup.js?v=20260813-admin-v103') && contem(profissionais, 'admin-warmup.js?v=20260813-admin-v103') && contem(recados, 'admin-warmup.js?v=20260813-admin-v103') && !contem(warmup, 'portal-auto-update.js'));
+registrar('resiliencia', 'Pré-aquecimento administrativo é carregado sem UI do Portal', contem(agenda, 'admin-warmup.js?v=20260813-admin-v103') && contem(profissionais, 'admin-warmup.js?v=20260813-admin-v103') && contem(recados, 'admin-warmup.js?v=20260814-receipt-v110') && !contem(warmup, 'portal-auto-update.js'));
 
 // Usabilidade e acessibilidade voltadas a agentes leigos e uso móvel.
 registrar('usabilidade', 'Viewport móvel preservado nos três painéis', [agenda, profissionais, recados].every(t => contem(t, 'width=device-width,initial-scale=1,viewport-fit=cover')));

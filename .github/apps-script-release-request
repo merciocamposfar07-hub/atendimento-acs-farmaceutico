@@ -1,4 +1,4 @@
-release=tacs-territorio-1.1.0-cadastro-completo
-requested_at=2026-08-14T23:02:54Z
-source=cadastro-tacs-nove-campos-e-data-nascimento
+release=notificacoes-1.1.0-comprovacao-individual
+requested_at=2026-08-15T01:43:12Z
+source=confirmacao-android-e-iphone-por-aparelho
 commit=pending-pr

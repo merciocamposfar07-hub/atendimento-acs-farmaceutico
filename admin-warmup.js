@@ -223,24 +223,41 @@
     r.hidden=false;
     if(!resultado||resultado.ok!==true){r.innerHTML='<strong>Não foi possível consultar.</strong><div class="notificacao-entrega-nota">'+esc(resultado&&resultado.message||'Resultado indisponível.')+'</div>';return}
     if(resultado.encontrada!==true){r.innerHTML='<strong>Nenhum envio Push encontrado.</strong><div class="notificacao-entrega-nota">'+esc(resultado.message||'Esta publicação ainda não possui notificação auditada.')+'</div>';return}
-    var m=resultado.metricas||{},a=resultado.aberturas||{},envio=resultado.envio||{},lista=Array.isArray(a.aparelhos)?a.aparelhos:[];
+    var c=resultado.comprovacao||{},envio=resultado.envio||{},lista=Array.isArray(c.aparelhos)?c.aparelhos:[];
+    if(c.disponivel!==true){
+      r.innerHTML='<strong>Sem comprovante individual.</strong><div class="notificacao-entrega-nota">'+esc(resultado.message||'Este envio é anterior ao sistema de comprovação individual por aparelho.')+'</div>';
+      return
+    }
     var html='<strong>Resultado desta notificação</strong><div class="notificacao-entrega-grid">'+
-      '<div class="notificacao-entrega-num"><strong>'+esc(numero(m.aceitos))+'</strong><span>Aceitos pelo serviço Push</span></div>'+
-      '<div class="notificacao-entrega-num"><strong>'+esc(numero(m.confirmados))+'</strong><span>Confirmações no aparelho*</span></div>'+
-      '<div class="notificacao-entrega-num"><strong>'+esc(numero(m.falhas))+'</strong><span>Falhas de entrega</span></div>'+
-      '<div class="notificacao-entrega-num"><strong>'+esc(numero(m.canceladas))+'</strong><span>Inscrições inativas/canceladas</span></div>'+
-      '<div class="notificacao-entrega-num"><strong>'+esc(numero(m.cliques))+'</strong><span>Cliques no aviso</span></div>'+
-      '<div class="notificacao-entrega-num"><strong>'+esc(numero(a.total||0))+'</strong><span>Abriram no Portal TACS</span></div></div>';
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(c.destinados))+'</strong><span>Aparelhos destinados</span></div>'+
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(c.comprovados))+'</strong><span>Recebimento comprovado</span></div>'+
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(c.exibidosTecnicos))+'</strong><span>Exibidos no aparelho</span></div>'+
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(c.confirmadosMorador))+'</strong><span>Confirmados pelo morador</span></div>'+
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(c.pendentes))+'</strong><span>Aguardando comprovação</span></div>'+
+      '<div class="notificacao-entrega-num"><strong>'+esc(numero(c.falhas))+'</strong><span>Falhas de envio</span></div></div>';
     html+='<div class="notificacao-entrega-nota">Envio …'+esc(texto(envio.onesignalId).slice(-8))+(envio.registradoEm?' • '+esc(envio.registradoEm):'')+'</div>';
-    if(lista.length){html+='<div class="notificacao-entrega-nota"><strong>Aberturas identificadas:</strong></div><ul class="notificacao-entrega-lista">'+lista.map(function(x){var nome=texto(x.nome)||('Aparelho …'+texto(x.referenciaTecnica));return'<li>'+esc(nome)+(x.abertoEm?' — '+esc(x.abertoEm):'')+'</li>'}).join('')+'</ul>'}else{html+='<div class="notificacao-entrega-nota">Nenhuma abertura individual registrada ainda.</div>'}
-    html+='<div class="notificacao-entrega-nota">* “Aceito” significa aceito pelo serviço Push. “Confirmação no aparelho” só aparece quando o OneSignal e a plataforma oferecem esse retorno; Safari não oferece Confirmed Receipt. “Abriu no Portal” registra o clique capturado pelo Portal TACS e pode ser associado ao nome quando o aparelho já está identificado.</div>';
+    var confirmados=lista.filter(function(x){return Boolean(texto(x.confirmadoEm))});
+    var exibidos=lista.filter(function(x){return Boolean(texto(x.exibidoEm))&&!texto(x.confirmadoEm)});
+    var pendentes=lista.filter(function(x){return !texto(x.confirmadoEm)&&!texto(x.exibidoEm)&&texto(x.estado)!=='FALHA_ENVIO'});
+    function nomeAparelho(x){return texto(x.nome)||('Aparelho …'+texto(x.referenciaTecnica))}
+    function ambiente(x){return [texto(x.tipoAparelho),texto(x.navegador)].filter(Boolean).join(' / ')}
+    if(confirmados.length){
+      html+='<div class="notificacao-entrega-nota"><strong>Confirmações expressas:</strong></div><ul class="notificacao-entrega-lista">'+confirmados.map(function(x){return'<li>'+esc(nomeAparelho(x))+' — confirmou o recebimento em '+esc(x.confirmadoEm)+(ambiente(x)?' ('+esc(ambiente(x))+')':'')+'</li>'}).join('')+'</ul>'
+    }
+    if(exibidos.length){
+      html+='<div class="notificacao-entrega-nota"><strong>Exibições técnicas:</strong></div><ul class="notificacao-entrega-lista">'+exibidos.map(function(x){return'<li>'+esc(nomeAparelho(x))+' — aviso exibido no aparelho em '+esc(x.exibidoEm)+(ambiente(x)?' ('+esc(ambiente(x))+')':'')+'</li>'}).join('')+'</ul>'
+    }
+    if(pendentes.length){
+      html+='<div class="notificacao-entrega-nota"><strong>Aguardando comprovação:</strong> '+pendentes.map(nomeAparelho).map(esc).join(', ')+'.</div>'
+    }
+    html+='<div class="notificacao-entrega-nota">O painel só conta como comprovado quando o navegador confirma a exibição no aparelho ou quando o morador confirma expressamente. O simples encaminhamento ao serviço Push não conta como recebimento.</div>';
     r.innerHTML=html;
   }
   function consultarEntrega(botao){
     if(!botao||botao.disabled)return;
     var api=window.PortalTacsRecadosCampanhasV12,id=texto(botao.dataset.id),tipo=texto(botao.dataset.tipo),wrap=botao.closest('.notificacao-entrega'),r=wrap&&wrap.querySelector('.notificacao-entrega-resultado');
     if(!api||typeof api.post!=='function'||!id||!r)return;
-    var original=botao.textContent;botao.disabled=true;botao.textContent='Consultando OneSignal…';r.hidden=false;r.textContent='Consultando o resultado real desta notificação…';
+    var original=botao.textContent;botao.disabled=true;botao.textContent='Consultando comprovantes…';r.hidden=false;r.textContent='Consultando os comprovantes individuais desta notificação…';
     var payload=sessao();payload.id=id;payload.tipo=tipo;
     api.post('admin_notificacao_resultado',payload,function(res){botao.disabled=false;botao.textContent=original;renderEntrega(res,r)},'admin_result');
   }

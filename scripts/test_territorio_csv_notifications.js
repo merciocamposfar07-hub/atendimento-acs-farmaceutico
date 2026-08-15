@@ -267,6 +267,17 @@ function makeContext() {
           getResponseCode() { return 200; },
           getContentText() { return JSON.stringify(body); }
         };
+      },
+      fetchAll(requests) {
+        return requests.map(({url, ...options}) => {
+          fetched.push({url, options});
+          const body = nextFetchResponse || {id: 'push-' + fetched.length, recipients: 1};
+          nextFetchResponse = null;
+          return {
+            getResponseCode() { return 200; },
+            getContentText() { return JSON.stringify(body); }
+          };
+        });
       }
     },
     HtmlService: {
@@ -847,8 +858,17 @@ function notification(context, parameters) {
 function testNotifications(context, territory) {
   // Compatibilidade com o nome já utilizado no Apps Script em produção.
   context.__properties.set('ONESIGNAL_APP_API_KEY', 'private-key-for-test');
+  let activeTargets=true;
+  context.saudeNotificacoesV1ExportarSubscriptions_=()=>activeTargets?[{
+    id:'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',device_type:5,
+    invalid_identifier:'f',notification_types:'1'
+  }]:[];
+  context.saudeNotificacoesV1EhPush_=type=>Number(type)===5;
+  context.saudeNotificacoesV1PertenceArea_=()=>true;
+  context.saudeNotificacoesV1ClassificarExport_=()=>({status:'ATIVO'});
+  context.saudeNotificacoesV1TipoRemoto_=()=>({dispositivo:'Web Push',navegador:'Chrome'});
   vm.runInContext(read(FILES.notifications), context);
-  assert.equal(context.TACS_NOTIFICACOES_AREA_V1.VERSAO, '1.0.4');
+  assert.equal(context.TACS_NOTIFICACOES_AREA_V1.VERSAO, '1.1.0');
   assert.equal(
     context.TACS_NOTIFICACOES_AREA_V1.DEFAULT_APP_ID,
     'e2294b98-c72b-4f8c-a055-de28979676dc'
@@ -881,9 +901,12 @@ function testNotifications(context, territory) {
   assert.equal(context.__fetched.length, 1);
   const sent = JSON.parse(context.__fetched[0].options.payload);
   assert.equal(sent.app_id, 'e2294b98-c72b-4f8c-a055-de28979676dc');
-  assert.deepEqual(JSON.parse(JSON.stringify(sent.filters)), [
-    {field: 'tag', key: 'area_tacs', relation: '=', value: territory.area.areaId}
+  assert.deepEqual(JSON.parse(JSON.stringify(sent.include_subscription_ids)), [
+    'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
   ]);
+  assert.equal(sent.web_buttons[0].id,'confirmar_recebimento');
+  assert.equal(sent.web_buttons[0].url,'_osp=do_not_open');
+  assert.match(sent.url,/confirmar-recebimento\.html\?t=/);
   assert.equal(sent.data.areaId, territory.area.areaId);
   assert.equal(JSON.stringify(sent).includes('OUTRA_AREA'), false, 'O servidor aceitou o filtro livre enviado pelo navegador.');
   assert.equal(context.__fetched[0].options.headers.Authorization, 'Key private-key-for-test');
@@ -971,8 +994,8 @@ function testNotifications(context, territory) {
   assert.equal(tacsAllowed.areaId, territory.area.areaId);
   assert.equal(context.__fetched.length, 4);
   const tacsSent = JSON.parse(context.__fetched[3].options.payload);
-  assert.deepEqual(JSON.parse(JSON.stringify(tacsSent.filters)), [
-    {field: 'tag', key: 'area_tacs', relation: '=', value: territory.area.areaId}
+  assert.deepEqual(JSON.parse(JSON.stringify(tacsSent.include_subscription_ids)), [
+    'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
   ]);
 
   const crossAreaDenied = notification(context, Object.assign({}, base, {
@@ -984,7 +1007,7 @@ function testNotifications(context, territory) {
   assert.match(crossAreaDenied.message, /troca de área bloqueada/i);
   assert.equal(context.__fetched.length, 4, 'A tentativa do TACS em outra área chegou ao OneSignal.');
 
-  context.__setFetchResponse({recipients: 0});
+  activeTargets=false;
   const zeroAudience = notification(context, Object.assign({}, base, {
     requestId: 'push_area_000010', eventoPublicacao: 'evento-sem-destinatario'
   }));
@@ -992,16 +1015,18 @@ function testNotifications(context, territory) {
   assert.equal(zeroAudience.push, false);
   assert.equal(zeroAudience.zeroAudience, true);
   assert.equal(zeroAudience.destinatarios, 0);
-  assert.equal(context.__fetched.length, 5);
+  assert.equal(context.__fetched.length, 4);
 
+  activeTargets=true;
   context.__setFetchResponse({id: 'push-sem-contagem'});
   const acceptedWithoutCount = notification(context, Object.assign({}, base, {
     requestId: 'push_area_000011', eventoPublicacao: 'evento-sem-contagem'
   }));
   assert.equal(acceptedWithoutCount.push, true);
   assert.equal(acceptedWithoutCount.onesignalId, 'push-sem-contagem');
-  assert.equal(acceptedWithoutCount.destinatarios, null);
-  assert.equal(context.__fetched.length, 6);
+  assert.equal(acceptedWithoutCount.destinatarios, 1);
+  assert.equal(acceptedWithoutCount.encaminhados, 1);
+  assert.equal(context.__fetched.length, 5);
 }
 
 function testWrappedRoutes(context) {
