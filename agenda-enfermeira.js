@@ -972,6 +972,13 @@
           serviceWorkerParam: {
             scope: '/atendimento-acs-farmaceutico/push/'
           },
+          webhooks: {
+            cors: false,
+            'notification.willDisplay':
+              API + '?action=publico_notificacao_webhook',
+            'notification.clicked':
+              API + '?action=publico_notificacao_webhook'
+          },
           autoResubscribe: true,
           notifyButton: { enable: false },
           allowLocalhostAsSecureOrigin: false

@@ -174,7 +174,7 @@ function verifyStaticSource(config) {
   assert.match(official, /v=202608/);
   assert.match(
     official,
-    /admin-warmup\.js\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v103)/
+    /admin-warmup\.js\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v103|14-receipt-v110)/
   );
   assert.match(official, /rel="preconnect" href="https:\/\/script\.google\.com"/);
   assert.doesNotMatch(official, /Promise\.all\(\[painel,conexao/);

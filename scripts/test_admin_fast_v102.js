@@ -30,7 +30,7 @@ for(const file of ['painel-oficial-profissionais-servicos.html','painel-oficial-
   const t=read(file);
   assert.match(t,/cache:'default'/,file+' deve reutilizar HTML versionado');
   assert.doesNotMatch(t,/cache:'no-store'/,file+' não deve forçar download integral');
-  assert.match(t,/20260813-admin-v103/);
+  assert.match(t,file.includes('recados')?/20260814-receipt-v110/:/20260813-admin-v103/);
 }
 assert.match(read('painel-oficial-agendas-vagas.html'),/admin-warmup\.js\?v=20260813-admin-v103/);
 console.log('ADMIN_LOGIN_V103_TRANSPORT_TESTS_OK');

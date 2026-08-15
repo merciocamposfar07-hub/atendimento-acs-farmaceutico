@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#073f57">
+  <title>Confirmar recebimento — Portal TACS</title>
+  <style>
+    :root{color-scheme:light;--petroleo:#073f57;--borda:#62cae6;--fundo:#e8f5f9;--verde:#12874a;--texto:#0a2e40}
+    *{box-sizing:border-box}
+    html,body{min-height:100%;margin:0}
+    body{display:grid;place-items:center;padding:24px;background:var(--fundo);color:var(--texto);font-family:Arial,Helvetica,sans-serif}
+    main{width:min(100%,560px);padding:30px;border:3px solid var(--borda);border-radius:28px;background:#fff;box-shadow:0 18px 45px rgba(5,57,79,.16);text-align:center}
+    .icone{display:grid;place-items:center;width:72px;height:72px;margin:0 auto 18px;border-radius:50%;background:var(--petroleo);color:#fff;font-size:38px;font-weight:900}
+    h1{margin:0 0 12px;font-size:clamp(29px,8vw,42px);line-height:1.08}
+    p{margin:0;color:#526d7b;font-size:19px;line-height:1.5}
+    #estado{margin-top:22px;padding:18px;border:2px solid #b6d3dd;border-radius:18px;background:#f5fafc;color:var(--petroleo);font-size:19px;font-weight:850;line-height:1.4}
+    #estado.ok{border-color:#82d5a5;background:#eaf8ef;color:#08723d}
+    #estado.erro{border-color:#e3a4a4;background:#fff1f1;color:#922d2d}
+    a{display:inline-block;margin-top:22px;padding:16px 24px;border-radius:16px;background:var(--petroleo);color:#fff;font-size:18px;font-weight:900;text-decoration:none}
+    [hidden]{display:none!important}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="icone" aria-hidden="true">✓</div>
+    <h1>Confirmação do recado</h1>
+    <p>Estamos registrando que este aparelho recebeu e abriu a notificação.</p>
+    <div id="estado" role="status" aria-live="polite">Confirmando recebimento…</div>
+    <a id="portal" href="./" hidden>Abrir Portal TACS</a>
+  </main>
+  <script>
+  (function(){
+    'use strict';
+    var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+    var estado=document.getElementById('estado'),portal=document.getElementById('portal');
+    var token=String(new URLSearchParams(location.search).get('t')||'').trim().toLowerCase();
+    try{history.replaceState(null,'',location.pathname)}catch(e){}
+    function mostrar(texto,tipo){estado.textContent=texto;estado.className=tipo||'';if(tipo==='ok')portal.hidden=false}
+    if(!/^[0-9a-f]{64}$/.test(token)){mostrar('Este comprovante é inválido ou está incompleto.','erro');return}
+    var requestId='confirm_receipt_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);
+    var inicio=Date.now();
+    function consultar(){
+      var callback='__tacsReceipt_'+Date.now()+'_'+Math.floor(Math.random()*100000),script=document.createElement('script'),finalizado=false;
+      var timer=setTimeout(function(){concluir(null)},4500);
+      function concluir(data){
+        if(finalizado)return;finalizado=true;clearTimeout(timer);
+        try{delete window[callback]}catch(e){window[callback]=undefined}
+        if(script.parentNode)script.remove();
+        if(data&&data.ok===true&&data.pendente===false&&data.result){
+          if(data.result.ok===true){mostrar('Recebimento confirmado. Você já pode fechar esta página.','ok');return}
+          mostrar(data.result.message||'Não foi possível confirmar este recebimento.','erro');return
+        }
+        if(Date.now()-inicio>45000){mostrar('A confirmação demorou mais que o esperado. Toque novamente na notificação para repetir.','erro');return}
+        setTimeout(consultar,900)
+      }
+      window[callback]=concluir;script.onerror=function(){concluir(null)};
+      script.src=API+'?action=publico_confirmar_recebimento_result&requestId='+encodeURIComponent(requestId)+'&callback='+encodeURIComponent(callback)+'&_='+Date.now();
+      document.head.appendChild(script)
+    }
+    var body=new URLSearchParams();
+    body.set('action','publico_confirmar_recebimento');body.set('requestId',requestId);body.set('token',token);
+    body.set('origem',/iPhone|iPad|iPod/i.test(navigator.userAgent||'')?'LINK_IPHONE_SAFARI':'LINK_NOTIFICACAO');
+    fetch(API+'?_='+Date.now(),{
+      method:'POST',mode:'no-cors',cache:'no-store',
+      headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString()
+    }).catch(function(){}).then(function(){setTimeout(consultar,650)})
+  }());
+  </script>
+</body>
+</html>
