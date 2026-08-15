@@ -47,6 +47,7 @@ assert(!front.includes('localStorage.setItem')&&!front.includes('sessionStorage.
 assert(agenda.includes("document.dispatchEvent(new CustomEvent('tacs:notificacao-reparo-concluido'"));
 assert(index.includes('portal-notification-health.js?v=20260813-notif-health-v106'));
 assert(panel.includes('Saúde das notificações'));assert(panel.includes('Solicitar reparo das notificações da área'));assert(panel.includes("post('admin_notificacoes_saude'"));assert(panel.includes("post('admin_notificacoes_solicitar_reparo_area'"));
+assert(!fs.existsSync('painel-oficial-saude-notificacoes.html'));
 assert(warm.includes("/\\/painel-oficial-recados-campanhas\\.html$/"));
 assert(warm.includes("admin_notificacoes_solicitar_reparo_aparelho"));
 assert(warm.includes("if(!ref||estado==='ATIVO')return"));
@@ -68,4 +69,4 @@ x=context.saudeNotificacoesV1ClassificarExport_({invalid_identifier:'f',notifica
 x=context.saudeNotificacoesV1ResolverMoradorOpcional_('', 'JAPARANDUBA');assert.equal(x.idPortal,'');
 assert.equal(context.saudeNotificacoesV1NormalizarRef_('ABCDEF12'),'abcdef12');
 assert.throws(function(){context.saudeNotificacoesV1NormalizarRef_('123')},/Referência técnica/);
-console.log('Saúde das notificações v1.1.2 + rastreamento de entrega: vínculo, reparo e métricas isoladas validados.');
+console.log('Saúde das notificações consolidada em Recados e campanhas: vínculo, reparo e métricas validados.');
