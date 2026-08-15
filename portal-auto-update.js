@@ -9,16 +9,98 @@
   var STYLE_ID='portalTacsAtualizarPaginaStyleV1';
   var CHECK_INTERVAL=60000;
   var checking=false;
+  var territorialObserver=null;
+  var territorialLastStatus=null;
 
   function readStorage(storage,key){try{return storage.getItem(key)||''}catch(e){return ''}}
   function writeStorage(storage,key,value){try{storage.setItem(key,String(value))}catch(e){}}
   function removeStorage(storage,key){try{storage.removeItem(key)}catch(e){}}
+  function onlyDigits(value){return String(value||'').replace(/\D/g,'')}
 
   function clearTransientConnectionState(){
     [
       'portalTacsAdminStatusV5',
       'portalTacsAppsScriptWarmAtV1'
     ].forEach(function(key){removeStorage(localStorage,key)});
+  }
+
+  function isLegacyIdentityStatus(text){
+    var value=String(text||'').trim();
+    return value==='CPF conferido ✓'||
+      value==='Confira os números do CPF.'||
+      value==='Digite o CPF para identificação na Unidade de Saúde Posto Matias.';
+  }
+
+  function normalizeTerritorialStatus(text){
+    var value=String(text||'').trim();
+    if(value==='Cadastro não encontrado. Confira o documento.'){
+      return 'Cadastro não encontrado nesta área. Confira o CPF ou CNS.';
+    }
+    return value;
+  }
+
+  function rememberTerritorialStatus(status){
+    if(!status)return;
+    var current=normalizeTerritorialStatus(status.textContent);
+    if(!current||isLegacyIdentityStatus(current))return;
+    if(current!==String(status.textContent||'').trim())status.textContent=current;
+    territorialLastStatus={text:current,className:status.className||'help id-cns-note'};
+  }
+
+  function restoreTerritorialStatus(input,status){
+    if(!input||!status)return;
+    var doc=onlyDigits(input.value);
+    if(!doc){
+      status.textContent='Informe o CPF ou o Cartão Nacional de Saúde (CNS).';
+      status.className='help id-cns-note';
+      territorialLastStatus={text:status.textContent,className:status.className};
+      return;
+    }
+    if(territorialLastStatus&&territorialLastStatus.text){
+      status.textContent=territorialLastStatus.text;
+      status.className=territorialLastStatus.className||'help id-cns-note';
+      return;
+    }
+    status.textContent='Conferindo se o cadastro pertence a esta área...';
+    status.className='help id-cns-note';
+    territorialLastStatus={text:status.textContent,className:status.className};
+  }
+
+  function installTerritorialIdentityGuard(){
+    if(!document.body){setTimeout(installTerritorialIdentityGuard,40);return}
+    var input=document.getElementById('cpf');
+    var status=document.getElementById('cpfStatus');
+    if(!input||!status){setTimeout(installTerritorialIdentityGuard,120);return}
+    if(status.dataset.territorialIdentityGuard==='1')return;
+    status.dataset.territorialIdentityGuard='1';
+    rememberTerritorialStatus(status);
+
+    territorialObserver=new MutationObserver(function(){
+      var current=String(status.textContent||'').trim();
+      var normalized=normalizeTerritorialStatus(current);
+      if(normalized!==current){
+        status.textContent=normalized;
+        if(status.className.indexOf('invalid')===-1)status.className='help id-cns-note invalid';
+        territorialLastStatus={text:normalized,className:status.className};
+        return;
+      }
+      if(isLegacyIdentityStatus(current)){
+        restoreTerritorialStatus(input,status);
+        return;
+      }
+      rememberTerritorialStatus(status);
+    });
+    territorialObserver.observe(status,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:['class']});
+
+    input.addEventListener('input',function(){
+      setTimeout(function(){
+        var current=String(status.textContent||'').trim();
+        if(isLegacyIdentityStatus(current))restoreTerritorialStatus(input,status);
+        else rememberTerritorialStatus(status);
+      },0);
+    });
+
+    document.addEventListener('tacs:morador',function(){setTimeout(function(){rememberTerritorialStatus(status)},0)});
   }
 
   function freshUrl(version){
@@ -69,6 +151,7 @@
     }catch(e){}
     tasks.push(Promise.resolve(fetchVersion(true)).catch(function(){return null}));
     Promise.all(tasks).finally(function(){
+      installTerritorialIdentityGuard();
       if(button){button.disabled=false;button.textContent=original||'↻ Atualizar página'}
     });
   }
@@ -76,6 +159,7 @@
   function installUI(){
     if(!document.body){setTimeout(installUI,40);return}
     ensureStyle();
+    installTerritorialIdentityGuard();
     var button=document.getElementById(BUTTON_ID);
     if(button)return;
     button=document.createElement('button');
@@ -131,6 +215,7 @@
   function onVisible(){
     if(document.visibilityState==='visible'){
       installUI();
+      installTerritorialIdentityGuard();
       fetchVersion(false);
     }
   }
@@ -140,13 +225,15 @@
     verificar:function(force){return fetchVersion(!!force)},
     atualizar:function(){reloadFresh(Date.now())},
     reconectar:wakeConnection,
-    limparTemporarios:clearTransientConnectionState
+    limparTemporarios:clearTransientConnectionState,
+    protegerIdentidadeTerritorial:installTerritorialIdentityGuard
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installUI,{once:true});
   else installUI();
+  installTerritorialIdentityGuard();
   fetchVersion(true);
-  window.addEventListener('pageshow',function(){installUI();fetchVersion(false)});
+  window.addEventListener('pageshow',function(){installUI();installTerritorialIdentityGuard();fetchVersion(false)});
   window.addEventListener('online',function(){wakeConnection();fetchVersion(true)});
   document.addEventListener('visibilitychange',onVisible);
 }());
