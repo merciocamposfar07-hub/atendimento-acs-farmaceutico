@@ -184,7 +184,7 @@ async function testSafariPostTargetRegistration() {
   dom.window.close();
 }
 
-function testTerritoryPanel() {
+async function testTerritoryPanel() {
   const html = source('teste-v1/painel-tacs-areas-v1.html');
   const js = source('teste-v1/painel-tacs-areas-v1.js');
   assert.match(html, /painel-tacs-areas\.svg/);
@@ -223,6 +223,7 @@ function testTerritoryPanel() {
   });
   const {window} = dom;
   window.HTMLElement.prototype.scrollIntoView = function scrollIntoView() {};
+  window.TextDecoder = TextDecoder;
   window.eval(js);
   assert.equal(window.document.getElementById('adminLogin').classList.contains('hidden'), false);
   window.document.getElementById('loginTacsTab').click();
@@ -240,6 +241,32 @@ function testTerritoryPanel() {
   for (const id of ['permRead', 'permEdit', 'permStatus', 'permCsv', 'permPublish']) {
     assert.equal(window.document.getElementById(id).checked, true, `Permissão inicial ausente: ${id}`);
   }
+
+  const esusCsv = [
+    'e-SUS - Atenção Primária',
+    'MINISTÉRIO DA SAÚDE',
+    'UNIDADE DE SAÚDE: USF MATIAS',
+    '',
+    'Nome do cidadão;Data de nascimento;Sexo;CPF;CNS;Telefone celular;Microárea;Equipe responsável',
+    'João da Área;07/04/1985;Masculino;77777777777;777777777777777;81988887777;04;Equipe Sítio'
+  ].join('\r\n');
+  const csvFile = new window.File(
+    [Uint8Array.from(Buffer.from(esusCsv, 'latin1'))],
+    'acompanhamento-cidadaos.csv',
+    {type: 'text/csv'}
+  );
+  const fileInput = window.document.getElementById('csvFile');
+  Object.defineProperty(fileInput, 'files', {configurable: true, value: [csvFile]});
+  fileInput.dispatchEvent(new window.Event('change', {bubbles: true}));
+  await waitFor(() => /Cabeçalho real do e-SUS reconhecido na linha 5/.test(
+    window.document.getElementById('operationStatus').textContent
+  ));
+  assert.equal(window.document.getElementById('mappingBox').classList.contains('hidden'), false);
+  assert.equal(window.document.getElementById('map_nome').selectedOptions[0].textContent, 'Nome do cidadão');
+  assert.equal(window.document.getElementById('map_nascimento').selectedOptions[0].textContent, 'Data de nascimento');
+  assert.equal(window.document.getElementById('map_sexo').selectedOptions[0].textContent, 'Sexo');
+  assert.equal(window.document.getElementById('map_microarea').selectedOptions[0].textContent, 'Microárea');
+  assert.doesNotMatch(window.document.getElementById('mappingFields').textContent, /Aten��o/);
   dom.window.close();
 }
 
@@ -280,7 +307,7 @@ function testAreaTagClient() {
 async function main() {
   await testResidentPanel();
   await testSafariPostTargetRegistration();
-  testTerritoryPanel();
+  await testTerritoryPanel();
   testIconsAndManifests();
   testAreaTagClient();
   console.log('DOM territorial: retorno à busca, data/idade, acesso TACS, CSV e ícones validados.');

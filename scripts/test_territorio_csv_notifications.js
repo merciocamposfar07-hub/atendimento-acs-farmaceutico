@@ -245,7 +245,18 @@ function makeContext() {
           : (Array.isArray(value) ? Buffer.from(value) : Buffer.from(String(value), 'utf8'));
         return {
           getBytes() { return Array.from(buffer); },
-          getDataAsString() { return buffer.toString('utf8'); }
+          getDataAsString(charset) {
+            const normalized = String(charset || 'UTF-8').toUpperCase();
+            if (normalized === 'WINDOWS-1252' || normalized === 'ISO-8859-1') return buffer.toString('latin1');
+            if (normalized === 'UTF-16LE') return buffer.toString('utf16le');
+            if (normalized === 'UTF-16BE') {
+              const swapped = Buffer.from(buffer);
+              if (swapped.length % 2) return buffer.toString('utf8');
+              swapped.swap16();
+              return swapped.toString('utf16le');
+            }
+            return buffer.toString('utf8');
+          }
         };
       },
       formatDate(value, _timezone, pattern) {
@@ -616,7 +627,7 @@ function testTerritory(context) {
 function testCsv(context, territory) {
   installResidentStubs(context);
   vm.runInContext(read(FILES.csv), context);
-  assert.equal(context.TACS_CSV_MORADORES_V1.VERSAO, '1.0.0');
+  assert.equal(context.TACS_CSV_MORADORES_V1.VERSAO, '1.0.1');
 
   const access = {
     perfil: 'ADMIN_GERAL', operadorId: 'ADMIN_GERAL',
@@ -638,6 +649,41 @@ function testCsv(context, territory) {
   ]);
   const fonte = {ss: sourceSpreadsheet, sheet: sourceSheet, headerRow: 0, map: residentMap()};
   context.moradoresAdminV1LocalizarFonte_ = () => fonte;
+
+  const esusWithPreamble = [
+    'e-SUS - Atenção Primária',
+    'MINISTÉRIO DA SAÚDE',
+    'UNIDADE DE SAÚDE: USF MATIAS',
+    '',
+    'Nome do cidadão;Data de nascimento;Sexo;CPF;CNS;Telefone celular;Microárea;Equipe responsável',
+    'João da Área;07/04/1985;Masculino;77777777777;777777777777777;81988887777;04;Equipe Sítio'
+  ].join('\r\n');
+  const esusBase64 = Buffer.from(esusWithPreamble, 'latin1').toString('base64');
+  const decodedEsus = context.csvMoradoresV1Decodificar_({csvBase64: esusBase64});
+  assert.equal(decodedEsus.includes('\uFFFD'), false, 'A leitura Windows-1252 manteve caracteres quebrados.');
+  assert.match(decodedEsus, /Atenção Primária/);
+  const parsedEsus = context.csvMoradoresV1Parse_(decodedEsus, '');
+  assert.equal(parsedEsus.headerRow, 4, 'A capa do relatório e-SUS foi tratada como cabeçalho.');
+  assert.equal(parsedEsus.firstDataLine, 6);
+  assert.equal(parsedEsus.headers[0], 'Nome do cidadão');
+  const mappedEsus = context.csvMoradoresV1Mapping_(parsedEsus.headers, {});
+  assert.equal(mappedEsus.nome, 0);
+  assert.equal(mappedEsus.nascimento, 1);
+  assert.equal(mappedEsus.sexo, 2);
+  assert.equal(mappedEsus.cpf, 3);
+  assert.equal(mappedEsus.cns, 4);
+  assert.equal(mappedEsus.microarea, 6);
+  const manualEsus = context.csvMoradoresV1Mapping_(parsedEsus.headers, {
+    nome: 0, nascimento: 1, sexo: 2, cpf: -1, cns: 4
+  });
+  assert.equal(manualEsus.cpf, -1, 'Uma coluna marcada como Não importar foi remapeada automaticamente.');
+  const esusPreview = context.csvMoradoresV1Previa_({payload: JSON.stringify({
+    csvBase64: esusBase64, arquivo: 'acompanhamento-cidadaos.csv'
+  })}, csvContext, access);
+  assert.equal(esusPreview.linhaCabecalho, 5);
+  assert.equal(esusPreview.resumo.NOVO, 1);
+  assert.equal(esusPreview.linhas[0].linhaCsv, 6);
+  assert.equal(esusPreview.linhas[0].dados.nome, 'João da Área');
 
   const csv = [
     'CPF;CNS;NOME;DATA_NASCIMENTO;SEXO;ENDERECO;CELULAR',
