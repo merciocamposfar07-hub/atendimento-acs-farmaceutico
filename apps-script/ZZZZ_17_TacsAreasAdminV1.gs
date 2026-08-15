@@ -1,6 +1,6 @@
 /**
  * ZZZZ_17_TacsAreasAdminV1.gs
- * Portal TACS — cadastro territorial e acesso individual V1.1.0
+ * Portal TACS — cadastro territorial e acesso individual V1.2.0
  *
  * Mantém TACS e áreas em tabelas próprias, sem misturar esses dados à base de
  * moradores. Todos os campos cadastrais humanos podem ser corrigidos depois
@@ -17,7 +17,7 @@
  * - o PIN individual nunca é devolvido e é salvo somente como hash com salt.
  */
 var TACS_TERRITORIO_V1 = Object.freeze({
-  VERSAO:'1.1.0',
+  VERSAO:'1.2.0',
   TACS_SHEET:'TACS_PROFISSIONAIS_AREA',
   AREAS_SHEET:'TACS_AREAS',
   AUDIT_SHEET:'TACS_AUDIT_TERRITORIO',
@@ -40,7 +40,7 @@ var TACS_TERRITORIO_V1 = Object.freeze({
   MAX_AREAS:500,
   DEFAULT_PERMISSIONS:Object.freeze([
     'MORADORES_LER','MORADORES_EDITAR','MORADORES_SITUACAO','MORADORES_IMPORTAR_CSV',
-    'PUBLICACOES_GERENCIAR'
+    'PUBLICACOES_GERENCIAR','AGENDAS_GERENCIAR','PROFISSIONAIS_GERENCIAR'
   ]),
   TACS_HEADERS:Object.freeze([
     'TACS_ID','NOME_COMPLETO','CNS_PROFISSIONAL','CPF','MATRICULA','TELEFONE','EMAIL',
@@ -840,9 +840,13 @@ function tacsTerritorioV1CompararSeguro_(a,b){
 
 function tacsTerritorioV1Permissoes_(valor){
   var lista=Array.isArray(valor)?valor:String(valor||'').split(/[;,]/);
-  var permitidas=['MORADORES_LER','MORADORES_EDITAR','MORADORES_SITUACAO','MORADORES_IMPORTAR_CSV','PUBLICACOES_GERENCIAR'];
+  var legadas=['MORADORES_LER','MORADORES_EDITAR','MORADORES_SITUACAO','MORADORES_IMPORTAR_CSV','PUBLICACOES_GERENCIAR'];
+  var permitidas=legadas.concat(['AGENDAS_GERENCIAR','PROFISSIONAIS_GERENCIAR']);
   var out=[];
   lista.forEach(function(item){var p=tacsTerritorioV1Texto_(item).toUpperCase();if(permitidas.indexOf(p)!==-1&&out.indexOf(p)===-1)out.push(p);});
+  var cadastroLegadoCompleto=legadas.every(function(p){return out.indexOf(p)!==-1;});
+  if(cadastroLegadoCompleto&&out.indexOf('AGENDAS_GERENCIAR')===-1)out.push('AGENDAS_GERENCIAR');
+  if(cadastroLegadoCompleto&&out.indexOf('PROFISSIONAIS_GERENCIAR')===-1)out.push('PROFISSIONAIS_GERENCIAR');
   return out;
 }
 

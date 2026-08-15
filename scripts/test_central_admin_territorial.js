@@ -26,8 +26,10 @@ assert.match(html,/data-module="moradores"/);
 assert.match(html,/data-module="recados"/);
 assert.match(html,/data-permission="MORADORES_LER"/);
 assert.match(html,/data-permission="PUBLICACOES_GERENCIAR"/);
-assert.match(html,/data-module="agendas" data-admin-only="true"/);
-assert.match(html,/data-module="profissionais" data-admin-only="true"/);
+assert.match(html,/data-module="agendas" data-permission="AGENDAS_GERENCIAR"/);
+assert.match(html,/data-module="profissionais" data-permission="PROFISSIONAIS_GERENCIAR"/);
+assert.doesNotMatch(html,/data-module="agendas" data-admin-only="true"/);
+assert.doesNotMatch(html,/data-module="profissionais" data-admin-only="true"/);
 assert.match(html,/id="viewerBack"/);
 assert.match(js,/portalTacsAdminTokenV1/);
 assert.match(js,/portalTacsTerritorioTokenV1/);
@@ -37,8 +39,8 @@ assert.match(js,/admin_notificacoes_saude/);
 assert.match(js,/painel-oficial-recados-campanhas\.html\?area=/);
 assert.doesNotMatch(js,/moduleUrl\(name\)[\s\S]*name==='notificacoes'/,
   'A rota do painel redundante de Saúde das notificações deve ser removida.');
-assert.match(html,/central-administrativa-tacs\.js\?v=20260815-v9-csv-auto/,
-  'A Central deve invalidar o cache após remover o painel redundante.');
+assert.match(html,/central-administrativa-tacs\.js\?v=20260815-v10-agendas-territoriais/,
+  'A Central deve invalidar o cache após liberar os painéis territoriais.');
 assert.match(html,/\.health-card\{[^}]*background:linear-gradient\(145deg,var\(--p\),var\(--p2\)\)/,
   'Os cartões de Saúde geral devem usar fundo azul-petróleo.');
 assert.match(html,/\.health-card strong\{[^}]*color:#fff/,
@@ -47,9 +49,15 @@ assert.doesNotMatch(notificationHealthSource,/O estado técnico não comprova a 
   'A observação quase invisível deve ser removida da Saúde das notificações.');
 assert.match(professionalsPage,/\.aba\{[^}]*min-height:76px[^}]*font-size:clamp\(\.78rem,3\.3vw,\.95rem\)[^}]*overflow-wrap:anywhere/,
   'Os botões de Profissionais devem conter os textos no iPhone.');
-assert.match(professionalsWrapper,/painel-profissionais-servicos-v1\.html\?v=20260814-tabs-v104/);
-assert.match(js,/painel-oficial-profissionais-servicos\.html\?v=20260814-tabs-v104/,
+assert.match(professionalsWrapper,/painel-profissionais-servicos-v1\.html\?v=20260815-territorial-v1/);
+assert.match(js,/painel-oficial-profissionais-servicos\.html\?area=/,
   'A Central deve carregar a versão corrigida do painel de Profissionais.');
+assert.match(js,/painel-oficial-agendas-vagas\.html\?area=/,
+  'A Central deve informar a área ao painel de Agendas.');
+assert.match(professionalsPage,/portalTacsTerritorioTokenV1/,
+  'Profissionais deve reutilizar a sessão territorial do TACS.');
+assert.match(professionalsPage,/escopo:'profissionais'/,
+  'Profissionais deve solicitar somente dados da própria área.');
 assert.match(js,/painel-oficial-tacs-areas\.html\?v=20260815-csv-auto-v5/,
   'A Central deve carregar a confirmação atualizada do painel de TACS.');
 assert.match(territoryWrapper,/painel-tacs-areas-v1\.html\?v=20260815-csv-auto-v5/,

@@ -9,6 +9,8 @@
   var REGULAR = 'Solicitar atendimento odontológico (dentista)';
   var EMERGENCY = 'Solicitar atendimento odontológico de emergência (dentista)';
   var ALLOWED_DAYS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
+  var AREA_ID = String(new URLSearchParams(location.search).get('area') || window.TACS_AREA_ID || 'JAPARANDUBA')
+    .toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 64) || 'JAPARANDUBA';
 
   var slots = [];
   var selection = null;
@@ -17,7 +19,7 @@
   var internalCategoryChange = false;
   var verifyTimer = null;
   var loadPromise = null;
-  var CACHE_KEY = 'portalTacsDentalAgendaV101';
+  var CACHE_KEY = 'portalTacsDentalAgendaV102:' + AREA_ID;
   var CACHE_MAX_MS = 6 * 60 * 60 * 1000;
   var CACHE_ACTIONABLE_MS = 90 * 1000;
   var cacheSavedAt = 0;
@@ -310,7 +312,7 @@
         else finish(null, data);
       };
       script.onerror = function () { finish(new Error('Não foi possível consultar a planilha odontológica.')); };
-      script.src = API + (API.indexOf('?') === -1 ? '?' : '&') + 'action=agenda&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
+      script.src = API + (API.indexOf('?') === -1 ? '?' : '&') + 'action=agenda&areaId=' + encodeURIComponent(AREA_ID) + '&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
       document.head.appendChild(script);
     });
   }
@@ -489,6 +491,7 @@
       form.target = frameName;
       form.hidden = true;
       add('action', 'reservar');
+      add('areaId', AREA_ID);
       add('requestId', item.requestId);
       add('date', item.date);
       add('type', item.type);
