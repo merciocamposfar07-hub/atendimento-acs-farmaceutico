@@ -9,7 +9,7 @@ var territorioToken=sessionStorage.getItem(TACS_TOKEN_KEY)||'';
 var device=localStorage.getItem(DEVICE_KEY)||'';
 var mode=territorioToken?'tacs':(token?'admin':'');
 var active=null,data={tacs:[],areas:[],podeAdministrar:false,perfil:''};
-var csvState={file:null,base64:'',name:'',headers:[],delimiter:'',mapping:{},preview:null};
+var csvState={file:null,base64:'',name:'',headers:[],delimiter:'',headerRow:-1,encoding:'',mapping:{},preview:null};
 var MAP_FIELDS=[
   ['idPortal','ID Portal'],['id','ID original'],['cpf','CPF'],['cns','CNS'],['nome','Nome completo'],
   ['nascimento','Data de nascimento'],['idade','Idade'],['sexo','Sexo'],['endereco','Endereço'],
@@ -177,23 +177,68 @@ function saveArea(event){
 
 function validateArea(id){status('Conferindo área e schema 20/20…','warn');territoryPost('admin_territorio_validar_area',{areaId:id},function(r){status(text(r&&r.message||'Não foi possível validar a área.'),r&&r.ok===true?'ok':'err');});}
 
+var CSV_HEADER_ALIASES={
+  idPortal:['IDPORTAL'],id:['ID','IDCIDADAO','CODIGOCIDADAO','PRONTUARIO'],
+  cpf:['CPF','CPFCIDADAO','CPFDOCIDADAO'],
+  cns:['CNS','CNSCIDADAO','CNSDOCIDADAO','CARTAOSUS','CARTAONACIONALDESAUDE','CARTAONACIONALSUS'],
+  nome:['NOME','NOMECOMPLETO','NOMECIDADAO','NOMEDOCIDADAO','CIDADAO'],
+  nascimento:['DATANASCIMENTO','DATADENASCIMENTO','NASCIMENTO','DTNASCIMENTO'],
+  idade:['IDADE'],sexo:['SEXO','SEXOBIOLOGICO'],
+  endereco:['ENDERECO','ENDERECOCOMPLETO','ENDERECODODOMICILIO','LOCALIDADE','LOGRADOURO'],
+  celular:['CELULAR','TELEFONECELULAR','TELEFONESCELULARES'],
+  telefoneContato:['TELEFONECONTATO','TELEFONESDECONTATO','TELEFONE','TELEFONES'],
+  microarea:['MICROAREA','MICROAREARESPONSAVEL'],
+  equipe:['EQUIPE','NOMEDAEQUIPE','EQUIPEVINCULADA','EQUIPERESPONSAVEL'],
+  origem:['ORIGEM'],ultimaAtualizacao:['ULTIMAATUALIZACAO','DATAULTIMAATUALIZACAO'],
+  status:['STATUS','SITUACAO'],consentimentoWhatsapp:['CONSENTIMENTOWHATSAPP'],
+  dataConsentimento:['DATACONSENTIMENTO'],dataCadastroPortal:['DATACADASTROPORTAL'],
+  observacoes:['OBSERVACOES','OBSERVACAO']
+};
 function normalizeKey(v){var out=text(v).toUpperCase();if(out.normalize)out=out.normalize('NFD').replace(/[\u0300-\u036f]/g,'');return out.replace(/[^A-Z0-9]/g,'');}
 function detectDelimiter(line){var best=';',count=-1;[',',';','\t','|'].forEach(function(sep){var quotes=false,total=0;for(var i=0;i<line.length;i++){if(line[i]==='"')quotes=!quotes;else if(!quotes&&line[i]===sep)total++;}if(total>count){count=total;best=sep;}});return best;}
 function parseLine(line,delimiter){var out=[],value='',quotes=false;for(var i=0;i<line.length;i++){var c=line[i];if(c==='"'){if(quotes&&line[i+1]==='"'){value+='"';i++;}else quotes=!quotes;}else if(c===delimiter&&!quotes){out.push(value.trim());value='';}else value+=c;}out.push(value.trim());return out;}
-function defaultIndex(field,headers){var aliases={idPortal:['IDPORTAL'],id:['ID'],cpf:['CPF'],cns:['CNS','CARTAOSUS','CARTAONACIONALSUS'],nome:['NOME','NOMECOMPLETO'],nascimento:['DATANASCIMENTO','NASCIMENTO','DTNASCIMENTO'],idade:['IDADE'],sexo:['SEXO'],endereco:['ENDERECO','LOCALIDADE','LOGRADOURO'],celular:['CELULAR','TELEFONECELULAR'],telefoneContato:['TELEFONECONTATO','TELEFONE'],microarea:['MICROAREA'],equipe:['EQUIPE'],origem:['ORIGEM'],ultimaAtualizacao:['ULTIMAATUALIZACAO'],status:['STATUS','SITUACAO'],consentimentoWhatsapp:['CONSENTIMENTOWHATSAPP'],dataConsentimento:['DATACONSENTIMENTO'],dataCadastroPortal:['DATACADASTROPORTAL'],observacoes:['OBSERVACOES','OBSERVACAO']};var normal=headers.map(normalizeKey),found=-1;(aliases[field]||[]).some(function(a){var i=normal.indexOf(a);if(i>=0){found=i;return true;}return false;});return found;}
+function csvAliasMatches(key,alias){if(key===alias)return true;if(alias.length<10)return false;return key.indexOf(alias)===0||key.slice(-alias.length)===alias||key.indexOf(alias)!==-1;}
+function csvHeaderIndex(field,headers){var normal=headers.map(normalizeKey),aliases=CSV_HEADER_ALIASES[field]||[],found=-1;aliases.some(function(alias){return normal.some(function(key,index){if(csvAliasMatches(key,alias)){found=index;return true;}return false;});});return found;}
+function defaultIndex(field,headers){return csvHeaderIndex(field,headers);}
+function csvHeaderScore(headers){var fields=['cpf','cns','nome','nascimento','sexo','endereco','celular','telefoneContato','microarea','equipe'],seen={},matches=0,score=0,required=0;fields.forEach(function(field){var index=csvHeaderIndex(field,headers);if(index<0||seen[index])return;seen[index]=true;matches++;score+=10;if(field==='nome'||field==='nascimento'||field==='sexo'){required++;score+=12;}if(field==='cpf'||field==='cns')score+=6;});return {matches:matches,score:score,required:required};}
+function locateCsvHeader(textValue){
+  var lines=String(textValue||'').split(/\r?\n/),best=null,limit=Math.min(lines.length,250);
+  for(var row=0;row<limit;row++){
+    if(!text(lines[row]))continue;
+    [',',';','\t','|'].forEach(function(delimiter){
+      var headers=parseLine(lines[row],delimiter);if(headers.length<3)return;
+      var result=csvHeaderScore(headers);if(result.matches<2)return;
+      var candidate={headers:headers,delimiter:delimiter,headerRow:row,matches:result.matches,score:result.score,required:result.required};
+      if(!best||candidate.score>best.score||(candidate.score===best.score&&candidate.matches>best.matches)||(candidate.score===best.score&&candidate.matches===best.matches&&candidate.headers.length>best.headers.length))best=candidate;
+    });
+  }
+  if(!best)throw new Error('Não foi possível localizar a linha com os nomes das colunas neste CSV do e-SUS.');
+  return best;
+}
+function decodeCsvBuffer(buffer){
+  var bytes=new Uint8Array(buffer),decoded='',encoding='UTF-8';
+  if(bytes.length>=2&&bytes[0]===255&&bytes[1]===254){decoded=new TextDecoder('utf-16le').decode(buffer);encoding='UTF-16LE';}
+  else if(bytes.length>=2&&bytes[0]===254&&bytes[1]===255){decoded=new TextDecoder('utf-16be').decode(buffer);encoding='UTF-16BE';}
+  else{
+    try{decoded=new TextDecoder('utf-8',{fatal:true}).decode(buffer);}
+    catch(error){decoded=new TextDecoder('windows-1252').decode(buffer);encoding='Windows-1252';}
+    if(decoded.indexOf('\uFFFD')!==-1){decoded=new TextDecoder('windows-1252').decode(buffer);encoding='Windows-1252';}
+  }
+  return {text:decoded.replace(/^\uFEFF/,''),encoding:encoding};
+}
 
 function bytesToBase64(buffer){var bytes=new Uint8Array(buffer),binary='';for(var i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode.apply(null,bytes.subarray(i,Math.min(i+32768,bytes.length)));return btoa(binary);}
 function prepareFile(file){
   if(!file)return;if(file.size>2097152){status('O CSV deve ter no máximo 2 MB.','err');return;}var reader=new FileReader();
-  reader.onload=function(){var buffer=reader.result;csvState.file=file;csvState.base64=bytesToBase64(buffer);csvState.name=file.name;var textValue=new TextDecoder('utf-8').decode(buffer).replace(/^\uFEFF/,'');var line=(textValue.split(/\r?\n/)[0]||'');csvState.delimiter=detectDelimiter(line);csvState.headers=parseLine(line,csvState.delimiter);renderMapping();el('mappingBox').classList.remove('hidden');el('csvPreview').classList.add('hidden');status('Arquivo lido apenas no aparelho. Confirme o mapeamento para gerar a prévia no servidor.','ok');};
+  reader.onload=function(){try{var buffer=reader.result,decoded=decodeCsvBuffer(buffer),located=locateCsvHeader(decoded.text);csvState.file=file;csvState.base64=bytesToBase64(buffer);csvState.name=file.name;csvState.encoding=decoded.encoding;csvState.delimiter=located.delimiter;csvState.headerRow=located.headerRow;csvState.headers=located.headers;csvState.preview=null;renderMapping();el('mappingBox').classList.remove('hidden');el('csvPreview').classList.add('hidden');status('Cabeçalho real do e-SUS reconhecido na linha '+(located.headerRow+1)+'. Confira as colunas e gere a prévia.','ok');}catch(error){csvState.file=null;csvState.base64='';csvState.headers=[];csvState.headerRow=-1;el('mappingBox').classList.add('hidden');el('csvPreview').classList.add('hidden');status(text(error&&error.message||'Não foi possível reconhecer este arquivo CSV.'),'err');}};
   reader.onerror=function(){status('Não foi possível ler o arquivo neste aparelho.','err');};reader.readAsArrayBuffer(file);
 }
 
 function renderMapping(){
-  var box=el('mappingFields');box.innerHTML=MAP_FIELDS.map(function(field){var selected=defaultIndex(field[0],csvState.headers);var required=['nome','nascimento','sexo'].indexOf(field[0])!==-1;return '<div class="maprow"><label for="map_'+esc(field[0])+'">'+esc(field[1])+(required?' *':'')+'</label><select class="field mappingSelect" id="map_'+esc(field[0])+'" data-field="'+esc(field[0])+'"><option value="">Não importar</option>'+csvState.headers.map(function(h,i){return '<option value="'+i+'" '+(i===selected?'selected':'')+'>'+esc(h||('Coluna '+(i+1)))+'</option>';}).join('')+'</select></div>';}).join('');
+  var box=el('mappingFields'),used={};box.innerHTML=MAP_FIELDS.map(function(field){var selected=defaultIndex(field[0],csvState.headers);if(selected>=0&&used[selected])selected=-1;if(selected>=0)used[selected]=true;var required=['nome','nascimento','sexo'].indexOf(field[0])!==-1;return '<div class="maprow"><label for="map_'+esc(field[0])+'">'+esc(field[1])+(required?' *':'')+'</label><select class="field mappingSelect" id="map_'+esc(field[0])+'" data-field="'+esc(field[0])+'"><option value="">Não importar</option>'+csvState.headers.map(function(h,i){return '<option value="'+i+'" '+(i===selected?'selected':'')+'>'+esc(h||('Coluna '+(i+1)))+'</option>';}).join('')+'</select></div>';}).join('');
 }
 
-function collectMapping(){var out={};document.querySelectorAll('.mappingSelect').forEach(function(s){if(s.value!=='')out[s.dataset.field]=Number(s.value);});return out;}
+function collectMapping(){var out={};document.querySelectorAll('.mappingSelect').forEach(function(s){out[s.dataset.field]=s.value===''?-1:Number(s.value);});return out;}
 function csvBody(){return {arquivo:csvState.name,csvBase64:csvState.base64,delimitador:csvState.delimiter,mapeamento:csvState.mapping,previewToken:csvState.preview&&csvState.preview.previewToken||''};}
 
 function previewCsv(){

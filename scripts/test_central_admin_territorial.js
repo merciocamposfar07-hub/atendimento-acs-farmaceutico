@@ -37,7 +37,7 @@ assert.match(js,/admin_notificacoes_saude/);
 assert.match(js,/painel-oficial-recados-campanhas\.html\?area=/);
 assert.doesNotMatch(js,/moduleUrl\(name\)[\s\S]*name==='notificacoes'/,
   'A rota do painel redundante de Saúde das notificações deve ser removida.');
-assert.match(html,/central-administrativa-tacs\.js\?v=20260814-v7/,
+assert.match(html,/central-administrativa-tacs\.js\?v=20260815-v8-csv/,
   'A Central deve invalidar o cache após remover o painel redundante.');
 assert.match(html,/\.health-card\{[^}]*background:linear-gradient\(145deg,var\(--p\),var\(--p2\)\)/,
   'Os cartões de Saúde geral devem usar fundo azul-petróleo.');
@@ -50,9 +50,9 @@ assert.match(professionalsPage,/\.aba\{[^}]*min-height:76px[^}]*font-size:clamp\
 assert.match(professionalsWrapper,/painel-profissionais-servicos-v1\.html\?v=20260814-tabs-v104/);
 assert.match(js,/painel-oficial-profissionais-servicos\.html\?v=20260814-tabs-v104/,
   'A Central deve carregar a versão corrigida do painel de Profissionais.');
-assert.match(js,/painel-oficial-tacs-areas\.html\?v=20260814-status-v3/,
+assert.match(js,/painel-oficial-tacs-areas\.html\?v=20260815-csv-esus-v4/,
   'A Central deve carregar a confirmação atualizada do painel de TACS.');
-assert.match(territoryWrapper,/painel-tacs-areas-v1\.html\?v=20260814-status-v3/,
+assert.match(territoryWrapper,/painel-tacs-areas-v1\.html\?v=20260815-csv-esus-v4/,
   'O painel oficial deve invalidar o cache da confirmação corrigida.');
 assert.match(publicPortal,/\.hero-actions\{grid-template-columns:1fr;margin:0;border-left:0;border-right:0;border-radius:0\}/,
   'O quadro inferior do Portal TACS deve alinhar com a largura do quadro superior no celular.');

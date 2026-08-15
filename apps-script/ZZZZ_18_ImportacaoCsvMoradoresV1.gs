@@ -1,6 +1,6 @@
 /**
  * ZZZZ_18_ImportacaoCsvMoradoresV1.gs
- * Portal TACS — importação auditável de moradores por CSV V1.0.0
+ * Portal TACS — importação auditável de moradores por CSV V1.0.1
  *
  * Fluxo obrigatório: prévia no servidor -> confirmação -> gravação em lote.
  * Duplicidades e conflitos nunca são resolvidos silenciosamente. Registros
@@ -9,7 +9,7 @@
  * IMPORTACAO_DESFEITA, preservando IDs, linhas e auditoria.
  */
 var TACS_CSV_MORADORES_V1 = Object.freeze({
-  VERSAO:'1.0.0',
+  VERSAO:'1.0.1',
   TIMEZONE:'America/Recife',
   RESULT_PREFIX:'tacs_csv_moradores_v1_result_',
   RESULT_SECONDS:300,
@@ -39,6 +39,24 @@ var TACS_CSV_MORADORES_V1 = Object.freeze({
     'cpf','cns','nome','nascimento','sexo','endereco','celular','telefoneContato',
     'microarea','equipe','consentimentoWhatsapp','dataConsentimento','observacoes'
   ])
+});
+
+var TACS_CSV_MORADORES_V1_HEADER_ALIASES = Object.freeze({
+  idPortal:['IDPORTAL'],id:['ID','IDCIDADAO','CODIGOCIDADAO','PRONTUARIO'],
+  cpf:['CPF','CPFCIDADAO','CPFDOCIDADAO'],
+  cns:['CNS','CNSCIDADAO','CNSDOCIDADAO','CARTAOSUS','CARTAONACIONALDESAUDE','CARTAONACIONALSUS'],
+  nome:['NOME','NOMECOMPLETO','NOMECIDADAO','NOMEDOCIDADAO','CIDADAO'],
+  nascimento:['DATANASCIMENTO','DATADENASCIMENTO','NASCIMENTO','DTNASCIMENTO'],
+  idade:['IDADE'],sexo:['SEXO','SEXOBIOLOGICO'],
+  endereco:['ENDERECO','ENDERECOCOMPLETO','ENDERECODODOMICILIO','LOCALIDADE','LOGRADOURO'],
+  celular:['CELULAR','TELEFONECELULAR','TELEFONESCELULARES'],
+  telefoneContato:['TELEFONECONTATO','TELEFONESDECONTATO','TELEFONE','TELEFONES'],
+  microarea:['MICROAREA','MICROAREARESPONSAVEL'],
+  equipe:['EQUIPE','NOMEDAEQUIPE','EQUIPEVINCULADA','EQUIPERESPONSAVEL'],
+  origem:['ORIGEM'],ultimaAtualizacao:['ULTIMAATUALIZACAO','DATAULTIMAATUALIZACAO'],
+  status:['STATUS','SITUACAO'],consentimentoWhatsapp:['CONSENTIMENTOWHATSAPP'],
+  dataConsentimento:['DATACONSENTIMENTO'],dataCadastroPortal:['DATACADASTROPORTAL'],
+  observacoes:['OBSERVACOES','OBSERVACAO']
 });
 
 var csvMoradoresV1DoGetAnterior_;
@@ -122,12 +140,13 @@ function csvMoradoresV1Previa_(p,contexto,acesso){
   var parsed=csvMoradoresV1Parse_(texto,body.delimitador);
   var mapping=csvMoradoresV1Mapping_(parsed.headers,body.mapeamento);
   var fonte=moradoresAdminV1LocalizarFonte_(contexto);
-  var analise=csvMoradoresV1Analisar_(parsed.rows,mapping,fonte,contexto);
+  var analise=csvMoradoresV1Analisar_(parsed.rows,mapping,fonte,contexto,parsed.firstDataLine);
   var assinatura=csvMoradoresV1Token_(texto,mapping,contexto.areaId);
   var token=csvMoradoresV1CriarPrevia_(assinatura,contexto,acesso);
   return {
     ok:true,versao:TACS_CSV_MORADORES_V1.VERSAO,areaId:contexto.areaId,
     areaNome:contexto.areaNome,arquivo:arquivo,delimitador:parsed.delimiter,
+    linhaCabecalho:parsed.headerRow+1,
     headers:parsed.headers,mapeamento:mapping,previewToken:token,
     resumo:analise.resumo,linhas:analise.itens.slice(0,TACS_CSV_MORADORES_V1.MAX_PREVIEW_ROWS).map(csvMoradoresV1ItemPublico_),
     limitado:analise.itens.length>TACS_CSV_MORADORES_V1.MAX_PREVIEW_ROWS,
@@ -149,7 +168,7 @@ function csvMoradoresV1Importar_(p,contexto,acesso){
   if(!lock.tryLock(30000))throw new Error('Outra atualização de moradores está em andamento. Tente novamente.');
   try{
     var fonte=moradoresAdminV1LocalizarFonte_(contexto);
-    var analise=csvMoradoresV1Analisar_(parsed.rows,mapping,fonte,contexto);
+    var analise=csvMoradoresV1Analisar_(parsed.rows,mapping,fonte,contexto,parsed.firstDataLine);
     if(
       analise.itens.length>TACS_CSV_MORADORES_V1.MAX_PREVIEW_ROWS&&
       !csvMoradoresV1Booleano_(body.confirmarTodosImportaveis)
@@ -216,12 +235,13 @@ function csvMoradoresV1Importar_(p,contexto,acesso){
   }finally{lock.releaseLock();}
 }
 
-function csvMoradoresV1Analisar_(rows,mapping,fonte,contexto){
+function csvMoradoresV1Analisar_(rows,mapping,fonte,contexto,firstDataLine){
   var existentes=csvMoradoresV1IndexarFonte_(fonte);
   var preparados=[];
+  firstDataLine=Number(firstDataLine||2);
   rows.forEach(function(row,index){
     if(row.every(function(v){return !csvMoradoresV1Texto_(v);} ))return;
-    var item={linhaCsv:index+2,status:'',erros:[],conflitos:[],dados:null,existing:null};
+    var item={linhaCsv:index+firstDataLine,status:'',erros:[],conflitos:[],dados:null,existing:null};
     try{
       item.dados=csvMoradoresV1Dados_(row,mapping,contexto);
       moradoresAdminV1ValidarDadosMorador_(item.dados,false);
@@ -316,22 +336,13 @@ function csvMoradoresV1Dados_(row,mapping,contexto){
 }
 
 function csvMoradoresV1Mapping_(headers,recebido){
-  var aliases={
-    idPortal:['IDPORTAL'],id:['ID'],cpf:['CPF'],cns:['CNS','CARTAOSUS','CARTAONACIONALSUS'],
-    nome:['NOME','NOMECOMPLETO'],nascimento:['DATANASCIMENTO','NASCIMENTO','DTNASCIMENTO'],
-    idade:['IDADE'],sexo:['SEXO'],endereco:['ENDERECO','LOCALIDADE','LOGRADOURO'],
-    celular:['CELULAR','TELEFONECELULAR'],telefoneContato:['TELEFONECONTATO','TELEFONE'],
-    microarea:['MICROAREA'],equipe:['EQUIPE'],origem:['ORIGEM'],
-    ultimaAtualizacao:['ULTIMAATUALIZACAO'],status:['STATUS','SITUACAO'],
-    consentimentoWhatsapp:['CONSENTIMENTOWHATSAPP'],dataConsentimento:['DATACONSENTIMENTO'],
-    dataCadastroPortal:['DATACADASTROPORTAL'],observacoes:['OBSERVACOES','OBSERVACAO']
-  };
-  var map={},normal=headers.map(csvMoradoresV1Chave_);
+  var map={};
   var manual=recebido&&typeof recebido==='object'?recebido:{};
   if(typeof recebido==='string'&&recebido){try{manual=JSON.parse(recebido);}catch(erro){throw new Error('O mapeamento de colunas é inválido.');}}
   TACS_CSV_MORADORES_V1.FIELDS.forEach(function(campo){
     var valor=manual[campo];
-    if(valor!==undefined&&valor!==null&&valor!==''){
+    if(Object.prototype.hasOwnProperty.call(manual,campo)){
+      if(valor===undefined||valor===null||valor===''||Number(valor)===-1){map[campo]=-1;return;}
       var indice=Number(valor);
       if(!isFinite(indice)||indice<0||indice>=headers.length){
         indice=headers.indexOf(String(valor));
@@ -339,8 +350,7 @@ function csvMoradoresV1Mapping_(headers,recebido){
       if(indice<0)throw new Error('A coluna mapeada para '+campo+' não existe no CSV.');
       map[campo]=indice;return;
     }
-    map[campo]=-1;
-    (aliases[campo]||[]).some(function(alias){var idx=normal.indexOf(alias);if(idx!==-1){map[campo]=idx;return true;}return false;});
+    map[campo]=csvMoradoresV1IndiceCabecalho_(campo,headers);
   });
   ['nome','nascimento','sexo'].forEach(function(campo){if(map[campo]<0)throw new Error('Mapeie a coluna obrigatória '+campo+'.');});
   return map;
@@ -352,23 +362,51 @@ function csvMoradoresV1Parse_(texto,delimitador){
   var delimiter=csvMoradoresV1Texto_(delimitador);
   if([',',';','\t','|'].indexOf(delimiter)===-1)delimiter=csvMoradoresV1DetectarDelimitador_(texto);
   var rows=Utilities.parseCsv(texto,delimiter);
-  if(!rows.length||rows[0].length<2)throw new Error('Não foi possível reconhecer as colunas do CSV.');
-  var headers=rows.shift().map(function(v){return csvMoradoresV1Texto_(v);});
+  var located=csvMoradoresV1EncontrarCabecalho_(rows);
+  if(!located){
+    var redetected=csvMoradoresV1DetectarDelimitador_(texto);
+    if(redetected!==delimiter){delimiter=redetected;rows=Utilities.parseCsv(texto,delimiter);located=csvMoradoresV1EncontrarCabecalho_(rows);}
+  }
+  if(!located)throw new Error('Não foi possível localizar a linha com os nomes das colunas neste CSV do e-SUS.');
+  var headers=rows[located.index].map(function(v){return csvMoradoresV1Texto_(v);});
+  rows=rows.slice(located.index+1);
   if(rows.length>TACS_CSV_MORADORES_V1.MAX_ROWS)throw new Error('O CSV ultrapassa o limite de '+TACS_CSV_MORADORES_V1.MAX_ROWS+' linhas por arquivo.');
-  return {headers:headers,rows:rows,delimiter:delimiter==='\t'?'TAB':delimiter};
+  return {headers:headers,rows:rows,delimiter:delimiter==='\t'?'TAB':delimiter,headerRow:located.index,firstDataLine:located.index+2};
 }
 
 function csvMoradoresV1DetectarDelimitador_(texto){
-  var primeira=String(texto).split(/\r?\n/)[0]||'';
-  var candidatos=[',',';','\t','|'],melhor=';',quantidade=-1;
+  var candidatos=[',',';','\t','|'],melhor=null,pontuacao=-1,colunas=-1;
   candidatos.forEach(function(sep){
-    var aspas=false,total=0;
-    for(var i=0;i<primeira.length;i++){
-      if(primeira.charAt(i)==='"')aspas=!aspas;
-      else if(!aspas&&primeira.charAt(i)===sep)total++;
-    }
-    if(total>quantidade){quantidade=total;melhor=sep;}
+    var rows;try{rows=Utilities.parseCsv(String(texto),sep);}catch(erro){return;}
+    var located=csvMoradoresV1EncontrarCabecalho_(rows);if(!located)return;
+    if(located.score>pontuacao||(located.score===pontuacao&&located.columns>colunas)){melhor=sep;pontuacao=located.score;colunas=located.columns;}
   });
+  if(melhor)return melhor;
+  var linhas=String(texto).split(/\r?\n/).slice(0,250),quantidade=-1;melhor=';';
+  candidatos.forEach(function(sep){linhas.forEach(function(linha){var aspas=false,total=0;for(var i=0;i<linha.length;i++){if(linha.charAt(i)==='"')aspas=!aspas;else if(!aspas&&linha.charAt(i)===sep)total++;}if(total>quantidade){quantidade=total;melhor=sep;}});});
+  return melhor;
+}
+
+function csvMoradoresV1AliasCombina_(chave,alias){if(chave===alias)return true;if(alias.length<10)return false;return chave.indexOf(alias)===0||chave.slice(-alias.length)===alias||chave.indexOf(alias)!==-1;}
+function csvMoradoresV1IndiceCabecalho_(campo,headers){
+  var normal=headers.map(csvMoradoresV1Chave_),aliases=TACS_CSV_MORADORES_V1_HEADER_ALIASES[campo]||[],found=-1;
+  aliases.some(function(alias){return normal.some(function(chave,index){if(csvMoradoresV1AliasCombina_(chave,alias)){found=index;return true;}return false;});});
+  return found;
+}
+function csvMoradoresV1PontuarCabecalho_(headers){
+  var campos=['cpf','cns','nome','nascimento','sexo','endereco','celular','telefoneContato','microarea','equipe'];
+  var usados={},matches=0,score=0;
+  campos.forEach(function(campo){var index=csvMoradoresV1IndiceCabecalho_(campo,headers);if(index<0||usados[index])return;usados[index]=true;matches++;score+=10;if(campo==='nome'||campo==='nascimento'||campo==='sexo')score+=12;if(campo==='cpf'||campo==='cns')score+=6;});
+  return {matches:matches,score:score};
+}
+function csvMoradoresV1EncontrarCabecalho_(rows){
+  var melhor=null,limite=Math.min(rows.length,250);
+  for(var i=0;i<limite;i++){
+    var headers=(rows[i]||[]).map(function(v){return csvMoradoresV1Texto_(v);});if(headers.length<3)continue;
+    var resultado=csvMoradoresV1PontuarCabecalho_(headers);if(resultado.matches<2)continue;
+    var atual={index:i,score:resultado.score,matches:resultado.matches,columns:headers.length};
+    if(!melhor||atual.score>melhor.score||(atual.score===melhor.score&&atual.matches>melhor.matches)||(atual.score===melhor.score&&atual.matches===melhor.matches&&atual.columns>melhor.columns))melhor=atual;
+  }
   return melhor;
 }
 
@@ -377,7 +415,12 @@ function csvMoradoresV1Decodificar_(body){
   if(body.csvBase64){
     try{bytes=Utilities.base64Decode(String(body.csvBase64));}catch(erro){throw new Error('O conteúdo do CSV está corrompido.');}
     if(bytes.length>TACS_CSV_MORADORES_V1.MAX_BYTES)throw new Error('O CSV deve ter no máximo 2 MB.');
-    return Utilities.newBlob(bytes).getDataAsString('UTF-8');
+    var blob=Utilities.newBlob(bytes),textoUtf8;
+    if(bytes.length>=2&&Number(bytes[0]&255)===255&&Number(bytes[1]&255)===254)return blob.getDataAsString('UTF-16LE').replace(/^\uFEFF/,'');
+    if(bytes.length>=2&&Number(bytes[0]&255)===254&&Number(bytes[1]&255)===255)return blob.getDataAsString('UTF-16BE').replace(/^\uFEFF/,'');
+    textoUtf8=blob.getDataAsString('UTF-8');
+    if(textoUtf8.indexOf('\uFFFD')!==-1){try{return blob.getDataAsString('windows-1252');}catch(erroWindows){return blob.getDataAsString('ISO-8859-1');}}
+    return textoUtf8;
   }
   var texto=String(body.csvTexto||'');
   if(Utilities.newBlob(texto).getBytes().length>TACS_CSV_MORADORES_V1.MAX_BYTES)throw new Error('O CSV deve ter no máximo 2 MB.');
