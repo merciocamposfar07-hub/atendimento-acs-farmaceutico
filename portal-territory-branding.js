@@ -70,6 +70,7 @@
     var description=document.querySelector('meta[name="description"]');
     if(description)description.setAttribute('content','Canal do TACS - Técnico Agente Comunitário de Saúde '+identity.tacsNome+', vinculado à '+identity.unidadeNome+', para moradores de '+identity.areaNome+', Chã Grande/PE.');
 
+    document.documentElement.classList.remove('territory-pending');
     window.PortalTacsTerritoryIdentity=identity;
     try{window.dispatchEvent(new CustomEvent('portal-tacs-territory-identity',{detail:identity}));}catch(error){}
     return true;

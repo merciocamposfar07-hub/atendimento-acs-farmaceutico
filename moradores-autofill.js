@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var API = 'https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec';
+  var API = String(window.TACS_ADMIN_API_URL || 'https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec').trim();
   var timer = null;
   var requestId = 0;
   var activeFrame = null;
@@ -14,6 +14,28 @@
 
   function onlyDigits(value) {
     return String(value || '').replace(/\D/g, '').slice(0, 15);
+  }
+
+  function normalizeArea(value) {
+    var area = String(value == null ? '' : value).trim().toUpperCase();
+    if (area.normalize) area = area.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return area.replace(/[^A-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+  }
+
+  function portalAreaId() {
+    var fromUrl = '';
+    try {
+      var params = new URLSearchParams(window.location.search || '');
+      fromUrl = normalizeArea(params.get('areaId') || params.get('area') || params.get('territorio'));
+    } catch (e) {}
+    if (fromUrl) return fromUrl;
+    var current = '';
+    try {
+      current = window.PortalTacsArea && typeof window.PortalTacsArea.id === 'function'
+        ? window.PortalTacsArea.id()
+        : window.TACS_AREA_ID;
+    } catch (e) {}
+    return normalizeArea(current) || 'JAPARANDUBA';
   }
 
   function validCpf(value) {
@@ -269,8 +291,20 @@
       if (token !== requestId) return;
       cleanupTransport();
 
-      if (payload && payload.ok === true && payload.encontrado === true && fillFields(payload)) {
-        setStatus(status, (validCns(input.value) ? 'CNS' : 'CPF') + ' encontrado ✓ Dados preenchidos automaticamente.', 'valid');
+      if (payload && payload.ok === true && payload.encontrado === true) {
+        var expectedArea = portalAreaId();
+        var returnedArea = normalizeArea(payload.morador && payload.morador.areaId);
+        if (!returnedArea || returnedArea !== expectedArea) {
+          clearResidentFields();
+          setStatus(status, 'Este cadastro não pertence à área deste TACS.', 'invalid');
+          return;
+        }
+        if (fillFields(payload)) {
+          setStatus(status, (validCns(input.value) ? 'CNS' : 'CPF') + ' encontrado ✓ Dados preenchidos automaticamente.', 'valid');
+        } else {
+          clearResidentFields();
+          setStatus(status, 'O cadastro retornado está incompleto. Procure seu TACS.', 'invalid');
+        }
       } else if (payload && payload.ok === true && payload.encontrado === false) {
         setStatus(status, 'Cadastro não encontrado. Confira o documento.', 'invalid');
       } else {
@@ -305,7 +339,7 @@
       var script = document.createElement('script');
       activeScript = script;
       script.async = true;
-      script.src = API + '?action=buscar_morador&documento=' + encodeURIComponent(doc) + '&callback=' + encodeURIComponent(callback) + '&tentativa=' + attempt + '&v=' + Date.now();
+      script.src = API + '?action=buscar_morador&documento=' + encodeURIComponent(doc) + '&areaId=' + encodeURIComponent(portalAreaId()) + '&callback=' + encodeURIComponent(callback) + '&tentativa=' + attempt + '&v=' + Date.now();
       script.onerror = function () {
         failOrRetry(doc, token, attempt);
       };
@@ -326,7 +360,7 @@
       frame.hidden = true;
       frame.setAttribute('aria-hidden', 'true');
       frame.title = 'Consulta de cadastro';
-      frame.src = API + '?action=buscar_morador_bridge&documento=' + encodeURIComponent(doc) + '&nonce=' + encodeURIComponent(nonce) + '&v=' + Date.now();
+      frame.src = API + '?action=buscar_morador_bridge&documento=' + encodeURIComponent(doc) + '&areaId=' + encodeURIComponent(portalAreaId()) + '&nonce=' + encodeURIComponent(nonce) + '&v=' + Date.now();
 
       activeNonce = nonce;
       activeFrame = frame;

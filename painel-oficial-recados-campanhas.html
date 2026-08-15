@@ -27,6 +27,8 @@
   (function(){
     'use strict';
     var origem='/atendimento-acs-farmaceutico/teste-v1/painel-recados-campanhas-v1.html?v=20260814-receipt-v110';
+    var params=new URLSearchParams(location.search||''),TACS_ONLY=String(params.get('acesso')||'').toLowerCase()==='tacs';
+    if(TACS_ONLY)sessionStorage.removeItem('portalTacsAdminTokenV1');
     var trocas=[
       ['<title>Recados e campanhas V1 • Portal TACS</title>','<title>Painel oficial de recados e campanhas • Portal TACS</title>'],
       ['AMBIENTE ISOLADO • FASE 4','PAINEL ADMINISTRATIVO OFICIAL'],
@@ -66,6 +68,11 @@
       var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt>';
       html=substituir(html,'<head>',bootstrap);
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
+      if(TACS_ONLY){
+        html=substituir(html,'<html lang="pt-BR">','<html lang="pt-BR" class="tacs-only-ui">');
+        html=substituir(html,'</head>','<style id="tacs-only-recados-style">html.tacs-only-ui #loginAdminTab,html.tacs-only-ui #adminLogin{display:none!important}html.tacs-only-ui .abas{grid-template-columns:1fr!important}</style></head>');
+        html=substituir(html,'</body>','<scr'+'ipt>(function(){sessionStorage.removeItem("portalTacsAdminTokenV1");var a=document.getElementById("loginAdminTab"),l=document.getElementById("adminLogin"),t=document.getElementById("loginTacsTab");if(a)a.hidden=true;if(l)l.hidden=true;if(!sessionStorage.getItem("portalTacsTerritorioTokenV1")&&t)t.click();}());<\/scr'+'ipt></body>');
+      }
       html=substituir(html,'</body>',complementoStatus()+'</body>');
       document.open();document.write(html);document.close();
     }).catch(function(erro){

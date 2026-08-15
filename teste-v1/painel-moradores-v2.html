@@ -39,6 +39,35 @@
 </section>
 </main>
 <footer>Portal TACS • Portal Administrativo de Moradores</footer>
+<style id="tacs-only-moradores-style">
+html.tacs-only-ui label[for="pin"],html.tacs-only-ui #pin,html.tacs-only-ui #login{display:none!important}
+html.tacs-only-ui a[href*="painel-oficial-tacs-areas"]{display:none!important}
+</style>
+<script>
+(function(){
+  'use strict';
+  var params=new URLSearchParams(location.search||'');
+  var tacsOnly=String(params.get('acesso')||'').toLowerCase()==='tacs';
+  if(!tacsOnly)return;
+  sessionStorage.removeItem('portalTacsAdminTokenV1');
+  document.documentElement.classList.add('tacs-only-ui');
+  function aplicar(){
+    document.body.classList.add('tacs-only-ui');
+    var seal=document.querySelector('.seal');if(seal)seal.textContent='ACESSO DO TACS • MORADORES';
+    var h1=document.querySelector('header h1');if(h1)h1.textContent='Moradores da minha área';
+    var heading=document.getElementById('areaHeading');if(heading)heading.textContent='Acesso restrito à área vinculada ao seu CNS profissional.';
+    var note=document.querySelector('main .note');if(note)note.textContent='PAINEL DE MORADORES: você visualiza e administra somente os moradores da sua própria área.';
+    var panelTitle=document.querySelector('main .panel h2');if(panelTitle)panelTitle.textContent='Acesso individual do TACS';
+    var adminLabel=document.querySelector('label[for="pin"]');if(adminLabel)adminLabel.hidden=true;
+    var pin=document.getElementById('pin');if(pin)pin.hidden=true;
+    var adminButton=document.getElementById('login');if(adminButton)adminButton.hidden=true;
+    var tacsBox=document.querySelector('main .panel .area-control');
+    if(tacsBox&&sessionStorage.getItem('portalTacsTerritorioTokenV1'))tacsBox.classList.add('hidden');
+    var muted=document.querySelector('main .panel .muted');if(muted)muted.textContent='O TACS autenticado acessa somente os moradores da área vinculada ao próprio CNS.';
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',aplicar,{once:true});else aplicar();
+}());
+</script>
 <script src="../admin-warmup.js?v=20260813-admin-v103"></script>
 <script src="painel-moradores-transport-v2.js?v=20260813-admin-v103"></script>
 </body>

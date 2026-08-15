@@ -16,7 +16,7 @@ assert.match(backend,/areaId:areaId[\s\S]*areaNome:areaNome[\s\S]*unidadeNome:un
 assert.doesNotMatch(backend,/\b(cns|cpf|telefone|email|pinHash|pinSalt)\s*:/i,'A resposta pública não pode expor identificação privada do TACS.');
 assert.match(build,/ZZZZ_27_IdentidadePublicaAreaV1\.gs/);
 assert.match(build,/TACS_IDENTIDADE_PUBLICA_AREA_V1/);
-assert.match(publicData,/portal-territory-branding\.js\?v=20260814-v1/);
+assert.match(publicData,/portal-territory-branding\.js\?v=20260815-territorial-v2/);
 
 const sandbox={
   console,

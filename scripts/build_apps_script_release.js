@@ -68,6 +68,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs',
     marker: 'TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_29_IsolamentoMoradorPublicoV1.gs',
+    marker: 'TACS_MORADORES_PUBLICO_TERRITORIAL_V1'
   }
 ];
 
