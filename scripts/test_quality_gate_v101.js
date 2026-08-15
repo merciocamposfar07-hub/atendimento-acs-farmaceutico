@@ -58,12 +58,12 @@ registrar('dados', 'Proteção contra profissional duplicado permanece', contem(
 registrar('dados', 'Teste territorial e isolamento multiárea continuam obrigatórios', contem(comandoTestes, 'test_public_content_multiarea.js') && contem(comandoTestes, 'test_publicacoes_territoriais.js'));
 
 // Desempenho: ganhos ficam onde não alteram a transação do servidor.
-registrar('desempenho', 'Agenda odontológica abre por snapshot local', contem(dental, 'portalTacsDentalAgendaV101'));
+registrar('desempenho', 'Agenda odontológica abre por snapshot territorial', contem(dental, 'portalTacsDentalAgendaV102:'));
 registrar('desempenho', 'Snapshot odontológico antigo não autoriza reserva', contem(perfTest, 'Cache acima de 90s não pode permitir reserva'));
-registrar('desempenho', 'Painel de agendas abre última leitura imediatamente', contem(agenda, 'Última leitura exibida imediatamente. Confirmando com o servidor'));
+registrar('desempenho', 'Painel de agendas abre última leitura imediatamente', contem(agenda, 'Última leitura desta área exibida imediatamente. Confirmando com o servidor'));
 registrar('desempenho', 'Pré-aquecimento reaproveita conexão recente por 3 minutos', contem(warmup, 'var WARM_MS=3*60*1000;'));
 registrar('desempenho', 'Timeout de pré-aquecimento limitado a 6 segundos', contem(warmup, 'var TIMEOUT_MS=6000;'));
-registrar('desempenho', 'Atualização inteligente evita apagar caches duráveis', !contem(auto, "'portalTacsPublicDataV4'") && !contem(auto, "'portalTacsDentalAgendaV101'"));
+registrar('desempenho', 'Atualização inteligente evita apagar caches duráveis', !contem(auto, "'portalTacsPublicDataV4'") && !contem(auto, "'portalTacsDentalAgendaV102'"));
 registrar('desempenho', 'Primeira abertura da web app não recarrega só por faltar ?ptv', contem(auto, 'if(!pageSeen)') && !contem(auto, 'currentUrl=new URL'));
 registrar('desempenho', 'Autoatualização recarrega apenas quando a versão publicada muda', contem(auto, 'if(pageSeen!==remote)'));
 registrar('desempenho', 'Consulta odontológica duplicada antiga virou somente fallback', contem(index, 'if(!window.PortalTacsOdontologiaV98)loadDental()'));

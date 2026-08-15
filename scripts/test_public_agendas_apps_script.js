@@ -72,9 +72,40 @@ const noticeSheet = {
     };
   }
 };
+
+function displaySheet(name, values) {
+  return {
+    getName: () => name,
+    getLastRow: () => values.length,
+    getLastColumn: () => values[0].length,
+    getRange: (row, column, rowCount, columnCount) => {
+      const selected = values
+        .slice(row - 1, row - 1 + rowCount)
+        .map(line => line.slice(column - 1, column - 1 + columnCount));
+      return {
+        getDisplayValues: () => selected.map(line => line.map(value => String(value)))
+      };
+    }
+  };
+}
+
+const professionalsSheet = displaySheet('PROFISSIONAIS', [
+  ['ID', 'TITULO_PUBLICO', 'ICONE', 'ORDEM', 'ATIVO', 'AREA_ID'],
+  ['DENTISTA', 'Dentista de Japaranduba', '🦷', 1, true, ''],
+  ['DENTISTA', 'Dentista de Muntuns', '🦷', 1, true, 'MUNTUNS']
+]);
+const servicesSheet = displaySheet('SERVICOS', [
+  ['ID', 'PROFISSIONAL_ID', 'NOME', 'DESCRICAO_AUTOMATICA', 'ORDEM', 'ATIVO', 'AREA_ID'],
+  ['ODONTO_JAP', 'DENTISTA', 'Odontologia', 'Serviço exclusivo de Japaranduba', 1, true, ''],
+  ['ODONTO_MUNTUNS', 'DENTISTA', 'Odontologia', 'Serviço exclusivo de Muntuns', 1, true, 'MUNTUNS']
+]);
 const sharedSpreadsheet = {
-  getSheets: () => [sheet, noticeSheet],
-  getSheetByName: name => name === 'RECADOS_PORTAL' ? noticeSheet : null
+  getSheets: () => [sheet, noticeSheet, professionalsSheet, servicesSheet],
+  getSheetByName: name => ({
+    RECADOS_PORTAL: noticeSheet,
+    PROFISSIONAIS: professionalsSheet,
+    SERVICOS: servicesSheet
+  })[name] || null
 };
 
 const context = {
@@ -127,6 +158,12 @@ assert.equal(result.recados.length, 1);
 assert.equal(result.recados[0].title, 'Horário da dentista');
 assert.match(result.recados[0].message, /dentista é até as 11:00/);
 assert.equal(result.recados[0].active, true);
+assert.equal(result.professionals.length, 1);
+assert.equal(result.professionals[0].title, 'Dentista de Japaranduba');
+assert.equal(
+  result.professionals[0].service.description,
+  'Serviço exclusivo de Japaranduba'
+);
 
 const muntunsResult = context.publicoAgendasV1Montar_('MUNTUNS');
 assert.equal(muntunsResult.areaId, 'MUNTUNS');
@@ -134,6 +171,13 @@ assert.equal(muntunsResult.modules.medica.length, 1);
 assert.equal(muntunsResult.modules.medica[0].message, 'Atendimento Muntuns');
 assert.equal(muntunsResult.recados.length, 1);
 assert.equal(muntunsResult.recados[0].title, 'Outro território');
+assert.equal(muntunsResult.professionals.length, 1);
+assert.equal(muntunsResult.professionals[0].title, 'Dentista de Muntuns');
+assert.equal(
+  muntunsResult.professionals[0].service.description,
+  'Serviço exclusivo de Muntuns'
+);
+assert.doesNotMatch(JSON.stringify(muntunsResult.professionals), /Japaranduba/);
 assert.equal(result.modules.MEDICA, undefined);
 
 const response = context.doGet({

@@ -94,8 +94,18 @@ assert.match(
 );
 assert.match(
   workflow,
-  /redeploy \\\n\s+--versionNumber "\$NEW_VERSION" \\\n\s+--description "Moradores 1\.4\.5 e painel 3\.6\.0" \\\n\s+"\$DEPLOYMENT_ID"/,
+  /redeploy \\\n\s+--versionNumber "\$NEW_VERSION" \\\n\s+--description "Agendas territoriais 1\.0\.0 e TACS 1\.2\.0" \\\n\s+"\$DEPLOYMENT_ID"/,
   'A implantação deve usar as opções aceitas pelo clasp 3.3.0.'
+);
+assert.match(
+  workflow,
+  /action=agenda&areaId=SITIO_MATIAS/,
+  'A implantação deve validar a agenda isolada de Sítio Matias.'
+);
+assert.match(
+  workflow,
+  /action=painel_publico&areaId=SITIO_MATIAS/,
+  'A implantação deve validar o painel público territorial de Sítio Matias.'
 );
 
 console.log('Montagem Apps Script: .js/.gs, projeto real preservado, módulos únicos, clasp 3.3.0 e falhas seguras validados.');

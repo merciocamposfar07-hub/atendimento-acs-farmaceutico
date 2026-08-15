@@ -10,11 +10,11 @@
  */
 
 var PUBLICO_AGENDAS_PORTAL_V1 = Object.freeze({
-  VERSAO: '1.1.0',
+  VERSAO: '1.2.0',
   ACAO: 'painel_publico',
   AREA_PADRAO: 'JAPARANDUBA',
   FUSO: 'America/Recife',
-  ABAS_PREFERIDAS: ['AGENDAS', 'PAINEL_PROFISSIONAIS']
+  ABAS_PREFERIDAS: ['PAINEL_PROFISSIONAIS', 'AGENDAS']
 });
 
 var publicoAgendasPortalV1DoGetAnterior_ =
@@ -157,9 +157,146 @@ function publicoAgendasV1Resposta_(modulos, aba, areaId, planilha) {
     ),
     origem: aba,
     modules: modulos,
+    professionals: publicoAgendasV1LerProfissionais_(planilha, areaId),
     recados: publicoAgendasV1LerRecados_(planilha, areaId),
     campanhas: []
   };
+}
+
+function publicoAgendasV1LerProfissionais_(planilha, areaId) {
+  areaId = publicoAgendasV1AreaId_(areaId) || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
+  if (!planilha || typeof planilha.getSheetByName !== 'function') return [];
+
+  var abaProfissionais = planilha.getSheetByName('PROFISSIONAIS');
+  var abaServicos = planilha.getSheetByName('SERVICOS');
+  if (!abaProfissionais || abaProfissionais.getLastRow() < 2) return [];
+
+  var profissionais = publicoAgendasV1TabelaPublica_(abaProfissionais);
+  var servicos = abaServicos && abaServicos.getLastRow() >= 2
+    ? publicoAgendasV1TabelaPublica_(abaServicos)
+    : null;
+  var servicoPorProfissional = {};
+
+  if (servicos) {
+    var servicoIdx = {
+      profissional: publicoAgendasV1IndicePublico_(
+        servicos.cabecalhos,
+        ['PROFISSIONAL_ID', 'PROFISSIONAL', 'MODULO']
+      ),
+      nome: publicoAgendasV1IndicePublico_(
+        servicos.cabecalhos,
+        ['NOME', 'SERVICO', 'TITULO']
+      ),
+      descricao: publicoAgendasV1IndicePublico_(
+        servicos.cabecalhos,
+        ['DESCRICAO_AUTOMATICA', 'DESCRICAO', 'MENSAGEM']
+      ),
+      ordem: publicoAgendasV1IndicePublico_(servicos.cabecalhos, ['ORDEM']),
+      ativo: publicoAgendasV1IndicePublico_(servicos.cabecalhos, ['ATIVO']),
+      area: publicoAgendasV1IndicePublico_(
+        servicos.cabecalhos,
+        ['AREA_ID', 'AREA', 'TERRITORIO']
+      )
+    };
+
+    servicos.linhas.forEach(function (linha) {
+      if (!publicoAgendasV1LinhaPublicaDaArea_(linha, servicoIdx.area, areaId)) return;
+      if (servicoIdx.ativo >= 0 && !publicoAgendasV1Booleano_(linha[servicoIdx.ativo])) return;
+      var modulo = servicoIdx.profissional >= 0
+        ? publicoAgendasV1Modulo_(linha[servicoIdx.profissional])
+        : '';
+      if (!modulo) return;
+      var ordem = servicoIdx.ordem >= 0
+        ? publicoAgendasV1NaoNegativo_(linha[servicoIdx.ordem]) || 999
+        : 999;
+      var candidato = {
+        name: servicoIdx.nome >= 0 ? publicoAgendasV1Texto_(linha[servicoIdx.nome]) : '',
+        description: servicoIdx.descricao >= 0
+          ? publicoAgendasV1Texto_(linha[servicoIdx.descricao])
+          : '',
+        order: ordem
+      };
+      if (!servicoPorProfissional[modulo] || ordem < servicoPorProfissional[modulo].order) {
+        servicoPorProfissional[modulo] = candidato;
+      }
+    });
+  }
+
+  var profissionalIdx = {
+    id: publicoAgendasV1IndicePublico_(
+      profissionais.cabecalhos,
+      ['ID', 'PROFISSIONAL_ID', 'MODULO']
+    ),
+    titulo: publicoAgendasV1IndicePublico_(
+      profissionais.cabecalhos,
+      ['TITULO_PUBLICO', 'TITULO', 'NOME']
+    ),
+    icone: publicoAgendasV1IndicePublico_(profissionais.cabecalhos, ['ICONE']),
+    ordem: publicoAgendasV1IndicePublico_(profissionais.cabecalhos, ['ORDEM']),
+    ativo: publicoAgendasV1IndicePublico_(profissionais.cabecalhos, ['ATIVO']),
+    area: publicoAgendasV1IndicePublico_(
+      profissionais.cabecalhos,
+      ['AREA_ID', 'AREA', 'TERRITORIO']
+    )
+  };
+  var unicos = {};
+
+  profissionais.linhas.forEach(function (linha) {
+    if (!publicoAgendasV1LinhaPublicaDaArea_(linha, profissionalIdx.area, areaId)) return;
+    if (profissionalIdx.ativo >= 0 && !publicoAgendasV1Booleano_(linha[profissionalIdx.ativo])) return;
+    var modulo = profissionalIdx.id >= 0
+      ? publicoAgendasV1Modulo_(linha[profissionalIdx.id])
+      : '';
+    if (!modulo) return;
+    var ordem = profissionalIdx.ordem >= 0
+      ? publicoAgendasV1NaoNegativo_(linha[profissionalIdx.ordem]) || 999
+      : 999;
+    var titulo = profissionalIdx.titulo >= 0
+      ? publicoAgendasV1Texto_(linha[profissionalIdx.titulo])
+      : '';
+    var item = {
+      id: modulo,
+      title: titulo || modulo.replace(/_/g, ' '),
+      icon: profissionalIdx.icone >= 0
+        ? publicoAgendasV1Texto_(linha[profissionalIdx.icone]) || '👤'
+        : '👤',
+      order: ordem,
+      active: true,
+      category: 'Solicitar atendimento com ' + (titulo || modulo.replace(/_/g, ' ')),
+      service: servicoPorProfissional[modulo] || null
+    };
+    if (!unicos[modulo] || ordem < unicos[modulo].order) unicos[modulo] = item;
+  });
+
+  return Object.keys(unicos)
+    .map(function (modulo) { return unicos[modulo]; })
+    .sort(function (a, b) { return a.order - b.order || a.title.localeCompare(b.title); });
+}
+
+function publicoAgendasV1TabelaPublica_(aba) {
+  var valores = aba
+    .getRange(1, 1, aba.getLastRow(), aba.getLastColumn())
+    .getDisplayValues();
+  return {
+    cabecalhos: valores[0].map(publicoAgendasV1Normalizar_),
+    linhas: valores.slice(1)
+  };
+}
+
+function publicoAgendasV1IndicePublico_(cabecalhos, nomes) {
+  for (var i = 0; i < nomes.length; i += 1) {
+    var indice = cabecalhos.indexOf(publicoAgendasV1Normalizar_(nomes[i]));
+    if (indice >= 0) return indice;
+  }
+  return -1;
+}
+
+function publicoAgendasV1LinhaPublicaDaArea_(linha, indiceArea, areaId) {
+  var areaLinha = indiceArea >= 0
+    ? publicoAgendasV1AreaId_(linha[indiceArea])
+    : '';
+  areaLinha = areaLinha || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
+  return areaLinha === areaId;
 }
 
 function publicoAgendasV1LerRecados_(planilha, areaId) {

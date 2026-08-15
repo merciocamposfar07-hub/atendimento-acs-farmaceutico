@@ -180,7 +180,7 @@ function verifyStaticSource(config) {
   assert.doesNotMatch(official, /Promise\.all\(\[painel,conexao/);
   if (config.official === 'painel-oficial-agendas-vagas.html') {
     assert.doesNotMatch(official, /fetch\([^)]*teste-v1\/painel-agendas-v1\.html/);
-    assert.match(official, /DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV101'/);
+    assert.match(official, /DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV102:'\+areaId/);
   } else {
     assert.match(official, /painel\.then\(function\(html\)/);
     assert.match(official, /window\.PortalTacsAdminPreload=/);

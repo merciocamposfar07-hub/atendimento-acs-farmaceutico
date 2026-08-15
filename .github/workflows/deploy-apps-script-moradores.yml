@@ -97,9 +97,9 @@ jobs:
           PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
           test -n "$PREVIOUS_VERSION"
 
-          npx --yes @google/clasp@3.3.0 version "Backup antes de moradores 1.4.5 - ${GITHUB_SHA::7}"
+          npx --yes @google/clasp@3.3.0 version "Backup antes das agendas territoriais - ${GITHUB_SHA::7}"
           npx --yes @google/clasp@3.3.0 push --force
-          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Moradores 1.4.5 e painel 3.6.0 - ${GITHUB_SHA::7}")
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Agendas territoriais 1.0.0 e TACS 1.2.0 - ${GITHUB_SHA::7}")
           NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
           test -n "$NEW_VERSION"
 
@@ -119,7 +119,7 @@ jobs:
 
           npx --yes @google/clasp@3.3.0 redeploy \
             --versionNumber "$NEW_VERSION" \
-            --description "Moradores 1.4.5 e painel 3.6.0" \
+            --description "Agendas territoriais 1.0.0 e TACS 1.2.0" \
             "$DEPLOYMENT_ID"
           DEPLOYED=1
           BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
@@ -137,14 +137,21 @@ jobs:
             territorio=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=admin_territorio_result&requestId=healthTerritorio10") || true
             csv=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=admin_csv_result&requestId=healthCsvMoradores10") || true
             manutencao=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=portal_manutencao_status&areaId=JAPARANDUBA") || true
+            agendas_territoriais=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=agendas_profissionais_territoriais_status") || true
+            agenda_japaranduba=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=agenda&areaId=JAPARANDUBA") || true
+            agenda_matias=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=agenda&areaId=SITIO_MATIAS") || true
             publico=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=painel_publico&areaId=JAPARANDUBA") || true
+            publico_matias=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=painel_publico&areaId=SITIO_MATIAS") || true
             conteudo=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=publico_conteudo&areaId=JAPARANDUBA") || true
+            agenda_japaranduba_area=$(area_of "$agenda_japaranduba")
+            agenda_matias_area=$(area_of "$agenda_matias")
             publico_area=$(area_of "$publico")
+            publico_matias_area=$(area_of "$publico_matias")
             conteudo_area=$(area_of "$conteudo")
             publico_msg=$(message_of "$publico")
-            printf 'Health %s: moradores=%s territorio=%s csv=%s manutencao=%s publico=%s publico_area=%s publico_msg=%s conteudo=%s conteudo_area=%s\n' \
-              "$tentativa" "$(flag_ok "$moradores")" "$(flag_ok "$territorio")" "$(flag_ok "$csv")" "$(flag_ok "$manutencao")" "$(flag_ok "$publico")" "${publico_area:-ausente}" "${publico_msg:-sem_mensagem}" "$(flag_ok "$conteudo")" "${conteudo_area:-ausente}"
-            if has_ok "$moradores" && has_ok "$territorio" && has_ok "$csv" && has_ok "$manutencao" && has_ok "$publico" && [ "$publico_area" = 'JAPARANDUBA' ] && has_ok "$conteudo" && [ "$conteudo_area" = 'JAPARANDUBA' ]; then
+            printf 'Health %s: moradores=%s territorio=%s csv=%s manutencao=%s isolamento=%s agenda_jap=%s/%s agenda_matias=%s/%s publico_jap=%s/%s publico_matias=%s/%s publico_msg=%s conteudo=%s/%s\n' \
+              "$tentativa" "$(flag_ok "$moradores")" "$(flag_ok "$territorio")" "$(flag_ok "$csv")" "$(flag_ok "$manutencao")" "$(flag_ok "$agendas_territoriais")" "$(flag_ok "$agenda_japaranduba")" "${agenda_japaranduba_area:-ausente}" "$(flag_ok "$agenda_matias")" "${agenda_matias_area:-ausente}" "$(flag_ok "$publico")" "${publico_area:-ausente}" "$(flag_ok "$publico_matias")" "${publico_matias_area:-ausente}" "${publico_msg:-sem_mensagem}" "$(flag_ok "$conteudo")" "${conteudo_area:-ausente}"
+            if has_ok "$moradores" && has_ok "$territorio" && has_ok "$csv" && has_ok "$manutencao" && has_ok "$agendas_territoriais" && has_ok "$agenda_japaranduba" && [ "$agenda_japaranduba_area" = 'JAPARANDUBA' ] && has_ok "$agenda_matias" && [ "$agenda_matias_area" = 'SITIO_MATIAS' ] && has_ok "$publico" && [ "$publico_area" = 'JAPARANDUBA' ] && has_ok "$publico_matias" && [ "$publico_matias_area" = 'SITIO_MATIAS' ] && has_ok "$conteudo" && [ "$conteudo_area" = 'JAPARANDUBA' ]; then
               ok=1
               break
             fi

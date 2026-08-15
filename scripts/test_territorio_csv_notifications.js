@@ -493,7 +493,7 @@ function testTerritory(context) {
   ];
   context.__adminSpreadsheet.insertSheet('TACS_PROFISSIONAIS_AREA').appendRow(legacyHeaders);
   vm.runInContext(read(FILES.territory), context);
-  assert.equal(context.TACS_TERRITORIO_V1.VERSAO, '1.1.0');
+  assert.equal(context.TACS_TERRITORIO_V1.VERSAO, '1.2.0');
 
   const createdBeforeInvalid = context.__created();
   assert.throws(() => saveArea(context, {
