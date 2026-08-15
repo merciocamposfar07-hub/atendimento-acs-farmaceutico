@@ -39,8 +39,16 @@ assert.match(js,/admin_notificacoes_saude/);
 assert.match(js,/painel-oficial-recados-campanhas\.html\?area=/);
 assert.doesNotMatch(js,/moduleUrl\(name\)[\s\S]*name==='notificacoes'/,
   'A rota do painel redundante de Saúde das notificações deve ser removida.');
-assert.match(html,/central-administrativa-tacs\.js\?v=20260815-v10-agendas-territoriais/,
-  'A Central deve invalidar o cache após liberar os painéis territoriais.');
+assert.match(html,/central-administrativa-tacs\.js\?v=20260815-v11-acesso-tacs-exclusivo/,
+  'A Central deve invalidar o cache após criar o acesso exclusivo do TACS.');
+assert.match(js,/new URLSearchParams\(location\.search\)/,
+  'A Central deve reconhecer o modo de acesso informado pelo link.');
+assert.match(js,/TACS_ONLY=String\(URL_PARAMS\.get\('acesso'\)\|\|''\)\.toLowerCase\(\)==='tacs'/,
+  'O link dedicado deve ativar somente o perfil TACS.');
+assert.match(js,/el\('tabAdmin'\)\.hidden=TACS_ONLY/,
+  'Administrador geral deve ficar oculto no link exclusivo do TACS.');
+assert.match(js,/showLogin\(TACS_ONLY\?'tacs':'admin'\)/,
+  'O link geral deve continuar abrindo como administrador e o dedicado como TACS.');
 assert.match(html,/\.health-card\{[^}]*background:linear-gradient\(145deg,var\(--p\),var\(--p2\)\)/,
   'Os cartões de Saúde geral devem usar fundo azul-petróleo.');
 assert.match(html,/\.health-card strong\{[^}]*color:#fff/,
