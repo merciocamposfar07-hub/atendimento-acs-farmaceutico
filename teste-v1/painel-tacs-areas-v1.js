@@ -93,11 +93,11 @@ function showLogin(which){
   el('loginAdminTab').classList.toggle('active',admin);el('loginTacsTab').classList.toggle('active',!admin);
 }
 
-function loadData(message){
+function loadData(message,operationMessage){
   territoryPost('admin_territorio_dados',{},function(r){
-    if(!r||r.ok!==true){clearSession();loginStatus(text(r&&r.message||'Sessão inválida ou expirada.'),'err');return;}
+    if(!r||r.ok!==true){clearSession();loginStatus(text(r&&r.message||'Sessão inválida ou expirada.'),'err');if(operationMessage)status('A alteração foi salva, mas não foi possível atualizar a tela. Reabra o painel.','err');return;}
     data={tacs:Array.isArray(r.tacs)?r.tacs:[],areas:Array.isArray(r.areas)?r.areas:[],podeAdministrar:r.podeAdministrar===true,perfil:text(r.perfil)};
-    render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;loginStatus(message||'Sessão validada.','ok');
+    render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;loginStatus(message||'Sessão validada.','ok');if(operationMessage)status(operationMessage,'ok');
   });
 }
 
@@ -160,7 +160,7 @@ function saveTacs(event){
   if(isNew&&!/^\d{4,8}$/.test(pin)){status('Defina um PIN de acesso com 4 a 8 números.','err');el('tacsPin').focus();return;}
   var body={tacsId:el('tacsId').value,nomeCompleto:el('tacsName').value,dataNascimento:birth,cnsProfissional:cns,cpf:cpf,matricula:el('tacsRegistration').value,telefone:phone,email:el('tacsEmail').value,areaId:el('tacsArea').value,unidadeId:el('tacsUnit').value,microarea:el('tacsMicroarea').value,pin:pin,permissoes:TACS_PERMISSIONS.filter(function(item){return el(item[0]).checked;}).map(function(item){return item[1];}),ativo:el('tacsActive').checked};
   if(!confirm('Salvar este cadastro completo do TACS? Todos os campos poderão ser corrigidos depois.'))return;
-  status('Salvando e conferindo o cadastro do TACS…','warn');territoryPost('admin_territorio_salvar_tacs',{payload:JSON.stringify(body)},function(r){if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar.'),'err');return;}el('tacsForm').classList.add('hidden');loadData(r.message);});
+  status('Salvando e conferindo o cadastro do TACS…','warn');territoryPost('admin_territorio_salvar_tacs',{payload:JSON.stringify(body)},function(r){if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar.'),'err');return;}el('tacsForm').classList.add('hidden');loadData('',text(r.message||'Cadastro do TACS salvo e conferido.'));});
 }
 
 function openArea(a){
@@ -172,7 +172,7 @@ function openArea(a){
 function saveArea(event){
   event.preventDefault();var body={areaId:el('areaId').value,areaNome:el('areaName').value,unidadeId:el('areaUnitId').value,unidadeNome:el('areaUnitName').value,tacsId:el('areaTacsId').value,microareaPadrao:el('areaMicroarea').value,equipe:el('areaTeam').value,planilhaId:el('areaSpreadsheet').value,criarFonte:el('areaCreateSource').checked,consultaPorDocumento:el('areaDocumentLookup').checked,ativa:el('areaActive').checked};
   if(!confirm('Salvar e validar esta área? Uma área ativa precisa ter fonte 20/20 exclusiva.'))return;
-  status('Validando TACS, CNS, unidade e fonte de moradores…','warn');territoryPost('admin_territorio_salvar_area',{payload:JSON.stringify(body)},function(r){if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar a área.'),'err');return;}el('areaForm').classList.add('hidden');loadData(r.message);});
+  status('Validando TACS, CNS, unidade e fonte de moradores…','warn');territoryPost('admin_territorio_salvar_area',{payload:JSON.stringify(body)},function(r){if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar a área.'),'err');return;}el('areaForm').classList.add('hidden');loadData('',text(r.message||'Área salva e validada.'));});
 }
 
 function validateArea(id){status('Conferindo área e schema 20/20…','warn');territoryPost('admin_territorio_validar_area',{areaId:id},function(r){status(text(r&&r.message||'Não foi possível validar a área.'),r&&r.ok===true?'ok':'err');});}
