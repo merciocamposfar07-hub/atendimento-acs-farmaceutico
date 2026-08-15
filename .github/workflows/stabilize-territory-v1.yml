@@ -39,18 +39,23 @@ jobs:
       - name: Rodar testes completos
         run: |
           set +e
-          npm test > test-output.txt 2>&1
-          code=$?
-          cat test-output.txt
-          if [ "$code" -ne 0 ]; then
-            msg=$(tail -n 35 test-output.txt | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
-            echo "::error::$msg"
-            exit "$code"
-          fi
+          node -e "const p=require('./package.json'); for(const c of p.scripts.test.split(' && ')) console.log(c.replace(/^node /,''));" > tests-list.txt
+          while IFS= read -r testfile; do
+            echo "Executando $testfile"
+            node "$testfile" > test-output.txt 2>&1
+            code=$?
+            if [ "$code" -ne 0 ]; then
+              echo "FALHOU: $testfile"
+              tail -n 18 test-output.txt
+              msg=$(printf 'Teste que falhou: %s' "$testfile" | sed 's/%/%25/g')
+              echo "::error title=Falha em teste territorial::$msg"
+              exit "$code"
+            fi
+          done < tests-list.txt
 
       - name: Remover rotina temporária e publicar estabilização
         run: |
-          rm -f scripts/stabilize_territory_v1.js scripts/fix_stabilization_test_v1.js .github/workflows/stabilize-territory-v1.yml test-output.txt
+          rm -f scripts/stabilize_territory_v1.js scripts/fix_stabilization_test_v1.js .github/workflows/stabilize-territory-v1.yml test-output.txt tests-list.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
