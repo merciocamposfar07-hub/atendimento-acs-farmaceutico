@@ -55,4 +55,25 @@ assert.equal(context.csvReader.defaultIndex('telefoneContato', located.headers),
 assert.equal(context.csvReader.defaultIndex('microarea', located.headers), 6);
 assert.equal(context.csvReader.defaultIndex('equipe', located.headers), 7);
 
-console.log('CSV do e-SUS: capa ignorada, cabeçalho real e acentuação reconhecidos.');
+const realEsus = [
+  'Nome equipe;INE equipe;Microárea;Endereço;CPF/CNS;Nome;Idade;Sexo;Identidade de gênero;Data de nascimento;Telefone celular;Telefone residencial;Telefone de contato;Última atualização cadastral;Origem;Coluna 16',
+  'USF MATIAS;0001628011;01;Rua Um;44444444444;Pessoa CPF;30;Feminino;;01/01/1996;81999990000;;81988880000;14/08/2026;e-SUS;'
+].join('\r\n');
+const realLocated = context.csvReader.locateCsvHeader(realEsus);
+assert.equal(realLocated.headerRow, 0);
+assert.equal(context.csvReader.defaultIndex('equipe', realLocated.headers), 0);
+assert.equal(context.csvReader.defaultIndex('microarea', realLocated.headers), 2);
+assert.equal(context.csvReader.defaultIndex('endereco', realLocated.headers), 3);
+assert.equal(context.csvReader.defaultIndex('cpf', realLocated.headers), 4);
+assert.equal(context.csvReader.defaultIndex('cns', realLocated.headers), 4);
+assert.equal(context.csvReader.defaultIndex('nome', realLocated.headers), 5);
+assert.equal(context.csvReader.defaultIndex('sexo', realLocated.headers), 7);
+assert.equal(context.csvReader.defaultIndex('nascimento', realLocated.headers), 9);
+assert.equal(context.csvReader.defaultIndex('celular', realLocated.headers), 10);
+assert.equal(context.csvReader.defaultIndex('telefoneContato', realLocated.headers), 12);
+assert.equal(context.csvReader.defaultIndex('idade', realLocated.headers), -1);
+assert.equal(context.csvReader.defaultIndex('ultimaAtualizacao', realLocated.headers), -1);
+assert.equal(context.csvReader.defaultIndex('origem', realLocated.headers), -1);
+assert.equal(context.csvReader.defaultIndex('idPortal', realLocated.headers), -1);
+
+console.log('CSV do e-SUS: capa, acentuação e mapeamento automático do relatório real reconhecidos.');
