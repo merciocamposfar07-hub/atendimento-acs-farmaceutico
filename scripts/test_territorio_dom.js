@@ -211,6 +211,10 @@ function testTerritoryPanel() {
   assert.match(js, /confirmarTodosImportaveis/);
   assert.match(js, /Desfazer este lote sem excluir linhas/);
   assert.match(js, /dataNascimento:birth/);
+  assert.match(js, /if\(operationMessage\)status\(operationMessage,'ok'\)/,
+    'Uma gravação concluída deve substituir a mensagem de validação pela confirmação final.');
+  assert.match(js, /loadData\('',text\(r\.message\|\|'Área salva e validada\.'\)\)/,
+    'Salvar uma área deve recarregar os dados e exibir a confirmação final.');
 
   const dom = new JSDOM(html, {
     url: 'https://portal.test/teste-v1/painel-tacs-areas-v1.html',
