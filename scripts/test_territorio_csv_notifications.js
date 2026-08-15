@@ -627,7 +627,7 @@ function testTerritory(context) {
 function testCsv(context, territory) {
   installResidentStubs(context);
   vm.runInContext(read(FILES.csv), context);
-  assert.equal(context.TACS_CSV_MORADORES_V1.VERSAO, '1.0.1');
+  assert.equal(context.TACS_CSV_MORADORES_V1.VERSAO, '1.0.2');
 
   const access = {
     perfil: 'ADMIN_GERAL', operadorId: 'ADMIN_GERAL',
@@ -684,6 +684,34 @@ function testCsv(context, territory) {
   assert.equal(esusPreview.resumo.NOVO, 1);
   assert.equal(esusPreview.linhas[0].linhaCsv, 6);
   assert.equal(esusPreview.linhas[0].dados.nome, 'João da Área');
+
+  const combinedDocumentsCsv = [
+    'Nome equipe;INE equipe;Microárea;Endereço;CPF/CNS;Nome;Idade;Sexo;Identidade de gênero;Data de nascimento;Telefone celular;Telefone residencial;Telefone de contato;Última atualização cadastral;Origem',
+    'USF MATIAS;0001628011;01;Rua CPF;44444444444;Pessoa CPF;30;Feminino;;01/01/1996;81999990000;;81988880000;14/08/2026;e-SUS',
+    'USF MATIAS;0001628011;02;Rua CNS;555555555555555;Pessoa CNS;40;Masculino;;02/02/1986;81977770000;;81966660000;14/08/2026;e-SUS'
+  ].join('\r\n');
+  const parsedCombined = context.csvMoradoresV1Parse_(combinedDocumentsCsv, ';');
+  const mappedCombined = context.csvMoradoresV1Mapping_(parsedCombined.headers, {});
+  assert.equal(mappedCombined.equipe, 0);
+  assert.equal(mappedCombined.microarea, 2);
+  assert.equal(mappedCombined.endereco, 3);
+  assert.equal(mappedCombined.cpf, 4);
+  assert.equal(mappedCombined.cns, 4);
+  assert.equal(mappedCombined.nome, 5);
+  assert.equal(mappedCombined.nascimento, 9);
+  assert.equal(mappedCombined.celular, 10);
+  assert.equal(mappedCombined.telefoneContato, 12);
+  assert.equal(mappedCombined.idade, -1);
+  assert.equal(mappedCombined.origem, -1);
+  assert.equal(mappedCombined.ultimaAtualizacao, -1);
+  const residentWithCpf = context.csvMoradoresV1Dados_(parsedCombined.rows[0], mappedCombined, csvContext);
+  assert.equal(residentWithCpf.cpf, '44444444444');
+  assert.equal(residentWithCpf.cns, '');
+  assert.equal(residentWithCpf.equipe, 'USF MATIAS');
+  const residentWithCns = context.csvMoradoresV1Dados_(parsedCombined.rows[1], mappedCombined, csvContext);
+  assert.equal(residentWithCns.cpf, '');
+  assert.equal(residentWithCns.cns, '555555555555555');
+  assert.equal(residentWithCns.microarea, '02');
 
   const csv = [
     'CPF;CNS;NOME;DATA_NASCIMENTO;SEXO;ENDERECO;CELULAR',

@@ -1,6 +1,6 @@
 /**
  * ZZZZ_18_ImportacaoCsvMoradoresV1.gs
- * Portal TACS — importação auditável de moradores por CSV V1.0.1
+ * Portal TACS — importação auditável de moradores por CSV V1.0.2
  *
  * Fluxo obrigatório: prévia no servidor -> confirmação -> gravação em lote.
  * Duplicidades e conflitos nunca são resolvidos silenciosamente. Registros
@@ -9,7 +9,7 @@
  * IMPORTACAO_DESFEITA, preservando IDs, linhas e auditoria.
  */
 var TACS_CSV_MORADORES_V1 = Object.freeze({
-  VERSAO:'1.0.1',
+  VERSAO:'1.0.2',
   TIMEZONE:'America/Recife',
   RESULT_PREFIX:'tacs_csv_moradores_v1_result_',
   RESULT_SECONDS:300,
@@ -35,6 +35,9 @@ var TACS_CSV_MORADORES_V1 = Object.freeze({
     'telefoneContato','microarea','equipe','origem','ultimaAtualizacao','status',
     'consentimentoWhatsapp','dataConsentimento','dataCadastroPortal','observacoes'
   ]),
+  SYSTEM_FIELDS:Object.freeze([
+    'idPortal','idade','origem','ultimaAtualizacao','status','dataCadastroPortal'
+  ]),
   MERGE_FIELDS:Object.freeze([
     'cpf','cns','nome','nascimento','sexo','endereco','celular','telefoneContato',
     'microarea','equipe','consentimentoWhatsapp','dataConsentimento','observacoes'
@@ -43,16 +46,16 @@ var TACS_CSV_MORADORES_V1 = Object.freeze({
 
 var TACS_CSV_MORADORES_V1_HEADER_ALIASES = Object.freeze({
   idPortal:['IDPORTAL'],id:['ID','IDCIDADAO','CODIGOCIDADAO','PRONTUARIO'],
-  cpf:['CPF','CPFCIDADAO','CPFDOCIDADAO'],
-  cns:['CNS','CNSCIDADAO','CNSDOCIDADAO','CARTAOSUS','CARTAONACIONALDESAUDE','CARTAONACIONALSUS'],
+  cpf:['CPF','CPFCNS','CNSCPF','CPFEOUCNS','DOCUMENTOCPFCNS','CPFCIDADAO','CPFDOCIDADAO'],
+  cns:['CNS','CPFCNS','CNSCPF','CPFEOUCNS','DOCUMENTOCPFCNS','CNSCIDADAO','CNSDOCIDADAO','CARTAOSUS','CARTAONACIONALDESAUDE','CARTAONACIONALSUS'],
   nome:['NOME','NOMECOMPLETO','NOMECIDADAO','NOMEDOCIDADAO','CIDADAO'],
   nascimento:['DATANASCIMENTO','DATADENASCIMENTO','NASCIMENTO','DTNASCIMENTO'],
   idade:['IDADE'],sexo:['SEXO','SEXOBIOLOGICO'],
   endereco:['ENDERECO','ENDERECOCOMPLETO','ENDERECODODOMICILIO','LOCALIDADE','LOGRADOURO'],
   celular:['CELULAR','TELEFONECELULAR','TELEFONESCELULARES'],
-  telefoneContato:['TELEFONECONTATO','TELEFONESDECONTATO','TELEFONE','TELEFONES'],
+  telefoneContato:['TELEFONECONTATO','TELEFONEDECONTATO','TELEFONESDECONTATO','TELEFONE','TELEFONES'],
   microarea:['MICROAREA','MICROAREARESPONSAVEL'],
-  equipe:['EQUIPE','NOMEDAEQUIPE','EQUIPEVINCULADA','EQUIPERESPONSAVEL'],
+  equipe:['EQUIPE','NOMEEQUIPE','NOMEDAEQUIPE','EQUIPEVINCULADA','EQUIPERESPONSAVEL'],
   origem:['ORIGEM'],ultimaAtualizacao:['ULTIMAATUALIZACAO','DATAULTIMAATUALIZACAO'],
   status:['STATUS','SITUACAO'],consentimentoWhatsapp:['CONSENTIMENTOWHATSAPP'],
   dataConsentimento:['DATACONSENTIMENTO'],dataCadastroPortal:['DATACADASTROPORTAL'],
@@ -317,8 +320,9 @@ function csvMoradoresV1Dados_(row,mapping,contexto){
   var get=function(campo){var idx=mapping[campo];return idx==null||idx<0?'':row[idx];};
   var microareaCsv=get('microarea');
   var equipeCsv=get('equipe');
+  var documentos=csvMoradoresV1SepararDocumentos_(get('cpf'),get('cns'),mapping.cpf>=0&&mapping.cpf===mapping.cns);
   var dados=moradoresAdminV1NormalizarDadosEntrada_({
-    idPortal:get('idPortal'),id:get('id'),cpf:get('cpf'),cns:get('cns'),nome:get('nome'),
+    idPortal:get('idPortal'),id:get('id'),cpf:documentos.cpf,cns:documentos.cns,nome:get('nome'),
     nascimento:get('nascimento'),sexo:get('sexo'),endereco:get('endereco'),celular:get('celular'),
     telefoneContato:get('telefoneContato'),microarea:get('microarea'),equipe:get('equipe'),
     origem:get('origem'),status:get('status'),consentimentoWhatsapp:get('consentimentoWhatsapp'),
@@ -333,6 +337,15 @@ function csvMoradoresV1Dados_(row,mapping,contexto){
     dados.equipe=csvMoradoresV1Texto_(contexto.equipe);
   }
   return dados;
+}
+
+function csvMoradoresV1SepararDocumentos_(cpfValor,cnsValor,colunaCompartilhada){
+  var cpf=csvMoradoresV1Digitos_(cpfValor),cns=csvMoradoresV1Digitos_(cnsValor);
+  if(!colunaCompartilhada)return {cpf:cpf,cns:cns};
+  var documento=cpf||cns;
+  if(documento.length===11)return {cpf:documento,cns:''};
+  if(documento.length===15)return {cpf:'',cns:documento};
+  return {cpf:documento,cns:''};
 }
 
 function csvMoradoresV1Mapping_(headers,recebido){
@@ -350,7 +363,7 @@ function csvMoradoresV1Mapping_(headers,recebido){
       if(indice<0)throw new Error('A coluna mapeada para '+campo+' não existe no CSV.');
       map[campo]=indice;return;
     }
-    map[campo]=csvMoradoresV1IndiceCabecalho_(campo,headers);
+    map[campo]=TACS_CSV_MORADORES_V1.SYSTEM_FIELDS.indexOf(campo)!==-1?-1:csvMoradoresV1IndiceCabecalho_(campo,headers);
   });
   ['nome','nascimento','sexo'].forEach(function(campo){if(map[campo]<0)throw new Error('Mapeie a coluna obrigatória '+campo+'.');});
   return map;

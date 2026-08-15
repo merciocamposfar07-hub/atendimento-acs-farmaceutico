@@ -1,4 +1,4 @@
-release=csv-moradores-1.0.1-cabecalho-esus
-requested_at=2026-08-15T03:50:00Z
-source=correcao-leitura-csv-esus-com-capa-e-windows-1252
+release=csv-moradores-1.0.2-mapeamento-automatico
+requested_at=2026-08-15T15:49:22Z
+source=mapeamento-automatico-csv-esus-com-cpf-cns-compartilhado
 commit=pending-pr

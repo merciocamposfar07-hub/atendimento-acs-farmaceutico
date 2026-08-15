@@ -247,8 +247,8 @@ async function testTerritoryPanel() {
     'MINISTÉRIO DA SAÚDE',
     'UNIDADE DE SAÚDE: USF MATIAS',
     '',
-    'Nome do cidadão;Data de nascimento;Sexo;CPF;CNS;Telefone celular;Microárea;Equipe responsável',
-    'João da Área;07/04/1985;Masculino;77777777777;777777777777777;81988887777;04;Equipe Sítio'
+    'Nome equipe;INE equipe;Microárea;Endereço;CPF/CNS;Nome;Idade;Sexo;Identidade de gênero;Data de nascimento;Telefone celular;Telefone residencial;Telefone de contato;Última atualização cadastral;Origem',
+    'USF MATIAS;0001628011;04;Rua da Área;77777777777;João da Área;41;Masculino;;07/04/1985;81988887777;;81977776666;14/08/2026;e-SUS'
   ].join('\r\n');
   const csvFile = new window.File(
     [Uint8Array.from(Buffer.from(esusCsv, 'latin1'))],
@@ -262,10 +262,20 @@ async function testTerritoryPanel() {
     window.document.getElementById('operationStatus').textContent
   ));
   assert.equal(window.document.getElementById('mappingBox').classList.contains('hidden'), false);
-  assert.equal(window.document.getElementById('map_nome').selectedOptions[0].textContent, 'Nome do cidadão');
+  assert.equal(window.document.getElementById('map_idPortal').selectedOptions[0].textContent, 'Não importar');
+  assert.equal(window.document.getElementById('map_id').selectedOptions[0].textContent, 'Não importar');
+  assert.equal(window.document.getElementById('map_cpf').selectedOptions[0].textContent, 'CPF/CNS');
+  assert.equal(window.document.getElementById('map_cns').selectedOptions[0].textContent, 'CPF/CNS');
+  assert.equal(window.document.getElementById('map_nome').selectedOptions[0].textContent, 'Nome');
   assert.equal(window.document.getElementById('map_nascimento').selectedOptions[0].textContent, 'Data de nascimento');
+  assert.equal(window.document.getElementById('map_idade').selectedOptions[0].textContent, 'Não importar');
   assert.equal(window.document.getElementById('map_sexo').selectedOptions[0].textContent, 'Sexo');
   assert.equal(window.document.getElementById('map_microarea').selectedOptions[0].textContent, 'Microárea');
+  assert.equal(window.document.getElementById('map_equipe').selectedOptions[0].textContent, 'Nome equipe');
+  assert.equal(window.document.getElementById('map_telefoneContato').selectedOptions[0].textContent, 'Telefone de contato');
+  assert.equal(window.document.getElementById('map_origem').selectedOptions[0].textContent, 'Não importar');
+  assert.equal(window.document.getElementById('map_ultimaAtualizacao').selectedOptions[0].textContent, 'Não importar');
+  assert.match(window.document.getElementById('operationStatus').textContent, /CPF\/CNS será separada automaticamente/);
   assert.doesNotMatch(window.document.getElementById('mappingFields').textContent, /Aten��o/);
   dom.window.close();
 }
