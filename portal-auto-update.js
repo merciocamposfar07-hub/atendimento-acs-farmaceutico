@@ -70,7 +70,7 @@
     if(!document.body){setTimeout(installTerritorialIdentityGuard,40);return}
     var input=document.getElementById('cpf');
     var status=document.getElementById('cpfStatus');
-    if(!input||!status){setTimeout(installTerritorialIdentityGuard,120);return}
+    if(!input||!status)return;
     if(status.dataset.territorialIdentityGuard==='1')return;
     status.dataset.territorialIdentityGuard='1';
     rememberTerritorialStatus(status);
