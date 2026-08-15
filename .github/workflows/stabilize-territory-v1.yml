@@ -35,6 +35,7 @@ jobs:
         run: |
           node scripts/stabilize_territory_v1.js
           node scripts/fix_stabilization_test_v1.js
+          node scripts/fix_stabilization_compat_v1.js
 
       - name: Rodar testes completos
         run: |
@@ -55,7 +56,7 @@ jobs:
 
       - name: Remover rotina temporária e publicar estabilização
         run: |
-          rm -f scripts/stabilize_territory_v1.js scripts/fix_stabilization_test_v1.js .github/workflows/stabilize-territory-v1.yml test-output.txt tests-list.txt
+          rm -f scripts/stabilize_territory_v1.js scripts/fix_stabilization_test_v1.js scripts/fix_stabilization_compat_v1.js .github/workflows/stabilize-territory-v1.yml test-output.txt tests-list.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
