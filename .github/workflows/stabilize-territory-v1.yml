@@ -35,11 +35,20 @@ jobs:
         run: node scripts/stabilize_territory_v1.js
 
       - name: Rodar testes completos
-        run: npm test
+        run: |
+          set +e
+          npm test > test-output.txt 2>&1
+          code=$?
+          cat test-output.txt
+          if [ "$code" -ne 0 ]; then
+            msg=$(tail -n 35 test-output.txt | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+            echo "::error::$msg"
+            exit "$code"
+          fi
 
       - name: Remover rotina temporária e publicar estabilização
         run: |
-          rm -f scripts/stabilize_territory_v1.js .github/workflows/stabilize-territory-v1.yml
+          rm -f scripts/stabilize_territory_v1.js .github/workflows/stabilize-territory-v1.yml test-output.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
