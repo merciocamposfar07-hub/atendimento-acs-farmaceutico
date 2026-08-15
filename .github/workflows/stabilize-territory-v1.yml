@@ -66,3 +66,5 @@ jobs:
           fi
           git commit -m "Estabilizar acesso TACS e isolamento territorial de moradores"
           git push origin HEAD:main
+
+# Revalidação após atualização da identidade territorial.
