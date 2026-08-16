@@ -73,7 +73,8 @@
         html=substituir(html,'</head>','<style id="tacs-only-recados-style">html.tacs-only-ui #loginAdminTab,html.tacs-only-ui #adminLogin{display:none!important}html.tacs-only-ui .abas{grid-template-columns:1fr!important}</style></head>');
         html=substituir(html,'</body>','<scr'+'ipt>(function(){sessionStorage.removeItem("portalTacsAdminTokenV1");var a=document.getElementById("loginAdminTab"),l=document.getElementById("adminLogin"),t=document.getElementById("loginTacsTab");if(a)a.hidden=true;if(l)l.hidden=true;if(!sessionStorage.getItem("portalTacsTerritorioTokenV1")&&t)t.click();}());<\/scr'+'ipt></body>');
       }
-      html=substituir(html,'</body>',complementoStatus()+'</body>');
+      var campanhas='<scr'+'ipt src="/atendimento-acs-farmaceutico/campanhas-periodo-v1.js?v=20260816-periodo-v1"><\/scr'+'ipt>';
+      html=substituir(html,'</body>',complementoStatus()+campanhas+'</body>');
       document.open();document.write(html);document.close();
     }).catch(function(erro){
       var e=document.getElementById('mensagem');
