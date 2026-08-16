@@ -1,0 +1,36 @@
+name: Normalize Recados Standalone V9
+
+on:
+  push:
+    paths:
+      - 'scripts/normalize_recados_standalone_test_v9.py'
+      - '.github/workflows/normalize-recados-standalone-v9.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci --silent
+      - run: python scripts/normalize_recados_standalone_test_v9.py
+      - run: node scripts/test_admin_transport.js
+      - name: Commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add painel-oficial-recados-campanhas.html scripts/test_admin_transport.js
+          git commit -m 'Normaliza transporte do painel Recados standalone'
+          git push
