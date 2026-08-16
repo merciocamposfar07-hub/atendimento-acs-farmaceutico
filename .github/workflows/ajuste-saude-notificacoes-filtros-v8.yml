@@ -60,14 +60,14 @@ jobs:
           URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?v=20260816-recados-saude-filtros-v8'
           ok=0
           for i in $(seq 1 30); do
-            page="$(curl -fsSL --max-time 20 "${URL}&_=${RANDOM}${RANDOM}" || true)"
-            if printf '%s' "$page" | grep -q 'SAUDE_NOTIFICACOES_FILTROS_V8' \
-              && printf '%s' "$page" | grep -q 'data-saude-filtro="ATIVO"' \
-              && printf '%s' "$page" | grep -q 'data-saude-filtro="REPARO"' \
-              && printf '%s' "$page" | grep -q 'Fechar lista' \
-              && printf '%s' "$page" | grep -q 'Contato cadastrado:' \
-              && printf '%s' "$page" | grep -q 'Última checagem:' \
-              && printf '%s' "$page" | grep -q 'Referência técnica:'; then
+            curl -fsSL --max-time 20 "${URL}&_=${RANDOM}${RANDOM}" -o /tmp/recados-v8.html || true
+            if grep -q 'SAUDE_NOTIFICACOES_FILTROS_V8' /tmp/recados-v8.html 2>/dev/null \
+              && grep -q 'data-saude-filtro="ATIVO"' /tmp/recados-v8.html \
+              && grep -q 'data-saude-filtro="REPARO"' /tmp/recados-v8.html \
+              && grep -q 'Fechar lista' /tmp/recados-v8.html \
+              && grep -q 'Contato cadastrado:' /tmp/recados-v8.html \
+              && grep -q 'Última checagem:' /tmp/recados-v8.html \
+              && grep -q 'Referência técnica:' /tmp/recados-v8.html; then
               ok=1
               break
             fi
