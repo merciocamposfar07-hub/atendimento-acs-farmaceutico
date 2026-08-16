@@ -88,6 +88,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_33_MultimunicipioAdminApiV1.gs',
     marker: 'TACS_MULTIMUNICIPIO_ADMIN_API_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_34_CampanhasPeriodoV1.gs',
+    marker: 'TACS_CAMPANHAS_PERIODO_V1'
   }
 ];
 
