@@ -34,7 +34,11 @@ jobs:
           old2="s=once(s,'@media(max-width:640px){.resumo{grid-template-columns:1fr 1fr}','input[type=\"date\"].campo,input[type=\"time\"].campo{display:block;width:100%!important;min-width:0!important;max-width:100%!important;inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;box-sizing:border-box!important}.corpo,.corpo>*{min-width:0}\\n@media(max-width:640px){.resumo{grid-template-columns:1fr 1fr}','css datas agenda')"
           new2="s=once(s,'@media(min-width:650px){.acoes.duas{grid-template-columns:1fr 1fr}','input[type=\"date\"].campo,input[type=\"time\"].campo{display:block;width:100%!important;min-width:0!important;max-width:100%!important;inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;box-sizing:border-box!important}.corpo,.corpo>*{min-width:0}\\n@media(min-width:650px){.acoes.duas{grid-template-columns:1fr 1fr}','css datas agenda')"
           if old2 not in s: raise SystemExit('Não foi possível ajustar a âncora de datas da agenda.')
-          p.write_text(s.replace(old2,new2,1))
+          s=s.replace(old2,new2,1)
+          old3="out,n=re.subn(pattern,repl,s,count=1,flags=flags)"
+          new3="out,n=re.subn(pattern,(lambda m: repl) if label=='func encerramento variável' else repl,s,count=1,flags=flags)"
+          if old3 not in s: raise SystemExit('Não foi possível ajustar a substituição da função de encerramento.')
+          p.write_text(s.replace(old3,new3,1))
           PY
           python scripts/ajuste_publicacoes_horarios_validade_v9.py
           git checkout -- scripts/ajuste_publicacoes_horarios_validade_v9.py
