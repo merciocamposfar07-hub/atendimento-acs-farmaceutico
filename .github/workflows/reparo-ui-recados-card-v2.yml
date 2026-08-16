@@ -1,0 +1,57 @@
+name: Reparo UI Recados e Card V2
+
+on:
+  push:
+    paths:
+      - 'scripts/repair_ui_recados_card_v2.js'
+      - '.github/workflows/reparo-ui-recados-card-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  reparar-testar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Aplicar reparo controlado
+        run: node scripts/repair_ui_recados_card_v2.js
+
+      - name: Validar sintaxe dos arquivos alterados
+        run: |
+          node --check central-administrativa-tacs.js
+          node --check portal-ajustes-finais.js
+          node --check campanhas-periodo-v1.js
+          node --check scripts/test_ui_contract_v1.js
+          node --check scripts/test_campanhas_periodo_v1.js
+
+      - name: Rodar regressão completa
+        run: npm test
+
+      - name: Gravar reparo
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add central-administrativa-tacs.js central-administrativa-tacs.html painel-oficial-organizacoes-municipios.html painel-oficial-recados-campanhas.html portal-ajustes-finais.js scripts/test_ui_contract_v1.js scripts/test_campanhas_periodo_v1.js
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração pendente.'
+            exit 0
+          fi
+          git commit -m 'Repara Recados, card corporativo e padrão petróleo'
+          git pull --rebase origin main
+          npm test
+          git push origin main
