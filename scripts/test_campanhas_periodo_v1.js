@@ -28,7 +28,13 @@ assert(frontend.includes("appendHidden(form,'validade'"), 'Campanhas: validade n
 assert(frontend.includes('ORGANIZACAO_NOME'), 'Campanhas: organização não aparece no contexto');
 
 const wrapper = read('painel-oficial-recados-campanhas.html');
-assert(wrapper.includes('campanhas-periodo-v1.js?v=20260816-periodo-v2'), 'Painel oficial: extensão mensal não é carregada');
+const base = read('teste-v1/painel-recados-campanhas-v1.html');
+assert(wrapper.includes('painel-recados-campanhas-v1.html?v=20260816-recados-live-v3'), 'Painel oficial: carregador não aponta para a revisão segura');
+assert(!wrapper.includes('campanhas-periodo-v1.js'), 'Painel oficial: extensão mensal não deve ser injetada no carregador');
+assert(base.includes('id="campanhasPeriodoInlineV3"'), 'Painel-base: extensão mensal inline ausente');
+assert(base.includes('Campanhas no mês'), 'Painel-base: organização mensal não foi incorporada');
+assert(base.includes('recadosPetroleoFixoV3'), 'Painel-base: padrão petróleo fixo ausente');
+assert(base.includes('.preferenciaVisual{display:none!important'), 'Painel-base: controle de contraste ainda visível');
 
 const portal = read('portal-ajustes-finais.js');
 assert(portal.includes("#sendWrittenTacs,.tacs-written-button{display:none!important}"), 'Portal: botão escrito antigo não está bloqueado');
@@ -49,5 +55,4 @@ assert(municipal.includes('Vínculo salvo:'), 'Municípios: mensagem nominal de 
 assert(/\.signal\{[^}]*background:var\(--p\)/.test(municipal), 'Municípios: balão de status não usa azul-petróleo');
 assert(!municipal.includes('<button id="portalTacsContrastToggleV1"'), 'Municípios: botão de contraste foi reintroduzido');
 
-assert(wrapper.includes('recados-petroleo-fixo'), 'Painel oficial: padrão petróleo fixo de Recados ausente');
-console.log('Campanhas/portal V2: OK — meses preservados, painel reparado, card corporativo e padrão petróleo validados.');
+console.log('Campanhas/portal V3: OK — meses preservados sem interferir na abertura do painel.');
