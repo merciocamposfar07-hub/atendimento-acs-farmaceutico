@@ -3,7 +3,7 @@ name: Reparo UI Recados e Card V2
 on:
   push:
     paths:
-      - 'scripts/repair_ui_recados_card_v2.js'
+      - 'scripts/repair_ui_recados_card_v2.py'
       - '.github/workflows/reparo-ui-recados-card-v2.yml'
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
         run: npm ci
 
       - name: Aplicar reparo controlado
-        run: node scripts/repair_ui_recados_card_v2.js
+        run: python3 scripts/repair_ui_recados_card_v2.py
 
       - name: Validar sintaxe dos arquivos alterados
         run: |
