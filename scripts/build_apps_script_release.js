@@ -80,6 +80,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_31_LoginRapidoTacsV1.gs',
     marker: 'TACS_LOGIN_RAPIDO_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_32_OrganizacoesMunicipiosV1.gs',
+    marker: 'TACS_ORGANIZACOES_MUNICIPIOS_V1'
   }
 ];
 
