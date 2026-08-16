@@ -19,10 +19,16 @@ TARGETS = [
 START = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_START -->'
 END = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->'
 BLOCK = f'''{START}\n<style id="portalTacsAdminUiStandardV1">\n{CSS}\n</style>\n{END}'''
+BLOCK_PATTERN = re.compile(re.escape(START) + r'.*?' + re.escape(END), re.S)
+
+
+def without_visual_block(html: str) -> str:
+    return BLOCK_PATTERN.sub('', html)
 
 
 def fingerprint(html: str):
     """Contrato estrutural que a padronização visual não pode alterar."""
+    html = without_visual_block(html)
     patterns = {
         'ids': r'\bid\s*=\s*["\']([^"\']+)["\']',
         'names': r'\bname\s*=\s*["\']([^"\']+)["\']',
@@ -38,8 +44,7 @@ for rel in TARGETS:
     fp_before = fingerprint(before)
 
     if START in before and END in before:
-        pattern = re.compile(re.escape(START) + r'.*?' + re.escape(END), re.S)
-        after = pattern.sub(BLOCK, before, count=1)
+        after = BLOCK_PATTERN.sub(BLOCK, before, count=1)
     else:
         if '</head>' not in before.lower():
             raise RuntimeError(f'{rel}: </head> não encontrado')
