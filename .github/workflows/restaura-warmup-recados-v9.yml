@@ -1,0 +1,45 @@
+name: Restaura warmup Recados V9
+
+on:
+  push:
+    paths:
+      - '.github/workflows/restaura-warmup-recados-v9.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restaurar pre-aquecimento esperado
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('painel-oficial-recados-campanhas.html')
+          s=p.read_text()
+          marker='<link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-recados.webmanifest">'
+          script='<script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260813-admin-v103"></script>'
+          if script not in s:
+              if marker not in s: raise SystemExit('Âncora do manifest não encontrada.')
+              s=s.replace(marker,marker+'\n'+script,1)
+              p.write_text(s)
+          PY
+          grep -q 'admin-warmup.js?v=20260813-admin-v103' painel-oficial-recados-campanhas.html
+          node scripts/test_admin_transport.js
+      - name: Publicar
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add painel-oficial-recados-campanhas.html
+          git commit -m 'Restaura warmup do painel Recados e campanhas'
+          git push
