@@ -6,6 +6,7 @@ on:
     paths:
       - 'admin-ui-standard.inline.css'
       - 'scripts/apply_admin_ui_standard_v1.py'
+      - 'scripts/bump_admin_ui_revision_v1.py'
       - 'scripts/test_admin_ui_standard_v1.js'
       - '.github/workflows/padronizacao-visual-segura-v1.yml'
   workflow_dispatch:
@@ -36,6 +37,9 @@ jobs:
       - name: Aplicar padrão visual inline
         run: python3 scripts/apply_admin_ui_standard_v1.py
 
+      - name: Atualizar revisão dos painéis na Central
+        run: python3 scripts/bump_admin_ui_revision_v1.py
+
       - name: Validar contrato visual
         run: node scripts/test_admin_ui_standard_v1.js
 
@@ -64,7 +68,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          allowed='^(central-administrativa-tacs\.html|painel-oficial-organizacoes-municipios\.html|painel-oficial-agendas-vagas\.html|painel-oficial-profissionais-servicos\.html|painel-oficial-recados-campanhas\.html|painel-oficial-tacs-areas\.html|teste-v1/painel-moradores-v2\.html|teste-v1/painel-tacs-areas-v1\.html|portal-version\.json)$'
+          allowed='^(central-administrativa-tacs\.html|central-administrativa-tacs\.js|painel-oficial-organizacoes-municipios\.html|painel-oficial-agendas-vagas\.html|painel-oficial-profissionais-servicos\.html|painel-oficial-recados-campanhas\.html|painel-oficial-tacs-areas\.html|teste-v1/painel-moradores-v2\.html|teste-v1/painel-tacs-areas-v1\.html|portal-version\.json)$'
           changed="$(git diff --name-only)"
           printf '%s\n' "$changed"
           if [ -n "$changed" ]; then
@@ -81,6 +85,7 @@ jobs:
           git config user.name 'Portal TACS'
           git config user.email 'actions@users.noreply.github.com'
           git add central-administrativa-tacs.html \
+                  central-administrativa-tacs.js \
                   painel-oficial-organizacoes-municipios.html \
                   painel-oficial-agendas-vagas.html \
                   painel-oficial-profissionais-servicos.html \
