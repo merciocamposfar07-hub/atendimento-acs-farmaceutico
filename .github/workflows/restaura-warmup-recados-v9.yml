@@ -32,6 +32,7 @@ jobs:
               p.write_text(s)
           PY
           grep -q 'admin-warmup.js?v=20260813-admin-v103' painel-oficial-recados-campanhas.html
+          npm ci --silent
           node scripts/test_admin_transport.js
       - name: Publicar
         shell: bash
