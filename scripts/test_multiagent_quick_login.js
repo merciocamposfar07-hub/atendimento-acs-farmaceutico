@@ -50,8 +50,8 @@ assert.doesNotMatch(quickFrontend,/localStorage\.setItem\([^\n]*cns/i,
   'O CNS não deve ser persistido no armazenamento do navegador para o acesso rápido.');
 assert.match(quickFrontend,/Usar outro TACS neste aparelho/,
   'Deve existir uma saída explícita para trocar a identidade lembrada no aparelho.');
-assert.match(centralHtml,/central-tacs-login-rapido-v1\.js\?v=20260815-pin-rapido-v1/,
-  'A Central precisa carregar a camada de acesso rápido.');
+assert.match(centralHtml,/central-tacs-login-rapido-v1\.js\?v=20260815-pin-rapido-v2/,
+  'A Central precisa carregar a camada final de acesso rápido sem cache antigo.');
 assert.match(build,/ZZZZ_31_LoginRapidoTacsV1\.gs/);
 assert.match(build,/TACS_LOGIN_RAPIDO_V1/);
 
