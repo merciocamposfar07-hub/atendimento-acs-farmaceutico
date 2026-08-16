@@ -1,0 +1,65 @@
+name: Ajuste resumo Agendas petroleo V1
+
+on:
+  push:
+    paths:
+      - 'scripts/ajuste_resumo_agendas_petroleo_v1.py'
+      - '.github/workflows/ajuste-resumo-agendas-petroleo-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Aplicar somente o ajuste dos 4 baloes-resumo
+        run: python3 scripts/ajuste_resumo_agendas_petroleo_v1.py
+
+      - name: Validar escopo e integridade
+        run: |
+          grep -q 'AJUSTE_RESUMO_AGENDAS_PETROLEO_V1' painel-oficial-agendas-vagas.html
+          grep -q '#resumo.resumo .numero{' painel-oficial-agendas-vagas.html
+          grep -q 'qAgendas' painel-oficial-agendas-vagas.html
+          grep -q 'qAtivas' painel-oficial-agendas-vagas.html
+          grep -q 'qProf' painel-oficial-agendas-vagas.html
+          grep -q 'qVagas' painel-oficial-agendas-vagas.html
+          grep -q 'function salvarAgenda(c)' painel-oficial-agendas-vagas.html
+          grep -q 'function restaurar()' painel-oficial-agendas-vagas.html
+          CHANGED=$(git diff --name-only)
+          test "$CHANGED" = 'painel-oficial-agendas-vagas.html'
+
+      - name: Publicar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add painel-oficial-agendas-vagas.html
+          git commit -m 'Padroniza 4 resumos de Agendas em azul-petroleo'
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Validar no GitHub Pages
+        run: |
+          URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html'
+          for i in $(seq 1 60); do
+            HTML=$(curl -fsSL "$URL?validacao=petroleo-v1-$i-$(date +%s)" || true)
+            if echo "$HTML" | grep -q 'AJUSTE_RESUMO_AGENDAS_PETROLEO_V1' && \
+               echo "$HTML" | grep -q 'qAgendas' && \
+               echo "$HTML" | grep -q 'qAtivas' && \
+               echo "$HTML" | grep -q 'qProf' && \
+               echo "$HTML" | grep -q 'qVagas' && \
+               echo "$HTML" | grep -q 'function salvarAgenda(c)' && \
+               echo "$HTML" | grep -q 'function restaurar()'; then
+              echo 'RESUMO_AGENDAS_PETROLEO_PUBLICADO_OK'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'A revisão visual não apareceu no GitHub Pages no prazo.' >&2
+          exit 1
