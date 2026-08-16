@@ -1,0 +1,104 @@
+name: Recados V7 botões e meses validados ao vivo
+
+on:
+  push:
+    paths:
+      - 'campanhas-periodo-v2.js'
+      - 'scripts/build_recados_stable_v7.py'
+      - 'scripts/test_live_recados_stable_v7.js'
+      - '.github/workflows/recados-stable-v7.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  candidato-testar-promover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Validar sintaxe da extensão de campanhas
+        run: node --check campanhas-periodo-v2.js
+
+      - name: Gerar candidato V7
+        run: python3 scripts/build_recados_stable_v7.py
+
+      - name: Validar candidato local
+        run: |
+          grep -q 'recadosStableV7Style' painel-recados-campanhas-candidato-v7.html
+          grep -q 'campanhasMesLoaderV7' painel-recados-campanhas-candidato-v7.html
+          grep -q 'campanhas-periodo-v2.js' painel-recados-campanhas-candidato-v7.html
+          grep -q 'white-space:nowrap!important' painel-recados-campanhas-candidato-v7.html
+          if grep -q 'document.open();document.write' painel-recados-campanhas-candidato-v7.html; then
+            echo 'Candidato voltou a usar document.write.' >&2; exit 1
+          fi
+
+      - name: Publicar somente candidato
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add painel-recados-campanhas-candidato-v7.html
+          git commit -m 'Publica candidato Recados V7 para teste real' || true
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Aguardar candidato e extensão no Pages
+        run: |
+          BASE='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico'
+          for i in $(seq 1 48); do
+            A=$(curl -fsSL "$BASE/painel-recados-campanhas-candidato-v7.html?probe=$i-$(date +%s)" || true)
+            B=$(curl -fsSL "$BASE/campanhas-periodo-v2.js?probe=$i-$(date +%s)" || true)
+            if echo "$A" | grep -q 'recadosStableV7Style' && echo "$B" | grep -q '__portalTacsCampanhasPeriodoV2'; then
+              echo 'Candidato e extensão publicados.'; exit 0
+            fi
+            sleep 5
+          done
+          echo 'Candidato ou extensão não apareceram no Pages.' >&2; exit 1
+
+      - name: Testar todos os botões no candidato ao vivo
+        env:
+          RECADOS_LIVE_PATH: painel-recados-campanhas-candidato-v7.html
+        run: timeout 50s node scripts/test_live_recados_stable_v7.js
+
+      - name: Promover somente após candidato aprovado
+        run: python3 scripts/build_recados_stable_v7.py --promote
+
+      - name: Validar promoção local
+        run: |
+          grep -q 'recadosStableV7Style' painel-oficial-recados-campanhas.html
+          grep -q 'campanhasMesLoaderV7' painel-oficial-recados-campanhas.html
+          grep -q 'campanhas-periodo-v2.js' painel-oficial-recados-campanhas.html
+          grep -q '20260816-recados-stable-v7' central-administrativa-tacs.js
+          if grep -q 'document.open();document.write' painel-oficial-recados-campanhas.html; then
+            echo 'Painel oficial voltou a usar document.write.' >&2; exit 1
+          fi
+
+      - name: Publicar painel oficial e Central
+        run: |
+          git add painel-oficial-recados-campanhas.html central-administrativa-tacs.js central-administrativa-tacs.html
+          git commit -m 'Corrige botões meses e selo Ativo do Recados V7' || true
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Aguardar painel oficial no Pages
+        run: |
+          URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?probe='
+          for i in $(seq 1 48); do
+            if curl -fsSL "${URL}${i}-$(date +%s)" | grep -q 'recadosStableV7Style'; then
+              echo 'Painel oficial V7 publicado.'; exit 0
+            fi
+            sleep 5
+          done
+          echo 'Painel oficial V7 não apareceu no Pages.' >&2; exit 1
+
+      - name: Testar novamente o painel oficial publicado
+        run: timeout 50s node scripts/test_live_recados_stable_v7.js
