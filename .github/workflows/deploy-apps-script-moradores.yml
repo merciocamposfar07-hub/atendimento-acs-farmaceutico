@@ -42,7 +42,8 @@ jobs:
           code=${PIPESTATUS[0]}
           set -e
           if [ "$code" -ne 0 ]; then
-            resumo=$(tail -n 35 "$RUNNER_TEMP/npm-test.log" | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g' | cut -c1-3500)
+            resumo=$(grep -E 'AssertionError|ERR_ASSERTION|scripts/test_|Expected|actual:|expected:|operator:|at Object|at .*test_' "$RUNNER_TEMP/npm-test.log" | tail -n 24 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g' | cut -c1-3500)
+            if [ -z "$resumo" ]; then resumo=$(tail -c 3500 "$RUNNER_TEMP/npm-test.log" | tr '\n' ' ' | sed 's/%/%25/g'); fi
             printf '::error title=Falha nos testes do Portal TACS::%s\n' "$resumo"
             exit "$code"
           fi
