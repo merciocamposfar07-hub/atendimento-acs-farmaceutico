@@ -1,6 +1,6 @@
 /**
  * ZZZZ_31_LoginRapidoTacsV1.gs
- * Portal TACS — acesso rápido do TACS por PIN no aparelho já identificado V1.0.0
+ * Portal TACS — acesso rápido do TACS por PIN no aparelho já identificado V1.1.0
  *
  * Regras:
  * - o CNS continua obrigatório no cadastro do TACS e no primeiro acesso de cada aparelho;
@@ -8,10 +8,11 @@
  *   ao TACS + identificador local do aparelho;
  * - acessos seguintes usam somente PIN + chave rápida do aparelho;
  * - a chave rápida não substitui o PIN e não concede acesso se o TACS/área estiver inativo;
- * - trocar de aparelho ou apagar os dados locais exige CNS + PIN uma vez novamente.
+ * - trocar de aparelho ou apagar os dados locais exige CNS + PIN uma vez novamente;
+ * - a ativação da chave rápida funciona mesmo se outro módulo interceptar primeiro o login CNS+PIN.
  */
 var TACS_LOGIN_RAPIDO_V1=Object.freeze({
-  VERSAO:'1.0.0',
+  VERSAO:'1.1.0',
   PREFIXO:'qt1'
 });
 
@@ -31,6 +32,9 @@ var tacsLoginRapidoV1DoPostAnterior_;
         }
         return resultado;
       });
+    }
+    if(action==='admin_territorio_criar_chave_rapida'){
+      return tacsLoginRapidoV1Responder_(p,function(){return tacsLoginRapidoV1CriarParaSessao_(p);});
     }
     if(action==='admin_territorio_login_pin'){
       return tacsLoginRapidoV1Responder_(p,function(){return tacsLoginRapidoV1EntrarPorPin_(p);});
@@ -56,6 +60,23 @@ function tacsLoginRapidoV1Responder_(p,executar){
     return tacsTerritorioV1ResponderPost_(requestId,resultado);
   }
   return tacsLoginRapidoV1DoPostAnterior_({parameter:p});
+}
+
+function tacsLoginRapidoV1CriarParaSessao_(p){
+  var dispositivo=tacsTerritorioV1Texto_(p.dispositivo);
+  if(!dispositivo)throw new Error('Identificação do aparelho ausente.');
+  var acesso=tacsTerritorioV1ValidarSessaoToken_(p,false);
+  if(!acesso||acesso.perfil!=='TACS'||!acesso.tacsId)throw new Error('A sessão do TACS não está válida para ativar o acesso rápido.');
+  var tacs=tacsTerritorioV1EncontrarTacs_(acesso.tacsId);
+  var area=tacs&&tacsTerritorioV1EncontrarArea_(acesso.areaId);
+  if(!tacs||!tacs.ativo||!area||!area.ativa||area.tacsId!==tacs.tacsId){
+    throw new Error('O acesso deste TACS ou o vínculo com a área não está ativo.');
+  }
+  return{
+    ok:true,quickKey:tacsLoginRapidoV1CriarChave_(tacs.tacsId,dispositivo),
+    acessoRapido:true,tacsId:tacs.tacsId,nome:tacs.nomeCompleto,
+    areaId:area.areaId,areaNome:area.areaNome,unidadeId:area.unidadeId
+  };
 }
 
 function tacsLoginRapidoV1EntrarPorPin_(p){
