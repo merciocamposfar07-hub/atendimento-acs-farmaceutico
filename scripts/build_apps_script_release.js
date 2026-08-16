@@ -76,6 +76,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_30_AutonomiaProfissionaisServicosV1.gs',
     marker: 'TACS_AUTONOMIA_PROFISSIONAIS_SERVICOS_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_31_LoginRapidoTacsV1.gs',
+    marker: 'TACS_LOGIN_RAPIDO_V1'
   }
 ];
 
