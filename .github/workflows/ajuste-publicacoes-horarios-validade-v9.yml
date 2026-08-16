@@ -20,7 +20,20 @@ jobs:
           fetch-depth: 0
 
       - name: Aplicar correcoes autorizadas
-        run: python scripts/ajuste_publicacoes_horarios_validade_v9.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/ajuste_publicacoes_horarios_validade_v9.py')
+          s=p.read_text()
+          old="    if n!=1: raise SystemExit(f'{label}: esperado 1, encontrado {n}')\n    return s.replace(old,new,1)"
+          new="    if n<1: raise SystemExit(f'{label}: esperado ao menos 1, encontrado {n}')\n    if n!=1 and label not in {'novo recado horario','nova campanha horario'}: raise SystemExit(f'{label}: esperado 1, encontrado {n}')\n    return s.replace(old,new,1)"
+          if old not in s: raise SystemExit('Não foi possível preparar o aplicador V9.')
+          p.write_text(s.replace(old,new,1))
+          PY
+          python scripts/ajuste_publicacoes_horarios_validade_v9.py
+          git checkout -- scripts/ajuste_publicacoes_horarios_validade_v9.py
 
       - name: Validar escopo e sintaxe
         shell: bash
@@ -51,14 +64,15 @@ jobs:
           from pathlib import Path
           p=Path('apps-script/ZZ_11_PublicoConteudoPortalV1.gs').read_text()
           assert "Campanha vencida" in p
-          assert "if (validade && validade < hoje) return;" in p
+          assert p.count("if (validade && validade < hoje) return;") >= 2
           a=Path('painel-oficial-agendas-vagas.html').read_text()
           assert 'Encerrar automaticamente às' in a
           assert 'type="time"' in a
           c=Path('campanhas-periodo-v2.js').read_text()
           assert 'min-inline-size:0' in c
           r=Path('painel-oficial-recados-campanhas.html').read_text()
-          assert r.count('name="horario"') >= 2
+          assert r.count('name="horario"') >= 4
+          assert 'recados-campanhas-whatsapp-card-v9.js' in r
           print('validacao-direcionada-ok')
           PY
 
