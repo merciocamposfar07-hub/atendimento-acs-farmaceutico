@@ -1,5 +1,5 @@
-release=multi-municipio-foundation-v1.0.0
-requested_at=2026-08-16T03:29:00Z
-source=blindagem-multiagente-e-camada-municipal
-commit=b9755a6383142e82101d62ccc8f6425cf9f07010
-attempt=2
+release=multi-municipio-hardening-v1.1.0
+requested_at=2026-08-16T04:18:00Z
+source=escopo-admin-geral-integridade-territorial
+commit=f1737ca04c848e1ad9214c67d2e0012f884fc5cc
+attempt=1
