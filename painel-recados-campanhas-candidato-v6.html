@@ -232,12 +232,17 @@ var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!teste
 
 <script id="campanhasMesLoaderV6">
 (function(){
+  var tentativa=0;
   function carregar(){
     if(window.__portalTacsCampanhasPeriodoV1)return;
+    tentativa+=1;
     var s=document.createElement('script');
-    s.src='/atendimento-acs-farmaceutico/campanhas-periodo-v1.js?v=20260816-recados-standalone-v6';
+    s.src='/atendimento-acs-farmaceutico/campanhas-periodo-v1.js?v=20260816-recados-standalone-v6&t='+tentativa;
     s.async=true;
-    s.onerror=function(){console.error('Campanhas no mês não pôde ser carregado.')};
+    s.onerror=function(){
+      if(tentativa<4){setTimeout(carregar,500*tentativa);return}
+      console.error('Campanhas no mês não pôde ser carregado.');
+    };
     document.head.appendChild(s);
   }
   var aba=document.getElementById('abaCampanhas');
