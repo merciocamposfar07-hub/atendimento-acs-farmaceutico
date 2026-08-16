@@ -1,0 +1,81 @@
+name: Reparo real Recados e campanhas V3
+
+on:
+  push:
+    paths:
+      - 'scripts/repair_recados_live_v3.py'
+      - 'scripts/test_recados_live_v3.js'
+      - '.github/workflows/reparo-recados-live-v3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  reparar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Aplicar reparo mínimo
+        run: python3 scripts/repair_recados_live_v3.py
+
+      - name: Validar sintaxe
+        run: |
+          node --check central-administrativa-tacs.js
+          node --check campanhas-periodo-v1.js
+          node --check portal-ajustes-finais.js
+          node --check scripts/test_recados_live_v3.js
+
+      - name: Validar contrato local crítico
+        run: |
+          grep -q 'painel-recados-campanhas-v1.html?v=20260816-recados-live-v3' painel-oficial-recados-campanhas.html
+          grep -q 'campanhas-periodo-v1.js?v=20260816-recados-live-v3' teste-v1/painel-recados-campanhas-v1.html
+          grep -q 'preferenciaVisual{display:none!important' teste-v1/painel-recados-campanhas-v1.html
+          grep -q "painel-oficial-recados-campanhas.html?area='+area+access+'&v=20260816-recados-live-v3" central-administrativa-tacs.js
+
+      - name: Rodar regressão completa
+        run: npm test
+
+      - name: Gravar e publicar reparo
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add painel-oficial-recados-campanhas.html teste-v1/painel-recados-campanhas-v1.html central-administrativa-tacs.js central-administrativa-tacs.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração pendente.'
+          else
+            git commit -m 'Restaura abertura real de Recados e mantém meses'
+            git pull --rebase origin main
+            npm test
+            git push origin main
+          fi
+
+      - name: Aguardar GitHub Pages publicar a revisão
+        run: |
+          URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?probe='
+          for i in $(seq 1 36); do
+            if curl -fsSL "${URL}${i}-$(date +%s)" | grep -q '20260816-recados-live-v3'; then
+              echo 'GitHub Pages já serve a revisão V3.'
+              exit 0
+            fi
+            echo "Aguardando Pages... tentativa ${i}/36"
+            sleep 5
+          done
+          echo 'A revisão V3 não apareceu no Pages dentro do prazo.' >&2
+          exit 1
+
+      - name: Testar a página pública de verdade
+        run: node scripts/test_recados_live_v3.js
