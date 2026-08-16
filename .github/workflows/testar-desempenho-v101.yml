@@ -10,14 +10,19 @@ on:
       - 'admin-warmup.js'
       - 'portal-auto-update.js'
       - 'portal-odontologia-segunda-sexta.js'
+      - 'portal-ajustes-finais.js'
+      - 'campanhas-periodo-v1.js'
       - 'painel-oficial-agendas-vagas.html'
       - 'painel-oficial-profissionais-servicos.html'
       - 'painel-oficial-recados-campanhas.html'
+      - 'painel-oficial-organizacoes-municipios.html'
       - 'index.html'
       - 'apps-script/ZZZZ_21_PerformanceCacheV101.gs'
+      - 'apps-script/ZZZZ_34_CampanhasPeriodoV1.gs'
       - 'scripts/test_performance_v101.js'
       - 'scripts/test_quality_gate_v101.js'
       - 'scripts/test_admin_transport.js'
+      - 'scripts/test_campanhas_periodo_v1.js'
       - 'scripts/build_apps_script_release.js'
       - 'package.json'
 
@@ -47,17 +52,21 @@ jobs:
       - name: Rodar regressão completa + desempenho + gate percentual
         run: npm test
 
-      - name: Validar sintaxe dos componentes de desempenho
+      - name: Validar sintaxe dos componentes de desempenho e expansão
         run: |
           set -euo pipefail
           node --check admin-warmup.js
           node --check portal-auto-update.js
           node --check portal-odontologia-segunda-sexta.js
+          node --check portal-ajustes-finais.js
+          node --check campanhas-periodo-v1.js
           node --check scripts/test_performance_v101.js
           node --check scripts/test_quality_gate_v101.js
           node --check scripts/test_admin_transport.js
+          node --check scripts/test_campanhas_periodo_v1.js
           node --check scripts/build_apps_script_release.js
           node --check --input-type=commonjs < apps-script/ZZZZ_21_PerformanceCacheV101.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_34_CampanhasPeriodoV1.gs
 
       - name: Auditoria de escopo — bloquear alterações fora do pacote autorizado
         if: github.ref_name == 'desempenho-v101' || github.ref_name == 'desempenho-v101-estabilidade'
@@ -81,6 +90,14 @@ jobs:
           grep -Fq "Solicitar atendimento odontológico (dentista)" portal-odontologia-segunda-sexta.js
           grep -Fq "Solicitar atendimento odontológico de emergência (dentista)" portal-odontologia-segunda-sexta.js
           grep -Fq "TACS_PERFORMANCE_CACHE_V101" apps-script/ZZZZ_21_PerformanceCacheV101.gs
+          grep -Fq "TACS_CAMPANHAS_PERIODO_V1" apps-script/ZZZZ_34_CampanhasPeriodoV1.gs
+          grep -Fq "Campanhas no mês" campanhas-periodo-v1.js
+          grep -Fq "Vínculo salvo:" painel-oficial-organizacoes-municipios.html
+          grep -Fq "Enviar solicitação em card azul-petróleo" portal-ajustes-finais.js
+          if grep -Fq "Enviar solicitação por escrito no WhatsApp" portal-ajustes-finais.js; then
+            echo 'Falha: o botão verde antigo de envio por escrito foi reintroduzido.'
+            exit 1
+          fi
           grep -Fq "Aguarde a confirmação dos dados atuais antes de salvar." painel-oficial-agendas-vagas.html
           grep -Fq "if(!pageSeen)" portal-auto-update.js
           grep -Fq "if(pageSeen!==remote)" portal-auto-update.js
