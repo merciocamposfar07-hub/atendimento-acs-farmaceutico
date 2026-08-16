@@ -65,3 +65,5 @@ jobs:
           done
           echo 'A revisão visual não apareceu no GitHub Pages no prazo.' >&2
           exit 1
+
+# trigger-v2
