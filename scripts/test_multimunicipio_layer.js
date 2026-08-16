@@ -8,20 +8,28 @@ const source=fs.readFileSync(path.join(ROOT,'apps-script/ZZZZ_32_OrganizacoesMun
 const build=fs.readFileSync(path.join(ROOT,'scripts/build_apps_script_release.js'),'utf8');
 
 const props=new Map();
-const areas=new Set(['AREA_A','AREA_B','AREA_C']);
+const areaState=new Map([
+  ['AREA_A',{areaId:'AREA_A',areaNome:'Área A',ativa:true}],
+  ['AREA_B',{areaId:'AREA_B',areaNome:'Área B',ativa:true}],
+  ['AREA_C',{areaId:'AREA_C',areaNome:'Área C',ativa:true}]
+]);
+const fakeLock={locked:false,tryLock(){if(this.locked)return false;this.locked=true;return true;},releaseLock(){this.locked=false;}};
 const sandbox={
   PropertiesService:{getScriptProperties(){return{
     getProperty:key=>props.get(key)||'',
     setProperty:(key,value)=>props.set(key,String(value))
   }}},
-  tacsTerritorioV1EncontrarArea_:areaId=>areas.has(areaId)?{areaId,ativa:true}:null,
+  LockService:{getScriptLock(){return fakeLock;}},
+  tacsTerritorioV1EncontrarArea_:areaId=>areaState.get(areaId)||null,
+  tacsTerritorioV1LerAreas_:()=>Array.from(areaState.values()).map(x=>({...x})),
   console
 };
 vm.createContext(sandbox);
 vm.runInContext(source,sandbox);
 
-assert.equal(sandbox.TACS_ORGANIZACOES_MUNICIPIOS_V1.VERSAO,'1.0.0');
+assert.equal(sandbox.TACS_ORGANIZACOES_MUNICIPIOS_V1.VERSAO,'1.1.0');
 assert.match(source,/O TACS não pode mudar de município ou área pelo navegador/);
+assert.match(source,/Somente o administrador geral pode alterar organizações, municípios e vínculos territoriais/);
 assert.match(build,/ZZZZ_32_OrganizacoesMunicipiosV1\.gs/);
 assert.match(build,/TACS_ORGANIZACOES_MUNICIPIOS_V1/);
 
@@ -30,6 +38,7 @@ assert.equal(ctx.areaId,'AREA_A');
 assert.equal(ctx.municipioId,'MUN_ATUAL');
 assert.equal(ctx.organizacaoId,'ORG_ATUAL');
 assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1ContextoAcesso_({perfil:'TACS',areaId:'AREA_A'},'AREA_B'),/não pode mudar/i);
+assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1ContextoAcesso_({perfil:'ADMIN_MUNICIPAL',areaId:'AREA_A'},'AREA_A'),/não possui escopo/i);
 
 const catalog={
   organizacoes:[
@@ -42,10 +51,12 @@ const catalog={
   ],
   areas:{
     AREA_A:{municipioId:'MUN_1'},
-    AREA_B:{municipioId:'MUN_2'}
+    AREA_B:{municipioId:'MUN_2'},
+    AREA_C:{municipioId:'MUN_2'}
   }
 };
 const admin={perfil:'ADMIN_GERAL'};
+const adminMunicipal={perfil:'ADMIN_MUNICIPAL',municipioId:'MUN_1'};
 sandbox.tacsOrganizacoesMunicipiosV1SalvarCatalogo_(catalog,admin);
 ctx=sandbox.tacsOrganizacoesMunicipiosV1ContextoAcesso_({perfil:'TACS',areaId:'AREA_A'},'AREA_A');
 assert.equal(ctx.municipioId,'MUN_1');
@@ -53,6 +64,10 @@ assert.equal(ctx.organizacaoId,'ORG_1');
 ctx=sandbox.tacsOrganizacoesMunicipiosV1ContextoAcesso_(admin,'AREA_B');
 assert.equal(ctx.municipioId,'MUN_2');
 assert.equal(ctx.organizacaoId,'ORG_2');
+
+assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1SalvarCatalogo_(catalog,adminMunicipal),/Somente o administrador geral/i);
+assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1VincularArea_('AREA_A','MUN_2',adminMunicipal),/Somente o administrador geral/i);
+assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1SalvarMunicipio_({municipioId:'MUN_1',organizacaoId:'ORG_1',nome:'Município 1',uf:'PE',ativo:false},adminMunicipal),/Somente o administrador geral/i);
 
 assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1ValidarCatalogo_({
   organizacoes:[{organizacaoId:'ORG_1'},{organizacaoId:'ORG_1'}],
@@ -66,10 +81,30 @@ assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1ValidarCatalogo_({
   organizacoes:[{organizacaoId:'ORG_1'}],
   municipios:[{municipioId:'MUN_1',organizacaoId:'ORG_1'}],areas:{AREA_A:{municipioId:'MUN_X'}}
 }),/município inexistente/i);
+assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1ValidarCatalogo_({
+  organizacoes:[{organizacaoId:'ORG_1',ativa:false}],
+  municipios:[{municipioId:'MUN_1',organizacaoId:'ORG_1',ativo:true}],areas:{}
+}),/organização inativa/i);
 
-sandbox.tacsOrganizacoesMunicipiosV1VincularArea_('AREA_C','MUN_2',admin);
+assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1SalvarMunicipio_({
+  municipioId:'MUN_1',organizacaoId:'ORG_1',nome:'Município 1',uf:'PE',ativo:false
+},admin),/área ativa AREA_A ficaria sem município ativo/i);
+ctx=sandbox.tacsOrganizacoesMunicipiosV1ContextoAcesso_({perfil:'TACS',areaId:'AREA_A'},'AREA_A');
+assert.equal(ctx.municipioId,'MUN_1','a tentativa inválida não deve alterar o vínculo existente');
+
+assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1VincularArea_('AREA_INEXISTENTE','MUN_2',admin),/área informada não existe/i);
+
+sandbox.tacsOrganizacoesMunicipiosV1SalvarOrganizacao_({organizacaoId:'ORG_3',nome:'Organização 3',ativa:true},admin);
+sandbox.tacsOrganizacoesMunicipiosV1SalvarMunicipio_({municipioId:'MUN_3',organizacaoId:'ORG_3',nome:'Município 3',uf:'AL',ativo:true},admin);
+sandbox.tacsOrganizacoesMunicipiosV1VincularArea_('AREA_C','MUN_3',admin);
 ctx=sandbox.tacsOrganizacoesMunicipiosV1ContextoAcesso_({perfil:'TACS',areaId:'AREA_C'},'AREA_C');
-assert.equal(ctx.municipioId,'MUN_2');
-assert.equal(ctx.organizacaoId,'ORG_2');
+assert.equal(ctx.municipioId,'MUN_3');
+assert.equal(ctx.organizacaoId,'ORG_3');
 
-console.log('Camada multi-município V1: organização → município → área validada sem permitir troca territorial pelo TACS.');
+const dados=sandbox.tacsOrganizacoesMunicipiosV1DadosAdmin_(admin);
+assert.equal(dados.ok,true);
+assert.equal(dados.versao,'1.1.0');
+assert.equal(dados.areas.length,3);
+assert.equal(dados.areas.find(x=>x.areaId==='AREA_C').contexto.municipioId,'MUN_3');
+
+console.log('Camada multi-município V1.1: organização → município → área validada, mutação só pelo administrador geral e TACS preso ao território da sessão.');
