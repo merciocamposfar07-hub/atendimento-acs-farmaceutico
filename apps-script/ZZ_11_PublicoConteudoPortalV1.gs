@@ -150,6 +150,8 @@ function publicoConteudoPortalV1PrepararRecados_(linhas, hoje, areaId) {
     );
     if (validade && validade < hoje) return;
 
+    var horario = publicoConteudoPortalV1Texto_(publicoConteudoPortalV1Campo_(linha, ['HORARIO', 'HORARIO_EXIBICAO']));
+
     var prioridade = publicoConteudoPortalV1NormalizarPrioridade_(
       publicoConteudoPortalV1Campo_(linha, ['PRIORIDADE', 'TIPO'])
     );
@@ -170,6 +172,7 @@ function publicoConteudoPortalV1PrepararRecados_(linhas, hoje, areaId) {
       titulo: titulo,
       mensagem: mensagem,
       prioridade: prioridade,
+      horario: horario,
       validade: validade
     });
   });
@@ -198,6 +201,15 @@ function publicoConteudoPortalV1PrepararCampanhas_(linhas, hoje, areaId) {
     );
     if (inicio && inicio > hoje) return;
 
+    var validade = publicoConteudoPortalV1DataIso_(
+      publicoConteudoPortalV1Campo_(linha, ['VALIDADE', 'DATA_VALIDADE', 'ATE'])
+    );
+    if (validade && validade < hoje) return;
+
+    var horario = publicoConteudoPortalV1Texto_(
+      publicoConteudoPortalV1Campo_(linha, ['HORARIO', 'HORARIO_EXIBICAO'])
+    );
+
     var titulo = publicoConteudoPortalV1Texto_(
       publicoConteudoPortalV1Campo_(linha, ['TITULO', 'TITULO_PUBLICO', 'NOME'])
     );
@@ -213,6 +225,8 @@ function publicoConteudoPortalV1PrepararCampanhas_(linhas, hoje, areaId) {
       titulo: titulo || 'Campanha de saúde',
       mensagem: mensagem,
       inicio: inicio,
+      validade: validade,
+      horario: horario,
       dias: publicoConteudoPortalV1Texto_(
         publicoConteudoPortalV1Campo_(linha, ['DIAS', 'DIAS_EXIBICAO', 'PERIODO'])
       )
@@ -359,6 +373,13 @@ function testarPublicoConteudoPortalV1() {
       TITULO: 'Campanha futura',
       MENSAGEM: 'Não pode aparecer',
       INICIO: '03/08/2026'
+    },
+    {
+      ATIVO: 'true',
+      TITULO: 'Campanha vencida',
+      MENSAGEM: 'Não pode aparecer',
+      INICIO: '01/08/2026',
+      VALIDADE: '01/08/2026'
     }
   ], hojeTeste);
 

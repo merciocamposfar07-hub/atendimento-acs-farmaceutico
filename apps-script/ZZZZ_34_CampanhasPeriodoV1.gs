@@ -11,7 +11,7 @@
  */
 var TACS_CAMPANHAS_PERIODO_V1=Object.freeze({
   VERSAO:'1.0.0',
-  COLUNAS:['ANO','MES','VALIDADE','MUNICIPIO_ID','MUNICIPIO_NOME','UF','ORGANIZACAO_ID','ORGANIZACAO_NOME']
+  COLUNAS:['ANO','MES','VALIDADE','HORARIO','MUNICIPIO_ID','MUNICIPIO_NOME','UF','ORGANIZACAO_ID','ORGANIZACAO_NOME']
 });
 
 var campanhasPeriodoV1SalvarBase_=typeof publicacoesTerritoriaisV1Salvar_==='function'?publicacoesTerritoriaisV1Salvar_:null;
@@ -113,6 +113,7 @@ function campanhasPeriodoV1SalvarCampanha_(contexto,acesso,p){
       ANO:String(periodo.ano),
       MES:String(periodo.mes).padStart(2,'0'),
       VALIDADE:validade,
+      HORARIO:publicacoesTerritoriaisV1Texto_(p.horario).slice(0,160),
       MUNICIPIO_ID:publicacoesTerritoriaisV1Texto_(municipal.municipioId),
       MUNICIPIO_NOME:publicacoesTerritoriaisV1Texto_(municipal.municipioNome),
       UF:publicacoesTerritoriaisV1Texto_(municipal.uf).slice(0,2),

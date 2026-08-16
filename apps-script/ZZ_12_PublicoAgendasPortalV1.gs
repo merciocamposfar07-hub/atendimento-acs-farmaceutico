@@ -94,6 +94,9 @@ function publicoAgendasV1Montar_(areaId) {
     var encerra12h = publicoAgendasV1Booleano_(
       publicoAgendasV1Valor_(valores[linha], indices.encerra12h)
     );
+    var encerraHorario = publicoAgendasV1Hora_(
+      publicoAgendasV1Valor_(exibidos[linha], indices.encerraHorario)
+    ) || (encerra12h ? '12:00' : '');
 
     modulos[modulo].push({
       day: dia,
@@ -113,7 +116,8 @@ function publicoAgendasV1Montar_(areaId) {
       service: publicoAgendasV1Texto_(
         publicoAgendasV1Valor_(exibidos[linha], indices.mensagem)
       ),
-      closeAtNoon: encerra12h,
+      closeAtNoon: encerraHorario==='12:00',
+      closeAt: encerraHorario,
       common: publicoAgendasV1NaoNegativo_(
         publicoAgendasV1Valor_(valores[linha], indices.vagasComuns)
       ),
@@ -123,7 +127,7 @@ function publicoAgendasV1Montar_(areaId) {
       extra: publicoAgendasV1Booleano_(
         publicoAgendasV1Valor_(valores[linha], indices.diaExtra)
       ),
-      closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerra12h),
+      closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerraHorario),
       order: publicoAgendasV1NaoNegativo_(
         publicoAgendasV1Valor_(valores[linha], indices.ordem)
       )
@@ -326,6 +330,7 @@ function publicoAgendasV1LerRecados_(planilha, areaId) {
     mensagem: indice(['MENSAGEM', 'TEXTO', 'CONTEUDO']),
     prioridade: indice(['PRIORIDADE', 'TIPO']),
     validade: indice(['VALIDADE', 'DATA_VALIDADE', 'ATE']),
+    horario: indice(['HORARIO', 'HORARIO_EXIBICAO']),
     ativo: indice(['ATIVO', 'RECADO_ATIVO', 'PUBLICAR'])
   };
 
@@ -368,6 +373,7 @@ function publicoAgendasV1LerRecados_(planilha, areaId) {
       message: mensagem,
       priority: prioridade || 'INFORMATIVO',
       validity: validade,
+      time: idx.horario >= 0 ? String(registro[idx.horario] || '').trim() : '',
       active: true
     });
   }
@@ -428,6 +434,7 @@ function publicoAgendasV1Indices_(cabecalhos, permitirAusentes) {
     situacao: indice(['SITUACAO', 'STATUS'], false),
     mensagem: indice(['MENSAGEM', 'SERVICO', 'ATENDIMENTO'], false),
     encerra12h: indice(['ENCERRA_12H', 'ENCERRAR_AS_12H'], false),
+    encerraHorario: indice(['ENCERRA_HORARIO', 'HORARIO_ENCERRAMENTO'], false),
     vagasComuns: indice(['VAGAS_COMUNS'], false),
     vagasEmergenciais: indice(['VAGAS_EMERGENCIAIS'], false),
     diaExtra: indice(['DIA_EXTRA'], false)
@@ -494,17 +501,18 @@ function publicoAgendasV1DataIso_(valor) {
   return br ? br[3] + '-' + br[2] + '-' + br[1] : '';
 }
 
-function publicoAgendasV1EncerradoAgora_(data, encerra12h) {
-  if (!encerra12h) return false;
-  var hoje = Utilities.formatDate(
-    new Date(),
-    PUBLICO_AGENDAS_PORTAL_V1.FUSO,
-    'yyyy-MM-dd'
-  );
+function publicoAgendasV1Hora_(valor) {
+  var texto = publicoAgendasV1Texto_(valor), m = texto.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  return m ? m[1] + ':' + m[2] : '';
+}
+
+function publicoAgendasV1EncerradoAgora_(data, horario) {
+  horario = publicoAgendasV1Hora_(horario);
+  if (!horario) return false;
+  var hoje = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'yyyy-MM-dd');
   if (publicoAgendasV1DataIso_(data) !== hoje) return false;
-  return Number(
-    Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'HH')
-  ) >= 12;
+  var agora = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'HH:mm');
+  return agora >= horario;
 }
 
 function publicoAgendasV1Valor_(linha, indice) {

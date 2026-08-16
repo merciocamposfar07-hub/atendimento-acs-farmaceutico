@@ -111,7 +111,7 @@ function publicacoesTerritoriaisV1Salvar_(contexto,acesso,tipo,p){
     var titulo=publicacoesTerritoriaisV1Texto_(p.titulo).slice(0,220);
     var mensagem=publicacoesTerritoriaisV1Texto_(p.mensagem).slice(0,5000);
     if(!titulo||!mensagem)throw new Error('Título e mensagem são obrigatórios.');
-    var registro={ID:id,AREA_ID:contexto.areaId,TITULO:titulo,MENSAGEM:mensagem,ATIVO:publicacoesTerritoriaisV1Booleano_(p.ativo)};
+    var registro={ID:id,AREA_ID:contexto.areaId,TITULO:titulo,MENSAGEM:mensagem,HORARIO:publicacoesTerritoriaisV1Texto_(p.horario).slice(0,160),ATIVO:publicacoesTerritoriaisV1Booleano_(p.ativo)};
     if(tipo==='recado'){
       registro.PRIORIDADE=publicacoesTerritoriaisV1Prioridade_(p.prioridade);
       registro.VALIDADE=publicacoesTerritoriaisV1Data_(p.validade);
@@ -165,6 +165,7 @@ function publicacoesTerritoriaisV1Tabela_(ss,nomeAba,tipo,criar){
   var headers=sheet.getRange(1,1,1,lastCol).getDisplayValues()[0].map(publicacoesTerritoriaisV1Normalizar_);
   base.forEach(function(h){if(headers.indexOf(h)===-1)throw new Error('A aba '+nomeAba+' não possui a coluna obrigatória '+h+'.');});
   if(headers.indexOf('AREA_ID')===-1){sheet.getRange(1,lastCol+1).setValue('AREA_ID');headers.push('AREA_ID');lastCol++;}
+  if(headers.indexOf('HORARIO')===-1){sheet.getRange(1,lastCol+1).setValue('HORARIO');headers.push('HORARIO');lastCol++;}
   var raw=sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,lastCol).getValues():[];
   var display=sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,lastCol).getDisplayValues():[];
   return {sheet:sheet,headers:headers,rows:raw.map(function(values,i){return{row:i+2,values:values,display:display[i]};})};
