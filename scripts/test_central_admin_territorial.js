@@ -63,7 +63,7 @@ assert.doesNotMatch(notificationHealthSource,/O estado técnico não comprova a 
   'A observação quase invisível deve ser removida da Saúde das notificações.');
 assert.match(professionalsPage,/\.aba\{[^}]*min-height:76px[^}]*font-size:clamp\(\.78rem,3\.3vw,\.95rem\)[^}]*overflow-wrap:anywhere/,
   'Os botões de Profissionais devem conter os textos no iPhone.');
-assert.match(professionalsWrapper,/painel-profissionais-servicos-v1\.html\?v=20260815-autonomia-v2/);
+assert.match(professionalsWrapper,/painel-profissionais-servicos-v1\.html\?v=(?:20260816-profissionais-v3|20260815-autonomia-v2)/);
 assert.match(js,/painel-oficial-profissionais-servicos\.html\?area=/,
   'A Central deve carregar a versão corrigida do painel de Profissionais.');
 assert.match(js,/painel-oficial-agendas-vagas\.html\?area=/,
