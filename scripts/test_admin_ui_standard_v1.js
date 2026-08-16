@@ -37,12 +37,13 @@ for (const file of targets) {
 const centralJs = read('central-administrativa-tacs.js');
 assert.match(centralJs, /btn\.dataset\.permission/);
 assert.match(centralJs, /btn\.dataset\.module/);
-assert.match(centralJs, /data-admin-only/);
+assert.match(centralJs, /btn\.dataset\.adminOnly/);
 
 const centralHtml = read('central-administrativa-tacs.html');
 for (const moduleName of ['moradores','recados','agendas','profissionais','territorio','municipios','portal']) {
   assert.match(centralHtml, new RegExp(`data-module=["']${moduleName}["']`));
 }
+assert.match(centralHtml, /data-module="municipios"[^>]*data-admin-only="true"/);
 
 const territorio = read('teste-v1/painel-tacs-areas-v1.html');
 assert.match(territorio, /id="tacsCns"/);
