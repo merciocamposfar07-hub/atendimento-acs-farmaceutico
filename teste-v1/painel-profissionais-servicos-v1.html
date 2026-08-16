@@ -29,6 +29,17 @@
 .cartao .campo{background:#fff!important;color:var(--texto)!important}
 .cartao .sinal.ativo{background:#e8f7ee!important;color:#08723a!important;border:2px solid #9ed6b2!important}
 .cartao .sinal.inativo{background:#fff0f0!important;color:#a52d2d!important;border:2px solid #d88a8a!important}
+
+/* AJUSTE_PROFISSIONAIS_SERVICOS_V3 */
+.resumo .numero{
+  background:linear-gradient(145deg,var(--petroleo),var(--petroleo2))!important;
+  border-color:#69c7e7!important;
+  color:#fff!important;
+  box-shadow:0 8px 18px rgba(7,58,85,.16)!important;
+}
+.resumo .numero strong{color:#fff!important}
+.resumo .numero span{color:#d8eef7!important}
+
 </style>
 </head>
 <body>
@@ -226,5 +237,49 @@ function iniciarPainel(){entrar.disabled=false;if(tacsMode){document.getElementB
 iniciarPainel();
 }());
 </script>
+
+<script id="ajusteProfissionaisServicosV3">
+(function(){
+  'use strict';
+  function normalizar(v){
+    var s=String(v==null?'':v);
+    if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    return s.toUpperCase().replace(/\s+/g,' ').trim();
+  }
+  function redundante(card){
+    return normalizar(card&&card.textContent).indexOf('ATENDIMENTO ODONTOLOGICO DE EMERGENCIA')!==-1;
+  }
+  function sincronizar(){
+    var lista=document.getElementById('listaServicos');
+    if(!lista)return;
+    var cards=Array.prototype.slice.call(lista.querySelectorAll('.cartao'));
+    cards.forEach(function(card){if(redundante(card)&&card.parentNode)card.parentNode.removeChild(card)});
+    cards=Array.prototype.slice.call(lista.querySelectorAll('.cartao'));
+    var total=document.getElementById('qServ');
+    var ativos=document.getElementById('qServAtivos');
+    if(total)total.textContent=String(cards.length);
+    if(ativos)ativos.textContent=String(cards.filter(function(card){return !!card.querySelector('.sinal.ativo')}).length);
+  }
+  function instalar(){
+    var lista=document.getElementById('listaServicos');
+    if(!lista)return;
+    sincronizar();
+    if(window.MutationObserver){
+      var agendado=false;
+      new MutationObserver(function(){
+        if(agendado)return;
+        agendado=true;
+        requestAnimationFrame(function(){agendado=false;sincronizar()});
+      }).observe(lista,{childList:true,subtree:true});
+    }
+    document.addEventListener('click',function(e){
+      if(e.target&&e.target.id==='abaServ')setTimeout(sincronizar,0);
+    },true);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',instalar,{once:true});
+  else instalar();
+})();
+</script>
+
 </body>
 </html>
