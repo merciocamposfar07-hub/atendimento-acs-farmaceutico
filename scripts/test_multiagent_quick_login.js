@@ -24,6 +24,10 @@ assert.match(centralJs,/if\(mode===['"]tacs['"]\)selectedAreaId=normArea\(areas\
 
 assert.match(quickBackend,/admin_territorio_login_pin/,'Backend deve oferecer entrada rápida por PIN.');
 assert.match(quickBackend,/admin_territorio_login_tacs/,'Primeiro acesso com CNS + PIN deve continuar suportado.');
+assert.match(quickBackend,/admin_territorio_criar_chave_rapida/,
+  'A ativação da chave rápida deve funcionar mesmo se o login CNS+PIN for tratado por outro módulo.');
+assert.match(quickBackend,/tacsTerritorioV1ValidarSessaoToken_\(p,false\)/,
+  'A chave rápida pós-login deve exigir uma sessão territorial TACS válida.');
 assert.match(quickBackend,/LOGIN_RAPIDO_V1/,'Chave rápida deve ser assinada com domínio próprio.');
 assert.match(quickBackend,/tacsTerritorioV1Hash_\(dispositivo\)/,
   'A chave rápida precisa estar vinculada ao aparelho.');
@@ -40,6 +44,8 @@ assert.match(quickFrontend,/payload=\{quickKey:profile\.quickKey,pin:pin,disposi
 assert.match(quickFrontend,/action='admin_territorio_login_tacs'/);
 assert.match(quickFrontend,/payload=\{cns:cns,pin:pin,dispositivo:device\}/,
   'CNS deve ser usado somente quando o aparelho ainda não possui identificação rápida.');
+assert.match(quickFrontend,/post\('admin_territorio_criar_chave_rapida',\{territorioToken:r\.token,dispositivo:device\}/,
+  'Após o primeiro login, a Central deve ativar o acesso rápido se a resposta inicial ainda não trouxer a chave.');
 assert.doesNotMatch(quickFrontend,/localStorage\.setItem\([^\n]*cns/i,
   'O CNS não deve ser persistido no armazenamento do navegador para o acesso rápido.');
 assert.match(quickFrontend,/Usar outro TACS neste aparelho/,
