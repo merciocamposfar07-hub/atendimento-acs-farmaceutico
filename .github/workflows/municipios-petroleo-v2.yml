@@ -1,0 +1,63 @@
+name: Municipios petroleo V2
+
+on:
+  push:
+    paths:
+      - 'scripts/fix_municipios_petroleo_cards_v1.py'
+      - '.github/workflows/municipios-petroleo-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Aplicar ajuste visual
+        run: python3 scripts/fix_municipios_petroleo_cards_v1.py
+
+      - name: Validar escopo e CSS
+        shell: bash
+        run: |
+          grep -Fq ".card,.area-row{min-width:0;border:2px solid var(--blue);border-radius:18px;background:linear-gradient(145deg,var(--p),var(--p2));color:#fff" painel-oficial-organizacoes-municipios.html
+          grep -Fq ".newbox{min-width:0;border:2px solid var(--blue);border-radius:18px" painel-oficial-organizacoes-municipios.html
+          grep -Fq ".newbox h2,.newbox label,.card .body label,.area-row label{color:#fff}" painel-oficial-organizacoes-municipios.html
+          grep -Fq "painel-oficial-organizacoes-municipios.html?v=20260816-municipios-petroleo-v1" central-administrativa-tacs.js
+          git diff --check
+          git diff --name-only | grep -Fxq 'painel-oficial-organizacoes-municipios.html'
+          git diff --name-only | grep -Fxq 'central-administrativa-tacs.js'
+          git diff --name-only | grep -Fxq 'central-administrativa-tacs.html'
+          test "$(git diff --name-only | wc -l | tr -d ' ')" = "3"
+
+      - name: Publicar ajuste
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add painel-oficial-organizacoes-municipios.html central-administrativa-tacs.js central-administrativa-tacs.html
+          git commit -m 'Aplica azul-petroleo aos baloes de Municipios e organizacoes'
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Aguardar Pages e validar ao vivo
+        shell: bash
+        run: |
+          URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html'
+          for i in $(seq 1 60); do
+            PAGE=$(curl -fsSL "${URL}?v=20260816-municipios-petroleo-v1&probe=${i}-$(date +%s)" || true)
+            if printf '%s' "$PAGE" | grep -Fq ".card,.area-row{min-width:0;border:2px solid var(--blue);border-radius:18px;background:linear-gradient(145deg,var(--p),var(--p2));color:#fff"; then
+              printf '%s' "$PAGE" | grep -Fq ".newbox{min-width:0;border:2px solid var(--blue);border-radius:18px"
+              printf '%s' "$PAGE" | grep -Fq ".newbox h2,.newbox label,.card .body label,.area-row label{color:#fff}"
+              echo 'MUNICIPIOS_PETROLEO_LIVE_OK'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'A revisao nao apareceu no GitHub Pages.' >&2
+          exit 1
