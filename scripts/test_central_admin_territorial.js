@@ -42,8 +42,11 @@ assert.match(js,/admin_notificacoes_saude/);
 assert.match(js,/painel-oficial-recados-campanhas\.html\?area=/);
 assert.doesNotMatch(js,/moduleUrl\(name\)[\s\S]*name==='notificacoes'/,
   'A rota do painel redundante de Saúde das notificações deve ser removida.');
-assert.match(html,/central-administrativa-tacs\.js\?v=20260816-multimunicipio-v1/,
-  'A Central deve invalidar o cache após adicionar a gestão multi-município.');
+const centralScript=html.match(/central-administrativa-tacs\.js\?v=([A-Za-z0-9._-]+)/);
+assert.ok(centralScript&&/^20260816-[A-Za-z0-9._-]+$/.test(centralScript[1]),
+  'A Central deve carregar o JavaScript com revisão explícita e atual para invalidar o cache.');
+assert.notEqual(centralScript&&centralScript[1],'20260816-multimunicipio-v1',
+  'A Central não pode voltar à revisão anterior à padronização visual e de contraste.');
 assert.match(js,/new URLSearchParams\(location\.search\)/,
   'A Central deve reconhecer o modo de acesso informado pelo link.');
 assert.match(js,/TACS_ONLY=String\(URL_PARAMS\.get\('acesso'\)\|\|''\)\.toLowerCase\(\)==='tacs'/,
