@@ -1,0 +1,67 @@
+name: Padronizacao visual petroleo V2
+
+on:
+  push:
+    paths:
+      - 'scripts/padronizacao_visual_petroleo_v2.py'
+      - '.github/workflows/padronizacao-visual-petroleo-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Aplicar padronizacao visual
+        run: python3 scripts/padronizacao_visual_petroleo_v2.py
+
+      - name: Validar escopo visual
+        run: |
+          grep -q 'PADRAO_VISUAL_PETROLEO_V2_MUNICIPIOS' painel-oficial-organizacoes-municipios.html
+          grep -q 'area-row .btn{background:#fff!important;color:var(--p)!important' painel-oficial-organizacoes-municipios.html
+          grep -q 'PADRAO_VISUAL_PETROLEO_V2_PROFISSIONAIS' teste-v1/painel-profissionais-servicos-v1.html
+          grep -q 'PADRAO_VISUAL_PETROLEO_V2_AGENDAS' painel-oficial-agendas-vagas.html
+          grep -q 'PADRAO_VISUAL_PETROLEO_V2_MORADORES' teste-v1/painel-moradores-v2.html
+          grep -q '20260816-padrao-petroleo-v2' central-administrativa-tacs.js
+          grep -q '20260816-padrao-petroleo-v2' central-administrativa-tacs.html
+          grep -q '20260816-petroleo-v2' painel-oficial-profissionais-servicos.html
+
+      - name: Confirmar que somente arquivos visuais esperados mudaram
+        run: |
+          ALLOWED='central-administrativa-tacs.html|central-administrativa-tacs.js|painel-oficial-organizacoes-municipios.html|painel-oficial-profissionais-servicos.html|painel-oficial-agendas-vagas.html|teste-v1/painel-profissionais-servicos-v1.html|teste-v1/painel-moradores-v2.html'
+          git diff --name-only | grep -Ev "^($ALLOWED)$" && { echo 'Arquivo fora do escopo visual foi alterado.'; exit 1; } || true
+
+      - name: Publicar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add central-administrativa-tacs.html central-administrativa-tacs.js painel-oficial-organizacoes-municipios.html painel-oficial-profissionais-servicos.html painel-oficial-agendas-vagas.html teste-v1/painel-profissionais-servicos-v1.html teste-v1/painel-moradores-v2.html
+          git commit -m 'Padroniza cards administrativos em azul-petroleo V2' || true
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Aguardar GitHub Pages
+        run: |
+          BASE='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico'
+          for i in $(seq 1 60); do
+            M=$(curl -fsSL "$BASE/painel-oficial-organizacoes-municipios.html?probe=$i-$(date +%s)" || true)
+            P=$(curl -fsSL "$BASE/teste-v1/painel-profissionais-servicos-v1.html?probe=$i-$(date +%s)" || true)
+            A=$(curl -fsSL "$BASE/painel-oficial-agendas-vagas.html?probe=$i-$(date +%s)" || true)
+            R=$(curl -fsSL "$BASE/teste-v1/painel-moradores-v2.html?probe=$i-$(date +%s)" || true)
+            if echo "$M" | grep -q 'PADRAO_VISUAL_PETROLEO_V2_MUNICIPIOS' && \
+               echo "$P" | grep -q 'PADRAO_VISUAL_PETROLEO_V2_PROFISSIONAIS' && \
+               echo "$A" | grep -q 'PADRAO_VISUAL_PETROLEO_V2_AGENDAS' && \
+               echo "$R" | grep -q 'PADRAO_VISUAL_PETROLEO_V2_MORADORES'; then
+              echo 'PADRONIZACAO_VISUAL_PUBLICADA_OK'; exit 0
+            fi
+            sleep 5
+          done
+          echo 'A revisão visual não apareceu no GitHub Pages no prazo.' >&2
+          exit 1
