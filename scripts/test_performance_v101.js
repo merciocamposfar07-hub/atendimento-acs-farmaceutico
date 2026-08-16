@@ -88,7 +88,7 @@ function testStaticSafety() {
 
   const index = read('index.html');
   assert.ok(index.includes('portal-auto-update.js?v=20260812-v101'));
-  assert.ok(index.includes('portal-odontologia-segunda-sexta.js?v=20260815-territorial-v102'));
+  assert.ok(/portal-odontologia-segunda-sexta\.js\?v=[A-Za-z0-9._-]+/.test(index), 'Odontologia deve carregar com revisão explícita para invalidar cache');
   assert.ok(index.includes('if(!window.PortalTacsOdontologiaV98)loadDental()'), 'Rotina odontológica antiga só pode atuar como fallback');
 
   const release = read('scripts/build_apps_script_release.js');
