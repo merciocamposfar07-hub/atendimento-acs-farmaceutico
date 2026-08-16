@@ -1,16 +1,17 @@
 from pathlib import Path
 import subprocess
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 WRAPPER = ROOT / 'painel-oficial-recados-campanhas.html'
 BASE = ROOT / 'teste-v1' / 'painel-recados-campanhas-v1.html'
+MONTH_JS = ROOT / 'campanhas-periodo-v1.js'
 CENTRAL_JS = ROOT / 'central-administrativa-tacs.js'
 CENTRAL_HTML = ROOT / 'central-administrativa-tacs.html'
 REV = '20260816-recados-live-v3'
 
 # 1) Volta o carregador de Recados/Campanhas exatamente ao último estado conhecido
-# como funcional antes da inclusão dos meses. A extensão mensal passa a existir no
-# painel-base, depois do script principal, para nunca bloquear o login/abertura.
+# como funcional antes da inclusão dos meses. O carregador não recebe extensões novas.
 old_wrapper = subprocess.check_output([
     'git', 'show',
     'a1d12621fff3a7ee9f611ae1cddf6154cfbf2fa2:painel-oficial-recados-campanhas.html'
@@ -36,11 +37,13 @@ force_css = '''\n<style id="recadosPetroleoFixoV3">\n.preferenciaVisual,#alterna
 if 'recadosPetroleoFixoV3' not in s:
     s = s.replace('</head>', force_css + '</head>', 1)
 
-month_tag = f'<script src="../campanhas-periodo-v1.js?v={REV}"></script>'
-# Remove qualquer inclusão antiga dessa extensão no painel-base e reinstala uma única vez.
-import re
+# A organização mensal entra somente DEPOIS do script principal e de forma inline.
+# Isso remove uma segunda requisição de script e impede a extensão de bloquear o login.
 s = re.sub(r'\s*<script src="\.\./campanhas-periodo-v1\.js\?v=[^"]+"></script>\s*', '\n', s)
-s = s.replace('</body>', month_tag + '\n</body>', 1)
+s = re.sub(r'\n?<script id="campanhasPeriodoInlineV3">[\s\S]*?</script>\n?', '\n', s, count=1)
+month_code = MONTH_JS.read_text(encoding='utf-8')
+month_inline = '<script id="campanhasPeriodoInlineV3">\n' + month_code + '\n</script>\n'
+s = s.replace('</body>', month_inline + '</body>', 1)
 BASE.write_text(s, encoding='utf-8')
 
 # 3) Invalidação de cache somente do módulo Recados/Campanhas na Central.
