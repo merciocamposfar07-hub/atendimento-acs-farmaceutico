@@ -26,11 +26,14 @@ assert.doesNotMatch(moradores,/portal-auto-update\.js/,'Moradores não deve carr
 assert.match(moradores,/painel-moradores-transport-v2\.js\?v=20260813-admin-v103/);
 const warm=read('admin-warmup.js');
 assert.doesNotMatch(warm,/portal-auto-update\.js/,'Warmup administrativo não deve injetar atualização do Portal público');
-for(const file of ['painel-oficial-profissionais-servicos.html','painel-oficial-recados-campanhas.html']){
-  const t=read(file);
-  assert.match(t,/cache:'default'/,file+' deve reutilizar HTML versionado');
-  assert.doesNotMatch(t,/cache:'no-store'/,file+' não deve forçar download integral');
-  assert.match(t,file.includes('recados')?/20260814-receipt-v110/:/20260815-autonomia-v2/);
-}
+const profissionais=read('painel-oficial-profissionais-servicos.html');
+assert.match(profissionais,/cache:'default'/,'Profissionais deve reutilizar HTML versionado');
+assert.doesNotMatch(profissionais,/cache:'no-store'/,'Profissionais não deve forçar download integral');
+assert.match(profissionais,/20260816-profissionais-v3|20260815-autonomia-v2/);
+const recados=read('painel-oficial-recados-campanhas.html');
+assert.match(recados,/admin_publicacoes_dados/,'Recados standalone deve manter a rota administrativa territorial');
+assert.match(recados,/ponteConteudoV102_/,'Recados standalone deve manter transporte POST compatível com Safari');
+assert.match(recados,/admin-warmup\.js\?v=20260813-admin-v103/,'Recados standalone deve manter pre-aquecimento');
+assert.doesNotMatch(recados,/document\.write/,'Recados standalone não deve retornar ao carregador frágil');
 assert.match(read('painel-oficial-agendas-vagas.html'),/admin-warmup\.js\?v=20260813-admin-v103/);
 console.log('ADMIN_LOGIN_V103_TRANSPORT_TESTS_OK');
