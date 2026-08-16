@@ -40,13 +40,17 @@ body.tema-petroleo .saude-resumo .saude-numero,body.tema-petroleo .saude-aparelh
 @media(max-width:650px){.saude-resumo{grid-template-columns:1fr 1fr}.saude-acoes{grid-template-columns:1fr}.saude-aparelho-topo{display:block}.saude-status{margin-top:8px}}
 </style>
 
-<style id="recadosStandaloneV6Style">
+<style id="recadosStableV7Style">
 .preferenciaVisual,#alternarContraste{display:none!important}
 .numero,.areaEnvio,.item{background:linear-gradient(145deg,#073a55,#0b5878)!important;border-color:#69c7e7!important;color:#fff!important;box-shadow:0 8px 18px rgba(7,58,85,.18)!important}
 .numero span,.areaEnvio p,.item .sub{color:#d8eef7!important}
 .item .corpo{border-top-color:rgba(216,238,247,.35)!important}
 .botao.verde{background:linear-gradient(145deg,#073a55,#0b5878)!important;color:#fff!important}
-@media(max-width:430px){.sinal{white-space:normal!important;text-align:center;max-width:38%;overflow-wrap:anywhere}.item summary>div{min-width:0;flex:1 1 auto}}
+.item summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:start!important;gap:10px!important}
+.item summary>div{min-width:0!important}
+.sinal{justify-self:end!important;align-self:start!important;min-width:76px!important;max-width:none!important;white-space:nowrap!important;text-align:center!important;overflow-wrap:normal!important;word-break:normal!important;line-height:1.2!important}
+.botao,.aba,.sinal{touch-action:manipulation}
+@media(max-width:430px){.item summary{grid-template-columns:minmax(0,1fr) auto!important}.sinal{min-width:72px!important;font-size:.78rem!important;padding:6px 8px!important}}
 </style>
 </head>
 <body>
@@ -215,7 +219,7 @@ var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!teste
 }());
 </script>
 
-<script id="tacsOnlyRecadosV6">
+<script id="tacsOnlyRecadosV7">
 (function(){
   try{
     var p=new URLSearchParams(location.search||'');
@@ -230,19 +234,14 @@ var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!teste
 }());
 </script>
 
-<script id="campanhasMesLoaderV6">
+<script id="campanhasMesLoaderV7">
 (function(){
-  var tentativa=0;
   function carregar(){
-    if(window.__portalTacsCampanhasPeriodoV1)return;
-    tentativa+=1;
+    if(window.__portalTacsCampanhasPeriodoV2)return;
     var s=document.createElement('script');
-    s.src='/atendimento-acs-farmaceutico/campanhas-periodo-v1.js?v=20260816-recados-standalone-v6&t='+tentativa;
+    s.src='/atendimento-acs-farmaceutico/campanhas-periodo-v2.js?v=20260816-recados-stable-v7';
     s.async=true;
-    s.onerror=function(){
-      if(tentativa<4){setTimeout(carregar,500*tentativa);return}
-      console.error('Campanhas no mês não pôde ser carregado.');
-    };
+    s.onerror=function(){console.error('Campanhas por mês não pôde ser carregado.')};
     document.head.appendChild(s);
   }
   var aba=document.getElementById('abaCampanhas');
