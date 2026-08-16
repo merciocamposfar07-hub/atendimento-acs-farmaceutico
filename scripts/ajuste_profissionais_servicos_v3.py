@@ -104,6 +104,6 @@ assert MARKER in final
 assert 'ATENDIMENTO ODONTOLOGICO DE EMERGENCIA' in final
 assert '.resumo .numero{' in final
 assert 'background:linear-gradient(145deg,var(--petroleo),var(--petroleo2))!important' in final
-assert f'panel-profissionais-servicos-v1.html?v={REV}' in OFFICIAL.read_text(encoding='utf-8')
+assert f'painel-profissionais-servicos-v1.html?v={REV}' in OFFICIAL.read_text(encoding='utf-8')
 assert f'&v={REV}' in CENTRAL_JS.read_text(encoding='utf-8')
 assert f'central-administrativa-tacs.js?v={REV}' in CENTRAL_HTML.read_text(encoding='utf-8')
