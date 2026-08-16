@@ -6,11 +6,11 @@ const PATHNAME=process.env.RECADOS_LIVE_PATH||'painel-oficial-recados-campanhas.
 const BASE='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/'+PATHNAME;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-async function open(query){
+async function openOnce(query,attempt){
   const errors=[];const vc=new VirtualConsole();
   vc.on('jsdomError',e=>errors.push('jsdom:'+String(e&&e.message||e)));
   vc.on('error',e=>errors.push('console:'+String(e)));
-  const url=BASE+'?'+query+'&v='+REV+'&_='+Date.now();
+  const url=BASE+'?'+query+'&v='+REV+'&_='+Date.now()+'-'+attempt;
   const dom=await JSDOM.fromURL(url,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
     w.alert=()=>{};w.confirm=()=>false;
     w.matchMedia=w.matchMedia||(()=>({matches:false,addListener(){},removeListener(){},addEventListener(){},removeEventListener(){}}));
@@ -18,6 +18,13 @@ async function open(query){
   }});
   await sleep(1200);
   return {dom,errors,url};
+}
+async function open(query){
+  let last;
+  for(let attempt=1;attempt<=5;attempt++){
+    try{return await openOnce(query,attempt)}catch(e){last=e;console.log('OPEN_RETRY_'+attempt+' '+String(e&&e.message||e));await sleep(700*attempt)}
+  }
+  throw last;
 }
 
 (async()=>{
@@ -38,7 +45,7 @@ async function open(query){
   assert(w.getComputedStyle(contrast).display==='none'||w.getComputedStyle(contrast.parentElement).display==='none','Botão de contraste está visível.');
 
   d.getElementById('abaCampanhas').click();
-  for(let i=0;i<40;i++){if(d.querySelectorAll('#campMonthTabs .camp-month-tab').length===12)break;await sleep(150)}
+  for(let i=0;i<50;i++){if(d.querySelectorAll('#campMonthTabs .camp-month-tab').length===12)break;await sleep(150)}
   const months=[...d.querySelectorAll('#campMonthTabs .camp-month-tab')].map(x=>x.textContent.trim());
   assert.deepStrictEqual(months,['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],'Campanhas no mês não carregou os 12 meses. Erros: '+a.errors.join(' | '));
   assert(d.getElementById('campPeriodBox'),'Bloco Campanhas no mês ausente.');
