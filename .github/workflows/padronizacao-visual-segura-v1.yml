@@ -1,0 +1,80 @@
+name: Padronização visual segura V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'admin-ui-standard.inline.css'
+      - 'scripts/apply_admin_ui_standard_v1.py'
+      - 'scripts/test_admin_ui_standard_v1.js'
+      - '.github/workflows/padronizacao-visual-segura-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: padronizacao-visual-segura-v1
+  cancel-in-progress: false
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Aplicar padrão visual inline
+        run: python3 scripts/apply_admin_ui_standard_v1.py
+
+      - name: Validar contrato visual
+        run: node scripts/test_admin_ui_standard_v1.js
+
+      - name: Rodar regressão completa do projeto
+        run: npm test
+
+      - name: Garantir escopo somente visual nos painéis
+        shell: bash
+        run: |
+          set -euo pipefail
+          allowed='^(central-administrativa-tacs\.html|painel-oficial-organizacoes-municipios\.html|painel-oficial-agendas-vagas\.html|painel-oficial-profissionais-servicos\.html|painel-oficial-recados-campanhas\.html|painel-oficial-tacs-areas\.html|teste-v1/painel-moradores-v2\.html|teste-v1/painel-tacs-areas-v1\.html)$'
+          changed="$(git diff --name-only)"
+          printf '%s\n' "$changed"
+          if [ -n "$changed" ]; then
+            while IFS= read -r file; do
+              [ -z "$file" ] && continue
+              echo "$file" | grep -Eq "$allowed" || { echo "Arquivo fora do escopo visual: $file"; exit 1; }
+            done <<< "$changed"
+          fi
+
+      - name: Publicar painéis padronizados
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add central-administrativa-tacs.html \
+                  painel-oficial-organizacoes-municipios.html \
+                  painel-oficial-agendas-vagas.html \
+                  painel-oficial-profissionais-servicos.html \
+                  painel-oficial-recados-campanhas.html \
+                  painel-oficial-tacs-areas.html \
+                  teste-v1/painel-moradores-v2.html \
+                  teste-v1/painel-tacs-areas-v1.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Aplica padrão visual administrativo seguro V1'
+          for tentativa in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((tentativa*2))
+          done
+          exit 1
