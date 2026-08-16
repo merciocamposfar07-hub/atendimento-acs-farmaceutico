@@ -1,5 +1,5 @@
-release=autonomia-territorial-profissionais-servicos-1.0.0
-requested_at=2026-08-16T02:16:00Z
-source=estabilizacao-profissionais-servicos-e-agenda
-commit=416e0afbd12eda07e21e8dca269327c6ddf08c40
-attempt=6
+release=login-rapido-tacs-pin-1.0.0
+requested_at=2026-08-16T02:58:30Z
+source=multiagente-acesso-rapido-pin
+commit=0d5255644663f0ada7637435620906fa62bbe928
+attempt=1
