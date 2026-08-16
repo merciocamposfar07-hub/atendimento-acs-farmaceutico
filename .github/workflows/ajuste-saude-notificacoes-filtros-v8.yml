@@ -1,0 +1,76 @@
+name: Ajuste saude notificacoes filtros V8
+
+on:
+  push:
+    paths:
+      - 'scripts/ajuste_saude_notificacoes_filtros_v8.py'
+      - '.github/workflows/ajuste-saude-notificacoes-filtros-v8.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar ajuste autorizado
+        run: python scripts/ajuste_saude_notificacoes_filtros_v8.py
+
+      - name: Validar escopo e integridade
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- . ':(exclude)painel-oficial-recados-campanhas.html' ':(exclude)central-administrativa-tacs.js' ':(exclude)central-administrativa-tacs.html'
+          grep -q 'SAUDE_NOTIFICACOES_FILTROS_V8' painel-oficial-recados-campanhas.html
+          grep -q 'data-saude-filtro="ATIVO"' painel-oficial-recados-campanhas.html
+          grep -q 'data-saude-filtro="INATIVO"' painel-oficial-recados-campanhas.html
+          grep -q 'data-saude-filtro="REPARO"' painel-oficial-recados-campanhas.html
+          grep -q 'data-saude-filtro="SEM_CONFIRMACAO"' painel-oficial-recados-campanhas.html
+          grep -q 'Contato cadastrado:' painel-oficial-recados-campanhas.html
+          grep -q 'Última checagem:' painel-oficial-recados-campanhas.html
+          grep -q 'Referência técnica:' painel-oficial-recados-campanhas.html
+          grep -q 'Fechar lista' painel-oficial-recados-campanhas.html
+          grep -q '20260816-recados-saude-filtros-v8' central-administrativa-tacs.js
+          grep -q '20260816-recados-saude-filtros-v8' central-administrativa-tacs.html
+
+      - name: Publicar
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Nenhuma alteracao pendente.'
+            exit 0
+          fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add painel-oficial-recados-campanhas.html central-administrativa-tacs.js central-administrativa-tacs.html
+          git commit -m 'Organiza aparelhos por indicadores clicaveis'
+          git push
+
+      - name: Validar revisao publicada no GitHub Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?v=20260816-recados-saude-filtros-v8'
+          ok=0
+          for i in $(seq 1 30); do
+            page="$(curl -fsSL --max-time 20 "${URL}&_=${RANDOM}${RANDOM}" || true)"
+            if printf '%s' "$page" | grep -q 'SAUDE_NOTIFICACOES_FILTROS_V8' \
+              && printf '%s' "$page" | grep -q 'data-saude-filtro="ATIVO"' \
+              && printf '%s' "$page" | grep -q 'data-saude-filtro="REPARO"' \
+              && printf '%s' "$page" | grep -q 'Fechar lista' \
+              && printf '%s' "$page" | grep -q 'Contato cadastrado:' \
+              && printf '%s' "$page" | grep -q 'Última checagem:' \
+              && printf '%s' "$page" | grep -q 'Referência técnica:'; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ok" = 1
