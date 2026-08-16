@@ -6,6 +6,7 @@ const root=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(root,f),'utf8');
 const html=read('central-administrativa-tacs.html');
 const js=read('central-administrativa-tacs.js');
+const multiPage=read('painel-oficial-organizacoes-municipios.html');
 const notificationHealthBackend=read('apps-script/ZZZZ_22_SaudeNotificacoesV1.gs');
 const notificationHealthSource=read('teste-v1/painel-recados-campanhas-v1.html');
 const professionalsPage=read('teste-v1/painel-profissionais-servicos-v1.html');
@@ -30,6 +31,8 @@ assert.match(html,/data-module="agendas" data-permission="AGENDAS_GERENCIAR"/);
 assert.match(html,/data-module="profissionais" data-permission="PROFISSIONAIS_GERENCIAR"/);
 assert.doesNotMatch(html,/data-module="agendas" data-admin-only="true"/);
 assert.doesNotMatch(html,/data-module="profissionais" data-admin-only="true"/);
+assert.match(html,/data-module="municipios" data-admin-only="true"/,
+  'Gestão multi-município deve existir somente como módulo do administrador geral.');
 assert.match(html,/id="viewerBack"/);
 assert.match(js,/portalTacsAdminTokenV1/);
 assert.match(js,/portalTacsTerritorioTokenV1/);
@@ -39,8 +42,8 @@ assert.match(js,/admin_notificacoes_saude/);
 assert.match(js,/painel-oficial-recados-campanhas\.html\?area=/);
 assert.doesNotMatch(js,/moduleUrl\(name\)[\s\S]*name==='notificacoes'/,
   'A rota do painel redundante de Saúde das notificações deve ser removida.');
-assert.match(html,/central-administrativa-tacs\.js\?v=20260815-v11-acesso-tacs-exclusivo/,
-  'A Central deve invalidar o cache após criar o acesso exclusivo do TACS.');
+assert.match(html,/central-administrativa-tacs\.js\?v=20260816-multimunicipio-v1/,
+  'A Central deve invalidar o cache após adicionar a gestão multi-município.');
 assert.match(js,/new URLSearchParams\(location\.search\)/,
   'A Central deve reconhecer o modo de acesso informado pelo link.');
 assert.match(js,/TACS_ONLY=String\(URL_PARAMS\.get\('acesso'\)\|\|''\)\.toLowerCase\(\)==='tacs'/,
@@ -68,6 +71,15 @@ assert.match(professionalsPage,/escopo:'profissionais'/,
   'Profissionais deve solicitar somente dados da própria área.');
 assert.match(js,/painel-oficial-tacs-areas\.html\?v=20260815-csv-auto-v5/,
   'A Central deve carregar a confirmação atualizada do painel de TACS.');
+assert.match(js,/painel-oficial-organizacoes-municipios\.html\?v=/,
+  'A Central deve abrir o painel global de organizações e municípios.');
+assert.match(multiPage,/ADMINISTRADOR GERAL/);
+assert.match(multiPage,/admin_multimunicipio_dados/);
+assert.match(multiPage,/admin_multimunicipio_salvar_organizacao/);
+assert.match(multiPage,/admin_multimunicipio_salvar_municipio/);
+assert.match(multiPage,/admin_multimunicipio_vincular_area/);
+assert.match(multiPage,/territoryToken&&!token/,
+  'O painel global deve bloquear a interface quando existir apenas sessão territorial TACS.');
 assert.match(territoryWrapper,/painel-tacs-areas-v1\.html\?v=20260815-csv-auto-v5/,
   'O painel oficial deve invalidar o cache da confirmação corrigida.');
 assert.match(publicPortal,/\.hero-actions\{grid-template-columns:1fr;margin:0;border-left:0;border-right:0;border-radius:0\}/,
@@ -83,4 +95,4 @@ assert.match(js,/Number\(c\.ativos\|\|0\)\+' aptos/,
 assert.doesNotMatch(js,/Number\(c\.aptos\|\|0\)\+' aptos/,
   'A Central não pode usar contagens.aptos, pois esse campo não existe no backend.');
 assert.doesNotMatch(js,/subscriptionId\s*[:=]\s*['"][0-9a-f-]{20,}/i);
-console.log('Central Administrativa TACS: um ícone, sessão territorial, permissões e Saúde Geral validados.');
+console.log('Central Administrativa TACS: sessão territorial, permissões, Saúde Geral e gestão multi-município ADMIN_GERAL validados.');
