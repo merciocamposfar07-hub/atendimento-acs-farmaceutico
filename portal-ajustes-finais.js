@@ -499,7 +499,42 @@
     ctx.closePath();
   }
 
+  function escapeRegExp(value) {
+    return String(value == null ? '' : value).replace(/[.*+?^$(){}|[\]\\]/g, '\\$&');
+  }
+
+  function corporateRequest(data) {
+    var service = clean(data.category).replace(/^Solicitar\s+/i, '') || 'Serviço informado';
+    var raw = clean(data.description);
+    [clean(data.category), service].forEach(function (prefix) {
+      if (!prefix) return;
+      raw = raw.replace(new RegExp('^' + escapeRegExp(prefix) + '\\s*(?:[-–:]\\s*)?', 'i'), '').trim();
+    });
+    var day = '';
+    var dayMatch = raw.match(/^((?:Segunda|Terça|Terca|Quarta|Quinta|Sexta|Sábado|Sabado|Domingo)(?:-feira)?)\s*[-–]\s*/i);
+    if (dayMatch) {
+      day = clean(dayMatch[1]);
+      raw = raw.slice(dayMatch[0].length).trim();
+    }
+    var status = '';
+    var statusWithDetail = raw.match(/^Situa[cç][aã]o\s*:\s*([^:]+?)\s*:\s*(.+)$/i);
+    if (statusWithDetail) {
+      status = clean(statusWithDetail[1]);
+      raw = clean(statusWithDetail[2]);
+    } else {
+      var statusOnly = raw.match(/^Situa[cç][aã]o\s*:\s*([^–-]+?)(?:\s*[-–]\s*(.+))?$/i);
+      if (statusOnly) {
+        status = clean(statusOnly[1]);
+        raw = clean(statusOnly[2]);
+      }
+    }
+    raw = raw.replace(/\s+-\s+/g, ' – ').trim();
+    if (raw && !/[.!?]$/.test(raw)) raw += '.';
+    return { service: service, description: raw || 'Não informada.', day: day, status: status };
+  }
+
   function createPetroleumCard(data) {
+    var summary = corporateRequest(data);
     var canvas = document.createElement('canvas');
     canvas.width = 1080;
     canvas.height = 1920;
@@ -512,60 +547,65 @@
     ctx.fillRect(0, 0, 1080, 1920);
 
     ctx.fillStyle = '#8df0b4';
-    ctx.font = '900 38px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('PORTAL TACS • SOLICITAÇÃO', 60, 85);
+    ctx.font = '900 36px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('PORTAL TACS • SOLICITAÇÃO', 60, 82);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 68px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('SOLICITAÇÃO DO MORADOR', 60, 170);
+    ctx.font = '900 66px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('SOLICITAÇÃO DO MORADOR', 60, 165);
 
     ctx.fillStyle = 'rgba(255,255,255,.12)';
-    roundRect(ctx, 52, 215, 976, 205, 30);
+    roundRect(ctx, 52, 210, 976, 350, 30);
     ctx.fill();
-    ctx.fillStyle = '#8df0b4';
-    ctx.font = '900 28px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('ÁREA E RESPONSÁVEL', 82, 265);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '900 40px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    var iy = drawLines(ctx, data.areaName, 82, 318, 900, 47, 2);
-    ctx.font = '800 31px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    iy = drawLines(ctx, 'TACS: ' + data.tacsName, 82, iy + 5, 900, 38, 2);
-    ctx.fillStyle = '#d8eef7';
-    ctx.font = '700 27px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    drawLines(ctx, data.unitName, 82, Math.min(390, iy + 4), 900, 32, 1);
+    var infoY = 257;
+    function identityBlock(label, value, valueSize, maxLines) {
+      ctx.fillStyle = '#8df0b4';
+      ctx.font = '900 24px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+      ctx.fillText(label, 82, infoY);
+      infoY += 38;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '850 ' + valueSize + 'px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+      infoY = drawLines(ctx, value, 82, infoY, 890, valueSize + 7, maxLines) + 19;
+    }
+    identityBlock('ÁREA DE ATENDIMENTO', data.areaName, 38, 2);
+    identityBlock('TACS RESPONSÁVEL', data.tacsName, 31, 2);
+    identityBlock('UNIDADE DE SAÚDE', data.unitName, 29, 2);
 
     ctx.fillStyle = 'rgba(141,240,180,.13)';
-    roundRect(ctx, 52, 455, 976, 190, 30);
+    roundRect(ctx, 52, 590, 976, 180, 30);
     ctx.fill();
     ctx.fillStyle = '#8df0b4';
-    ctx.font = '900 28px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('SERVIÇO SOLICITADO', 82, 505);
+    ctx.font = '900 25px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('SERVIÇO SOLICITADO', 82, 638);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 47px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    drawLines(ctx, data.category, 82, 565, 900, 55, 2);
+    ctx.font = '900 44px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    drawLines(ctx, summary.service, 82, 698, 900, 52, 2);
 
     ctx.fillStyle = 'rgba(255,255,255,.98)';
-    roundRect(ctx, 48, 685, 984, 1010, 38);
+    roundRect(ctx, 48, 805, 984, 895, 38);
     ctx.fill();
-    var cursor = 755;
-    function block(label, value, maxLines, spacing) {
+    var cursor = 862;
+    function block(label, value, maxLines, spacing, fontSize) {
       ctx.fillStyle = '#0b5878';
-      ctx.font = '900 28px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+      ctx.font = '900 23px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
       ctx.fillText(label.toUpperCase(), 88, cursor);
-      cursor += 42;
+      cursor += 33;
       ctx.fillStyle = '#102b3c';
-      ctx.font = '800 44px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-      cursor = drawLines(ctx, value, 88, cursor, 900, 50, maxLines) + (spacing || 27);
+      var size = fontSize || 36;
+      ctx.font = '800 ' + size + 'px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+      cursor = drawLines(ctx, value, 88, cursor, 900, size + 7, maxLines) + (spacing || 18);
     }
 
-    block('Nome completo', data.name, 2, 25);
-    block('Data e horário do envio', data.sentAt, 1, 24);
-    block('Nascimento e idade', data.birth + ' • ' + data.age, 2, 24);
-    block('CPF ou CNS', data.document, 1, 24);
-    block('Localidade / comunidade', data.locality, 3, 25);
-    block('Descrição da solicitação', data.description, 5, 20);
+    block('Nome completo', data.name, 2, 17, 38);
+    block('Data e horário do envio', data.sentAt, 1, 16, 35);
+    block('Nascimento e idade', data.birth + ' • ' + data.age, 2, 16, 35);
+    block('CPF ou CNS', data.document, 1, 16, 35);
+    block('Localidade / comunidade', data.locality, 3, 18, 34);
+    block('Descrição da solicitação', summary.description, 4, 13, 34);
+    if (summary.day) block('Dia informado', summary.day, 1, 12, 32);
+    if (summary.status) block('Situação', summary.status, 1, 8, 32);
 
     ctx.fillStyle = '#8df0b4';
-    ctx.fillRect(52, 1740, 976, 7);
+    ctx.fillRect(52, 1742, 976, 7);
     ctx.fillStyle = '#ffffff';
     ctx.font = '850 31px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
     ctx.fillText('Código: ' + data.code, 60, 1810);

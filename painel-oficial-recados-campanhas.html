@@ -26,7 +26,7 @@
   <script>
   (function(){
     'use strict';
-    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-recados-campanhas-v1.html?v=20260814-receipt-v110';
+    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-recados-campanhas-v1.html?v=20260816-recados-repair-v2';
     var params=new URLSearchParams(location.search||''),TACS_ONLY=String(params.get('acesso')||'').toLowerCase()==='tacs';
     if(TACS_ONLY)sessionStorage.removeItem('portalTacsAdminTokenV1');
     var trocas=[
@@ -68,12 +68,14 @@
       var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt>';
       html=substituir(html,'<head>',bootstrap);
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
+      var visualFixo='<style id="recados-petroleo-fixo">#alternarContraste,.preferenciaVisual,.contrasteBotao{display:none!important}.botao.verde{background:linear-gradient(145deg,#073a55,#0b5878)!important;color:#fff!important}.numero,.areaEnvio,.item{background:linear-gradient(145deg,#073a55,#0b5878)!important;border-color:#69c7e7!important;color:#fff!important;box-shadow:0 8px 18px rgba(7,58,85,.18)!important}.numero span,.areaEnvio p,.item .sub{color:#d8eef7!important}.item .corpo{border-top-color:rgba(216,238,247,.35)!important}</style>';
+      html=substituir(html,'</head>',visualFixo+'</head>');
       if(TACS_ONLY){
         html=substituir(html,'<html lang="pt-BR">','<html lang="pt-BR" class="tacs-only-ui">');
         html=substituir(html,'</head>','<style id="tacs-only-recados-style">html.tacs-only-ui #loginAdminTab,html.tacs-only-ui #adminLogin{display:none!important}html.tacs-only-ui .abas{grid-template-columns:1fr!important}</style></head>');
         html=substituir(html,'</body>','<scr'+'ipt>(function(){sessionStorage.removeItem("portalTacsAdminTokenV1");var a=document.getElementById("loginAdminTab"),l=document.getElementById("adminLogin"),t=document.getElementById("loginTacsTab");if(a)a.hidden=true;if(l)l.hidden=true;if(!sessionStorage.getItem("portalTacsTerritorioTokenV1")&&t)t.click();}());<\/scr'+'ipt></body>');
       }
-      var campanhas='<scr'+'ipt src="/atendimento-acs-farmaceutico/campanhas-periodo-v1.js?v=20260816-periodo-v1"><\/scr'+'ipt>';
+      var campanhas='<scr'+'ipt src="/atendimento-acs-farmaceutico/campanhas-periodo-v1.js?v=20260816-periodo-v2"><\/scr'+'ipt>';
       html=substituir(html,'</body>',complementoStatus()+campanhas+'</body>');
       document.open();document.write(html);document.close();
     }).catch(function(erro){
