@@ -8,15 +8,15 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
 
 const backend = read('apps-script/ZZZZ_34_CampanhasPeriodoV1.gs');
 assert(/TACS_CAMPANHAS_PERIODO_V1/.test(backend), 'Campanhas: marcador do módulo ausente');
-for (const column of ['ANO','MES','VALIDADE','MUNICIPIO_ID','MUNICIPIO_NOME','ORGANIZACAO_ID','ORGANIZACAO_NOME']) {
-  assert(backend.includes(`'${column}'`), `Campanhas: coluna ${column} ausente`);
+for (const column of ['ANO','MES','VALIDADE','HORARIO','MUNICIPIO_ID','MUNICIPIO_NOME','ORGANIZACAO_ID','ORGANIZACAO_NOME']) {
+  assert(backend.includes(`'${column}'`) || backend.includes(`${column}:`), `Campanhas: coluna ${column} ausente`);
 }
 assert(/publicacoesTerritoriaisV1Salvar_=function/.test(backend), 'Campanhas: extensão de salvamento territorial ausente');
 assert(/publicacoesTerritoriaisV1Dados_=function/.test(backend), 'Campanhas: enriquecimento de leitura ausente');
 assert(/validade<inicio/.test(backend), 'Campanhas: validação de validade não encontrada');
 assert(/tacsOrganizacoesMunicipiosV1ContextoArea_/.test(backend), 'Campanhas: contexto municipal não deriva da área do servidor');
 
-const frontend = read('campanhas-periodo-v1.js');
+const frontend = read('campanhas-periodo-v2.js');
 for (const month of ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']) {
   assert(frontend.includes(month), `Campanhas: aba ${month} ausente`);
 }
@@ -26,15 +26,19 @@ assert(frontend.includes("appendHidden(form,'ano'"), 'Campanhas: ano não é env
 assert(frontend.includes("appendHidden(form,'mes'"), 'Campanhas: mês não é enviado');
 assert(frontend.includes("appendHidden(form,'validade'"), 'Campanhas: validade não é enviada');
 assert(frontend.includes('ORGANIZACAO_NOME'), 'Campanhas: organização não aparece no contexto');
+assert(frontend.includes('min-inline-size:0'), 'Campanhas: proteção contra extravasamento da validade no Safari ausente');
 
-const wrapper = read('painel-oficial-recados-campanhas.html');
+const official = read('painel-oficial-recados-campanhas.html');
+assert(official.includes('admin_publicacoes_dados'), 'Painel oficial: versão standalone territorial ausente');
+assert(!official.includes('document.write'), 'Painel oficial: carregador legado frágil foi reintroduzido');
+assert(official.includes('campanhas-periodo-v2.js'), 'Painel oficial: extensão mensal V2 não está carregada');
+assert(official.includes('name="horario"'), 'Painel oficial: horário editável de recados/campanhas ausente');
+assert(official.includes('recados-campanhas-whatsapp-card-v9.js'), 'Painel oficial: compartilhamento em card azul-petróleo ausente');
+assert(official.includes('.preferenciaVisual,#alternarContraste{display:none!important'), 'Painel oficial: controle de contraste voltou a ficar visível');
+
 const base = read('teste-v1/painel-recados-campanhas-v1.html');
-assert(wrapper.includes('painel-recados-campanhas-v1.html?v=20260816-recados-live-v3'), 'Painel oficial: carregador não aponta para a revisão segura');
-assert(!wrapper.includes('campanhas-periodo-v1.js'), 'Painel oficial: extensão mensal não deve ser injetada no carregador');
-assert(base.includes('id="campanhasPeriodoInlineV3"'), 'Painel-base: extensão mensal inline ausente');
-assert(base.includes('Campanhas no mês'), 'Painel-base: organização mensal não foi incorporada');
-assert(base.includes('recadosPetroleoFixoV3'), 'Painel-base: padrão petróleo fixo ausente');
-assert(base.includes('.preferenciaVisual{display:none!important'), 'Painel-base: controle de contraste ainda visível');
+assert(base.includes('id="campanhasPeriodoInlineV3"'), 'Painel-base legado: extensão mensal inline ausente');
+assert(base.includes('Campanhas no mês'), 'Painel-base legado: organização mensal não foi preservada');
 
 const portal = read('portal-ajustes-finais.js');
 assert(portal.includes("#sendWrittenTacs,.tacs-written-button{display:none!important}"), 'Portal: botão escrito antigo não está bloqueado');
@@ -55,4 +59,4 @@ assert(municipal.includes('Vínculo salvo:'), 'Municípios: mensagem nominal de 
 assert(/\.signal\{[^}]*background:var\(--p\)/.test(municipal), 'Municípios: balão de status não usa azul-petróleo');
 assert(!municipal.includes('<button id="portalTacsContrastToggleV1"'), 'Municípios: botão de contraste foi reintroduzido');
 
-console.log('Campanhas/portal V3: OK — meses preservados sem interferir na abertura do painel.');
+console.log('Campanhas/portal V9: meses, validade, horário e painel standalone preservados.');
