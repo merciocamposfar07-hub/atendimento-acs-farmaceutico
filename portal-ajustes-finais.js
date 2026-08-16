@@ -1,8 +1,6 @@
 (function () {
   'use strict';
 
-  var WHATSAPP_NUMBER = '5581989613130';
-  var TACS_NAME = 'Mércio José Campos dos Santos';
   var DENTAL_API = String(window.DENTAL_AGENDA_API_URL || '').trim();
   var submissionCode = '';
   var reservedSelection = '';
@@ -22,15 +20,17 @@
     return String(value == null ? '' : value).trim();
   }
 
-  function digits(value) {
-    return clean(value).replace(/\D/g, '');
-  }
-
   function normalize(value) {
     var text = clean(value).toLowerCase();
     return text.normalize
       ? text.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       : text;
+  }
+
+  function normalizeArea(value) {
+    var text = clean(value).toUpperCase();
+    if (text.normalize) text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return text.replace(/[^A-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
   }
 
   function recifeParts() {
@@ -129,14 +129,10 @@
     var afterMonths = addMonths(afterYears, months);
     var days = Math.floor((utcStamp(today) - utcStamp(afterMonths)) / 86400000);
 
-    if (years >= 2) {
-      return years + (years === 1 ? ' ano' : ' anos');
-    }
-
+    if (years >= 2) return years + ' anos';
     if (years === 1) {
       return '1 ano' + (months ? ' e ' + months + (months === 1 ? ' mês' : ' meses') : '');
     }
-
     return months + (months === 1 ? ' mês' : ' meses') +
       (days ? ' e ' + days + (days === 1 ? ' dia' : ' dias') : '');
   }
@@ -148,7 +144,29 @@
       String(birth.month).padStart(2, '0') + '/' + birth.year;
   }
 
-  function makeCode() {
+  function territorySnapshot() {
+    var identity = window.PortalTacsTerritoryIdentity || {};
+    var params = new URLSearchParams(location.search || '');
+    var areaId = normalizeArea(identity.areaId || params.get('area') || window.TACS_AREA_ID || 'JAPARANDUBA') || 'JAPARANDUBA';
+    return {
+      areaId: areaId,
+      areaName: clean(identity.areaNome) || (areaId === 'JAPARANDUBA' ? 'Sítio Japaranduba' : areaId.replace(/_/g, ' ')),
+      unitName: clean(identity.unidadeNome) || 'Unidade de Saúde Posto Matias',
+      tacsName: clean(identity.tacsNome) || 'TACS responsável pela área'
+    };
+  }
+
+  function ensureTerritory() {
+    var branding = window.PortalTacsTerritoryBranding;
+    if (branding && typeof branding.load === 'function') {
+      return branding.load(false).catch(function () { return territorySnapshot(); }).then(function () {
+        return territorySnapshot();
+      });
+    }
+    return Promise.resolve(territorySnapshot());
+  }
+
+  function makeCode(identity) {
     if (submissionCode) return submissionCode;
     var today = recifeParts();
     var alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -164,7 +182,8 @@
         suffix += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
       }
     }
-    submissionCode = 'MATIAS-' +
+    var prefix = normalizeArea(identity && identity.areaId || 'TACS').slice(0, 18) || 'TACS';
+    submissionCode = prefix + '-' +
       String(today.day).padStart(2, '0') +
       String(today.month).padStart(2, '0') +
       String(today.year).slice(-2) + '-' + suffix;
@@ -177,17 +196,19 @@
     style.id = 'portal-final-fixes-style';
     style.textContent = [
       '#send{display:none!important}',
+      '#sendWrittenTacs,.tacs-written-button{display:none!important}',
       '.tacs-send-options{display:grid!important;gap:13px!important;margin-top:16px!important}',
-      '.tacs-written-button,.tacs-petroleum-button{width:100%;min-height:78px;border:0;border-radius:17px;padding:15px 20px;color:#fff;font-size:20px;font-weight:950;line-height:1.22;cursor:pointer}',
-      '.tacs-written-button{background:linear-gradient(180deg,#08a44f,#078940);box-shadow:0 14px 28px rgba(7,137,64,.25)}',
-      '.tacs-petroleum-button{background:linear-gradient(180deg,#0d5f8a,#062c46);box-shadow:0 14px 28px rgba(6,44,70,.25)}',
-      '.tacs-written-button small,.tacs-petroleum-button small{display:block;margin-top:6px;font-size:14px;font-weight:750}',
-      '.tacs-written-button:disabled,.tacs-petroleum-button:disabled{opacity:.43;box-shadow:none;cursor:not-allowed}',
+      '.tacs-petroleum-button{width:100%;min-height:82px;border:3px solid #69c7e7;border-radius:18px;padding:16px 20px;background:linear-gradient(180deg,#0d5f8a,#062c46);color:#fff;font-size:21px;font-weight:950;line-height:1.22;cursor:pointer;box-shadow:0 14px 28px rgba(6,44,70,.25)}',
+      '.tacs-petroleum-button small{display:block;margin-top:7px;font-size:15px;font-weight:750;color:#d8eef7}',
+      '.tacs-petroleum-button:disabled{opacity:.43;box-shadow:none;cursor:not-allowed}',
       '.portal-agendas[hidden],.portal-agenda[hidden]{display:none!important}',
       '.notification-guide-all{margin-top:14px;padding:14px;border:1px solid #9fb9c7;border-radius:14px;background:#fff;color:#314b59}',
       '.notification-guide-all strong{display:block;margin-bottom:8px;color:#082b43;font-size:17px}',
       '.notification-guide-all p{margin:7px 0;font-size:15px;line-height:1.5}',
-      '@media(max-width:720px){.tacs-written-button,.tacs-petroleum-button{font-size:19px}}'
+      '@keyframes tacsPublicAttentionPulse{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.035);filter:brightness(1.13)}}',
+      '.integral-balloon>small{display:inline-flex!important;transform-origin:left center;animation:tacsPublicAttentionPulse 3.8s ease-in-out infinite}',
+      '@media(prefers-reduced-motion:reduce){.integral-balloon>small{animation:none!important;transform:none!important}}',
+      '@media(max-width:720px){.tacs-petroleum-button{font-size:20px}}'
     ].join('');
     document.head.appendChild(style);
   }
@@ -217,9 +238,7 @@
       var option = document.createElement('option');
       option.value = value;
       option.textContent = value;
-      option.dataset.professionalModule = value === PROFESSIONAL_CATEGORIES.medica
-        ? 'medica'
-        : 'enfermeira';
+      option.dataset.professionalModule = value === PROFESSIONAL_CATEGORIES.medica ? 'medica' : 'enfermeira';
       var dentalOption = Array.prototype.find.call(select.options, function (item) {
         return normalize(item.value).indexOf('odontologico') !== -1;
       });
@@ -227,13 +246,9 @@
     });
 
     Array.prototype.forEach.call(select.options, function (option) {
-      if (option.value === PROFESSIONAL_CATEGORIES.medica) {
-        option.dataset.professionalModule = 'medica';
-      } else if (option.value === PROFESSIONAL_CATEGORIES.enfermeira) {
-        option.dataset.professionalModule = 'enfermeira';
-      } else if (option.value === PROFESSIONAL_CATEGORIES.nutricionista) {
-        option.dataset.professionalModule = 'nutricionista';
-      }
+      if (option.value === PROFESSIONAL_CATEGORIES.medica) option.dataset.professionalModule = 'medica';
+      else if (option.value === PROFESSIONAL_CATEGORIES.enfermeira) option.dataset.professionalModule = 'enfermeira';
+      else if (option.value === PROFESSIONAL_CATEGORIES.nutricionista) option.dataset.professionalModule = 'nutricionista';
     });
   }
 
@@ -241,9 +256,7 @@
     var select = el('category');
     var value = clean(select && select.value);
     var selected = select && select.options[select.selectedIndex];
-    if (selected && selected.dataset.professionalModule) {
-      return clean(selected.dataset.professionalModule);
-    }
+    if (selected && selected.dataset.professionalModule) return clean(selected.dataset.professionalModule);
     if (value === PROFESSIONAL_CATEGORIES.medica) return 'medica';
     if (value === PROFESSIONAL_CATEGORIES.enfermeira) return 'enfermeira';
     if (value === PROFESSIONAL_CATEGORIES.nutricionista) return 'nutricionista';
@@ -255,12 +268,9 @@
     if (!container) return;
     var selected = selectedProfessionalModule();
     container.hidden = !selected;
-    Array.prototype.forEach.call(
-      container.querySelectorAll('.portal-agenda'),
-      function (section) {
-        section.hidden = clean(section.dataset.module) !== selected;
-      }
-    );
+    Array.prototype.forEach.call(container.querySelectorAll('.portal-agenda'), function (section) {
+      section.hidden = clean(section.dataset.module) !== selected;
+    });
     if (selected) {
       setTimeout(function () {
         var section = el('agenda-' + selected);
@@ -294,20 +304,15 @@
     }).filter(Boolean);
 
     var categorySelect = el('category');
-    if (categorySelect && category) {
-      categorySelect.value = category;
-    }
+    if (categorySelect && category) categorySelect.value = category;
 
     var description = category + ' - ' + clean(strong && strong.textContent) +
-      (details.length ? ' - ' + details.join(' - ') : '') + ': ' +
-      clean(service && service.textContent);
-
+      (details.length ? ' - ' + details.join(' - ') : '') + ': ' + clean(service && service.textContent);
     var subject = el('subject');
     if (subject) {
       subject.value = description;
       subject.dispatchEvent(new Event('input', { bubbles: true }));
     }
-
     updateAgendaVisibility();
   }
 
@@ -320,7 +325,6 @@
       ? 'Atendimento odontológico de emergência (dentista) - '
       : 'Atendimento odontológico (dentista) - ';
     description += day + ' - ' + date + ' - ' + (emergency ? 'vaga emergencial' : 'vaga comum');
-
     var subject = el('subject');
     if (subject) {
       subject.value = description;
@@ -330,35 +334,22 @@
 
   function installAgendaHooks() {
     var category = el('category');
-    if (category) {
-      category.addEventListener('change', function () {
-        setTimeout(updateAgendaVisibility, 0);
-      });
-    }
-
+    if (category) category.addEventListener('change', function () { setTimeout(updateAgendaVisibility, 0); });
     document.addEventListener('click', function (event) {
       var professional = event.target.closest('.agenda-day:not(:disabled)');
       if (professional) {
-        setTimeout(function () {
-          fillProfessionalDescription(professional);
-        }, 0);
+        setTimeout(function () { fillProfessionalDescription(professional); }, 0);
         return;
       }
-
       var dental = event.target.closest('#dentalSlots .slot:not(:disabled)');
-      if (dental) {
-        setTimeout(function () {
-          fillDentalDescription(dental);
-        }, 0);
-      }
+      if (dental) setTimeout(function () { fillDentalDescription(dental); }, 0);
     });
-
     setTimeout(updateAgendaVisibility, 100);
   }
 
-  function requestData() {
+  function requestData(identity) {
     return {
-      code: makeCode(),
+      code: makeCode(identity),
       sentAt: recifeDateTime(),
       category: clean(el('category') && el('category').value),
       name: clean(el('name') && el('name').value),
@@ -366,7 +357,11 @@
       age: detailedAge(el('birth') && el('birth').value),
       document: clean(el('cpf') && el('cpf').value),
       locality: clean(el('locality') && el('locality').value),
-      description: clean(el('subject') && el('subject').value)
+      description: clean(el('subject') && el('subject').value),
+      areaId: identity.areaId,
+      areaName: identity.areaName,
+      unitName: identity.unitName,
+      tacsName: identity.tacsName
     };
   }
 
@@ -404,11 +399,8 @@
         clearTimeout(timer);
         window.removeEventListener('message', receive);
         if (form.parentNode) form.remove();
-        setTimeout(function () {
-          if (iframe.parentNode) iframe.remove();
-        }, 250);
+        setTimeout(function () { if (iframe.parentNode) iframe.remove(); }, 250);
       }
-
       function finish(error, data) {
         if (done) return;
         done = true;
@@ -420,7 +412,6 @@
           resolve(data);
         }
       }
-
       function receive(event) {
         if (event.source !== iframe.contentWindow) return;
         var data = event.data;
@@ -428,7 +419,6 @@
         if (data.ok) finish(null, data);
         else finish(new Error(data.message || 'Não foi possível reservar a vaga.'));
       }
-
       function add(name, value) {
         var input = document.createElement('input');
         input.type = 'hidden';
@@ -444,7 +434,7 @@
       form.target = frameName;
       form.hidden = true;
       add('action', 'reservar');
-      add('requestId', makeCode());
+      add('requestId', makeCode(territorySnapshot()));
       add('date', dental.date);
       add('type', dental.type);
       add('nonce', nonce);
@@ -455,60 +445,22 @@
       }, 20000);
       form.submit();
     });
-
     return reservationPromise;
   }
 
-  function writtenMessage(data) {
-    return [
-      '*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*',
-      '*Área do TACS: ' + TACS_NAME + '*',
-      '',
-      'Código: ' + data.code,
-      'Data e horário do envio: ' + data.sentAt,
-      'Serviço solicitado: ' + data.category,
-      'Nome completo: ' + data.name,
-      'Data de nascimento: ' + data.birth,
-      'Idade: ' + data.age,
-      'CPF ou CNS: ' + data.document,
-      'Onde mora: ' + data.locality,
-      'Descrição: ' + data.description
-    ].join('\n');
-  }
-
-  function openWhatsApp(message) {
-    window.location.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(message);
-  }
-
-  function setButtonsBusy(busy, text) {
-    var written = el('sendWrittenTacs');
+  function setButtonsBusy(busy) {
     var card = el('sendPetroleumCard');
-    if (written) {
-      written.disabled = busy || !formIsReady();
-      if (text) written.dataset.originalHtml = written.dataset.originalHtml || written.innerHTML;
-      written.innerHTML = text || written.dataset.originalHtml || written.innerHTML;
-    }
     if (card) {
       card.disabled = busy || !formIsReady();
+      card.innerHTML = busy
+        ? 'Preparando card…<small>Confirmando os dados e a disponibilidade.</small>'
+        : card.dataset.originalHtml || card.innerHTML;
     }
   }
 
   function formIsReady() {
     var original = el('send');
     return Boolean(original && !original.disabled && !original.hidden);
-  }
-
-  function sendWritten() {
-    if (!formIsReady()) return;
-    setButtonsBusy(true, 'Preparando solicitação...');
-    reserveDentalIfNeeded()
-      .then(function () {
-        openWhatsApp(writtenMessage(requestData()));
-      })
-      .catch(function (error) {
-        alert(error.message || 'Não foi possível preparar a solicitação.');
-        setButtonsBusy(false);
-      });
   }
 
   function wrapText(ctx, text, maxWidth) {
@@ -520,9 +472,7 @@
       if (line && ctx.measureText(test).width > maxWidth) {
         lines.push(line);
         line = word;
-      } else {
-        line = test;
-      }
+      } else line = test;
     });
     if (line) lines.push(line);
     return lines;
@@ -556,59 +506,72 @@
     var ctx = canvas.getContext('2d');
     var gradient = ctx.createLinearGradient(0, 0, 1080, 1920);
     gradient.addColorStop(0, '#031b2d');
-    gradient.addColorStop(0.55, '#062c46');
-    gradient.addColorStop(1, '#0d5f8a');
+    gradient.addColorStop(0.55, '#073a55');
+    gradient.addColorStop(1, '#0b5878');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1080, 1920);
 
-    ctx.fillStyle = '#70e39f';
-    ctx.font = '900 34px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('PORTAL TACS • POSTO MATIAS', 62, 92);
+    ctx.fillStyle = '#8df0b4';
+    ctx.font = '900 38px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('PORTAL TACS • SOLICITAÇÃO', 60, 85);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 62px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('SOLICITAÇÃO DO MORADOR', 62, 180);
+    ctx.font = '900 68px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('SOLICITAÇÃO DO MORADOR', 60, 170);
 
     ctx.fillStyle = 'rgba(255,255,255,.12)';
-    roundRect(ctx, 52, 225, 976, 154, 28);
+    roundRect(ctx, 52, 215, 976, 205, 30);
     ctx.fill();
+    ctx.fillStyle = '#8df0b4';
+    ctx.font = '900 28px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('ÁREA E RESPONSÁVEL', 82, 265);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '850 34px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('Área TACS — ' + TACS_NAME, 82, 290);
-    ctx.font = '750 28px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('Unidade de Saúde Posto Matias', 82, 338);
+    ctx.font = '900 40px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    var iy = drawLines(ctx, data.areaName, 82, 318, 900, 47, 2);
+    ctx.font = '800 31px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    iy = drawLines(ctx, 'TACS: ' + data.tacsName, 82, iy + 5, 900, 38, 2);
+    ctx.fillStyle = '#d8eef7';
+    ctx.font = '700 27px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    drawLines(ctx, data.unitName, 82, Math.min(390, iy + 4), 900, 32, 1);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '900 46px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    var categoryEnd = drawLines(ctx, data.category, 62, 455, 950, 55, 3);
-
-    var panelY = categoryEnd + 32;
-    ctx.fillStyle = 'rgba(255,255,255,.97)';
-    roundRect(ctx, 48, panelY, 984, 1080, 38);
+    ctx.fillStyle = 'rgba(141,240,180,.13)';
+    roundRect(ctx, 52, 455, 976, 190, 30);
     ctx.fill();
+    ctx.fillStyle = '#8df0b4';
+    ctx.font = '900 28px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('SERVIÇO SOLICITADO', 82, 505);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 47px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    drawLines(ctx, data.category, 82, 565, 900, 55, 2);
 
-    var cursor = panelY + 75;
-    function block(label, value, maxLines) {
-      ctx.fillStyle = '#0d5f8a';
-      ctx.font = '900 27px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillStyle = 'rgba(255,255,255,.98)';
+    roundRect(ctx, 48, 685, 984, 1010, 38);
+    ctx.fill();
+    var cursor = 755;
+    function block(label, value, maxLines, spacing) {
+      ctx.fillStyle = '#0b5878';
+      ctx.font = '900 28px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
       ctx.fillText(label.toUpperCase(), 88, cursor);
-      cursor += 44;
+      cursor += 42;
       ctx.fillStyle = '#102b3c';
-      ctx.font = '800 42px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-      cursor = drawLines(ctx, value, 88, cursor, 900, 50, maxLines) + 32;
+      ctx.font = '800 44px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+      cursor = drawLines(ctx, value, 88, cursor, 900, 50, maxLines) + (spacing || 27);
     }
 
-    block('Nome completo', data.name, 3);
-    block('Nascimento e idade', data.birth + ' • ' + data.age, 2);
-    block('CPF ou CNS', data.document, 2);
-    block('Onde mora', data.locality, 4);
-    block('Descrição', data.description, 7);
+    block('Nome completo', data.name, 2, 25);
+    block('Data e horário do envio', data.sentAt, 1, 24);
+    block('Nascimento e idade', data.birth + ' • ' + data.age, 2, 24);
+    block('CPF ou CNS', data.document, 1, 24);
+    block('Localidade / comunidade', data.locality, 3, 25);
+    block('Descrição da solicitação', data.description, 5, 20);
 
+    ctx.fillStyle = '#8df0b4';
+    ctx.fillRect(52, 1740, 976, 7);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '850 32px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('Código: ' + data.code, 62, 1770);
+    ctx.font = '850 31px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('Código: ' + data.code, 60, 1810);
     ctx.fillStyle = '#d8e7ee';
-    ctx.font = '700 27px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('Enviado em ' + data.sentAt, 62, 1816);
+    ctx.font = '700 26px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('Gerado pelo Portal TACS • ' + data.areaName, 60, 1855);
 
     return new Promise(function (resolve, reject) {
       canvas.toBlob(function (blob) {
@@ -620,32 +583,33 @@
 
   function sendCard() {
     if (!formIsReady()) return;
-    setButtonsBusy(true, 'Preparando solicitação...');
-    reserveDentalIfNeeded()
-      .then(function () {
-        var data = requestData();
-        return createPetroleumCard(data).then(function (blob) {
-          var file = new File([blob], 'solicitacao-portal-tacs.png', { type: 'image/png' });
-          if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-            return navigator.share({
-              title: 'Solicitação do morador',
-              text: 'Solicitação da área TACS de ' + TACS_NAME + '.',
-              files: [file]
-            });
-          }
-          var url = URL.createObjectURL(blob);
-          var opened = window.open(url, '_blank');
-          if (!opened) window.location.href = url;
-          setTimeout(function () { URL.revokeObjectURL(url); }, 120000);
+    setButtonsBusy(true);
+    ensureTerritory()
+      .then(function (identity) {
+        return reserveDentalIfNeeded().then(function () {
+          var data = requestData(identity);
+          return createPetroleumCard(data).then(function (blob) {
+            var fileName = 'solicitacao-' + normalizeArea(identity.areaId).toLowerCase() + '-portal-tacs.png';
+            var file = new File([blob], fileName, { type: 'image/png' });
+            if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+              return navigator.share({
+                title: 'Solicitação do morador',
+                text: 'Solicitação do Portal TACS • ' + identity.areaName + ' • TACS ' + identity.tacsName + '.',
+                files: [file]
+              });
+            }
+            var url = URL.createObjectURL(blob);
+            var opened = window.open(url, '_blank');
+            if (!opened) window.location.href = url;
+            setTimeout(function () { URL.revokeObjectURL(url); }, 120000);
+          });
         });
       })
       .catch(function (error) {
         if (error && error.name === 'AbortError') return;
         alert(error.message || 'Não foi possível gerar o card.');
       })
-      .finally(function () {
-        setButtonsBusy(false);
-      });
+      .finally(function () { setButtonsBusy(false); });
   }
 
   function installSendOptions() {
@@ -660,45 +624,29 @@
       wrapper.appendChild(original);
     }
 
-    var oldCard = el('sendCardTacs');
-    if (oldCard) oldCard.remove();
-    var oldWritten = el('sendWrittenTacs');
-    if (oldWritten) oldWritten.remove();
-    var oldPetroleum = el('sendPetroleumCard');
-    if (oldPetroleum) oldPetroleum.remove();
-
-    var written = document.createElement('button');
-    written.type = 'button';
-    written.id = 'sendWrittenTacs';
-    written.className = 'tacs-written-button';
-    written.innerHTML = 'Enviar solicitação por escrito no WhatsApp<small>Mensagem completa em texto para o TACS.</small>';
-    written.dataset.originalHtml = written.innerHTML;
-    written.addEventListener('click', sendWritten);
+    ['sendCardTacs', 'sendWrittenTacs', 'sendPetroleumCard'].forEach(function (id) {
+      var old = el(id);
+      if (old) old.remove();
+    });
 
     var card = document.createElement('button');
     card.type = 'button';
     card.id = 'sendPetroleumCard';
     card.className = 'tacs-petroleum-button';
-    card.innerHTML = 'Enviar solicitação em card azul-petróleo<small>Card com a identificação da área e do TACS responsável.</small>';
+    card.innerHTML = 'Enviar solicitação em card azul-petróleo<small>Card profissional com identificação da área e do TACS responsável.</small>';
+    card.dataset.originalHtml = card.innerHTML;
     card.addEventListener('click', sendCard);
-
-    wrapper.appendChild(written);
     wrapper.appendChild(card);
 
     function sync() {
-      var disabled = !formIsReady();
-      written.disabled = disabled;
-      card.disabled = disabled;
+      card.disabled = !formIsReady();
     }
-
     new MutationObserver(sync).observe(original, {
       attributes: true,
       attributeFilter: ['disabled', 'hidden']
     });
     ['input', 'change'].forEach(function (eventName) {
-      document.addEventListener(eventName, function () {
-        setTimeout(sync, 0);
-      });
+      document.addEventListener(eventName, function () { setTimeout(sync, 0); });
     });
     sync();
   }
@@ -729,9 +677,6 @@
     }, 800);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', install);
-  } else {
-    install();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
+  else install();
 }());
