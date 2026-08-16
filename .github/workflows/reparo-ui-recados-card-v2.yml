@@ -29,7 +29,9 @@ jobs:
         run: npm ci
 
       - name: Aplicar reparo controlado
-        run: python3 scripts/repair_ui_recados_card_v2.py
+        run: |
+          python3 scripts/repair_ui_recados_card_v2.py
+          sed -i "s/cache:'no-store'/cache:'default'/g" painel-oficial-recados-campanhas.html
 
       - name: Validar sintaxe dos arquivos alterados
         run: |
