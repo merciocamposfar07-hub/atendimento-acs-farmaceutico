@@ -34,7 +34,8 @@ assert.match(autofill,/TACS_ADMIN_API_URL/);
 
 const index=get('index.html');
 assert.match(index,/territory-pending/);
-assert.match(index,/moradores-autofill\.js\?v=20260815-territorial-v2/);
+assert.match(index,/moradores-autofill\.js\?v=[A-Za-z0-9._-]+/,
+  'Autofill territorial deve continuar versionado sem amarrar o teste a uma revisão específica.');
 
 const branding=get('portal-territory-branding.js');
 assert.match(branding,/classList\.remove\(['"]territory-pending['"]\)/);
