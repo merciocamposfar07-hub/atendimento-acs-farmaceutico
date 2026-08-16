@@ -42,19 +42,7 @@ jobs:
           dental_path = Path('portal-odontologia-segunda-sexta.js')
           dental = dental_path.read_text(encoding='utf-8')
 
-          old_status = """  function statusText() {
-            if (loading) return slots.length ? 'Agenda exibida. Confirmando as vagas atuais…' : 'Atualizando a agenda odontológica pela planilha...';
-            if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
-            if (selection) {
-              if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
-              if (selection.explicitFailure) return selection.errorMessage || 'Não foi possível reservar essa vaga.';
-              if (selection.slowSync) return 'Vaga selecionada. A atualização da planilha está demorando, mas o envio pelo WhatsApp já está liberado.';
-              return 'Vaga selecionada. A quantidade foi reduzida no portal e o envio pelo WhatsApp já está liberado.';
-            }
-            if (cachedSnapshot) return 'Última agenda recebida exibida. Confirmando a disponibilidade atual ao selecionar uma vaga.';
-            return 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
-          }"""
-          new_status = """  function statusText() {
+          status_new = """  function statusText() {
             if (loading) return slots.length ? 'Agenda exibida. Confirmando as vagas atuais…' : 'Atualizando a agenda odontológica pela planilha...';
             if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
             if (selection) {
@@ -66,19 +54,17 @@ jobs:
             if (cachedSnapshot) return 'Última agenda recebida exibida. Confirmando a disponibilidade atual ao selecionar uma vaga.';
             return 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
           }"""
-          if old_status not in dental:
-              raise SystemExit('Bloco statusText atual não localizado; nenhuma alteração foi publicada.')
-          dental = dental.replace(old_status, new_status, 1)
+          dental, count = re.subn(
+              r"  function statusText\(\) \{.*?\n  \}\n\n  function renderAgenda",
+              status_new + "\n\n  function renderAgenda",
+              dental,
+              count=1,
+              flags=re.S
+          )
+          if count != 1:
+              raise SystemExit('statusText não localizado exatamente uma vez.')
 
-          old_refresh = """  function refreshSend() {
-            var send = el('send');
-            if (!send || !isDental() || !selection) return;
-            var shouldDisable = !formReady();
-            if (send.hidden) send.hidden = false;
-            if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
-            if (send.dataset) delete send.dataset.dentalReservationPending;
-          }"""
-          new_refresh = """  function refreshSend() {
+          refresh_new = """  function refreshSend() {
             var send = el('send');
             if (!send) return;
             if (!isDental() || !selection) {
@@ -94,11 +80,17 @@ jobs:
               else delete send.dataset.dentalReservationPending;
             }
           }"""
-          if old_refresh not in dental:
-              raise SystemExit('Bloco refreshSend atual não localizado; nenhuma alteração foi publicada.')
-          dental = dental.replace(old_refresh, new_refresh, 1)
+          dental, count = re.subn(
+              r"  function refreshSend\(\) \{.*?\n  \}\n\n  function makeCode",
+              refresh_new + "\n\n  function makeCode",
+              dental,
+              count=1,
+              flags=re.S
+          )
+          if count != 1:
+              raise SystemExit('refreshSend não localizado exatamente uma vez.')
 
-          new_verify = r"""  function verifyReservation(item, attempt) {
+          verify_new = """  function verifyReservation(item, attempt) {
             if (!selection || selection.requestId !== item.requestId) return;
             postReservation(item).then(function (result) {
               if (!selection || selection.requestId !== item.requestId) return;
@@ -128,78 +120,54 @@ jobs:
               refreshSend();
             });
           }"""
-          dental, verify_count = re.subn(
+          dental, count = re.subn(
               r"  function verifyReservation\(item, attempt\) \{.*?\n  \}\n\n  function scheduleVerify",
-              new_verify + "\n\n  function scheduleVerify",
+              verify_new + "\n\n  function scheduleVerify",
               dental,
               count=1,
               flags=re.S
           )
-          if verify_count != 1:
-              raise SystemExit('Função verifyReservation não localizada exatamente uma vez.')
+          if count != 1:
+              raise SystemExit('verifyReservation não localizado exatamente uma vez.')
 
-          old_success = """      item.confirmed = true;
-                item.slowSync = false;
-                renderAgenda();
-                refreshSend();
-              }).catch(function (error) {"""
-          new_success = """      item.confirmed = true;
-                item.slowSync = false;
-                renderAgenda();
-                refreshSend();
-                loadAgenda(true);
-              }).catch(function (error) {"""
-          if old_success not in dental:
-              raise SystemExit('Confirmação do persistInBackground não localizada.')
-          dental = dental.replace(old_success, new_success, 1)
-
-          old_click = """      if (send && isDental() && selection) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                if (!formReady()) { refreshSend(); return; }
-                openWhatsApp();
-                return;
-              }"""
-          new_click = """      if (send && isDental() && selection) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                if (!selection.confirmed || !formReady()) { refreshSend(); return; }
-                openWhatsApp();
-                return;
-              }"""
-          if old_click not in dental:
-              raise SystemExit('Interceptador do envio odontológico não localizado.')
+          old_click = "if (!formReady()) { refreshSend(); return; }"
+          new_click = "if (!selection.confirmed || !formReady()) { refreshSend(); return; }"
+          if dental.count(old_click) != 1:
+              raise SystemExit('Trava de envio odontológico não localizada exatamente uma vez.')
           dental = dental.replace(old_click, new_click, 1)
           dental_path.write_text(dental, encoding='utf-8')
 
           config_path = Path('agenda-config.js')
           config = config_path.read_text(encoding='utf-8')
-          old_config = """        if (ready && !send.hidden && send.textContent.indexOf('Reservando') === -1) {
-                    send.disabled = false;
-                  }"""
-          new_config = """        if (send.dataset && send.dataset.dentalReservationPending === '1') {
-                    send.disabled = true;
-                    return;
-                  }
-                  if (ready && !send.hidden && send.textContent.indexOf('Reservando') === -1) {
-                    send.disabled = false;
-                  }"""
-          if old_config not in config:
-              raise SystemExit('Compatibilidade CNS/WhatsApp não localizada.')
-          config = config.replace(old_config, new_config, 1)
+          old_enable = """        if (ready && !send.hidden && send.textContent.indexOf('Reservando') === -1) {
+            send.disabled = false;
+          }"""
+          new_enable = """        if (send.dataset && send.dataset.dentalReservationPending === '1') {
+            send.disabled = true;
+            return;
+          }
+          if (ready && !send.hidden && send.textContent.indexOf('Reservando') === -1) {
+            send.disabled = false;
+          }"""
+          if config.count(old_enable) != 1:
+              raise SystemExit('Auxiliar de habilitação do WhatsApp não localizado exatamente uma vez.')
+          config = config.replace(old_enable, new_enable, 1)
           config_path.write_text(config, encoding='utf-8')
 
           index_path = Path('index.html')
           index = index_path.read_text(encoding='utf-8')
-          old_version = 'portal-odontologia-segunda-sexta.js?v=20260815-territorial-v102'
-          new_version = 'portal-odontologia-segunda-sexta.js?v=20260816-reserva-confirmada-v103'
-          if old_version not in index:
-              raise SystemExit('Versão odontológica v102 não localizada no portal.')
-          index = index.replace(old_version, new_version, 1)
+          index, count = re.subn(
+              r"portal-odontologia-segunda-sexta\.js\?v=[A-Za-z0-9._-]+",
+              'portal-odontologia-segunda-sexta.js?v=20260816-reserva-confirmada-v103',
+              index,
+              count=1
+          )
+          if count != 1:
+              raise SystemExit('Referência do script odontológico não localizada exatamente uma vez.')
           index_path.write_text(index, encoding='utf-8')
 
           test_path = Path('scripts/test_dental_confirmation_gate_v103.js')
-          test_path.write_text(r"""'use strict';
+          test_path.write_text("""'use strict';
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
           const path = require('node:path');
@@ -209,25 +177,25 @@ jobs:
           const config = read('agenda-config.js');
           const index = read('index.html');
 
-          assert.match(dental, /var pending = !selection\.confirmed;/,
-            'A interface deve saber quando a reserva ainda não foi confirmada.');
-          assert.match(dental, /var shouldDisable = !formReady\(\) \|\| pending;/,
-            'O WhatsApp deve permanecer bloqueado enquanto a planilha não confirmar a reserva.');
-          assert.match(dental, /send\.dataset\.dentalReservationPending = '1'/,
-            'O estado pendente deve ser compartilhado com os auxiliares do formulário.');
-          assert.match(dental, /if \(!selection\.confirmed \|\| !formReady\(\)\) \{ refreshSend\(\); return; \}/,
-            'O clique de envio deve ter uma segunda trava contra reserva ainda não confirmada.');
-          assert.doesNotMatch(dental, /serverCount\s*<=\s*item\.optimisticRemaining/,
-            'A reserva não pode ser considerada confirmada apenas porque outra pessoa reduziu o total.');
-          assert.match(dental, /postReservation\(item\)\.then/,
-            'A confirmação após timeout deve reutilizar o mesmo requestId idempotente no servidor.');
+          assert.match(dental, /var pending = !selection\\.confirmed;/,
+            'A interface deve reconhecer reserva pendente.');
+          assert.match(dental, /var shouldDisable = !formReady\\(\\) \\|\\| pending;/,
+            'O WhatsApp deve permanecer bloqueado enquanto a planilha não confirmar.');
+          assert.match(dental, /send\\.dataset\\.dentalReservationPending = '1'/,
+            'O estado pendente deve ser compartilhado com o auxiliar do formulário.');
+          assert.match(dental, /if \\(!selection\\.confirmed \\|\\| !formReady\\(\\)\\) \\{ refreshSend\\(\\); return; \\}/,
+            'O clique de envio deve bloquear reserva não confirmada.');
+          assert.doesNotMatch(dental, /serverCount\\s*<=\\s*item\\.optimisticRemaining/,
+            'O total agregado não pode comprovar que este requestId foi gravado.');
+          assert.match(dental, /function verifyReservation[\\s\\S]*postReservation\\(item\\)\\.then/,
+            'Após timeout, a confirmação deve reutilizar o mesmo requestId idempotente.');
           assert.doesNotMatch(dental, /atualização da planilha está demorando, mas o envio pelo WhatsApp já está liberado/,
-            'A interface não pode liberar WhatsApp antes da confirmação da planilha.');
-          assert.match(config, /dentalReservationPending === '1'[\s\S]*send\.disabled = true/,
-            'O auxiliar de CNS não pode reabilitar o envio durante a confirmação odontológica.');
-          assert.match(index, /portal-odontologia-segunda-sexta\.js\?v=20260816-reserva-confirmada-v103/,
-            'O portal deve invalidar o cache do script odontológico corrigido.');
-          console.log('Odontologia v103: confirmação obrigatória antes do WhatsApp e retry idempotente validados.');
+            'A interface não pode liberar WhatsApp sem confirmação.');
+          assert.match(config, /dentalReservationPending === '1'[\\s\\S]*send\\.disabled = true/,
+            'O auxiliar de CNS não pode reabilitar o envio durante a reserva pendente.');
+          assert.match(index, /portal-odontologia-segunda-sexta\\.js\\?v=20260816-reserva-confirmada-v103/,
+            'O portal deve invalidar o cache da correção v103.');
+          console.log('Odontologia v103: confirmação obrigatória antes do WhatsApp validada.');
           """, encoding='utf-8')
 
           package_path = Path('package.json')
@@ -237,9 +205,8 @@ jobs:
           if gate not in command:
               anchor = 'node scripts/test_dom_flows.js'
               if anchor not in command:
-                  raise SystemExit('Âncora de testes DOM não localizada no package.json.')
-              command = command.replace(anchor, anchor + ' && ' + gate, 1)
-              package_data['scripts']['test'] = command
+                  raise SystemExit('Âncora de testes DOM não localizada.')
+              package_data['scripts']['test'] = command.replace(anchor, anchor + ' && ' + gate, 1)
           package_path.write_text(json.dumps(package_data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           PY
 
