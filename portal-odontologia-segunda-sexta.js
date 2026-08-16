@@ -215,17 +215,17 @@
   }
 
   function statusText() {
-    if (loading) return slots.length ? 'Agenda exibida. Confirmando as vagas atuais…' : 'Atualizando a agenda odontológica pela planilha...';
-    if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
-    if (selection) {
-      if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
-      if (selection.explicitFailure) return selection.errorMessage || 'Não foi possível reservar essa vaga.';
-      if (selection.slowSync) return 'Vaga selecionada. A atualização da planilha está demorando, mas o envio pelo WhatsApp já está liberado.';
-      return 'Vaga selecionada. A quantidade foi reduzida no portal e o envio pelo WhatsApp já está liberado.';
-    }
-    if (cachedSnapshot) return 'Última agenda recebida exibida. Confirmando a disponibilidade atual ao selecionar uma vaga.';
-    return 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
+  if (loading) return slots.length ? 'Agenda exibida. Confirmando as vagas atuais…' : 'Atualizando a agenda odontológica pela planilha...';
+  if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
+  if (selection) {
+    if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
+    if (selection.explicitFailure) return selection.errorMessage || 'Não foi possível reservar essa vaga.';
+    if (selection.slowSync) return 'A vaga foi selecionada, mas a planilha ainda não confirmou a reserva. Aguarde a confirmação antes de enviar pelo WhatsApp.';
+    return 'Vaga selecionada. Confirmando a redução da vaga na planilha...';
   }
+  if (cachedSnapshot) return 'Última agenda recebida exibida. Confirmando a disponibilidade atual ao selecionar uma vaga.';
+  return 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
+}
 
   function renderAgenda() {
     if (!isDental()) return;
@@ -419,13 +419,21 @@
   }
 
   function refreshSend() {
-    var send = el('send');
-    if (!send || !isDental() || !selection) return;
-    var shouldDisable = !formReady();
-    if (send.hidden) send.hidden = false;
-    if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
+  var send = el('send');
+  if (!send) return;
+  if (!isDental() || !selection) {
     if (send.dataset) delete send.dataset.dentalReservationPending;
+    return;
   }
+  var pending = !selection.confirmed;
+  var shouldDisable = !formReady() || pending;
+  if (send.hidden) send.hidden = false;
+  if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
+  if (send.dataset) {
+    if (pending) send.dataset.dentalReservationPending = '1';
+    else delete send.dataset.dentalReservationPending;
+  }
+}
 
   function makeCode() {
     var alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -521,52 +529,35 @@
   }
 
   function verifyReservation(item, attempt) {
+  if (!selection || selection.requestId !== item.requestId) return;
+  postReservation(item).then(function (result) {
     if (!selection || selection.requestId !== item.requestId) return;
-    fetchAgenda().then(function (data) {
-      var rows = Array.isArray(data.dias) ? data.dias : [];
-      var found = null;
-      for (var i = 0; i < rows.length; i += 1) {
-        if (normalizeDate(rows[i] && (rows[i].data || rows[i].date)) === item.date) { found = rows[i]; break; }
-      }
-      var serverCount = found ? numberValue(found, item.type) : null;
-      if (serverCount !== null && serverCount <= item.optimisticRemaining) {
-        applyServerRemaining(item, serverCount);
-        item.confirmed = true;
-        item.slowSync = false;
-        renderAgenda();
-        refreshSend();
-        return;
-      }
-      if (attempt < 2) {
-        postReservation(item).then(function (result) {
-          if (result.alreadyReserved && (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type)) {
-            var conflict = new Error('Este formulário já reservou outra data.');
-            conflict.code = 'CONFLICT';
-            throw conflict;
-          }
-          if (Number.isFinite(Number(result.remaining))) applyServerRemaining(item, result.remaining);
-          item.confirmed = true;
-          item.slowSync = false;
-          renderAgenda();
-          refreshSend();
-        }).catch(function (error) {
-          if (error.code && error.code !== 'TIMEOUT') handleExplicitReservationFailure(item, error);
-          else scheduleVerify(item, attempt + 1, 2500);
-        });
-      } else {
-        item.slowSync = true;
-        renderAgenda();
-        refreshSend();
-      }
-    }).catch(function () {
-      if (attempt < 2) scheduleVerify(item, attempt + 1, 2500);
-      else {
-        item.slowSync = true;
-        renderAgenda();
-        refreshSend();
-      }
-    });
-  }
+    if (result.alreadyReserved && (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type)) {
+      var conflict = new Error('Este formulário já reservou outra data.');
+      conflict.code = 'CONFLICT';
+      throw conflict;
+    }
+    if (Number.isFinite(Number(result.remaining))) applyServerRemaining(item, result.remaining);
+    item.confirmed = true;
+    item.slowSync = false;
+    renderAgenda();
+    refreshSend();
+    loadAgenda(true);
+  }).catch(function (error) {
+    if (!selection || selection.requestId !== item.requestId) return;
+    if (error.code && error.code !== 'TIMEOUT') {
+      handleExplicitReservationFailure(item, error);
+      return;
+    }
+    if (attempt < 5) {
+      scheduleVerify(item, attempt + 1, Math.min(6000, 1500 + attempt * 900));
+      return;
+    }
+    item.slowSync = true;
+    renderAgenda();
+    refreshSend();
+  });
+}
 
   function scheduleVerify(item, attempt, delay) {
     clearTimeout(verifyTimer);
@@ -715,7 +706,7 @@
       if (send && isDental() && selection) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        if (!formReady()) { refreshSend(); return; }
+        if (!selection.confirmed || !formReady()) { refreshSend(); return; }
         openWhatsApp();
         return;
       }

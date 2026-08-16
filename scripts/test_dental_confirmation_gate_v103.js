@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f),'utf8');
+const dental=read('portal-odontologia-segunda-sexta.js'),config=read('agenda-config.js'),index=read('index.html');
+assert.match(dental,/var pending = !selection\.confirmed;/);
+assert.match(dental,/var shouldDisable = !formReady\(\) \|\| pending;/);
+assert.match(dental,/send\.dataset\.dentalReservationPending = '1'/);
+assert.match(dental,/if \(!selection\.confirmed \|\| !formReady\(\)\) \{ refreshSend\(\); return; \}/);
+assert.doesNotMatch(dental,/serverCount\s*<=\s*item\.optimisticRemaining/);
+assert.match(dental,/function verifyReservation[\s\S]*postReservation\(item\)\.then/);
+assert.doesNotMatch(dental,/atualização da planilha está demorando, mas o envio pelo WhatsApp já está liberado/);
+assert.match(config,/dentalReservationPending === '1'[\s\S]*send\.disabled = true/);
+assert.match(index,/portal-odontologia-segunda-sexta\.js\?v=20260816-reserva-confirmada-v103/);
+console.log('DENTAL_CONFIRMATION_GATE_V103_OK');
