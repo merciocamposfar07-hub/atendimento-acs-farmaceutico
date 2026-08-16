@@ -1,0 +1,96 @@
+name: Ajuste publicacoes horarios validade V9
+
+on:
+  push:
+    paths:
+      - 'scripts/ajuste_publicacoes_horarios_validade_v9.py'
+      - '.github/workflows/ajuste-publicacoes-horarios-validade-v9.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar correcoes autorizadas
+        run: python scripts/ajuste_publicacoes_horarios_validade_v9.py
+
+      - name: Validar escopo e sintaxe
+        shell: bash
+        run: |
+          set -euo pipefail
+          allowed='^(painel-oficial-recados-campanhas.html|campanhas-periodo-v2.js|painel-oficial-agendas-vagas.html|apps-script/ZZZZ_20_PublicacoesTerritoriaisV1.gs|apps-script/ZZZZ_34_CampanhasPeriodoV1.gs|apps-script/ZZ_11_PublicoConteudoPortalV1.gs|apps-script/ZZ_12_PublicoAgendasPortalV1.gs|apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs|portal-controle-integral.js|central-administrativa-tacs.js|\.github/apps-script-release-request)$'
+          bad=$(git diff --name-only | grep -Ev "$allowed" || true)
+          if [ -n "$bad" ]; then echo "Arquivo fora do escopo: $bad"; exit 1; fi
+          grep -q 'recados-campanhas-whatsapp-card-v9.js' painel-oficial-recados-campanhas.html
+          grep -q 'name="horario"' painel-oficial-recados-campanhas.html
+          grep -q 'name="encerraHorario"' painel-oficial-agendas-vagas.html
+          grep -q 'ENCERRA_HORARIO' apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs
+          grep -q "validade && validade < hoje" apps-script/ZZ_11_PublicoConteudoPortalV1.gs
+          grep -q 'HORARIO' apps-script/ZZZZ_20_PublicacoesTerritoriaisV1.gs
+          grep -q 'HORARIO' apps-script/ZZZZ_34_CampanhasPeriodoV1.gs
+          grep -q '20260816-publicacoes-horarios-v9' central-administrativa-tacs.js
+          grep -q '20260816-agendas-horarios-v9' central-administrativa-tacs.js
+          node --check campanhas-periodo-v2.js
+          node --check portal-controle-integral.js
+          node --check recados-campanhas-whatsapp-card-v9.js
+          for f in apps-script/ZZ_11_PublicoConteudoPortalV1.gs apps-script/ZZ_12_PublicoAgendasPortalV1.gs apps-script/ZZZZ_20_PublicacoesTerritoriaisV1.gs apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs apps-script/ZZZZ_34_CampanhasPeriodoV1.gs; do node --check --input-type=commonjs < "$f" >/dev/null; done
+
+      - name: Testes direcionados
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('apps-script/ZZ_11_PublicoConteudoPortalV1.gs').read_text()
+          assert "Campanha vencida" in p
+          assert "if (validade && validade < hoje) return;" in p
+          a=Path('painel-oficial-agendas-vagas.html').read_text()
+          assert 'Encerrar automaticamente às' in a
+          assert 'type="time"' in a
+          c=Path('campanhas-periodo-v2.js').read_text()
+          assert 'min-inline-size:0' in c
+          r=Path('painel-oficial-recados-campanhas.html').read_text()
+          assert r.count('name="horario"') >= 2
+          print('validacao-direcionada-ok')
+          PY
+
+      - name: Publicar alteracoes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then echo 'Nenhuma alteração pendente.'; exit 0; fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add painel-oficial-recados-campanhas.html campanhas-periodo-v2.js painel-oficial-agendas-vagas.html \
+            apps-script/ZZZZ_20_PublicacoesTerritoriaisV1.gs apps-script/ZZZZ_34_CampanhasPeriodoV1.gs \
+            apps-script/ZZ_11_PublicoConteudoPortalV1.gs apps-script/ZZ_12_PublicoAgendasPortalV1.gs \
+            apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs portal-controle-integral.js \
+            central-administrativa-tacs.js .github/apps-script-release-request
+          git commit -m 'Corrige validade horarios e card WhatsApp das publicacoes'
+          git push
+
+      - name: Validar GitHub Pages publicado
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico'
+          ok=0
+          for i in $(seq 1 36); do
+            rec=$(curl -fsSL --max-time 20 "$base/painel-oficial-recados-campanhas.html?v=20260816-publicacoes-horarios-v9&_=$RANDOM" || true)
+            ag=$(curl -fsSL --max-time 20 "$base/painel-oficial-agendas-vagas.html?v=20260816-agendas-horarios-v9&_=$RANDOM" || true)
+            wa=$(curl -fsSL --max-time 20 "$base/recados-campanhas-whatsapp-card-v9.js?_=$RANDOM" || true)
+            if printf '%s' "$rec" | grep -q 'name="horario"' \
+              && printf '%s' "$rec" | grep -q 'recados-campanhas-whatsapp-card-v9.js' \
+              && printf '%s' "$ag" | grep -q 'Encerrar automaticamente às' \
+              && printf '%s' "$wa" | grep -q 'PortalTacsPublicacoesWhatsAppV9'; then ok=1; break; fi
+            sleep 5
+          done
+          test "$ok" = 1
