@@ -1,0 +1,283 @@
+name: Corrigir confirmação da vaga odontológica v103
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-confirmacao-vaga-odontologica-v103.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: corrigir-confirmacao-vaga-odontologica-v103
+  cancel-in-progress: false
+
+jobs:
+  corrigir-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Corrigir reserva odontológica sem tocar no Apps Script
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          dental_path = Path('portal-odontologia-segunda-sexta.js')
+          dental = dental_path.read_text(encoding='utf-8')
+
+          old_status = """  function statusText() {
+            if (loading) return slots.length ? 'Agenda exibida. Confirmando as vagas atuais…' : 'Atualizando a agenda odontológica pela planilha...';
+            if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
+            if (selection) {
+              if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
+              if (selection.explicitFailure) return selection.errorMessage || 'Não foi possível reservar essa vaga.';
+              if (selection.slowSync) return 'Vaga selecionada. A atualização da planilha está demorando, mas o envio pelo WhatsApp já está liberado.';
+              return 'Vaga selecionada. A quantidade foi reduzida no portal e o envio pelo WhatsApp já está liberado.';
+            }
+            if (cachedSnapshot) return 'Última agenda recebida exibida. Confirmando a disponibilidade atual ao selecionar uma vaga.';
+            return 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
+          }"""
+          new_status = """  function statusText() {
+            if (loading) return slots.length ? 'Agenda exibida. Confirmando as vagas atuais…' : 'Atualizando a agenda odontológica pela planilha...';
+            if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
+            if (selection) {
+              if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
+              if (selection.explicitFailure) return selection.errorMessage || 'Não foi possível reservar essa vaga.';
+              if (selection.slowSync) return 'A vaga foi selecionada, mas a planilha ainda não confirmou a reserva. Aguarde a confirmação antes de enviar pelo WhatsApp.';
+              return 'Vaga selecionada. Confirmando a redução da vaga na planilha...';
+            }
+            if (cachedSnapshot) return 'Última agenda recebida exibida. Confirmando a disponibilidade atual ao selecionar uma vaga.';
+            return 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
+          }"""
+          if old_status not in dental:
+              raise SystemExit('Bloco statusText atual não localizado; nenhuma alteração foi publicada.')
+          dental = dental.replace(old_status, new_status, 1)
+
+          old_refresh = """  function refreshSend() {
+            var send = el('send');
+            if (!send || !isDental() || !selection) return;
+            var shouldDisable = !formReady();
+            if (send.hidden) send.hidden = false;
+            if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
+            if (send.dataset) delete send.dataset.dentalReservationPending;
+          }"""
+          new_refresh = """  function refreshSend() {
+            var send = el('send');
+            if (!send) return;
+            if (!isDental() || !selection) {
+              if (send.dataset) delete send.dataset.dentalReservationPending;
+              return;
+            }
+            var pending = !selection.confirmed;
+            var shouldDisable = !formReady() || pending;
+            if (send.hidden) send.hidden = false;
+            if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
+            if (send.dataset) {
+              if (pending) send.dataset.dentalReservationPending = '1';
+              else delete send.dataset.dentalReservationPending;
+            }
+          }"""
+          if old_refresh not in dental:
+              raise SystemExit('Bloco refreshSend atual não localizado; nenhuma alteração foi publicada.')
+          dental = dental.replace(old_refresh, new_refresh, 1)
+
+          new_verify = r"""  function verifyReservation(item, attempt) {
+            if (!selection || selection.requestId !== item.requestId) return;
+            postReservation(item).then(function (result) {
+              if (!selection || selection.requestId !== item.requestId) return;
+              if (result.alreadyReserved && (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type)) {
+                var conflict = new Error('Este formulário já reservou outra data.');
+                conflict.code = 'CONFLICT';
+                throw conflict;
+              }
+              if (Number.isFinite(Number(result.remaining))) applyServerRemaining(item, result.remaining);
+              item.confirmed = true;
+              item.slowSync = false;
+              renderAgenda();
+              refreshSend();
+              loadAgenda(true);
+            }).catch(function (error) {
+              if (!selection || selection.requestId !== item.requestId) return;
+              if (error.code && error.code !== 'TIMEOUT') {
+                handleExplicitReservationFailure(item, error);
+                return;
+              }
+              if (attempt < 5) {
+                scheduleVerify(item, attempt + 1, Math.min(6000, 1500 + attempt * 900));
+                return;
+              }
+              item.slowSync = true;
+              renderAgenda();
+              refreshSend();
+            });
+          }"""
+          dental, verify_count = re.subn(
+              r"  function verifyReservation\(item, attempt\) \{.*?\n  \}\n\n  function scheduleVerify",
+              new_verify + "\n\n  function scheduleVerify",
+              dental,
+              count=1,
+              flags=re.S
+          )
+          if verify_count != 1:
+              raise SystemExit('Função verifyReservation não localizada exatamente uma vez.')
+
+          old_success = """      item.confirmed = true;
+                item.slowSync = false;
+                renderAgenda();
+                refreshSend();
+              }).catch(function (error) {"""
+          new_success = """      item.confirmed = true;
+                item.slowSync = false;
+                renderAgenda();
+                refreshSend();
+                loadAgenda(true);
+              }).catch(function (error) {"""
+          if old_success not in dental:
+              raise SystemExit('Confirmação do persistInBackground não localizada.')
+          dental = dental.replace(old_success, new_success, 1)
+
+          old_click = """      if (send && isDental() && selection) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                if (!formReady()) { refreshSend(); return; }
+                openWhatsApp();
+                return;
+              }"""
+          new_click = """      if (send && isDental() && selection) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                if (!selection.confirmed || !formReady()) { refreshSend(); return; }
+                openWhatsApp();
+                return;
+              }"""
+          if old_click not in dental:
+              raise SystemExit('Interceptador do envio odontológico não localizado.')
+          dental = dental.replace(old_click, new_click, 1)
+          dental_path.write_text(dental, encoding='utf-8')
+
+          config_path = Path('agenda-config.js')
+          config = config_path.read_text(encoding='utf-8')
+          old_config = """        if (ready && !send.hidden && send.textContent.indexOf('Reservando') === -1) {
+                    send.disabled = false;
+                  }"""
+          new_config = """        if (send.dataset && send.dataset.dentalReservationPending === '1') {
+                    send.disabled = true;
+                    return;
+                  }
+                  if (ready && !send.hidden && send.textContent.indexOf('Reservando') === -1) {
+                    send.disabled = false;
+                  }"""
+          if old_config not in config:
+              raise SystemExit('Compatibilidade CNS/WhatsApp não localizada.')
+          config = config.replace(old_config, new_config, 1)
+          config_path.write_text(config, encoding='utf-8')
+
+          index_path = Path('index.html')
+          index = index_path.read_text(encoding='utf-8')
+          old_version = 'portal-odontologia-segunda-sexta.js?v=20260815-territorial-v102'
+          new_version = 'portal-odontologia-segunda-sexta.js?v=20260816-reserva-confirmada-v103'
+          if old_version not in index:
+              raise SystemExit('Versão odontológica v102 não localizada no portal.')
+          index = index.replace(old_version, new_version, 1)
+          index_path.write_text(index, encoding='utf-8')
+
+          test_path = Path('scripts/test_dental_confirmation_gate_v103.js')
+          test_path.write_text(r"""'use strict';
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = path.resolve(__dirname, '..');
+          const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+          const dental = read('portal-odontologia-segunda-sexta.js');
+          const config = read('agenda-config.js');
+          const index = read('index.html');
+
+          assert.match(dental, /var pending = !selection\.confirmed;/,
+            'A interface deve saber quando a reserva ainda não foi confirmada.');
+          assert.match(dental, /var shouldDisable = !formReady\(\) \|\| pending;/,
+            'O WhatsApp deve permanecer bloqueado enquanto a planilha não confirmar a reserva.');
+          assert.match(dental, /send\.dataset\.dentalReservationPending = '1'/,
+            'O estado pendente deve ser compartilhado com os auxiliares do formulário.');
+          assert.match(dental, /if \(!selection\.confirmed \|\| !formReady\(\)\) \{ refreshSend\(\); return; \}/,
+            'O clique de envio deve ter uma segunda trava contra reserva ainda não confirmada.');
+          assert.doesNotMatch(dental, /serverCount\s*<=\s*item\.optimisticRemaining/,
+            'A reserva não pode ser considerada confirmada apenas porque outra pessoa reduziu o total.');
+          assert.match(dental, /postReservation\(item\)\.then/,
+            'A confirmação após timeout deve reutilizar o mesmo requestId idempotente no servidor.');
+          assert.doesNotMatch(dental, /atualização da planilha está demorando, mas o envio pelo WhatsApp já está liberado/,
+            'A interface não pode liberar WhatsApp antes da confirmação da planilha.');
+          assert.match(config, /dentalReservationPending === '1'[\s\S]*send\.disabled = true/,
+            'O auxiliar de CNS não pode reabilitar o envio durante a confirmação odontológica.');
+          assert.match(index, /portal-odontologia-segunda-sexta\.js\?v=20260816-reserva-confirmada-v103/,
+            'O portal deve invalidar o cache do script odontológico corrigido.');
+          console.log('Odontologia v103: confirmação obrigatória antes do WhatsApp e retry idempotente validados.');
+          """, encoding='utf-8')
+
+          package_path = Path('package.json')
+          package_data = json.loads(package_path.read_text(encoding='utf-8'))
+          command = package_data['scripts']['test']
+          gate = 'node scripts/test_dental_confirmation_gate_v103.js'
+          if gate not in command:
+              anchor = 'node scripts/test_dom_flows.js'
+              if anchor not in command:
+                  raise SystemExit('Âncora de testes DOM não localizada no package.json.')
+              command = command.replace(anchor, anchor + ' && ' + gate, 1)
+              package_data['scripts']['test'] = command
+          package_path.write_text(json.dumps(package_data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Validar correção odontológica isolada
+        run: |
+          node --check portal-odontologia-segunda-sexta.js
+          node --check agenda-config.js
+          node scripts/test_dental_confirmation_gate_v103.js
+
+      - name: Rodar regressão completa
+        run: npm test
+
+      - name: Garantir escopo da correção
+        shell: bash
+        run: |
+          set -euo pipefail
+          allowed='^(portal-odontologia-segunda-sexta\.js|agenda-config\.js|index\.html|scripts/test_dental_confirmation_gate_v103\.js|package\.json)$'
+          changed="$(git diff --name-only)"
+          printf '%s\n' "$changed"
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            echo "$file" | grep -Eq "$allowed" || { echo "Arquivo fora do escopo odontológico: $file"; exit 1; }
+          done <<< "$changed"
+
+      - name: Publicar somente a correção validada
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/corrigir-confirmacao-vaga-odontologica-v103.yml
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add portal-odontologia-segunda-sexta.js agenda-config.js index.html \
+                  scripts/test_dental_confirmation_gate_v103.js package.json \
+                  .github/workflows/corrigir-confirmacao-vaga-odontologica-v103.yml
+          git commit -m 'Exige confirmação da vaga odontológica antes do WhatsApp'
+          for tentativa in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((tentativa*2))
+          done
+          exit 1
