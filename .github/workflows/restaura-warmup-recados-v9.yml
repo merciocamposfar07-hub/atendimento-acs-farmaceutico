@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Restaurar pre-aquecimento esperado
+      - name: Restaurar conexao preparada e alinhar teste standalone
         shell: bash
         run: |
           set -euo pipefail
@@ -25,13 +25,45 @@ jobs:
           p=Path('painel-oficial-recados-campanhas.html')
           s=p.read_text()
           marker='<link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-recados.webmanifest">'
-          script='<script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260813-admin-v103"></script>'
-          if script not in s:
-              if marker not in s: raise SystemExit('Âncora do manifest não encontrada.')
-              s=s.replace(marker,marker+'\n'+script,1)
+          extras=[
+            '<link rel="preconnect" href="https://script.google.com">',
+            '<link rel="preconnect" href="https://script.googleusercontent.com">',
+            '<script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260813-admin-v103"></script>'
+          ]
+          if marker not in s: raise SystemExit('Âncora do manifest não encontrada.')
+          add=''.join('\n'+x for x in extras if x not in s)
+          if add:
+              s=s.replace(marker,marker+add,1)
               p.write_text(s)
+
+          t=Path('scripts/test_admin_transport.js')
+          q=t.read_text()
+          old="""  if (config.official === 'painel-oficial-agendas-vagas.html') {
+    assert.doesNotMatch(official, /fetch\\([^)]*teste-v1\\/painel-agendas-v1\\.html/);
+    assert.match(official, /DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV102:'\\+areaId/);
+  } else {
+    assert.match(official, /painel\\.then\\(function\\(html\\)/);
+    assert.match(official, /window\\.PortalTacsAdminPreload=/);
+  }
+"""
+          new="""  if (config.official === 'painel-oficial-agendas-vagas.html') {
+    assert.doesNotMatch(official, /fetch\\([^)]*teste-v1\\/painel-agendas-v1\\.html/);
+    assert.match(official, /DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV102:'\\+areaId/);
+  } else if (config.official === 'painel-oficial-recados-campanhas.html') {
+    // O painel de Recados é standalone: não depende mais do carregador HTML legado.
+    assert.match(official, /admin_publicacoes_dados/);
+    assert.match(official, /ponteConteudoV102_/);
+    assert.doesNotMatch(official, /document\\.write/);
+  } else {
+    assert.match(official, /painel\\.then\\(function\\(html\\)/);
+    assert.match(official, /window\\.PortalTacsAdminPreload=/);
+  }
+"""
+          if old not in q: raise SystemExit('Trecho do teste de transporte não encontrado.')
+          t.write_text(q.replace(old,new,1))
           PY
           grep -q 'admin-warmup.js?v=20260813-admin-v103' painel-oficial-recados-campanhas.html
+          grep -q 'preconnect" href="https://script.google.com' painel-oficial-recados-campanhas.html
           npm ci --silent
           node scripts/test_admin_transport.js
       - name: Publicar
@@ -41,6 +73,6 @@ jobs:
           if git diff --quiet; then exit 0; fi
           git config user.name 'merciocamposfar07-hub'
           git config user.email 'merciocamposfar07@icloud.com'
-          git add painel-oficial-recados-campanhas.html
-          git commit -m 'Restaura warmup do painel Recados e campanhas'
+          git add painel-oficial-recados-campanhas.html scripts/test_admin_transport.js
+          git commit -m 'Alinha Recados standalone ao contrato de transporte'
           git push
