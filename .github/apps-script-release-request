@@ -1,5 +1,5 @@
-release=multi-municipio-hardening-v1.1.0
-requested_at=2026-08-16T04:18:00Z
-source=escopo-admin-geral-integridade-territorial
-commit=f1737ca04c848e1ad9214c67d2e0012f884fc5cc
+release=multi-municipio-admin-v1.0.0
+requested_at=2026-08-16T04:25:00Z
+source=multi-municipio-admin
+commit=fc456783c2a4f41938d8e3b712a22581d1859bc1
 attempt=1
