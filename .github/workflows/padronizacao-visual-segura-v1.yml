@@ -42,11 +42,29 @@ jobs:
       - name: Rodar regressão completa do projeto
         run: npm test
 
+      - name: Atualizar versão para invalidar cache dos painéis
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, datetime
+          sha=(os.environ.get('GITHUB_SHA') or 'manual')[:12]
+          now=datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z')
+          data={
+            'version':'admin-ui-'+sha,
+            'releasedAt':now,
+            'scope':'Padrão visual administrativo seguro V1'
+          }
+          with open('portal-version.json','w',encoding='utf-8') as f:
+            json.dump(data,f,ensure_ascii=False,indent=2)
+            f.write('\n')
+          PY
+
       - name: Garantir escopo somente visual nos painéis
         shell: bash
         run: |
           set -euo pipefail
-          allowed='^(central-administrativa-tacs\.html|painel-oficial-organizacoes-municipios\.html|painel-oficial-agendas-vagas\.html|painel-oficial-profissionais-servicos\.html|painel-oficial-recados-campanhas\.html|painel-oficial-tacs-areas\.html|teste-v1/painel-moradores-v2\.html|teste-v1/painel-tacs-areas-v1\.html)$'
+          allowed='^(central-administrativa-tacs\.html|painel-oficial-organizacoes-municipios\.html|painel-oficial-agendas-vagas\.html|painel-oficial-profissionais-servicos\.html|painel-oficial-recados-campanhas\.html|painel-oficial-tacs-areas\.html|teste-v1/painel-moradores-v2\.html|teste-v1/painel-tacs-areas-v1\.html|portal-version\.json)$'
           changed="$(git diff --name-only)"
           printf '%s\n' "$changed"
           if [ -n "$changed" ]; then
@@ -69,7 +87,8 @@ jobs:
                   painel-oficial-recados-campanhas.html \
                   painel-oficial-tacs-areas.html \
                   teste-v1/painel-moradores-v2.html \
-                  teste-v1/painel-tacs-areas-v1.html
+                  teste-v1/painel-tacs-areas-v1.html \
+                  portal-version.json
           git diff --cached --quiet && exit 0
           git commit -m 'Aplica padrão visual administrativo seguro V1'
           for tentativa in 1 2 3; do
