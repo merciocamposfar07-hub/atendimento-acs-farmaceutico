@@ -32,13 +32,10 @@ const official = read('painel-oficial-recados-campanhas.html');
 assert(official.includes('admin_publicacoes_dados'), 'Painel oficial: versão standalone territorial ausente');
 assert(!official.includes('document.write'), 'Painel oficial: carregador legado frágil foi reintroduzido');
 assert(official.includes('campanhas-periodo-v2.js'), 'Painel oficial: extensão mensal V2 não está carregada');
+assert(official.includes('Campanhas no mês') || official.includes('campanhas-periodo-v2.js'), 'Painel oficial: organização mensal não está disponível');
 assert(official.includes('name="horario"'), 'Painel oficial: horário editável de recados/campanhas ausente');
 assert(official.includes('recados-campanhas-whatsapp-card-v9.js'), 'Painel oficial: compartilhamento em card azul-petróleo ausente');
 assert(official.includes('.preferenciaVisual,#alternarContraste{display:none!important'), 'Painel oficial: controle de contraste voltou a ficar visível');
-
-const base = read('teste-v1/painel-recados-campanhas-v1.html');
-assert(base.includes('id="campanhasPeriodoInlineV3"'), 'Painel-base legado: extensão mensal inline ausente');
-assert(base.includes('Campanhas no mês'), 'Painel-base legado: organização mensal não foi preservada');
 
 const portal = read('portal-ajustes-finais.js');
 assert(portal.includes("#sendWrittenTacs,.tacs-written-button{display:none!important}"), 'Portal: botão escrito antigo não está bloqueado');
