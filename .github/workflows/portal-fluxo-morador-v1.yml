@@ -52,6 +52,15 @@ jobs:
           s = s.replace(old, new, 1)
           p.write_text(s, encoding='utf-8')
 
+          p = Path('portal-orientacao-morador.js')
+          s = p.read_text(encoding='utf-8')
+          old = "function el(id) { return document.getElementById(id); }"
+          new = "function el(id) { return (typeof document !== 'undefined' && document && typeof document.getElementById === 'function') ? document.getElementById(id) : null; }"
+          if old not in s:
+              raise SystemExit('Helper DOM esperado não encontrado no guia')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
           old = '<script src="moradores-autofill.js?v=20260815-territorial-v2"></script>'
@@ -89,7 +98,7 @@ jobs:
           git diff --check
           changed="$(git diff --name-only)"
           printf '%s\n' "$changed"
-          unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(index\.html|moradores-autofill\.js)$' || true)"
+          unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(index\.html|moradores-autofill\.js|portal-orientacao-morador\.js)$' || true)"
           test -z "$unexpected"
 
       - name: Publicar
@@ -98,6 +107,6 @@ jobs:
           set -euo pipefail
           git config user.name 'Portal TACS'
           git config user.email 'actions@users.noreply.github.com'
-          git add index.html moradores-autofill.js
-          git commit -m 'Limpa dados entre atendimentos e orienta CPF ou Cartão SUS'
+          git add index.html moradores-autofill.js portal-orientacao-morador.js
+          git commit -m 'Limpa dados entre atendimentos e guia morador por etapas'
           git push origin HEAD:main
