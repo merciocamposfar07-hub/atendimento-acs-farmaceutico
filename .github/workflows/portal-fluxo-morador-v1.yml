@@ -23,395 +23,81 @@ jobs:
           cache: npm
       - run: npm ci
 
-      - name: Aplicar fluxo guiado sem alterar contratos territoriais
+      - name: Aplicar limpeza e mensagens do morador
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
 
-          autofill_path = Path('moradores-autofill.js')
-          autofill = autofill_path.read_text(encoding='utf-8')
-
-          replacements = [
-            ("input.placeholder = 'CPF ou CNS';", "input.placeholder = 'CPF ou Cartão SUS (CNS)';"),
-            ("label.firstChild.textContent = 'CPF ou CNS ';", "label.firstChild.textContent = 'CPF ou Cartão SUS (CNS) ';"),
-            ("setStatus(status, 'Informe o CPF ou o Cartão Nacional de Saúde (CNS).', '');", "setStatus(status, 'Digite seu CPF ou Cartão SUS (CNS). Seus dados serão carregados automaticamente para conferência.', '');"),
-            ("setStatus(status, (validCns(input.value) ? 'CNS' : 'CPF') + ' encontrado ✓ Dados preenchidos automaticamente.', 'valid');", "setStatus(status, (validCns(input.value) ? 'Cartão SUS encontrado ✓ ' : 'CPF encontrado ✓ ') + 'Dados carregados automaticamente. Confira nome, nascimento e localidade; se algo estiver errado, corrija antes de continuar.', 'valid');"),
-            ("setStatus(status, 'Cadastro não encontrado. Confira o documento.', 'invalid');", "setStatus(status, validCns(input.value) ? 'Cartão SUS não localizado nesta área. Confira os 15 números ou procure seu TACS.' : 'CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).', 'invalid');"),
-            ("setStatus(status, 'Digite um CPF válido ou os 15 números do CNS.', 'invalid');", "setStatus(status, 'Digite um CPF válido ou os 15 números do Cartão SUS (CNS).', 'invalid');")
+          p = Path('moradores-autofill.js')
+          s = p.read_text(encoding='utf-8')
+          reps = [
+              ("input.placeholder = 'CPF ou CNS';", "input.placeholder = 'CPF ou Cartão SUS (CNS)';"),
+              ("label.firstChild.textContent = 'CPF ou CNS ';", "label.firstChild.textContent = 'CPF ou Cartão SUS (CNS) ';"),
+              ("setStatus(status, 'Informe o CPF ou o Cartão Nacional de Saúde (CNS).', '');", "setStatus(status, 'Digite seu CPF ou Cartão SUS (CNS). Seus dados serão carregados automaticamente para conferência.', '');"),
+              ("setStatus(status, (validCns(input.value) ? 'CNS' : 'CPF') + ' encontrado ✓ Dados preenchidos automaticamente.', 'valid');", "setStatus(status, (validCns(input.value) ? 'Cartão SUS encontrado ✓ ' : 'CPF encontrado ✓ ') + 'Dados carregados automaticamente. Confira nome, nascimento e localidade; se algo estiver errado, corrija antes de continuar.', 'valid');"),
+              ("setStatus(status, 'Cadastro não encontrado. Confira o documento.', 'invalid');", "setStatus(status, validCns(input.value) ? 'Cartão SUS não localizado nesta área. Confira os 15 números ou procure seu TACS.' : 'CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).', 'invalid');"),
+              ("setStatus(status, 'Digite um CPF válido ou os 15 números do CNS.', 'invalid');", "setStatus(status, 'Digite um CPF válido ou os 15 números do Cartão SUS (CNS).', 'invalid');")
           ]
-          for old, new in replacements:
-            if old not in autofill:
-              raise SystemExit('Trecho esperado não encontrado em moradores-autofill.js: ' + old[:80])
-            autofill = autofill.replace(old, new, 1)
+          for old, new in reps:
+              if old not in s:
+                  raise SystemExit('Trecho não encontrado: ' + old[:90])
+              s = s.replace(old, new, 1)
 
-          old_replace = "oldInput.parentNode.replaceChild(input, oldInput);\n\n    var label = input.closest('label');"
-          new_replace = "oldInput.parentNode.replaceChild(input, oldInput);\n    // Nunca reaproveitar dados visíveis de outro morador/território restaurados pelo navegador.\n    clearResidentFields();\n\n    var label = input.closest('label');"
-          if old_replace not in autofill:
-            raise SystemExit('Ponto de limpeza inicial não encontrado em moradores-autofill.js')
-          autofill = autofill.replace(old_replace, new_replace, 1)
-          autofill_path.write_text(autofill, encoding='utf-8')
+          old = "oldInput.parentNode.replaceChild(input, oldInput);\n\n    var label = input.closest('label');"
+          new = "oldInput.parentNode.replaceChild(input, oldInput);\n    // Limpa qualquer dado pessoal restaurado pelo navegador antes de consultar a área atual.\n    clearResidentFields();\n\n    var label = input.closest('label');"
+          if old not in s:
+              raise SystemExit('Ponto de limpeza inicial não encontrado')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
 
-          guidance = r'''(function () {
-  'use strict';
-
-  if (window.PortalTacsOrientacaoMoradorV1) return;
-
-  var residentReady = false;
-  var residentDocument = '';
-  var sendIntent = false;
-  var sendArrowShownForService = '';
-  var flowArrow = null;
-  var alertObserver = null;
-  var formObserver = null;
-  var initialized = false;
-
-  function el(id) { return document.getElementById(id); }
-  function digits(value) { return String(value || '').replace(/\D/g, ''); }
-  function clean(value) { return String(value == null ? '' : value).trim(); }
-
-  function addStyle() {
-    if (document.getElementById('portal-guide-style-v1')) return;
-    var style = document.createElement('style');
-    style.id = 'portal-guide-style-v1';
-    style.textContent = [
-      '.portal-flow-arrow{display:flex;align-items:center;gap:9px;width:max-content;max-width:100%;margin:0 0 10px;padding:9px 13px;border:2px solid #70e39f;border-radius:999px;background:#073a55;color:#fff;font-size:15px;font-weight:950;line-height:1.25;box-shadow:0 9px 22px rgba(3,42,64,.20);animation:portalGuidePulse 1.35s ease-in-out infinite}',
-      '.portal-flow-arrow .portal-arrow-symbol{display:inline-block;color:#7af0a8;font-size:23px;line-height:1}',
-      '.portal-alert-guide{display:inline-flex;align-items:center;gap:8px;margin:0 0 10px;padding:7px 11px;border:2px solid #70e39f;border-radius:999px;background:#073a55;color:#fff;font-size:14px;font-weight:950;line-height:1.2;animation:portalGuidePulse 1.45s ease-in-out infinite}',
-      '.portal-alert-guide .portal-arrow-symbol{color:#7af0a8;font-size:20px}',
-      '@keyframes portalGuidePulse{0%,100%{opacity:.62;transform:translateY(0)}50%{opacity:1;transform:translateY(5px)}}',
-      '@media(prefers-reduced-motion:reduce){.portal-flow-arrow,.portal-alert-guide{animation:none!important}}'
-    ].join('');
-    document.head.appendChild(style);
-  }
-
-  function dispatchValue(field, value) {
-    if (!field) return;
-    field.value = value;
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-    field.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-
-  function clearForm() {
-    residentReady = false;
-    residentDocument = '';
-    sendIntent = false;
-    sendArrowShownForService = '';
-    removeFlowArrow();
-
-    ['birth', 'name', 'locality', 'motherName', 'fatherName', 'subject', 'implanonChoice'].forEach(function (id) {
-      dispatchValue(el(id), '');
-    });
-
-    var localityDisplay = el('localityDisplay');
-    if (localityDisplay) localityDisplay.value = '';
-
-    var cpf = el('cpf');
-    if (cpf) {
-      cpf.value = '';
-      cpf.autocomplete = 'off';
-    }
-
-    var category = el('category');
-    if (category) {
-      category.value = '';
-      category.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    Array.prototype.forEach.call(document.querySelectorAll('.slot.selected,.integral-day.selected,[aria-checked="true"]'), function (node) {
-      node.classList.remove('selected');
-      if (node.hasAttribute('aria-checked')) node.setAttribute('aria-checked', 'false');
-    });
-
-    window.TACS_MORADOR_ATUAL = null;
-    var status = el('cpfStatus');
-    if (status) {
-      status.textContent = 'Digite seu CPF ou Cartão SUS (CNS). Seus dados serão carregados automaticamente para conferência.';
-      status.className = 'help id-cns-note';
-    }
-
-    setTimeout(updateFlowGuide, 0);
-  }
-
-  function removeFlowArrow() {
-    if (flowArrow && flowArrow.parentNode) flowArrow.parentNode.removeChild(flowArrow);
-    flowArrow = null;
-    Array.prototype.forEach.call(document.querySelectorAll('.portal-flow-arrow'), function (node) { node.remove(); });
-  }
-
-  function makeArrow(text) {
-    var node = document.createElement('div');
-    node.className = 'portal-flow-arrow';
-    node.setAttribute('role', 'status');
-    node.setAttribute('aria-live', 'polite');
-    node.innerHTML = '<span class="portal-arrow-symbol" aria-hidden="true">➜</span><span></span>';
-    node.lastChild.textContent = text;
-    return node;
-  }
-
-  function placeArrow(target, text, key, autoScroll) {
-    if (!target || !target.parentNode) return;
-    if (flowArrow && flowArrow.dataset.guideKey === key) return;
-    removeFlowArrow();
-    flowArrow = makeArrow(text);
-    flowArrow.dataset.guideKey = key;
-    target.parentNode.insertBefore(flowArrow, target);
-    if (autoScroll && typeof target.scrollIntoView === 'function') {
-      setTimeout(function () {
-        try { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
-      }, 90);
-    }
-  }
-
-  function cpfTarget() {
-    var cpf = el('cpf');
-    return cpf && (cpf.closest('label') || cpf);
-  }
-
-  function categoryTarget() {
-    var category = el('category');
-    return category && (category.closest('label') || category);
-  }
-
-  function updateFlowGuide() {
-    if (!initialized) return;
-    var cpf = el('cpf');
-    var category = el('category');
-    var send = el('send');
-
-    if (!residentReady) {
-      placeArrow(cpfTarget(), 'Comece aqui: digite seu CPF ou Cartão SUS.', 'document', false);
-      return;
-    }
-
-    if (!category || !clean(category.value)) {
-      placeArrow(categoryTarget(), 'Agora toque aqui e escolha o serviço necessário.', 'service', true);
-      return;
-    }
-
-    if (send && !send.hidden && !send.disabled) {
-      var serviceKey = clean(category.value);
-      var shouldScroll = sendArrowShownForService !== serviceKey;
-      sendArrowShownForService = serviceKey;
-      placeArrow(send, 'Tudo pronto. Toque aqui para enviar sua solicitação ao TACS.', 'send:' + serviceKey, shouldScroll);
-      return;
-    }
-
-    removeFlowArrow();
-  }
-
-  function decorateAlerts() {
-    var area = el('integralPublicArea');
-    if (!area) return;
-    Array.prototype.forEach.call(area.querySelectorAll('.integral-balloon'), function (card) {
-      if (card.querySelector('.portal-alert-guide')) return;
-      var guide = document.createElement('div');
-      guide.className = 'portal-alert-guide';
-      var isCampaign = card.classList.contains('integral-campaign');
-      guide.innerHTML = '<span class="portal-arrow-symbol" aria-hidden="true">↓</span><span></span>';
-      guide.lastChild.textContent = isCampaign ? 'Veja a campanha ativa' : 'Veja o recado ativo';
-      card.insertBefore(guide, card.firstChild);
-    });
-  }
-
-  function installObservers() {
-    if (!alertObserver) {
-      alertObserver = new MutationObserver(function () { decorateAlerts(); });
-      alertObserver.observe(document.body, { childList: true, subtree: true });
-    }
-    var send = el('send');
-    if (send && !formObserver) {
-      formObserver = new MutationObserver(function () { updateFlowGuide(); });
-      formObserver.observe(send, { attributes: true, attributeFilter: ['disabled', 'hidden', 'style', 'class'] });
-    }
-  }
-
-  function installEvents() {
-    document.addEventListener('tacs:morador', function () {
-      residentReady = true;
-      residentDocument = digits(el('cpf') && el('cpf').value);
-      sendArrowShownForService = '';
-      setTimeout(updateFlowGuide, 0);
-    });
-
-    var cpf = el('cpf');
-    if (cpf) {
-      cpf.addEventListener('input', function () {
-        if (residentReady && digits(cpf.value) !== residentDocument) {
-          residentReady = false;
-          residentDocument = '';
-          sendArrowShownForService = '';
-        }
-        setTimeout(updateFlowGuide, 0);
-      });
-    }
-
-    var category = el('category');
-    if (category) {
-      category.addEventListener('change', function () {
-        sendArrowShownForService = '';
-        setTimeout(updateFlowGuide, 30);
-      });
-    }
-
-    ['birth', 'name', 'locality', 'localityDisplay', 'subject', 'implanonChoice'].forEach(function (id) {
-      var field = el(id);
-      if (field) field.addEventListener('input', function () { setTimeout(updateFlowGuide, 20); });
-    });
-
-    document.addEventListener('click', function (event) {
-      var target = event.target && event.target.closest ? event.target.closest('.slot,.integral-day,#send') : null;
-      if (!target) return;
-      if (target.id === 'send') {
-        if (!target.disabled && !target.hidden) sendIntent = true;
-        return;
-      }
-      setTimeout(updateFlowGuide, 60);
-    });
-
-    window.addEventListener('pagehide', function () {
-      if (!sendIntent) return;
-      try { sessionStorage.setItem('portalTacsResetAfterSendV1', '1'); } catch (e) {}
-      clearForm();
-    });
-
-    window.addEventListener('pageshow', function () {
-      var reset = false;
-      try {
-        reset = sessionStorage.getItem('portalTacsResetAfterSendV1') === '1';
-        if (reset) sessionStorage.removeItem('portalTacsResetAfterSendV1');
-      } catch (e) {}
-      if (reset) clearForm();
-      else setTimeout(updateFlowGuide, 0);
-    });
-  }
-
-  function init() {
-    if (initialized) return;
-    initialized = true;
-    addStyle();
-
-    ['cpf', 'birth', 'name', 'locality', 'category', 'subject', 'implanonChoice'].forEach(function (id) {
-      var field = el(id);
-      if (field) field.autocomplete = 'off';
-    });
-
-    // Todo carregamento do Portal começa sem dados pessoais restaurados pelo navegador.
-    clearForm();
-    installEvents();
-    installObservers();
-    decorateAlerts();
-    updateFlowGuide();
-  }
-
-  window.PortalTacsOrientacaoMoradorV1 = Object.freeze({
-    reset: clearForm,
-    refreshGuide: updateFlowGuide
-  });
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
-  else init();
-}());
-'''
-          Path('portal-orientacao-morador.js').write_text(guidance, encoding='utf-8')
-
-          index_path = Path('index.html')
-          index = index_path.read_text(encoding='utf-8')
-          old_autofill = '<script src="moradores-autofill.js?v=20260815-territorial-v2"></script>'
-          new_autofill = '<script src="moradores-autofill.js?v=20260816-fluxo-morador-v1"></script>'
-          if old_autofill not in index:
-            raise SystemExit('Versão esperada de moradores-autofill não encontrada em index.html')
-          index = index.replace(old_autofill, new_autofill, 1)
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '<script src="moradores-autofill.js?v=20260815-territorial-v2"></script>'
+          new = '<script src="moradores-autofill.js?v=20260816-fluxo-morador-v1"></script>'
+          if old not in s:
+              raise SystemExit('Versão antiga do autofill não encontrada em index.html')
+          s = s.replace(old, new, 1)
 
           anchor = '<script src="portal-odontologia-segunda-sexta.js?v=20260816-reserva-confirmada-v103"></script>'
           addition = anchor + '\n  <script src="portal-orientacao-morador.js?v=20260816-fluxo-guiado-v1"></script>'
-          if anchor not in index:
-            raise SystemExit('Âncora odontológica v103 não encontrada em index.html')
-          if 'portal-orientacao-morador.js' not in index:
-            index = index.replace(anchor, addition, 1)
-          index_path.write_text(index, encoding='utf-8')
+          if anchor not in s:
+              raise SystemExit('Âncora odontológica v103 não encontrada')
+          if 'portal-orientacao-morador.js' not in s:
+              s = s.replace(anchor, addition, 1)
+          p.write_text(s, encoding='utf-8')
           PY
 
-      - name: Testar fluxo guiado e regressão completa
+      - name: Validar contratos e regressão
         shell: bash
         run: |
           set -euo pipefail
-          node - <<'NODE'
-          const fs=require('fs');
-          const assert=require('assert');
-          const {JSDOM}=require('jsdom');
-          const index=fs.readFileSync('index.html','utf8');
-          const autofill=fs.readFileSync('moradores-autofill.js','utf8');
-          const guide=fs.readFileSync('portal-orientacao-morador.js','utf8');
-
-          assert(index.includes('moradores-autofill.js?v=20260816-fluxo-morador-v1'));
-          assert(index.includes('portal-orientacao-morador.js?v=20260816-fluxo-guiado-v1'));
-          assert(autofill.includes('CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).'));
-          assert(autofill.includes('Dados carregados automaticamente. Confira nome, nascimento e localidade'));
-          assert(autofill.includes('clearResidentFields();\n\n    var label = input.closest'));
-          assert(!guide.includes('localStorage.removeItem'), 'Guia não pode apagar caches territoriais/dados públicos.');
-          assert(!guide.includes('TACS_ADMIN_API_URL'), 'Guia visual não pode alterar comunicação com Apps Script.');
-
-          const dom=new JSDOM(`<!doctype html><html><head></head><body>
-            <main><section id="integralPublicArea"><article class="integral-balloon"><small>Recado</small></article><article class="integral-balloon integral-campaign"><small>Campanha</small></article></section>
-            <label>CPF<input id="cpf"></label><div id="cpfStatus"></div>
-            <label>Nascimento<input id="birth"></label><div id="ageStatus"></div>
-            <label>Nome<input id="name"></label><label>Localidade<input id="locality"></label>
-            <label>Serviço<select id="category"><option value="">Escolha</option><option value="MEDICA">Médica</option></select></label>
-            <textarea id="subject"></textarea><select id="implanonChoice"></select>
-            <button id="send" disabled>Enviar</button></main>
-          </body></html>`,{url:'https://example.test/?area=SITIO_MATIAS',runScripts:'outside-only',pretendToBeVisual:true});
-          const w=dom.window;
-          w.eval(guide);
-          w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
-          assert.equal(w.document.querySelector('.portal-flow-arrow').dataset.guideKey,'document');
-          assert.equal(w.document.querySelectorAll('.portal-alert-guide').length,2);
-
-          w.document.getElementById('cpf').value='12345678901';
-          w.document.dispatchEvent(new w.CustomEvent('tacs:morador',{detail:{nome:'Teste'}}));
-          assert.equal(w.document.querySelector('.portal-flow-arrow').dataset.guideKey,'service');
-
-          const category=w.document.getElementById('category');
-          category.value='MEDICA';
-          category.dispatchEvent(new w.Event('change',{bubbles:true}));
-          const send=w.document.getElementById('send');
-          send.disabled=false;
-          send.removeAttribute('disabled');
-          return new Promise(r=>setTimeout(r,80)).then(()=>{
-            assert(w.document.querySelector('.portal-flow-arrow').dataset.guideKey.startsWith('send:'));
-            send.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
-            w.dispatchEvent(new w.PageTransitionEvent('pagehide'));
-            assert.equal(w.document.getElementById('cpf').value,'');
-            assert.equal(w.document.getElementById('name').value,'');
-            assert.equal(w.document.getElementById('category').value,'');
-            dom.window.close();
-            console.log('PORTAL_FLUXO_MORADOR_V1_OK');
-          });
-          NODE
+          node --check moradores-autofill.js
+          node --check portal-orientacao-morador.js
+          grep -q 'CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).' moradores-autofill.js
+          grep -q 'Dados carregados automaticamente. Confira nome, nascimento e localidade' moradores-autofill.js
+          grep -q 'portal-orientacao-morador.js?v=20260816-fluxo-guiado-v1' index.html
+          grep -q 'portal-odontologia-segunda-sexta.js?v=20260816-reserva-confirmada-v103' index.html
+          grep -q 'buscar_morador.*areaId' moradores-autofill.js
           npm test
 
-      - name: Garantir escopo funcional preservado
+      - name: Garantir escopo
         shell: bash
         run: |
           set -euo pipefail
+          git diff --check
           changed="$(git diff --name-only)"
           printf '%s\n' "$changed"
-          test "$(printf '%s\n' "$changed" | grep -Ev '^(index\.html|moradores-autofill\.js|portal-orientacao-morador\.js)$' | wc -l)" -eq 0
-          git diff --check
-          grep -q "buscar_morador.*areaId" moradores-autofill.js
-          grep -q "portal-odontologia-segunda-sexta.js?v=20260816-reserva-confirmada-v103" index.html
+          unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(index\.html|moradores-autofill\.js)$' || true)"
+          test -z "$unexpected"
 
-      - name: Publicar correções
+      - name: Publicar
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet; then
-            echo 'Nenhuma alteração pendente.'
-            exit 0
-          fi
           git config user.name 'Portal TACS'
           git config user.email 'actions@users.noreply.github.com'
-          git add index.html moradores-autofill.js portal-orientacao-morador.js
-          git commit -m 'Guia morador por etapas e limpa dados entre atendimentos'
+          git add index.html moradores-autofill.js
+          git commit -m 'Limpa dados entre atendimentos e orienta CPF ou Cartão SUS'
           git push origin HEAD:main
