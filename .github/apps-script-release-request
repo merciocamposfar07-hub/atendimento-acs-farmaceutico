@@ -1,5 +1,5 @@
-release=login-rapido-tacs-pin-1.0.0
-requested_at=2026-08-16T02:58:30Z
-source=multiagente-acesso-rapido-pin
-commit=0d5255644663f0ada7637435620906fa62bbe928
-attempt=1
+release=login-rapido-tacs-pin-1.1.0
+requested_at=2026-08-16T03:03:30Z
+source=multiagente-acesso-rapido-pin-final
+commit=59271e92cb23873415465a7ba0dc47565c14ffb0
+attempt=2
