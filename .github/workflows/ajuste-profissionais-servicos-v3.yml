@@ -1,0 +1,71 @@
+name: Ajuste Profissionais e Servicos V3
+
+on:
+  push:
+    paths:
+      - 'scripts/ajuste_profissionais_servicos_v3.py'
+      - '.github/workflows/ajuste-profissionais-servicos-v3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Aplicar somente os dois ajustes solicitados
+        run: python3 scripts/ajuste_profissionais_servicos_v3.py
+
+      - name: Validar o resultado antes da publicacao
+        run: |
+          grep -q 'AJUSTE_PROFISSIONAIS_SERVICOS_V3' teste-v1/painel-profissionais-servicos-v1.html
+          grep -q 'ATENDIMENTO ODONTOLOGICO DE EMERGENCIA' teste-v1/painel-profissionais-servicos-v1.html
+          grep -q 'resumo .numero' teste-v1/painel-profissionais-servicos-v1.html
+          grep -q '20260816-profissionais-v3' painel-oficial-profissionais-servicos.html
+          grep -q '20260816-profissionais-v3' central-administrativa-tacs.js
+          grep -q '20260816-profissionais-v3' central-administrativa-tacs.html
+
+      - name: Garantir que nenhuma outra area foi alterada
+        run: |
+          ALLOWED='teste-v1/painel-profissionais-servicos-v1.html|painel-oficial-profissionais-servicos.html|central-administrativa-tacs.js|central-administrativa-tacs.html'
+          EXTRA=$(git diff --name-only | grep -Ev "^($ALLOWED)$" || true)
+          if [ -n "$EXTRA" ]; then
+            echo "Arquivos fora do escopo foram alterados:"
+            echo "$EXTRA"
+            exit 1
+          fi
+
+      - name: Publicar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add teste-v1/painel-profissionais-servicos-v1.html painel-oficial-profissionais-servicos.html central-administrativa-tacs.js central-administrativa-tacs.html
+          git commit -m 'Ajusta serviço odontológico e resumo petróleo V3' || true
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Validar a revisao publicada no GitHub Pages
+        run: |
+          BASE='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico'
+          for i in $(seq 1 60); do
+            TS=$(date +%s)
+            SRC=$(curl -fsSL "$BASE/teste-v1/painel-profissionais-servicos-v1.html?probe=$i-$TS" || true)
+            OFF=$(curl -fsSL "$BASE/painel-oficial-profissionais-servicos.html?probe=$i-$TS" || true)
+            CEN=$(curl -fsSL "$BASE/central-administrativa-tacs.js?probe=$i-$TS" || true)
+            if echo "$SRC" | grep -q 'AJUSTE_PROFISSIONAIS_SERVICOS_V3' && \
+               echo "$SRC" | grep -q 'ATENDIMENTO ODONTOLOGICO DE EMERGENCIA' && \
+               echo "$OFF" | grep -q '20260816-profissionais-v3' && \
+               echo "$CEN" | grep -q '20260816-profissionais-v3'; then
+              echo 'AJUSTE_PROFISSIONAIS_SERVICOS_V3_PUBLICADO_OK'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'A revisao V3 nao apareceu no GitHub Pages no prazo.' >&2
+          exit 1
