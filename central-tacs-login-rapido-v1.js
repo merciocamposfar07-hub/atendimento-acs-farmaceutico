@@ -113,6 +113,20 @@ function post(action,payload,cb){
   frame.addEventListener('load',send,{once:true});setTimeout(send,120);
 }
 
+function abrirSessao(token){
+  try{sessionStorage.removeItem(ADMIN_TOKEN_KEY);sessionStorage.setItem(TERRITORY_TOKEN_KEY,token)}catch(e){}
+  setStatus('Acesso validado. Abrindo sua área…','ok');
+  setTimeout(function(){location.reload()},80);
+}
+function concluirPrimeiroAcesso(r,device){
+  if(r.quickKey){saveProfile(r);abrirSessao(r.token);return}
+  setStatus('Acesso validado. Ativando entrada rápida por PIN neste aparelho…','warn');
+  post('admin_territorio_criar_chave_rapida',{territorioToken:r.token,dispositivo:device},function(q){
+    if(q&&q.ok===true&&q.quickKey)saveProfile(q);
+    abrirSessao(r.token);
+  });
+}
+
 loginBtn.addEventListener('click',function(event){
   event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
   if(busy){setStatus('Aguarde a validação em andamento.','warn');return}
@@ -134,10 +148,8 @@ loginBtn.addEventListener('click',function(event){
   post(action,payload,function(r){
     pinInput.value='';
     if(!r||r.ok!==true||!r.token){setStatus(text(r&&r.message)||'Acesso recusado.','err');return}
-    if(r.quickKey)saveProfile(r);
-    try{sessionStorage.removeItem(ADMIN_TOKEN_KEY);sessionStorage.setItem(TERRITORY_TOKEN_KEY,r.token)}catch(e){}
-    setStatus('Acesso validado. Abrindo sua área…','ok');
-    setTimeout(function(){location.reload()},80);
+    if(profile){if(r.quickKey)saveProfile(r);abrirSessao(r.token);return}
+    concluirPrimeiroAcesso(r,device);
   });
 },true);
 
