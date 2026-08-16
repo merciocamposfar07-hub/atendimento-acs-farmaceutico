@@ -12,7 +12,7 @@
   var formObserver = null;
   var initialized = false;
 
-  function el(id) { return document.getElementById(id); }
+  function el(id) { return (typeof document !== 'undefined' && document && typeof document.getElementById === 'function') ? document.getElementById(id) : null; }
   function digits(value) { return String(value || '').replace(/\D/g, ''); }
   function clean(value) { return String(value == null ? '' : value).trim(); }
 

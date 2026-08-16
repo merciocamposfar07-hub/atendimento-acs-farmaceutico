@@ -280,12 +280,13 @@
     input.dataset.autofillIsolado = '4';
     input.value = '';
     input.maxLength = 18;
-    input.placeholder = 'CPF ou CNS';
+    input.placeholder = 'CPF ou Cartão SUS (CNS)';
     oldInput.parentNode.replaceChild(input, oldInput);
+    clearResidentFields();
 
     var label = input.closest('label');
-    if (label && label.firstChild) label.firstChild.textContent = 'CPF ou CNS ';
-    setStatus(status, 'Informe o CPF ou o Cartão Nacional de Saúde (CNS).', '');
+    if (label && label.firstChild) label.firstChild.textContent = 'CPF ou Cartão SUS (CNS) ';
+    setStatus(status, 'Digite seu CPF ou Cartão SUS (CNS). Seus dados serão carregados automaticamente para conferência.', '');
 
     function complete(payload, token) {
       if (token !== requestId) return;
@@ -300,13 +301,13 @@
           return;
         }
         if (fillFields(payload)) {
-          setStatus(status, (validCns(input.value) ? 'CNS' : 'CPF') + ' encontrado ✓ Dados preenchidos automaticamente.', 'valid');
+          setStatus(status, (validCns(input.value) ? 'Cartão SUS encontrado ✓ ' : 'CPF encontrado ✓ ') + 'Dados carregados automaticamente. Confira nome, nascimento e localidade; se algo estiver errado, corrija antes de continuar.', 'valid');
         } else {
           clearResidentFields();
           setStatus(status, 'O cadastro retornado está incompleto. Procure seu TACS.', 'invalid');
         }
       } else if (payload && payload.ok === true && payload.encontrado === false) {
-        setStatus(status, 'Cadastro não encontrado. Confira o documento.', 'invalid');
+        setStatus(status, validCns(input.value) ? 'Cartão SUS não localizado nesta área. Confira os 15 números ou procure seu TACS.' : 'CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).', 'invalid');
       } else {
         setStatus(status, payload && payload.message ? payload.message : 'Não foi possível consultar agora. Tente novamente.', 'invalid');
       }
@@ -404,7 +405,7 @@
         timer = setTimeout(lookup, 350);
       } else if (doc.length) {
         clearResidentFields();
-        setStatus(status, 'Digite um CPF válido ou os 15 números do CNS.', 'invalid');
+        setStatus(status, 'Digite um CPF válido ou os 15 números do Cartão SUS (CNS).', 'invalid');
       } else {
         clearResidentFields();
         setStatus(status, 'Informe o CPF ou o Cartão Nacional de Saúde (CNS).', '');
