@@ -42,7 +42,8 @@ jobs:
       - name: Validar contrato local crítico
         run: |
           grep -q 'painel-recados-campanhas-v1.html?v=20260816-recados-live-v3' painel-oficial-recados-campanhas.html
-          grep -q 'campanhas-periodo-v1.js?v=20260816-recados-live-v3' teste-v1/painel-recados-campanhas-v1.html
+          grep -q 'campanhasPeriodoInlineV3' teste-v1/painel-recados-campanhas-v1.html
+          grep -q 'Campanhas no mês' teste-v1/painel-recados-campanhas-v1.html
           grep -q 'preferenciaVisual{display:none!important' teste-v1/painel-recados-campanhas-v1.html
           grep -q "painel-oficial-recados-campanhas.html?area='+area+access+'&v=20260816-recados-live-v3" central-administrativa-tacs.js
 
