@@ -16,9 +16,16 @@ assert.match(moradoresPanel,/sessionStorage\.removeItem\(['"]portalTacsAdminToke
 assert.match(moradoresPanel,/Acesso individual do TACS/);
 
 const recados=get('painel-oficial-recados-campanhas.html');
-assert.match(recados,/TACS_ONLY/);
 assert.match(recados,/loginAdminTab/);
+assert.match(recados,/loginTacsTab/);
 assert.match(recados,/portalTacsAdminTokenV1/);
+assert.match(recados,/portalTacsTerritorioTokenV1/);
+assert.match(recados,/accessMode=territorioToken\?'tacs':\(token\?'admin':''\)/,
+  'Recados deve inferir sessão TACS pelo token territorial, sem confiar no navegador.');
+assert.match(recados,/if\(accessMode==='tacs'&&territorioToken\)s\.territorioToken=territorioToken/,
+  'Recados deve enviar o token territorial quando a sessão é TACS.');
+assert.match(recados,/admin_territorio_login_tacs/,
+  'Recados deve preservar o login individual do TACS.');
 
 const autofill=get('moradores-autofill.js');
 assert.match(autofill,/&areaId=' \+ encodeURIComponent\(portalAreaId\(\)\)/);
