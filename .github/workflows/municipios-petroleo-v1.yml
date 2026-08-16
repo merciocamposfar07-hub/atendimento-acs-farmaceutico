@@ -1,0 +1,65 @@
+name: Municípios azul-petróleo V1
+
+on:
+  push:
+    paths:
+      - 'scripts/fix_municipios_petroleo_cards_v1.py'
+      - '.github/workflows/municipios-petroleo-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Aplicar somente o ajuste visual solicitado
+        run: python3 scripts/fix_municipios_petroleo_cards_v1.py
+
+      - name: Validar que só o visual dos balões foi alterado
+        run: |
+          grep -q "background:linear-gradient(145deg,var(--p),var(--p2));color:#fff;overflow:hidden" painel-oficial-organizacoes-municipios.html
+          grep -q ".newbox h2,.newbox label,.card .body label,.area-row label{color:#fff}" painel-oficial-organizacoes-municipios.html
+          grep -q "painel-oficial-organizacoes-municipios.html?v=20260816-municipios-petroleo-v1" central-administrativa-tacs.js
+          git diff --check
+          CHANGED=$(git diff --name-only | sort)
+          printf '%s\n' "$CHANGED"
+          test "$CHANGED" = "central-administrativa-tacs.html
+central-administrativa-tacs.js
+painel-oficial-organizacoes-municipios.html"
+
+      - name: Publicar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add painel-oficial-organizacoes-municipios.html central-administrativa-tacs.js central-administrativa-tacs.html
+          git commit -m 'Aplica fundo azul-petróleo aos balões de Municípios e organizações'
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Aguardar GitHub Pages
+        run: |
+          URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?probe='
+          for i in $(seq 1 48); do
+            PAGE=$(curl -fsSL "${URL}${i}-$(date +%s)" || true)
+            if echo "$PAGE" | grep -q "background:linear-gradient(145deg,var(--p),var(--p2));color:#fff;overflow:hidden"; then
+              echo 'Painel publicado com balões azul-petróleo.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'A revisão não apareceu no GitHub Pages.' >&2
+          exit 1
+
+      - name: Validar página pública final
+        run: |
+          PAGE=$(curl -fsSL "https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?v=20260816-municipios-petroleo-v1&_=$(date +%s)")
+          echo "$PAGE" | grep -q ".card,.area-row{min-width:0;border:2px solid var(--blue);border-radius:18px;background:linear-gradient(145deg,var(--p),var(--p2));color:#fff"
+          echo "$PAGE" | grep -q ".newbox{min-width:0;border:2px solid var(--blue);border-radius:18px"
+          echo "$PAGE" | grep -q ".newbox h2,.newbox label,.card .body label,.area-row label{color:#fff}"
+          echo 'MUNICIPIOS_PETROLEO_LIVE_OK'
