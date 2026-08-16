@@ -8,10 +8,37 @@ Este documento é uma regra de projeto e uma fonte de verdade. Novas telas, corr
 - Clareza de leitura em iPhone, Android e navegadores móveis comuns.
 - Nenhum texto, selo, status, botão, card, tabela ou campo pode ultrapassar a largura do contêiner.
 - IDs técnicos, CNS, CPF, nomes longos e descrições devem quebrar linha de forma segura sem empurrar outros elementos para fora da tela.
-- Todo painel administrativo aberto pela Central deve possuir controle persistente de contraste.
-- O contraste deve ser compartilhado entre os painéis no mesmo aparelho, sem alterar os dados da aplicação.
+- O padrão administrativo é fixo e de alta legibilidade; controles antigos de alternância manual de contraste não devem ser recriados.
 - Estados de foco devem ser visíveis para teclado e tecnologias assistivas.
 - Botões e campos devem manter dimensão adequada para toque.
+- Botões de salvar/confirmar devem compartilhar o mesmo padrão visual: azul-petróleo, texto branco, contorno azul-claro, raio e altura consistentes.
+- Ações destrutivas devem permanecer visualmente distintas em vermelho; estados de alerta/sucesso preservam semântica própria.
+- Cards, campos, abas, selos, tipografia e espaçamentos devem obedecer aos tokens visuais oficiais do projeto.
+
+### 1.1 Separação obrigatória entre visual e funcional
+
+A camada visual nunca deve ser usada como fonte de verdade funcional.
+
+**Contrato funcional protegido:**
+- IDs (`id`);
+- nomes de campos (`name`);
+- atributos `data-*`;
+- classes que o JavaScript consulta explicitamente;
+- autenticação, sessão e permissões;
+- território/área/município/organização;
+- payloads e respostas do Apps Script;
+- regras de gravação, releitura, auditoria e isolamento.
+
+**Contrato visual independente:**
+- cor;
+- contorno;
+- `border-radius`;
+- tipografia;
+- espaçamento;
+- sombra;
+- aparência de cards, campos, selos e botões.
+
+Padronizações visuais devem ser feitas sem renomear ou remover identificadores funcionais. O arquivo `admin-ui-standard.inline.css` é a fonte de verdade visual administrativa; ele é injetado inline nos painéis para não criar requisição HTTP adicional em tempo de uso.
 
 ## 2. Integridade territorial
 
@@ -76,9 +103,11 @@ Toda alteração relevante deve passar, conforme o módulo afetado, por:
 5. teste de gravação e releitura;
 6. teste de duplicidade/duplo clique quando houver escrita;
 7. teste responsivo/mobile e de overflow;
-8. teste de contraste e legibilidade;
+8. teste de legibilidade, foco e padrão visual;
 9. teste de manipulação de `area=`/IDs no navegador;
 10. teste de concorrência/carga quando a alteração afetar infraestrutura compartilhada.
+
+Mudança exclusivamente visual deve, adicionalmente, passar pelo teste de contrato visual e comprovar que IDs, `name`, `data-*` e scripts funcionais não foram alterados.
 
 ## 8. Regra de publicação
 
