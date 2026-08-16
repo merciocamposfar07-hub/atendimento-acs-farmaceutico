@@ -5,6 +5,7 @@ var PROFILE_KEY='portalTacsAcessoRapidoV1';
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
+var EXCLUSIVE_MODE_KEY='portalTacsModoExclusivoV2';
 var loginBtn=document.getElementById('loginTacs');
 var cnsInput=document.getElementById('tacsCns');
 var pinInput=document.getElementById('tacsPin');
@@ -17,6 +18,37 @@ function text(v){return String(v==null?'':v).trim()}
 function digits(v){return text(v).replace(/\D/g,'')}
 function setStatus(msg,type){if(!status)return;status.textContent=msg;status.className='status'+(type?' '+type:'')}
 function getDevice(){var d='';try{d=localStorage.getItem(DEVICE_KEY)||''}catch(e){}return d}
+function queryTacsOnly(){try{return String(new URLSearchParams(location.search).get('acesso')||'').toLowerCase()==='tacs'}catch(e){return false}}
+function hasTerritorySession(){try{return !!text(sessionStorage.getItem(TERRITORY_TOKEN_KEY))}catch(e){return false}}
+function rememberExclusiveMode(){
+  if(queryTacsOnly()||hasTerritorySession()){
+    try{sessionStorage.setItem(EXCLUSIVE_MODE_KEY,'tacs')}catch(e){}
+  }
+}
+function exclusiveMode(){
+  rememberExclusiveMode();
+  try{return queryTacsOnly()||hasTerritorySession()||sessionStorage.getItem(EXCLUSIVE_MODE_KEY)==='tacs'}catch(e){return queryTacsOnly()||hasTerritorySession()}
+}
+function enforceExclusiveTacsUi(){
+  if(!exclusiveMode())return;
+  var tabAdmin=document.getElementById('tabAdmin');
+  var tabTacs=document.getElementById('tabTacs');
+  var adminLogin=document.getElementById('adminLogin');
+  var loginPanel=document.getElementById('loginPanel');
+  var tabs=tabTacs&&tabTacs.parentNode;
+  if(tabAdmin){if(!tabAdmin.hidden)tabAdmin.hidden=true;if(tabAdmin.classList.contains('active'))tabAdmin.classList.remove('active');tabAdmin.setAttribute('aria-hidden','true')}
+  if(adminLogin&&!adminLogin.hidden)adminLogin.hidden=true;
+  if(tabTacs){if(tabTacs.hidden)tabTacs.hidden=false;if(!tabTacs.classList.contains('active'))tabTacs.classList.add('active');tabTacs.setAttribute('aria-selected','true')}
+  if(tabs&&tabs.style&&tabs.style.gridTemplateColumns!=='1fr')tabs.style.gridTemplateColumns='1fr';
+  if(loginPanel&&!loginPanel.hidden&&tacsLogin.hidden)tacsLogin.hidden=false;
+}
+rememberExclusiveMode();
+enforceExclusiveTacsUi();
+var exclusiveObserver=new MutationObserver(function(){enforceExclusiveTacsUi()});
+if(document.body)exclusiveObserver.observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden','class','style']});
+window.addEventListener('pageshow',enforceExclusiveTacsUi);
+window.addEventListener('focus',enforceExclusiveTacsUi);
+
 function getProfile(){
   try{
     var raw=localStorage.getItem(PROFILE_KEY)||'';
@@ -66,8 +98,9 @@ function renderLogin(){
     remembered.hidden=true;
     remembered.innerHTML='';
   }
+  enforceExclusiveTacsUi();
 }
-function escapeHtml(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function escapeHtml(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]})}
 
 function requestId(action){return 'quick_'+action+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
 function jsonp(action,params,cb){
@@ -114,7 +147,8 @@ function post(action,payload,cb){
 }
 
 function abrirSessao(token){
-  try{sessionStorage.removeItem(ADMIN_TOKEN_KEY);sessionStorage.setItem(TERRITORY_TOKEN_KEY,token)}catch(e){}
+  try{sessionStorage.removeItem(ADMIN_TOKEN_KEY);sessionStorage.setItem(TERRITORY_TOKEN_KEY,token);sessionStorage.setItem(EXCLUSIVE_MODE_KEY,'tacs')}catch(e){}
+  enforceExclusiveTacsUi();
   setStatus('Acesso validado. Abrindo sua área…','ok');
   setTimeout(function(){location.reload()},80);
 }
@@ -159,5 +193,6 @@ if(tabTacs)tabTacs.addEventListener('click',function(){setTimeout(function(){
   var p=getProfile();
   if(p)setStatus('Digite apenas o seu PIN para entrar na área '+(p.areaNome||p.areaId||'cadastrada')+'.','');
   else setStatus('No primeiro acesso deste aparelho, use CNS + PIN. Depois, somente o PIN será necessário.','');
+  enforceExclusiveTacsUi();
 },0)});
 })();
