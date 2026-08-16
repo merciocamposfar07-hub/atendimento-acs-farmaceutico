@@ -1,0 +1,33 @@
+name: Validar publicacao V9
+
+on:
+  push:
+    paths:
+      - '.github/workflows/validar-publicacao-v9.yml'
+  workflow_dispatch:
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conferir GitHub Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico'
+          ok=0
+          for i in $(seq 1 40); do
+            rec=$(curl -fsSL --max-time 20 "$base/painel-oficial-recados-campanhas.html?v=20260816-publicacoes-horarios-v9&_=$RANDOM" || true)
+            ag=$(curl -fsSL --max-time 20 "$base/painel-oficial-agendas-vagas.html?v=20260816-agendas-horarios-v9&_=$RANDOM" || true)
+            wa=$(curl -fsSL --max-time 20 "$base/recados-campanhas-whatsapp-card-v9.js?_=$RANDOM" || true)
+            if grep -Fq 'name="horario"' <<<"$rec" \
+              && grep -Fq 'admin-warmup.js?v=20260813-admin-v103' <<<"$rec" \
+              && grep -Fq 'recados-campanhas-whatsapp-card-v9.js' <<<"$rec" \
+              && grep -Fq 'Encerrar automaticamente às' <<<"$ag" \
+              && grep -Fq 'PortalTacsPublicacoesWhatsAppV9' <<<"$wa"; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ok" = 1
