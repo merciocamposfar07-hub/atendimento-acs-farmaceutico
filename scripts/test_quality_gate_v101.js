@@ -45,7 +45,6 @@ const adminTransport = read('scripts/test_admin_transport.js');
 const perfTest = read('scripts/test_performance_v101.js');
 const index = read('index.html');
 
-// Integridade: após o gate live detectar HTTP 500, o backend de desempenho não pode interceptar doGet/doPost.
 registrar('dados', 'Cache global instável está explicitamente desativado', contem(backend, 'ATIVO: false'));
 registrar('dados', 'Módulo de desempenho não redefine doGet', !regex(backend, /\bdoGet\s*=\s*function/));
 registrar('dados', 'Módulo de desempenho não redefine doPost', !regex(backend, /\bdoPost\s*=\s*function/));
@@ -57,7 +56,6 @@ registrar('dados', 'Snapshot de agendas não libera escrita sem confirmação', 
 registrar('dados', 'Proteção contra profissional duplicado permanece', contem(profissionais, 'Profissional já cadastrado'));
 registrar('dados', 'Teste territorial e isolamento multiárea continuam obrigatórios', contem(comandoTestes, 'test_public_content_multiarea.js') && contem(comandoTestes, 'test_publicacoes_territoriais.js'));
 
-// Desempenho: ganhos ficam onde não alteram a transação do servidor.
 registrar('desempenho', 'Agenda odontológica abre por snapshot territorial', contem(dental, 'portalTacsDentalAgendaV102:'));
 registrar('desempenho', 'Snapshot odontológico antigo não autoriza reserva', contem(perfTest, 'Cache acima de 90s não pode permitir reserva'));
 registrar('desempenho', 'Painel de agendas abre última leitura imediatamente', contem(agenda, 'Última leitura desta área exibida imediatamente. Confirmando com o servidor'));
@@ -69,7 +67,6 @@ registrar('desempenho', 'Autoatualização recarrega apenas quando a versão pub
 registrar('desempenho', 'Consulta odontológica duplicada antiga virou somente fallback', contem(index, 'if(!window.PortalTacsOdontologiaV98)loadDental()'));
 registrar('desempenho', 'Arquivo neutro do backend é incluído no release para substituir a versão instável', contem(read('scripts/build_apps_script_release.js'), "marker: 'TACS_PERFORMANCE_CACHE_V101'"));
 
-// Compatibilidade e resiliência, especialmente Safari/iPhone.
 registrar('resiliencia', 'Fluxo Safari/iframe possui teste dedicado', contem(adminTransport, 'transporte Safari'));
 registrar('resiliencia', 'Resposta direta encerra polling duplicado', contem(adminTransport, 'iniciou polling mesmo após a resposta direta'));
 registrar('resiliencia', 'Pré-aquecimento tolera DOM mínimo', contem(warmup, "typeof document==='undefined'||typeof document.createElement!=='function'||!document.head"));
@@ -77,17 +74,16 @@ registrar('resiliencia', 'Atualização funciona mesmo sem fetch nativo', contem
 registrar('resiliencia', 'Painéis fazem preconnect com Apps Script', [agenda, profissionais, recados].every(t => contem(t, 'rel="preconnect" href="https://script.google.com"')));
 registrar('resiliencia', 'Falha de rede não duplica envio administrativo', contem(adminTransport, 'deve enviar cada operação uma única vez'));
 registrar('resiliencia', 'Sessão expirada volta ao PIN sem alerta falso', contem(adminTransport, 'sessão anterior não pôde ser reutilizada'));
-registrar('resiliencia', 'Pré-aquecimento administrativo é carregado sem UI do Portal', contem(agenda, 'admin-warmup.js?v=20260813-admin-v103') && contem(profissionais, 'admin-warmup.js?v=20260813-admin-v103') && contem(recados, 'admin-warmup.js?v=20260814-receipt-v110') && !contem(warmup, 'portal-auto-update.js'));
+registrar('resiliencia', 'Pré-aquecimento administrativo é carregado sem UI do Portal', contem(agenda, 'admin-warmup.js?v=20260813-admin-v103') && contem(profissionais, 'admin-warmup.js?v=20260813-admin-v103') && contem(recados, 'admin-warmup.js?v=20260813-admin-v103') && !contem(warmup, 'portal-auto-update.js'));
 
-// Usabilidade e acessibilidade voltadas a agentes leigos e uso móvel.
 registrar('usabilidade', 'Viewport móvel preservado nos três painéis', [agenda, profissionais, recados].every(t => contem(t, 'width=device-width,initial-scale=1,viewport-fit=cover')));
 registrar('usabilidade', 'Botões do painel de agendas têm alvo grande', regex(agenda, /\.botao\{[^}]*min-height:56px/));
 registrar('usabilidade', 'Campos do painel de agendas têm altura ampla', regex(agenda, /\.campo\{[^}]*min-height:54px/));
 registrar('usabilidade', 'Campo de validade possui correção de overflow Safari', contem(adminTransport, 'contain:inline-size'));
-registrar('usabilidade', 'Botão de contraste do painel de recados é testado', contem(adminTransport, 'alternarContraste'));
-registrar('usabilidade', 'Preferência visual fica salva no aparelho', contem(adminTransport, 'portalTacsTemaRecadosV1'));
+registrar('usabilidade', 'Controle de contraste do painel de recados permanece oculto', contem(recados, '.preferenciaVisual,#alternarContraste{display:none!important'));
+registrar('usabilidade', 'Padrão visual petróleo permanece definido no painel de recados', contem(recados, 'tema-petroleo') && contem(recados, 'linear-gradient(145deg,#073a55,#0b5878)'));
 registrar('usabilidade', 'Portal público mantém atualização sem recarga forçada', contem(index, 'portal-auto-update.js?v=20260812-v101'));
-registrar('usabilidade', 'Mensagens administrativas permanecem em português claro', contem(agenda, 'Digite o PIN para carregar as agendas') && contem(recados, 'Carregando recados e campanhas'));
+registrar('usabilidade', 'Mensagens administrativas permanecem em português claro', contem(agenda, 'Digite o PIN para carregar as agendas') && contem(recados, 'Digite o PIN administrativo ou entre como TACS da área.'));
 
 let geral = 0;
 let falhas = [];
