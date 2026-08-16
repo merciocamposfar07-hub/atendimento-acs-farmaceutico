@@ -33,10 +33,19 @@ jobs:
           cache: npm
 
       - name: Testar toda a integração
+        shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           npm ci
-          npm test
+          set +e
+          npm test 2>&1 | tee "$RUNNER_TEMP/npm-test.log"
+          code=${PIPESTATUS[0]}
+          set -e
+          if [ "$code" -ne 0 ]; then
+            resumo=$(tail -n 35 "$RUNNER_TEMP/npm-test.log" | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g' | cut -c1-3500)
+            printf '::error title=Falha nos testes do Portal TACS::%s\n' "$resumo"
+            exit "$code"
+          fi
 
       - name: Validar credenciais sem exibi-las
         env:
