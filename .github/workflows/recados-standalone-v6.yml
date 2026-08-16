@@ -1,0 +1,95 @@
+name: Recados standalone V6 validado ao vivo
+
+on:
+  push:
+    paths:
+      - 'scripts/build_recados_standalone_v6.py'
+      - 'scripts/test_live_recados_standalone_v6.js'
+      - '.github/workflows/recados-standalone-v6.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  candidato-testar-promover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Gerar candidato standalone
+        run: python3 scripts/build_recados_standalone_v6.py
+
+      - name: Validar candidato local
+        run: |
+          grep -q 'recadosStandaloneV6Style' painel-recados-campanhas-candidato-v6.html
+          grep -q 'campanhasMesLoaderV6' painel-recados-campanhas-candidato-v6.html
+          grep -q 'PAINEL ADMINISTRATIVO OFICIAL' painel-recados-campanhas-candidato-v6.html
+          if grep -q 'document.open();document.write' painel-recados-campanhas-candidato-v6.html; then
+            echo 'Candidato ainda usa document.write.' >&2; exit 1
+          fi
+
+      - name: Publicar somente candidato
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add painel-recados-campanhas-candidato-v6.html
+          git commit -m 'Publica candidato standalone Recados V6' || true
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Aguardar candidato no Pages
+        run: |
+          URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-recados-campanhas-candidato-v6.html?probe='
+          for i in $(seq 1 48); do
+            if curl -fsSL "${URL}${i}-$(date +%s)" | grep -q 'recadosStandaloneV6Style'; then
+              echo 'Candidato publicado.'; exit 0
+            fi
+            sleep 5
+          done
+          echo 'Candidato não apareceu no Pages.' >&2; exit 1
+
+      - name: Testar candidato ao vivo antes de promover
+        env:
+          RECADOS_LIVE_PATH: painel-recados-campanhas-candidato-v6.html
+        run: node scripts/test_live_recados_standalone_v6.js
+
+      - name: Promover conteúdo já validado
+        run: python3 scripts/build_recados_standalone_v6.py --promote
+
+      - name: Validar promoção local
+        run: |
+          grep -q 'recadosStandaloneV6Style' painel-oficial-recados-campanhas.html
+          grep -q 'campanhasMesLoaderV6' painel-oficial-recados-campanhas.html
+          grep -q '20260816-recados-standalone-v6' central-administrativa-tacs.js
+          if grep -q 'document.open();document.write' painel-oficial-recados-campanhas.html; then
+            echo 'Painel oficial ainda usa document.write.' >&2; exit 1
+          fi
+
+      - name: Publicar painel oficial e Central
+        run: |
+          git add painel-oficial-recados-campanhas.html central-administrativa-tacs.js central-administrativa-tacs.html
+          git commit -m 'Substitui Recados por painel standalone validado' || true
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Aguardar painel oficial no Pages
+        run: |
+          URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?probe='
+          for i in $(seq 1 48); do
+            if curl -fsSL "${URL}${i}-$(date +%s)" | grep -q 'recadosStandaloneV6Style'; then
+              echo 'Painel oficial publicado.'; exit 0
+            fi
+            sleep 5
+          done
+          echo 'Painel oficial não apareceu no Pages.' >&2; exit 1
+
+      - name: Testar painel oficial publicado de verdade
+        run: node scripts/test_live_recados_standalone_v6.js
