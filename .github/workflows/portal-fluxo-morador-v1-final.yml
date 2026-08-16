@@ -1,0 +1,83 @@
+name: Portal morador - implantar fluxo guiado v1 final
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/portal-fluxo-morador-v1-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  implantar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Aplicar correções
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('moradores-autofill.js'); s=p.read_text(encoding='utf-8')
+          pairs=[
+            ("input.placeholder = 'CPF ou CNS';","input.placeholder = 'CPF ou Cartão SUS (CNS)';"),
+            ("label.firstChild.textContent = 'CPF ou CNS ';","label.firstChild.textContent = 'CPF ou Cartão SUS (CNS) ';"),
+            ("setStatus(status, 'Informe o CPF ou o Cartão Nacional de Saúde (CNS).', '');","setStatus(status, 'Digite seu CPF ou Cartão SUS (CNS). Seus dados serão carregados automaticamente para conferência.', '');"),
+            ("setStatus(status, (validCns(input.value) ? 'CNS' : 'CPF') + ' encontrado ✓ Dados preenchidos automaticamente.', 'valid');","setStatus(status, (validCns(input.value) ? 'Cartão SUS encontrado ✓ ' : 'CPF encontrado ✓ ') + 'Dados carregados automaticamente. Confira nome, nascimento e localidade; se algo estiver errado, corrija antes de continuar.', 'valid');"),
+            ("setStatus(status, 'Cadastro não encontrado. Confira o documento.', 'invalid');","setStatus(status, validCns(input.value) ? 'Cartão SUS não localizado nesta área. Confira os 15 números ou procure seu TACS.' : 'CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).', 'invalid');"),
+            ("setStatus(status, 'Digite um CPF válido ou os 15 números do CNS.', 'invalid');","setStatus(status, 'Digite um CPF válido ou os 15 números do Cartão SUS (CNS).', 'invalid');")]
+          for a,b in pairs:
+            if a not in s: raise SystemExit('Trecho autofill não encontrado: '+a[:70])
+            s=s.replace(a,b,1)
+          a="oldInput.parentNode.replaceChild(input, oldInput);\n\n    var label = input.closest('label');"
+          b="oldInput.parentNode.replaceChild(input, oldInput);\n    clearResidentFields();\n\n    var label = input.closest('label');"
+          if a not in s: raise SystemExit('Ponto de limpeza inicial não encontrado')
+          p.write_text(s.replace(a,b,1),encoding='utf-8')
+
+          p=Path('portal-orientacao-morador.js'); s=p.read_text(encoding='utf-8')
+          a="function el(id) { return document.getElementById(id); }"
+          b="function el(id) { return (typeof document !== 'undefined' && document && typeof document.getElementById === 'function') ? document.getElementById(id) : null; }"
+          if a in s: s=s.replace(a,b,1)
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          a='<script src="moradores-autofill.js?v=20260815-territorial-v2"></script>'
+          b='<script src="moradores-autofill.js?v=20260816-fluxo-morador-v1"></script>'
+          if a not in s: raise SystemExit('Autofill antigo não encontrado no index')
+          s=s.replace(a,b,1)
+          anchor='<script src="portal-odontologia-segunda-sexta.js?v=20260816-reserva-confirmada-v103"></script>'
+          if 'portal-orientacao-morador.js' not in s:
+            if anchor not in s: raise SystemExit('Âncora odontológica não encontrada')
+            s=s.replace(anchor,anchor+'\n  <script src="portal-orientacao-morador.js?v=20260816-fluxo-guiado-v1"></script>',1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Testar regressão completa
+        run: |
+          node --check moradores-autofill.js
+          node --check portal-orientacao-morador.js
+          grep -q 'CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).' moradores-autofill.js
+          grep -q 'portal-orientacao-morador.js?v=20260816-fluxo-guiado-v1' index.html
+          npm test
+      - name: Validar escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          test -z "$(git diff --name-only | grep -Ev '^(index\.html|moradores-autofill\.js|portal-orientacao-morador\.js)$' || true)"
+      - name: Publicar
+        run: |
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html moradores-autofill.js portal-orientacao-morador.js
+          git commit -m 'Guia morador por etapas e limpa dados entre atendimentos'
+          git push origin HEAD:main
