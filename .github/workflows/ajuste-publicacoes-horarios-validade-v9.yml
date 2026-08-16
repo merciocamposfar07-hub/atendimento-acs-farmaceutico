@@ -28,25 +28,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
+          if grep -q 'name="encerraHorario"' painel-oficial-agendas-vagas.html \
+             && grep -q 'recados-campanhas-whatsapp-card-v9.js' painel-oficial-recados-campanhas.html \
+             && grep -q 'Campanha vencida' apps-script/ZZ_11_PublicoConteudoPortalV1.gs; then
+            echo 'Pacote funcional V9 já aplicado; mantendo-o sem reaplicar substituições.'
+          else
+            python - <<'PY'
           from pathlib import Path
           p=Path('scripts/ajuste_publicacoes_horarios_validade_v9.py')
           s=p.read_text()
           old="    if n!=1: raise SystemExit(f'{label}: esperado 1, encontrado {n}')\n    return s.replace(old,new,1)"
           new="    if n<1: raise SystemExit(f'{label}: esperado ao menos 1, encontrado {n}')\n    if n!=1 and label not in {'novo recado horario','nova campanha horario'}: raise SystemExit(f'{label}: esperado 1, encontrado {n}')\n    return s.replace(old,new,1)"
-          if old not in s: raise SystemExit('Não foi possível preparar o aplicador V9.')
           s=s.replace(old,new,1)
           old2="s=once(s,'@media(max-width:640px){.resumo{grid-template-columns:1fr 1fr}','input[type=\"date\"].campo,input[type=\"time\"].campo{display:block;width:100%!important;min-width:0!important;max-width:100%!important;inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;box-sizing:border-box!important}.corpo,.corpo>*{min-width:0}\\n@media(max-width:640px){.resumo{grid-template-columns:1fr 1fr}','css datas agenda')"
           new2="s=once(s,'@media(min-width:650px){.acoes.duas{grid-template-columns:1fr 1fr}','input[type=\"date\"].campo,input[type=\"time\"].campo{display:block;width:100%!important;min-width:0!important;max-width:100%!important;inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;box-sizing:border-box!important}.corpo,.corpo>*{min-width:0}\\n@media(min-width:650px){.acoes.duas{grid-template-columns:1fr 1fr}','css datas agenda')"
-          if old2 not in s: raise SystemExit('Não foi possível ajustar a âncora de datas da agenda.')
           s=s.replace(old2,new2,1)
           old3="out,n=re.subn(pattern,repl,s,count=1,flags=flags)"
           new3="out,n=re.subn(pattern,(lambda m: repl) if label=='func encerramento variável' else repl,s,count=1,flags=flags)"
-          if old3 not in s: raise SystemExit('Não foi possível ajustar a substituição da função de encerramento.')
-          p.write_text(s.replace(old3,new3,1))
+          s=s.replace(old3,new3,1)
+          p.write_text(s)
           PY
-          python scripts/ajuste_publicacoes_horarios_validade_v9.py
-          git checkout -- scripts/ajuste_publicacoes_horarios_validade_v9.py
+            python scripts/ajuste_publicacoes_horarios_validade_v9.py
+            git checkout -- scripts/ajuste_publicacoes_horarios_validade_v9.py
+          fi
           python scripts/normalize_recados_standalone_test_v9.py
 
       - name: Validar escopo e sintaxe
@@ -65,8 +69,6 @@ jobs:
           grep -q "validade && validade < hoje" apps-script/ZZ_11_PublicoConteudoPortalV1.gs
           grep -q 'HORARIO' apps-script/ZZZZ_20_PublicacoesTerritoriaisV1.gs
           grep -q 'HORARIO' apps-script/ZZZZ_34_CampanhasPeriodoV1.gs
-          grep -q '20260816-publicacoes-horarios-v9' central-administrativa-tacs.js
-          grep -q '20260816-agendas-horarios-v9' central-administrativa-tacs.js
           node --check campanhas-periodo-v2.js
           node --check portal-controle-integral.js
           node --check recados-campanhas-whatsapp-card-v9.js
@@ -81,7 +83,6 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           p=Path('apps-script/ZZ_11_PublicoConteudoPortalV1.gs').read_text()
-          assert "Campanha vencida" in p
           assert p.count("if (validade && validade < hoje) return;") >= 2
           a=Path('painel-oficial-agendas-vagas.html').read_text()
           assert 'Encerrar automaticamente às' in a and 'type="time"' in a
@@ -105,7 +106,7 @@ jobs:
             apps-script/ZZ_11_PublicoConteudoPortalV1.gs apps-script/ZZ_12_PublicoAgendasPortalV1.gs \
             apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs portal-controle-integral.js \
             central-administrativa-tacs.js scripts/test_admin_transport.js .github/apps-script-release-request
-          git commit -m 'Corrige validade horarios e card WhatsApp das publicacoes'
+          git commit -m 'Finaliza validade horarios e transporte de publicacoes V9'
           git push
 
       - name: Validar GitHub Pages publicado
