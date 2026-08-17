@@ -1,0 +1,76 @@
+name: Aplicar correcao reserva odontologica JSONP v107
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/aplicar-correcao-reserva-jsonp-v107.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: correcao-reserva-odontologica-v107
+  cancel-in-progress: false
+
+jobs:
+  corrigir-testar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Confirmar backend live sem gravar
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOYMENT_ID"
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          PROBE=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=reservar_get&probe=1")
+          printf '%s' "$PROBE" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const j=JSON.parse(s);if(!j.ok||!j.probe||j.versao!=="2.2.0")process.exit(4);console.log("BACKEND_RESERVAR_GET_V220_OK");})'
+
+      - name: Aplicar correção
+        run: python3 scripts/corrigir_reserva_odontologia_jsonp_v107.py
+
+      - name: Testar integração completa
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+
+      - name: Validar invariantes da correção
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "function reserveViaJsonp(item)" portal-odontologia-segunda-sexta.js
+          grep -q "action=reservar_get&areaId=" portal-odontologia-segunda-sexta.js
+          grep -q "!selection.confirmed" portal-odontologia-segunda-sexta.js
+          grep -q "dental-reserva-jsonp-v107" index.html
+          node scripts/test_dental_confirmation_gate_v103.js
+
+      - name: Publicar somente após os testes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Nenhuma mudança necessária.'
+            exit 0
+          fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add portal-odontologia-segunda-sexta.js index.html scripts/test_dom_flows.js scripts/test_dental_confirmation_gate_v103.js portal-version.json
+          git commit -m 'Corrige persistência real da vaga odontológica no Safari v107'
+          git push origin HEAD:main
