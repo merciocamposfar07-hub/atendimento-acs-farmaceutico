@@ -1,4 +1,4 @@
-name: Corrigir botão de envio odontologia v1
+name: Corrigir botão de envio odontologia v2
 
 on:
   push:
@@ -37,6 +37,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add portal-odontologia-segunda-sexta.js portal-ajustes-finais.js index.html scripts/test_dental_confirmation_gate_v103.js portal-version.json
-          git commit -m "Corrige envio após reserva odontológica confirmada"
+          git add portal-odontologia-segunda-sexta.js portal-ajustes-finais.js portal-orientacao-morador.js index.html scripts/test_dental_confirmation_gate_v103.js portal-version.json
+          git commit -m "Estabiliza envio odontológico e fluxo visual no iPhone"
           git push origin HEAD:main
