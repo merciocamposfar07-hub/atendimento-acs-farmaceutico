@@ -180,8 +180,8 @@ body.tema-petroleo #listaCampanhas .item[class*="camp-theme-"]>summary .camp-adm
 }
 #listaCampanhas .camp-admin-symbol svg{
   display:block;
-  width:80px;
-  height:80px;
+  width:68px;
+  height:68px;
   max-width:100%;
   max-height:100%;
   overflow:visible;
@@ -244,7 +244,7 @@ body.tema-petroleo #listaCampanhas .item[class*="camp-theme-"]>summary .camp-adm
 @media(max-width:390px){
   #listaCampanhas .item[class*="camp-theme-"]>summary{grid-template-columns:minmax(0,1fr) 70px!important;gap:9px 10px!important;min-height:154px!important;padding:14px!important}
   #listaCampanhas .camp-admin-symbol{width:70px;height:70px}
-  #listaCampanhas .camp-admin-symbol svg{width:68px;height:68px}
+  #listaCampanhas .camp-admin-symbol svg{width:58px;height:58px}
   #listaCampanhas .camp-admin-badge{font-size:.7rem;padding:7px 9px}
   #listaCampanhas .item[class*="camp-theme-"]>summary .sinal{min-width:68px!important;font-size:.74rem!important;padding:7px 8px!important}
   #listaCampanhas .camp-admin-title{font-size:clamp(1.42rem,6.2vw,1.72rem)!important}
@@ -376,7 +376,7 @@ function campaignSpecificIconSvg(key,theme){
   };
   var file=files[key];
   if(!file)return campaignIconSvg(theme);
-  return '<img src="assets/campanhas/'+file+'?v=1" alt="" aria-hidden="true" draggable="false" style="display:block;width:80px;height:80px;max-width:100%;max-height:100%;object-fit:contain;image-rendering:auto">';
+  return '<img src="assets/campanhas/'+file+'?v=1" alt="" aria-hidden="true" draggable="false" style="display:block;width:68px;height:68px;max-width:82%;max-height:82%;margin:auto;object-fit:contain;image-rendering:auto">';
 }
 
 function decorateCampaignSummary(box,meta){
