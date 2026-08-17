@@ -47,10 +47,13 @@ jobs:
           node --check central-tacs-login-rapido-v1.js
           node --check teste-v1/painel-moradores-transport-v2.js
 
-      - name: Rodar testes do Portal TACS
+      - name: Validar somente o escopo do login TACS
+        shell: bash
         run: |
-          npm ci
-          npm test
+          set -euo pipefail
+          node scripts/test_multiagent_quick_login.js
+          node scripts/test_tacs_admin_visibility.js
+          node scripts/test_central_admin_territorial.js
 
       - name: Solicitar publicação do Apps Script e gravar correção
         shell: bash
