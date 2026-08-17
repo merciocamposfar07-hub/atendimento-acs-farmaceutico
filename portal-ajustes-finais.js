@@ -402,7 +402,7 @@
 
   function waitForCurrentDentalReservation(requestId) {
     return new Promise(function (resolve, reject) {
-      var deadline = Date.now() + 16000;
+      var deadline = Date.now() + 26000;
       function check() {
         var current = currentDentalSelection();
         if (!current || current.requestId !== requestId) {

@@ -10,10 +10,16 @@ assert.doesNotMatch(dental,/serverCount\s*<=\s*item\.optimisticRemaining/);
 assert.match(dental,/function verifyReservation[\s\S]*postReservation\(item\)\.then/);
 assert.doesNotMatch(dental,/atualização da planilha está demorando, mas o envio pelo WhatsApp já está liberado/);
 assert.match(config,/dentalReservationPending === '1'[\s\S]*send\.disabled = true/);
-assert.match(index,/portal-odontologia-segunda-sexta\.js\?v=20260817-dental-whatsapp-bridge-v2/);
+assert.match(index,/portal-odontologia-segunda-sexta\.js\?v=20260817-dental-whatsapp-bridge-v3/);
 assert.match(dental,/selecao: function \(\)/);
 assert.match(dental,/prontoParaEnvio: function \(\)/);
 assert.match(dental,/formularioValido: function \(\)/);
+assert.match(dental,/function fetchReservationStatus\(item\)/);
+assert.match(dental,/action=reserva_status/);
+assert.match(dental,/function recoverReservationStatus\(item\)/);
+assert.match(backend,/reserva_status/);
+assert.match(backend,/function correcaoDataOdontologiaV1StatusReserva_/);
+
 assert.match(card,/function waitForCurrentDentalReservation\(requestId\)/);
 assert.match(card,/api\.formularioValido/);
 
@@ -25,6 +31,6 @@ assert.match(dental,/portalTacsDentalAgendaV103FullWeek/);
 assert.match(dental,/ALLOWED_DAYS\.indexOf\(day\) === -1\) return null/);
 assert.match(admin,/Hora de expiração da agenda/);
 assert.match(admin,/name="encerraHorario" type="time"/);
-assert.match(backend,/VERSAO:'2\.0\.0'/);
+assert.match(backend,/VERSAO:'2\.1\.0'/);
 assert.match(backend,/Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'/);
 console.log('DENTAL_CONFIRMATION_GATE_V103_OK');

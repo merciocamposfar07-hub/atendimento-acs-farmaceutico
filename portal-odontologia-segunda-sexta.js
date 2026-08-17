@@ -449,6 +449,79 @@
     return 'MATIAS-' + parts[2] + parts[1] + parts[0].slice(2) + '-' + suffix;
   }
 
+  function fetchReservationStatus(item) {
+    return new Promise(function (resolve, reject) {
+      if (!API) { reject(new Error('A vaga não está conectada à planilha.')); return; }
+      var callbackName = 'dentalV103Status' + Date.now() + Math.floor(Math.random() * 10000);
+      var script = document.createElement('script');
+      var finished = false;
+      var timer = setTimeout(function () {
+        var timeout = new Error('A confirmação da reserva ainda não respondeu.');
+        timeout.code = 'TIMEOUT';
+        finish(timeout);
+      }, 6500);
+
+      function cleanup() {
+        clearTimeout(timer);
+        try { delete window[callbackName]; } catch (error) { window[callbackName] = undefined; }
+        if (script.parentNode) script.remove();
+      }
+      function finish(error, data) {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        error ? reject(error) : resolve(data || {});
+      }
+
+      window[callbackName] = function (data) {
+        if (!data || data.ok === false) {
+          var error = new Error(data && data.message ? data.message : 'Não foi possível conferir a reserva.');
+          error.code = clean(data && data.code);
+          finish(error);
+          return;
+        }
+        finish(null, data);
+      };
+      script.onerror = function () {
+        var error = new Error('Não foi possível conferir a confirmação da vaga.');
+        error.code = 'TIMEOUT';
+        finish(error);
+      };
+      script.src = API + (API.indexOf('?') === -1 ? '?' : '&') +
+        'action=reserva_status&areaId=' + encodeURIComponent(AREA_ID) +
+        '&requestId=' + encodeURIComponent(item.requestId) +
+        '&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
+      document.head.appendChild(script);
+    });
+  }
+
+  function applyReservationStatus(item, result) {
+    if (!result || !result.found) return false;
+    if (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type) {
+      var conflict = new Error('Este formulário já reservou outra data.');
+      conflict.code = 'CONFLICT';
+      throw conflict;
+    }
+    if (Number.isFinite(Number(result.remaining))) applyServerRemaining(item, result.remaining);
+    item.confirmed = true;
+    item.slowSync = false;
+    renderAgenda();
+    refreshSend();
+    return true;
+  }
+
+  function recoverReservationStatus(item) {
+    return fetchReservationStatus(item).then(function (result) {
+      if (!result || !result.found) {
+        var notFound = new Error('A reserva ainda não apareceu na planilha.');
+        notFound.code = 'NOT_FOUND';
+        throw notFound;
+      }
+      applyReservationStatus(item, result);
+      return result;
+    });
+  }
+
   function postReservation(item) {
     return new Promise(function (resolve, reject) {
       if (!API) { reject(new Error('A vaga não está conectada à planilha.')); return; }
@@ -549,13 +622,21 @@
       handleExplicitReservationFailure(item, error);
       return;
     }
-    if (attempt < 5) {
-      scheduleVerify(item, attempt + 1, Math.min(6000, 1500 + attempt * 900));
-      return;
-    }
-    item.slowSync = true;
-    renderAgenda();
-    refreshSend();
+    recoverReservationStatus(item).then(function () {
+      loadAgenda(true);
+    }).catch(function (statusError) {
+      if (statusError.code && statusError.code !== 'NOT_FOUND' && statusError.code !== 'TIMEOUT') {
+        handleExplicitReservationFailure(item, statusError);
+        return;
+      }
+      if (attempt < 5) {
+        scheduleVerify(item, attempt + 1, Math.min(6000, 1500 + attempt * 900));
+        return;
+      }
+      item.slowSync = true;
+      renderAgenda();
+      refreshSend();
+    });
   });
 }
 
@@ -600,8 +681,16 @@
       renderAgenda();
       refreshSend();
     }).catch(function (error) {
-      if (error.code && error.code !== 'TIMEOUT') handleExplicitReservationFailure(item, error);
-      else scheduleVerify(item, 0, 1200);
+      if (error.code && error.code !== 'TIMEOUT') {
+        handleExplicitReservationFailure(item, error);
+        return;
+      }
+      recoverReservationStatus(item).then(function () {
+        loadAgenda(true);
+      }).catch(function (statusError) {
+        if (statusError.code && statusError.code !== 'NOT_FOUND' && statusError.code !== 'TIMEOUT') handleExplicitReservationFailure(item, statusError);
+        else scheduleVerify(item, 0, 900);
+      });
     });
   }
 
