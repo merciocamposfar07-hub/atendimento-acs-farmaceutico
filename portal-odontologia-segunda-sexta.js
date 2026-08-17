@@ -361,18 +361,20 @@
   function postReservation(item) {
     return new Promise(function (resolve, reject) {
       if (!API) { reject(new Error('A vaga não está conectada à planilha.')); return; }
-      var nonce = 'agenda-v98-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-      var frameName = 'dentalV98Reserve' + Date.now() + Math.floor(Math.random() * 10000);
-      var iframe = document.createElement('iframe');
-      var form = document.createElement('form');
+
+      var callbackName = 'dentalV111Reserve' + Date.now() + Math.floor(Math.random() * 10000);
+      var script = document.createElement('script');
       var finished = false;
-      var timer;
+      var timer = setTimeout(function () {
+        var timeout = new Error('A confirmação da reserva está demorando.');
+        timeout.code = 'TIMEOUT';
+        finish(timeout);
+      }, 12000);
 
       function cleanup() {
         clearTimeout(timer);
-        window.removeEventListener('message', receive);
-        if (form.parentNode) form.remove();
-        setTimeout(function () { if (iframe.parentNode) iframe.remove(); }, 250);
+        try { delete window[callbackName]; } catch (error) { window[callbackName] = undefined; }
+        if (script.parentNode) script.remove();
       }
       function finish(error, data) {
         if (finished) return;
@@ -380,51 +382,33 @@
         cleanup();
         error ? reject(error) : resolve(data || {});
       }
-      function receive(event) {
-        if (event.source !== iframe.contentWindow) return;
-        var data = event.data;
-        if (!data || data.source !== 'agenda-odontologica-tacs' || data.nonce !== nonce) return;
-        if (data.ok) {
-          finish(null, data);
-        } else {
-          var error = new Error(data.message || 'Não foi possível reservar a vaga.');
-          error.code = clean(data.code || (data.result && data.result.code));
-          finish(error);
-        }
-      }
-      function add(name, value) {
-        var input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = value;
-        form.appendChild(input);
-      }
 
-      iframe.name = frameName;
-      iframe.hidden = true;
-      iframe.style.display = 'none';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.position = 'absolute';
-      iframe.setAttribute('aria-hidden', 'true');
-      form.method = 'post';
-      form.action = API;
-      form.target = frameName;
-      form.hidden = true;
-      add('action', 'reservar');
-      add('areaId', (window.TACS_AREA_ID || 'JAPARANDUBA'));
-      add('requestId', item.requestId);
-      add('date', item.date);
-      add('type', item.type);
-      add('nonce', nonce);
-      window.addEventListener('message', receive);
-      document.body.append(iframe, form);
-      timer = setTimeout(function () {
-        var timeout = new Error('A confirmação da planilha está demorando.');
-        timeout.code = 'TIMEOUT';
-        finish(timeout);
-      }, 8000);
-      form.submit();
+      window[callbackName] = function (data) {
+        if (data && data.ok) {
+          finish(null, data);
+          return;
+        }
+        var error = new Error(data && data.message ? data.message : 'Não foi possível reservar a vaga.');
+        error.code = clean(data && data.code);
+        finish(error);
+      };
+
+      var params = new URLSearchParams();
+      params.set('action', 'reservar_get');
+      params.set('areaId', window.TACS_AREA_ID || 'JAPARANDUBA');
+      params.set('requestId', item.requestId);
+      params.set('date', item.date);
+      params.set('type', item.type);
+      params.set('callback', callbackName);
+      params.set('v', String(Date.now()));
+
+      script.onerror = function () {
+        var error = new Error('Não foi possível confirmar a reserva na agenda.');
+        error.code = 'NETWORK';
+        finish(error);
+      };
+      script.src = API + (API.indexOf('?') === -1 ? '?' : '&') + params.toString();
+      document.head.appendChild(script);
     });
   }
 
