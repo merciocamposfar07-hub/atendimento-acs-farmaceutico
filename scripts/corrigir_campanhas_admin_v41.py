@@ -33,8 +33,8 @@ write(p,s)
 
 # 3) Revisões para invalidar cache do painel/Central.
 p='painel-oficial-recados-campanhas.html'; s=read(p)
-s=re.sub(r'campanhas-periodo-v2\\.js\\?v=[A-Za-z0-9._-]+','campanhas-periodo-v2.js?v=20260817-campanhas-admin-ui-v4-1',s)
-s=re.sub(r'recados-campanhas-whatsapp-card-v9\\.js\\?v=[A-Za-z0-9._-]+','recados-campanhas-whatsapp-card-v9.js?v=20260817-publicacoes-v10-1',s)
+s=re.sub(r'campanhas-periodo-v2\.js\?v=[A-Za-z0-9._-]+','campanhas-periodo-v2.js?v=20260817-campanhas-admin-ui-v4-1',s)
+s=re.sub(r'recados-campanhas-whatsapp-card-v9\.js\?v=[A-Za-z0-9._-]+','recados-campanhas-whatsapp-card-v9.js?v=20260817-publicacoes-v10-1',s)
 if '20260817-campanhas-admin-ui-v4-1' not in s or '20260817-publicacoes-v10-1' not in s: raise SystemExit('Cache bust painel falhou')
 write(p,s)
 
@@ -44,7 +44,8 @@ if '20260817-campanhas-reparos-v4-1' not in s: raise SystemExit('Cache bust Cent
 write(p,s)
 
 p='central-administrativa-tacs.html'; s=read(p)
-s=re.sub(r'central-administrativa-tacs\\.js\\?v=[A-Za-z0-9._-]+','central-administrativa-tacs.js?v=20260816-campanhas-reparos-v4-1',s)
+s=re.sub(r'central-administrativa-tacs\.js\?v=[A-Za-z0-9._-]+','central-administrativa-tacs.js?v=20260816-campanhas-reparos-v4-1',s)
+if '20260816-campanhas-reparos-v4-1' not in s: raise SystemExit('Cache bust Central principal falhou')
 write(p,s)
 
 print('CAMPANHAS_ADMIN_V41_OK')
