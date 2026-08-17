@@ -1,0 +1,60 @@
+exit_code=1
+head_sha=e9a8b15ee56833920b98828e6f1d3a8d4a0c2a57
+--- ultimo trecho ---
+
+> test
+> node scripts/test_agenda_apps_script.js && node scripts/test_public_agendas_apps_script.js && node scripts/test_public_content_multiarea.js && node scripts/test_dynamic_professionals_apps_script.js && node scripts/test_agendas_profissionais_territoriais.js && node scripts/test_apps_script_module_chain.js && node scripts/test_build_apps_script_release.js && node scripts/test_dom_flows.js && node scripts/test_dental_confirmation_gate_v103.js && node scripts/test_admin_transport.js && node scripts/test_admin_fast_v102.js && node scripts/test_dynamic_professionals_dom.js && node scripts/test_public_data_transport.js && node scripts/test_moradores_v145.js && node scripts/test_birth_plus_one_fix.js && node scripts/test_portal_maintenance.js && node scripts/test_csv_esus_header.js && node scripts/test_territorio_csv_notifications.js && node scripts/test_public_area_identification.js && node scripts/test_public_area_resolver.js && node scripts/test_base_url_canonical_area.js && node scripts/test_publicacoes_territoriais.js && node scripts/test_territorio_dom.js && node scripts/test_notification_repair_button.js && node scripts/test_notification_repair_confirmation.js && node scripts/test_notification_health_registry.js && node scripts/test_notification_receipt_confirmation.js && node scripts/test_notification_auto_repair_feedback.js && node scripts/test_central_admin_territorial.js && node scripts/test_portal_territory_branding.js && node scripts/test_territorial_stabilization_v1.js && node scripts/test_multiagent_quick_login.js && node scripts/test_tacs_admin_visibility.js && node scripts/test_multiagent_isolation_50.js && node scripts/test_multimunicipio_layer.js && node scripts/test_multimunicipio_admin_api.js && node scripts/test_campanhas_periodo_v1.js && node scripts/test_campanhas_automaticas_v1.js && node scripts/test_ui_contract_v1.js && node scripts/test_performance_v101.js && node scripts/test_quality_gate_v101.js
+
+Agenda: reservas, fontes oficiais e rotas antigas validadas.
+Apps Script público: agendas preservadas e recados ativos publicados por área.
+Conteúdo público multiárea: legado permanece Japaranduba e AREA_ID isola a nova área.
+{"ok":true,"versao":"1.0.0","somenteLeitura":true,"profissionaisAtivos":["medica","enfermeira","nutricionista","odontologia","psicologo","fisioterapeuta"],"agendasPorProfissional":{"medica":5,"nutricionista":5,"enfermeira":5,"odontologia":5,"fisioterapeuta":5,"psicologo":5}}
+Apps Script dinâmico: psicólogo adotado sem duplicação, fisioterapeuta criado com 5 agendas e módulos legados preservados.
+AGENDAS_PROFISSIONAIS_TERRITORIAIS_TESTS_OK
+Encadeamento Apps Script: 120 ordens dos módulos 15–19 e rotas antigas validadas.
+Montagem Apps Script: .js/.gs, projeto real preservado, módulos únicos, clasp 3.3.0 e falhas seguras validados.
+DOM: abas, sincronização pública, profissionais dinâmicos, médica, enfermeira, nutricionista, campanhas, recados, odontologia, abatimento único e WhatsApp validados sem gravação real.
+DENTAL_CONFIRMATION_GATE_V103_OK
+OK: abertura imediata, transporte Safari, data brasileira, push antecipado e releitura atrasada aprovados.
+ADMIN_LOGIN_V103_TRANSPORT_TESTS_OK
+Painel dinâmico: terceira aba, criação única, serviço associado e releitura confirmada.
+OK: cache imediato, atualização em segundo plano e consulta pública única aprovados.
+Moradores 1.4.5: leitura leve, fonte vazia 20/20, cache e invalidação após escrita aprovados.
+Correção +1 dia e restauração: data civil, backup, conferência integral, datas inválidas visíveis, bloqueio por divergência e travas contra repetição validados.
+Manutenção: estado público, bloqueio duplo, comunicado único e republicação validados.
+CSV do e-SUS: capa, acentuação e mapeamento automático do relatório real reconhecidos.
+Território, TACS reeditável, isolamento, CSV seguro e push segmentado validados.
+Identificação pública de área: CPF/CNS, isolamento, ambiguidade, situação e privacidade validados.
+Not implemented: navigation to another Document
+Portal público: Minha área, identificação opcional, fallback, troca de território e compatibilidade com Japaranduba validados.
+Link base canônico: Japaranduba fixa sem herdar área anterior; links explícitos continuam isolados.
+PUBLICACOES_TERRITORIAIS_TESTS_OK
+DOM territorial: retorno à busca, data/idade, acesso TACS, CSV e ícones validados.
+Push do morador: botão permanente e renovação optOut/optIn + token + área validados.
+Confirmação individual de reparo: alvo único, texto fixo, limite e resultado público validados.
+Saúde das notificações consolidada em Recados e campanhas: vínculo, reparo e métricas validados.
+Comprovação individual: token secreto, exibição Android, confirmação expressa e idempotência validados.
+Reparo automático: renovação leve, Push técnico, fallback manual, rotação de inscrição e feedback administrativo validados.
+Central Administrativa TACS: sessão territorial, permissões, Saúde Geral e gestão multi-município ADMIN_GERAL validados.
+Identidade territorial: dados públicos mínimos, Japaranduba preservada e cabeçalho dinâmico sem alteração de layout validados.
+Estabilização territorial: acessos TACS, identidade e moradores isolados por área validados.
+Gate multiagente: autonomia territorial + primeiro acesso CNS/PIN + acessos seguintes somente por PIN validados.
+Acesso TACS exclusivo: Administrador geral não reaparece após o PIN.
+Blindagem Multiagente V1: 50 TACS, 50 áreas e 15050 verificações sem troca territorial pelo navegador.
+Camada multi-município V1.1: organização → município → área validada, mutação só pelo administrador geral e TACS preso ao território da sessão.
+API multi-município: leitura/mutações somente ADMIN_GERAL e resultado assíncrono validado.
+Campanhas/portal V9: meses, validade e painel standalone preservados.
+Campanhas automáticas V1: calendário, cores, vigência, renderer e rotina diária validados.
+UI contract V2: OK — azul-petróleo fixo, sem botões de contraste, módulos e overflow conferidos.
+PERFORMANCE_V101_TESTS_OK
+QUALIDADE Regressão funcional: 22/22 = 100.0%
+QUALIDADE Integridade e segurança dos dados: 10/10 = 100.0%
+QUALIDADE Desempenho e agilidade: 9/10 = 90.0%
+QUALIDADE Compatibilidade e resiliência: 6/8 = 75.0%
+QUALIDADE Usabilidade e acessibilidade: 8/8 = 100.0%
+QUALIDADE_INTERNA_V101=95.5%
+OBSERVACAO=Percentual de critérios automatizados desta homologação; não equivale a garantia de 100% em todas as redes e aparelhos reais.
+FALHAS_DO_GATE:
+- Desempenho e agilidade: Agenda odontológica abre por snapshot territorial
+- Compatibilidade e resiliência: Painéis fazem preconnect com Apps Script
+- Compatibilidade e resiliência: Pré-aquecimento administrativo é carregado sem UI do Portal
