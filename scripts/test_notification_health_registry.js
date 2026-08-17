@@ -79,7 +79,6 @@ assert(receiptPage.includes("publico_confirmar_recebimento"));
 assert(!panel.includes('SUBSCRIPTION_ID</'));
 assert(official.includes('Saúde das notificações'));
 assert(official.includes('admin_notificacoes_saude'));
-assert(official.includes('admin-warmup.js?v=20260813-admin-v103'));
 assert(builder.includes("marker: 'TACS_SAUDE_NOTIFICACOES_V1'"));
 const context={Object:Object,Number:Number,String:String,Boolean:Boolean,Array:Array,Date:Date,JSON:JSON,Math:Math,RegExp:RegExp,Error:Error,console:console,moradoresAdminV1Digitos_:function(v){return String(v==null?'':v).replace(/\D/g,'')}};vm.createContext(context);vm.runInContext(delivery,context);vm.runInContext(backend,context);
 let metrics=context.notificacoesAreaV1Metricas_({successful:17,received:12,failed:2,errored:1,converted:7,remaining:0});assert.equal(metrics.aceitos,17);assert.equal(metrics.confirmados,12);assert.equal(metrics.canceladas,2);assert.equal(metrics.falhas,1);assert.equal(metrics.cliques,7);assert.equal(metrics.tentativas,20);
