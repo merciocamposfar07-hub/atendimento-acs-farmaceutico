@@ -101,7 +101,7 @@
       category.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    Array.prototype.forEach.call(document.querySelectorAll('.slot.selected,.integral-day.selected,[aria-checked="true"]'), function (node) {
+    Array.prototype.forEach.call(document.querySelectorAll('.slot.selected,.sheet-dental-choice.selected,.integral-day.selected,[aria-checked="true"]'), function (node) {
       node.classList.remove('selected');
       if (node.hasAttribute('aria-checked')) node.setAttribute('aria-checked', 'false');
     });
@@ -146,7 +146,7 @@
   }
 
   function visibleChoiceExists() {
-    var nodes = document.querySelectorAll('.slot,.integral-day');
+    var nodes = document.querySelectorAll('.slot,.sheet-dental-choice,.integral-day');
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
       if (node.hidden || node.disabled) continue;
@@ -180,8 +180,8 @@
   function revealSendAfterChoice() {
     removeFlowArrow();
     setTimeout(function () {
-      var send = el('send');
-      if (!send || send.hidden) { updateFlowGuide(); return; }
+      var send = el('sendPetroleumCard') || el('send');
+      if (!send || send.hidden || (window.getComputedStyle && window.getComputedStyle(send).display === 'none')) { updateFlowGuide(); return; }
       slowScrollTo(send, 1150, function () {
         setTimeout(updateFlowGuide, 80);
       });
@@ -191,7 +191,7 @@
   function updateFlowGuide() {
     if (!initialized) return;
     var category = el('category');
-    var send = el('send');
+    var send = el('sendPetroleumCard') || el('send');
 
     if (!residentReady) {
       placeArrow(cpfTarget(), 'Comece aqui: digite seu CPF ou Cartão SUS.', 'document');
@@ -237,7 +237,7 @@
       alertObserver = new MutationObserver(function () { decorateAlerts(); });
       alertObserver.observe(document.body, { childList: true, subtree: true });
     }
-    var send = el('send');
+    var send = el('sendPetroleumCard') || el('send');
     if (send && !formObserver) {
       formObserver = new MutationObserver(function () { updateFlowGuide(); });
       formObserver.observe(send, { attributes: true, attributeFilter: ['disabled', 'hidden', 'style', 'class'] });
@@ -282,9 +282,9 @@
     });
 
     document.addEventListener('click', function (event) {
-      var target = event.target && event.target.closest ? event.target.closest('.slot,.integral-day,#send') : null;
+      var target = event.target && event.target.closest ? event.target.closest('.slot,.sheet-dental-choice,.integral-day,#send,#sendPetroleumCard') : null;
       if (!target) return;
-      if (target.id === 'send') {
+      if (target.id === 'send' || target.id === 'sendPetroleumCard') {
         if (!target.disabled && !target.hidden) sendIntent = true;
         return;
       }

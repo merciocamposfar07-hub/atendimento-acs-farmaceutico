@@ -771,6 +771,9 @@
     },
     prontoParaEnvio: function () {
       return Boolean(selection && selection.confirmed && formReady());
+    },
+    formularioValido: function () {
+      return Boolean(selection && formReady());
     }
   });
 

@@ -400,12 +400,40 @@
     };
   }
 
+  function waitForCurrentDentalReservation(requestId) {
+    return new Promise(function (resolve, reject) {
+      var deadline = Date.now() + 16000;
+      function check() {
+        var current = currentDentalSelection();
+        if (!current || current.requestId !== requestId) {
+          reject(new Error('A vaga selecionada não pôde ser confirmada. Escolha a vaga novamente.'));
+          return;
+        }
+        if (current.confirmed) {
+          reservedSelection = current.date + '|' + current.type;
+          resolve(current);
+          return;
+        }
+        if (Date.now() >= deadline) {
+          reject(new Error('A confirmação da vaga está demorando. Aguarde alguns segundos e tente enviar novamente.'));
+          return;
+        }
+        setTimeout(check, 250);
+      }
+      check();
+    });
+  }
+
   function reserveDentalIfNeeded() {
     var dental = selectedDental();
     if (!dental || !DENTAL_API) return Promise.resolve();
-    if (dental.reservedOnSelection) {
-      reservedSelection = dental.key;
-      return Promise.resolve();
+    var current = currentDentalSelection();
+    if (current) {
+      if (current.confirmed) {
+        reservedSelection = dental.key;
+        return Promise.resolve();
+      }
+      return waitForCurrentDentalReservation(current.requestId);
     }
     if (reservedSelection === dental.key) return Promise.resolve();
     if (reservationPromise) return reservationPromise;
@@ -486,8 +514,8 @@
     var category = normalize(el('category') && el('category').value);
     if (category.indexOf('odontologico') !== -1) {
       var api = window.PortalTacsOdontologiaV98;
-      if (api && typeof api.prontoParaEnvio === 'function') {
-        return Boolean(api.prontoParaEnvio());
+      if (api && typeof api.formularioValido === 'function') {
+        return Boolean(api.formularioValido());
       }
     }
     return Boolean(original && !original.disabled && !original.hidden);
