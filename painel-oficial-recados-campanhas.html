@@ -478,7 +478,7 @@ var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!teste
   function carregar(){
     if(window.__portalTacsCampanhasPeriodoV2)return;
     var s=document.createElement('script');
-    s.src='/atendimento-acs-farmaceutico/campanhas-periodo-v2.js?v=20260816-campanhas-auto-v1';
+    s.src='/atendimento-acs-farmaceutico/campanhas-periodo-v2.js?v=20260816-campanhas-admin-ui-v3';
     s.async=true;
     s.onerror=function(){console.error('Campanhas por mês não pôde ser carregado.')};
     document.head.appendChild(s);
