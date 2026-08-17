@@ -1,0 +1,268 @@
+name: Estabilizar envio odontológico v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/estabilizar-envio-odontologia-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  estabilizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Aplicar correção fechada
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'Trecho não encontrado em {path}: {old[:160]!r}')
+              p.write_text(text.replace(old, new, 1))
+
+          # 1) Agenda odontológica: expõe validade do formulário separada da confirmação.
+          replace_once(
+              'portal-odontologia-segunda-sexta.js',
+              """    prontoParaEnvio: function () {
+      return Boolean(selection && selection.confirmed && formReady());
+    }
+  });""",
+              """    prontoParaEnvio: function () {
+      return Boolean(selection && selection.confirmed && formReady());
+    },
+    formularioValido: function () {
+      return Boolean(selection && formReady());
+    }
+  });"""
+          )
+
+          # 2) Card visível: habilita assim que a vaga é selecionada e os dados estão válidos.
+          # Ao tocar, espera a MESMA reserva já iniciada pela agenda; não cria segunda reserva.
+          replace_once(
+              'portal-ajustes-finais.js',
+              """  function reserveDentalIfNeeded() {
+    var dental = selectedDental();
+    if (!dental || !DENTAL_API) return Promise.resolve();
+    if (dental.reservedOnSelection) {
+      reservedSelection = dental.key;
+      return Promise.resolve();
+    }
+    if (reservedSelection === dental.key) return Promise.resolve();
+    if (reservationPromise) return reservationPromise;
+""",
+              """  function waitForCurrentDentalReservation(requestId) {
+    return new Promise(function (resolve, reject) {
+      var deadline = Date.now() + 16000;
+      function check() {
+        var current = currentDentalSelection();
+        if (!current || current.requestId !== requestId) {
+          reject(new Error('A vaga selecionada não pôde ser confirmada. Escolha a vaga novamente.'));
+          return;
+        }
+        if (current.confirmed) {
+          reservedSelection = current.date + '|' + current.type;
+          resolve(current);
+          return;
+        }
+        if (Date.now() >= deadline) {
+          reject(new Error('A confirmação da vaga está demorando. Aguarde alguns segundos e tente enviar novamente.'));
+          return;
+        }
+        setTimeout(check, 250);
+      }
+      check();
+    });
+  }
+
+  function reserveDentalIfNeeded() {
+    var dental = selectedDental();
+    if (!dental || !DENTAL_API) return Promise.resolve();
+    var current = currentDentalSelection();
+    if (current) {
+      if (current.confirmed) {
+        reservedSelection = dental.key;
+        return Promise.resolve();
+      }
+      return waitForCurrentDentalReservation(current.requestId);
+    }
+    if (reservedSelection === dental.key) return Promise.resolve();
+    if (reservationPromise) return reservationPromise;
+"""
+          )
+
+          replace_once(
+              'portal-ajustes-finais.js',
+              """    if (category.indexOf('odontologico') !== -1) {
+      var api = window.PortalTacsOdontologiaV98;
+      if (api && typeof api.prontoParaEnvio === 'function') {
+        return Boolean(api.prontoParaEnvio());
+      }
+    }
+""",
+              """    if (category.indexOf('odontologico') !== -1) {
+      var api = window.PortalTacsOdontologiaV98;
+      if (api && typeof api.formularioValido === 'function') {
+        return Boolean(api.formularioValido());
+      }
+    }
+"""
+          )
+
+          # 3) Fluxo guiado: reconhecer os botões odontológicos novos e nunca rolar para o #send oculto.
+          replace_once(
+              'portal-orientacao-morador.js',
+              "document.querySelectorAll('.slot,.integral-day')",
+              "document.querySelectorAll('.slot,.sheet-dental-choice,.integral-day')"
+          )
+          replace_once(
+              'portal-orientacao-morador.js',
+              "document.querySelectorAll('.slot.selected,.integral-day.selected,[aria-checked=\"true\"]')",
+              "document.querySelectorAll('.slot.selected,.sheet-dental-choice.selected,.integral-day.selected,[aria-checked=\"true\"]')"
+          )
+          replace_once(
+              'portal-orientacao-morador.js',
+              """      var send = el('send');
+      if (!send || send.hidden) { updateFlowGuide(); return; }
+      slowScrollTo(send, 1150, function () {""",
+              """      var send = el('sendPetroleumCard') || el('send');
+      if (!send || send.hidden || (window.getComputedStyle && window.getComputedStyle(send).display === 'none')) { updateFlowGuide(); return; }
+      slowScrollTo(send, 1150, function () {"""
+          )
+          replace_once(
+              'portal-orientacao-morador.js',
+              """    var category = el('category');
+    var send = el('send');
+""",
+              """    var category = el('category');
+    var send = el('sendPetroleumCard') || el('send');
+"""
+          )
+          replace_once(
+              'portal-orientacao-morador.js',
+              """    var send = el('send');
+    if (send && !formObserver) {""",
+              """    var send = el('sendPetroleumCard') || el('send');
+    if (send && !formObserver) {"""
+          )
+          replace_once(
+              'portal-orientacao-morador.js',
+              "event.target.closest('.slot,.integral-day,#send')",
+              "event.target.closest('.slot,.sheet-dental-choice,.integral-day,#send,#sendPetroleumCard')"
+          )
+          replace_once(
+              'portal-orientacao-morador.js',
+              """      if (target.id === 'send') {
+        if (!target.disabled && !target.hidden) sendIntent = true;
+        return;
+      }""",
+              """      if (target.id === 'send' || target.id === 'sendPetroleumCard') {
+        if (!target.disabled && !target.hidden) sendIntent = true;
+        return;
+      }"""
+          )
+
+          # 4) Cache-busting para Safari/iPhone buscar os arquivos corrigidos.
+          replace_once(
+              'index.html',
+              'portal-ajustes-finais.js?v=20260817-dental-card-bridge-v1',
+              'portal-ajustes-finais.js?v=20260817-dental-card-bridge-v2'
+          )
+          replace_once(
+              'index.html',
+              'portal-odontologia-segunda-sexta.js?v=20260817-dental-whatsapp-bridge-v1',
+              'portal-odontologia-segunda-sexta.js?v=20260817-dental-whatsapp-bridge-v2'
+          )
+          replace_once(
+              'index.html',
+              'portal-orientacao-morador.js?v=20260816-fluxo-guiado-v2',
+              'portal-orientacao-morador.js?v=20260817-fluxo-guiado-v3'
+          )
+
+          # 5) Atualizar o gate existente para proteger exatamente esta regressão.
+          p = Path('scripts/test_dental_confirmation_gate_v103.js')
+          t = p.read_text()
+          t = t.replace(
+              "assert.match(index,/portal-odontologia-segunda-sexta\\.js\\?v=20260817-dental-whatsapp-bridge-v1/);",
+              "assert.match(index,/portal-odontologia-segunda-sexta\\.js\\?v=20260817-dental-whatsapp-bridge-v2/);"
+          )
+          marker = "assert.match(card,/api\\.prontoParaEnvio/);"
+          if marker in t:
+              t = t.replace(marker, "assert.match(card,/api\\.formularioValido/);", 1)
+          marker2 = "assert.match(dental,/prontoParaEnvio: function \\(\\)/);"
+          extra = """assert.match(dental,/formularioValido: function \\(\\)/);
+          assert.match(card,/function waitForCurrentDentalReservation\\(requestId\\)/);
+          assert.doesNotMatch(card,/if \\(dental\\.reservedOnSelection\\)/);
+          """
+          if extra.strip() not in t:
+              if marker2 not in t:
+                  raise SystemExit('Marcador do gate odontológico não encontrado')
+              t = t.replace(marker2, marker2 + '\n' + extra, 1)
+          p.write_text(t)
+
+          Path('scripts/test_dental_flow_bridge_v2.js').write_text(r"""'use strict';
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          const dental=fs.readFileSync('portal-odontologia-segunda-sexta.js','utf8');
+          const card=fs.readFileSync('portal-ajustes-finais.js','utf8');
+          const guide=fs.readFileSync('portal-orientacao-morador.js','utf8');
+          const index=fs.readFileSync('index.html','utf8');
+          assert.match(dental,/formularioValido: function \(\)/);
+          assert.match(card,/function waitForCurrentDentalReservation\(requestId\)/);
+          assert.match(card,/api\.formularioValido/);
+          assert.match(guide,/\.slot,\.sheet-dental-choice,\.integral-day/);
+          assert.match(guide,/sendPetroleumCard/);
+          assert.match(index,/dental-card-bridge-v2/);
+          assert.match(index,/dental-whatsapp-bridge-v2/);
+          assert.match(index,/fluxo-guiado-v3/);
+          console.log('DENTAL_FLOW_BRIDGE_V2_OK');
+          """)
+
+          package = Path('package.json')
+          pkg = json.loads(package.read_text())
+          test = pkg.get('scripts', {}).get('test', '')
+          addition = 'node scripts/test_dental_flow_bridge_v2.js'
+          if addition not in test:
+              pkg.setdefault('scripts', {})['test'] = (test + ' && ' + addition) if test else addition
+              package.write_text(json.dumps(pkg, ensure_ascii=False, indent=2) + '\n')
+
+          Path('portal-version.json').write_text(json.dumps({
+              'version': 'd17a1c0ff002',
+              'releasedAt': '2026-08-17T14:35:00Z',
+              'scope': 'Estabilização do botão de envio odontológico e fluxo visual no iPhone'
+          }, ensure_ascii=False, indent=2) + '\n')
+          PY
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Testar integração completa
+        run: npm test
+
+      - name: Publicar correção
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add portal-odontologia-segunda-sexta.js portal-ajustes-finais.js portal-orientacao-morador.js index.html scripts/test_dental_confirmation_gate_v103.js scripts/test_dental_flow_bridge_v2.js package.json portal-version.json
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'Estabiliza envio odontológico e fluxo visual no iPhone'
+          git push origin HEAD:main
