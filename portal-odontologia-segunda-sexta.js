@@ -220,8 +220,8 @@
   if (selection) {
     if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
     if (selection.explicitFailure) return selection.errorMessage || 'Não foi possível reservar essa vaga.';
-    if (selection.slowSync) return 'A vaga foi selecionada, mas a planilha ainda não confirmou a reserva. Aguarde a confirmação antes de enviar pelo WhatsApp.';
-    return 'Vaga selecionada. Confirmando a redução da vaga na planilha...';
+    if (selection.slowSync) return 'Vaga selecionada. A agenda ainda está sincronizando em segundo plano; o envio continua disponível.';
+    return 'Vaga selecionada. Atualizando a quantidade na agenda em segundo plano...';
   }
   if (cachedSnapshot) return 'Última agenda recebida exibida. Confirmando a disponibilidade atual ao selecionar uma vaga.';
   return 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
@@ -425,14 +425,10 @@
     if (send.dataset) delete send.dataset.dentalReservationPending;
     return;
   }
-  var pending = !selection.confirmed;
-  var shouldDisable = !formReady() || pending;
+  var shouldDisable = !formReady();
   if (send.hidden) send.hidden = false;
   if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
-  if (send.dataset) {
-    if (pending) send.dataset.dentalReservationPending = '1';
-    else delete send.dataset.dentalReservationPending;
-  }
+  if (send.dataset) delete send.dataset.dentalReservationPending;
 }
 
   function makeCode() {
@@ -795,7 +791,7 @@
       if (send && isDental() && selection) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        if (!selection.confirmed || !formReady()) { refreshSend(); return; }
+        if (!formReady()) { refreshSend(); return; }
         openWhatsApp();
         return;
       }
@@ -859,7 +855,7 @@
       };
     },
     prontoParaEnvio: function () {
-      return Boolean(selection && selection.confirmed && formReady());
+      return Boolean(selection && formReady());
     },
     formularioValido: function () {
       return Boolean(selection && formReady());

@@ -349,7 +349,7 @@
 
   function requestData(identity) {
     return {
-      code: (function () { var dental = currentDentalSelection(); return dental && dental.confirmed && dental.requestId ? dental.requestId : makeCode(identity); }()),
+      code: (function () { var dental = currentDentalSelection(); return dental && dental.requestId ? dental.requestId : makeCode(identity); }()),
       sentAt: recifeDateTime(),
       category: clean(el('category') && el('category').value),
       name: clean(el('name') && el('name').value),
@@ -429,11 +429,10 @@
     if (!dental || !DENTAL_API) return Promise.resolve();
     var current = currentDentalSelection();
     if (current) {
-      if (current.confirmed) {
-        reservedSelection = dental.key;
-        return Promise.resolve();
-      }
-      return waitForCurrentDentalReservation(current.requestId);
+      // A rotina odontológica principal já iniciou a reserva no clique da vaga.
+      // Não duplicar a reserva e, principalmente, não bloquear o envio esperando a resposta.
+      reservedSelection = dental.key;
+      return Promise.resolve(current);
     }
     if (reservedSelection === dental.key) return Promise.resolve();
     if (reservationPromise) return reservationPromise;
@@ -504,7 +503,7 @@
     if (card) {
       card.disabled = busy || !formIsReady();
       card.innerHTML = busy
-        ? 'Preparando card…<small>Confirmando os dados e a disponibilidade.</small>'
+        ? 'Preparando card…<small>Abrindo as opções de envio.</small>'
         : card.dataset.originalHtml || card.innerHTML;
     }
   }
@@ -684,23 +683,30 @@
     setButtonsBusy(true);
     ensureTerritory()
       .then(function (identity) {
-        return reserveDentalIfNeeded().then(function () {
-          var data = requestData(identity);
-          return createPetroleumCard(data).then(function (blob) {
-            var fileName = 'solicitacao-' + normalizeArea(identity.areaId).toLowerCase() + '-portal-tacs.png';
-            var file = new File([blob], fileName, { type: 'image/png' });
-            if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-              return navigator.share({
-                title: 'Solicitação do morador',
-                text: 'Solicitação do Portal TACS • ' + identity.areaName + ' • TACS ' + identity.tacsName + '.',
-                files: [file]
-              });
-            }
-            var url = URL.createObjectURL(blob);
-            var opened = window.open(url, '_blank');
-            if (!opened) window.location.href = url;
-            setTimeout(function () { URL.revokeObjectURL(url); }, 120000);
-          });
+        // A sincronização da vaga é independente do compartilhamento. Em navegadores
+        // antigos/fallback, inicia a reserva aqui, mas nunca espera por ela para enviar.
+        reserveDentalIfNeeded().catch(function (error) {
+          var status = el('dentalStatus');
+          if (status && error && error.message) {
+            status.textContent = 'Solicitação liberada para envio. A agenda continuará tentando sincronizar em segundo plano.';
+            status.className = 'dental-status';
+          }
+        });
+        var data = requestData(identity);
+        return createPetroleumCard(data).then(function (blob) {
+          var fileName = 'solicitacao-' + normalizeArea(identity.areaId).toLowerCase() + '-portal-tacs.png';
+          var file = new File([blob], fileName, { type: 'image/png' });
+          if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+            return navigator.share({
+              title: 'Solicitação do morador',
+              text: 'Solicitação do Portal TACS • ' + identity.areaName + ' • TACS ' + identity.tacsName + '.',
+              files: [file]
+            });
+          }
+          var url = URL.createObjectURL(blob);
+          var opened = window.open(url, '_blank');
+          if (!opened) window.location.href = url;
+          setTimeout(function () { URL.revokeObjectURL(url); }, 120000);
         });
       })
       .catch(function (error) {

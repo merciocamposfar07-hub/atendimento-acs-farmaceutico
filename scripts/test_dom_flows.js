@@ -67,9 +67,12 @@ class Harness {
       dentalAdminPosts: [],
       mainPosts: [],
       oldNoticeRequests: [],
-      whatsAppMessages: []
+      whatsAppMessages: [],
+      shares: [],
+      alerts: []
     };
     this.errors = [];
+    this.reservationMessageDelay = 120;
   }
 
   apiResponse(url) {
@@ -143,7 +146,7 @@ class Harness {
           date: fields.date,
           type: fields.type
         },
-        120
+        this.reservationMessageDelay
       );
       return;
     }
@@ -274,6 +277,26 @@ class Harness {
         window.open = function () {
           return {};
         };
+        window.alert = message => { harness.records.alerts.push(String(message || '')); };
+        window.navigator.canShare = function () { return true; };
+        window.navigator.share = function (payload) {
+          harness.records.shares.push(payload);
+          return Promise.resolve();
+        };
+        if (window.HTMLCanvasElement) {
+          window.HTMLCanvasElement.prototype.getContext = function () {
+            return {
+              createLinearGradient: function () { return { addColorStop: function () {} }; },
+              fillRect: function () {}, fillText: function () {}, beginPath: function () {},
+              moveTo: function () {}, arcTo: function () {}, closePath: function () {}, fill: function () {},
+              measureText: function (value) { return { width: String(value || '').length * 18 }; },
+              fillStyle: '', font: ''
+            };
+          };
+          window.HTMLCanvasElement.prototype.toBlob = function (callback) {
+            callback(new window.Blob(['portal-tacs-card'], {type: 'image/png'}));
+          };
+        }
         window.HTMLElement.prototype.scrollIntoView = function () {};
         window.__TEST_WHATSAPP__ = message => {
           harness.records.whatsAppMessages.push(message);
@@ -296,6 +319,56 @@ async function fillPatient(window, name, subject) {
   setField(window, '#name', name);
   setField(window, '#locality', 'Sítio Japaranduba');
   setField(window, '#subject', subject);
+}
+
+
+async function testNonBlockingDentalCard() {
+  const harness = new Harness();
+  harness.reservationMessageDelay = 5000;
+  const dom = await harness.dom('index.html');
+  const {window} = dom;
+  try {
+    const category = window.document.querySelector('#category');
+    category.value = 'Solicitar atendimento odontológico (dentista)';
+    dispatch(window, category, 'change');
+    await waitFor(
+      () => window.document.querySelector('#dentalSlots .sheet-dental-choice.common:not(:disabled)'),
+      'A vaga odontológica não apareceu para o teste não bloqueante'
+    );
+    const slot = window.document.querySelector('#dentalSlots .sheet-dental-choice.common:not(:disabled)');
+    slot.click();
+    await waitFor(
+      () => harness.records.dentalReservations.length === 1,
+      'A reserva em segundo plano não foi iniciada no clique da vaga'
+    );
+    await fillPatient(window, 'Paciente Teste Não Bloqueante', 'Solicitação odontológica simulada.');
+    const card = window.document.querySelector('#sendPetroleumCard');
+    assert.ok(card, 'Botão visível do card não encontrado');
+    await waitFor(() => !card.disabled, 'O botão do card permaneceu bloqueado aguardando a planilha');
+
+    const beforeSelection = window.PortalTacsOdontologiaV98.selecao();
+    assert.ok(beforeSelection, 'Seleção odontológica não disponível');
+    assert.equal(beforeSelection.confirmed, false, 'O teste precisa clicar enquanto a confirmação ainda está atrasada');
+    const reservationsBeforeSend = harness.records.dentalReservations.length;
+    const started = Date.now();
+    card.click();
+    await waitFor(
+      () => harness.records.shares.length === 1,
+      'O compartilhamento não abriu enquanto a confirmação da vaga estava atrasada',
+      1400
+    );
+    const elapsed = Date.now() - started;
+    assert.ok(elapsed < 1400, `O envio ficou bloqueado por ${elapsed} ms esperando a vaga`);
+    assert.equal(
+      harness.records.dentalReservations.length,
+      reservationsBeforeSend,
+      'O clique em enviar não pode criar uma segunda reserva'
+    );
+    assert.equal(harness.records.alerts.length, 0, 'O envio não pode exibir alerta de demora da confirmação');
+    assert.ok(harness.records.shares[0].files && harness.records.shares[0].files.length === 1, 'O card não foi entregue ao compartilhamento nativo');
+  } finally {
+    window.close();
+  }
 }
 
 async function testRegularDental(harness) {
@@ -755,6 +828,7 @@ async function testPublicSynchronization(harness) {
 }
 
 async function main() {
+  await testNonBlockingDentalCard();
   const harness = new Harness();
   await testRegularDental(harness);
   await testEmergencyDental(harness);

@@ -321,10 +321,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
           description.length > 0 &&
           dentalReady;
 
-        if (send.dataset && send.dataset.dentalReservationPending === '1') {
-          send.disabled = true;
-          return;
-        }
+        if (send.dataset) delete send.dataset.dentalReservationPending;
         if (ready && !send.hidden && send.textContent.indexOf('Reservando') === -1) {
           send.disabled = false;
         }
