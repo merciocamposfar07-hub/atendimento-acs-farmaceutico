@@ -425,9 +425,9 @@
     if (send.dataset) delete send.dataset.dentalReservationPending;
     return;
   }
-  // A vaga é reservada no clique. O envio só é liberado depois que o
-  // Apps Script confirma a gravação; não existe nova conferência no botão Enviar.
-  var shouldDisable = !formReady();
+  // Comportamento restaurado do ponto estável: o envio só é liberado depois que
+  // a reserva foi realmente confirmada na planilha.
+  var shouldDisable = !formReady() || !selection.confirmed;
   if (send.hidden) send.hidden = false;
   if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
   if (send.dataset) delete send.dataset.dentalReservationPending;
@@ -776,7 +776,9 @@
   }
 
   function persistInBackground(item) {
-    reserveViaJsonp(item).then(function (result) {
+    // Restaura o transporte que funcionava no fluxo estável: POST por formulário/iframe
+    // no próprio clique, aguardando a resposta real da planilha antes de liberar envio.
+    postReservation(item).then(function (result) {
       if (!selection || selection.requestId !== item.requestId) return;
       if (result.alreadyReserved && (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type)) {
         var conflict = new Error('Este formulário já reservou outra data. Reabra o portal para escolher uma nova vaga.');
@@ -826,11 +828,9 @@
     selection = item;
     if (type === 'emergencial') slot.emergency = item.optimisticRemaining;
     else slot.common = item.optimisticRemaining;
-    // A redução visual acontece no clique e a mesma reserva é enviada imediatamente
-    // por transporte durável. Todos os canais usam o MESMO requestId, então o backend
-    // idempotente nunca desconta a vaga duas vezes.
+    // Mantém a redução visual imediata, mas a operação só é considerada concluída
+    // quando o POST estável confirma a gravação real na planilha.
     saveSlotsCache();
-    queueDurableReservation(item);
     var category = el('category');
     if (category) {
       internalCategoryChange = true;
@@ -947,9 +947,8 @@
       if (isDental()) loadAgenda(false);
     });
     window.addEventListener('pagehide', function () {
-      // Se o Safari sair para o WhatsApp/compartilhamento antes da confirmação visual,
-      // reenfileira a MESMA reserva. O requestId idempotente impede abatimento duplo.
-      if (selection && !selection.confirmed) queueDurableReservation(selection);
+      // Nenhuma nova reserva é disparada ao sair da página. A reserva já foi iniciada
+      // no clique e o envio só é liberado após confirmação real.
     });
 
     if (isDental()) {
@@ -976,10 +975,10 @@
       };
     },
     prontoParaEnvio: function () {
-      return Boolean(selection && formReady());
+      return Boolean(selection && selection.confirmed && formReady());
     },
     formularioValido: function () {
-      return Boolean(selection && formReady());
+      return Boolean(selection && selection.confirmed && formReady());
     }
   });
 
