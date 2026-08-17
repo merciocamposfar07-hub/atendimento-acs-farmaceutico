@@ -1,0 +1,111 @@
+name: Implantar patch baixa odontológica v115
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-odontologia-schema-v115.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  patch-deploy-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Preparar credenciais e baixar Apps Script real
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const config=JSON.parse(process.env.CLASP_JSON);
+          if(!config.scriptId) throw new Error('scriptId ausente');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f ZZZZ_36_CorrecaoDataOdontologiaV1.js
+
+      - name: Aplicar patch somente na odontologia
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE="$RUNNER_TEMP/apps-script-live/ZZZZ_36_CorrecaoDataOdontologiaV1.js"
+          python3 scripts/patch_odontologia_schema_v115.py "$LIVE"
+          node --check --input-type=commonjs < "$LIVE"
+          cp "$LIVE" apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs
+
+      - name: Publicar e validar sem consumir vaga
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          npx --yes @google/clasp@3.3.0 version "Backup antes da baixa odontológica v115"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Baixa odontológica schema v115")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+          DEPLOYED=0
+          rollback(){ code=$?; trap - ERR; if [ "$DEPLOYED" = '1' ]; then npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback baixa odontológica v115" "$DEPLOYMENT_ID" || true; fi; exit "$code"; }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Baixa odontológica schema v115" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          PROBE=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=reservar_get&probe=1")
+          echo "$PROBE"
+          printf '%s' "$PROBE" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);if(!(j.ok&&j.probe&&j.versao==='2.3.0'))process.exit(3);console.log('BACKEND_V230_OK');})"
+          STATUS=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=reserva_status&areaId=JAPARANDUBA&requestId=TESTE-V115-STATUS-0001")
+          echo "$STATUS"
+          printf '%s' "$STATUS" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);if(!(j.ok===true&&j.found===false))process.exit(4);console.log('SCHEMA_RESERVAS_OK');})"
+          NEG=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=reservar_get&areaId=JAPARANDUBA&requestId=TESTE-V115-WRITE-0001&date=2099-12-31&type=comum")
+          echo "$NEG"
+          printf '%s' "$NEG" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);if(j.ok||j.code!=='DATE_NOT_FOUND')process.exit(5);console.log('CAMINHO_DE_ESCRITA_OK_SEM_CONSUMIR_VAGA');})"
+          trap - ERR
+          echo "VALIDACAO_V115_OK versão $NEW_VERSION"
+
+      - name: Persistir exatamente o backend validado no repositório
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Corrige schema legado da baixa odontológica v115'
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Limpar credenciais
+        if: always()
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
