@@ -167,6 +167,17 @@ body.tema-petroleo #listaCampanhas .item[class*="camp-theme-"]>summary .camp-adm
   overflow:visible;
   pointer-events:none;
 }
+#listaCampanhas .camp-admin-symbol.camp-symbol-static svg{
+  animation:none!important;
+  transition:none!important;
+  transform:none!important;
+}
+#listaCampanhas .camp-admin-symbol.camp-symbol-static{
+  animation:none!important;
+  transition:none!important;
+  transform:none!important;
+  will-change:auto!important;
+}
 #listaCampanhas .camp-admin-symbol svg{
   display:block;
   width:80px;
@@ -301,6 +312,33 @@ function metaForCard(card){
 function campaignTheme(meta,title){var t=txt(meta&&meta.COR_TEMA).toLowerCase();if(t)return t.replace(/[^a-z0-9-]/g,'');var n=txt(title).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');var temas=['lilas','dourado','azul-marinho','laranja','amarelo','vermelho','verde','roxo','rosa','azul'];for(var i=0;i<temas.length;i++)if(n.indexOf(temas[i])!==-1)return temas[i];return''}
 function applyCampaignTheme(box,meta){if(!box)return;Array.prototype.slice.call(box.classList).filter(function(c){return c.indexOf('camp-theme-')===0}).forEach(function(c){box.classList.remove(c)});var h=box.querySelector('h3'),theme=campaignTheme(meta,h&&h.textContent);if(theme)box.classList.add('camp-theme-'+theme)}
 function dateBrIsoV41(v){var m=txt(v).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+'/'+m[2]+'/'+m[1]:txt(v)}
+function campaignCatalogByTitle(title){
+  var n=txt(title).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  var map={
+    'janeiro roxo':{key:'JAN_ROXO',subtitle:'Combate e prevenção da hanseníase'},
+    'fevereiro laranja':{key:'FEV_LARANJA',subtitle:'Conscientização e combate à leucemia'},
+    'março roxo':{key:'MAR_ROXO',subtitle:'Conscientização sobre a epilepsia'},
+    'marco roxo':{key:'MAR_ROXO',subtitle:'Conscientização sobre a epilepsia'},
+    'março azul-marinho':{key:'MAR_AZUL_MARINHO',subtitle:'Prevenção do câncer colorretal'},
+    'marco azul-marinho':{key:'MAR_AZUL_MARINHO',subtitle:'Prevenção do câncer colorretal'},
+    'abril verde':{key:'ABR_VERDE',subtitle:'Segurança no trabalho'},
+    'abril azul':{key:'ABR_AZUL',subtitle:'Conscientização sobre o autismo'},
+    'maio amarelo':{key:'MAI_AMARELO',subtitle:'Prevenção e segurança no trânsito'},
+    'junho vermelho':{key:'JUN_VERMELHO',subtitle:'Incentivo à doação de sangue'},
+    'julho amarelo':{key:'JUL_AMARELO',subtitle:'Combate às hepatites virais'},
+    'julho verde':{key:'JUL_VERDE',subtitle:'Prevenção do câncer de cabeça e pescoço'},
+    'agosto lilás':{key:'AGO_LILAS',subtitle:'Fim da violência contra a mulher'},
+    'agosto lilas':{key:'AGO_LILAS',subtitle:'Fim da violência contra a mulher'},
+    'agosto dourado':{key:'AGO_DOURADO',subtitle:'Incentivo ao aleitamento materno'},
+    'setembro amarelo':{key:'SET_AMARELO',subtitle:'Prevenção ao suicídio'},
+    'setembro verde':{key:'SET_VERDE',subtitle:'Incentivo à doação de órgãos'},
+    'outubro rosa':{key:'OUT_ROSA',subtitle:'Prevenção e diagnóstico precoce do câncer de mama'},
+    'novembro azul':{key:'NOV_AZUL',subtitle:'Saúde do homem e prevenção do câncer de próstata'},
+    'dezembro vermelho':{key:'DEZ_VERMELHO',subtitle:'Luta contra a AIDS e as ISTs'},
+    'dezembro laranja':{key:'DEZ_LARANJA',subtitle:'Prevenção do câncer de pele'}
+  };
+  return map[n]||{key:'',subtitle:''};
+}
 /* CAMPANHAS_ADMIN_V5 */
 function campaignPalette(theme){
   var map={
@@ -368,11 +406,13 @@ function decorateCampaignSummary(box,meta){
   copy.classList.add('camp-admin-copy');
   var h=copy.querySelector('h3');if(h)h.classList.add('camp-admin-title');
   var theme=campaignTheme(meta,h&&h.textContent);
-  var key=txt(meta&&meta.CAMPANHA_CHAVE).toUpperCase();
+  var catalog=campaignCatalogByTitle(h&&h.textContent);
+  var key=txt(meta&&meta.CAMPANHA_CHAVE).toUpperCase()||catalog.key;
   var isAugust=/^AGO_/.test(key)||parseInt(meta&&meta.MES,10)===8;
   var subtitle=copy.querySelector('.camp-admin-subtitle');
   if(!subtitle){subtitle=document.createElement('div');subtitle.className='camp-admin-subtitle';if(h)h.insertAdjacentElement('afterend',subtitle);else copy.insertBefore(subtitle,copy.firstChild)}
-  subtitle.textContent=txt(meta&&meta.SUBTITULO);subtitle.hidden=!subtitle.textContent;
+  var subtitleValue=isAugust?txt(meta&&meta.SUBTITULO):txt(meta&&meta.SUBTITULO)||catalog.subtitle;
+  subtitle.textContent=subtitleValue;subtitle.hidden=!subtitleValue;
   var period=copy.querySelector('.sub');
   if(period){
     period.classList.add('camp-admin-period');
@@ -534,7 +574,7 @@ function install(){
       if(record.target&&record.target.id==='listaCampanhas')changedList=true;
       Array.prototype.forEach.call(record.addedNodes,function(node){if(containsCampaignCard(node))changedList=true});
     });
-    if(changedList){scheduleDecorate();fetchMetadata(700)}
+    if(changedList){decorate();fetchMetadata(700)}
   }).observe(document.body,{childList:true,subtree:true});
   fetchMetadata(700);
 }
