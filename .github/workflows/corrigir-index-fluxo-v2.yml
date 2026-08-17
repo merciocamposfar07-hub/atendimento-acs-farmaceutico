@@ -1,0 +1,61 @@
+name: Corrigir index do fluxo guiado v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-index-fluxo-v2.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: corrigir-index-fluxo-v2
+  cancel-in-progress: false
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar ícone público e cache-bust do fluxo guiado
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          anchor='  <meta name="description" content="Canal do TACS - Técnico Agente Comunitário de Saúde Mércio José Campos dos Santos, vinculado à Unidade de Saúde Posto Matias, para moradores do Sítio Japaranduba, Chã Grande/PE.">\n'
+          links=(
+              '  <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/painel-moradores.svg">\n'
+              '  <link rel="apple-touch-icon" sizes="180x180" href="/atendimento-acs-farmaceutico/icons/painel-moradores-180.png">\n'
+              '  <meta name="apple-mobile-web-app-title" content="Portal TACS">\n'
+          )
+          if 'rel="apple-touch-icon"' not in s:
+              if anchor not in s:
+                  raise SystemExit('Âncora do head não encontrada; nenhuma alteração aplicada.')
+              s=s.replace(anchor, anchor+links, 1)
+          old='portal-orientacao-morador.js?v=20260816-fluxo-guiado-v1'
+          new='portal-orientacao-morador.js?v=20260816-fluxo-guiado-v2'
+          if old in s:
+              s=s.replace(old,new,1)
+          elif new not in s:
+              raise SystemExit('Referência do fluxo guiado não encontrada.')
+          p.write_text(s,encoding='utf-8')
+          PY
+          grep -q 'apple-touch-icon.*painel-moradores-180.png' index.html
+          grep -q 'portal-orientacao-morador.js?v=20260816-fluxo-guiado-v2' index.html
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Padroniza ícone público e carrega fluxo guiado v2'
+          for tentativa in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((tentativa*2))
+          done
+          exit 1
