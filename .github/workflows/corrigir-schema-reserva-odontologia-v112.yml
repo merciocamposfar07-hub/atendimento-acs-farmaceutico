@@ -1,0 +1,93 @@
+name: Corrigir schema da reserva odontologica v112
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-schema-reserva-odontologia-v112.yml'
+permissions:
+  contents: write
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Corrigir somente schema de reservas odontologicas
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs')
+          t=p.read_text()
+          t=t.replace("VERSAO:'2.2.0'","VERSAO:'2.2.1'",1)
+          old_status="var reservas=agendasProfissionaisTerritoriaisV1Tabela_(agendasProfissionaisTerritoriaisV1Planilha_(),TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_RESERVAS,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.RESERVA_HEADERS,true);"
+          new_status="var reservas=correcaoDataOdontologiaV1TabelaReservas_(agendasProfissionaisTerritoriaisV1Planilha_());"
+          if old_status not in t:
+              raise SystemExit('Chamada da tabela de reservas no status nao encontrada')
+          t=t.replace(old_status,new_status,1)
+          old_res="var reservas=agendasProfissionaisTerritoriaisV1Tabela_(ss,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_RESERVAS,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.RESERVA_HEADERS,true);"
+          new_res="var reservas=correcaoDataOdontologiaV1TabelaReservas_(ss);"
+          if old_res not in t:
+              raise SystemExit('Chamada da tabela de reservas na reserva nao encontrada')
+          t=t.replace(old_res,new_res,1)
+          anchor='function correcaoDataOdontologiaV1StatusReserva_(p){'
+          helper=r'''function correcaoDataOdontologiaV1TabelaReservas_(ss){
+  var nome=TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_RESERVAS;
+  var obrigatorios=TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.RESERVA_HEADERS.slice();
+  var extras=['AREA_ID','ATUALIZADO_EM'];
+  var sheet=ss.getSheetByName(nome);
+  if(!sheet||sheet.getLastRow()===0)return agendasProfissionaisTerritoriaisV1Tabela_(ss,nome,obrigatorios,true);
+  var colunas=Math.max(1,sheet.getLastColumn());
+  var headers=sheet.getRange(1,1,1,colunas).getDisplayValues()[0].map(agendasProfissionaisTerritoriaisV1Normalizar_);
+  var faltando=obrigatorios.concat(extras).filter(function(c){return headers.indexOf(agendasProfissionaisTerritoriaisV1Normalizar_(c))===-1;});
+  if(faltando.length){
+    sheet.getRange(1,colunas+1,1,faltando.length).setValues([faltando]);
+    SpreadsheetApp.flush();
+  }
+  return agendasProfissionaisTerritoriaisV1Tabela_(ss,nome,obrigatorios,true);
+}
+
+'''
+          if helper.strip() not in t:
+              if anchor not in t:
+                  raise SystemExit('Ponto de insercao do helper nao encontrado')
+              t=t.replace(anchor,helper+anchor,1)
+          p.write_text(t)
+
+          # Atualiza o teste DOM antigo apenas para o transporte JSONP vigente.
+          p=Path('scripts/test_dom_flows.js')
+          t=p.read_text()
+          old="""    await waitFor(\n      () => harness.records.durableGetReservations.length >= 1,\n      'A reserva durável GET não foi enfileirada no clique da vaga'\n    );\n    const durableGet = harness.records.durableGetReservations[0];\n    assert.equal(durableGet.action, 'reservar_get');\n    assert.equal(durableGet.type, 'emergencial');\n    assert.equal(durableGet.date, '2099-08-03');\n    assert.equal(durableGet.keepalive, true);\n    assert.match(durableGet.requestId, /^MATIAS-/);\n\n    const cacheKey = window.PortalTacsOdontologiaV98.cacheKey;\n    const cached = JSON.parse(window.localStorage.getItem(cacheKey));\n    const monday = cached.data.dias.find(item => item.data === '2099-08-03');\n    assert.equal(monday.vagasEmergenciais, 0, 'A última vaga emergencial precisa virar 0 no cache já no clique');\n"""
+          new="""    await waitFor(\n      () => harness.records.dentalReservations.length >= 1,\n      'A reserva JSONP não chegou ao backend simulado no clique da vaga',\n      3000\n    );\n    const reserva = harness.records.dentalReservations[0];\n    assert.equal(reserva.action, 'reservar_get');\n    assert.equal(reserva.type, 'emergencial');\n    assert.equal(reserva.date, '2099-08-03');\n    assert.match(reserva.requestId, /^MATIAS-/);\n    assert.equal(harness.dental.find(item => item.data === '2099-08-03').vagasEmergenciais, 0, 'O backend simulado não reduziu 1 para 0');\n"""
+          if old not in t:
+              raise SystemExit('Trecho antigo do teste DOM nao encontrado')
+          p.write_text(t.replace(old,new,1))
+          PY
+      - name: Validar correcao e regressao
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check < apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs
+          node --check portal-odontologia-segunda-sexta.js
+          node scripts/test_dom_flows.js
+          node scripts/test_admin_transport.js
+          node scripts/test_agendas_profissionais_territoriais.js
+          node scripts/test_multiagent_isolation_50.js
+      - name: Publicar fonte e solicitar implantacao do Apps Script
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          printf 'odontologia-schema-reservas-v112-%s\n' "${GITHUB_SHA::7}" > .github/apps-script-release-request
+          git add apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs scripts/test_dom_flows.js .github/apps-script-release-request
+          git commit -m 'Corrige schema que impedia baixa da vaga odontologica v112'
+          git push origin HEAD:main
