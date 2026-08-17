@@ -63,7 +63,7 @@ function addStyle(){
   ].join('');
   style.textContent+='.camp-color-chip{margin-top:10px;border-radius:12px;padding:9px 11px;background:#fff;color:#073a55;font-weight:900}.camp-theme-lilas>summary{background:linear-gradient(135deg,#ead9ff,#d4adf2);color:#32105f}.camp-theme-dourado>summary{background:linear-gradient(135deg,#ffe7a3,#f6c954);color:#4f3400}.camp-theme-roxo>summary{background:linear-gradient(135deg,#e4d4ff,#b995e8);color:#2e1258}.camp-theme-laranja>summary{background:linear-gradient(135deg,#ffe0b5,#f2a24d);color:#5b2e00}.camp-theme-azul-marinho>summary{background:linear-gradient(135deg,#163a69,#0b2443);color:#fff}.camp-theme-verde>summary{background:linear-gradient(135deg,#d8f2df,#79c992);color:#123f23}.camp-theme-azul>summary{background:linear-gradient(135deg,#d8efff,#79bce8);color:#0b3654}.camp-theme-amarelo>summary{background:linear-gradient(135deg,#fff5b8,#f2d257);color:#554500}.camp-theme-vermelho>summary{background:linear-gradient(135deg,#ffd6d6,#e78383);color:#5d1717}.camp-theme-rosa>summary{background:linear-gradient(135deg,#ffdbea,#ef9cbd);color:#641d3a}#listaCampanhas .item[class*="camp-theme-"]>summary .sub{color:inherit}';
   style.textContent+=`
-/* CAMPANHAS_ADMIN_UI_V3 */
+/* CAMPANHAS_ADMIN_UI_V5 */
 #listaCampanhas .item[class*="camp-theme-"]{
   border:2px solid #69c7e7!important;
   border-radius:24px!important;
@@ -169,11 +169,12 @@ body.tema-petroleo #listaCampanhas .item[class*="camp-theme-"]>summary .camp-adm
 }
 #listaCampanhas .camp-admin-symbol svg{
   display:block;
-  width:76px;
-  height:76px;
+  width:80px;
+  height:80px;
   max-width:100%;
   max-height:100%;
-  filter:drop-shadow(0 5px 6px rgba(7,31,47,.20));
+  overflow:visible;
+  filter:drop-shadow(0 5px 7px rgba(7,31,47,.24));
 }
 #listaCampanhas .camp-theme-lilas>summary{
   background:linear-gradient(135deg,#ead9ff 0%,#d9b9f2 100%)!important;
@@ -220,7 +221,7 @@ body.tema-petroleo #listaCampanhas .item[class*="camp-theme-"]>summary .camp-adm
 @media(max-width:390px){
   #listaCampanhas .item[class*="camp-theme-"]>summary{grid-template-columns:minmax(0,1fr) 70px!important;gap:9px 10px!important;min-height:154px!important;padding:14px!important}
   #listaCampanhas .camp-admin-symbol{width:70px;height:70px}
-  #listaCampanhas .camp-admin-symbol svg{width:65px;height:65px}
+  #listaCampanhas .camp-admin-symbol svg{width:68px;height:68px}
   #listaCampanhas .camp-admin-badge{font-size:.7rem;padding:7px 9px}
   #listaCampanhas .item[class*="camp-theme-"]>summary .sinal{min-width:68px!important;font-size:.74rem!important;padding:7px 8px!important}
   #listaCampanhas .camp-admin-title{font-size:clamp(1.42rem,6.2vw,1.72rem)!important}
@@ -288,21 +289,21 @@ function metaForCard(card){
 function campaignTheme(meta,title){var t=txt(meta&&meta.COR_TEMA).toLowerCase();if(t)return t.replace(/[^a-z0-9-]/g,'');var n=txt(title).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');var temas=['lilas','dourado','azul-marinho','laranja','amarelo','vermelho','verde','roxo','rosa','azul'];for(var i=0;i<temas.length;i++)if(n.indexOf(temas[i])!==-1)return temas[i];return''}
 function applyCampaignTheme(box,meta){if(!box)return;Array.prototype.slice.call(box.classList).filter(function(c){return c.indexOf('camp-theme-')===0}).forEach(function(c){box.classList.remove(c)});var h=box.querySelector('h3'),theme=campaignTheme(meta,h&&h.textContent);if(theme)box.classList.add('camp-theme-'+theme)}
 function dateBrIsoV41(v){var m=txt(v).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+'/'+m[2]+'/'+m[1]:txt(v)}
-/* CAMPANHAS_ADMIN_V41 */
+/* CAMPANHAS_ADMIN_V5 */
 function campaignPalette(theme){
   var map={
-    lilas:['#6d28d9','#b87cff'],dourado:['#a96b00','#ffd66b'],roxo:['#6331a8','#b892ee'],
-    laranja:['#b85d00','#ffb75b'],'azul-marinho':['#12365f','#4c7fb4'],verde:['#17723a','#74c993'],
-    azul:['#17618f','#76c7f2'],amarelo:['#9b7900','#f3d95e'],vermelho:['#9e2f2f','#e98686'],rosa:['#a53e68','#f2a3c2']
+    lilas:['#6d28d9','#c39aff','#4d13a8'],dourado:['#a96b00','#ffd66b','#754700'],roxo:['#6331a8','#c0a0ef','#442176'],
+    laranja:['#b85d00','#ffc574','#7d3b00'],'azul-marinho':['#12365f','#8eb8e2','#0d2748'],verde:['#17723a','#9adbb0','#0e4c27'],
+    azul:['#17618f','#9bd7f5','#0d4262'],amarelo:['#9b7900','#ffeb86','#6f5700'],vermelho:['#9e2f2f','#f1a1a1','#6e1d1d'],rosa:['#a53e68','#f6bbd2','#752b4a']
   };
-  return map[theme]||['#17618f','#76c7f2'];
+  return map[theme]||['#17618f','#9bd7f5','#0d4262'];
 }
 function campaignIconSvg(theme){
-  var p=campaignPalette(theme),a=p[0],b=p[1],safe=theme.replace(/[^a-z0-9]/g,'');
+  var p=campaignPalette(theme),a=p[0],b=p[1],d=p[2],safe=theme.replace(/[^a-z0-9]/g,'');
   if(theme==='dourado'){
-    return '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><defs><linearGradient id="campGoldV3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0a5"/><stop offset=".35" stop-color="#f5bf36"/><stop offset="1" stop-color="#9b6100"/></linearGradient></defs><path d="M58 18c11 3 18 13 17 25-1 10-5 17-10 22 7 5 11 12 11 20H31c0-13 5-23 14-29-8-7-12-15-11-23 1-12 11-18 24-15Z" fill="url(#campGoldV3)"/><circle cx="58" cy="37" r="9" fill="#ffe58d"/><circle cx="56" cy="65" r="8" fill="#fff0ad"/><path d="M42 60c8 10 18 16 31 14M39 68c11 12 24 17 38 13" fill="none" stroke="#875500" stroke-width="5" stroke-linecap="round"/><path d="M81 48c4-7 15-2 10 6-3 5-10 9-10 9s-7-4-10-9c-5-8 6-13 10-6Z" fill="#f3b72f" stroke="#9b6100" stroke-width="2"/></svg>';
+    return '<svg viewBox="0 0 130 155" aria-hidden="true" focusable="false"><defs><linearGradient id="campGoldV5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff5bd"/><stop offset=".25" stop-color="#f8cc4d"/><stop offset=".58" stop-color="#d99a12"/><stop offset="1" stop-color="#8b5600"/></linearGradient><linearGradient id="campGoldLightV5" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff7c9"/><stop offset="1" stop-color="#e3a320"/></linearGradient><filter id="campGoldShadowV5" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#694000" flood-opacity=".30"/></filter></defs><g filter="url(#campGoldShadowV5)"><path d="M77 12c17 2 28 15 28 31 0 15-7 27-19 37 10 8 17 21 18 38 1 12-2 21-8 29H43c-12-12-17-27-14-44 3-18 13-32 28-40-8-7-13-16-13-26 0-15 13-27 33-25Z" fill="url(#campGoldV5)"/><path d="M84 17c-4 7-4 15 0 22 4 7 4 14-1 21-4 6-10 10-16 13 12-4 22-12 27-23 7-16 2-28-10-33Z" fill="#8a5600" opacity=".42"/><ellipse cx="70" cy="43" rx="13" ry="15" fill="url(#campGoldLightV5)"/><path d="M76 38c6 2 9 5 10 8-3-1-6 0-8 2" fill="none" stroke="#9b6100" stroke-width="2.8" stroke-linecap="round"/><circle cx="66" cy="93" r="13" fill="#fff1ac" stroke="#ae7409" stroke-width="2.5"/><path d="M43 87c9 15 24 24 45 20M39 101c13 17 31 24 51 14" fill="none" stroke="#875500" stroke-width="8" stroke-linecap="round"/><path d="M47 117c11 8 28 12 44 4" fill="none" stroke="#f8cf55" stroke-width="4" stroke-linecap="round" opacity=".7"/><path d="M108 70c6-10 22-3 14 9-4 7-14 13-14 13s-10-6-14-13c-8-12 8-19 14-9Z" fill="#f5bd31" stroke="#9b6100" stroke-width="3"/></g></svg>';
   }
-  return '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><defs><linearGradient id="campRibbonV3'+safe+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+b+'"/><stop offset=".55" stop-color="'+a+'"/><stop offset="1" stop-color="'+b+'"/></linearGradient></defs><path d="M38 13c-7 8-9 18-5 29 4 10 11 19 19 28l-13 20 13 7 13-21 13 21 13-7-17-27c8-10 13-19 13-29 0-14-9-24-23-24-11 0-19 5-25 13Zm27 10c7 0 11 5 11 12 0 6-4 13-10 20L49 31c4-5 9-8 16-8Z" fill="url(#campRibbonV3'+safe+')" stroke="'+a+'" stroke-width="2" stroke-linejoin="round"/></svg>';
+  return '<svg viewBox="0 0 120 150" aria-hidden="true" focusable="false"><defs><linearGradient id="campRibbonV5'+safe+'A" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+b+'"/><stop offset=".42" stop-color="'+a+'"/><stop offset="1" stop-color="'+d+'"/></linearGradient><linearGradient id="campRibbonV5'+safe+'B" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+b+'"/><stop offset=".5" stop-color="'+a+'"/><stop offset="1" stop-color="'+d+'"/></linearGradient><filter id="campRibbonV5'+safe+'S" x="-30%" y="-20%" width="170%" height="170%"><feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="'+d+'" flood-opacity=".32"/></filter></defs><g fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#campRibbonV5'+safe+'S)"><path d="M48 15C31 29 29 48 37 64c7 14 20 29 34 46l21 28" stroke="url(#campRibbonV5'+safe+'A)" stroke-width="24"/><path d="M73 15c18 13 22 32 15 50-6 15-18 29-32 46l-20 27" stroke="url(#campRibbonV5'+safe+'B)" stroke-width="24"/><path d="M42 20c-9 12-10 25-5 36" stroke="#fff" stroke-width="5" opacity=".24"/><path d="M82 22c7 11 8 23 4 34" stroke="#fff" stroke-width="5" opacity=".22"/><path d="M62 101l10 13" stroke="'+d+'" stroke-width="8" opacity=".28"/></g></svg>';
 }
 function decorateCampaignSummary(box,meta){
   if(!box)return;
@@ -317,9 +318,9 @@ function decorateCampaignSummary(box,meta){
   var period=copy.querySelector('.sub');
   if(period){
     period.classList.add('camp-admin-period');
-    var startInput=box.querySelector('[name="inicio"]'),daysInput=box.querySelector('[name="dias"]'),validityInput=box.querySelector('[name="validade"]');
-    var startValue=isoDate(startInput&&startInput.value),validityValue=isoDate(meta&&meta.VALIDADE)||isoDate(validityInput&&validityInput.value),daysValue=txt(daysInput&&daysInput.value);
-    var bits=[];if(startValue)bits.push('Início: '+dateBrIsoV41(startValue));if(validityValue)bits.push('até '+dateBrIsoV41(validityValue));if(daysValue)bits.push(daysValue);
+    var startInput=box.querySelector('[name="inicio"]'),daysInput=box.querySelector('[name="dias"]');
+    var startValue=isoDate(startInput&&startInput.value),daysValue=txt(daysInput&&daysInput.value);
+    var bits=[];if(startValue)bits.push('Início: '+dateBrIsoV41(startValue));if(daysValue)bits.push(daysValue);
     if(bits.length)period.textContent=bits.join(' • ');
   }
   var badge=summary.querySelector('.camp-admin-badge');
