@@ -12,10 +12,18 @@ new_loader = """        if (parsed.hostname === 'script.google.com') {
           const source = harness.apiResponse(url);
           if (source == null) return null;
           if (parsed.searchParams.get('action') === 'reservar_get' && harness.reservationMessageDelay > 0) {
-            return new Promise(resolve => setTimeout(
-              () => resolve(Buffer.from(source)),
-              harness.reservationMessageDelay
-            ));
+            let timer = null;
+            const delayed = new Promise(resolve => {
+              timer = setTimeout(
+                () => resolve(Buffer.from(source)),
+                harness.reservationMessageDelay
+              );
+            });
+            delayed.abort = function () {
+              if (timer) clearTimeout(timer);
+              timer = null;
+            };
+            return delayed;
           }
           return Promise.resolve(Buffer.from(source));
         }
