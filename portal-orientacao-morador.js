@@ -150,6 +150,7 @@
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
       if (node.hidden || node.disabled) continue;
+      if (node.getClientRects && node.getClientRects().length === 0) continue;
       var style = window.getComputedStyle ? window.getComputedStyle(node) : null;
       if (!style || (style.display !== 'none' && style.visibility !== 'hidden')) return true;
     }
