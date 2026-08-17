@@ -1,0 +1,375 @@
+from pathlib import Path
+import datetime
+import json
+import re
+
+REV = '20260816-campanhas-auto-v1'
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def read(path):
+    return (ROOT / path).read_text(encoding='utf-8')
+
+
+def write(path, content):
+    (ROOT / path).write_text(content, encoding='utf-8')
+
+
+def replace_once(path, old, new, required=True):
+    content = read(path)
+    if old not in content:
+        if required:
+            raise RuntimeError(f'Bloco esperado não encontrado em {path}: {old[:100]!r}')
+        return False
+    write(path, content.replace(old, new, 1))
+    return True
+
+
+# 1) Backend de período: subtítulo editável e restauração de campanha automática.
+p = 'apps-script/ZZZZ_34_CampanhasPeriodoV1.gs'
+s = read(p)
+if "VERSAO:'1.1.0'" not in s:
+    s = s.replace("VERSAO:'1.0.0'", "VERSAO:'1.1.0'", 1)
+if "'SUBTITULO'" not in s.split('COLUNAS:', 1)[1].split(']', 1)[0]:
+    s = s.replace("'ORGANIZACAO_ID','ORGANIZACAO_NOME']", "'ORGANIZACAO_ID','ORGANIZACAO_NOME','SUBTITULO']", 1)
+if 'SUBTITULO:publicacoesTerritoriaisV1Texto_(p.subtitulo)' not in s:
+    s = s.replace(
+        "      MENSAGEM:mensagem,\n      INICIO:inicio,",
+        "      MENSAGEM:mensagem,\n      SUBTITULO:publicacoesTerritoriaisV1Texto_(p.subtitulo).slice(0,320),\n      INICIO:inicio,",
+        1,
+    )
+if 'campanhasAutomaticasV1RegistrarRestauracao_' not in s:
+    s = s.replace(
+        "    publicacoesTerritoriaisV1Auditar_(ss,'SALVAR_CAMPANHA',contexto,acesso,anterior,depois);",
+        "    publicacoesTerritoriaisV1Auditar_(ss,'SALVAR_CAMPANHA',contexto,acesso,anterior,depois);\n    if(typeof campanhasAutomaticasV1RegistrarRestauracao_==='function')campanhasAutomaticasV1RegistrarRestauracao_(contexto.areaId,id);",
+        1,
+    )
+write(p, s)
+
+# 2) Remoção manual vira tombstone para campanha automática não renascer no próximo ciclo.
+p = 'apps-script/ZZZZ_20_PublicacoesTerritoriaisV1.gs'
+s = read(p)
+if 'campanhasAutomaticasV1RegistrarRemocao_' not in s:
+    old = "    var anterior=publicacoesTerritoriaisV1Objeto_(tabela.headers,linha.values);\n    tabela.sheet.deleteRow(linha.row);"
+    new = "    var anterior=publicacoesTerritoriaisV1Objeto_(tabela.headers,linha.values);\n    if(tipo==='campanha'&&typeof campanhasAutomaticasV1RegistrarRemocao_==='function')campanhasAutomaticasV1RegistrarRemocao_(contexto.areaId,anterior);\n    tabela.sheet.deleteRow(linha.row);"
+    if old not in s:
+        raise RuntimeError('Ponto de tombstone não encontrado em ZZZZ_20_PublicacoesTerritoriaisV1.gs')
+    s = s.replace(old, new, 1)
+write(p, s)
+
+# 3) Rota pública principal passa a expor campanhas vigentes da área.
+p = 'apps-script/ZZ_12_PublicoAgendasPortalV1.gs'
+s = read(p)
+if "VERSAO: '1.3.0'" not in s:
+    s = s.replace("VERSAO: '1.2.0'", "VERSAO: '1.3.0'", 1)
+if 'campanhasAutomaticasV1GarantirAnoAtualArea_' not in s:
+    old = "function publicoAgendasV1Resposta_(modulos, aba, areaId, planilha) {\n  areaId = publicoAgendasV1AreaId_(areaId) || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;\n  return {"
+    new = "function publicoAgendasV1Resposta_(modulos, aba, areaId, planilha) {\n  areaId = publicoAgendasV1AreaId_(areaId) || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;\n  try { if (typeof campanhasAutomaticasV1GarantirAnoAtualArea_ === 'function') campanhasAutomaticasV1GarantirAnoAtualArea_(areaId); } catch (erroCampanhaAutomatica) {}\n  var campanhas = publicoAgendasV1LerCampanhas_(planilha, areaId);\n  return {"
+    if old not in s:
+        raise RuntimeError('Resposta pública esperada não encontrada em ZZ_12')
+    s = s.replace(old, new, 1)
+if '    campanhas: campanhas' not in s:
+    s = s.replace('    campanhas: []', '    campanhas: campanhas', 1)
+if 'function publicoAgendasV1LerCampanhas_' not in s:
+    marker = 'function publicoAgendasV1LocalizarAba_(planilha) {'
+    if marker not in s:
+        raise RuntimeError('Marcador de inserção do leitor de campanhas não encontrado')
+    reader = r'''function publicoAgendasV1LerCampanhas_(planilha, areaId) {
+  areaId = publicoAgendasV1AreaId_(areaId) || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
+  if (!planilha || typeof planilha.getSheetByName !== 'function') return [];
+  var aba = planilha.getSheetByName('CAMPANHAS_PORTAL');
+  if (!aba || aba.getLastRow() < 2 || aba.getLastColumn() < 1) return [];
+  var valores = aba.getRange(1, 1, aba.getLastRow(), aba.getLastColumn()).getDisplayValues();
+  var cabecalhos = valores[0].map(publicoAgendasV1Normalizar_);
+  function indice(nomes) {
+    for (var i = 0; i < nomes.length; i += 1) {
+      var encontrado = cabecalhos.indexOf(publicoAgendasV1Normalizar_(nomes[i]));
+      if (encontrado >= 0) return encontrado;
+    }
+    return -1;
+  }
+  var idx = {
+    id: indice(['ID','CAMPANHA_ID']), area: indice(['AREA_ID','AREA','TERRITORIO']),
+    titulo: indice(['TITULO','NOME']), subtitulo: indice(['SUBTITULO','CHAMADA']),
+    mensagem: indice(['MENSAGEM','TEXTO','CONTEUDO']), inicio: indice(['INICIO','DATA_INICIO']),
+    validade: indice(['VALIDADE','FIM','DATA_FIM']), horario: indice(['HORARIO','HORARIO_EXIBICAO']),
+    ativo: indice(['ATIVO','PUBLICAR']), tema: indice(['COR_TEMA','TEMA']), corNome: indice(['COR_NOME']),
+    chave: indice(['CAMPANHA_CHAVE']), origem: indice(['ORIGEM']), ano: indice(['ANO']), mes: indice(['MES'])
+  };
+  if (idx.mensagem < 0 || idx.ativo < 0) return [];
+  var hoje = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'yyyy-MM-dd');
+  var out = [];
+  for (var linha = 1; linha < valores.length; linha += 1) {
+    var r = valores[linha];
+    var areaLinha = idx.area >= 0 ? publicoAgendasV1AreaId_(r[idx.area]) : '';
+    areaLinha = areaLinha || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
+    if (areaLinha !== areaId || !publicoAgendasV1Booleano_(r[idx.ativo])) continue;
+    var inicio = idx.inicio >= 0 ? publicoAgendasV1DataIso_(r[idx.inicio]) : '';
+    var validade = idx.validade >= 0 ? publicoAgendasV1DataIso_(r[idx.validade]) : '';
+    if (inicio && inicio > hoje) continue;
+    if (validade && validade < hoje) continue;
+    var mensagem = String(r[idx.mensagem] || '').trim();
+    if (!mensagem) continue;
+    out.push({
+      id: idx.id >= 0 ? String(r[idx.id] || '').trim() : '',
+      title: idx.titulo >= 0 ? String(r[idx.titulo] || '').trim() : 'Campanha da Unidade',
+      subtitle: idx.subtitulo >= 0 ? String(r[idx.subtitulo] || '').trim() : '',
+      message: mensagem,
+      start: inicio,
+      validity: validade,
+      time: idx.horario >= 0 ? String(r[idx.horario] || '').trim() : '',
+      active: true,
+      theme: idx.tema >= 0 ? String(r[idx.tema] || '').trim() : '',
+      colorName: idx.corNome >= 0 ? String(r[idx.corNome] || '').trim() : '',
+      campaignKey: idx.chave >= 0 ? String(r[idx.chave] || '').trim() : '',
+      source: idx.origem >= 0 ? String(r[idx.origem] || '').trim() : '',
+      year: idx.ano >= 0 ? String(r[idx.ano] || '').trim() : '',
+      month: idx.mes >= 0 ? String(r[idx.mes] || '').trim() : ''
+    });
+  }
+  return out;
+}
+
+'''
+    s = s.replace(marker, reader + marker, 1)
+write(p, s)
+
+# 4) O build de produção precisa incluir o novo módulo 35.
+p = 'scripts/build_apps_script_release.js'
+s = read(p)
+if "marker: 'TACS_CAMPANHAS_AUTOMATICAS_V1'" not in s:
+    old = "  {\n    source: 'apps-script/ZZZZ_34_CampanhasPeriodoV1.gs',\n    marker: 'TACS_CAMPANHAS_PERIODO_V1'\n  }\n];"
+    new = "  {\n    source: 'apps-script/ZZZZ_34_CampanhasPeriodoV1.gs',\n    marker: 'TACS_CAMPANHAS_PERIODO_V1'\n  },\n  {\n    source: 'apps-script/ZZZZ_35_CampanhasAutomaticasV1.gs',\n    marker: 'TACS_CAMPANHAS_AUTOMATICAS_V1'\n  }\n];"
+    if old not in s:
+        raise RuntimeError('Lista de módulos do build mudou')
+    s = s.replace(old, new, 1)
+write(p, s)
+
+# 5) Painel administrativo: vigência real, subtítulo, período no payload e push apenas quando vigente.
+p = 'painel-oficial-recados-campanhas.html'
+s = read(p)
+if 'function payloadCampanha(c,id){var campo=' not in s:
+    s, n = re.subn(
+        r'function payloadCampanha\(c,id\)\{.*?\}\nfunction textoComparavel',
+        '''function payloadCampanha(c,id){var campo=function(n){return c.querySelector('[name="'+n+'"]')};var valor=function(n){var x=campo(n);return x?txt(x.value).trim():''};return Object.assign(sessao(),{id:id||'',titulo:valor('titulo'),subtitulo:valor('subtitulo'),mensagem:valor('mensagem'),horario:valor('horario'),inicio:valor('inicio'),dias:valor('dias'),ano:valor('ano'),mes:valor('mes'),validade:valor('validade'),ativo:campo('ativo')&&campo('ativo').checked?'true':'false'})}\nfunction textoComparavel''',
+        s, count=1, flags=re.S,
+    )
+    if n != 1:
+        raise RuntimeError('payloadCampanha não localizado')
+if 'function estadoCampanha(x)' not in s:
+    old = "function render(){document.getElementById('qRecados').textContent=dados.recados.length;document.getElementById('qRecadosAtivos').textContent=dados.recados.filter(function(x){return bool(x.ATIVO)}).length;document.getElementById('qCampanhas').textContent=dados.campanhas.length;document.getElementById('qCampanhasAtivas').textContent=dados.campanhas.filter(function(x){return bool(x.ATIVO)}).length;renderRecados();renderCampanhas();atualizarBloqueioMutacoes()}"
+    new = "function hojeRecifeIso(){var partes=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),v={};partes.forEach(function(p){v[p.type]=p.value});return v.year+'-'+v.month+'-'+v.day}\nfunction estadoCampanha(x){if(!bool(x&&x.ATIVO))return'Inativa';var h=hojeRecifeIso(),i=dataInput(x&&x.INICIO),v=dataInput(x&&x.VALIDADE);if(i&&i>h)return'Programada';if(v&&v<h)return'Expirada';return'Ativa'}\nfunction render(){document.getElementById('qRecados').textContent=dados.recados.length;document.getElementById('qRecadosAtivos').textContent=dados.recados.filter(function(x){return bool(x.ATIVO)}).length;document.getElementById('qCampanhas').textContent=dados.campanhas.length;document.getElementById('qCampanhasAtivas').textContent=dados.campanhas.filter(function(x){return estadoCampanha(x)==='Ativa'}).length;renderRecados();renderCampanhas();atualizarBloqueioMutacoes()}"
+    if old not in s:
+        raise RuntimeError('render() esperado não localizado')
+    s = s.replace(old, new, 1)
+if "estado=estadoCampanha(x)" not in s:
+    s, n = re.subn(
+        r'function renderCampanhas\(\)\{.*?\}\nfunction deveNotificarPublicacao',
+        '''function renderCampanhas(){var e=document.getElementById('listaCampanhas');if(!dados.campanhas.length){e.innerHTML='<div class="vazio">Nenhuma campanha cadastrada.</div>';return}e.innerHTML=dados.campanhas.map(function(x){var at=bool(x.ATIVO),estado=estadoCampanha(x),ativaAgora=estado==='Ativa';return'<details class="item" data-id="'+esc(x.ID)+'"><summary><div><h3>'+esc(x.TITULO)+'</h3><div class="sub">'+(x.INICIO?'Início: <span class="dataResumo">'+esc(dataExibicao(x.INICIO))+'</span>':'Sem data de início')+(x.VALIDADE?' • até <span class="dataResumo">'+esc(dataExibicao(x.VALIDADE))+'</span>':'')+(x.DIAS?' • '+esc(x.DIAS):'')+'</div></div><span class="sinal '+(ativaAgora?'ativo':'inativo')+'">'+estado+'</span></summary><div class="corpo"><label>ID</label><input class="campo" value="'+esc(x.ID)+'" readonly><label>Título</label><input class="campo" name="titulo" value="'+esc(x.TITULO)+'"><label>Mensagem</label><textarea class="campo" name="mensagem">'+esc(x.MENSAGEM)+'</textarea><label>Horário</label><input class="campo" name="horario" value="'+esc(x.HORARIO||'')+'" placeholder="Ex.: 08:00 às 16:00"><label>Data de início</label><input class="campo" name="inicio" type="date" value="'+esc(dataInput(x.INICIO))+'"><label>Dias de exibição</label><input class="campo" name="dias" value="'+esc(x.DIAS)+'"><label class="check"><input name="ativo" type="checkbox" '+(at?'checked':'')+'> Campanha ativa</label><div class="acoes duas"><button class="botao verde salvarCampanha" type="button">Salvar campanha</button><button class="botao vermelho removerCampanha" type="button">Remover campanha</button></div></div></details>'}).join('')}\nfunction deveNotificarPublicacao''',
+        s, count=1, flags=re.S,
+    )
+    if n != 1:
+        raise RuntimeError('renderCampanhas não localizado')
+if 'A publicação foi salva fora do período atual.' not in s:
+    s, n = re.subn(
+        r'function deveNotificarPublicacao\(p\)\{.*?\}\nfunction enviarPushConfirmado\(tipo,id,p,anterior,mensagemBase,evento,cb\)\{',
+        '''function deveNotificarPublicacao(p){if(!bool(p&&p.ativo))return false;var h=hojeRecifeIso(),i=dataInput(p&&p.inicio),v=dataInput(p&&p.validade);return(!i||i<=h)&&(!v||v>=h)}\nfunction enviarPushConfirmado(tipo,id,p,anterior,mensagemBase,evento,cb){''',
+        s, count=1, flags=re.S,
+    )
+    if n != 1:
+        raise RuntimeError('deveNotificarPublicacao não localizado')
+    old = "if(!deveNotificarPublicacao(p)){concluir(mensagemBase+' Como a publicação está inativa, nenhuma notificação foi enviada.','ok');return}"
+    new = "if(!deveNotificarPublicacao(p)){var motivo=!bool(p&&p.ativo)?'Como a publicação está inativa, nenhuma notificação foi enviada.':'A publicação foi salva fora do período atual. O envio automático ocorrerá quando ela entrar em vigência.';concluir(mensagemBase+' '+motivo,'ok');return}"
+    if old not in s:
+        raise RuntimeError('Mensagem de push inativo não localizada')
+    s = s.replace(old, new, 1)
+s = s.replace(
+    "var meta=tipo==='recado'?'prioridade='+txt(p.prioridade)+';horario='+txt(p.horario)+';validade='+txt(p.validade):'inicio='+txt(p.inicio)+';horario='+txt(p.horario)+';dias='+txt(p.dias);",
+    "var meta=tipo==='recado'?'prioridade='+txt(p.prioridade)+';horario='+txt(p.horario)+';validade='+txt(p.validade):'inicio='+txt(p.inicio)+';validade='+txt(p.validade)+';horario='+txt(p.horario)+';dias='+txt(p.dias);",
+    1,
+)
+legacy_restore = "Object.assign(sessao(),{id:r.ID,titulo:txt(r.TITULO),mensagem:txt(r.MENSAGEM),inicio:dataInput(r.INICIO),dias:txt(r.DIAS),ativo:bool(r.ATIVO)?'true':'false'})"
+full_restore = "Object.assign(sessao(),{id:r.ID,titulo:txt(r.TITULO),subtitulo:txt(r.SUBTITULO),mensagem:txt(r.MENSAGEM),horario:txt(r.HORARIO),inicio:dataInput(r.INICIO),dias:txt(r.DIAS),ano:txt(r.ANO),mes:txt(r.MES),validade:dataInput(r.VALIDADE),ativo:bool(r.ATIVO)?'true':'false'})"
+if full_restore not in s:
+    if legacy_restore not in s:
+        raise RuntimeError('Payload de restauração de campanha não localizado')
+    s = s.replace(legacy_restore, full_restore, 1)
+s = s.replace('campanhas-periodo-v2.js?v=20260816-recados-stable-v7', f'campanhas-periodo-v2.js?v={REV}', 1)
+write(p, s)
+
+# 6) Extensão mensal do painel: subtítulo, cor e transporte dos novos campos.
+p = 'campanhas-periodo-v2.js'
+s = read(p)
+if 'SUBTITULO:txt(m.SUBTITULO)' not in s:
+    old = "    ORGANIZACAO_NOME:txt(m.ORGANIZACAO_NOME||context.organizacaoNome)\n  };"
+    new = "    ORGANIZACAO_NOME:txt(m.ORGANIZACAO_NOME||context.organizacaoNome),\n    SUBTITULO:txt(m.SUBTITULO),COR_TEMA:txt(m.COR_TEMA),COR_NOME:txt(m.COR_NOME),ORIGEM:txt(m.ORIGEM)\n  };"
+    if old not in s:
+        raise RuntimeError('metaForCard não localizado')
+    s = s.replace(old, new, 1)
+if 'function campaignTheme(meta,title)' not in s:
+    s = s.replace(
+        'function monthOptions(selected){',
+        "function campaignTheme(meta,title){var t=txt(meta&&meta.COR_TEMA).toLowerCase();if(t)return t.replace(/[^a-z0-9-]/g,'');var n=txt(title).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'');var temas=['lilas','dourado','azul-marinho','laranja','amarelo','vermelho','verde','roxo','rosa','azul'];for(var i=0;i<temas.length;i++)if(n.indexOf(temas[i])!==-1)return temas[i];return''}\nfunction applyCampaignTheme(box,meta){if(!box)return;Array.prototype.slice.call(box.classList).filter(function(c){return c.indexOf('camp-theme-')===0}).forEach(function(c){box.classList.remove(c)});var h=box.querySelector('h3'),theme=campaignTheme(meta,h&&h.textContent);if(theme)box.classList.add('camp-theme-'+theme)}\nfunction monthOptions(selected){",
+        1,
+    )
+if 'Subtítulo da campanha' not in s:
+    old = "  div.innerHTML='<div class=\"period-grid\"><div><label><strong>Ano</strong></label><input class=\"campo\" name=\"ano\" type=\"number\" min=\"2000\" max=\"2200\" inputmode=\"numeric\" value=\"'+esc(meta.ANO)+'\"></div><div><label><strong>Mês</strong></label><select class=\"campo\" name=\"mes\">'+monthOptions(meta.MES)+'</select></div></div><label><strong>Validade</strong></label><input class=\"campo\" name=\"validade\" type=\"date\" value=\"'+esc(meta.VALIDADE)+'\"><div class=\"camp-context\">'+contextText(meta)+'</div>';"
+    new = "  div.innerHTML='<label><strong>Subtítulo da campanha</strong></label><input class=\"campo\" name=\"subtitulo\" value=\"'+esc(meta.SUBTITULO||'')+'\" placeholder=\"Ex.: Incentivo ao aleitamento materno\"><div class=\"period-grid\"><div><label><strong>Ano</strong></label><input class=\"campo\" name=\"ano\" type=\"number\" min=\"2000\" max=\"2200\" inputmode=\"numeric\" value=\"'+esc(meta.ANO)+'\"></div><div><label><strong>Mês</strong></label><select class=\"campo\" name=\"mes\">'+monthOptions(meta.MES)+'</select></div></div><label><strong>Validade</strong></label><input class=\"campo\" name=\"validade\" type=\"date\" value=\"'+esc(meta.VALIDADE)+'\">'+(meta.COR_NOME?'<div class=\"camp-color-chip\">Cor da campanha: '+esc(meta.COR_NOME)+'</div>':'')+'<div class=\"camp-context\">'+contextText(meta)+'</div>';"
+    if old not in s:
+        raise RuntimeError('makeFields não localizado')
+    s = s.replace(old, new, 1)
+if "applyCampaignTheme(box,meta);" not in s:
+    s = s.replace(
+        "function decorateBox(box,meta){\n  if(!box||box.querySelector('.camp-period-fields'))return;",
+        "function decorateBox(box,meta){\n  if(!box)return;applyCampaignTheme(box,meta);\n  if(box.querySelector('.camp-period-fields'))return;",
+        1,
+    )
+if 'subtitulo:txt(subtitle&&subtitle.value)' not in s:
+    old = "var year=box&&box.querySelector('[name=\"ano\"]'),month=box&&box.querySelector('[name=\"mes\"]'),validity=box&&box.querySelector('[name=\"validade\"]');\n  return{ano:txt(year&&year.value||selectedYear),mes:digits2(month&&month.value||selectedMonth),validade:isoDate(validity&&validity.value)};"
+    new = "var year=box&&box.querySelector('[name=\"ano\"]'),month=box&&box.querySelector('[name=\"mes\"]'),validity=box&&box.querySelector('[name=\"validade\"]'),subtitle=box&&box.querySelector('[name=\"subtitulo\"]');\n  return{ano:txt(year&&year.value||selectedYear),mes:digits2(month&&month.value||selectedMonth),validade:isoDate(validity&&validity.value),subtitulo:txt(subtitle&&subtitle.value)};"
+    if old not in s:
+        raise RuntimeError('readFields não localizado')
+    s = s.replace(old, new, 1)
+if "appendHidden(form,'subtitulo'" not in s:
+    s = s.replace("    appendHidden(form,'validade',pendingTransport.validade);", "    appendHidden(form,'validade',pendingTransport.validade);\n    appendHidden(form,'subtitulo',pendingTransport.subtitulo);", 1)
+if '.camp-theme-lilas>summary' not in s:
+    css = ".camp-color-chip{margin-top:10px;border-radius:12px;padding:9px 11px;background:#fff;color:#073a55;font-weight:900}.camp-theme-lilas>summary{background:linear-gradient(135deg,#ead9ff,#d4adf2);color:#32105f}.camp-theme-dourado>summary{background:linear-gradient(135deg,#ffe7a3,#f6c954);color:#4f3400}.camp-theme-roxo>summary{background:linear-gradient(135deg,#e4d4ff,#b995e8);color:#2e1258}.camp-theme-laranja>summary{background:linear-gradient(135deg,#ffe0b5,#f2a24d);color:#5b2e00}.camp-theme-azul-marinho>summary{background:linear-gradient(135deg,#163a69,#0b2443);color:#fff}.camp-theme-verde>summary{background:linear-gradient(135deg,#d8f2df,#79c992);color:#123f23}.camp-theme-azul>summary{background:linear-gradient(135deg,#d8efff,#79bce8);color:#0b3654}.camp-theme-amarelo>summary{background:linear-gradient(135deg,#fff5b8,#f2d257);color:#554500}.camp-theme-vermelho>summary{background:linear-gradient(135deg,#ffd6d6,#e78383);color:#5d1717}.camp-theme-rosa>summary{background:linear-gradient(135deg,#ffdbea,#ef9cbd);color:#641d3a}#listaCampanhas .item[class*=\"camp-theme-\"]>summary .sub{color:inherit}"
+    s = s.replace("  document.head.appendChild(style);", "  style.textContent+='" + css.replace("'", "\\'") + "';\n  document.head.appendChild(style);", 1)
+write(p, s)
+
+# 7) Renderer público com cards por cor e descrição maior.
+portal = r'''(function(){
+'use strict';
+var API=String(window.TACS_ADMIN_API_URL||'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec').trim();
+var lastData=null;
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]})}
+function dateBr(x){var m=String(x||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:String(x||'')}
+function boolValue(value,defaultValue){if(value===true||value===1)return true;if(value===false||value===0)return false;if(value==null||value==='')return defaultValue;var normalized=String(value).trim().toLowerCase();if(['true','1','sim','yes','ativo','ativa'].indexOf(normalized)!==-1)return true;if(['false','0','nao','não','no','inativo','inativa'].indexOf(normalized)!==-1)return false;return defaultValue}
+function published(item){if(!item)return false;var active=boolValue(item.active,boolValue(item.ativo,boolValue(item.ATIVO,false)));var closed=boolValue(item.closedNow,boolValue(item.encerradoAgora,boolValue(item.ENCERRADO_AGORA,false)));return active&&!closed}
+function style(){if(document.getElementById('portal-integral-style'))return;var s=document.createElement('style');s.id='portal-integral-style';s.textContent='.integral-area{display:grid;gap:14px;margin-bottom:20px}.integral-balloon{padding:20px;border:2px solid #0e6b98;border-radius:22px;background:linear-gradient(145deg,#052a43,#0a476b);color:#fff;box-shadow:0 14px 30px rgba(4,44,70,.2)}.integral-balloon small{display:block;color:#79e5a6;font-size:14px;font-weight:950;letter-spacing:.06em;text-transform:uppercase}.integral-balloon strong{display:block;margin-top:8px;font-size:clamp(25px,5vw,34px);line-height:1.15}.integral-balloon p{margin:10px 0 0;color:#fff;font-size:18px;line-height:1.55;white-space:pre-line}.campaign-group{display:grid;gap:14px;padding:20px;border:2px solid #69c7e7;border-radius:24px;background:linear-gradient(145deg,#052a43,#0a476b);color:#fff}.campaign-group-head h2{margin:0;font-size:clamp(29px,6vw,42px);line-height:1.08}.campaign-group-head p{margin:6px 0 0;color:#70e39f;font-size:20px;font-weight:900}.campaign-card{--c1:#edf4f7;--c2:#d5e4ea;--ct:#16384a;--cb:#7aa4b7;position:relative;overflow:hidden;padding:22px;border:3px solid var(--cb);border-radius:22px;background:linear-gradient(135deg,var(--c1),var(--c2));color:var(--ct);box-shadow:0 12px 26px rgba(0,0,0,.16)}.campaign-card.integral-campaign{border-left-width:3px}.campaign-theme-lilas{--c1:#ead9ff;--c2:#d4adf2;--ct:#32105f;--cb:#9258c6}.campaign-theme-dourado{--c1:#ffe7a3;--c2:#f6c954;--ct:#4f3400;--cb:#c28a13}.campaign-theme-roxo{--c1:#e4d4ff;--c2:#b995e8;--ct:#2e1258;--cb:#7650ae}.campaign-theme-laranja{--c1:#ffe0b5;--c2:#f2a24d;--ct:#5b2e00;--cb:#c46b12}.campaign-theme-azul-marinho{--c1:#163a69;--c2:#0b2443;--ct:#fff;--cb:#72a8df}.campaign-theme-verde{--c1:#d8f2df;--c2:#79c992;--ct:#123f23;--cb:#39945b}.campaign-theme-azul{--c1:#d8efff;--c2:#79bce8;--ct:#0b3654;--cb:#2e88bf}.campaign-theme-amarelo{--c1:#fff5b8;--c2:#f2d257;--ct:#554500;--cb:#c4a20f}.campaign-theme-vermelho{--c1:#ffd6d6;--c2:#e78383;--ct:#5d1717;--cb:#b33b3b}.campaign-theme-rosa{--c1:#ffdbea;--c2:#ef9cbd;--ct:#641d3a;--cb:#bd5b82}.campaign-top{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px}.campaign-label{display:inline-flex!important;width:max-content;padding:7px 11px;border-radius:10px;background:rgba(5,42,67,.82);color:#fff!important;font-size:13px!important}.campaign-status{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.78);color:#08723a;font-weight:950}.campaign-title{position:relative;z-index:2;display:block;margin-top:16px!important;color:var(--ct);font-size:clamp(34px,7vw,50px)!important;letter-spacing:-.035em}.campaign-subtitle{position:relative;z-index:2;margin:7px 0 0;color:var(--ct);font-size:clamp(20px,4.5vw,27px);font-weight:900;line-height:1.28}.campaign-description{position:relative;z-index:2;margin:18px 0 0!important;padding-top:16px;border-top:4px solid var(--cb);color:var(--ct)!important;font-size:clamp(21px,4.7vw,25px)!important;font-weight:760;line-height:1.48!important;max-width:72%}.campaign-meta{position:relative;z-index:2;margin-top:14px;font-size:15px;font-weight:800;opacity:.84}.campaign-art{position:absolute;right:18px;bottom:20px;z-index:1;width:92px;height:118px;opacity:.9;color:var(--cb)}.campaign-ribbon{position:absolute;inset:5px 14px 7px}.campaign-ribbon:before{content:"";position:absolute;left:7px;top:0;width:44px;height:56px;border:15px solid currentColor;border-bottom:0;border-radius:50% 50% 0 0}.campaign-ribbon:after{content:"";position:absolute;left:25px;top:49px;width:17px;height:65px;background:currentColor;transform:rotate(24deg);box-shadow:24px -4px 0 currentColor}.campaign-art-mother{display:grid;place-items:center;font-size:70px}.integral-days{display:grid;grid-template-columns:1fr;gap:12px;margin-top:16px}.integral-day{width:100%;padding:18px 17px;border:2px solid #9bb4c1;border-radius:16px;background:#fff;color:#102b3c;text-align:left}.integral-day strong,.integral-day span,.integral-day b{display:block}.integral-day strong{font-size:22px}.integral-day span{margin-top:6px;color:#415b69;font-size:16px}.integral-day b{margin-top:8px;color:#06763a;font-size:18px}@media(max-width:520px){.campaign-card{padding:19px 17px}.campaign-description{max-width:78%}.campaign-art{right:10px;width:78px;opacity:.75}}';document.head.appendChild(s)}
+function jsonp(ok,attempt){if(window.PortalTacsPublicData&&typeof window.PortalTacsPublicData.get==='function'){window.PortalTacsPublicData.get().then(ok).catch(function(){});return}attempt=attempt||1;if(!API)return;var cb='tacsPublicIntegral'+Date.now()+Math.floor(Math.random()*100000),s=document.createElement('script'),done=false,t=setTimeout(function(){finish()},25000);function finish(data){if(done)return;done=true;clearTimeout(t);try{delete window[cb]}catch(e){}if(s.parentNode)s.remove();if(data&&data.ok!==false){ok(data);return}if(attempt<2)setTimeout(function(){jsonp(ok,attempt+1)},1000)}window[cb]=finish;s.onerror=function(){finish()};s.src=API+(API.indexOf('?')<0?'?':'&')+'action=painel_publico&areaId='+encodeURIComponent((window.PortalTacsArea&&window.PortalTacsArea.id&&window.PortalTacsArea.id())||window.TACS_AREA_ID||'JAPARANDUBA')+'&callback='+encodeURIComponent(cb)+'&v='+Date.now();document.head.appendChild(s)}
+function insertArea(){var content=document.querySelector('.content');if(!content)return null;var area=document.getElementById('integralPublicArea');if(area)return area;area=document.createElement('section');area.id='integralPublicArea';area.className='integral-area';var purpose=content.querySelector('.purpose');content.insertBefore(area,purpose||content.firstChild);return area}
+function renderBalloon(area,item,label,extra){var c=document.createElement('article');c.className='integral-balloon '+(extra||'');c.innerHTML='<small>'+esc(label)+'</small><strong>'+esc(item.title||'Aviso da Unidade')+'</strong><p>'+esc(item.message||'')+(item.time||item.horario?'\nHorário: '+esc(item.time||item.horario):'')+(item.validity?'\nVálido até: '+esc(dateBr(item.validity)):'')+'</p>';area.appendChild(c)}
+function normalize(value){var t=String(value||'').toLowerCase();return t.normalize?t.normalize('NFD').replace(/[\u0300-\u036f]/g,''):t}
+function campaignTheme(item){var t=String(item&&item.theme||'').toLowerCase().replace(/[^a-z0-9-]/g,'');if(t)return t;var n=normalize(item&&item.title);var temas=['lilas','dourado','azul-marinho','laranja','amarelo','vermelho','verde','roxo','rosa','azul'];for(var i=0;i<temas.length;i++)if(n.indexOf(temas[i])!==-1)return temas[i];return'azul'}
+function monthLabel(){try{var v=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Recife',month:'long',year:'numeric'}).format(new Date());return v.charAt(0).toUpperCase()+v.slice(1)}catch(e){return''}}
+function renderCampaign(group,item){var theme=campaignTheme(item),c=document.createElement('article');c.className='integral-balloon integral-campaign campaign-card campaign-theme-'+theme;c.dataset.campaignTheme=theme;var meta=[];if(item.validity)meta.push('Válida até '+dateBr(item.validity));if(item.time)meta.push('Horário: '+item.time);c.innerHTML='<div class="campaign-top"><small class="campaign-label">Campanha do mês</small><span class="campaign-status">✓ Ativa</span></div><strong class="campaign-title">'+esc(item.title||'Campanha da Unidade')+'</strong>'+(item.subtitle?'<div class="campaign-subtitle">'+esc(item.subtitle)+'</div>':'')+'<p class="campaign-description">'+esc(item.message||'')+'</p>'+(meta.length?'<div class="campaign-meta">'+esc(meta.join(' • '))+'</div>':'')+'<div class="campaign-art '+(theme==='dourado'?'campaign-art-mother':'')+'" aria-hidden="true">'+(theme==='dourado'?'🤱':'<span class="campaign-ribbon"></span>')+'</div>';group.appendChild(c)}
+function renderAlerts(data){var area=insertArea();if(!area)return;area.innerHTML='';(data.recados||[]).filter(function(x){return x.active!==false}).forEach(function(x){renderBalloon(area,x,'Recado da Unidade')});var campanhas=(data.campanhas||[]).filter(function(x){return x.active!==false});if(campanhas.length){var group=document.createElement('section');group.className='campaign-group';group.innerHTML='<header class="campaign-group-head"><h2>Campanhas da unidade</h2><p>'+esc(monthLabel())+'</p></header>';campanhas.forEach(function(x){renderCampaign(group,x)});area.appendChild(group)}if(!area.children.length)area.remove()}
+function category(m){return m==='medica'?'Solicitar atendimento com a Médica':'Solicitar atendimento com nutricionista'}
+function moduleDays(data,m){var modules=data.modules||data.modulos||{};if(m==='medica')return modules.medica||modules.MEDICA||data.medica||data.MEDICA||[];return modules.nutricionista||modules.NUTRICIONISTA||data.nutricionista||data.NUTRICIONISTA||[]}
+function renderLegacy(m,days){var box=document.getElementById(m==='medica'?'doctorSchedule':'nutritionSchedule');if(!box)return;days=(Array.isArray(days)?days:[]).filter(published);var old=box.querySelector('.integral-days');if(old)old.remove();var empty=box.querySelectorAll('p');empty.forEach(function(p){var t=String(p.textContent||'');if(/Nenhuma programação|Nenhum dia ativo/.test(t))p.hidden=false});if(!days.length){box.hidden=false;return}box.hidden=false;empty.forEach(function(p){var t=String(p.textContent||'');if(/Nenhuma programação|Nenhum dia ativo/.test(t))p.hidden=true});var list=document.createElement('div');list.className='integral-days';days.forEach(function(item){var day=item.day||item.dia||item.DIA||'Dia informado',date=item.date||item.data||item.DATA||'',time=item.time||item.horario||item.HORARIO||'',message=item.message||item.mensagem||item.MENSAGEM||item.service||item.servico||item.SERVICO||'Atendimento disponível';var b=document.createElement('button');b.type='button';b.className='integral-day';b.innerHTML='<strong>'+esc(day)+'</strong>'+(date?'<span>📅 '+esc(dateBr(date))+'</span>':'')+(time?'<span>🕒 '+esc(time)+'</span>':'')+'<b>'+esc(message)+'</b>';b.onclick=function(){var select=document.getElementById('category'),subject=document.getElementById('subject'),value=category(m);if(select){var opt=Array.prototype.find.call(select.options,function(o){return o.value===value||String(o.textContent||'').trim()===value});if(opt)select.value=opt.value;select.dispatchEvent(new Event('change',{bubbles:true}))}if(subject){subject.value=value+' - '+day+(date?' - '+dateBr(date):'')+(time?' - '+time:'')+': '+message;subject.dispatchEvent(new Event('input',{bubbles:true}))}};list.appendChild(b)});box.appendChild(list)}
+function render(data){if(!data||data.ok===false)return;lastData=data;renderAlerts(data)}
+function load(forcar){if(forcar&&window.PortalTacsPublicData&&typeof window.PortalTacsPublicData.refresh==='function'){window.PortalTacsPublicData.refresh().then(render).catch(function(){});return}jsonp(render,1)}
+function init(){style();window.addEventListener('portal-tacs-public-data',function(event){render(event&&event.detail)});load();var select=document.getElementById('category');if(select)select.addEventListener('change',function(){var value=String(select.value||'').toLowerCase();if((value.indexOf('médica')!==-1||value.indexOf('medica')!==-1||value.indexOf('nutricionista')!==-1)&&lastData)render(lastData)});document.addEventListener('visibilitychange',function(){if(!document.hidden)load(true)});setInterval(function(){load(true)},60000)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+}());
+'''
+write('portal-controle-integral.js', portal)
+
+# Só a seta guiada deve pulsar; o texto da publicação não.
+p = 'portal-ajustes-finais.js'
+s = read(p)
+s = s.replace(
+    "'.integral-balloon>small{display:inline-flex!important;transform-origin:left center;animation:tacsPublicAttentionPulse 3.8s ease-in-out infinite}',",
+    "'.integral-balloon>small{display:inline-flex!important;transform-origin:left center}',",
+    1,
+)
+write(p, s)
+
+# 8) Revisões de cache do Portal e da Central.
+p = 'index.html'
+s = read(p)
+s = re.sub(r'portal-controle-integral\.js\?v=[A-Za-z0-9._-]+', f'portal-controle-integral.js?v={REV}', s, count=1)
+s = re.sub(r'portal-ajustes-finais\.js\?v=[A-Za-z0-9._-]+', f'portal-ajustes-finais.js?v={REV}', s, count=1)
+write(p, s)
+
+p = 'central-administrativa-tacs.js'
+s = read(p)
+s, n = re.subn(
+    r"if\(name==='recados'\)return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas\.html\?area='\+area\+access\+'&v=[A-Za-z0-9._-]+';",
+    "if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v=" + REV + "';",
+    s, count=1,
+)
+if n != 1:
+    raise RuntimeError('URL do módulo Recados/Campanhas na Central não localizada')
+write(p, s)
+
+p = 'central-administrativa-tacs.html'
+s = read(p)
+s = re.sub(r'central-administrativa-tacs\.js\?v=[A-Za-z0-9._-]+', f'central-administrativa-tacs.js?v={REV}', s, count=1)
+write(p, s)
+
+# 9) Teste específico do novo contrato.
+test = r'''\'use strict\';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+const ROOT=path.resolve(__dirname,'..');
+const src=fs.readFileSync(path.join(ROOT,'apps-script','ZZZZ_35_CampanhasAutomaticasV1.gs'),'utf8');
+const ctx=vm.createContext({console,Date,JSON,Math});
+vm.runInContext(src,ctx);
+const catalog=JSON.parse(JSON.stringify(ctx.campanhasAutomaticasV1Catalogo_()));
+assert.equal(catalog.length,18);
+const aug=catalog.filter(x=>x.mes===8);
+assert.equal(aug.length,2);
+assert.deepEqual(aug.map(x=>x.tema),['lilas','dourado']);
+const plan=JSON.parse(JSON.stringify(ctx.campanhasAutomaticasV1PlanejarAno_('JAPARANDUBA',2026)));
+const augPlan=plan.filter(x=>x.MES==='08');
+assert.equal(augPlan.length,2);
+assert.ok(augPlan.every(x=>x.INICIO==='2026-08-01'&&x.VALIDADE==='2026-08-31'));
+const leap=JSON.parse(JSON.stringify(ctx.campanhasAutomaticasV1PlanejarAno_('JAPARANDUBA',2028))).find(x=>x.MES==='02');
+assert.equal(leap.VALIDADE,'2028-02-29');
+const publicBackend=fs.readFileSync(path.join(ROOT,'apps-script','ZZ_12_PublicoAgendasPortalV1.gs'),'utf8');
+assert.match(publicBackend,/publicoAgendasV1LerCampanhas_/);
+assert.match(publicBackend,/campanhas: campanhas/);
+const renderer=fs.readFileSync(path.join(ROOT,'portal-controle-integral.js'),'utf8');
+for(const c of ['campaign-theme-lilas','campaign-theme-dourado','campaign-description','integral-campaign'])assert.ok(renderer.includes(c));
+const panel=fs.readFileSync(path.join(ROOT,'painel-oficial-recados-campanhas.html'),'utf8');
+assert.match(panel,/A publicação foi salva fora do período atual/);
+assert.match(panel,/subtitulo/);
+const period=fs.readFileSync(path.join(ROOT,'campanhas-periodo-v2.js'),'utf8');
+assert.match(period,/Cor da campanha/);
+assert.match(period,/camp-theme-lilas/);
+const build=fs.readFileSync(path.join(ROOT,'scripts','build_apps_script_release.js'),'utf8');
+assert.match(build,/ZZZZ_35_CampanhasAutomaticasV1\.gs/);
+const cron=fs.readFileSync(path.join(ROOT,'.github','workflows','campanhas-automaticas-diarias.yml'),'utf8');
+assert.match(cron,/campanhas_automaticas_executar/);
+assert.match(cron,/cron: '5 3 \* \* \*'/);
+console.log('Campanhas automáticas V1: calendário, cores, vigência, renderer e rotina diária validados.');
+'''
+# remove the protection slash before the JS directive
+if test.startswith("\\'use strict"):
+    test = test[1:]
+write('scripts/test_campanhas_automaticas_v1.js', test)
+
+p = 'package.json'
+pkg = read(p)
+needle = 'node scripts/test_campanhas_periodo_v1.js && '
+repl = 'node scripts/test_campanhas_periodo_v1.js && node scripts/test_campanhas_automaticas_v1.js && '
+if repl not in pkg:
+    if needle not in pkg:
+        raise RuntimeError('Ponto de inclusão do teste não encontrado em package.json')
+    pkg = pkg.replace(needle, repl, 1)
+write(p, pkg)
+
+# 10) Após implantação Apps Script, tentar sincronização imediata de agosto.
+p = '.github/workflows/deploy-apps-script-moradores.yml'
+s = read(p)
+if 'campanhas_automaticas_executar&offset=0&limit=50' not in s:
+    needle = "          trap - ERR\n          printf 'Implantação validada"
+    if needle not in s:
+        raise RuntimeError('Ponto pós-deploy não encontrado no workflow Apps Script')
+    extra = "          trap - ERR\n          auto_resposta=\"$(curl -fsSL --max-time 90 \"$API?action=campanhas_automaticas_executar&offset=0&limit=50&_=$(date +%s)\" || true)\"\n          if AUTO_RESPOSTA=\"$auto_resposta\" node -e \"const r=JSON.parse(process.env.AUTO_RESPOSTA||'{}');process.exit(r.ok===true?0:1)\"; then\n            echo \"Campanhas automáticas sincronizadas após a implantação.\"\n          else\n            echo \"::warning::Apps Script publicado, mas a sincronização automática ficou para a rotina diária.\"\n          fi\n          printf 'Implantação validada"
+    s = s.replace(needle, extra, 1)
+write(p, s)
+
+# 11) Versionamento e gatilho da implantação Apps Script.
+write('portal-version.json', json.dumps({
+    'version': REV,
+    'releasedAt': datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00', 'Z'),
+    'scope': 'Portal TACS • campanhas mensais automáticas e cards por cor',
+}, ensure_ascii=False, indent=2) + '\n')
+write('.github/apps-script-release-request', 'campanhas-automaticas-v1-agosto-cores\n')
+
+print('Pacote de campanhas automáticas preparado com sucesso.')
