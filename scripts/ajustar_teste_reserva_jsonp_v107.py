@@ -115,4 +115,6 @@ new_test = r'''async function testNonBlockingDentalCard() {
 }
 '''
 t = t[:start] + new_test + t[end:]
+# A reserva funcional agora passa por reservar_get, não pelo POST antigo.
+t = t.replace("assert.equal(reservation.action, 'reservar');", "assert.equal(reservation.action, 'reservar_get');", 1)
 p.write_text(t)
