@@ -26,11 +26,5 @@ jobs:
           python3 scripts/ajustar_teste_reserva_jsonp_v107.py
       - name: Instalar dependências
         run: npm ci
-      - name: Rodar simulação DOM 1 -> 0 -> envio -> releitura
-        shell: bash
-        run: |
-          set -o pipefail
-          timeout 55s node scripts/test_dom_flows.js 2>&1 | tee /tmp/dom.log
-          code=${PIPESTATUS[0]}
-          echo "EXIT_CODE=$code"
-          exit $code
+      - name: Rodar simulação DOM de reserva e releitura
+        run: node scripts/test_dom_flows.js
