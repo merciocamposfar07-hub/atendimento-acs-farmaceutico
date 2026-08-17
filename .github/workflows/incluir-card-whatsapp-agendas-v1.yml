@@ -1,0 +1,40 @@
+name: Incluir card WhatsApp agendas v1
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'agenda-whatsapp-card-v1.js'
+      - '.github/workflows/incluir-card-whatsapp-agendas-v1.yml'
+permissions:
+  contents: write
+jobs:
+  incluir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Inserir script apenas no painel de agendas
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('painel-oficial-agendas-vagas.html')
+          s=p.read_text(encoding='utf-8')
+          tag='<script src="/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260817-1"></script>'
+          if tag not in s:
+              if '</body>' not in s: raise SystemExit('body final não encontrado')
+              s=s.replace('</body>',tag+'\n</body>',1)
+              p.write_text(s,encoding='utf-8')
+          print('CARD_WHATSAPP_AGENDAS_V1_OK')
+          PY
+          grep -q 'agenda-whatsapp-card-v1.js' painel-oficial-agendas-vagas.html
+      - name: Validar JavaScript do card
+        run: node --check agenda-whatsapp-card-v1.js
+      - name: Gravar alteração isolada
+        run: |
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add painel-oficial-agendas-vagas.html
+          git commit -m 'Inclui botão de card WhatsApp em cada agenda'
+          git pull --rebase origin main
+          git push origin HEAD:main
