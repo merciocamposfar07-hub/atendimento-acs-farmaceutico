@@ -1,0 +1,34 @@
+name: Teste live odontologia v111
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/teste-live-odontologia-v111.yml'
+permissions:
+  contents: read
+jobs:
+  testar-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Testar endpoint odontológico publicado sem consumir vaga
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=$(node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('agenda-config.js','utf8');
+          const m=s.match(/window\.DENTAL_AGENDA_API_URL\s*=\s*'([^']+)'/);
+          if(!m) process.exit(2);
+          process.stdout.write(m[1]);
+          NODE
+          )
+          PROBE=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=reservar_get&probe=1")
+          echo "$PROBE"
+          printf '%s' "$PROBE" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);if(!(j.ok&&j.probe&&j.route==='reservar_get'))process.exit(3);console.log('PROBE_OK',j.versao);})"
+          AGENDA=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=agenda&areaId=JAPARANDUBA")
+          printf '%s' "$AGENDA" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);if(!(j.ok&&Array.isArray(j.dias)&&j.dias.length===5))process.exit(4);console.log('AGENDA_OK',j.versao,j.areaId,j.dias.map(d=>[d.dia,d.data,d.vagasComuns,d.vagasEmergenciais]));})"
+          NEG=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=reservar_get&areaId=JAPARANDUBA&requestId=TESTE-V111-NAO-MUTAR-001&date=2099-12-31&type=comum")
+          echo "$NEG"
+          printf '%s' "$NEG" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);if(j.ok||j.code!=='DATE_NOT_FOUND')process.exit(5);console.log('WRITE_ROUTE_OK_SEM_MUTACAO',j.code);})"
