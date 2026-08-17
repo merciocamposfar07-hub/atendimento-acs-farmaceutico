@@ -509,9 +509,9 @@ function loginWithPin(pin){
   });
 }
 
-function loginWithTacs(cns,pin){
-  setStatus('loginStatus','Validando CNS profissional e PIN individual…','warn');
-  post('admin_territorio_login_tacs',{cns:cns,pin:pin,dispositivo:device},'admin_territorio_result',function(r){
+function loginWithTacs(pin){
+  setStatus('loginStatus','Validando seu PIN individual…','warn');
+  post('admin_territorio_login_pin',{pin:pin,dispositivo:device},'admin_territorio_result',function(r){
     if(el('tacsPinAccess'))el('tacsPinAccess').value='';
     if(!r||r.ok!==true||!r.token){
       territoryToken='';
@@ -1019,26 +1019,12 @@ function onTacsLoginCapture(event){
   event.preventDefault();
   event.stopPropagation();
   if(event.stopImmediatePropagation)event.stopImmediatePropagation();
-  var cns=digits(el('tacsCnsAccess')&&el('tacsCnsAccess').value);
   var pin=digits(el('tacsPinAccess')&&el('tacsPinAccess').value);
-  territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||territoryToken||'';
-  if(territoryToken&&!cns&&!pin){
-    accessMode='tacs';
-    showAuthenticatedShell('Sessão individual encontrada. Painel aberto somente para a área vinculada; conferindo a base…');
-    setTimeout(function(){
-      if(!active)loadBase('Sessão individual validada e base da área conferida.');
-    },0);
-    return;
-  }
-  if(!/^\d{15}$/.test(cns)){
-    setStatus('loginStatus','Digite os 15 números do CNS profissional.','err');
-    return;
-  }
   if(!/^\d{4,8}$/.test(pin)){
     setStatus('loginStatus','Digite o PIN individual numérico de 4 a 8 dígitos.','err');
     return;
   }
-  loginWithTacs(cns,pin);
+  loginWithTacs(pin);
 }
 
 function onLogoutCapture(event){

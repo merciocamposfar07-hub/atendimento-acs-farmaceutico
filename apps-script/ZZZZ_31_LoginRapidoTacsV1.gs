@@ -3,16 +3,16 @@
  * Portal TACS — acesso rápido do TACS por PIN no aparelho já identificado V1.1.0
  *
  * Regras:
- * - o CNS continua obrigatório no cadastro do TACS e no primeiro acesso de cada aparelho;
- * - depois do primeiro acesso válido, o aparelho recebe uma chave rápida assinada e vinculada
- *   ao TACS + identificador local do aparelho;
- * - acessos seguintes usam somente PIN + chave rápida do aparelho;
- * - a chave rápida não substitui o PIN e não concede acesso se o TACS/área estiver inativo;
- * - trocar de aparelho ou apagar os dados locais exige CNS + PIN uma vez novamente;
+ * - o CNS continua obrigatório somente no cadastro administrativo do TACS;
+ * - o login operacional do TACS usa somente o PIN individual;
+ * - sem chave rápida, o servidor identifica o único TACS ativo cujo hash corresponde ao PIN;
+ * - se o mesmo PIN estiver configurado para mais de um TACS, o acesso é bloqueado até o administrador corrigir;
+ * - a chave rápida antiga continua aceita apenas como otimização/compatibilidade;
+ * - o PIN nunca é devolvido nem persistido pelo servidor;
  * - a ativação da chave rápida funciona mesmo se outro módulo interceptar primeiro o login CNS+PIN.
  */
 var TACS_LOGIN_RAPIDO_V1=Object.freeze({
-  VERSAO:'1.1.0',
+  VERSAO:'1.2.0',
   PREFIXO:'qt1'
 });
 
@@ -86,22 +86,34 @@ function tacsLoginRapidoV1EntrarPorPin_(p){
   if(!/^[0-9]{4,8}$/.test(pin))throw new Error('Informe o PIN individual de 4 a 8 números.');
   if(!dispositivo)throw new Error('Identificação do aparelho ausente.');
 
-  var tacsId=tacsLoginRapidoV1ValidarChave_(chave,dispositivo);
-  if(!tacsId)throw new Error('A identificação rápida deste aparelho não é válida. Use o CNS uma vez para identificar novamente este aparelho.');
+  var tentativa='PIN_ONLY:'+tacsTerritorioV1Hash_(dispositivo).slice(0,32);
+  tacsTerritorioV1VerificarTentativasLogin_(tentativa);
 
-  var chaveTentativa='QUICK:'+tacsId;
-  tacsTerritorioV1VerificarTentativasLogin_(chaveTentativa);
-  var tacs=tacsTerritorioV1EncontrarTacs_(tacsId);
+  var tacs=null;
+  var tacsId=chave?tacsLoginRapidoV1ValidarChave_(chave,dispositivo):'';
+  if(tacsId){
+    var lembrado=tacsTerritorioV1EncontrarTacs_(tacsId);
+    if(lembrado&&lembrado.ativo&&lembrado.pinSalt&&lembrado.pinHash&&
+       tacsTerritorioV1CompararSeguro_(lembrado.pinHash,tacsTerritorioV1HashPin_(pin,lembrado.pinSalt))){
+      tacs=lembrado;
+    }
+  }else{
+    var correspondentes=tacsTerritorioV1LerTacs_().filter(function(item){
+      return item&&item.ativo===true&&item.pinSalt&&item.pinHash&&
+        tacsTerritorioV1CompararSeguro_(item.pinHash,tacsTerritorioV1HashPin_(pin,item.pinSalt));
+    });
+    if(correspondentes.length>1){
+      tacsTerritorioV1RegistrarFalhaLogin_(tentativa);
+      throw new Error('Este PIN está associado a mais de um TACS. O administrador deve definir PINs individuais diferentes.');
+    }
+    tacs=correspondentes[0]||null;
+  }
+
   if(!tacs||!tacs.ativo){
-    tacsTerritorioV1RegistrarFalhaLogin_(chaveTentativa);
+    tacsTerritorioV1RegistrarFalhaLogin_(tentativa);
     throw new Error('PIN incorreto ou acesso do TACS inativo.');
   }
-  if(!tacs.pinSalt||!tacs.pinHash)throw new Error('O PIN individual deste TACS ainda não foi configurado pelo administrador.');
-  if(!tacsTerritorioV1CompararSeguro_(tacs.pinHash,tacsTerritorioV1HashPin_(pin,tacs.pinSalt))){
-    tacsTerritorioV1RegistrarFalhaLogin_(chaveTentativa);
-    throw new Error('PIN incorreto.');
-  }
-  tacsTerritorioV1LimparFalhasLogin_(chaveTentativa);
+  tacsTerritorioV1LimparFalhasLogin_(tentativa);
 
   var area=tacsTerritorioV1EncontrarArea_(tacs.areaId);
   if(!area||!area.ativa||area.tacsId!==tacs.tacsId){
@@ -122,7 +134,7 @@ function tacsLoginRapidoV1EntrarPorPin_(p){
     areaId:area.areaId,areaNome:area.areaNome,unidadeId:area.unidadeId,
     expiraEm:Date.now()+TACS_TERRITORIO_V1.SESSION_SECONDS*1000,
     quickKey:tacsLoginRapidoV1CriarChave_(tacs.tacsId,dispositivo),
-    acessoRapido:true
+    acessoRapido:true,loginSomentePin:true
   };
 }
 

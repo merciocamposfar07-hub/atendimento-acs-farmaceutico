@@ -11,7 +11,7 @@ var cnsInput=document.getElementById('tacsCns');
 var pinInput=document.getElementById('tacsPin');
 var tacsLogin=document.getElementById('tacsLogin');
 var status=document.getElementById('loginStatus');
-if(!loginBtn||!cnsInput||!pinInput||!tacsLogin)return;
+if(!loginBtn||!pinInput||!tacsLogin)return;
 
 var busy=false;
 function text(v){return String(v==null?'':v).trim()}
@@ -88,13 +88,13 @@ function renderLogin(){
     var forget=document.getElementById('tacsQuickForget');
     if(forget)forget.addEventListener('click',function(){
       clearProfile();
-      cnsInput.value='';
+      if(cnsInput)cnsInput.value='';
       renderLogin();
-      setStatus('Identifique este aparelho com o CNS profissional e o PIN. Depois, os próximos acessos serão somente com o PIN.','');
+      setStatus('Digite somente o seu PIN individual.','');
     });
   }else{
-    if(cnsLabel)cnsLabel.hidden=false;
-    cnsInput.hidden=false;
+    if(cnsLabel)cnsLabel.hidden=true;
+    if(cnsInput)cnsInput.hidden=true;
     remembered.hidden=true;
     remembered.innerHTML='';
   }
@@ -167,18 +167,9 @@ loginBtn.addEventListener('click',function(event){
   var pin=digits(pinInput.value),device=getDevice(),profile=getProfile();
   if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN individual de 4 a 8 números.','err');return}
   if(!device){setStatus('Este aparelho ainda não foi identificado. Atualize a página e tente novamente.','err');return}
-  var action,payload;
-  if(profile){
-    action='admin_territorio_login_pin';
-    payload={quickKey:profile.quickKey,pin:pin,dispositivo:device};
-    setStatus('Validando seu PIN…','warn');
-  }else{
-    var cns=digits(cnsInput.value);
-    if(!/^\d{15}$/.test(cns)){setStatus('No primeiro acesso deste aparelho, informe os 15 números do CNS profissional.','err');return}
-    action='admin_territorio_login_tacs';
-    payload={cns:cns,pin:pin,dispositivo:device};
-    setStatus('Identificando este aparelho e validando o acesso…','warn');
-  }
+  var action='admin_territorio_login_pin';
+  var payload=profile?{quickKey:profile.quickKey,pin:pin,dispositivo:device}:{pin:pin,dispositivo:device};
+  setStatus('Validando seu PIN…','warn');
   post(action,payload,function(r){
     pinInput.value='';
     if(!r||r.ok!==true||!r.token){setStatus(text(r&&r.message)||'Acesso recusado.','err');return}
@@ -192,7 +183,7 @@ var tabTacs=document.getElementById('tabTacs');
 if(tabTacs)tabTacs.addEventListener('click',function(){setTimeout(function(){
   var p=getProfile();
   if(p)setStatus('Digite apenas o seu PIN para entrar na área '+(p.areaNome||p.areaId||'cadastrada')+'.','');
-  else setStatus('No primeiro acesso deste aparelho, use CNS + PIN. Depois, somente o PIN será necessário.','');
+  else setStatus('Digite somente o seu PIN individual.','');
   enforceExclusiveTacsUi();
 },0)});
 })();
