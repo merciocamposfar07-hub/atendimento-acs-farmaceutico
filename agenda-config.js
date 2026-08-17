@@ -37,10 +37,10 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
       return fromUrl;
     }
 
-    var saved = '';
-    try { saved = normalizePortalAreaId(localStorage.getItem(PORTAL_AREA_STORAGE_KEY)); }
-    catch (error) {}
-    return saved || PORTAL_DEFAULT_AREA_ID;
+    // BASE_URL_TERRITORIO_CANONICO_V1: sem parâmetro de área, o link histórico é sempre Japaranduba.
+    // O localStorage pode guardar a última área acessada, mas nunca pode transformar o link base em outra área.
+    try { localStorage.setItem(PORTAL_AREA_STORAGE_KEY, PORTAL_DEFAULT_AREA_ID); } catch (error) {}
+    return PORTAL_DEFAULT_AREA_ID;
   }
 
   function setPortalAreaId(value) {

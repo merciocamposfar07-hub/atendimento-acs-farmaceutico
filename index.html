@@ -18,8 +18,10 @@
   <script>
   (function(){
     try{
-      var p=new URLSearchParams(location.search||''),area=String(p.get('areaId')||p.get('area')||localStorage.getItem('portalTacsAreaIdV1')||'').toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64);
-      if(area&&area!=='JAPARANDUBA')document.documentElement.classList.add('territory-pending');
+      var p=new URLSearchParams(location.search||''),explicit=String(p.get('areaId')||p.get('area')||p.get('territorio')||'').toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64),area=explicit||'JAPARANDUBA';
+      // BASE_URL_TERRITORIO_CANONICO_V1: o endereço sem ?area= pertence permanentemente a Japaranduba.
+      try{localStorage.setItem('portalTacsAreaIdV1',area);}catch(ignore){}
+      if(area!=='JAPARANDUBA')document.documentElement.classList.add('territory-pending');
     }catch(e){}
   }());
   </script>
