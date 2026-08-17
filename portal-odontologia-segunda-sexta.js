@@ -19,7 +19,7 @@
   var internalCategoryChange = false;
   var verifyTimer = null;
   var loadPromise = null;
-  var CACHE_KEY = 'portalTacsDentalAgendaV102:' + AREA_ID;
+  var CACHE_KEY = 'portalTacsDentalAgendaV103FullWeek:' + AREA_ID;
   var CACHE_MAX_MS = 6 * 60 * 60 * 1000;
   var CACHE_ACTIONABLE_MS = 90 * 1000;
   var cacheSavedAt = 0;
@@ -98,7 +98,7 @@
   function normalizeSlot(raw, index) {
     var day = clean(raw && (raw.dia || raw.day));
     var date = normalizeDate(raw && (raw.data || raw.date));
-    if (ALLOWED_DAYS.indexOf(day) === -1 || !date || !currentDate(date)) return null;
+    if (ALLOWED_DAYS.indexOf(day) === -1) return null;
     return {
       id: clean(raw.id || raw.codigo || raw.row || '') || day + '-' + date + '-' + index,
       day: day,
@@ -114,7 +114,7 @@
       var slot = normalizeSlot(row, index);
       if (slot) normalized.push(slot);
     });
-    normalized.sort(function (a, b) { return dateStamp(a.date) - dateStamp(b.date); });
+    normalized.sort(function (a, b) { var da = ALLOWED_DAYS.indexOf(a.day), db = ALLOWED_DAYS.indexOf(b.day); if (da !== db) return da - db; var aa = dateStamp(a.date), bb = dateStamp(b.date); if (!Number.isFinite(aa)) aa = Number.MAX_SAFE_INTEGER; if (!Number.isFinite(bb)) bb = Number.MAX_SAFE_INTEGER; return aa - bb; });
     return normalized;
   }
 
