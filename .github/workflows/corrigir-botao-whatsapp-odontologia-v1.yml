@@ -1,4 +1,4 @@
-name: Corrigir envio odontologia não bloqueante v4
+name: Corrigir redução persistente de vagas odontológicas v5
 
 on:
   push:
@@ -24,11 +24,11 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - name: Aplicar correção em ambiente de teste
+      - name: Aplicar correção somente no ambiente de teste
         run: python scripts/corrigir_botao_whatsapp_odontologia_v1.py
       - name: Instalar dependências
         run: npm ci
-      - name: Testar integração completa e simulação de confirmação atrasada
+      - name: Testar regressão completa e simular 1 vaga emergencial virando 0 no iPhone
         run: npm test
       - name: Validar sintaxe dos arquivos alterados
         run: |
@@ -38,7 +38,7 @@ jobs:
           node --check agenda-config.js
           node --check scripts/test_dom_flows.js
           node --check scripts/test_dental_confirmation_gate_v103.js
-      - name: Publicar somente após todos os testes aprovados
+      - name: Publicar somente se todos os testes anteriores passarem
         run: |
           if git diff --quiet; then
             echo "Nenhuma alteração necessária."
@@ -46,7 +46,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add portal-odontologia-segunda-sexta.js portal-ajustes-finais.js portal-orientacao-morador.js agenda-config.js index.html scripts/test_dom_flows.js scripts/test_dental_confirmation_gate_v103.js portal-version.json
-          git commit -m "Restaura envio odontológico imediato com reserva em segundo plano"
+          git add portal-odontologia-segunda-sexta.js index.html scripts/test_dom_flows.js scripts/test_dental_confirmation_gate_v103.js portal-version.json
+          git commit -m "Restaura redução automática da vaga odontológica sem bloquear envio"
           git push origin HEAD:main
-# gate-v4-nao-bloqueante-com-simulacao
+# gate-v5-uma-vaga-para-zero-com-persistencia-e-saida-imediata
