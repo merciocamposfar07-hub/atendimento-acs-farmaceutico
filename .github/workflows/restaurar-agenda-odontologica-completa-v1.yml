@@ -1,0 +1,252 @@
+name: Restaurar agenda odontológica completa v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/restaurar-agenda-odontologica-completa-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: restaurar-agenda-odontologica-completa-v1
+  cancel-in-progress: false
+
+jobs:
+  restaurar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Restaurar cinco dias, data civil e hora de expiração
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          from datetime import datetime, timezone
+
+          backend_path = Path('apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs')
+          portal_path = Path('portal-odontologia-segunda-sexta.js')
+          admin_path = Path('painel-oficial-agendas-vagas.html')
+          index_path = Path('index.html')
+
+          backend = backend_path.read_text(encoding='utf-8')
+          portal = portal_path.read_text(encoding='utf-8')
+          admin = admin_path.read_text(encoding='utf-8')
+          index = index_path.read_text(encoding='utf-8')
+
+          endpoint_pattern = re.compile(
+              r"function agendasProfissionaisTerritoriaisV1AgendaOdontologica_\(areaId\)\{.*?\n\}\n\nfunction agendasProfissionaisTerritoriaisV1Reservar_\(p\)\{",
+              re.S,
+          )
+          endpoint_replacement = r'''function agendasProfissionaisTerritoriaisV1ValorExibido_(tabela,linha,campo){
+  var indice=agendasProfissionaisTerritoriaisV1Indice_(tabela,campo,false);if(indice<0)return'';
+  try{return agendasProfissionaisTerritoriaisV1Texto_(tabela.sheet.getRange(linha.row,indice+1).getDisplayValues()[0][0]);}catch(erro){return'';}
+}
+function agendasProfissionaisTerritoriaisV1DataCivil_(valor){
+  var s=agendasProfissionaisTerritoriaisV1Texto_(valor),m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];
+  m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);return m?m[3]+'-'+m[2]+'-'+m[1]:'';
+}
+function agendasProfissionaisTerritoriaisV1DataLinha_(tabela,linha,item){
+  var exibida=agendasProfissionaisTerritoriaisV1DataCivil_(agendasProfissionaisTerritoriaisV1ValorExibido_(tabela,linha,'DATA'));
+  if(exibida)return exibida;
+  if(item&&Object.prototype.toString.call(item.DATA)!=='[object Date]')return agendasProfissionaisTerritoriaisV1DataCivil_(item.DATA);
+  return item?agendasProfissionaisTerritoriaisV1Data_(item.DATA):'';
+}
+function agendasProfissionaisTerritoriaisV1HoraLinha_(tabela,linha,item){
+  var exibida=agendasProfissionaisTerritoriaisV1ValorExibido_(tabela,linha,'ENCERRA_HORARIO'),m=exibida.match(/(?:^|\s)([01]\d|2[0-3]):([0-5]\d)(?:\s|$)/);
+  if(m)return m[1]+':'+m[2];
+  var bruta=agendasProfissionaisTerritoriaisV1Texto_(item&&item.ENCERRA_HORARIO),b=bruta.match(/^([01]\d|2[0-3]):([0-5]\d)$/);if(b)return b[1]+':'+b[2];
+  return agendasProfissionaisTerritoriaisV1Booleano_(item&&item.ENCERRA_12H)?'12:00':'';
+}
+function agendasProfissionaisTerritoriaisV1SituacaoAberta_(valor){
+  var s=agendasProfissionaisTerritoriaisV1Normalizar_(valor);
+  return ['CANCELADO','CANCELADA','FERIADO','SEM ATENDIMENTO','NAO_CONFIGURADO','NÃO CONFIGURADO'].indexOf(s)===-1;
+}
+function agendasProfissionaisTerritoriaisV1AgendaExpirada_(tabela,linha,item){
+  var data=agendasProfissionaisTerritoriaisV1DataLinha_(tabela,linha,item);if(!data)return false;
+  var hoje=Utilities.formatDate(new Date(),'America/Recife','yyyy-MM-dd');if(data<hoje)return true;if(data>hoje)return false;
+  var hora=agendasProfissionaisTerritoriaisV1HoraLinha_(tabela,linha,item);if(!hora)return false;
+  return Utilities.formatDate(new Date(),'America/Recife','HH:mm')>=hora;
+}
+function agendasProfissionaisTerritoriaisV1AgendaOdontologica_(areaId){
+  var tabela=agendasProfissionaisTerritoriaisV1Tabela_(agendasProfissionaisTerritoriaisV1Planilha_(),TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.AGENDA_HEADERS,false);
+  var porDia={};
+  if(tabela)agendasProfissionaisTerritoriaisV1LinhasArea_(tabela,areaId).forEach(function(linha){
+    var item=agendasProfissionaisTerritoriaisV1Objeto_(tabela.headers,linha.values);if(agendasProfissionaisTerritoriaisV1Modulo_(item.MODULO)!=='odontologia')return;
+    var dia=agendasProfissionaisTerritoriaisV1Texto_(item.DIA);if(TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.DIAS.indexOf(dia)===-1)return;
+    var data=agendasProfissionaisTerritoriaisV1DataLinha_(tabela,linha,item),ativo=agendasProfissionaisTerritoriaisV1Booleano_(item.ATIVO),situacaoAberta=agendasProfissionaisTerritoriaisV1SituacaoAberta_(item.SITUACAO),expirada=agendasProfissionaisTerritoriaisV1AgendaExpirada_(tabela,linha,item),expiraAs=agendasProfissionaisTerritoriaisV1HoraLinha_(tabela,linha,item);
+    var comuns=agendasProfissionaisTerritoriaisV1NaoNegativo_(item.VAGAS_COMUNS),emergenciais=agendasProfissionaisTerritoriaisV1NaoNegativo_(item.VAGAS_EMERGENCIAIS),aberta=ativo&&situacaoAberta&&!expirada&&!!data;
+    porDia[dia]={id:'DENTISTA-'+areaId+'-'+linha.row+'-'+(data||dia),dia:dia,data:data,horario:agendasProfissionaisTerritoriaisV1Texto_(item.HORARIO),situacao:agendasProfissionaisTerritoriaisV1Texto_(item.SITUACAO),ativo:ativo,expiraAs:expiraAs,encerrada:!aberta,vagasComuns:aberta?comuns:0,vagasEmergenciais:aberta?emergenciais:0,vagasComunsConfiguradas:comuns,vagasEmergenciaisConfiguradas:emergenciais,diaExtra:agendasProfissionaisTerritoriaisV1Booleano_(item.DIA_EXTRA)};
+  });
+  var dias=TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.DIAS.map(function(dia){
+    return porDia[dia]||{id:'DENTISTA-'+areaId+'-'+dia,dia:dia,data:'',horario:'',situacao:'NAO_CONFIGURADO',ativo:false,expiraAs:'',encerrada:true,vagasComuns:0,vagasEmergenciais:0,vagasComunsConfiguradas:0,vagasEmergenciaisConfiguradas:0,diaExtra:false};
+  });
+  return{ok:true,versao:TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.VERSAO,areaId:areaId,isolamento:'AREA_ID',atualizadoEm:Utilities.formatDate(new Date(),'America/Recife','dd/MM/yyyy HH:mm'),dias:dias};
+}
+
+function agendasProfissionaisTerritoriaisV1Reservar_(p){'''
+
+          backend, count = endpoint_pattern.subn(endpoint_replacement, backend, count=1)
+          if count != 1:
+              raise SystemExit('Não foi possível substituir a leitura pública odontológica exatamente uma vez.')
+
+          old_match = "agendasProfissionaisTerritoriaisV1Data_(item.DATA)===data"
+          new_match = "agendasProfissionaisTerritoriaisV1DataLinha_(agenda,linha,item)===data"
+          if old_match not in backend:
+              raise SystemExit('Comparação antiga de data da reserva não encontrada.')
+          backend = backend.replace(old_match, new_match, 1)
+
+          target = "if(!alvo)return{ok:false,code:'DATE_NOT_FOUND',message:'Essa data não está mais disponível na agenda desta área.'};"
+          expiration_gate = target + "\n    var alvoItem=agendasProfissionaisTerritoriaisV1Objeto_(agenda.headers,alvo.values);\n    if(!agendasProfissionaisTerritoriaisV1SituacaoAberta_(alvoItem.SITUACAO))return{ok:false,code:'CLOSED',message:'Essa agenda está sem atendimento.'};\n    if(agendasProfissionaisTerritoriaisV1AgendaExpirada_(agenda,alvo,alvoItem))return{ok:false,code:'EXPIRED',message:'O horário de solicitação dessa agenda já encerrou.'};"
+          if target not in backend:
+              raise SystemExit('Ponto de validação da reserva não encontrado.')
+          backend = backend.replace(target, expiration_gate, 1)
+          backend_path.write_text(backend, encoding='utf-8')
+
+          normalize_pattern = re.compile(
+              r"  function normalizeSlot\(raw, index\) \{.*?\n\n  function readAgendaCache\(\) \{",
+              re.S,
+          )
+          normalize_replacement = r'''  function flag(value) {
+    if (value === true || value === 1) return true;
+    var text = normalize(value);
+    return text === 'true' || text === '1' || text === 'sim' || text === 'yes' || text === 'ativo' || text === 'ativa';
+  }
+
+  function normalizeSlot(raw, index) {
+    var day = clean(raw && (raw.dia || raw.day));
+    if (ALLOWED_DAYS.indexOf(day) === -1) return null;
+    var date = normalizeDate(raw && (raw.data || raw.date));
+    var hasActive = raw && (raw.ativo !== undefined || raw.active !== undefined);
+    var active = hasActive ? flag(raw.ativo !== undefined ? raw.ativo : raw.active) : true;
+    var closed = flag(raw && (raw.encerrada !== undefined ? raw.encerrada : (raw.closed !== undefined ? raw.closed : raw.expired)));
+    return {
+      id: clean(raw && (raw.id || raw.codigo || raw.row || '')) || day + '-' + (date || 'sem-data') + '-' + index,
+      day: day,
+      date: date,
+      common: numberValue(raw || {}, 'comum'),
+      emergency: numberValue(raw || {}, 'emergencial'),
+      active: active,
+      closed: closed,
+      expiresAt: clean(raw && (raw.expiraAs || raw.encerraHorario || raw.expiresAt)),
+      time: clean(raw && (raw.horario || raw.time)),
+      status: clean(raw && (raw.situacao || raw.status))
+    };
+  }
+
+  function normalizeAgendaData(data) {
+    var normalized = [];
+    (Array.isArray(data && data.dias) ? data.dias : []).forEach(function (row, index) {
+      var slot = normalizeSlot(row, index);
+      if (slot) normalized.push(slot);
+    });
+    normalized.sort(function (a, b) {
+      var byDay = ALLOWED_DAYS.indexOf(a.day) - ALLOWED_DAYS.indexOf(b.day);
+      if (byDay) return byDay;
+      var aStamp = dateStamp(a.date), bStamp = dateStamp(b.date);
+      if (!Number.isFinite(aStamp)) aStamp = Number.MAX_SAFE_INTEGER;
+      if (!Number.isFinite(bStamp)) bStamp = Number.MAX_SAFE_INTEGER;
+      return aStamp - bStamp;
+    });
+    return normalized;
+  }
+
+  function readAgendaCache() {'''
+          portal, count = normalize_pattern.subn(normalize_replacement, portal, count=1)
+          if count != 1:
+              raise SystemExit('Não foi possível atualizar a normalização dos cinco dias.')
+
+          cache_pattern = re.compile(r"  function saveSlotsCache\(\) \{.*?\n\n  function applyAgendaData", re.S)
+          cache_replacement = r'''  function saveSlotsCache() {
+    var data = {
+      ok: true,
+      dias: slots.map(function (slot) {
+        return {
+          id: slot.id, dia: slot.day, data: slot.date,
+          vagasComuns: slot.common, vagasEmergenciais: slot.emergency,
+          ativo: slot.active, encerrada: slot.closed, expiraAs: slot.expiresAt,
+          horario: slot.time, situacao: slot.status
+        };
+      })
+    };
+    saveAgendaCache(data);
+  }
+
+  function applyAgendaData'''
+          portal, count = cache_pattern.subn(cache_replacement, portal, count=1)
+          if count != 1:
+              raise SystemExit('Não foi possível preservar estado/expiração no cache odontológico.')
+
+          portal = portal.replace("var CACHE_KEY = 'portalTacsDentalAgendaV102:' + AREA_ID;", "var CACHE_KEY = 'portalTacsDentalAgendaV103FullWeek:' + AREA_ID;", 1)
+          portal = portal.replace(
+              "badge.className = 'sheet-dental-badge' + (slot.day === 'Sexta-feira' ? ' extra' : '');\n      badge.textContent = slot.day === 'Sexta-feira' ? 'DIA EXTRA' : (slot.day === 'Quarta-feira' ? 'DIA PUBLICADO' : 'DIA OFICIAL');",
+              "badge.className = 'sheet-dental-badge' + ((!slot.active || slot.closed || slot.day === 'Sexta-feira') ? ' extra' : '');\n      if (!slot.active) badge.textContent = 'AGENDA INATIVA';\n      else if (slot.closed) badge.textContent = 'AGENDA ENCERRADA';\n      else badge.textContent = slot.day === 'Sexta-feira' ? 'DIA EXTRA' : (slot.day === 'Quarta-feira' ? 'DIA PUBLICADO' : 'DIA OFICIAL');",
+              1,
+          )
+          portal = portal.replace("date.textContent = formatDate(slot.date);", "date.textContent = slot.date ? formatDate(slot.date) : 'Data ainda não informada';", 1)
+          old_disabled = "button.disabled = Boolean(selection && !same) || (!same && (value === null || value <= 0 || !cachedIsActionable()));"
+          new_disabled = "var actionable = slot.active && !slot.closed && Boolean(slot.date) && currentDate(slot.date);\n        button.disabled = Boolean(selection && !same) || (!same && (!actionable || value === null || value <= 0 || !cachedIsActionable()));"
+          if old_disabled not in portal:
+              raise SystemExit('Regra antiga de habilitação das vagas não encontrada.')
+          portal = portal.replace(old_disabled, new_disabled, 1)
+          old_label = "button.textContent = vacancyLabel(value, type);"
+          new_label = "button.textContent = !slot.active ? 'Agenda inativa' : (slot.closed ? ('Agenda encerrada' + (slot.expiresAt ? ' às ' + slot.expiresAt : '')) : vacancyLabel(value, type));"
+          if old_label not in portal:
+              raise SystemExit('Rótulo de vaga não encontrado.')
+          portal = portal.replace(old_label, new_label, 1)
+          portal_path.write_text(portal, encoding='utf-8')
+
+          if 'Encerrar automaticamente às' not in admin:
+              raise SystemExit('Campo de encerramento do painel não foi localizado.')
+          admin = admin.replace('Encerrar automaticamente às', 'Hora de expiração da agenda', 1)
+          admin = admin.replace('Deixe vazio para não encerrar automaticamente.', 'Ao chegar neste horário, as vagas desse dia são encerradas automaticamente. Deixe vazio para não expirar.', 1)
+          admin_path.write_text(admin, encoding='utf-8')
+
+          index, index_count = re.subn(
+              r'portal-odontologia-segunda-sexta\.js\?v=[^"\']+',
+              'portal-odontologia-segunda-sexta.js?v=20260817-agenda-completa-v1',
+              index,
+              count=1,
+          )
+          if index_count != 1:
+              raise SystemExit('Referência do script odontológico no portal não encontrada.')
+          index_path.write_text(index, encoding='utf-8')
+
+          release = Path('.github/apps-script-release-request')
+          release.write_text('restaurar-agenda-odontologica-completa-v1 ' + datetime.now(timezone.utc).isoformat() + '\n', encoding='utf-8')
+          PY
+
+      - name: Validar restauração
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.DIAS.map" apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs
+          grep -q "agendasProfissionaisTerritoriaisV1DataLinha_(agenda,linha,item)===data" apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs
+          grep -q "code:'EXPIRED'" apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs
+          grep -q "portalTacsDentalAgendaV103FullWeek" portal-odontologia-segunda-sexta.js
+          grep -q "AGENDA INATIVA" portal-odontologia-segunda-sexta.js
+          grep -q "Hora de expiração da agenda" painel-oficial-agendas-vagas.html
+          grep -q "portal-odontologia-segunda-sexta.js?v=20260817-agenda-completa-v1" index.html
+          node --check portal-odontologia-segunda-sexta.js
+          node --check --input-type=commonjs < apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs
+          npm ci
+          npm test
+
+      - name: Publicar correção no repositório
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'A restauração já está aplicada.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs portal-odontologia-segunda-sexta.js painel-oficial-agendas-vagas.html index.html .github/apps-script-release-request
+          git commit -m 'Restaura agenda odontológica completa e expiração por horário'
+          git push
