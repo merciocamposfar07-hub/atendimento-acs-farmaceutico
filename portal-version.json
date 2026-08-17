@@ -1,5 +1,5 @@
 {
-  "version": "dental-vacancy-get-route-v106",
-  "releasedAt": "2026-08-17T15:38:00Z",
-  "scope": "Reserva odontológica idempotente também por GET keepalive; POST mantido apenas como fallback"
+  "version": "dental-reserva-jsonp-v107",
+  "releasedAt": "2026-08-17T16:10:00Z",
+  "scope": "Reserva odontológica confirmada no clique via JSONP; envio liberado somente após persistência, sem conferência no botão"
 }

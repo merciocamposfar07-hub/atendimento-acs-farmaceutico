@@ -93,6 +93,31 @@ class Harness {
       payload = {ok: true, dias: clone(this.nurse)};
     } else if (parsed.pathname.includes(DENTAL_ID) && action === 'agenda') {
       payload = {ok: true, dias: clone(this.dental)};
+    } else if (parsed.pathname.includes(DENTAL_ID) && action === 'reservar_get') {
+      const fields = {
+        action,
+        areaId: parsed.searchParams.get('areaId') || '',
+        requestId: parsed.searchParams.get('requestId') || '',
+        date: parsed.searchParams.get('date') || '',
+        type: parsed.searchParams.get('type') || ''
+      };
+      const previous = this.records.dentalReservations.find(item => item.requestId === fields.requestId);
+      const slot = this.dental.find(item => item.data === fields.date);
+      assert.ok(slot, `Data odontológica não encontrada: ${fields.date}`);
+      const key = fields.type === 'emergencial' ? 'vagasEmergenciais' : 'vagasComuns';
+      if (!previous) {
+        assert.ok(slot[key] > 0, 'Tentativa de reservar vaga indisponível');
+        slot[key] -= 1;
+        this.records.dentalReservations.push(clone(fields));
+      }
+      payload = {
+        ok: true,
+        remaining: slot[key],
+        date: fields.date,
+        type: fields.type,
+        requestId: fields.requestId,
+        alreadyReserved: Boolean(previous)
+      };
     } else {
       payload = {ok: false, message: `Ação de leitura não prevista: ${action}`};
     }
@@ -219,7 +244,22 @@ class Harness {
         const parsed = new URL(url);
         if (parsed.hostname === 'script.google.com') {
           const source = harness.apiResponse(url);
-          return source == null ? null : Promise.resolve(Buffer.from(source));
+          if (source == null) return null;
+          if (parsed.searchParams.get('action') === 'reservar_get' && harness.reservationMessageDelay > 0) {
+            let timer = null;
+            const delayed = new Promise(resolve => {
+              timer = setTimeout(
+                () => resolve(Buffer.from(source)),
+                harness.reservationMessageDelay
+              );
+            });
+            delayed.abort = function () {
+              if (timer) clearTimeout(timer);
+              timer = null;
+            };
+            return delayed;
+          }
+          return Promise.resolve(Buffer.from(source));
         }
         if (parsed.origin === PORTAL_ORIGIN) {
           if (options.element && options.element.tagName === 'IFRAME') {
@@ -358,7 +398,7 @@ async function fillPatient(window, name, subject) {
 
 async function testNonBlockingDentalCard() {
   const harness = new Harness();
-  harness.reservationMessageDelay = 5000;
+  harness.reservationMessageDelay = 300;
   const dom = await harness.dom('index.html');
   const {window} = dom;
   try {
@@ -367,68 +407,69 @@ async function testNonBlockingDentalCard() {
     dispatch(window, category, 'change');
     await waitFor(
       () => window.document.querySelector('#dentalSlots .sheet-dental-choice.emergency:not(:disabled)'),
-      'A vaga emergencial única não apareceu para o teste não bloqueante'
+      'A vaga emergencial única não apareceu para o teste JSONP'
     );
     const slot = window.document.querySelector('#dentalSlots .sheet-dental-choice.emergency:not(:disabled)');
     slot.click();
-    await waitFor(
-      () => harness.records.durableReservations.length >= 1,
-      'A reserva durável não foi enfileirada no clique da vaga'
-    );
-    const durable = harness.records.durableReservations[0];
-    assert.equal(durable.action, 'reservar');
-    assert.equal(durable.type, 'emergencial');
-    assert.equal(durable.date, '2099-08-03');
-    assert.match(durable.requestId, /^MATIAS-/);
-    await waitFor(
-      () => harness.records.durableGetReservations.length >= 1,
-      'A rota GET durável não foi disparada no clique da vaga'
-    );
-    const durableGet = harness.records.durableGetReservations[0];
-    assert.equal(durableGet.action, 'reservar_get');
-    assert.equal(durableGet.type, 'emergencial');
-    assert.equal(durableGet.date, '2099-08-03');
-    assert.equal(durableGet.method, 'GET');
-    assert.equal(durableGet.keepalive, true);
-    assert.equal(durableGet.requestId, durable.requestId);
+
     const cacheKey = window.PortalTacsOdontologiaV98.cacheKey;
     const cached = JSON.parse(window.localStorage.getItem(cacheKey));
     const monday = cached.data.dias.find(item => item.data === '2099-08-03');
-    assert.equal(monday.vagasEmergenciais, 0, 'A última vaga emergencial precisa permanecer 0 no cache local');
+    assert.equal(monday.vagasEmergenciais, 0, 'A última vaga emergencial precisa virar 0 no cache já no clique');
     const renderedMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(card => /Segunda-feira/.test(card.textContent));
     assert.match(renderedMonday.textContent, /Sem vaga de emergência/, 'A tela deve mostrar 0 imediatamente após o clique');
-    const durableBeforeHide = harness.records.durableReservations.length;
-    window.dispatchEvent(new window.Event('pagehide'));
-    assert.ok(harness.records.durableReservations.length > durableBeforeHide, 'Ao sair para o compartilhamento, a reserva pendente deve ser reenfileirada');
-    await waitFor(
-      () => harness.records.dentalReservations.length === 1,
-      'A reserva em segundo plano não foi iniciada no clique da vaga'
-    );
-    await fillPatient(window, 'Paciente Teste Não Bloqueante', 'Solicitação odontológica simulada.');
+
+    await fillPatient(window, 'Paciente Teste JSONP', 'Solicitação odontológica simulada.');
     const card = window.document.querySelector('#sendPetroleumCard');
     assert.ok(card, 'Botão visível do card não encontrado');
-    await waitFor(() => !card.disabled, 'O botão do card permaneceu bloqueado aguardando a planilha');
+    assert.equal(card.disabled, true, 'Enquanto a gravação do clique não voltou do servidor, o envio deve permanecer protegido');
 
-    const beforeSelection = window.PortalTacsOdontologiaV98.selecao();
-    assert.ok(beforeSelection, 'Seleção odontológica não disponível');
-    assert.equal(beforeSelection.confirmed, false, 'O teste precisa clicar enquanto a confirmação ainda está atrasada');
+    const pending = window.PortalTacsOdontologiaV98.selecao();
+    assert.ok(pending && pending.confirmed === false, 'A simulação precisa observar o intervalo antes da confirmação JSONP');
+
+    await waitFor(
+      () => harness.records.dentalReservations.length === 1,
+      'A rota JSONP não gravou a reserva simulada no estado persistente',
+      2000
+    );
+    await waitFor(
+      () => {
+        const current = window.PortalTacsOdontologiaV98.selecao();
+        return current && current.confirmed === true && !card.disabled;
+      },
+      'O botão não foi liberado depois que a gravação foi confirmada',
+      2000
+    );
+
+    const serverSlot = harness.dental.find(item => item.data === '2099-08-03');
+    assert.equal(serverSlot.vagasEmergenciais, 0, 'O estado persistente do servidor simulado deve ficar em 0');
     const reservationsBeforeSend = harness.records.dentalReservations.length;
     const started = Date.now();
     card.click();
     await waitFor(
       () => harness.records.shares.length === 1,
-      'O compartilhamento não abriu enquanto a confirmação da vaga estava atrasada',
+      'O compartilhamento não abriu depois que a vaga já estava confirmada',
       1400
     );
     const elapsed = Date.now() - started;
-    assert.ok(elapsed < 1400, `O envio ficou bloqueado por ${elapsed} ms esperando a vaga`);
+    assert.ok(elapsed < 1400, `O envio voltou a fazer uma segunda conferência e demorou ${elapsed} ms`);
     assert.equal(
       harness.records.dentalReservations.length,
       reservationsBeforeSend,
       'O clique em enviar não pode criar uma segunda reserva'
     );
-    assert.equal(harness.records.alerts.length, 0, 'O envio não pode exibir alerta de demora da confirmação');
-    assert.ok(harness.records.shares[0].files && harness.records.shares[0].files.length === 1, 'O card não foi entregue ao compartilhamento nativo');
+    assert.equal(harness.records.alerts.length, 0, 'O envio não pode exibir alerta de confirmação da vaga');
+
+    await window.PortalTacsOdontologiaV98.atualizar();
+    await waitFor(
+      () => {
+        const cardMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(cardNode => /Segunda-feira/.test(cardNode.textContent));
+        return cardMonday && /Sem vaga de emergência/.test(cardMonday.textContent);
+      },
+      'Após releitura/atualização, a vaga reservada reapareceu como disponível',
+      2000
+    );
+    assert.equal(harness.dental.find(item => item.data === '2099-08-03').vagasEmergenciais, 0);
   } finally {
     window.close();
   }
@@ -463,7 +504,7 @@ async function testRegularDental(harness) {
       'A vaga comum não foi reservada no clique'
     );
     const reservation = harness.records.dentalReservations.at(-1);
-    assert.equal(reservation.action, 'reservar');
+    assert.equal(reservation.action, 'reservar_get');
     assert.equal(reservation.date, '2099-08-03');
     assert.equal(reservation.type, 'comum');
     assert.match(reservation.requestId, /^MATIAS-/);

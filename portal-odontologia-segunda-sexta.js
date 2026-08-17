@@ -425,7 +425,9 @@
     if (send.dataset) delete send.dataset.dentalReservationPending;
     return;
   }
-  var shouldDisable = !formReady();
+  // A vaga é reservada no clique. O envio só é liberado depois que o
+  // Apps Script confirma a gravação; não existe nova conferência no botão Enviar.
+  var shouldDisable = !formReady() || !selection.confirmed;
   if (send.hidden) send.hidden = false;
   if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
   if (send.dataset) delete send.dataset.dentalReservationPending;
@@ -527,6 +529,55 @@
     params.set('type', item.type);
     params.set('nonce', 'durable-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8));
     return params;
+  }
+
+  function reserveViaJsonp(item) {
+    return new Promise(function (resolve, reject) {
+      if (!API) { reject(new Error('A vaga não está conectada à planilha.')); return; }
+      var callbackName = 'dentalV107Reserve' + Date.now() + Math.floor(Math.random() * 10000);
+      var script = document.createElement('script');
+      var finished = false;
+      var timer = setTimeout(function () {
+        var timeout = new Error('A reserva ainda não respondeu.');
+        timeout.code = 'TIMEOUT';
+        finish(timeout);
+      }, 12000);
+
+      function cleanup() {
+        clearTimeout(timer);
+        try { delete window[callbackName]; } catch (error) { window[callbackName] = undefined; }
+        if (script.parentNode) script.remove();
+      }
+      function finish(error, data) {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        error ? reject(error) : resolve(data || {});
+      }
+
+      window[callbackName] = function (data) {
+        if (!data || data.ok === false) {
+          var error = new Error(data && data.message ? data.message : 'Não foi possível reservar a vaga.');
+          error.code = clean(data && data.code);
+          finish(error);
+          return;
+        }
+        finish(null, data);
+      };
+      script.onerror = function () {
+        var error = new Error('Não foi possível confirmar a reserva.');
+        error.code = 'TIMEOUT';
+        finish(error);
+      };
+      script.src = API + (API.indexOf('?') === -1 ? '?' : '&') +
+        'action=reservar_get&areaId=' + encodeURIComponent(AREA_ID) +
+        '&requestId=' + encodeURIComponent(item.requestId) +
+        '&date=' + encodeURIComponent(item.date) +
+        '&type=' + encodeURIComponent(item.type) +
+        '&callback=' + encodeURIComponent(callbackName) +
+        '&v=' + Date.now();
+      document.head.appendChild(script);
+    });
   }
 
   function queueDurableReservation(item) {
@@ -660,7 +711,7 @@
 
   function verifyReservation(item, attempt) {
   if (!selection || selection.requestId !== item.requestId) return;
-  postReservation(item).then(function (result) {
+  reserveViaJsonp(item).then(function (result) {
     if (!selection || selection.requestId !== item.requestId) return;
     if (result.alreadyReserved && (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type)) {
       var conflict = new Error('Este formulário já reservou outra data.');
@@ -725,7 +776,7 @@
   }
 
   function persistInBackground(item) {
-    postReservation(item).then(function (result) {
+    reserveViaJsonp(item).then(function (result) {
       if (!selection || selection.requestId !== item.requestId) return;
       if (result.alreadyReserved && (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type)) {
         var conflict = new Error('Este formulário já reservou outra data. Reabra o portal para escolher uma nova vaga.');
@@ -777,8 +828,6 @@
     else slot.common = item.optimisticRemaining;
     // A redução precisa sobreviver ao compartilhamento/retorno do Safari.
     saveSlotsCache();
-    queueDurableReservation(item);
-
     var category = el('category');
     if (category) {
       internalCategoryChange = true;
@@ -895,7 +944,7 @@
       if (isDental()) loadAgenda(false);
     });
     window.addEventListener('pagehide', function () {
-      if (selection && !selection.confirmed) queueDurableReservation(selection);
+      // Não iniciar nova reserva ao sair da página; evita concorrência de transportes.
     });
 
     if (isDental()) {
@@ -922,10 +971,10 @@
       };
     },
     prontoParaEnvio: function () {
-      return Boolean(selection && formReady());
+      return Boolean(selection && selection.confirmed && formReady());
     },
     formularioValido: function () {
-      return Boolean(selection && formReady());
+      return Boolean(selection && selection.confirmed && formReady());
     }
   });
 
