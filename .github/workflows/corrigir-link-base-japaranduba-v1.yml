@@ -99,6 +99,9 @@ jobs:
               package.write_text(pkg.replace(needle, replacement, 1), encoding='utf-8')
           PY
 
+      - name: Instalar dependências de teste
+        run: npm ci
+
       - name: Validar correção territorial específica
         run: node scripts/test_base_url_canonical_area.js
 
