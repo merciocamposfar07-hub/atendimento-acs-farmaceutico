@@ -1,0 +1,92 @@
+name: Implantar migração schema reservas odontologia v114
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-reparo-schema-reservas-odontologia-v114.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  implantar-validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar módulo isolado
+        run: node --check --input-type=commonjs < apps-script/ZZZZ_37_ReparoSchemaReservasOdontologiaV1.gs
+      - name: Baixar projeto Apps Script atual
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const config=JSON.parse(process.env.CLASP_JSON);
+          if(!config.scriptId) throw new Error('scriptId ausente');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+      - name: Adicionar somente o reparo odontológico
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cp apps-script/ZZZZ_37_ReparoSchemaReservasOdontologiaV1.gs "$LIVE_DIR/ZZZZ_37_ReparoSchemaReservasOdontologiaV1.js"
+          node --check --input-type=commonjs < "$LIVE_DIR/ZZZZ_37_ReparoSchemaReservasOdontologiaV1.js"
+      - name: Publicar migrar e validar
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          npx --yes @google/clasp@3.3.0 version "Backup antes da migração odontologia v114"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Migração schema reservas odontologia v114")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+          DEPLOYED=0
+          rollback(){ code=$?; trap - ERR; if [ "$DEPLOYED" = '1' ]; then npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback migração odontologia v114" "$DEPLOYMENT_ID" || true; fi; exit "$code"; }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Migração schema reservas odontologia v114" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          MIGRA=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=reparar_schema_reservas_odonto_v114")
+          echo "$MIGRA"
+          printf '%s' "$MIGRA" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);if(!j.ok||!Array.isArray(j.headers)||!j.headers.includes('VAGAS_RESTANTES'))process.exit(4);console.log('MIGRACAO_SCHEMA_OK',j.adicionadas);})"
+          STATUS=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=reserva_status&areaId=JAPARANDUBA&requestId=TESTE-V114-STATUS-0001")
+          echo "$STATUS"
+          printf '%s' "$STATUS" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);if(!(j.ok===true&&j.found===false))process.exit(5);console.log('STATUS_RESERVA_OK');})"
+          NEG=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=reservar_get&areaId=JAPARANDUBA&requestId=TESTE-V114-WRITE-0001&date=2099-12-31&type=comum")
+          echo "$NEG"
+          printf '%s' "$NEG" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);if(j.ok||j.code!=='DATE_NOT_FOUND')process.exit(6);console.log('ROTA_ESCRITA_PASSOU_PELO_SCHEMA',j.code);})"
+          trap - ERR
+          echo "VALIDACAO_ODONTOLOGIA_V114_OK versão $NEW_VERSION"
+      - name: Limpar credenciais
+        if: always()
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
