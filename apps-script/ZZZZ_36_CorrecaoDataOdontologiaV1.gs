@@ -10,7 +10,7 @@
  * - não altera moradores, profissionais, campanhas, recados ou outros módulos.
  */
 var TACS_CORRECAO_DATA_ODONTOLOGIA_V1=Object.freeze({
-  VERSAO:'2.2.0',
+  VERSAO:'2.3.0',
   TZ:'America/Recife',
   DIAS:Object.freeze(['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'])
 });
@@ -122,11 +122,32 @@ function correcaoDataOdontologiaV1AgendaCompleta_(areaId){
   };
 }
 
+
+function correcaoDataOdontologiaV1GarantirSchemaReservas_(ss){
+  var nome=TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_RESERVAS;
+  var sheet=ss.getSheetByName(nome);
+  if(!sheet)return;
+  var headers=sheet.getRange(1,1,1,Math.max(1,sheet.getLastColumn())).getDisplayValues()[0].map(function(valor){
+    return agendasProfissionaisTerritoriaisV1Normalizar_(valor);
+  });
+  var obrigatorios=TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.RESERVA_HEADERS.slice().concat(['AREA_ID','ATUALIZADO_EM']);
+  var faltantes=[];
+  obrigatorios.forEach(function(header){
+    var normal=agendasProfissionaisTerritoriaisV1Normalizar_(header);
+    if(headers.indexOf(normal)===-1){faltantes.push(header);headers.push(normal);}
+  });
+  if(!faltantes.length)return;
+  sheet.getRange(1,sheet.getLastColumn()+1,1,faltantes.length).setValues([faltantes]);
+  SpreadsheetApp.flush();
+}
+
 function correcaoDataOdontologiaV1StatusReserva_(p){
   var areaId=agendasProfissionaisTerritoriaisV1AreaId_(p.areaId||p.area)||TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.AREA_PADRAO;
   var requestId=correcaoDataOdontologiaV1Texto_(p.requestId);
   if(!/^[A-Z0-9-]{8,60}$/.test(requestId))return{ok:false,code:'INVALID_REQUEST',message:'Código da solicitação inválido.'};
-  var reservas=agendasProfissionaisTerritoriaisV1Tabela_(agendasProfissionaisTerritoriaisV1Planilha_(),TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_RESERVAS,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.RESERVA_HEADERS,true);
+  var ss=agendasProfissionaisTerritoriaisV1Planilha_();
+  correcaoDataOdontologiaV1GarantirSchemaReservas_(ss);
+  var reservas=agendasProfissionaisTerritoriaisV1Tabela_(ss,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_RESERVAS,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.RESERVA_HEADERS,true);
   var existente=agendasProfissionaisTerritoriaisV1Encontrar_(reservas,'CODIGO_SOLICITACAO',requestId,areaId);
   if(!existente)return{ok:true,found:false,requestId:requestId,areaId:areaId};
   var item=agendasProfissionaisTerritoriaisV1Objeto_(reservas.headers,existente.values);
@@ -154,6 +175,7 @@ function correcaoDataOdontologiaV1Reservar_(p){
   if(!lock.tryLock(15000))return{ok:false,code:'BUSY',message:'A agenda está sendo atualizada. Tente novamente.'};
   try{
     var ss=agendasProfissionaisTerritoriaisV1Planilha_();
+    correcaoDataOdontologiaV1GarantirSchemaReservas_(ss);
     var reservas=agendasProfissionaisTerritoriaisV1Tabela_(ss,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_RESERVAS,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.RESERVA_HEADERS,true);
     var existente=agendasProfissionaisTerritoriaisV1Encontrar_(reservas,'CODIGO_SOLICITACAO',requestId,areaId);
     if(existente){
