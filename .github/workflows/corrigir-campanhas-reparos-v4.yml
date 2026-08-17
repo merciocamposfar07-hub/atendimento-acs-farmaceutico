@@ -10,8 +10,6 @@ on:
 permissions:
   contents: write
 
-timeout-minutes: 35
-
 concurrency:
   group: corrigir-campanhas-reparos-v4
   cancel-in-progress: false
@@ -19,6 +17,7 @@ concurrency:
 jobs:
   aplicar-validar-publicar:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - name: Baixar repositório
         uses: actions/checkout@v4
