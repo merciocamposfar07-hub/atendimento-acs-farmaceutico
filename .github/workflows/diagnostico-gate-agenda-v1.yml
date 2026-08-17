@@ -1,0 +1,50 @@
+name: Diagnóstico gate agenda odontológica v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnostico-gate-agenda-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnosticar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Rodar gate e registrar falha exata
+        shell: bash
+        run: |
+          set +e
+          npm ci >/tmp/npm-ci.log 2>&1
+          ci=$?
+          if [ "$ci" -eq 0 ]; then
+            npm test >/tmp/npm-test.log 2>&1
+            code=$?
+          else
+            code=$ci
+            cp /tmp/npm-ci.log /tmp/npm-test.log
+          fi
+          {
+            echo "exit_code=$code"
+            echo "head_sha=$GITHUB_SHA"
+            echo "--- ultimo trecho ---"
+            tail -n 160 /tmp/npm-test.log
+          } > diagnostico-gate-agenda.txt
+          exit 0
+      - name: Publicar diagnóstico
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add diagnostico-gate-agenda.txt
+          git commit -m 'Registra diagnóstico do gate da agenda odontológica'
+          git push
