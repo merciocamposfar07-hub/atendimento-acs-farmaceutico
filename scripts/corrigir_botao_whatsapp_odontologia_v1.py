@@ -10,8 +10,6 @@ def replace_once(path, old, new):
     p.write_text(text.replace(old, new, 1))
 
 
-# 1) A agenda odontológica separa "formulário válido" de "reserva confirmada".
-# O botão visível pode ser usado após a seleção; o envio aguarda a confirmação real.
 replace_once(
     'portal-odontologia-segunda-sexta.js',
     """    prontoParaEnvio: function () {
@@ -27,10 +25,6 @@ replace_once(
   });"""
 )
 
-
-# 2) O card visível deixa de depender do #send legado oculto.
-# Se a reserva da agenda nova ainda estiver pendente, aguarda a MESMA solicitação,
-# sem gerar uma segunda baixa de vaga.
 replace_once(
     'portal-ajustes-finais.js',
     """  function reserveDentalIfNeeded() {
@@ -101,9 +95,6 @@ replace_once(
 """
 )
 
-
-# 3) Corrigir o fluxo guiado para reconhecer os novos botões odontológicos
-# e nunca tentar rolar o Safari para o botão #send que está oculto por CSS.
 replace_once(
     'portal-orientacao-morador.js',
     "document.querySelectorAll('.slot.selected,.integral-day.selected,[aria-checked=\"true\"]')",
@@ -156,8 +147,6 @@ replace_once(
       }"""
 )
 
-
-# 4) Cache-busting: força Safari/iPhone a buscar os JS corrigidos.
 replace_once(
     'index.html',
     'portal-ajustes-finais.js?v=20260817-dental-card-bridge-v1',
@@ -174,8 +163,6 @@ replace_once(
     'portal-orientacao-morador.js?v=20260817-fluxo-guiado-v3'
 )
 
-
-# 5) Atualizar o gate existente para travar esta regressão.
 p = Path('scripts/test_dental_confirmation_gate_v103.js')
 t = p.read_text()
 t = t.replace(
@@ -185,6 +172,10 @@ t = t.replace(
 t = t.replace(
     "assert.match(card,/api\\.prontoParaEnvio/);",
     "assert.match(card,/api\\.formularioValido/);"
+)
+t = t.replace(
+    "assert.match(card,/dental\\.reservedOnSelection/);",
+    "assert.doesNotMatch(card,/if \\(dental\\.reservedOnSelection\\)/);"
 )
 marker = "assert.match(dental,/prontoParaEnvio: function \\(\\)/);"
 extra = """assert.match(dental,/formularioValido: function \\(\\)/);
@@ -197,9 +188,8 @@ if extra.strip() not in t:
     t = t.replace(marker, marker + '\n' + extra, 1)
 p.write_text(t)
 
-
 Path('portal-version.json').write_text(json.dumps({
     'version': 'd17a1c0ff002',
-    'releasedAt': '2026-08-17T14:39:00Z',
+    'releasedAt': '2026-08-17T14:42:00Z',
     'scope': 'Estabilização do envio odontológico e fluxo visual no iPhone'
 }, ensure_ascii=False, indent=2) + '\n')
