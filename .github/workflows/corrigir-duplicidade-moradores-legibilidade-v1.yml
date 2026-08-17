@@ -1,0 +1,52 @@
+name: Corrigir legibilidade da duplicidade de moradores v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/corrigir_duplicidade_moradores_legibilidade_v1.py'
+      - '.github/workflows/corrigir-duplicidade-moradores-legibilidade-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: moradores-duplicidade-legibilidade-v1
+  cancel-in-progress: true
+
+jobs:
+  corrigir-testar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar correção restrita
+        run: python3 scripts/corrigir_duplicidade_moradores_legibilidade_v1.py
+      - name: Validar somente o bloco de duplicidade
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check teste-v1/painel-moradores-transport-v2.js
+          grep -q "duplicateResidentSummary" teste-v1/painel-moradores-transport-v2.js
+          grep -q "duplicateName.style.setProperty('color','#102d40','important')" teste-v1/painel-moradores-transport-v2.js
+          grep -q "duplicateMeta.style.setProperty('color','#29495b','important')" teste-v1/painel-moradores-transport-v2.js
+          grep -q "return '<strong>'+escapeHtml(item.nome)+'</strong>'" teste-v1/painel-moradores-transport-v2.js
+          grep -q "Unificar e manter '+itemLabel(item)+' como principal" teste-v1/painel-moradores-transport-v2.js
+          grep -q "20260817-duplicidade-legivel-v1" teste-v1/painel-moradores-v2.html
+      - name: Publicar somente os dois arquivos necessários
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add teste-v1/painel-moradores-transport-v2.js teste-v1/painel-moradores-v2.html
+          git commit -m 'Corrige nome e legibilidade na duplicidade de moradores'
+          git pull --rebase origin main
+          git push origin HEAD:main
