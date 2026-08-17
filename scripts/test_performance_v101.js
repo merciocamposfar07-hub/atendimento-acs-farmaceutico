@@ -34,7 +34,7 @@ async function buildDentalDom(ageMs) {
   });
   const {window} = dom;
   window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/test/exec';
-  window.localStorage.setItem('portalTacsDentalAgendaV102:JAPARANDUBA', JSON.stringify({
+  window.localStorage.setItem('portalTacsDentalAgendaV103FullWeek:JAPARANDUBA', JSON.stringify({
     savedAt: Date.now() - ageMs,
     data: {
       ok: true,
@@ -73,7 +73,7 @@ function testStaticSafety() {
   assert.ok(auto.includes('var CHECK_INTERVAL=60000;'));
   assert.ok(auto.includes('smartRefresh(button)'));
   assert.ok(!auto.includes("'portalTacsPublicDataV4'"), 'Atualizar não deve apagar cache público V4');
-  assert.ok(!auto.includes("'portalTacsDentalAgendaV102'"), 'Atualizar não deve apagar snapshot odontológico');
+  assert.ok(!auto.includes("'portalTacsDentalAgendaV103FullWeek'"), 'Atualizar não deve apagar snapshot odontológico completo');
   assert.ok(auto.includes('if(!pageSeen)'), 'Primeira leitura de versão não deve forçar recarga');
   assert.ok(auto.includes('if(pageSeen!==remote)'), 'Recarga automática deve ocorrer somente quando a versão mudar');
 
