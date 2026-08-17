@@ -69,7 +69,8 @@ class Harness {
       oldNoticeRequests: [],
       whatsAppMessages: [],
       shares: [],
-      alerts: []
+      alerts: [],
+      durableReservations: []
     };
     this.errors = [];
     this.reservationMessageDelay = 120;
@@ -283,6 +284,21 @@ class Harness {
           harness.records.shares.push(payload);
           return Promise.resolve();
         };
+        Object.defineProperty(window.navigator, 'sendBeacon', {
+          configurable: true,
+          value: function (url, body) {
+            const params = new window.URLSearchParams(String(body || ''));
+            harness.records.durableReservations.push({
+              url: String(url || ''),
+              action: params.get('action') || '',
+              areaId: params.get('areaId') || '',
+              requestId: params.get('requestId') || '',
+              date: params.get('date') || '',
+              type: params.get('type') || ''
+            });
+            return true;
+          }
+        });
         if (window.HTMLCanvasElement) {
           window.HTMLCanvasElement.prototype.getContext = function () {
             return {
@@ -329,14 +345,32 @@ async function testNonBlockingDentalCard() {
   const {window} = dom;
   try {
     const category = window.document.querySelector('#category');
-    category.value = 'Solicitar atendimento odontológico (dentista)';
+    category.value = 'Solicitar atendimento odontológico de emergência (dentista)';
     dispatch(window, category, 'change');
     await waitFor(
-      () => window.document.querySelector('#dentalSlots .sheet-dental-choice.common:not(:disabled)'),
-      'A vaga odontológica não apareceu para o teste não bloqueante'
+      () => window.document.querySelector('#dentalSlots .sheet-dental-choice.emergency:not(:disabled)'),
+      'A vaga emergencial única não apareceu para o teste não bloqueante'
     );
-    const slot = window.document.querySelector('#dentalSlots .sheet-dental-choice.common:not(:disabled)');
+    const slot = window.document.querySelector('#dentalSlots .sheet-dental-choice.emergency:not(:disabled)');
     slot.click();
+    await waitFor(
+      () => harness.records.durableReservations.length >= 1,
+      'A reserva durável não foi enfileirada no clique da vaga'
+    );
+    const durable = harness.records.durableReservations[0];
+    assert.equal(durable.action, 'reservar');
+    assert.equal(durable.type, 'emergencial');
+    assert.equal(durable.date, '2099-08-03');
+    assert.match(durable.requestId, /^MATIAS-/);
+    const cacheKey = window.PortalTacsOdontologiaV98.cacheKey;
+    const cached = JSON.parse(window.localStorage.getItem(cacheKey));
+    const monday = cached.data.dias.find(item => item.data === '2099-08-03');
+    assert.equal(monday.vagasEmergenciais, 0, 'A última vaga emergencial precisa permanecer 0 no cache local');
+    const renderedMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(card => /Segunda-feira/.test(card.textContent));
+    assert.match(renderedMonday.textContent, /Sem vaga de emergência/, 'A tela deve mostrar 0 imediatamente após o clique');
+    const durableBeforeHide = harness.records.durableReservations.length;
+    window.dispatchEvent(new window.Event('pagehide'));
+    assert.ok(harness.records.durableReservations.length > durableBeforeHide, 'Ao sair para o compartilhamento, a reserva pendente deve ser reenfileirada');
     await waitFor(
       () => harness.records.dentalReservations.length === 1,
       'A reserva em segundo plano não foi iniciada no clique da vaga'

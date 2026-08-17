@@ -518,6 +518,38 @@
     });
   }
 
+  function reservationParams(item) {
+    var params = new URLSearchParams();
+    params.set('action', 'reservar');
+    params.set('areaId', AREA_ID);
+    params.set('requestId', item.requestId);
+    params.set('date', item.date);
+    params.set('type', item.type);
+    params.set('nonce', 'durable-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8));
+    return params;
+  }
+
+  function queueDurableReservation(item) {
+    if (!API || !item || !item.requestId) return false;
+    var params = reservationParams(item);
+    try {
+      if (navigator.sendBeacon && navigator.sendBeacon(API, params)) return true;
+    } catch (error) {}
+    try {
+      if (window.fetch) {
+        window.fetch(API, {
+          method: 'POST',
+          body: params,
+          mode: 'no-cors',
+          keepalive: true,
+          credentials: 'omit'
+        }).catch(function () {});
+        return true;
+      }
+    } catch (error) {}
+    return false;
+  }
+
   function postReservation(item) {
     return new Promise(function (resolve, reject) {
       if (!API) { reject(new Error('A vaga não está conectada à planilha.')); return; }
@@ -714,6 +746,9 @@
     selection = item;
     if (type === 'emergencial') slot.emergency = item.optimisticRemaining;
     else slot.common = item.optimisticRemaining;
+    // A redução precisa sobreviver ao compartilhamento/retorno do Safari.
+    saveSlotsCache();
+    queueDurableReservation(item);
 
     var category = el('category');
     if (category) {
@@ -829,6 +864,9 @@
     });
     window.addEventListener('pageshow', function () {
       if (isDental()) loadAgenda(false);
+    });
+    window.addEventListener('pagehide', function () {
+      if (selection && !selection.confirmed) queueDurableReservation(selection);
     });
 
     if (isDental()) {

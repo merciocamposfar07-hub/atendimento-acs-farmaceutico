@@ -1,5 +1,5 @@
 {
-  "version": "dental-nonblocking-v104",
-  "releasedAt": "2026-08-17T15:03:00Z",
-  "scope": "Envio odontológico imediato; reserva e sincronização de vagas em segundo plano; simulação de confirmação atrasada"
+  "version": "dental-vacancy-persistence-v105",
+  "releasedAt": "2026-08-17T15:18:00Z",
+  "scope": "Redução automática 1→0 persistente no iPhone, reserva durável e envio sem espera"
 }
