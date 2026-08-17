@@ -1,0 +1,36 @@
+name: Debug reserva odontologica JSONP v107
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/debug-reserva-jsonp-v107.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Aplicar patch somente no runner
+        run: |
+          python3 scripts/corrigir_reserva_odontologia_jsonp_v107.py
+          python3 scripts/ajustar_teste_reserva_jsonp_v107.py
+      - name: Instalar dependências
+        run: npm ci
+      - name: Rodar somente simulação DOM com limite
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 70s node scripts/test_dom_flows.js 2>&1 | tee /tmp/dom.log
+          code=${PIPESTATUS[0]}
+          echo "EXIT_CODE=$code"
+          exit $code
