@@ -478,7 +478,7 @@ var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!teste
   function carregar(){
     if(window.__portalTacsCampanhasPeriodoV2)return;
     var s=document.createElement('script');
-    s.src='/atendimento-acs-farmaceutico/campanhas-periodo-v2.js?v=20260817-campanhas-admin-ui-v4';
+    s.src='/atendimento-acs-farmaceutico/campanhas-periodo-v2.js?v=20260817-campanhas-admin-ui-v4-1';
     s.async=true;
     s.onerror=function(){console.error('Campanhas por mês não pôde ser carregado.')};
     document.head.appendChild(s);
@@ -487,6 +487,6 @@ var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!teste
   if(aba)aba.addEventListener('click',carregar,{once:true});
 }());
 </script>
-<script src="/atendimento-acs-farmaceutico/recados-campanhas-whatsapp-card-v9.js?v=20260817-publicacoes-v10"></script>
+<script src="/atendimento-acs-farmaceutico/recados-campanhas-whatsapp-card-v9.js?v=20260817-publicacoes-v10-1"></script>
 </body>
 </html>

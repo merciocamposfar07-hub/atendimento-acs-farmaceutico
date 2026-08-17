@@ -287,6 +287,8 @@ function metaForCard(card){
 }
 function campaignTheme(meta,title){var t=txt(meta&&meta.COR_TEMA).toLowerCase();if(t)return t.replace(/[^a-z0-9-]/g,'');var n=txt(title).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');var temas=['lilas','dourado','azul-marinho','laranja','amarelo','vermelho','verde','roxo','rosa','azul'];for(var i=0;i<temas.length;i++)if(n.indexOf(temas[i])!==-1)return temas[i];return''}
 function applyCampaignTheme(box,meta){if(!box)return;Array.prototype.slice.call(box.classList).filter(function(c){return c.indexOf('camp-theme-')===0}).forEach(function(c){box.classList.remove(c)});var h=box.querySelector('h3'),theme=campaignTheme(meta,h&&h.textContent);if(theme)box.classList.add('camp-theme-'+theme)}
+function dateBrIsoV41(v){var m=txt(v).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+'/'+m[2]+'/'+m[1]:txt(v)}
+/* CAMPANHAS_ADMIN_V41 */
 function campaignPalette(theme){
   var map={
     lilas:['#6d28d9','#b87cff'],dourado:['#a96b00','#ffd66b'],roxo:['#6331a8','#b892ee'],
@@ -312,7 +314,14 @@ function decorateCampaignSummary(box,meta){
   var subtitle=copy.querySelector('.camp-admin-subtitle');
   if(!subtitle){subtitle=document.createElement('div');subtitle.className='camp-admin-subtitle';if(h)h.insertAdjacentElement('afterend',subtitle);else copy.insertBefore(subtitle,copy.firstChild)}
   subtitle.textContent=txt(meta&&meta.SUBTITULO);subtitle.hidden=!subtitle.textContent;
-  var period=copy.querySelector('.sub');if(period)period.classList.add('camp-admin-period');
+  var period=copy.querySelector('.sub');
+  if(period){
+    period.classList.add('camp-admin-period');
+    var startInput=box.querySelector('[name="inicio"]'),daysInput=box.querySelector('[name="dias"]'),validityInput=box.querySelector('[name="validade"]');
+    var startValue=isoDate(startInput&&startInput.value),validityValue=isoDate(meta&&meta.VALIDADE)||isoDate(validityInput&&validityInput.value),daysValue=txt(daysInput&&daysInput.value);
+    var bits=[];if(startValue)bits.push('Início: '+dateBrIsoV41(startValue));if(validityValue)bits.push('até '+dateBrIsoV41(validityValue));if(daysValue)bits.push(daysValue);
+    if(bits.length)period.textContent=bits.join(' • ');
+  }
   var badge=summary.querySelector('.camp-admin-badge');
   if(!badge){badge=document.createElement('span');badge.className='camp-admin-badge';badge.textContent='CAMPANHA DO MÊS';summary.insertBefore(badge,summary.firstChild)}
   var symbol=summary.querySelector('.camp-admin-symbol');
@@ -343,7 +352,17 @@ function decorateBox(box,meta){
     var label=start.previousElementSibling;
     start.parentNode.insertBefore(fields,label||start);
   }
+  var periodFields=box.querySelector('.camp-period-fields'),id=txt(box.dataset&&box.dataset.id),metaReady=id&&metadata[id];
+  if(periodFields&&metaReady&&periodFields.dataset.metaHydratedV41!=='1'){
+    var y=periodFields.querySelector('[name="ano"]'),m=periodFields.querySelector('[name="mes"]'),v=periodFields.querySelector('[name="validade"]'),sub=periodFields.querySelector('[name="subtitulo"]');
+    if(y&&meta.ANO)y.value=txt(meta.ANO);
+    if(m&&meta.MES)m.value=digits2(meta.MES);
+    if(v&&meta.VALIDADE)v.value=isoDate(meta.VALIDADE);
+    if(sub&&meta.SUBTITULO)sub.value=txt(meta.SUBTITULO);
+    periodFields.dataset.metaHydratedV41='1';
+  }
   wrapCampaignStart(start);
+  decorateCampaignSummary(box,meta);
   renameContentLabel(box);
 }
 function decorate(){
