@@ -1,4 +1,4 @@
-name: Corrigir botão de envio odontologia v2
+name: Corrigir envio odontologia não bloqueante v4
 
 on:
   push:
@@ -13,6 +13,7 @@ permissions:
 jobs:
   corrigir:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Baixar repositório
         uses: actions/checkout@v4
@@ -23,13 +24,21 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - name: Aplicar correção
+      - name: Aplicar correção em ambiente de teste
         run: python scripts/corrigir_botao_whatsapp_odontologia_v1.py
       - name: Instalar dependências
         run: npm ci
-      - name: Testar integração completa
+      - name: Testar integração completa e simulação de confirmação atrasada
         run: npm test
-      - name: Publicar correção
+      - name: Validar sintaxe dos arquivos alterados
+        run: |
+          set -euo pipefail
+          node --check portal-odontologia-segunda-sexta.js
+          node --check portal-ajustes-finais.js
+          node --check agenda-config.js
+          node --check scripts/test_dom_flows.js
+          node --check scripts/test_dental_confirmation_gate_v103.js
+      - name: Publicar somente após todos os testes aprovados
         run: |
           if git diff --quiet; then
             echo "Nenhuma alteração necessária."
@@ -37,7 +46,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add portal-odontologia-segunda-sexta.js portal-ajustes-finais.js portal-orientacao-morador.js index.html scripts/test_dental_confirmation_gate_v103.js portal-version.json
-          git commit -m "Estabiliza envio odontológico e fluxo visual no iPhone"
+          git add portal-odontologia-segunda-sexta.js portal-ajustes-finais.js portal-orientacao-morador.js agenda-config.js index.html scripts/test_dom_flows.js scripts/test_dental_confirmation_gate_v103.js portal-version.json
+          git commit -m "Restaura envio odontológico imediato com reserva em segundo plano"
           git push origin HEAD:main
-# gate-v2-ajustado
+# gate-v4-nao-bloqueante-com-simulacao
