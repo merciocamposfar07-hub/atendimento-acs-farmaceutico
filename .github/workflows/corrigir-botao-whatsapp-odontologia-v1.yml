@@ -40,3 +40,4 @@ jobs:
           git add portal-odontologia-segunda-sexta.js portal-ajustes-finais.js portal-orientacao-morador.js index.html scripts/test_dental_confirmation_gate_v103.js portal-version.json
           git commit -m "Estabiliza envio odontológico e fluxo visual no iPhone"
           git push origin HEAD:main
+# gate-v2-ajustado
