@@ -1,0 +1,72 @@
+name: Restaurar reserva odontologia backup v109
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/restaurar-reserva-odontologia-backup-v109.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: odontologia-backup-v109
+  cancel-in-progress: false
+
+jobs:
+  restaurar-validar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Confirmar backend odontológico ativo sem consumir vaga
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOYMENT_ID"
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          PROBE=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=reservar_get&probe=1")
+          printf '%s' "$PROBE" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const j=JSON.parse(s);if(!j.ok||!j.probe)process.exit(4);console.log("BACKEND_ODONTOLOGIA_OK");})'
+
+      - name: Restaurar somente o fluxo de reserva odontológica
+        run: python3 scripts/restaurar_reserva_odontologia_backup_v109.py
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Validar contrato restaurado
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "var shouldDisable = !formReady() || !selection.confirmed;" portal-odontologia-segunda-sexta.js
+          grep -q "postReservation(item).then(function (result)" portal-odontologia-segunda-sexta.js
+          grep -q "selection && selection.confirmed && formReady()" portal-odontologia-segunda-sexta.js
+          ! grep -A4 "window.addEventListener('pagehide'" portal-odontologia-segunda-sexta.js | grep -q "queueDurableReservation(selection)"
+          grep -q "restaura-reserva-estavel-v109" index.html
+          node scripts/test_admin_transport.js
+          node scripts/test_agendas_profissionais_territoriais.js
+          node scripts/test_multiagent_isolation_50.js
+
+      - name: Publicar somente os dois arquivos do escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add portal-odontologia-segunda-sexta.js index.html
+          git commit -m 'Restaura reserva odontológica estável no clique v109'
+          git pull --rebase origin main
+          git push origin HEAD:main
