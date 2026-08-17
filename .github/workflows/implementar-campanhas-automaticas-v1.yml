@@ -27,6 +27,9 @@ jobs:
       - name: Aplicar implementação controlada
         run: python scripts/implementar_campanhas_automaticas_v1.py
 
+      - name: Preservar workflow de implantação existente
+        run: git checkout -- .github/workflows/deploy-apps-script-moradores.yml
+
       - name: Normalizar teste gerado
         shell: bash
         run: |
@@ -70,7 +73,6 @@ jobs:
             central-administrativa-tacs.html \
             scripts/test_campanhas_automaticas_v1.js \
             package.json \
-            .github/workflows/deploy-apps-script-moradores.yml \
             portal-version.json \
             .github/apps-script-release-request
           git diff --cached --quiet && exit 0
