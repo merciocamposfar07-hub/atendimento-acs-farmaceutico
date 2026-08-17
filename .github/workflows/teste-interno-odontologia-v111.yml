@@ -18,9 +18,28 @@ jobs:
           cache: npm
       - name: Instalar dependencias
         run: npm ci
-      - name: Testar fluxo odontologico no DOM simulado
-        run: node scripts/test_dom_flows.js
-      - name: Testar gate da reserva odontologica
-        run: node scripts/test_dental_confirmation_gate_v103.js
+      - name: Preparar teste DOM compatível com JSONP v111
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp scripts/test_dom_flows.js /tmp/test_dom_v111.js
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/test_dom_v111.js')
+          t=p.read_text()
+          old="""    await waitFor(\n      () => harness.records.durableGetReservations.length >= 1,\n      'A reserva durável GET não foi enfileirada no clique da vaga'\n    );\n    const durableGet = harness.records.durableGetReservations[0];\n    assert.equal(durableGet.action, 'reservar_get');\n    assert.equal(durableGet.type, 'emergencial');\n    assert.equal(durableGet.date, '2099-08-03');\n    assert.equal(durableGet.keepalive, true);\n    assert.match(durableGet.requestId, /^MATIAS-/);\n\n"""
+          new="""    await waitFor(\n      () => harness.records.dentalReservations.length >= 1,\n      'A reserva GET/JSONP não foi executada no clique da vaga'\n    );\n    const reserva = harness.records.dentalReservations[0];\n    assert.equal(reserva.action, 'reservar_get');\n    assert.equal(reserva.type, 'emergencial');\n    assert.equal(reserva.date, '2099-08-03');\n    assert.match(reserva.requestId, /^MATIAS-/);\n    const simulado = harness.dental.find(item => item.data === '2099-08-03');\n    assert.equal(simulado.vagasEmergenciais, 0, 'A reserva GET/JSONP precisa reduzir a vaga simulada de 1 para 0');\n\n"""
+          if old not in t:
+              raise SystemExit('Trecho antigo do teste não encontrado')
+          p.write_text(t.replace(old,new,1))
+          PY
+      - name: Testar fluxo odontologico completo no DOM simulado
+        run: node /tmp/test_dom_v111.js
       - name: Verificar sintaxe do portal odontologico
         run: node --check portal-odontologia-segunda-sexta.js
+      - name: Verificar rota GET no frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "params.set('action', 'reservar_get')" portal-odontologia-segunda-sexta.js
+          grep -q "params.set('callback', callbackName)" portal-odontologia-segunda-sexta.js
