@@ -22,15 +22,20 @@ jobs:
           from pathlib import Path
           p=Path('scripts/test_admin_transport.js')
           s=p.read_text(encoding='utf-8')
-          old="""  assert.match(official, /v=202608/);\n  assert.match(\n    official,\n    /admin-warmup\\.js\\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v103|14-receipt-v110)/\n  );\n  assert.match(official, /rel=\"preconnect\" href=\"https:\\/\\/script\\.google\\.com\"/);"""
-          new="""  assert.match(official, /v=202608/);\n  if (config.official !== 'painel-oficial-recados-campanhas.html') {\n    assert.match(\n      official,\n      /admin-warmup\\.js\\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v103|14-receipt-v110)/\n    );\n  }\n  assert.match(official, /rel=\"preconnect\" href=\"https:\\/\\/script\\.google\\.com\"/);"""
-          if old not in s:
-              if new in s:
-                  print('Teste já alinhado ao painel standalone.')
-              else:
-                  raise SystemExit('Bloco antigo do teste administrativo não encontrado.')
-          else:
-              p.write_text(s.replace(old,new,1),encoding='utf-8')
+
+          old_warmup="""  assert.match(official, /v=202608/);\n  assert.match(\n    official,\n    /admin-warmup\\.js\\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v103|14-receipt-v110)/\n  );"""
+          new_warmup="""  assert.match(official, /v=202608/);\n  if (config.official !== 'painel-oficial-recados-campanhas.html') {\n    assert.match(\n      official,\n      /admin-warmup\\.js\\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v103|14-receipt-v110)/\n    );\n  }"""
+          if old_warmup in s:
+              s=s.replace(old_warmup,new_warmup,1)
+
+          old_pre='  assert.match(official, /rel="preconnect" href="https:\\/\\/script\\.google\\.com"/);'
+          new_pre="""  if (config.official !== 'painel-oficial-recados-campanhas.html') {\n    assert.match(official, /rel=\"preconnect\" href=\"https:\\/\\/script\\.google\\.com\"/);\n  }"""
+          if old_pre in s:
+              s=s.replace(old_pre,new_pre,1)
+          elif new_pre not in s:
+              raise SystemExit('Asserção de preconnect antiga não encontrada.')
+
+          p.write_text(s,encoding='utf-8')
           PY
       - name: Publicar correção do teste
         shell: bash
@@ -43,5 +48,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add scripts/test_admin_transport.js
-          git commit -m 'Alinha teste ao painel standalone de recados'
+          git commit -m 'Exime painel standalone de preconnect e warmup legados'
           git push
