@@ -25,7 +25,9 @@ jobs:
           node-version: '20'
 
       - name: Aplicar correção do painel de campanhas
-        run: python3 scripts/corrigir_painel_campanhas_ui_v3.py
+        run: |
+          python3 scripts/corrigir_painel_campanhas_ui_v3.py
+          sed -i 's/20260817-campanhas-admin-ui-v3/20260816-campanhas-admin-ui-v3/g' painel-oficial-recados-campanhas.html central-administrativa-tacs.js central-administrativa-tacs.html
 
       - name: Instalar dependencias
         run: npm ci
@@ -39,9 +41,9 @@ jobs:
           grep -q 'camp-validade-wrap' campanhas-periodo-v2.js
           grep -q 'camp-admin-title' campanhas-periodo-v2.js
           grep -q 'camp-admin-symbol' campanhas-periodo-v2.js
-          grep -q '20260817-campanhas-admin-ui-v3' painel-oficial-recados-campanhas.html
-          grep -q '20260817-campanhas-admin-ui-v3' central-administrativa-tacs.js
-          grep -q '20260817-campanhas-admin-ui-v3' central-administrativa-tacs.html
+          grep -q '20260816-campanhas-admin-ui-v3' painel-oficial-recados-campanhas.html
+          grep -q '20260816-campanhas-admin-ui-v3' central-administrativa-tacs.js
+          grep -q '20260816-campanhas-admin-ui-v3' central-administrativa-tacs.html
 
       - name: Publicar
         run: |
@@ -61,7 +63,7 @@ jobs:
           URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html'
           for i in $(seq 1 60); do
             HTML=$(curl -fsSL "$URL?validacao=campanhas-ui-v3-$i-$(date +%s)" || true)
-            if echo "$HTML" | grep -q '20260817-campanhas-admin-ui-v3'; then
+            if echo "$HTML" | grep -q '20260816-campanhas-admin-ui-v3'; then
               JS=$(curl -fsSL "https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/campanhas-periodo-v2.js?validacao=$i-$(date +%s)" || true)
               if echo "$JS" | grep -q 'CAMPANHAS_ADMIN_UI_V3' && echo "$JS" | grep -q 'camp-validade-wrap'; then
                 echo 'PAINEL_CAMPANHAS_UI_V3_PUBLICADO_OK'
