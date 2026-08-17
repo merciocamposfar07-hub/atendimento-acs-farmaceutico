@@ -45,6 +45,7 @@ jobs:
         run: |
           python3 scripts/corrigir_fluxo_odontologia_sync_v108.py
           python3 scripts/ajustar_v108_ci_timer.py
+          python3 scripts/ajustar_v108_test_loader.py
 
       - name: Instalar dependências
         run: npm ci
