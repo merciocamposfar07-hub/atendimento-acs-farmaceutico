@@ -1,0 +1,36 @@
+name: Corrigir cards campanhas tremor descricao v2
+on:
+  push:
+    paths:
+      - 'scripts/corrigir_cards_campanhas_tremor_descricao_v2.py'
+      - '.github/workflows/corrigir-cards-campanhas-tremor-descricao-v2.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar somente as alterações solicitadas
+        run: python scripts/corrigir_cards_campanhas_tremor_descricao_v2.py
+      - name: Validar JavaScript
+        run: node --check campanhas-periodo-v2.js
+      - name: Conferir escopo
+        run: |
+          git diff --check
+          git diff -- campanhas-periodo-v2.js
+      - name: Publicar correção
+        run: |
+          if git diff --quiet -- campanhas-periodo-v2.js; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add campanhas-periodo-v2.js
+          git commit -m 'Corrige tremor e descrições dos cards de campanhas'
+          git push
