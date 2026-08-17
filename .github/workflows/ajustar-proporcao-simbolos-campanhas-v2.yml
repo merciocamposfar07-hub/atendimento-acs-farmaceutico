@@ -1,0 +1,60 @@
+name: Ajustar proporcao simbolos campanhas v2
+
+on:
+  push:
+    paths:
+      - '.github/workflows/ajustar-proporcao-simbolos-campanhas-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ajustar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Ajustar proporcao sem alterar logica
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('campanhas-periodo-v2.js')
+          s = p.read_text(encoding='utf-8')
+          old = 'style="display:block;width:80px;height:80px;max-width:100%;max-height:100%;object-fit:contain;image-rendering:auto"'
+          new = 'style="display:block;width:68px;height:68px;max-width:82%;max-height:82%;margin:auto;object-fit:contain;image-rendering:auto"'
+          if old not in s:
+              raise SystemExit('Assinatura dos simbolos nao encontrada em campanhas-periodo-v2.js')
+          s = s.replace(old, new, 1)
+          s = s.replace('  width:80px;\n  height:80px;', '  width:68px;\n  height:68px;', 1)
+          s = s.replace('#listaCampanhas .camp-admin-symbol svg{width:68px;height:68px}', '#listaCampanhas .camp-admin-symbol svg{width:58px;height:58px}', 1)
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('recados-campanhas-whatsapp-card-v9.js')
+          s = p.read_text(encoding='utf-8')
+          old = '.camp-admin-symbol .camp-reference-symbol{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;max-width:100%!important;max-height:100%!important;filter:drop-shadow(0 5px 7px rgba(7,31,47,.24))!important}'
+          new = '.camp-admin-symbol .camp-reference-symbol{display:block!important;width:82%!important;height:82%!important;object-fit:contain!important;max-width:82%!important;max-height:82%!important;margin:auto!important;filter:drop-shadow(0 5px 7px rgba(7,31,47,.24))!important}'
+          if old not in s:
+              raise SystemExit('Assinatura do simbolo de Agosto nao encontrada em recados-campanhas-whatsapp-card-v9.js')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Validar escopo e sintaxe
+        run: |
+          node --check campanhas-periodo-v2.js
+          node --check recados-campanhas-whatsapp-card-v9.js
+          git diff --check
+          git diff --name-only | grep -qx 'campanhas-periodo-v2.js'
+          git diff --name-only | grep -qx 'recados-campanhas-whatsapp-card-v9.js'
+          test "$(git diff --name-only | wc -l)" -eq 2
+          grep -q 'width:82%!important;height:82%!important' recados-campanhas-whatsapp-card-v9.js
+          grep -q 'width:68px;height:68px;max-width:82%;max-height:82%' campanhas-periodo-v2.js
+      - name: Publicar ajuste
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add campanhas-periodo-v2.js recados-campanhas-whatsapp-card-v9.js
+          git commit -m 'Ajusta margens e proporcao dos simbolos das campanhas'
+          git push
