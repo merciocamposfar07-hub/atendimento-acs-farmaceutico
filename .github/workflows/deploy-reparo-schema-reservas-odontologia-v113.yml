@@ -1,0 +1,128 @@
+name: Implantar reparo schema reservas odontologia v113
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-reparo-schema-reservas-odontologia-v113.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  implantar-e-validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NO_COLOR: '1'
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validar módulo isolado
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_37_ReparoSchemaReservasOdontologiaV1.gs
+
+      - name: Validar credenciais sem exibi-las
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar projeto Apps Script atual
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const config=JSON.parse(process.env.CLASP_JSON);
+          if(!config.scriptId) throw new Error('scriptId ausente');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Adicionar somente o reparo odontológico
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cp apps-script/ZZZZ_37_ReparoSchemaReservasOdontologiaV1.gs "$LIVE_DIR/ZZZZ_37_ReparoSchemaReservasOdontologiaV1.gs"
+          node --check --input-type=commonjs < "$LIVE_DIR/ZZZZ_37_ReparoSchemaReservasOdontologiaV1.gs"
+
+      - name: Publicar e validar sem consumir vaga
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+
+          npx --yes @google/clasp@3.3.0 version "Backup antes do reparo schema odontologia v113"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Reparo schema reservas odontologia v113")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+
+          DEPLOYED=0
+          rollback(){
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback reparo odontologia v113" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Reparo schema reservas odontologia v113" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+
+          # Esta chamada NÃO reserva vaga. Ela apenas força a leitura da tabela de reservas.
+          STATUS=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=reserva_status&areaId=JAPARANDUBA&requestId=TESTE-V113-STATUS-0001")
+          echo "$STATUS"
+          printf '%s' "$STATUS" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);if(!(j.ok===true&&j.found===false))process.exit(5);console.log('SCHEMA_RESERVAS_OK_SEM_CONSUMIR_VAGA');})"
+
+          AGENDA=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=agenda&areaId=JAPARANDUBA")
+          printf '%s' "$AGENDA" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);if(!(j.ok&&Array.isArray(j.dias)&&j.dias.length===5))process.exit(6);console.log('AGENDA_ODONTOLOGICA_OK',j.dias.map(d=>[d.dia,d.vagasComuns,d.vagasEmergenciais]));})"
+
+          trap - ERR
+          echo "Implantação validada: versão $NEW_VERSION"
+
+      - name: Remover credenciais temporárias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
