@@ -1,0 +1,171 @@
+name: Corrigir campanhas reparos V4
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-campanhas-reparos-v4.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+timeout-minutes: 35
+
+concurrency:
+  group: corrigir-campanhas-reparos-v4
+  cancel-in-progress: false
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar reparos autorizados
+        run: python3 scripts/corrigir_campanhas_reparos_v4.py
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Regressão completa
+        run: npm test
+
+      - name: Validar escopo e contratos preservados
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'CAMPANHAS_ADMIN_FIX_V4' campanhas-periodo-v2.js
+          grep -q 'camp-start-wrap' campanhas-periodo-v2.js
+          grep -q 'Postar no status do WhatsApp' recados-campanhas-whatsapp-card-v9.js
+          grep -q 'publicacao-campanha-status' recados-campanhas-whatsapp-card-v9.js
+          grep -q 'CAMPANHAS_PUBLICAS_CARDS_V4' portal-controle-integral.js
+          grep -q 'campaignIconSvg' portal-controle-integral.js
+          ! grep -q '🤱' portal-controle-integral.js
+          grep -q '20260817-campanhas-admin-ui-v4' painel-oficial-recados-campanhas.html
+          grep -q '20260817-publicacoes-v10' painel-oficial-recados-campanhas.html
+          grep -q '20260817-campanhas-cards-v4' index.html
+          grep -q '20260817-campanhas-reparos-v4' central-administrativa-tacs.js
+          grep -q '20260816-campanhas-reparos-v4' central-administrativa-tacs.html
+          grep -q "VERSAO:'1.1.0'" apps-script/ZZZZ_35_CampanhasAutomaticasV1.gs
+          grep -q 'RENOTIF_REVISAO' apps-script/ZZZZ_35_CampanhasAutomaticasV1.gs
+          grep -q 'ZZZZ_35_CampanhasAutomaticasV1' scripts/build_apps_script_release.js
+          grep -q 'name="inicio"' painel-oficial-recados-campanhas.html
+          grep -q 'admin_publicacoes_salvar_campanha' painel-oficial-recados-campanhas.html
+          grep -q 'admin_publicacoes_salvar_campanha' campanhas-periodo-v2.js
+          git diff --check
+
+      - name: Publicar alterações validadas
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add \
+            campanhas-periodo-v2.js \
+            recados-campanhas-whatsapp-card-v9.js \
+            portal-controle-integral.js \
+            painel-oficial-recados-campanhas.html \
+            index.html \
+            central-administrativa-tacs.js \
+            central-administrativa-tacs.html \
+            portal-version.json \
+            apps-script/ZZZZ_35_CampanhasAutomaticasV1.gs \
+            .github/apps-script-release-request
+          git diff --cached --quiet && exit 0
+          git commit -m 'Corrige cards campanhas, status WhatsApp e data inicial'
+          for tentativa in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((tentativa * 2))
+          done
+          exit 1
+
+      - name: Validar GitHub Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico'
+          for i in $(seq 1 90); do
+            q="?v=reparos-v4-$i-$(date +%s)"
+            painel="$(curl -fsSL "$BASE/painel-oficial-recados-campanhas.html$q" || true)"
+            campjs="$(curl -fsSL "$BASE/campanhas-periodo-v2.js$q" || true)"
+            wajs="$(curl -fsSL "$BASE/recados-campanhas-whatsapp-card-v9.js$q" || true)"
+            portaljs="$(curl -fsSL "$BASE/portal-controle-integral.js$q" || true)"
+            index="$(curl -fsSL "$BASE/$q" || true)"
+            if printf '%s' "$painel" | grep -q '20260817-publicacoes-v10' && \
+               printf '%s' "$campjs" | grep -q 'CAMPANHAS_ADMIN_FIX_V4' && \
+               printf '%s' "$wajs" | grep -q 'Postar no status do WhatsApp' && \
+               printf '%s' "$portaljs" | grep -q 'CAMPANHAS_PUBLICAS_CARDS_V4' && \
+               ! printf '%s' "$portaljs" | grep -q '🤱' && \
+               printf '%s' "$index" | grep -q '20260817-campanhas-cards-v4'; then
+              echo 'PAGES_CAMPANHAS_REPAROS_V4_OK'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'GitHub Pages não publicou os reparos V4 no prazo.' >&2
+          exit 1
+
+      - name: Aguardar Apps Script V1.1.0 e reenviar campanhas ativas
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+          pronto=0
+          for i in $(seq 1 110); do
+            status="$(curl -LfsS --max-time 20 "$API?action=campanhas_automaticas_status&_=$(date +%s)" || true)"
+            if STATUS="$status" node - <<'NODE'
+          const r=JSON.parse(process.env.STATUS||'{}');
+          process.exit(r.ok===true && r.versao==='1.1.0' ? 0 : 1);
+          NODE
+            then
+              pronto=1
+              echo 'APPS_SCRIPT_CAMPANHAS_V1_1_0_OK'
+              break
+            fi
+            sleep 10
+          done
+          test "$pronto" = '1'
+
+          : > "$RUNNER_TEMP/campanhas-push-v4.jsonl"
+          offset=0
+          for rodada in $(seq 1 30); do
+            resposta="$(curl -LfsS --max-time 90 "$API?action=campanhas_automaticas_executar&offset=$offset&limit=25&_=$(date +%s)")"
+            printf '%s\n' "$resposta" | tee -a "$RUNNER_TEMP/campanhas-push-v4.jsonl"
+            proximo="$(RESPOSTA="$resposta" node - <<'NODE'
+          const r=JSON.parse(process.env.RESPOSTA||'{}');
+          if(!Array.isArray(r.resultados)){console.error('Resposta de reenvio inválida');process.exit(2)}
+          for(const x of r.resultados){
+            const tentativas=Number(x.enviadas||0)+Number(x.pendentes||0)+Number(x.erros||0);
+            console.error(`PUSH_AREA ${x.areaId}: enviadas=${x.enviadas||0} pendentes=${x.pendentes||0} erros=${x.erros||0} tentativas=${tentativas}`);
+          }
+          process.stdout.write(r.nextOffset==null?'':String(r.nextOffset));
+          NODE
+            )"
+            [ -z "$proximo" ] && break
+            offset="$proximo"
+          done
+
+          node - "$RUNNER_TEMP/campanhas-push-v4.jsonl" <<'NODE'
+          const fs=require('fs');
+          const linhas=fs.readFileSync(process.argv[2],'utf8').trim().split(/\n+/).filter(Boolean).map(JSON.parse);
+          const resultados=linhas.flatMap(r=>Array.isArray(r.resultados)?r.resultados:[]);
+          const jap=resultados.find(r=>r.areaId==='JAPARANDUBA');
+          if(!jap) throw new Error('JAPARANDUBA não apareceu no reenvio.');
+          const total=Number(jap.enviadas||0)+Number(jap.pendentes||0)+Number(jap.erros||0);
+          if(total<2) throw new Error('As duas campanhas ativas de Japaranduba não foram processadas para reenvio.');
+          if(Number(jap.erros||0)>0) console.log('::warning title=Push de campanha com erro::Japaranduba teve '+jap.erros+' erro(s) no reenvio.');
+          if(Number(jap.pendentes||0)>0) console.log('::warning title=Push de campanha pendente::Japaranduba teve '+jap.pendentes+' notificação(ões) pendente(s).');
+          console.log('REENVIO_CAMPANHAS_JAPARANDUBA_PROCESSADO');
+          NODE
