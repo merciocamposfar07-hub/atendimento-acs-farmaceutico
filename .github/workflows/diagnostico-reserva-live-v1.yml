@@ -1,0 +1,44 @@
+name: Diagnostico reserva odontologica live
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnostico-reserva-live-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnosticar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conferir endpoint e estado live sem gravar
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOYMENT_ID"
+          CONFIG_ID=$(node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('agenda-config.js','utf8');
+          const m=s.match(/DENTAL_AGENDA_API_URL\s*=\s*'https:\/\/script\.google\.com\/macros\/s\/([^/]+)\/exec'/);
+          if(!m) process.exit(2);
+          process.stdout.write(m[1]);
+          NODE
+          )
+          if [ "$CONFIG_ID" = "$DEPLOYMENT_ID" ]; then
+            echo 'ENDPOINT_CONFIG_IGUAL_DEPLOYMENT=SIM'
+          else
+            echo 'ENDPOINT_CONFIG_IGUAL_DEPLOYMENT=NAO'
+            exit 3
+          fi
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          PROBE=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=reservar_get&probe=1")
+          printf '%s' "$PROBE" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const j=JSON.parse(s);if(!j.ok||!j.probe)process.exit(4);console.log("PROBE_OK=SIM VERSAO="+String(j.versao||"?")+" ROTA="+String(j.route||"?"));})'
+          AGENDA=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=agenda&areaId=JAPARANDUBA&_=$(date +%s)")
+          printf '%s' "$AGENDA" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const j=JSON.parse(s);if(!j.ok)process.exit(5);const a=(j.dias||[]).find(x=>String(x.data||x.date||"").slice(0,10)==="2026-08-20");if(!a){console.log("QUINTA_20_08=NAO_ENCONTRADA");process.exit(6)}; console.log("QUINTA_20_08 COMUNS="+String(a.vagasComuns ?? a.comum ?? "?")+" EMERGENCIAIS="+String(a.vagasEmergenciais ?? a.emergencial ?? "?"));})'
