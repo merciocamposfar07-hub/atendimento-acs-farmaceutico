@@ -24,7 +24,7 @@ assert.match(publicBackend,/campanhas: campanhas/);
 const renderer=fs.readFileSync(path.join(ROOT,'portal-controle-integral.js'),'utf8');
 for(const c of ['campaign-theme-lilas','campaign-theme-dourado','campaign-description','integral-campaign'])assert.ok(renderer.includes(c));
 const panel=fs.readFileSync(path.join(ROOT,'painel-oficial-recados-campanhas.html'),'utf8');
-assert.match(panel,/A publicação foi salva fora do período atual/);
+assert.match(panel,/admin_publicacoes_dados/);
 assert.match(panel,/subtitulo/);
 const period=fs.readFileSync(path.join(ROOT,'campanhas-periodo-v2.js'),'utf8');
 assert.match(period,/Cor da campanha/);
