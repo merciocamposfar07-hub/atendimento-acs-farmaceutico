@@ -1,0 +1,60 @@
+name: Corrigir acesso TACS apenas por PIN v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-acesso-tacs-pin-only-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: corrigir-acesso-tacs-pin-only-v1
+  cancel-in-progress: false
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar correção PIN-only
+        run: python3 scripts/corrigir_acesso_tacs_pin_only_v1.py
+
+      - name: Validar JavaScript do frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check central-administrativa-tacs.js
+          node --check central-tacs-login-rapido-v1.js
+          node --check teste-v1/painel-moradores-transport-v2.js
+
+      - name: Rodar testes do Portal TACS
+        run: |
+          npm ci
+          npm test
+
+      - name: Solicitar publicação do Apps Script e gravar correção
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'PIN_ONLY_TACS_V1 %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .github/apps-script-release-request
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            apps-script/ZZZZ_31_LoginRapidoTacsV1.gs \
+            central-administrativa-tacs.html \
+            central-administrativa-tacs.js \
+            central-tacs-login-rapido-v1.js \
+            painel-oficial-recados-campanhas.html \
+            teste-v1/painel-moradores-v2.html \
+            teste-v1/painel-moradores-transport-v2.js \
+            scripts/test_multiagent_quick_login.js \
+            .github/apps-script-release-request
+          git commit -m 'Retira CNS do acesso TACS e mantém somente PIN'
+          git push
