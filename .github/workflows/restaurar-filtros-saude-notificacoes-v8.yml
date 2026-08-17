@@ -1,0 +1,47 @@
+name: Restaurar filtros saúde notificações v8
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/restaurar-filtros-saude-notificacoes-v8.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  restaurar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restaurar função existente no projeto
+        run: python3 scripts/ajuste_saude_notificacoes_filtros_v8.py
+      - name: Validar somente painel de recados e central
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'SAUDE_NOTIFICACOES_FILTROS_V8' painel-oficial-recados-campanhas.html
+          grep -q 'data-saude-filtro="ATIVO"' painel-oficial-recados-campanhas.html
+          grep -q 'data-saude-filtro="REPARO"' painel-oficial-recados-campanhas.html
+          grep -q 'saudeNotificacoesLista" class="saude-lista oculto"' painel-oficial-recados-campanhas.html
+          grep -q 'selecionarSaudeFiltro' painel-oficial-recados-campanhas.html
+          grep -q 'Fechar lista' painel-oficial-recados-campanhas.html
+          node scripts/test_notification_health_registry.js
+          node scripts/test_notification_repair_button.js
+      - name: Publicar alteração isolada
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add painel-oficial-recados-campanhas.html central-administrativa-tacs.js central-administrativa-tacs.html
+          if git diff --cached --quiet; then
+            echo 'Função já restaurada.'
+            exit 0
+          fi
+          git commit -m 'Restaura botões clicáveis de aparelhos e reparos v8'
+          git pull --rebase origin main
+          git push origin HEAD:main
