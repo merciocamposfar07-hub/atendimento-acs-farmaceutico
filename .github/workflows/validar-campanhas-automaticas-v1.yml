@@ -1,0 +1,50 @@
+name: Validar campanhas automáticas V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/validar-campanhas-automaticas-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Sincronizar e validar produção
+        shell: bash
+        env:
+          API: https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec
+        run: |
+          set -euo pipefail
+          status="$(curl -L -fsS --max-time 60 "$API?action=campanhas_automaticas_status&_=$(date +%s)")"
+          execucao="$(curl -L -fsS --max-time 120 "$API?action=campanhas_automaticas_executar&offset=0&limit=50&_=$(date +%s)")"
+          japa="$(curl -L -fsS --max-time 60 "$API?action=painel_publico&areaId=JAPARANDUBA&_=$(date +%s)")"
+          matias="$(curl -L -fsS --max-time 60 "$API?action=painel_publico&areaId=SITIO_MATIAS&_=$(date +%s)")"
+          STATUS="$status" EXECUCAO="$execucao" JAPA="$japa" MATIAS="$matias" node - <<'NODE'
+          const status=JSON.parse(process.env.STATUS||'{}');
+          const execucao=JSON.parse(process.env.EXECUCAO||'{}');
+          const japa=JSON.parse(process.env.JAPA||'{}');
+          const matias=JSON.parse(process.env.MATIAS||'{}');
+          if(status.ok!==true || status.versao!=='1.0.0' || status.templates!==18) throw new Error('Status do motor automático inválido: '+JSON.stringify(status));
+          if(execucao.ok!==true) throw new Error('Sincronização automática falhou: '+JSON.stringify(execucao));
+          function validarPortal(nome,r,area){
+            if(r.ok!==true || r.areaId!==area) throw new Error(nome+' sem isolamento territorial: '+JSON.stringify({ok:r.ok,areaId:r.areaId}));
+            const camp=Array.isArray(r.campanhas)?r.campanhas:[];
+            const lilas=camp.find(x=>String(x.title||'').trim()==='Agosto Lilás');
+            const dourado=camp.find(x=>String(x.title||'').trim()==='Agosto Dourado');
+            if(!lilas||!dourado) throw new Error(nome+' não recebeu os dois cards de agosto: '+JSON.stringify(camp));
+            if(lilas.theme!=='lilas'||dourado.theme!=='dourado') throw new Error(nome+' com cores incorretas: '+JSON.stringify({lilas:lilas.theme,dourado:dourado.theme}));
+            if(lilas.validity!=='2026-08-31'||dourado.validity!=='2026-08-31') throw new Error(nome+' com validade incorreta.');
+            if(lilas.subtitle!=='Fim da violência contra a mulher') throw new Error(nome+' subtítulo lilás incorreto.');
+            if(dourado.subtitle!=='Incentivo ao aleitamento materno') throw new Error(nome+' subtítulo dourado incorreto.');
+            return {total:camp.length,lilas:{tema:lilas.theme,validade:lilas.validity},dourado:{tema:dourado.theme,validade:dourado.validity}};
+          }
+          const resumo={status:{versao:status.versao,templates:status.templates},execucao:{areas:execucao.totalAreas,resultados:execucao.resultados,erros:execucao.erros},JAPARANDUBA:validarPortal('Japaranduba',japa,'JAPARANDUBA'),SITIO_MATIAS:validarPortal('Sítio Matias',matias,'SITIO_MATIAS')};
+          console.log('CAMPANHAS_AUTOMATICAS_PRODUCAO_OK');
+          console.log(JSON.stringify(resumo,null,2));
+          NODE
