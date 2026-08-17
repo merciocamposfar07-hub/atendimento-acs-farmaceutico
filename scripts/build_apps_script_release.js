@@ -96,6 +96,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_35_CampanhasAutomaticasV1.gs',
     marker: 'TACS_CAMPANHAS_AUTOMATICAS_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs',
+    marker: 'TACS_CORRECAO_DATA_ODONTOLOGIA_V1'
   }
 ];
 
