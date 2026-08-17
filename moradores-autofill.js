@@ -318,7 +318,7 @@
       cleanupTransport();
 
       if (attempt < 2) {
-        setStatus(status, 'A consulta está demorando. Tentando novamente...', '');
+        setStatus(status, 'Aguarde', '');
         setTimeout(function () {
           if (token === requestId) startJsonp(doc, token, attempt + 1);
         }, 700);
@@ -368,7 +368,7 @@
       activeTimeout = setTimeout(function () {
         if (token !== requestId) return;
         cleanupTransport();
-        setStatus(status, 'A consulta está demorando. Tentando novamente...', '');
+        setStatus(status, 'Aguarde', '');
         startJsonp(doc, token, 0);
       }, 6000);
 
@@ -389,7 +389,7 @@
       var token = ++requestId;
       cleanupTransport();
       clearResidentFields();
-      setStatus(status, 'Buscando cadastro...', '');
+      setStatus(status, 'Aguarde', '');
       startBridge(doc, token);
     }
 
@@ -401,7 +401,7 @@
 
       if (validCpf(doc) || validCns(doc)) {
         clearResidentFields();
-        setStatus(status, 'Documento completo. Buscando cadastro...', 'valid');
+        setStatus(status, 'Documento completo. Aguarde', 'valid');
         timer = setTimeout(lookup, 350);
       } else if (doc.length) {
         clearResidentFields();

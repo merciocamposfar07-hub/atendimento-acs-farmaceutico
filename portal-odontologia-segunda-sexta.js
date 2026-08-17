@@ -9,8 +9,6 @@
   var REGULAR = 'Solicitar atendimento odontológico (dentista)';
   var EMERGENCY = 'Solicitar atendimento odontológico de emergência (dentista)';
   var ALLOWED_DAYS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
-  var AREA_ID = String(new URLSearchParams(location.search).get('area') || window.TACS_AREA_ID || 'JAPARANDUBA')
-    .toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 64) || 'JAPARANDUBA';
 
   var slots = [];
   var selection = null;
@@ -18,12 +16,6 @@
   var rendering = false;
   var internalCategoryChange = false;
   var verifyTimer = null;
-  var loadPromise = null;
-  var CACHE_KEY = 'portalTacsDentalAgendaV103FullWeek:' + AREA_ID;
-  var CACHE_MAX_MS = 6 * 60 * 60 * 1000;
-  var CACHE_ACTIONABLE_MS = 90 * 1000;
-  var cacheSavedAt = 0;
-  var cachedSnapshot = false;
 
   function el(id) { return document.getElementById(id); }
   function clean(value) { return String(value == null ? '' : value).trim(); }
@@ -98,7 +90,7 @@
   function normalizeSlot(raw, index) {
     var day = clean(raw && (raw.dia || raw.day));
     var date = normalizeDate(raw && (raw.data || raw.date));
-    if (ALLOWED_DAYS.indexOf(day) === -1) return null;
+    if (ALLOWED_DAYS.indexOf(day) === -1 || !date || !currentDate(date)) return null;
     return {
       id: clean(raw.id || raw.codigo || raw.row || '') || day + '-' + date + '-' + index,
       day: day,
@@ -106,65 +98,6 @@
       common: numberValue(raw, 'comum'),
       emergency: numberValue(raw, 'emergencial')
     };
-  }
-
-  function normalizeAgendaData(data) {
-    var normalized = [];
-    (Array.isArray(data && data.dias) ? data.dias : []).forEach(function (row, index) {
-      var slot = normalizeSlot(row, index);
-      if (slot) normalized.push(slot);
-    });
-    normalized.sort(function (a, b) { var da = ALLOWED_DAYS.indexOf(a.day), db = ALLOWED_DAYS.indexOf(b.day); if (da !== db) return da - db; var aa = dateStamp(a.date), bb = dateStamp(b.date); if (!Number.isFinite(aa)) aa = Number.MAX_SAFE_INTEGER; if (!Number.isFinite(bb)) bb = Number.MAX_SAFE_INTEGER; return aa - bb; });
-    return normalized;
-  }
-
-  function readAgendaCache() {
-    try {
-      var item = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-      if (!item || !item.data || item.data.ok === false) return null;
-      var age = Date.now() - Number(item.savedAt || 0);
-      if (age < 0 || age > CACHE_MAX_MS) return null;
-      return { data: item.data, savedAt: Number(item.savedAt || 0) };
-    } catch (error) { return null; }
-  }
-
-  function saveAgendaCache(data) {
-    if (!data || data.ok === false) return;
-    cacheSavedAt = Date.now();
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: cacheSavedAt, data: data })); }
-    catch (error) {}
-  }
-
-  function saveSlotsCache() {
-    var data = {
-      ok: true,
-      dias: slots.map(function (slot) {
-        return {
-          id: slot.id, dia: slot.day, data: slot.date,
-          vagasComuns: slot.common, vagasEmergenciais: slot.emergency
-        };
-      })
-    };
-    saveAgendaCache(data);
-  }
-
-  function applyAgendaData(data, fromCache, savedAt) {
-    slots = normalizeAgendaData(data);
-    cachedSnapshot = Boolean(fromCache);
-    cacheSavedAt = Number(savedAt || (fromCache ? 0 : Date.now()));
-  }
-
-  function cachedIsActionable() {
-    return !cachedSnapshot || (cacheSavedAt > 0 && Date.now() - cacheSavedAt <= CACHE_ACTIONABLE_MS);
-  }
-
-  function loadCachedAgenda() {
-    var item = readAgendaCache();
-    if (!item) return false;
-    applyAgendaData(item.data, true, item.savedAt);
-    loading = false;
-    renderAgenda();
-    return slots.length > 0;
   }
 
   function setSubject(value) {
@@ -215,17 +148,16 @@
   }
 
   function statusText() {
-  if (loading) return slots.length ? 'Agenda exibida. Confirmando as vagas atuais…' : 'Atualizando a agenda odontológica pela planilha...';
-  if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
-  if (selection) {
-    if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
-    if (selection.explicitFailure) return selection.errorMessage || 'Não foi possível reservar essa vaga.';
-    if (selection.slowSync) return 'Vaga selecionada. A agenda ainda está sincronizando em segundo plano; o envio continua disponível.';
-    return 'Vaga selecionada. Atualizando a quantidade na agenda em segundo plano...';
+    if (loading) return 'Atualizando a agenda odontológica pela planilha...';
+    if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
+    if (selection) {
+      if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
+      if (selection.explicitFailure) return selection.errorMessage || 'Não foi possível reservar essa vaga.';
+      if (selection.slowSync) return 'Vaga selecionada. A atualização da planilha está demorando, mas o envio pelo WhatsApp já está liberado.';
+      return 'Vaga selecionada. A quantidade foi reduzida no portal e o envio pelo WhatsApp já está liberado.';
+    }
+    return 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
   }
-  if (cachedSnapshot) return 'Última agenda recebida exibida. Confirmando a disponibilidade atual ao selecionar uma vaga.';
-  return 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
-}
 
   function renderAgenda() {
     if (!isDental()) return;
@@ -270,7 +202,7 @@
         button.dataset.id = slot.id;
         button.dataset.type = type;
         button.dataset.value = value === null ? '' : String(value);
-        button.disabled = Boolean(selection && !same) || (!same && (value === null || value <= 0 || !cachedIsActionable()));
+        button.disabled = Boolean(selection && !same) || (!same && (value === null || value <= 0));
         button.textContent = vacancyLabel(value, type);
         if (same) button.classList.add('selected');
         actions.appendChild(button);
@@ -292,8 +224,7 @@
       var callbackName = 'dentalV98Agenda' + Date.now() + Math.floor(Math.random() * 10000);
       var script = document.createElement('script');
       var finished = false;
-      var timeoutMs = slots.length ? 4500 : 12000;
-      var timer = setTimeout(function () { finish(new Error('Tempo de resposta excedido.')); }, timeoutMs);
+      var timer = setTimeout(function () { finish(new Error('Tempo de resposta excedido.')); }, 12000);
 
       function cleanup() {
         clearTimeout(timer);
@@ -312,52 +243,38 @@
         else finish(null, data);
       };
       script.onerror = function () { finish(new Error('Não foi possível consultar a planilha odontológica.')); };
-      script.src = API + (API.indexOf('?') === -1 ? '?' : '&') + 'action=agenda&areaId=' + encodeURIComponent(AREA_ID) + '&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
+      script.src = API + (API.indexOf('?') === -1 ? '?' : '&') + 'action=agenda&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
       document.head.appendChild(script);
     });
   }
 
   function loadAgenda(preserveSelection) {
-    if (!isDental()) return Promise.resolve(null);
-    if (loading && loadPromise) return loadPromise;
+    if (!isDental() || loading) return;
     loading = true;
     if (!preserveSelection) selection = null;
     renderAgenda();
-    loadPromise = fetchAgenda().then(function (data) {
-      var pendingSelection = selection;
-      applyAgendaData(data, false, Date.now());
-      saveAgendaCache(data);
-      if (pendingSelection && selection && selection.requestId === pendingSelection.requestId) {
-        var selectedSlot = slotForSelection(pendingSelection);
-        if (selectedSlot) {
-          if (pendingSelection.type === 'emergencial') selectedSlot.emergency = Math.min(Number(selectedSlot.emergency), pendingSelection.optimisticRemaining);
-          else selectedSlot.common = Math.min(Number(selectedSlot.common), pendingSelection.optimisticRemaining);
-        }
-      }
+    fetchAgenda().then(function (data) {
+      var normalized = [];
+      (Array.isArray(data.dias) ? data.dias : []).forEach(function (row, index) {
+        var slot = normalizeSlot(row, index);
+        if (slot) normalized.push(slot);
+      });
+      normalized.sort(function (a, b) { return dateStamp(a.date) - dateStamp(b.date); });
+      slots = normalized;
       loading = false;
-      loadPromise = null;
       renderAgenda();
       refreshSend();
-      return data;
     }).catch(function (error) {
       loading = false;
-      loadPromise = null;
+      if (!preserveSelection) slots = [];
       renderAgenda();
       var status = el('dentalStatus');
       if (status && !selection) {
-        if (slots.length) {
-          cachedSnapshot = true;
-          status.textContent = 'Não foi possível confirmar a agenda agora. A última leitura recebida continua visível.';
-          status.className = 'dental-status';
-        } else {
-          status.textContent = error.message || 'Não foi possível consultar a planilha odontológica.';
-          status.className = 'dental-status error';
-        }
+        status.textContent = error.message || 'Não foi possível consultar a planilha odontológica.';
+        status.className = 'dental-status error';
       }
       refreshSend();
-      return null;
     });
-    return loadPromise;
   }
 
   function validCpf(value) {
@@ -419,19 +336,13 @@
   }
 
   function refreshSend() {
-  var send = el('send');
-  if (!send) return;
-  if (!isDental() || !selection) {
+    var send = el('send');
+    if (!send || !isDental() || !selection) return;
+    var shouldDisable = !formReady();
+    if (send.hidden) send.hidden = false;
+    if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
     if (send.dataset) delete send.dataset.dentalReservationPending;
-    return;
   }
-  // Comportamento restaurado do ponto estável: o envio só é liberado depois que
-  // a reserva foi realmente confirmada na planilha.
-  var shouldDisable = !formReady() || !selection.confirmed;
-  if (send.hidden) send.hidden = false;
-  if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
-  if (send.dataset) delete send.dataset.dentalReservationPending;
-}
 
   function makeCode() {
     var alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -445,189 +356,6 @@
     }
     var parts = recifeToday().split('-');
     return 'MATIAS-' + parts[2] + parts[1] + parts[0].slice(2) + '-' + suffix;
-  }
-
-  function fetchReservationStatus(item) {
-    return new Promise(function (resolve, reject) {
-      if (!API) { reject(new Error('A vaga não está conectada à planilha.')); return; }
-      var callbackName = 'dentalV103Status' + Date.now() + Math.floor(Math.random() * 10000);
-      var script = document.createElement('script');
-      var finished = false;
-      var timer = setTimeout(function () {
-        var timeout = new Error('A confirmação da reserva ainda não respondeu.');
-        timeout.code = 'TIMEOUT';
-        finish(timeout);
-      }, 6500);
-
-      function cleanup() {
-        clearTimeout(timer);
-        try { delete window[callbackName]; } catch (error) { window[callbackName] = undefined; }
-        if (script.parentNode) script.remove();
-      }
-      function finish(error, data) {
-        if (finished) return;
-        finished = true;
-        cleanup();
-        error ? reject(error) : resolve(data || {});
-      }
-
-      window[callbackName] = function (data) {
-        if (!data || data.ok === false) {
-          var error = new Error(data && data.message ? data.message : 'Não foi possível conferir a reserva.');
-          error.code = clean(data && data.code);
-          finish(error);
-          return;
-        }
-        finish(null, data);
-      };
-      script.onerror = function () {
-        var error = new Error('Não foi possível conferir a confirmação da vaga.');
-        error.code = 'TIMEOUT';
-        finish(error);
-      };
-      script.src = API + (API.indexOf('?') === -1 ? '?' : '&') +
-        'action=reserva_status&areaId=' + encodeURIComponent(AREA_ID) +
-        '&requestId=' + encodeURIComponent(item.requestId) +
-        '&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
-      document.head.appendChild(script);
-    });
-  }
-
-  function applyReservationStatus(item, result) {
-    if (!result || !result.found) return false;
-    if (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type) {
-      var conflict = new Error('Este formulário já reservou outra data.');
-      conflict.code = 'CONFLICT';
-      throw conflict;
-    }
-    if (Number.isFinite(Number(result.remaining))) applyServerRemaining(item, result.remaining);
-    item.confirmed = true;
-    item.slowSync = false;
-    renderAgenda();
-    refreshSend();
-    return true;
-  }
-
-  function recoverReservationStatus(item) {
-    return fetchReservationStatus(item).then(function (result) {
-      if (!result || !result.found) {
-        var notFound = new Error('A reserva ainda não apareceu na planilha.');
-        notFound.code = 'NOT_FOUND';
-        throw notFound;
-      }
-      applyReservationStatus(item, result);
-      return result;
-    });
-  }
-
-  function reservationParams(item) {
-    var params = new URLSearchParams();
-    params.set('action', 'reservar');
-    params.set('areaId', AREA_ID);
-    params.set('requestId', item.requestId);
-    params.set('date', item.date);
-    params.set('type', item.type);
-    params.set('nonce', 'durable-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8));
-    return params;
-  }
-
-  function reserveViaJsonp(item) {
-    return new Promise(function (resolve, reject) {
-      if (!API) { reject(new Error('A vaga não está conectada à planilha.')); return; }
-      var callbackName = 'dentalV107Reserve' + Date.now() + Math.floor(Math.random() * 10000);
-      var script = document.createElement('script');
-      var finished = false;
-      var timer = setTimeout(function () {
-        var timeout = new Error('A reserva ainda não respondeu.');
-        timeout.code = 'TIMEOUT';
-        finish(timeout);
-      }, 12000);
-
-      function cleanup() {
-        clearTimeout(timer);
-        try { delete window[callbackName]; } catch (error) { window[callbackName] = undefined; }
-        if (script.parentNode) script.remove();
-      }
-      function finish(error, data) {
-        if (finished) return;
-        finished = true;
-        cleanup();
-        error ? reject(error) : resolve(data || {});
-      }
-
-      window[callbackName] = function (data) {
-        if (!data || data.ok === false) {
-          var error = new Error(data && data.message ? data.message : 'Não foi possível reservar a vaga.');
-          error.code = clean(data && data.code);
-          finish(error);
-          return;
-        }
-        finish(null, data);
-      };
-      script.onerror = function () {
-        var error = new Error('Não foi possível confirmar a reserva.');
-        error.code = 'TIMEOUT';
-        finish(error);
-      };
-      script.src = API + (API.indexOf('?') === -1 ? '?' : '&') +
-        'action=reservar_get&areaId=' + encodeURIComponent(AREA_ID) +
-        '&requestId=' + encodeURIComponent(item.requestId) +
-        '&date=' + encodeURIComponent(item.date) +
-        '&type=' + encodeURIComponent(item.type) +
-        '&callback=' + encodeURIComponent(callbackName) +
-        '&v=' + Date.now();
-      document.head.appendChild(script);
-    });
-  }
-
-  function queueDurableReservation(item) {
-    if (!API || !item || !item.requestId) return false;
-    var params = reservationParams(item);
-
-    // O canal de leitura GET/JSONP do Apps Script já é o canal comprovadamente
-    // funcional no Safari. A reserva usa o mesmo canal, com requestId idempotente.
-    var getParams = new URLSearchParams(params.toString());
-    getParams.set('action', 'reservar_get');
-    getParams.set('v', String(Date.now()));
-    var getUrl = API + (API.indexOf('?') === -1 ? '?' : '&') + getParams.toString();
-    var getQueued = false;
-    try {
-      if (window.fetch) {
-        window.fetch(getUrl, {
-          method: 'GET',
-          mode: 'no-cors',
-          keepalive: true,
-          credentials: 'omit',
-          cache: 'no-store'
-        }).catch(function () {});
-        getQueued = true;
-      }
-    } catch (error) {}
-    if (!getQueued) {
-      try {
-        var beaconImage = new Image();
-        beaconImage.src = getUrl;
-        getQueued = true;
-      } catch (error) {}
-    }
-
-    // Mantém os transportes antigos apenas como redundância/fallback.
-    try {
-      if (navigator.sendBeacon && navigator.sendBeacon(API, params)) return true;
-    } catch (error) {}
-    try {
-      if (window.fetch) {
-        window.fetch(API, {
-          method: 'POST',
-          body: params,
-          mode: 'no-cors',
-          keepalive: true,
-          credentials: 'omit'
-        }).catch(function () {});
-        return true;
-      }
-    } catch (error) {}
-    return getQueued;
   }
 
   function postReservation(item) {
@@ -674,13 +402,17 @@
 
       iframe.name = frameName;
       iframe.hidden = true;
+      iframe.style.display = 'none';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.position = 'absolute';
       iframe.setAttribute('aria-hidden', 'true');
       form.method = 'post';
       form.action = API;
       form.target = frameName;
       form.hidden = true;
       add('action', 'reservar');
-      add('areaId', AREA_ID);
+      add('areaId', (window.TACS_AREA_ID || 'JAPARANDUBA'));
       add('requestId', item.requestId);
       add('date', item.date);
       add('type', item.type);
@@ -706,47 +438,55 @@
     if (item.type === 'emergencial') slot.emergency = Math.max(0, Number(remaining));
     else slot.common = Math.max(0, Number(remaining));
     item.optimisticRemaining = Math.max(0, Number(remaining));
-    saveSlotsCache();
   }
 
   function verifyReservation(item, attempt) {
-  if (!selection || selection.requestId !== item.requestId) return;
-  reserveViaJsonp(item).then(function (result) {
     if (!selection || selection.requestId !== item.requestId) return;
-    if (result.alreadyReserved && (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type)) {
-      var conflict = new Error('Este formulário já reservou outra data.');
-      conflict.code = 'CONFLICT';
-      throw conflict;
-    }
-    if (Number.isFinite(Number(result.remaining))) applyServerRemaining(item, result.remaining);
-    item.confirmed = true;
-    item.slowSync = false;
-    renderAgenda();
-    refreshSend();
-    loadAgenda(true);
-  }).catch(function (error) {
-    if (!selection || selection.requestId !== item.requestId) return;
-    if (error.code && error.code !== 'TIMEOUT') {
-      handleExplicitReservationFailure(item, error);
-      return;
-    }
-    recoverReservationStatus(item).then(function () {
-      loadAgenda(true);
-    }).catch(function (statusError) {
-      if (statusError.code && statusError.code !== 'NOT_FOUND' && statusError.code !== 'TIMEOUT') {
-        handleExplicitReservationFailure(item, statusError);
+    fetchAgenda().then(function (data) {
+      var rows = Array.isArray(data.dias) ? data.dias : [];
+      var found = null;
+      for (var i = 0; i < rows.length; i += 1) {
+        if (normalizeDate(rows[i] && (rows[i].data || rows[i].date)) === item.date) { found = rows[i]; break; }
+      }
+      var serverCount = found ? numberValue(found, item.type) : null;
+      if (serverCount !== null && serverCount <= item.optimisticRemaining) {
+        applyServerRemaining(item, serverCount);
+        item.confirmed = true;
+        item.slowSync = false;
+        renderAgenda();
+        refreshSend();
         return;
       }
-      if (attempt < 5) {
-        scheduleVerify(item, attempt + 1, Math.min(6000, 1500 + attempt * 900));
-        return;
+      if (attempt < 2) {
+        postReservation(item).then(function (result) {
+          if (result.alreadyReserved && (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type)) {
+            var conflict = new Error('Este formulário já reservou outra data.');
+            conflict.code = 'CONFLICT';
+            throw conflict;
+          }
+          if (Number.isFinite(Number(result.remaining))) applyServerRemaining(item, result.remaining);
+          item.confirmed = true;
+          item.slowSync = false;
+          renderAgenda();
+          refreshSend();
+        }).catch(function (error) {
+          if (error.code && error.code !== 'TIMEOUT') handleExplicitReservationFailure(item, error);
+          else scheduleVerify(item, attempt + 1, 2500);
+        });
+      } else {
+        item.slowSync = true;
+        renderAgenda();
+        refreshSend();
       }
-      item.slowSync = true;
-      renderAgenda();
-      refreshSend();
+    }).catch(function () {
+      if (attempt < 2) scheduleVerify(item, attempt + 1, 2500);
+      else {
+        item.slowSync = true;
+        renderAgenda();
+        refreshSend();
+      }
     });
-  });
-}
+  }
 
   function scheduleVerify(item, attempt, delay) {
     clearTimeout(verifyTimer);
@@ -776,8 +516,6 @@
   }
 
   function persistInBackground(item) {
-    // Restaura o transporte que funcionava no fluxo estável: POST por formulário/iframe
-    // no próprio clique, aguardando a resposta real da planilha antes de liberar envio.
     postReservation(item).then(function (result) {
       if (!selection || selection.requestId !== item.requestId) return;
       if (result.alreadyReserved && (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type)) {
@@ -791,16 +529,8 @@
       renderAgenda();
       refreshSend();
     }).catch(function (error) {
-      if (error.code && error.code !== 'TIMEOUT') {
-        handleExplicitReservationFailure(item, error);
-        return;
-      }
-      recoverReservationStatus(item).then(function () {
-        loadAgenda(true);
-      }).catch(function (statusError) {
-        if (statusError.code && statusError.code !== 'NOT_FOUND' && statusError.code !== 'TIMEOUT') handleExplicitReservationFailure(item, statusError);
-        else scheduleVerify(item, 0, 900);
-      });
+      if (error.code && error.code !== 'TIMEOUT') handleExplicitReservationFailure(item, error);
+      else scheduleVerify(item, 0, 1200);
     });
   }
 
@@ -828,9 +558,7 @@
     selection = item;
     if (type === 'emergencial') slot.emergency = item.optimisticRemaining;
     else slot.common = item.optimisticRemaining;
-    // Mantém a redução visual imediata, mas a operação só é considerada concluída
-    // quando o POST estável confirma a gravação real na planilha.
-    saveSlotsCache();
+
     var category = el('category');
     if (category) {
       internalCategoryChange = true;
@@ -946,41 +674,9 @@
     window.addEventListener('pageshow', function () {
       if (isDental()) loadAgenda(false);
     });
-    window.addEventListener('pagehide', function () {
-      // Nenhuma nova reserva é disparada ao sair da página. A reserva já foi iniciada
-      // no clique e o envio só é liberado após confirmação real.
-    });
 
-    if (isDental()) {
-      loadCachedAgenda();
-      loadAgenda(false);
-    }
+    if (isDental()) loadAgenda(false);
   }
-
-  window.PortalTacsOdontologiaV98 = Object.freeze({
-    atualizar: function () { return loadAgenda(false); },
-    temCache: function () { return Boolean(readAgendaCache()); },
-    cacheKey: CACHE_KEY,
-    selecao: function () {
-      if (!selection) return null;
-      return {
-        id: selection.id,
-        day: selection.day,
-        date: selection.date,
-        type: selection.type,
-        requestId: selection.requestId,
-        confirmed: Boolean(selection.confirmed),
-        pending: !selection.confirmed,
-        ready: Boolean(selection.confirmed && formReady())
-      };
-    },
-    prontoParaEnvio: function () {
-      return Boolean(selection && selection.confirmed && formReady());
-    },
-    formularioValido: function () {
-      return Boolean(selection && selection.confirmed && formReady());
-    }
-  });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();
