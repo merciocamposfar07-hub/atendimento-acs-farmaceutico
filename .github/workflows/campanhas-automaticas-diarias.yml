@@ -1,0 +1,38 @@
+name: Campanhas automáticas diárias
+
+on:
+  schedule:
+    - cron: '5 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: campanhas-automaticas-diarias
+  cancel-in-progress: false
+
+jobs:
+  sincronizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Publicar campanhas vigentes e disparar notificações pendentes
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+          offset=0
+          for rodada in $(seq 1 30); do
+            resposta="$(curl -fsSL --max-time 90 "$API?action=campanhas_automaticas_executar&offset=$offset&limit=25&_=$(date +%s)")"
+            echo "$resposta"
+            RESPOSTA="$resposta" node - <<'NODE'
+          const r=JSON.parse(process.env.RESPOSTA||'{}');
+          if(r.ok!==true){console.error(r);process.exit(1)}
+          NODE
+            proximo="$(RESPOSTA="$resposta" node -e "const r=JSON.parse(process.env.RESPOSTA||'{}'); process.stdout.write(r.nextOffset==null?'':String(r.nextOffset))")"
+            [ -z "$proximo" ] && exit 0
+            offset="$proximo"
+          done
+          echo 'Quantidade máxima de lotes excedida.' >&2
+          exit 1
