@@ -427,7 +427,7 @@
   }
   // A vaga é reservada no clique. O envio só é liberado depois que o
   // Apps Script confirma a gravação; não existe nova conferência no botão Enviar.
-  var shouldDisable = !formReady() || !selection.confirmed;
+  var shouldDisable = !formReady();
   if (send.hidden) send.hidden = false;
   if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
   if (send.dataset) delete send.dataset.dentalReservationPending;
@@ -826,8 +826,11 @@
     selection = item;
     if (type === 'emergencial') slot.emergency = item.optimisticRemaining;
     else slot.common = item.optimisticRemaining;
-    // A redução precisa sobreviver ao compartilhamento/retorno do Safari.
+    // A redução visual acontece no clique e a mesma reserva é enviada imediatamente
+    // por transporte durável. Todos os canais usam o MESMO requestId, então o backend
+    // idempotente nunca desconta a vaga duas vezes.
     saveSlotsCache();
+    queueDurableReservation(item);
     var category = el('category');
     if (category) {
       internalCategoryChange = true;
@@ -944,7 +947,9 @@
       if (isDental()) loadAgenda(false);
     });
     window.addEventListener('pagehide', function () {
-      // Não iniciar nova reserva ao sair da página; evita concorrência de transportes.
+      // Se o Safari sair para o WhatsApp/compartilhamento antes da confirmação visual,
+      // reenfileira a MESMA reserva. O requestId idempotente impede abatimento duplo.
+      if (selection && !selection.confirmed) queueDurableReservation(selection);
     });
 
     if (isDental()) {
@@ -971,10 +976,10 @@
       };
     },
     prontoParaEnvio: function () {
-      return Boolean(selection && selection.confirmed && formReady());
+      return Boolean(selection && formReady());
     },
     formularioValido: function () {
-      return Boolean(selection && selection.confirmed && formReady());
+      return Boolean(selection && formReady());
     }
   });
 

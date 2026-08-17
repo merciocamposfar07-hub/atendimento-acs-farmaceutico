@@ -19,6 +19,12 @@ function wait(milliseconds) {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
+function abortableResolved(value) {
+  const promise = Promise.resolve(value);
+  promise.abort = function () {};
+  return promise;
+}
+
 async function waitFor(predicate, message, timeout = 5000) {
   const started = Date.now();
   while (Date.now() - started < timeout) {
@@ -259,11 +265,11 @@ class Harness {
             };
             return delayed;
           }
-          return Promise.resolve(Buffer.from(source));
+          return abortableResolved(Buffer.from(source));
         }
         if (parsed.origin === PORTAL_ORIGIN) {
           if (options.element && options.element.tagName === 'IFRAME') {
-            return Promise.resolve(Buffer.from('<!doctype html><title>Espelho simulado</title>'));
+            return abortableResolved(Buffer.from('<!doctype html><title>Espelho simulado</title>'));
           }
           const relative = decodeURIComponent(parsed.pathname).replace(/^\/+/, '') || 'index.html';
           const file = path.resolve(ROOT, relative);
@@ -279,7 +285,7 @@ class Harness {
               assert.ok(text.includes(original), 'O teste não encontrou o envio odontológico ao WhatsApp');
               source = Buffer.from(text.replace(original, replacement));
             }
-            return Promise.resolve(source);
+            return abortableResolved(source);
           } catch (error) {
             return null;
           }
@@ -398,7 +404,7 @@ async function fillPatient(window, name, subject) {
 
 async function testNonBlockingDentalCard() {
   const harness = new Harness();
-  harness.reservationMessageDelay = 300;
+  harness.reservationMessageDelay = 1500;
   const dom = await harness.dom('index.html');
   const {window} = dom;
   try {
@@ -407,10 +413,21 @@ async function testNonBlockingDentalCard() {
     dispatch(window, category, 'change');
     await waitFor(
       () => window.document.querySelector('#dentalSlots .sheet-dental-choice.emergency:not(:disabled)'),
-      'A vaga emergencial única não apareceu para o teste JSONP'
+      'A vaga emergencial única não apareceu para o teste não bloqueante'
     );
     const slot = window.document.querySelector('#dentalSlots .sheet-dental-choice.emergency:not(:disabled)');
     slot.click();
+
+    await waitFor(
+      () => harness.records.durableGetReservations.length >= 1,
+      'A reserva durável GET não foi enfileirada no clique da vaga'
+    );
+    const durableGet = harness.records.durableGetReservations[0];
+    assert.equal(durableGet.action, 'reservar_get');
+    assert.equal(durableGet.type, 'emergencial');
+    assert.equal(durableGet.date, '2099-08-03');
+    assert.equal(durableGet.keepalive, true);
+    assert.match(durableGet.requestId, /^MATIAS-/);
 
     const cacheKey = window.PortalTacsOdontologiaV98.cacheKey;
     const cached = JSON.parse(window.localStorage.getItem(cacheKey));
@@ -419,46 +436,36 @@ async function testNonBlockingDentalCard() {
     const renderedMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(card => /Segunda-feira/.test(card.textContent));
     assert.match(renderedMonday.textContent, /Sem vaga de emergência/, 'A tela deve mostrar 0 imediatamente após o clique');
 
-    await fillPatient(window, 'Paciente Teste JSONP', 'Solicitação odontológica simulada.');
-    const card = window.document.querySelector('#sendPetroleumCard');
-    assert.ok(card, 'Botão visível do card não encontrado');
-    assert.equal(card.disabled, true, 'Enquanto a gravação do clique não voltou do servidor, o envio deve permanecer protegido');
+    await fillPatient(window, 'Paciente Teste Não Bloqueante', 'Solicitação odontológica simulada.');
+    const send = window.document.querySelector('#send');
+    assert.ok(send, 'Botão do WhatsApp não encontrado');
+    await waitFor(() => !send.disabled, 'O botão do WhatsApp permaneceu bloqueado esperando a planilha', 800);
 
     const pending = window.PortalTacsOdontologiaV98.selecao();
-    assert.ok(pending && pending.confirmed === false, 'A simulação precisa observar o intervalo antes da confirmação JSONP');
-
+    assert.ok(pending && pending.confirmed === false, 'O teste precisa enviar enquanto a confirmação ainda está em trânsito');
+    const reservationsBeforeSend = harness.records.dentalReservations.length;
+    const started = Date.now();
+    send.click();
     await waitFor(
-      () => harness.records.dentalReservations.length === 1,
-      'A rota JSONP não gravou a reserva simulada no estado persistente',
-      2000
+      () => harness.records.whatsAppMessages.length === 1,
+      'O WhatsApp não abriu durante a sincronização da vaga',
+      1000
     );
+    const elapsed = Date.now() - started;
+    assert.ok(elapsed < 1000, `O WhatsApp ficou bloqueado ${elapsed} ms esperando a agenda`);
+    assert.equal(window.PortalTacsOdontologiaV98.selecao().confirmed, false, 'O WhatsApp só abriu depois da confirmação; regressão do v107');
+    assert.equal(harness.records.dentalReservations.length, reservationsBeforeSend, 'Enviar ao WhatsApp não pode criar outra reserva');
+    assert.equal(harness.records.alerts.length, 0, 'O envio ao WhatsApp não pode mostrar alerta de confirmação da vaga');
+
     await waitFor(
       () => {
         const current = window.PortalTacsOdontologiaV98.selecao();
-        return current && current.confirmed === true && !card.disabled;
+        return current && current.confirmed === true;
       },
-      'O botão não foi liberado depois que a gravação foi confirmada',
-      2000
+      'A confirmação em segundo plano não concluiu',
+      3000
     );
-
-    const serverSlot = harness.dental.find(item => item.data === '2099-08-03');
-    assert.equal(serverSlot.vagasEmergenciais, 0, 'O estado persistente do servidor simulado deve ficar em 0');
-    const reservationsBeforeSend = harness.records.dentalReservations.length;
-    const started = Date.now();
-    card.click();
-    await waitFor(
-      () => harness.records.shares.length === 1,
-      'O compartilhamento não abriu depois que a vaga já estava confirmada',
-      1400
-    );
-    const elapsed = Date.now() - started;
-    assert.ok(elapsed < 1400, `O envio voltou a fazer uma segunda conferência e demorou ${elapsed} ms`);
-    assert.equal(
-      harness.records.dentalReservations.length,
-      reservationsBeforeSend,
-      'O clique em enviar não pode criar uma segunda reserva'
-    );
-    assert.equal(harness.records.alerts.length, 0, 'O envio não pode exibir alerta de confirmação da vaga');
+    assert.equal(harness.dental.find(item => item.data === '2099-08-03').vagasEmergenciais, 0, 'O servidor simulado deve permanecer em 0');
 
     await window.PortalTacsOdontologiaV98.atualizar();
     await waitFor(
@@ -469,7 +476,6 @@ async function testNonBlockingDentalCard() {
       'Após releitura/atualização, a vaga reservada reapareceu como disponível',
       2000
     );
-    assert.equal(harness.dental.find(item => item.data === '2099-08-03').vagasEmergenciais, 0);
   } finally {
     window.close();
   }
