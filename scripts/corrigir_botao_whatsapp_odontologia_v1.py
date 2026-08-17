@@ -6,171 +6,200 @@ def replace_once(path, old, new):
     p = Path(path)
     text = p.read_text()
     if old not in text:
-        raise SystemExit(f'Trecho não encontrado em {path}: {old[:120]!r}')
+        raise SystemExit(f'Trecho não encontrado em {path}: {old[:160]!r}')
     p.write_text(text.replace(old, new, 1))
 
 
+# 1) A agenda odontológica separa "formulário válido" de "reserva confirmada".
+# O botão visível pode ser usado após a seleção; o envio aguarda a confirmação real.
 replace_once(
     'portal-odontologia-segunda-sexta.js',
-    """  window.PortalTacsOdontologiaV98 = Object.freeze({
-    atualizar: function () { return loadAgenda(false); },
-    temCache: function () { return Boolean(readAgendaCache()); },
-    cacheKey: CACHE_KEY
-  });""",
-    """  window.PortalTacsOdontologiaV98 = Object.freeze({
-    atualizar: function () { return loadAgenda(false); },
-    temCache: function () { return Boolean(readAgendaCache()); },
-    cacheKey: CACHE_KEY,
-    selecao: function () {
-      if (!selection) return null;
-      return {
-        id: selection.id,
-        day: selection.day,
-        date: selection.date,
-        type: selection.type,
-        requestId: selection.requestId,
-        confirmed: Boolean(selection.confirmed),
-        pending: !selection.confirmed,
-        ready: Boolean(selection.confirmed && formReady())
-      };
-    },
-    prontoParaEnvio: function () {
+    """    prontoParaEnvio: function () {
       return Boolean(selection && selection.confirmed && formReady());
+    }
+  });""",
+    """    prontoParaEnvio: function () {
+      return Boolean(selection && selection.confirmed && formReady());
+    },
+    formularioValido: function () {
+      return Boolean(selection && formReady());
     }
   });"""
 )
 
+
+# 2) O card visível deixa de depender do #send legado oculto.
+# Se a reserva da agenda nova ainda estiver pendente, aguarda a MESMA solicitação,
+# sem gerar uma segunda baixa de vaga.
 replace_once(
     'portal-ajustes-finais.js',
-    "      code: makeCode(identity),",
-    "      code: (function () { var dental = currentDentalSelection(); return dental && dental.confirmed && dental.requestId ? dental.requestId : makeCode(identity); }()),"
-)
-
-replace_once(
-    'portal-ajustes-finais.js',
-    """  function selectedDental() {
-    var category = clean(el('category') && el('category').value);
-    if (normalize(category).indexOf('odontologico') === -1) return null;
-    var selected = document.querySelector('#dentalSlots .slot.selected');
-    if (!selected) return null;
-    var dateText = clean(selected.querySelector('span') && selected.querySelector('span').textContent);
-    var match = dateText.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
-    if (!match) return null;
-    var type = normalize(category).indexOf('emergencia') !== -1 ? 'emergencial' : 'comum';
-    return {
-      date: match[3] + '-' + match[2] + '-' + match[1],
-      type: type,
-      key: match[3] + '-' + match[2] + '-' + match[1] + '|' + type
-    };
-  }
-""",
-    """  function currentDentalSelection() {
-    var api = window.PortalTacsOdontologiaV98;
-    if (!api || typeof api.selecao !== 'function') return null;
-    var current = api.selecao();
-    return current && current.date && current.type ? current : null;
-  }
-
-  function selectedDental() {
-    var current = currentDentalSelection();
-    if (current) {
-      return {
-        date: current.date,
-        type: current.type,
-        key: current.date + '|' + current.type,
-        requestId: current.requestId || '',
-        reservedOnSelection: Boolean(current.confirmed)
-      };
-    }
-    var category = clean(el('category') && el('category').value);
-    if (normalize(category).indexOf('odontologico') === -1) return null;
-    var selected = document.querySelector('#dentalSlots .slot.selected');
-    if (!selected) return null;
-    var dateText = clean(selected.querySelector('span') && selected.querySelector('span').textContent);
-    var match = dateText.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
-    if (!match) return null;
-    var type = normalize(category).indexOf('emergencia') !== -1 ? 'emergencial' : 'comum';
-    return {
-      date: match[3] + '-' + match[2] + '-' + match[1],
-      type: type,
-      key: match[3] + '-' + match[2] + '-' + match[1] + '|' + type,
-      requestId: '',
-      reservedOnSelection: false
-    };
-  }
-"""
-)
-
-replace_once(
-    'portal-ajustes-finais.js',
-    """    var dental = selectedDental();
-    if (!dental || !DENTAL_API) return Promise.resolve();
-    if (reservedSelection === dental.key) return Promise.resolve();""",
-    """    var dental = selectedDental();
+    """  function reserveDentalIfNeeded() {
+    var dental = selectedDental();
     if (!dental || !DENTAL_API) return Promise.resolve();
     if (dental.reservedOnSelection) {
       reservedSelection = dental.key;
       return Promise.resolve();
     }
-    if (reservedSelection === dental.key) return Promise.resolve();"""
+    if (reservedSelection === dental.key) return Promise.resolve();
+    if (reservationPromise) return reservationPromise;
+""",
+    """  function waitForCurrentDentalReservation(requestId) {
+    return new Promise(function (resolve, reject) {
+      var deadline = Date.now() + 16000;
+      function check() {
+        var current = currentDentalSelection();
+        if (!current || current.requestId !== requestId) {
+          reject(new Error('A vaga selecionada não pôde ser confirmada. Escolha a vaga novamente.'));
+          return;
+        }
+        if (current.confirmed) {
+          reservedSelection = current.date + '|' + current.type;
+          resolve(current);
+          return;
+        }
+        if (Date.now() >= deadline) {
+          reject(new Error('A confirmação da vaga está demorando. Aguarde alguns segundos e tente enviar novamente.'));
+          return;
+        }
+        setTimeout(check, 250);
+      }
+      check();
+    });
+  }
+
+  function reserveDentalIfNeeded() {
+    var dental = selectedDental();
+    if (!dental || !DENTAL_API) return Promise.resolve();
+    var current = currentDentalSelection();
+    if (current) {
+      if (current.confirmed) {
+        reservedSelection = dental.key;
+        return Promise.resolve();
+      }
+      return waitForCurrentDentalReservation(current.requestId);
+    }
+    if (reservedSelection === dental.key) return Promise.resolve();
+    if (reservationPromise) return reservationPromise;
+"""
 )
 
 replace_once(
     'portal-ajustes-finais.js',
-    """  function formIsReady() {
-    var original = el('send');
-    return Boolean(original && !original.disabled && !original.hidden);
-  }""",
-    """  function formIsReady() {
-    var original = el('send');
-    var category = normalize(el('category') && el('category').value);
-    if (category.indexOf('odontologico') !== -1) {
+    """    if (category.indexOf('odontologico') !== -1) {
       var api = window.PortalTacsOdontologiaV98;
       if (api && typeof api.prontoParaEnvio === 'function') {
         return Boolean(api.prontoParaEnvio());
       }
     }
-    return Boolean(original && !original.disabled && !original.hidden);
-  }"""
+""",
+    """    if (category.indexOf('odontologico') !== -1) {
+      var api = window.PortalTacsOdontologiaV98;
+      if (api && typeof api.formularioValido === 'function') {
+        return Boolean(api.formularioValido());
+      }
+    }
+"""
 )
 
+
+# 3) Corrigir o fluxo guiado para reconhecer os novos botões odontológicos
+# e nunca tentar rolar o Safari para o botão #send que está oculto por CSS.
 replace_once(
-    'index.html',
-    'portal-ajustes-finais.js?v=20260816-campanhas-auto-v1',
-    'portal-ajustes-finais.js?v=20260817-dental-card-bridge-v1'
+    'portal-orientacao-morador.js',
+    "document.querySelectorAll('.slot.selected,.integral-day.selected,[aria-checked=\"true\"]')",
+    "document.querySelectorAll('.slot.selected,.sheet-dental-choice.selected,.integral-day.selected,[aria-checked=\"true\"]')"
 )
 replace_once(
-    'index.html',
-    'portal-odontologia-segunda-sexta.js?v=20260817-agenda-completa-expiracao-v1',
-    'portal-odontologia-segunda-sexta.js?v=20260817-dental-whatsapp-bridge-v1'
+    'portal-orientacao-morador.js',
+    "document.querySelectorAll('.slot,.integral-day')",
+    "document.querySelectorAll('.slot,.sheet-dental-choice,.integral-day')"
+)
+replace_once(
+    'portal-orientacao-morador.js',
+    """      var send = el('send');
+      if (!send || send.hidden) { updateFlowGuide(); return; }
+      slowScrollTo(send, 1150, function () {""",
+    """      var send = el('sendPetroleumCard') || el('send');
+      if (!send || send.hidden || (window.getComputedStyle && window.getComputedStyle(send).display === 'none')) { updateFlowGuide(); return; }
+      slowScrollTo(send, 1150, function () {"""
+)
+replace_once(
+    'portal-orientacao-morador.js',
+    """    var category = el('category');
+    var send = el('send');
+""",
+    """    var category = el('category');
+    var send = el('sendPetroleumCard') || el('send');
+"""
+)
+replace_once(
+    'portal-orientacao-morador.js',
+    """    var send = el('send');
+    if (send && !formObserver) {""",
+    """    var send = el('sendPetroleumCard') || el('send');
+    if (send && !formObserver) {"""
+)
+replace_once(
+    'portal-orientacao-morador.js',
+    "event.target.closest('.slot,.integral-day,#send')",
+    "event.target.closest('.slot,.sheet-dental-choice,.integral-day,#send,#sendPetroleumCard')"
+)
+replace_once(
+    'portal-orientacao-morador.js',
+    """      if (target.id === 'send') {
+        if (!target.disabled && !target.hidden) sendIntent = true;
+        return;
+      }""",
+    """      if (target.id === 'send' || target.id === 'sendPetroleumCard') {
+        if (!target.disabled && !target.hidden) sendIntent = true;
+        return;
+      }"""
 )
 
+
+# 4) Cache-busting: força Safari/iPhone a buscar os JS corrigidos.
+replace_once(
+    'index.html',
+    'portal-ajustes-finais.js?v=20260817-dental-card-bridge-v1',
+    'portal-ajustes-finais.js?v=20260817-dental-card-bridge-v2'
+)
+replace_once(
+    'index.html',
+    'portal-odontologia-segunda-sexta.js?v=20260817-dental-whatsapp-bridge-v1',
+    'portal-odontologia-segunda-sexta.js?v=20260817-dental-whatsapp-bridge-v2'
+)
+replace_once(
+    'index.html',
+    'portal-orientacao-morador.js?v=20260816-fluxo-guiado-v2',
+    'portal-orientacao-morador.js?v=20260817-fluxo-guiado-v3'
+)
+
+
+# 5) Atualizar o gate existente para travar esta regressão.
 p = Path('scripts/test_dental_confirmation_gate_v103.js')
 t = p.read_text()
 t = t.replace(
-    "const dental=read('portal-odontologia-segunda-sexta.js'),config=read('agenda-config.js'),index=read('index.html'),admin=read('painel-oficial-agendas-vagas.html'),backend=read('apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs');",
-    "const dental=read('portal-odontologia-segunda-sexta.js'),config=read('agenda-config.js'),index=read('index.html'),admin=read('painel-oficial-agendas-vagas.html'),backend=read('apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs'),card=read('portal-ajustes-finais.js');"
+    "assert.match(index,/portal-odontologia-segunda-sexta\\.js\\?v=20260817-dental-whatsapp-bridge-v1/);",
+    "assert.match(index,/portal-odontologia-segunda-sexta\\.js\\?v=20260817-dental-whatsapp-bridge-v2/);"
 )
 t = t.replace(
-    "assert.match(index,/portal-odontologia-segunda-sexta\\.js\\?v=20260817-agenda-completa-expiracao-v1/);",
-    "assert.match(index,/portal-odontologia-segunda-sexta\\.js\\?v=20260817-dental-whatsapp-bridge-v1/);"
+    "assert.match(card,/api\\.prontoParaEnvio/);",
+    "assert.match(card,/api\\.formularioValido/);"
 )
-marker = "assert.match(dental,/portalTacsDentalAgendaV103FullWeek/);"
-extra = """assert.match(dental,/selecao: function \\(\\)/);
-assert.match(dental,/prontoParaEnvio: function \\(\\)/);
-assert.match(card,/function currentDentalSelection\\(\\)/);
-assert.match(card,/dental\\.reservedOnSelection/);
-assert.match(card,/api\\.prontoParaEnvio/);
-assert.match(card,/dental && dental\\.confirmed && dental\\.requestId/);
+marker = "assert.match(dental,/prontoParaEnvio: function \\(\\)/);"
+extra = """assert.match(dental,/formularioValido: function \\(\\)/);
+assert.match(card,/function waitForCurrentDentalReservation\\(requestId\\)/);
+assert.match(card,/api\\.formularioValido/);
 """
 if extra.strip() not in t:
     if marker not in t:
-        raise SystemExit('Marcador de teste odontológico não encontrado')
-    t = t.replace(marker, extra + marker, 1)
+        raise SystemExit('Marcador do gate odontológico não encontrado')
+    t = t.replace(marker, marker + '\n' + extra, 1)
 p.write_text(t)
 
+
 Path('portal-version.json').write_text(json.dumps({
-    'version': 'd17a1c0ff001',
-    'releasedAt': '2026-08-17T14:22:00Z',
-    'scope': 'Correção do envio após confirmação da vaga odontológica'
+    'version': 'd17a1c0ff002',
+    'releasedAt': '2026-08-17T14:39:00Z',
+    'scope': 'Estabilização do envio odontológico e fluxo visual no iPhone'
 }, ensure_ascii=False, indent=2) + '\n')
