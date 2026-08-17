@@ -80,7 +80,7 @@ body.tema-petroleo .saude-resumo .saude-numero,body.tema-petroleo .saude-aparelh
 <div id="tacsLogin" class="oculto"><label for="tacsCnsPublicacoes">CNS profissional</label><input id="tacsCnsPublicacoes" class="campo" inputmode="numeric" maxlength="18"><label for="tacsPinPublicacoes">PIN individual</label><input id="tacsPinPublicacoes" class="campo" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="acoes"><button id="entrarTacs" class="botao" type="button">Entrar na minha área</button></div></div>
 <div class="acoes"><button id="sair" class="botao vermelho" type="button" disabled>Encerrar sessão</button></div>
 <p class="muted">O administrador pode alternar áreas. O TACS acessa e publica somente na área vinculada ao próprio CNS.</p>
-<div id="loginStatus" class="status">Executando testes internos da página…</div>
+<div id="loginStatus" class="status">Aguarde…</div>
 <div id="resumo" class="resumo oculto"><div class="numero"><strong id="qRecados">0</strong><span>Recados</span></div><div class="numero"><strong id="qRecadosAtivos">0</strong><span>Recados ativos</span></div><div class="numero"><strong id="qCampanhas">0</strong><span>Campanhas</span></div><div class="numero"><strong id="qCampanhasAtivas">0</strong><span>Campanhas ativas</span></div></div>
 <div id="areaEnvioBox" class="areaEnvio oculto"><label for="areaEnvio">Área da notificação e da manutenção</label><select id="areaEnvio" class="campo"></select><p id="areaEnvioTexto">A área é validada pelo servidor antes de qualquer envio.</p></div>
 <div id="manutencaoBox" class="manutencao oculto"><span id="manutencaoEstado" class="estado">Portal disponível</span><h3>Controle do Portal TACS</h3><p id="manutencaoTexto">Com o modo manutenção desligado, publicações ativas podem gerar notificações.</p><button id="alternarManutencao" class="botao manutencaoBotao" type="button">ATIVAR PORTAL EM MANUTENÇÃO</button></div>
@@ -302,5 +302,7 @@ var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!teste
   if(aba)aba.addEventListener('click',carregar,{once:true});
 }());
 </script>
+<script src="/atendimento-acs-farmaceutico/recados-campanhas-whatsapp-card-v9.js?v=20260817-recados-cards-mensais-v12"></script>
+<script src="/atendimento-acs-farmaceutico/recados-campanhas-whatsapp-mensal-v12.js?v=20260817-recados-cards-mensais-v12"></script>
 </body>
 </html>

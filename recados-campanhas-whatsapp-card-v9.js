@@ -91,7 +91,7 @@ function inject(card,type){
   if(!card)return;
   var flag=type==='campanha'?'whatsappCampanhaV11':'whatsappRecadoV11';if(card.dataset[flag]==='1')return;card.dataset[flag]='1';
   var box=document.createElement('div');box.className='publicacao-whatsapp-v11 '+(type==='campanha'?'publicacao-campanha-status':'publicacao-recado-card');
-  var label=type==='campanha'?'Postar no status do WhatsApp':'Compartilhar card azul-petróleo no WhatsApp';
+  var label=type==='campanha'?'Postar no status do WhatsApp':'📱 Postar recado no Status do WhatsApp';
   box.innerHTML='<button type="button" class="botao publicacao-card-whatsapp"><span class="wa-mark" aria-hidden="true">◉</span> '+label+'</button><div class="publicacao-whatsapp-status" aria-live="polite"></div>';
   if(type==='campanha'){card.insertAdjacentElement('afterend',box)}else{var actions=card.querySelector('.corpo .acoes');if(!actions){card.dataset[flag]='0';return}actions.insertAdjacentElement('afterend',box)}
   var b=box.querySelector('button'),st=box.querySelector('.publicacao-whatsapp-status');b.addEventListener('click',function(){share(card,type,b,st)});
