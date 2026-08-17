@@ -1,0 +1,26 @@
+name: Teste interno odontologia v111
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/teste-interno-odontologia-v111.yml'
+permissions:
+  contents: read
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Testar fluxo odontologico no DOM simulado
+        run: node scripts/test_dom_flows.js
+      - name: Testar gate da reserva odontologica
+        run: node scripts/test_dental_confirmation_gate_v103.js
+      - name: Verificar sintaxe do portal odontologico
+        run: node --check portal-odontologia-segunda-sexta.js
