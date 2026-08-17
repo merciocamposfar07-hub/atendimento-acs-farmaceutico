@@ -17,7 +17,7 @@ concurrency:
 jobs:
   corrigir-testar-publicar:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     env:
       DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
     steps:
@@ -46,12 +46,28 @@ jobs:
           python3 scripts/corrigir_fluxo_odontologia_sync_v108.py
           python3 scripts/ajustar_v108_ci_timer.py
 
-      - name: Testar regressões e integração completa
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Testar fluxo real do morador e odontologia
         shell: bash
         run: |
           set -euo pipefail
-          npm ci
-          npm test
+          timeout 45s node scripts/test_dom_flows.js
+          node scripts/test_dental_confirmation_gate_v103.js
+
+      - name: Testar painéis, território, transporte e desempenho
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/test_admin_transport.js
+          node scripts/test_admin_fast_v102.js
+          node scripts/test_public_data_transport.js
+          node scripts/test_agendas_profissionais_territoriais.js
+          node scripts/test_territorial_stabilization_v1.js
+          node scripts/test_multiagent_isolation_50.js
+          node scripts/test_performance_v101.js
+          node scripts/test_quality_gate_v101.js
 
       - name: Validar contrato específico v108
         shell: bash
