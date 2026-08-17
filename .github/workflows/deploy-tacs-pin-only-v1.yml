@@ -1,0 +1,127 @@
+name: Implantar login TACS somente por PIN v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-tacs-pin-only-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  testar-e-implantar-pin-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NO_COLOR: '1'
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Validar somente o escopo PIN-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          node --check central-administrativa-tacs.js
+          node --check central-tacs-login-rapido-v1.js
+          node --check teste-v1/painel-moradores-transport-v2.js
+          node scripts/test_multiagent_quick_login.js
+          node scripts/test_tacs_admin_visibility.js
+          node scripts/test_apps_script_module_chain.js
+          node scripts/test_build_apps_script_release.js
+
+      - name: Validar credenciais sem exibi-las
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar projeto Apps Script atual
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs');const path=require('path');
+          const config=JSON.parse(process.env.CLASP_JSON);
+          if(!config.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId)) throw new Error('scriptId inválido');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Substituir módulos autorizados
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          node scripts/build_apps_script_release.js "$LIVE_DIR"
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$LIVE_DIR" -type f \( -name '*.js' -o -name '*.gs' \) -print0)
+
+      - name: Publicar mesma implantação e validar
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          npx --yes @google/clasp@3.3.0 version "Backup antes do login PIN-only - ${GITHUB_SHA::7}"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "TACS login somente por PIN 1.2.0 - ${GITHUB_SHA::7}")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+          DEPLOYED=0
+          rollback(){ code=$?; trap - ERR; if [ "$DEPLOYED" = '1' ]; then npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático após falha PIN-only" "$DEPLOYMENT_ID" || true; fi; exit "$code"; }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "TACS login somente por PIN 1.2.0" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          has_ok(){ printf '%s' "$1" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; }
+          ok=0
+          for tentativa in 1 2 3; do
+            territorio=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=admin_territorio_result&requestId=healthPinOnly12") || true
+            moradores=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=admin_moradores_result&requestId=healthPinOnlyMoradores") || true
+            if has_ok "$territorio" && has_ok "$moradores"; then ok=1; break; fi
+            sleep 8
+          done
+          test "$ok" = '1'
+          trap - ERR
+          printf 'PIN-only implantado e validado: versão %s\n' "$NEW_VERSION"
+
+      - name: Remover credenciais temporárias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
