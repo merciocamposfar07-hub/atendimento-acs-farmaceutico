@@ -24,7 +24,20 @@ jobs:
           fetch-depth: 0
 
       - name: Aplicar correção PIN-only
-        run: python3 scripts/corrigir_acesso_tacs_pin_only_v1.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/corrigir_acesso_tacs_pin_only_v1.py')
+          s=p.read_text(encoding='utf-8')
+          old='out,n=re.subn(pattern,repl,s,count=1,flags=flags)'
+          new='out,n=re.subn(pattern,lambda _m: repl,s,count=1,flags=flags)'
+          if old not in s:
+              raise SystemExit('Helper do patch não localizado.')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+          python3 scripts/corrigir_acesso_tacs_pin_only_v1.py
 
       - name: Validar JavaScript do frontend
         shell: bash
