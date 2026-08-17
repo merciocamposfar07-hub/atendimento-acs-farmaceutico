@@ -1,0 +1,32 @@
+name: Publicar card semanal de agendas v2
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/cache_bust_agenda_whatsapp_v2.py'
+      - '.github/workflows/cache-bust-agenda-whatsapp-v2.yml'
+permissions:
+  contents: write
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Atualizar versão do script
+        run: |
+          set -euo pipefail
+          python3 scripts/cache_bust_agenda_whatsapp_v2.py
+          grep -q 'agenda-completa-v2' painel-oficial-agendas-vagas.html
+      - name: Validar JavaScript
+        run: node --check agenda-whatsapp-card-v1.js
+      - name: Publicar somente o painel
+        run: |
+          set -euo pipefail
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add painel-oficial-agendas-vagas.html
+          git commit -m 'Publica card semanal por profissional nas agendas'
+          git pull --rebase origin main
+          git push origin HEAD:main
