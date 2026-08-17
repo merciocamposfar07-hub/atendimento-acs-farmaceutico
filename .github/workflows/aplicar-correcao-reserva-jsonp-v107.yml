@@ -42,7 +42,11 @@ jobs:
           printf '%s' "$PROBE" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const j=JSON.parse(s);if(!j.ok||!j.probe||j.versao!=="2.2.0")process.exit(4);console.log("BACKEND_RESERVAR_GET_V220_OK");})'
 
       - name: Aplicar correção
-        run: python3 scripts/corrigir_reserva_odontologia_jsonp_v107.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/corrigir_reserva_odontologia_jsonp_v107.py
+          python3 scripts/ajustar_teste_reserva_jsonp_v107.py
 
       - name: Testar integração completa
         shell: bash
