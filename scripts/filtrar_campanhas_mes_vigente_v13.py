@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 
 js=Path('recados-campanhas-whatsapp-mensal-v12.js')
 s=js.read_text(encoding='utf-8')
@@ -10,11 +9,12 @@ if 'function currentMonthKey()' not in s:
     if anchor not in s: raise SystemExit('anchor monthLabel não encontrado')
     s=s.replace(anchor,helper,1)
 
-pattern=r"function render\(\)\{if\(rendering\)return;rendering=true;try\{var lista=document\.getElementById\('listaCampanhas'\);if\(!lista\)return;cleanupIndividual\(\);lista\.querySelectorAll\('\.campanha-mensal-whatsapp-v12'\)\.forEach\(function\(e\)\{e\.remove\(\)\}\);var groups=\{\},order=\[\];lista\.querySelectorAll\('\.item\[data-id\]'\)\.forEach\(function\(card\)\{if\(!isActive\(card\)\)return;var k=monthKey\(card\);if\(!k\)return;if\(!groups\[k\]\)\{groups\[k\]=\[\];order\.push\(k\)\}groups\[k\]\.push\(card\)\}\);order\.forEach\(function\(k\)\{var cards=groups\[k\],label=monthLabel\(k\),box=document\.createElement\('div'\);box\.className='campanha-mensal-whatsapp-v12';box\.innerHTML='<button type=\\\"button\\\" class=\\\"botao campanha-mensal-botao\\\"><span aria-hidden=\\\"true\\\">◉</span> Postar campanhas de '\+label\+' no Status do WhatsApp</button><div class=\\\"campanha-mensal-status\\\" aria-live=\\\"polite\\\"></div>';lista\.insertBefore\(box,cards\[0\]\);var b=box\.querySelector\('button'\),st=box\.querySelector\('\.campanha-mensal-status'\);b\.addEventListener\('click',function\(\)\{shareMonth\(cards,label,b,st\)\}\)\}\)\}finally\{rendering=false\}\}"
+start=s.find('function render(){')
+end=s.find('\nfunction schedule()',start)
+if start<0 or end<0: raise SystemExit('função render mensal não encontrada')
 repl="function render(){if(rendering)return;rendering=true;try{var lista=document.getElementById('listaCampanhas');if(!lista)return;cleanupIndividual();lista.querySelectorAll('.campanha-mensal-whatsapp-v12').forEach(function(e){e.remove()});var vigente=currentMonthKey(),cards=[];lista.querySelectorAll('.item[data-id]').forEach(function(card){var mostrar=isActive(card)&&monthKey(card)===vigente;card.hidden=!mostrar;if(mostrar)cards.push(card)});if(!cards.length)return;var label=monthLabel(vigente),box=document.createElement('div');box.className='campanha-mensal-whatsapp-v12';box.innerHTML='<button type=\"button\" class=\"botao campanha-mensal-botao\"><span aria-hidden=\"true\">◉</span> Postar campanhas de '+label+' no Status do WhatsApp</button><div class=\"campanha-mensal-status\" aria-live=\"polite\"></div>';lista.insertBefore(box,cards[0]);var b=box.querySelector('button'),st=box.querySelector('.campanha-mensal-status');b.addEventListener('click',function(){shareMonth(cards,label,b,st)})}finally{rendering=false}}"
-out,n=re.subn(pattern,repl,s,count=1)
-if n!=1: raise SystemExit(f'render mensal esperado 1, encontrado {n}')
-js.write_text(out,encoding='utf-8')
+s=s[:start]+repl+s[end:]
+js.write_text(s,encoding='utf-8')
 
 p=Path('painel-oficial-recados-campanhas.html')
 h=p.read_text(encoding='utf-8')
