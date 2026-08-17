@@ -7,6 +7,7 @@
   var residentDocument = '';
   var sendIntent = false;
   var sendArrowShownForService = '';
+  var selectionConfirmed = false;
   var flowArrow = null;
   var alertObserver = null;
   var formObserver = null;
@@ -16,17 +17,46 @@
   function digits(value) { return String(value || '').replace(/\D/g, ''); }
   function clean(value) { return String(value == null ? '' : value).trim(); }
 
+  function ensureHeadLink(rel, href, attrs) {
+    var selector = 'link[rel="' + rel + '"][data-portal-tacs-public-icon="1"]';
+    var link = document.querySelector(selector);
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = rel;
+      link.dataset.portalTacsPublicIcon = '1';
+      document.head.appendChild(link);
+    }
+    link.href = href;
+    Object.keys(attrs || {}).forEach(function (key) { link.setAttribute(key, attrs[key]); });
+  }
+
+  function ensurePublicIcon() {
+    var base = '/atendimento-acs-farmaceutico/icons/';
+    ensureHeadLink('icon', base + 'painel-moradores.svg', { type: 'image/svg+xml' });
+    ensureHeadLink('apple-touch-icon', base + 'painel-moradores-180.png', { sizes: '180x180' });
+    var meta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'apple-mobile-web-app-title';
+      document.head.appendChild(meta);
+    }
+    meta.content = 'Portal TACS';
+  }
+
   function addStyle() {
-    if (document.getElementById('portal-guide-style-v1')) return;
+    if (document.getElementById('portal-guide-style-v2')) return;
+    var old = document.getElementById('portal-guide-style-v1');
+    if (old) old.remove();
     var style = document.createElement('style');
-    style.id = 'portal-guide-style-v1';
+    style.id = 'portal-guide-style-v2';
     style.textContent = [
-      '.portal-flow-arrow{display:flex;align-items:center;gap:9px;width:max-content;max-width:100%;margin:0 0 10px;padding:9px 13px;border:2px solid #70e39f;border-radius:999px;background:#073a55;color:#fff;font-size:15px;font-weight:950;line-height:1.25;box-shadow:0 9px 22px rgba(3,42,64,.20);animation:portalGuidePulse 1.35s ease-in-out infinite}',
-      '.portal-flow-arrow .portal-arrow-symbol{display:inline-block;color:#7af0a8;font-size:23px;line-height:1}',
-      '.portal-alert-guide{display:inline-flex;align-items:center;gap:8px;margin:0 0 10px;padding:7px 11px;border:2px solid #70e39f;border-radius:999px;background:#073a55;color:#fff;font-size:14px;font-weight:950;line-height:1.2;animation:portalGuidePulse 1.45s ease-in-out infinite}',
-      '.portal-alert-guide .portal-arrow-symbol{color:#7af0a8;font-size:20px}',
-      '@keyframes portalGuidePulse{0%,100%{opacity:.62;transform:translateY(0)}50%{opacity:1;transform:translateY(5px)}}',
-      '@media(prefers-reduced-motion:reduce){.portal-flow-arrow,.portal-alert-guide{animation:none!important}}'
+      '.portal-flow-arrow{display:flex;align-items:center;gap:10px;width:100%;max-width:100%;min-width:0;margin:0 0 12px;padding:10px 14px;border:2px solid #70e39f;border-radius:20px;background:#073a55;color:#fff;font-size:15px;font-weight:950;line-height:1.3;box-shadow:0 9px 22px rgba(3,42,64,.20);overflow:hidden}',
+      '.portal-flow-arrow>span:last-child{min-width:0;overflow-wrap:anywhere;word-break:normal}',
+      '.portal-flow-arrow .portal-arrow-symbol{display:inline-block;flex:0 0 auto;color:#7af0a8;font-size:25px;line-height:1;animation:portalArrowBlink 1.1s ease-in-out infinite}',
+      '.portal-alert-guide{display:inline-flex;align-items:center;gap:8px;max-width:100%;margin:0 0 10px;padding:7px 11px;border:2px solid #70e39f;border-radius:999px;background:#073a55;color:#fff;font-size:14px;font-weight:950;line-height:1.2}',
+      '.portal-alert-guide .portal-arrow-symbol{display:inline-block;flex:0 0 auto;color:#7af0a8;font-size:21px;animation:portalArrowBlink 1.1s ease-in-out infinite}',
+      '@keyframes portalArrowBlink{0%,100%{opacity:.35;transform:translateY(0)}50%{opacity:1;transform:translateY(5px)}}',
+      '@media(prefers-reduced-motion:reduce){.portal-flow-arrow .portal-arrow-symbol,.portal-alert-guide .portal-arrow-symbol{animation:none!important}}'
     ].join('');
     document.head.appendChild(style);
   }
@@ -49,6 +79,7 @@
     residentDocument = '';
     sendIntent = false;
     sendArrowShownForService = '';
+    selectionConfirmed = false;
     removeFlowArrow();
 
     ['birth', 'name', 'locality', 'motherName', 'fatherName', 'subject', 'implanonChoice'].forEach(function (id) {
@@ -90,23 +121,18 @@
     node.className = 'portal-flow-arrow';
     node.setAttribute('role', 'status');
     node.setAttribute('aria-live', 'polite');
-    node.innerHTML = '<span class="portal-arrow-symbol" aria-hidden="true">➜</span><span></span>';
+    node.innerHTML = '<span class="portal-arrow-symbol" aria-hidden="true">↓</span><span></span>';
     node.lastChild.textContent = text;
     return node;
   }
 
-  function placeArrow(target, text, key, autoScroll) {
+  function placeArrow(target, text, key) {
     if (!target || !target.parentNode) return;
     if (flowArrow && flowArrow.dataset.guideKey === key) return;
     removeFlowArrow();
     flowArrow = makeArrow(text);
     flowArrow.dataset.guideKey = key;
     target.parentNode.insertBefore(flowArrow, target);
-    if (autoScroll && typeof target.scrollIntoView === 'function') {
-      setTimeout(function () {
-        try { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
-      }, 90);
-    }
   }
 
   function cpfTarget() {
@@ -119,26 +145,72 @@
     return category && (category.closest('label') || category);
   }
 
+  function visibleChoiceExists() {
+    var nodes = document.querySelectorAll('.slot,.integral-day');
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      if (node.hidden || node.disabled) continue;
+      var style = window.getComputedStyle ? window.getComputedStyle(node) : null;
+      if (!style || (style.display !== 'none' && style.visibility !== 'hidden')) return true;
+    }
+    return false;
+  }
+
+  function slowScrollTo(target, duration, done) {
+    if (!target) { if (done) done(); return; }
+    var startY = window.pageYOffset || document.documentElement.scrollTop || 0;
+    var rect = target.getBoundingClientRect();
+    var targetY = Math.max(0, startY + rect.top - Math.max(70, (window.innerHeight - rect.height) * 0.42));
+    var distance = targetY - startY;
+    if (Math.abs(distance) < 8) { if (done) done(); return; }
+    var started = null;
+    var total = Math.max(850, Number(duration) || 1100);
+    function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+    function frame(now) {
+      if (started === null) started = now;
+      var progress = Math.min(1, (now - started) / total);
+      window.scrollTo(0, startY + distance * ease(progress));
+      if (progress < 1) window.requestAnimationFrame(frame);
+      else if (done) done();
+    }
+    window.requestAnimationFrame(frame);
+  }
+
+  function revealSendAfterChoice() {
+    removeFlowArrow();
+    setTimeout(function () {
+      var send = el('send');
+      if (!send || send.hidden) { updateFlowGuide(); return; }
+      slowScrollTo(send, 1150, function () {
+        setTimeout(updateFlowGuide, 80);
+      });
+    }, 220);
+  }
+
   function updateFlowGuide() {
     if (!initialized) return;
     var category = el('category');
     var send = el('send');
 
     if (!residentReady) {
-      placeArrow(cpfTarget(), 'Comece aqui: digite seu CPF ou Cartão SUS.', 'document', false);
+      placeArrow(cpfTarget(), 'Comece aqui: digite seu CPF ou Cartão SUS.', 'document');
       return;
     }
 
     if (!category || !clean(category.value)) {
-      placeArrow(categoryTarget(), 'Agora toque aqui e escolha o serviço necessário.', 'service', true);
+      placeArrow(categoryTarget(), 'Agora toque abaixo e escolha o serviço necessário.', 'service');
+      return;
+    }
+
+    if (visibleChoiceExists() && !selectionConfirmed) {
+      removeFlowArrow();
       return;
     }
 
     if (send && !send.hidden && !send.disabled) {
       var serviceKey = clean(category.value);
-      var shouldScroll = sendArrowShownForService !== serviceKey;
       sendArrowShownForService = serviceKey;
-      placeArrow(send, 'Tudo pronto. Toque aqui para enviar sua solicitação ao TACS.', 'send:' + serviceKey, shouldScroll);
+      placeArrow(send, 'Tudo pronto. Toque abaixo para enviar sua solicitação ao TACS.', 'send:' + serviceKey);
       return;
     }
 
@@ -176,6 +248,7 @@
       residentReady = true;
       residentDocument = digits(el('cpf') && el('cpf').value);
       sendArrowShownForService = '';
+      selectionConfirmed = false;
       setTimeout(updateFlowGuide, 0);
     });
 
@@ -186,6 +259,7 @@
           residentReady = false;
           residentDocument = '';
           sendArrowShownForService = '';
+          selectionConfirmed = false;
         }
         setTimeout(updateFlowGuide, 0);
       });
@@ -195,7 +269,9 @@
     if (category) {
       category.addEventListener('change', function () {
         sendArrowShownForService = '';
-        setTimeout(updateFlowGuide, 30);
+        selectionConfirmed = false;
+        removeFlowArrow();
+        setTimeout(updateFlowGuide, 60);
       });
     }
 
@@ -211,7 +287,10 @@
         if (!target.disabled && !target.hidden) sendIntent = true;
         return;
       }
-      setTimeout(updateFlowGuide, 60);
+      if (target.disabled) return;
+      selectionConfirmed = true;
+      sendArrowShownForService = '';
+      revealSendAfterChoice();
     });
 
     window.addEventListener('pagehide', function () {
@@ -234,6 +313,7 @@
   function init() {
     if (initialized) return;
     initialized = true;
+    ensurePublicIcon();
     addStyle();
 
     ['cpf', 'birth', 'name', 'locality', 'category', 'subject', 'implanonChoice'].forEach(function (id) {
