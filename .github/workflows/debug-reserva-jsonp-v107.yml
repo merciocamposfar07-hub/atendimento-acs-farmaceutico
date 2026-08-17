@@ -13,7 +13,7 @@ permissions:
 jobs:
   debug:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,11 +26,11 @@ jobs:
           python3 scripts/ajustar_teste_reserva_jsonp_v107.py
       - name: Instalar dependências
         run: npm ci
-      - name: Rodar somente simulação DOM com limite
+      - name: Rodar simulação DOM 1 -> 0 -> envio -> releitura
         shell: bash
         run: |
           set -o pipefail
-          timeout 70s node scripts/test_dom_flows.js 2>&1 | tee /tmp/dom.log
+          timeout 55s node scripts/test_dom_flows.js 2>&1 | tee /tmp/dom.log
           code=${PIPESTATUS[0]}
           echo "EXIT_CODE=$code"
           exit $code
