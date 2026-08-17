@@ -349,7 +349,7 @@
 
   function requestData(identity) {
     return {
-      code: makeCode(identity),
+      code: (function () { var dental = currentDentalSelection(); return dental && dental.confirmed && dental.requestId ? dental.requestId : makeCode(identity); }()),
       sentAt: recifeDateTime(),
       category: clean(el('category') && el('category').value),
       name: clean(el('name') && el('name').value),
@@ -365,7 +365,24 @@
     };
   }
 
+  function currentDentalSelection() {
+    var api = window.PortalTacsOdontologiaV98;
+    if (!api || typeof api.selecao !== 'function') return null;
+    var current = api.selecao();
+    return current && current.date && current.type ? current : null;
+  }
+
   function selectedDental() {
+    var current = currentDentalSelection();
+    if (current) {
+      return {
+        date: current.date,
+        type: current.type,
+        key: current.date + '|' + current.type,
+        requestId: current.requestId || '',
+        reservedOnSelection: Boolean(current.confirmed)
+      };
+    }
     var category = clean(el('category') && el('category').value);
     if (normalize(category).indexOf('odontologico') === -1) return null;
     var selected = document.querySelector('#dentalSlots .slot.selected');
@@ -377,13 +394,19 @@
     return {
       date: match[3] + '-' + match[2] + '-' + match[1],
       type: type,
-      key: match[3] + '-' + match[2] + '-' + match[1] + '|' + type
+      key: match[3] + '-' + match[2] + '-' + match[1] + '|' + type,
+      requestId: '',
+      reservedOnSelection: false
     };
   }
 
   function reserveDentalIfNeeded() {
     var dental = selectedDental();
     if (!dental || !DENTAL_API) return Promise.resolve();
+    if (dental.reservedOnSelection) {
+      reservedSelection = dental.key;
+      return Promise.resolve();
+    }
     if (reservedSelection === dental.key) return Promise.resolve();
     if (reservationPromise) return reservationPromise;
 
@@ -460,6 +483,13 @@
 
   function formIsReady() {
     var original = el('send');
+    var category = normalize(el('category') && el('category').value);
+    if (category.indexOf('odontologico') !== -1) {
+      var api = window.PortalTacsOdontologiaV98;
+      if (api && typeof api.prontoParaEnvio === 'function') {
+        return Boolean(api.prontoParaEnvio());
+      }
+    }
     return Boolean(original && !original.disabled && !original.hidden);
   }
 

@@ -755,7 +755,23 @@
   window.PortalTacsOdontologiaV98 = Object.freeze({
     atualizar: function () { return loadAgenda(false); },
     temCache: function () { return Boolean(readAgendaCache()); },
-    cacheKey: CACHE_KEY
+    cacheKey: CACHE_KEY,
+    selecao: function () {
+      if (!selection) return null;
+      return {
+        id: selection.id,
+        day: selection.day,
+        date: selection.date,
+        type: selection.type,
+        requestId: selection.requestId,
+        confirmed: Boolean(selection.confirmed),
+        pending: !selection.confirmed,
+        ready: Boolean(selection.confirmed && formReady())
+      };
+    },
+    prontoParaEnvio: function () {
+      return Boolean(selection && selection.confirmed && formReady());
+    }
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
