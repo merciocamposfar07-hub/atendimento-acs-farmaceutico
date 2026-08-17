@@ -804,8 +804,11 @@ function confirmedGroupCard(group){
   grid.style.display='grid';grid.style.gap='10px';grid.style.marginTop='12px';
   group.forEach(function(item){
     var option=document.createElement('div');
-    option.style.border='2px solid #c4d4db';option.style.borderRadius='15px';option.style.padding='12px';option.style.background='#fff';
-    var summary=document.createElement('div');summary.innerHTML=residentSummary(item);option.appendChild(summary);
+    option.style.border='2px solid #c4d4db';option.style.borderRadius='15px';option.style.padding='12px';option.style.background='#fff';option.style.color='#102d40';
+    var summary=document.createElement('div');summary.className='duplicateResidentSummary';summary.innerHTML=residentSummary(item);
+    var duplicateName=summary.querySelector('strong');if(duplicateName){duplicateName.style.setProperty('color','#102d40','important');duplicateName.style.setProperty('font-size','1.18rem','important');duplicateName.style.setProperty('margin-bottom','7px','important')}
+    var duplicateMeta=summary.querySelector('.sub');if(duplicateMeta){duplicateMeta.style.setProperty('color','#29495b','important');duplicateMeta.style.setProperty('font-size','.96rem','important');duplicateMeta.style.setProperty('font-weight','800','important');duplicateMeta.style.setProperty('line-height','1.45','important')}
+    option.appendChild(summary);
     var actions=document.createElement('div');actions.className='actions';
     var open=document.createElement('button');open.type='button';open.className='btn gray';open.textContent='Abrir '+itemLabel(item)+' para conferir';open.dataset.duplicateAction='open';
     open.addEventListener('click',function(){loadResident(item,'CONFIRMADA')});
