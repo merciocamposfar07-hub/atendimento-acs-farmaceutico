@@ -532,6 +532,35 @@
   function queueDurableReservation(item) {
     if (!API || !item || !item.requestId) return false;
     var params = reservationParams(item);
+
+    // O canal de leitura GET/JSONP do Apps Script já é o canal comprovadamente
+    // funcional no Safari. A reserva usa o mesmo canal, com requestId idempotente.
+    var getParams = new URLSearchParams(params.toString());
+    getParams.set('action', 'reservar_get');
+    getParams.set('v', String(Date.now()));
+    var getUrl = API + (API.indexOf('?') === -1 ? '?' : '&') + getParams.toString();
+    var getQueued = false;
+    try {
+      if (window.fetch) {
+        window.fetch(getUrl, {
+          method: 'GET',
+          mode: 'no-cors',
+          keepalive: true,
+          credentials: 'omit',
+          cache: 'no-store'
+        }).catch(function () {});
+        getQueued = true;
+      }
+    } catch (error) {}
+    if (!getQueued) {
+      try {
+        var beaconImage = new Image();
+        beaconImage.src = getUrl;
+        getQueued = true;
+      } catch (error) {}
+    }
+
+    // Mantém os transportes antigos apenas como redundância/fallback.
     try {
       if (navigator.sendBeacon && navigator.sendBeacon(API, params)) return true;
     } catch (error) {}
@@ -547,7 +576,7 @@
         return true;
       }
     } catch (error) {}
-    return false;
+    return getQueued;
   }
 
   function postReservation(item) {

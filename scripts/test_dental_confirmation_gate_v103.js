@@ -9,6 +9,8 @@ assert.match(dental,/saveSlotsCache\(\);\s*queueDurableReservation\(item\);/);
 
 // A reserva ganha transporte durável para sobreviver ao compartilhamento do iPhone.
 assert.match(dental,/function queueDurableReservation\(item\)/);
+assert.match(dental,/getParams\.set\('action', 'reservar_get'\)/);
+assert.match(dental,/method:\s*'GET'/);
 assert.match(dental,/navigator\.sendBeacon\(API, params\)/);
 assert.match(dental,/keepalive:\s*true/);
 assert.match(dental,/pagehide[\s\S]*queueDurableReservation\(selection\)/);
@@ -16,6 +18,9 @@ assert.match(dental,/pagehide[\s\S]*queueDurableReservation\(selection\)/);
 // Continua existindo a confirmação normal por iframe e a idempotência do backend.
 assert.match(dental,/function postReservation\(item\)/);
 assert.match(dental,/add\('action', 'reservar'\)/);
+assert.match(backend,/action==='reservar_get'/);
+assert.match(backend,/route:'reservar_get'/);
+assert.match(backend,/VERSAO:'2\.2\.0'/);
 assert.match(backend,/CODIGO_SOLICITACAO/);
 assert.match(backend,/if\(existente\)/);
 assert.match(backend,/var restantes=disponiveis-1;/);
@@ -29,5 +34,5 @@ assert.match(dental,/if \(!formReady\(\)\) \{ refreshSend\(\); return; \}[\s\S]*
 assert.doesNotMatch(config,/dentalReservationPending === '1'/);
 assert.match(card,/reserveDentalIfNeeded\(\)\.catch/);
 assert.doesNotMatch(card,/Confirmando os dados e a disponibilidade/);
-assert.match(index,/portal-odontologia-segunda-sexta\.js\?v=20260817-dental-whatsapp-bridge-v5/);
-console.log('DENTAL_VACANCY_PERSISTENCE_V105_OK');
+assert.match(index,/portal-odontologia-segunda-sexta\.js\?v=20260817-dental-whatsapp-bridge-v6/);
+console.log('DENTAL_VACANCY_GET_ROUTE_V106_OK');

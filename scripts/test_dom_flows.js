@@ -70,7 +70,8 @@ class Harness {
       whatsAppMessages: [],
       shares: [],
       alerts: [],
-      durableReservations: []
+      durableReservations: [],
+      durableGetReservations: []
     };
     this.errors = [];
     this.reservationMessageDelay = 120;
@@ -284,6 +285,23 @@ class Harness {
           harness.records.shares.push(payload);
           return Promise.resolve();
         };
+        window.fetch = function (url, options) {
+          const parsed = new window.URL(String(url || ''), window.location.href);
+          if (parsed.hostname === 'script.google.com' && parsed.searchParams.get('action') === 'reservar_get') {
+            harness.records.durableGetReservations.push({
+              url: parsed.href,
+              action: parsed.searchParams.get('action') || '',
+              areaId: parsed.searchParams.get('areaId') || '',
+              requestId: parsed.searchParams.get('requestId') || '',
+              date: parsed.searchParams.get('date') || '',
+              type: parsed.searchParams.get('type') || '',
+              keepalive: Boolean(options && options.keepalive),
+              method: String(options && options.method || 'GET')
+            });
+            return Promise.resolve({ok: true});
+          }
+          return Promise.resolve({ok: true});
+        };
         Object.defineProperty(window.navigator, 'sendBeacon', {
           configurable: true,
           value: function (url, body) {
@@ -362,6 +380,17 @@ async function testNonBlockingDentalCard() {
     assert.equal(durable.type, 'emergencial');
     assert.equal(durable.date, '2099-08-03');
     assert.match(durable.requestId, /^MATIAS-/);
+    await waitFor(
+      () => harness.records.durableGetReservations.length >= 1,
+      'A rota GET durável não foi disparada no clique da vaga'
+    );
+    const durableGet = harness.records.durableGetReservations[0];
+    assert.equal(durableGet.action, 'reservar_get');
+    assert.equal(durableGet.type, 'emergencial');
+    assert.equal(durableGet.date, '2099-08-03');
+    assert.equal(durableGet.method, 'GET');
+    assert.equal(durableGet.keepalive, true);
+    assert.equal(durableGet.requestId, durable.requestId);
     const cacheKey = window.PortalTacsOdontologiaV98.cacheKey;
     const cached = JSON.parse(window.localStorage.getItem(cacheKey));
     const monday = cached.data.dias.find(item => item.data === '2099-08-03');

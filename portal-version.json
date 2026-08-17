@@ -1,5 +1,5 @@
 {
-  "version": "dental-vacancy-persistence-v105",
-  "releasedAt": "2026-08-17T15:18:00Z",
-  "scope": "Redução automática 1→0 persistente no iPhone, reserva durável e envio sem espera"
+  "version": "dental-vacancy-get-route-v106",
+  "releasedAt": "2026-08-17T15:38:00Z",
+  "scope": "Reserva odontológica idempotente também por GET keepalive; POST mantido apenas como fallback"
 }

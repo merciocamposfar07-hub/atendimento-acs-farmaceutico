@@ -10,7 +10,7 @@
  * - não altera moradores, profissionais, campanhas, recados ou outros módulos.
  */
 var TACS_CORRECAO_DATA_ODONTOLOGIA_V1=Object.freeze({
-  VERSAO:'2.1.0',
+  VERSAO:'2.2.0',
   TZ:'America/Recife',
   DIAS:Object.freeze(['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'])
 });
@@ -29,6 +29,15 @@ var correcaoDataOdontologiaV1DoPostAnterior_;
         }catch(erroAgenda){
           return agendasProfissionaisTerritoriaisV1ResponderJson_({ok:false,message:correcaoDataOdontologiaV1Erro_(erroAgenda)},p.callback);
         }
+      }
+      if(action==='reservar_get'||action==='reservar_odontologia_get'){
+        if(correcaoDataOdontologiaV1Texto_(p.probe)==='1'){
+          return agendasProfissionaisTerritoriaisV1ResponderJson_({ok:true,probe:true,versao:TACS_CORRECAO_DATA_ODONTOLOGIA_V1.VERSAO,route:'reservar_get'},p.callback);
+        }
+        var resultadoGet;
+        try{resultadoGet=correcaoDataOdontologiaV1Reservar_(p);}
+        catch(erroReservaGet){resultadoGet={ok:false,message:correcaoDataOdontologiaV1Erro_(erroReservaGet)};}
+        return agendasProfissionaisTerritoriaisV1ResponderJson_(resultadoGet,p.callback);
       }
       if(action==='reserva_status'||action==='status_reserva_odontologia'){
         try{
