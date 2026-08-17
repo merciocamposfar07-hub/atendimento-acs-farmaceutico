@@ -11,11 +11,13 @@
  * - nenhum horário é imposto: o campo continua totalmente editável.
  */
 var TACS_CAMPANHAS_AUTOMATICAS_V1=Object.freeze({
-  VERSAO:'1.0.0',
+  VERSAO:'1.1.0',
   FUSO:'America/Recife',
   ORIGEM:'CALENDARIO_AUTOMATICO',
   AREA_PADRAO:'JAPARANDUBA',
   TOMB_PREFIX:'TACS_CAMP_AUTO_REMOVIDA_V1_',
+  RENOTIF_REVISAO:'CARDS_VISUAIS_V4_20260817',
+  RENOTIF_PREFIX:'TACS_CAMP_AUTO_RENOTIF_V1_',
   COLUNAS:['ANO','MES','VALIDADE','HORARIO','MUNICIPIO_ID','MUNICIPIO_NOME','UF','ORGANIZACAO_ID','ORGANIZACAO_NOME','SUBTITULO','CAMPANHA_CHAVE','COR_TEMA','COR_NOME','ORIGEM','NOTIFICADO_EM']
 });
 
@@ -190,21 +192,26 @@ function campanhasAutomaticasV1NotificarArea_(areaId){
   var hoje=Utilities.formatDate(new Date(),TACS_CAMPANHAS_AUTOMATICAS_V1.FUSO,'yyyyMMdd');
   var resumo={enviadas:0,pendentes:0,erros:0,detalhes:[]};
   campanhasAutomaticasV1AtivasAgora_(areaId).forEach(function(item){
-    var id=campanhasAutomaticasV1Texto_(item.ID);
-    if(campanhasAutomaticasV1Texto_(item.NOTIFICADO_EM))return;
+    var id=campanhasAutomaticasV1Texto_(item.ID),notificado=campanhasAutomaticasV1Texto_(item.NOTIFICADO_EM);
+    var reKey=TACS_CAMPANHAS_AUTOMATICAS_V1.RENOTIF_PREFIX+TACS_CAMPANHAS_AUTOMATICAS_V1.RENOTIF_REVISAO+'_'+id;
+    var reenviar=Boolean(notificado)&&!props.getProperty(reKey);
+    if(notificado&&!reenviar)return;
     try{
-      var anterior=typeof notificacoesAreaV1UltimoEnvio_==='function'?notificacoesAreaV1UltimoEnvio_(areaId,'CAMPANHA',id):null;
-      if(anterior&&anterior.onesignalId){campanhasAutomaticasV1MarcarNotificada_(areaId,id,'AUDITADO '+anterior.registradoEm);return;}
+      if(!reenviar){
+        var anterior=typeof notificacoesAreaV1UltimoEnvio_==='function'?notificacoesAreaV1UltimoEnvio_(areaId,'CAMPANHA',id):null;
+        if(anterior&&anterior.onesignalId){campanhasAutomaticasV1MarcarNotificada_(areaId,id,'AUDITADO '+anterior.registradoEm);return;}
+      }
       var subtitulo=campanhasAutomaticasV1Texto_(item.SUBTITULO),mensagem=campanhasAutomaticasV1Texto_(item.MENSAGEM);
+      var evento=((reenviar?'REVISAO_':'AUTO_')+id+'_'+hoje+(reenviar?'_'+TACS_CAMPANHAS_AUTOMATICAS_V1.RENOTIF_REVISAO:'')).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,160);
       var resultado=notificacoesAreaV1Enviar_(appId,apiKey,contexto,acesso,{
-        evento:('AUTO_'+id+'_'+hoje).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,160),
-        tipo:'CAMPANHA',referencia:id,titulo:campanhasAutomaticasV1Texto_(item.TITULO).slice(0,120),
+        evento:evento,tipo:'CAMPANHA',referencia:id,titulo:campanhasAutomaticasV1Texto_(item.TITULO).slice(0,120),
         mensagem:(subtitulo+(subtitulo&&mensagem?' — ':'')+mensagem).slice(0,1000),
-        meta:'origem=CALENDARIO_AUTOMATICO;inicio='+campanhasAutomaticasV1Texto_(item.INICIO)+';validade='+campanhasAutomaticasV1Texto_(item.VALIDADE),
+        meta:'origem=CALENDARIO_AUTOMATICO;inicio='+campanhasAutomaticasV1Texto_(item.INICIO)+';validade='+campanhasAutomaticasV1Texto_(item.VALIDADE)+';revisao='+TACS_CAMPANHAS_AUTOMATICAS_V1.RENOTIF_REVISAO,
         quantidadeAreas:notificacoesAreaV1QuantidadeAreas_()
       });
       if(resultado&&resultado.ok===true&&resultado.push===true){
-        campanhasAutomaticasV1MarcarNotificada_(areaId,id,Utilities.formatDate(new Date(),TACS_CAMPANHAS_AUTOMATICAS_V1.FUSO,'dd/MM/yyyy HH:mm:ss'));
+        var carimbo=Utilities.formatDate(new Date(),TACS_CAMPANHAS_AUTOMATICAS_V1.FUSO,'dd/MM/yyyy HH:mm:ss');
+        if(reenviar)props.setProperty(reKey,carimbo);else campanhasAutomaticasV1MarcarNotificada_(areaId,id,carimbo);
         resumo.enviadas++;
       }else{
         resumo.pendentes++;

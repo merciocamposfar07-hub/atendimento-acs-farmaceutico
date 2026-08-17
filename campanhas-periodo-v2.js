@@ -203,6 +203,20 @@ body.tema-petroleo #listaCampanhas .item[class*="camp-theme-"]>summary .camp-adm
   inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;
   box-sizing:border-box!important;font-size:1rem!important;
 }
+/* CAMPANHAS_ADMIN_FIX_V4 */
+.camp-start-wrap,#secaoCampanhas .camp-start-wrap{
+  display:block!important;position:relative!important;width:100%!important;min-width:0!important;max-width:100%!important;
+  inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;
+  overflow:hidden!important;contain:inline-size!important;border:2px solid #a9c0ca!important;border-radius:18px!important;
+  background:#fff!important;box-sizing:border-box!important;clip-path:inset(0 round 18px)!important;
+}
+.camp-start-wrap>input[name="inicio"],#secaoCampanhas .camp-start-wrap>input[name="inicio"]{
+  display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;
+  inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;
+  -webkit-min-logical-width:0!important;box-sizing:border-box!important;margin:0!important;
+  border:0!important;border-radius:0!important;background:#fff!important;overflow:hidden!important;
+}
+.camp-start-wrap:focus-within{outline:3px solid rgba(11,88,120,.17)!important;border-color:#0b5878!important}
 @media(max-width:390px){
   #listaCampanhas .item[class*="camp-theme-"]>summary{grid-template-columns:minmax(0,1fr) 70px!important;gap:9px 10px!important;min-height:154px!important;padding:14px!important}
   #listaCampanhas .camp-admin-symbol{width:70px;height:70px}
@@ -315,13 +329,21 @@ function makeFields(meta){
 function renameContentLabel(box){
   Array.prototype.forEach.call(box.querySelectorAll('label'),function(label){if(txt(label.textContent)==='Mensagem'&&label.childNodes.length)label.childNodes[0].nodeValue='Conteúdo'})
 }
+function wrapCampaignStart(start){
+  if(!start||start.closest('.camp-start-wrap'))return;
+  var parent=start.parentNode;if(!parent)return;
+  var wrap=document.createElement('div');wrap.className='camp-start-wrap';
+  parent.insertBefore(wrap,start);wrap.appendChild(start);start.classList.add('camp-start-input');
+}
 function decorateBox(box,meta){
   if(!box)return;applyCampaignTheme(box,meta);decorateCampaignSummary(box,meta);
-  if(box.querySelector('.camp-period-fields'))return;
   var start=box.querySelector('[name="inicio"]');if(!start)return;
-  var fields=makeFields(meta);
-  var label=start.previousElementSibling;
-  start.parentNode.insertBefore(fields,label||start);
+  if(!box.querySelector('.camp-period-fields')){
+    var fields=makeFields(meta);
+    var label=start.previousElementSibling;
+    start.parentNode.insertBefore(fields,label||start);
+  }
+  wrapCampaignStart(start);
   renameContentLabel(box);
 }
 function decorate(){
