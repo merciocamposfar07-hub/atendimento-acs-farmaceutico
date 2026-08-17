@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" shape-rendering="geometricPrecision">
+<defs>
+  <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1a1a1"/><stop offset=".42" stop-color="#9e2f2f"/><stop offset="1" stop-color="#6e1d1d"/></linearGradient>
+  <linearGradient id="light" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".72"/><stop offset=".32" stop-color="#f1a1a1"/><stop offset="1" stop-color="#9e2f2f"/></linearGradient>
+  <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#6e1d1d" flood-opacity=".30"/></filter>
+</defs>
+<g filter="url(#shadow)" class="art"><style>.line{fill:none;stroke:#6e1d1d;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}</style><path d="M44 18c-13 18-13 35 0 53l34 42M76 18c13 18 13 35 0 53l-34 42" fill="none" stroke="url(#g)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/><path d="M47 24c-6 10-7 19-3 28M73 24c6 10 7 19 3 28" fill="none" stroke="#fff" stroke-width="4" opacity=".3" stroke-linecap="round"/></g>
+</svg>

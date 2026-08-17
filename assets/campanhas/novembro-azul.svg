@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" shape-rendering="geometricPrecision">
+<defs>
+  <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9bd7f5"/><stop offset=".42" stop-color="#17618f"/><stop offset="1" stop-color="#0d4262"/></linearGradient>
+  <linearGradient id="light" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".72"/><stop offset=".32" stop-color="#9bd7f5"/><stop offset="1" stop-color="#17618f"/></linearGradient>
+  <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#0d4262" flood-opacity=".30"/></filter>
+</defs>
+<g filter="url(#shadow)" class="art"><style>.line{fill:none;stroke:#0d4262;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}</style><path d="M60 12 94 24v28c0 26-13 44-34 58-21-14-34-32-34-58V24Z" fill="url(#light)"/><circle cx="54" cy="55" r="16" fill="none" stroke="url(#g)" stroke-width="7"/><path d="M66 43l21-21M76 22h11v11M54 72v20M44 82h20" class="line"/></g>
+</svg>
