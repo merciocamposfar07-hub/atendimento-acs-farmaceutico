@@ -50,6 +50,9 @@ jobs:
           node --check central-tacs-login-rapido-v1.js
           node --check teste-v1/painel-moradores-transport-v2.js
 
+      - name: Preparar dependências dos testes
+        run: npm ci
+
       - name: Validar somente o escopo do login TACS
         shell: bash
         run: |
