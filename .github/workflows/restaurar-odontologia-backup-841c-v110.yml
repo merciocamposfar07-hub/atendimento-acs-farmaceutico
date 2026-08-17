@@ -1,0 +1,62 @@
+name: Restaurar odontologia backup 841c v110
+on:
+  push:
+    branches: [v110-restore-test2]
+    paths: ['.github/workflows/restaurar-odontologia-backup-841c-v110.yml']
+permissions:
+  contents: write
+jobs:
+  restaurar-validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '20', cache: npm}
+      - name: Restaurar e ajustar
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show 841c77523ae0693a3d314fbfa421d580a15493bb:portal-odontologia-segunda-sexta.js > portal-odontologia-segunda-sexta.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('portal-odontologia-segunda-sexta.js'); t=p.read_text()
+          t=t.replace("iframe.hidden = true;", "iframe.hidden = true;\n      iframe.style.display = 'none';\n      iframe.style.width = '0';\n      iframe.style.height = '0';\n      iframe.style.position = 'absolute';", 1)
+          t=t.replace("add('action', 'reservar');\n      add('requestId'", "add('action', 'reservar');\n      add('areaId', (window.TACS_AREA_ID || 'JAPARANDUBA'));\n      add('requestId'", 1)
+          p.write_text(t)
+          p=Path('moradores-autofill.js'); t=p.read_text()
+          t=t.replace('A consulta está demorando. Tentando novamente...', 'Aguarde')
+          t=t.replace('Buscando cadastro...', 'Aguarde')
+          t=t.replace('Documento completo. Buscando cadastro...', 'Aguarde')
+          p.write_text(t)
+          p=Path('index.html'); t=p.read_text()
+          t=re.sub(r'portal-odontologia-segunda-sexta\.js\?v=[^"\']+', 'portal-odontologia-segunda-sexta.js?v=20260817-restaura-841c-v110', t)
+          t=re.sub(r'moradores-autofill\.js\?v=[^"\']+', 'moradores-autofill.js?v=20260817-aguarde-v110', t)
+          p.write_text(t)
+          PY
+      - name: Validar
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          node --check portal-odontologia-segunda-sexta.js
+          node --check moradores-autofill.js
+          grep -q "var shouldDisable = !formReady();" portal-odontologia-segunda-sexta.js
+          grep -q "persistInBackground(item);" portal-odontologia-segunda-sexta.js
+          grep -q "iframe.style.display = 'none';" portal-odontologia-segunda-sexta.js
+          grep -q "add('areaId'" portal-odontologia-segunda-sexta.js
+          grep -q "setStatus(status, 'Aguarde'" moradores-autofill.js
+          node scripts/test_admin_transport.js
+          node scripts/test_agendas_profissionais_territoriais.js
+          node scripts/test_multiagent_isolation_50.js
+      - name: Publicar na branch de teste
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add portal-odontologia-segunda-sexta.js moradores-autofill.js index.html
+          git commit -m 'Restaura fluxo odontológico estável 841c e simplifica consulta CPF v110'
+          git push origin HEAD:v110-restore-test2
