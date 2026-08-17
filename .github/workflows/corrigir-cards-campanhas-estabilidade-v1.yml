@@ -1,0 +1,60 @@
+name: Corrigir cards de campanhas estabilidade v1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/corrigir_cards_campanhas_estabilidade_v1.py'
+      - '.github/workflows/corrigir-cards-campanhas-estabilidade-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: corrigir-cards-campanhas-estabilidade-v1
+  cancel-in-progress: false
+
+jobs:
+  corrigir:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar somente a correção dos cards
+        run: python3 scripts/corrigir_cards_campanhas_estabilidade_v1.py
+
+      - name: Validar JavaScript alterado
+        run: node --check campanhas-periodo-v2.js
+
+      - name: Conferir escopo e regras
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "campaignSpecificIconSvg" campanhas-periodo-v2.js
+          grep -q "camp-symbol-static" campanhas-periodo-v2.js
+          grep -q "CAMPANHA_CHAVE" campanhas-periodo-v2.js
+          grep -q "AUGUST_LEGACY" campanhas-periodo-v2.js
+          grep -q "period.hidden=true" campanhas-periodo-v2.js
+          git diff --exit-code -- . ':!campanhas-periodo-v2.js' || {
+            echo 'Mudança fora do arquivo autorizado.' >&2
+            exit 1
+          }
+
+      - name: Publicar correção
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- campanhas-periodo-v2.js; then
+            echo 'Arquivo já está corrigido.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add campanhas-periodo-v2.js
+          git commit -m 'Estabiliza cards mensais e preserva Agosto'
+          git push origin HEAD:main
