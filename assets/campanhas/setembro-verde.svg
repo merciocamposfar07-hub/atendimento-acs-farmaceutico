@@ -1,8 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" shape-rendering="geometricPrecision">
-<defs>
-  <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9adbb0"/><stop offset=".42" stop-color="#17723a"/><stop offset="1" stop-color="#0e4c27"/></linearGradient>
-  <linearGradient id="light" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".72"/><stop offset=".32" stop-color="#9adbb0"/><stop offset="1" stop-color="#17723a"/></linearGradient>
-  <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#0e4c27" flood-opacity=".30"/></filter>
-</defs>
-<g filter="url(#shadow)" class="art"><style>.line{fill:none;stroke:#0e4c27;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}</style><path d="M60 77S36 63 36 45c0-17 20-22 24-8 4-14 24-9 24 8 0 18-24 32-24 32Z" fill="url(#g)"/><path d="M18 84c14-9 25-10 42 3M102 84c-14-9-25-10-42 3M22 93c14 9 27 14 38 15M98 93c-14 9-27 14-38 15" class="line"/></g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" shape-rendering="geometricPrecision"><defs><linearGradient id="g" x1=".18" y1=".08" x2=".82" y2=".92"><stop offset="0" stop-color="#dff6e5"/><stop offset=".28" stop-color="#78c992"/><stop offset=".62" stop-color="#23804a"/><stop offset="1" stop-color="#0d4b29"/></linearGradient><filter id="s" x="-30%" y="-25%" width="160%" height="170%"><feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#0a3a21" flood-opacity=".32"/></filter></defs><g filter="url(#s)"><path d="M60 71s-20-12-20-27c0-14 16-19 20-7 4-12 20-7 20 7 0 15-20 27-20 27Z" fill="url(#g)"/><path d="M21 82c13-8 25-9 39 2M99 82c-13-8-25-9-39 2M25 92c12 7 24 11 35 12M95 92c-12 7-24 11-35 12" fill="none" stroke="#0d4b29" stroke-width="5" stroke-linecap="round"/><path d="M51 42c3-5 7-7 11-6" stroke="#fff" stroke-width="4" opacity=".35" stroke-linecap="round"/></g></svg>
