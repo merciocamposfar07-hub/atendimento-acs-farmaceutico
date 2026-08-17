@@ -35,7 +35,10 @@ jobs:
           new='out,n=re.subn(pattern,lambda _m: repl,s,count=1,flags=flags)'
           if old not in s:
               raise SystemExit('Helper do patch não localizado.')
-          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          s=s.replace(old,new,1)
+          s=s.replace("assert.match(quickBackend,/tacs\\.pinHash,tacsTerritorioV1HashPin_\\(pin,tacs\\.pinSalt\\)/,\n  'O PIN deve ser validado apenas contra o hash armazenado no servidor.');",
+                      "assert.match(quickBackend,/item\\.pinHash,tacsTerritorioV1HashPin_\\(pin,item\\.pinSalt\\)/,\n  'O PIN deve ser validado apenas contra o hash armazenado no servidor.');",1)
+          p.write_text(s,encoding='utf-8')
           PY
           python3 scripts/corrigir_acesso_tacs_pin_only_v1.py
 
