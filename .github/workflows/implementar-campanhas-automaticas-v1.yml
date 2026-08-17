@@ -27,6 +27,20 @@ jobs:
       - name: Aplicar implementação controlada
         run: python scripts/implementar_campanhas_automaticas_v1.py
 
+      - name: Normalizar teste gerado
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/test_campanhas_automaticas_v1.js')
+          s=p.read_text(encoding='utf-8')
+          lines=s.splitlines()
+          if not lines:
+              raise SystemExit('Teste específico ficou vazio.')
+          lines[0]="'use strict';"
+          p.write_text('\n'.join(lines)+'\n',encoding='utf-8')
+          PY
+
       - name: Instalar dependências
         run: npm ci
 
