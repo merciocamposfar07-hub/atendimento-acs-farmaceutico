@@ -56,12 +56,12 @@ registrar('dados', 'Snapshot de agendas não libera escrita sem confirmação', 
 registrar('dados', 'Proteção contra profissional duplicado permanece', contem(profissionais, 'Profissional já cadastrado'));
 registrar('dados', 'Teste territorial e isolamento multiárea continuam obrigatórios', contem(comandoTestes, 'test_public_content_multiarea.js') && contem(comandoTestes, 'test_publicacoes_territoriais.js'));
 
-registrar('desempenho', 'Agenda odontológica abre por snapshot territorial', contem(dental, 'portalTacsDentalAgendaV102:'));
+registrar('desempenho', 'Agenda odontológica abre por snapshot territorial completo', contem(dental, 'portalTacsDentalAgendaV103FullWeek:'));
 registrar('desempenho', 'Snapshot odontológico antigo não autoriza reserva', contem(perfTest, 'Cache acima de 90s não pode permitir reserva'));
 registrar('desempenho', 'Painel de agendas abre última leitura imediatamente', contem(agenda, 'Última leitura desta área exibida imediatamente. Confirmando com o servidor'));
 registrar('desempenho', 'Pré-aquecimento reaproveita conexão recente por 3 minutos', contem(warmup, 'var WARM_MS=3*60*1000;'));
 registrar('desempenho', 'Timeout de pré-aquecimento limitado a 6 segundos', contem(warmup, 'var TIMEOUT_MS=6000;'));
-registrar('desempenho', 'Atualização inteligente evita apagar caches duráveis', !contem(auto, "'portalTacsPublicDataV4'") && !contem(auto, "'portalTacsDentalAgendaV102'"));
+registrar('desempenho', 'Atualização inteligente evita apagar caches duráveis', !contem(auto, "'portalTacsPublicDataV4'") && !contem(auto, "'portalTacsDentalAgendaV103FullWeek'"));
 registrar('desempenho', 'Primeira abertura da web app não recarrega só por faltar ?ptv', contem(auto, 'if(!pageSeen)') && !contem(auto, 'currentUrl=new URL'));
 registrar('desempenho', 'Autoatualização recarrega apenas quando a versão publicada muda', contem(auto, 'if(pageSeen!==remote)'));
 registrar('desempenho', 'Consulta odontológica duplicada antiga virou somente fallback', contem(index, 'if(!window.PortalTacsOdontologiaV98)loadDental()'));
@@ -71,10 +71,10 @@ registrar('resiliencia', 'Fluxo Safari/iframe possui teste dedicado', contem(adm
 registrar('resiliencia', 'Resposta direta encerra polling duplicado', contem(adminTransport, 'iniciou polling mesmo após a resposta direta'));
 registrar('resiliencia', 'Pré-aquecimento tolera DOM mínimo', contem(warmup, "typeof document==='undefined'||typeof document.createElement!=='function'||!document.head"));
 registrar('resiliencia', 'Atualização funciona mesmo sem fetch nativo', contem(auto, "if(typeof fetch!=='function')return Promise.resolve(null);"));
-registrar('resiliencia', 'Painéis fazem preconnect com Apps Script', [agenda, profissionais, recados].every(t => contem(t, 'rel="preconnect" href="https://script.google.com"')));
+registrar('resiliencia', 'Painéis que usam transporte aquecido fazem preconnect; Recados standalone não depende disso', [agenda, profissionais].every(t => contem(t, 'rel="preconnect" href="https://script.google.com"')) && !contem(recados, 'admin-warmup.js?v='));
 registrar('resiliencia', 'Falha de rede não duplica envio administrativo', contem(adminTransport, 'deve enviar cada operação uma única vez'));
 registrar('resiliencia', 'Sessão expirada volta ao PIN sem alerta falso', contem(adminTransport, 'sessão anterior não pôde ser reutilizada'));
-registrar('resiliencia', 'Pré-aquecimento administrativo é carregado sem UI do Portal', contem(agenda, 'admin-warmup.js?v=20260813-admin-v103') && contem(profissionais, 'admin-warmup.js?v=20260813-admin-v103') && contem(recados, 'admin-warmup.js?v=20260813-admin-v103') && !contem(warmup, 'portal-auto-update.js'));
+registrar('resiliencia', 'Pré-aquecimento administrativo é carregado somente onde necessário, sem UI do Portal', contem(agenda, 'admin-warmup.js?v=20260813-admin-v103') && contem(profissionais, 'admin-warmup.js?v=20260813-admin-v103') && !contem(recados, 'admin-warmup.js?v=') && !contem(warmup, 'portal-auto-update.js'));
 
 registrar('usabilidade', 'Viewport móvel preservado nos três painéis', [agenda, profissionais, recados].every(t => contem(t, 'width=device-width,initial-scale=1,viewport-fit=cover')));
 registrar('usabilidade', 'Botões do painel de agendas têm alvo grande', regex(agenda, /\.botao\{[^}]*min-height:56px/));
