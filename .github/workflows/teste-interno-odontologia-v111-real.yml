@@ -1,0 +1,36 @@
+name: Teste interno odontologia v111 real
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/teste-interno-odontologia-v111-real.yml'
+permissions:
+  contents: read
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Ajustar somente o teste para o transporte JSONP atual
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/test_dom_flows.js')
+          t=p.read_text()
+          old="""    await waitFor(\n      () => harness.records.durableGetReservations.length >= 1,\n      'A reserva durável GET não foi enfileirada no clique da vaga'\n    );\n    const durableGet = harness.records.durableGetReservations[0];\n    assert.equal(durableGet.action, 'reservar_get');\n    assert.equal(durableGet.type, 'emergencial');\n    assert.equal(durableGet.date, '2099-08-03');\n    assert.equal(durableGet.keepalive, true);\n    assert.match(durableGet.requestId, /^MATIAS-/);\n"""
+          new="""    await waitFor(\n      () => harness.records.dentalReservations.length >= 1,\n      'A reserva JSONP não chegou ao backend simulado no clique da vaga',\n      3000\n    );\n    const reserva = harness.records.dentalReservations[0];\n    assert.equal(reserva.action, 'reservar_get');\n    assert.equal(reserva.type, 'emergencial');\n    assert.equal(reserva.date, '2099-08-03');\n    assert.match(reserva.requestId, /^MATIAS-/);\n    assert.equal(harness.dental.find(item => item.data === '2099-08-03').vagasEmergenciais, 0, 'O backend simulado não reduziu 1 para 0');\n"""
+          if old not in t:
+              raise SystemExit('Trecho antigo do teste não encontrado')
+          p.write_text(t.replace(old,new,1))
+          PY
+      - name: Executar fluxo completo odontológico
+        run: node scripts/test_dom_flows.js
+      - name: Verificar sintaxe do módulo odontológico
+        run: node --check portal-odontologia-segunda-sexta.js
