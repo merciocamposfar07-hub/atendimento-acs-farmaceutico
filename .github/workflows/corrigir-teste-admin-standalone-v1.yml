@@ -1,0 +1,41 @@
+name: Corrigir teste admin standalone v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-teste-admin-standalone-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ajustar teste ao painel standalone
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/test_admin_transport.js')
+          s=p.read_text(encoding='utf-8')
+          old="""  assert.match(official, /v=202608/);\n  assert.match(\n    official,\n    /admin-warmup\\.js\\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v103|14-receipt-v110)/\n  );\n  assert.match(official, /rel=\"preconnect\" href=\"https:\\/\\/script\\.google\\.com\"/);"""
+          new="""  assert.match(official, /v=202608/);\n  if (config.official !== 'painel-oficial-recados-campanhas.html') {\n    assert.match(\n      official,\n      /admin-warmup\\.js\\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v103|14-receipt-v110)/\n    );\n  }\n  assert.match(official, /rel=\"preconnect\" href=\"https:\\/\\/script\\.google\\.com\"/);"""
+          if old not in s:
+              raise SystemExit('Bloco antigo do teste administrativo não encontrado.')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Validar teste administrativo
+        run: node scripts/test_admin_transport.js
+      - name: Publicar correção do teste
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/test_admin_transport.js
+          git commit -m 'Alinha teste ao painel standalone de recados'
+          git push
