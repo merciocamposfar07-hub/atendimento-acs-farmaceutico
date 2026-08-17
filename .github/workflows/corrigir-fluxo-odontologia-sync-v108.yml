@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: odontologia-sync-v108
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   corrigir-testar-publicar:
@@ -42,7 +42,9 @@ jobs:
           printf '%s' "$PROBE" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const j=JSON.parse(s);if(!j.ok||!j.probe||j.versao!=="2.2.0")process.exit(4);console.log("BACKEND_ODONTOLOGIA_V220_OK");})'
 
       - name: Aplicar correção integrada no runner
-        run: python3 scripts/corrigir_fluxo_odontologia_sync_v108.py
+        run: |
+          python3 scripts/corrigir_fluxo_odontologia_sync_v108.py
+          python3 scripts/ajustar_v108_ci_timer.py
 
       - name: Testar regressões e integração completa
         shell: bash
