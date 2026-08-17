@@ -10,7 +10,7 @@
  */
 
 var PUBLICO_AGENDAS_PORTAL_V1 = Object.freeze({
-  VERSAO: '1.2.0',
+  VERSAO: '1.3.0',
   ACAO: 'painel_publico',
   AREA_PADRAO: 'JAPARANDUBA',
   FUSO: 'America/Recife',
@@ -148,6 +148,8 @@ function publicoAgendasV1Montar_(areaId) {
 
 function publicoAgendasV1Resposta_(modulos, aba, areaId, planilha) {
   areaId = publicoAgendasV1AreaId_(areaId) || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
+  try { if (typeof campanhasAutomaticasV1GarantirAnoAtualArea_ === 'function') campanhasAutomaticasV1GarantirAnoAtualArea_(areaId); } catch (erroCampanhaAutomatica) {}
+  var campanhas = publicoAgendasV1LerCampanhas_(planilha, areaId);
   return {
     ok: true,
     modulo: 'Agendas públicas do Portal TACS',
@@ -163,7 +165,7 @@ function publicoAgendasV1Resposta_(modulos, aba, areaId, planilha) {
     modules: modulos,
     professionals: publicoAgendasV1LerProfissionais_(planilha, areaId),
     recados: publicoAgendasV1LerRecados_(planilha, areaId),
-    campanhas: []
+    campanhas: campanhas
   };
 }
 
@@ -379,6 +381,62 @@ function publicoAgendasV1LerRecados_(planilha, areaId) {
   }
 
   return recados;
+}
+
+function publicoAgendasV1LerCampanhas_(planilha, areaId) {
+  areaId = publicoAgendasV1AreaId_(areaId) || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
+  if (!planilha || typeof planilha.getSheetByName !== 'function') return [];
+  var aba = planilha.getSheetByName('CAMPANHAS_PORTAL');
+  if (!aba || aba.getLastRow() < 2 || aba.getLastColumn() < 1) return [];
+  var valores = aba.getRange(1, 1, aba.getLastRow(), aba.getLastColumn()).getDisplayValues();
+  var cabecalhos = valores[0].map(publicoAgendasV1Normalizar_);
+  function indice(nomes) {
+    for (var i = 0; i < nomes.length; i += 1) {
+      var encontrado = cabecalhos.indexOf(publicoAgendasV1Normalizar_(nomes[i]));
+      if (encontrado >= 0) return encontrado;
+    }
+    return -1;
+  }
+  var idx = {
+    id: indice(['ID','CAMPANHA_ID']), area: indice(['AREA_ID','AREA','TERRITORIO']),
+    titulo: indice(['TITULO','NOME']), subtitulo: indice(['SUBTITULO','CHAMADA']),
+    mensagem: indice(['MENSAGEM','TEXTO','CONTEUDO']), inicio: indice(['INICIO','DATA_INICIO']),
+    validade: indice(['VALIDADE','FIM','DATA_FIM']), horario: indice(['HORARIO','HORARIO_EXIBICAO']),
+    ativo: indice(['ATIVO','PUBLICAR']), tema: indice(['COR_TEMA','TEMA']), corNome: indice(['COR_NOME']),
+    chave: indice(['CAMPANHA_CHAVE']), origem: indice(['ORIGEM']), ano: indice(['ANO']), mes: indice(['MES'])
+  };
+  if (idx.mensagem < 0 || idx.ativo < 0) return [];
+  var hoje = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'yyyy-MM-dd');
+  var out = [];
+  for (var linha = 1; linha < valores.length; linha += 1) {
+    var r = valores[linha];
+    var areaLinha = idx.area >= 0 ? publicoAgendasV1AreaId_(r[idx.area]) : '';
+    areaLinha = areaLinha || PUBLICO_AGENDAS_PORTAL_V1.AREA_PADRAO;
+    if (areaLinha !== areaId || !publicoAgendasV1Booleano_(r[idx.ativo])) continue;
+    var inicio = idx.inicio >= 0 ? publicoAgendasV1DataIso_(r[idx.inicio]) : '';
+    var validade = idx.validade >= 0 ? publicoAgendasV1DataIso_(r[idx.validade]) : '';
+    if (inicio && inicio > hoje) continue;
+    if (validade && validade < hoje) continue;
+    var mensagem = String(r[idx.mensagem] || '').trim();
+    if (!mensagem) continue;
+    out.push({
+      id: idx.id >= 0 ? String(r[idx.id] || '').trim() : '',
+      title: idx.titulo >= 0 ? String(r[idx.titulo] || '').trim() : 'Campanha da Unidade',
+      subtitle: idx.subtitulo >= 0 ? String(r[idx.subtitulo] || '').trim() : '',
+      message: mensagem,
+      start: inicio,
+      validity: validade,
+      time: idx.horario >= 0 ? String(r[idx.horario] || '').trim() : '',
+      active: true,
+      theme: idx.tema >= 0 ? String(r[idx.tema] || '').trim() : '',
+      colorName: idx.corNome >= 0 ? String(r[idx.corNome] || '').trim() : '',
+      campaignKey: idx.chave >= 0 ? String(r[idx.chave] || '').trim() : '',
+      source: idx.origem >= 0 ? String(r[idx.origem] || '').trim() : '',
+      year: idx.ano >= 0 ? String(r[idx.ano] || '').trim() : '',
+      month: idx.mes >= 0 ? String(r[idx.mes] || '').trim() : ''
+    });
+  }
+  return out;
 }
 
 function publicoAgendasV1LocalizarAba_(planilha) {

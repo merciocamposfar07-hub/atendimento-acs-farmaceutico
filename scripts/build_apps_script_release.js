@@ -92,6 +92,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_34_CampanhasPeriodoV1.gs',
     marker: 'TACS_CAMPANHAS_PERIODO_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_35_CampanhasAutomaticasV1.gs',
+    marker: 'TACS_CAMPANHAS_AUTOMATICAS_V1'
   }
 ];
 

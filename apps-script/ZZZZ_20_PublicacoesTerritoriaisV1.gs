@@ -142,6 +142,7 @@ function publicacoesTerritoriaisV1Remover_(contexto,acesso,tipo,id){
     var linha=publicacoesTerritoriaisV1Encontrar_(tabela,id,contexto.areaId);
     if(!linha)throw new Error('A publicação não foi encontrada nesta área.');
     var anterior=publicacoesTerritoriaisV1Objeto_(tabela.headers,linha.values);
+    if(tipo==='campanha'&&typeof campanhasAutomaticasV1RegistrarRemocao_==='function')campanhasAutomaticasV1RegistrarRemocao_(contexto.areaId,anterior);
     tabela.sheet.deleteRow(linha.row);
     SpreadsheetApp.flush();
     publicacoesTerritoriaisV1Auditar_(ss,'REMOVER_'+tipo.toUpperCase(),contexto,acesso,anterior,null);

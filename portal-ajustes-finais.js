@@ -206,7 +206,7 @@
       '.notification-guide-all strong{display:block;margin-bottom:8px;color:#082b43;font-size:17px}',
       '.notification-guide-all p{margin:7px 0;font-size:15px;line-height:1.5}',
       '@keyframes tacsPublicAttentionPulse{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.035);filter:brightness(1.13)}}',
-      '.integral-balloon>small{display:inline-flex!important;transform-origin:left center;animation:tacsPublicAttentionPulse 3.8s ease-in-out infinite}',
+      '.integral-balloon>small{display:inline-flex!important;transform-origin:left center}',
       '@media(prefers-reduced-motion:reduce){.integral-balloon>small{animation:none!important;transform:none!important}}',
       '@media(max-width:720px){.tacs-petroleum-button{font-size:20px}}'
     ].join('');

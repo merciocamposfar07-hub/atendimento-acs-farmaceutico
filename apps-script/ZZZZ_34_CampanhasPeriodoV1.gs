@@ -10,8 +10,8 @@
  * - o território continua vindo da sessão validada no servidor.
  */
 var TACS_CAMPANHAS_PERIODO_V1=Object.freeze({
-  VERSAO:'1.0.0',
-  COLUNAS:['ANO','MES','VALIDADE','HORARIO','MUNICIPIO_ID','MUNICIPIO_NOME','UF','ORGANIZACAO_ID','ORGANIZACAO_NOME']
+  VERSAO:'1.1.0',
+  COLUNAS:['ANO','MES','VALIDADE','HORARIO','MUNICIPIO_ID','MUNICIPIO_NOME','UF','ORGANIZACAO_ID','ORGANIZACAO_NOME','SUBTITULO']
 });
 
 var campanhasPeriodoV1SalvarBase_=typeof publicacoesTerritoriaisV1Salvar_==='function'?publicacoesTerritoriaisV1Salvar_:null;
@@ -107,6 +107,7 @@ function campanhasPeriodoV1SalvarCampanha_(contexto,acesso,p){
       AREA_ID:contexto.areaId,
       TITULO:titulo,
       MENSAGEM:mensagem,
+      SUBTITULO:publicacoesTerritoriaisV1Texto_(p.subtitulo).slice(0,320),
       INICIO:inicio,
       DIAS:publicacoesTerritoriaisV1Texto_(p.dias).slice(0,300),
       ATIVO:publicacoesTerritoriaisV1Booleano_(p.ativo),
@@ -131,6 +132,7 @@ function campanhasPeriodoV1SalvarCampanha_(contexto,acesso,p){
     SpreadsheetApp.flush();
     var depois=publicacoesTerritoriaisV1Objeto_(tabela.headers,values);
     publicacoesTerritoriaisV1Auditar_(ss,'SALVAR_CAMPANHA',contexto,acesso,anterior,depois);
+    if(typeof campanhasAutomaticasV1RegistrarRestauracao_==='function')campanhasAutomaticasV1RegistrarRestauracao_(contexto.areaId,id);
     return {
       ok:true,id:id,areaId:contexto.areaId,criado:!linha,
       ano:periodo.ano,mes:periodo.mes,validade:validade,

@@ -61,6 +61,7 @@ function addStyle(){
     '@media(max-width:520px){.camp-year-row{grid-template-columns:1fr}.camp-period-fields .period-grid{grid-template-columns:1fr}.camp-month-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.camp-month-tab{font-size:.88rem;padding:8px 4px}}',
     '@media(max-width:350px){.camp-month-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}'
   ].join('');
+  style.textContent+='.camp-color-chip{margin-top:10px;border-radius:12px;padding:9px 11px;background:#fff;color:#073a55;font-weight:900}.camp-theme-lilas>summary{background:linear-gradient(135deg,#ead9ff,#d4adf2);color:#32105f}.camp-theme-dourado>summary{background:linear-gradient(135deg,#ffe7a3,#f6c954);color:#4f3400}.camp-theme-roxo>summary{background:linear-gradient(135deg,#e4d4ff,#b995e8);color:#2e1258}.camp-theme-laranja>summary{background:linear-gradient(135deg,#ffe0b5,#f2a24d);color:#5b2e00}.camp-theme-azul-marinho>summary{background:linear-gradient(135deg,#163a69,#0b2443);color:#fff}.camp-theme-verde>summary{background:linear-gradient(135deg,#d8f2df,#79c992);color:#123f23}.camp-theme-azul>summary{background:linear-gradient(135deg,#d8efff,#79bce8);color:#0b3654}.camp-theme-amarelo>summary{background:linear-gradient(135deg,#fff5b8,#f2d257);color:#554500}.camp-theme-vermelho>summary{background:linear-gradient(135deg,#ffd6d6,#e78383);color:#5d1717}.camp-theme-rosa>summary{background:linear-gradient(135deg,#ffdbea,#ef9cbd);color:#641d3a}#listaCampanhas .item[class*="camp-theme-"]>summary .sub{color:inherit}';
   document.head.appendChild(style);
 }
 
@@ -114,20 +115,24 @@ function metaForCard(card){
     AREA_NOME:txt(m.AREA_NOME||context.areaNome),
     MUNICIPIO_NOME:txt(m.MUNICIPIO_NOME||context.municipioNome),
     UF:txt(m.UF||context.uf),
-    ORGANIZACAO_NOME:txt(m.ORGANIZACAO_NOME||context.organizacaoNome)
+    ORGANIZACAO_NOME:txt(m.ORGANIZACAO_NOME||context.organizacaoNome),
+    SUBTITULO:txt(m.SUBTITULO),COR_TEMA:txt(m.COR_TEMA),COR_NOME:txt(m.COR_NOME),ORIGEM:txt(m.ORIGEM)
   };
 }
+function campaignTheme(meta,title){var t=txt(meta&&meta.COR_TEMA).toLowerCase();if(t)return t.replace(/[^a-z0-9-]/g,'');var n=txt(title).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');var temas=['lilas','dourado','azul-marinho','laranja','amarelo','vermelho','verde','roxo','rosa','azul'];for(var i=0;i<temas.length;i++)if(n.indexOf(temas[i])!==-1)return temas[i];return''}
+function applyCampaignTheme(box,meta){if(!box)return;Array.prototype.slice.call(box.classList).filter(function(c){return c.indexOf('camp-theme-')===0}).forEach(function(c){box.classList.remove(c)});var h=box.querySelector('h3'),theme=campaignTheme(meta,h&&h.textContent);if(theme)box.classList.add('camp-theme-'+theme)}
 function monthOptions(selected){return MONTHS.map(function(name,i){var v=String(i+1).padStart(2,'0');return'<option value="'+v+'" '+(v===selected?'selected':'')+'>'+name+'</option>'}).join('')}
 function makeFields(meta){
   var div=document.createElement('div');div.className='camp-period-fields';
-  div.innerHTML='<div class="period-grid"><div><label><strong>Ano</strong></label><input class="campo" name="ano" type="number" min="2000" max="2200" inputmode="numeric" value="'+esc(meta.ANO)+'"></div><div><label><strong>Mês</strong></label><select class="campo" name="mes">'+monthOptions(meta.MES)+'</select></div></div><label><strong>Validade</strong></label><input class="campo" name="validade" type="date" value="'+esc(meta.VALIDADE)+'"><div class="camp-context">'+contextText(meta)+'</div>';
+  div.innerHTML='<label><strong>Subtítulo da campanha</strong></label><input class="campo" name="subtitulo" value="'+esc(meta.SUBTITULO||'')+'" placeholder="Ex.: Incentivo ao aleitamento materno"><div class="period-grid"><div><label><strong>Ano</strong></label><input class="campo" name="ano" type="number" min="2000" max="2200" inputmode="numeric" value="'+esc(meta.ANO)+'"></div><div><label><strong>Mês</strong></label><select class="campo" name="mes">'+monthOptions(meta.MES)+'</select></div></div><label><strong>Validade</strong></label><input class="campo" name="validade" type="date" value="'+esc(meta.VALIDADE)+'">'+(meta.COR_NOME?'<div class="camp-color-chip">Cor da campanha: '+esc(meta.COR_NOME)+'</div>':'')+'<div class="camp-context">'+contextText(meta)+'</div>';
   return div;
 }
 function renameContentLabel(box){
   Array.prototype.forEach.call(box.querySelectorAll('label'),function(label){if(txt(label.textContent)==='Mensagem'&&label.childNodes.length)label.childNodes[0].nodeValue='Conteúdo'})
 }
 function decorateBox(box,meta){
-  if(!box||box.querySelector('.camp-period-fields'))return;
+  if(!box)return;applyCampaignTheme(box,meta);
+  if(box.querySelector('.camp-period-fields'))return;
   var start=box.querySelector('[name="inicio"]');if(!start)return;
   var fields=makeFields(meta);
   var label=start.previousElementSibling;
@@ -142,8 +147,8 @@ function decorate(){
 }
 function scheduleDecorate(){clearTimeout(decorateTimer);decorateTimer=setTimeout(decorate,0)}
 function readFields(box){
-  var year=box&&box.querySelector('[name="ano"]'),month=box&&box.querySelector('[name="mes"]'),validity=box&&box.querySelector('[name="validade"]');
-  return{ano:txt(year&&year.value||selectedYear),mes:digits2(month&&month.value||selectedMonth),validade:isoDate(validity&&validity.value)};
+  var year=box&&box.querySelector('[name="ano"]'),month=box&&box.querySelector('[name="mes"]'),validity=box&&box.querySelector('[name="validade"]'),subtitle=box&&box.querySelector('[name="subtitulo"]');
+  return{ano:txt(year&&year.value||selectedYear),mes:digits2(month&&month.value||selectedMonth),validade:isoDate(validity&&validity.value),subtitulo:txt(subtitle&&subtitle.value)};
 }
 function setNewDefaults(){
   var form=document.getElementById('formNovaCampanha');if(!form)return;
@@ -208,6 +213,7 @@ function inspectTransport(node){
     appendHidden(form,'ano',pendingTransport.ano);
     appendHidden(form,'mes',pendingTransport.mes);
     appendHidden(form,'validade',pendingTransport.validade);
+    appendHidden(form,'subtitulo',pendingTransport.subtitulo);
     pendingTransport=null;
   });
 }
