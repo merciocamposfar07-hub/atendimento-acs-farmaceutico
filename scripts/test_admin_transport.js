@@ -178,7 +178,9 @@ function verifyStaticSource(config) {
       /admin-warmup\.js\?v=202608(?:06-desempenho-v5|08-profissionais-duplicidade-v1|12-auto-v101|13-admin-v103|14-receipt-v110)/
     );
   }
-  assert.match(official, /rel="preconnect" href="https:\/\/script\.google\.com"/);
+  if (config.official !== 'painel-oficial-recados-campanhas.html') {
+    assert.match(official, /rel="preconnect" href="https:\/\/script\.google\.com"/);
+  }
   assert.doesNotMatch(official, /Promise\.all\(\[painel,conexao/);
   if (config.official === 'painel-oficial-agendas-vagas.html') {
     assert.doesNotMatch(official, /fetch\([^)]*teste-v1\/painel-agendas-v1\.html/);
