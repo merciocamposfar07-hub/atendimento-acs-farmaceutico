@@ -7,7 +7,7 @@
   var reservationPromise = null;
 
   var PROFESSIONAL_CATEGORIES = {
-    medica: 'Solicitar atendimento com a Médica',
+    medica: 'Solicitar consulta Médica',
     enfermeira: 'Solicitar atendimento com a Enfermeira Chefe',
     nutricionista: 'Solicitar atendimento com nutricionista'
   };
@@ -224,6 +224,7 @@
     if (!select) return;
 
     [
+      'Solicitar atendimento com a Médica',
       'Atendimento com a Médica',
       'Atendimento com a Enfermeira Chefe',
       'Atendimento com a Nutricionista'

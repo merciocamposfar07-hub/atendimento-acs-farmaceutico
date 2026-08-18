@@ -12,30 +12,32 @@
   var sendObserver=null;
 
   var COLORS=[
-    '#0B5A7A','#6A3F9B','#0D7351','#A34718','#9D2F49','#315E9E','#6E4B8F',
-    '#08766C','#8A6500','#336E4B','#7B4E00','#8C365F','#4057A5','#4E626D','#7A3C28','#256A75'
+    '#06445D','#54307E','#095B40','#7E350F','#762338','#254A7B','#54386B',
+    '#066057','#6B4E00','#28583C','#5E3A00','#702B4C','#30437E','#39484F','#5C2D1E','#1D515A'
   ];
 
   var SERVICES=[
-    {value:'Implanon',label:'Implanon — informações ou solicitação do implante',color:'#6A3F9B',aliases:['Implanon']},
-    {value:'Solicitar consulta Médica',label:'Solicitar consulta Médica',color:'#0B5A7A',aliases:['Solicitar atendimento com a Médica','Atendimento com a Médica','Solicitar consulta Médica']},
-    {value:'Solicitar atendimento com a Enfermeira Chefe',label:'Solicitar atendimento com a Enfermeira Chefe',color:'#0D7351',aliases:['Solicitar atendimento com a Enfermeira Chefe','Atendimento com a Enfermeira Chefe']},
-    {value:'Solicitar atendimento com nutricionista',label:'Solicitar atendimento com nutricionista',color:'#A34718',aliases:['Solicitar atendimento com nutricionista','Atendimento com a Nutricionista']},
-    {value:'Solicitar atendimento odontológico (dentista)',label:'Solicitar atendimento odontológico (dentista)',color:'#315E9E',aliases:['Solicitar atendimento odontológico (dentista)']},
-    {value:'Solicitar visita domiciliar do TACS',label:'Solicitar visita domiciliar do TACS',color:'#08766C',aliases:['Visita domiciliar ou acompanhamento do TACS - Técnico Agente Comunitário de Saúde da Unidade de Saúde Posto Matias','Solicitar visita domiciliar do TACS']},
-    {value:'Solicitar visita domiciliar com a Médica',label:'Solicitar visita domiciliar com a Médica',color:'#8C365F',aliases:['Solicitar visita domiciliar com a Médica']},
-    {value:'Vacinação ou campanha de saúde',label:'Vacinação ou campanha de saúde',color:'#8A6500',aliases:['Vacinação ou campanha de saúde']},
-    {value:'Acompanhamento de saúde do Bolsa Família',label:'Acompanhamento de saúde do Bolsa Família',color:'#336E4B',aliases:['Acompanhamento de saúde do Bolsa Família']},
-    {value:'Cadastro ou atualização da família',label:'Cadastro ou atualização da família',color:'#7B4E00',aliases:['Cadastro ou atualização da família']},
-    {value:'Solicitar ficha de cadastro para Aposentadoria',label:'Solicitar ficha de cadastro para Aposentadoria',color:'#6E4B8F',aliases:['Solicitar ficha de cadastro para Aposentadoria']},
-    {value:SERVICE_RECIPE,label:SERVICE_RECIPE,color:'#9D2F49',aliases:[SERVICE_RECIPE]},
-    {value:SERVICE_EXAMS,label:SERVICE_EXAMS,color:'#4057A5',aliases:[SERVICE_EXAMS,'Encaminhamento ou orientação para outro serviço da rede pública']},
-    {value:'Outro assunto comunitário relacionado à Unidade de Saúde Posto Matias',label:'Outro assunto comunitário relacionado à Unidade de Saúde Posto Matias',color:'#4E626D',aliases:['Outro assunto comunitário relacionado à Unidade de Saúde Posto Matias']}
+    {value:'Implanon',label:'Implanon — informações ou solicitação do implante',color:'#54307E',aliases:['Implanon']},
+    {value:'Solicitar consulta Médica',label:'Solicitar consulta Médica',color:'#06445D',aliases:['Solicitar atendimento com a Médica','Atendimento com a Médica','Solicitar consulta Médica']},
+    {value:'Solicitar atendimento com a Enfermeira Chefe',label:'Solicitar atendimento com a Enfermeira Chefe',color:'#095B40',aliases:['Solicitar atendimento com a Enfermeira Chefe','Atendimento com a Enfermeira Chefe']},
+    {value:'Solicitar atendimento com nutricionista',label:'Solicitar atendimento com nutricionista',color:'#7E350F',aliases:['Solicitar atendimento com nutricionista','Atendimento com a Nutricionista']},
+    {value:'Solicitar atendimento odontológico (dentista)',label:'Solicitar atendimento odontológico (dentista)',color:'#254A7B',aliases:['Solicitar atendimento odontológico (dentista)']},
+    {value:'Solicitar visita domiciliar do TACS',label:'Solicitar visita domiciliar do TACS',color:'#066057',aliases:['Visita domiciliar ou acompanhamento do TACS - Técnico Agente Comunitário de Saúde da Unidade de Saúde Posto Matias','Solicitar visita domiciliar do TACS']},
+    {value:'Solicitar visita domiciliar com a Médica',label:'Solicitar visita domiciliar com a Médica',color:'#702B4C',aliases:['Solicitar visita domiciliar com a Médica']},
+    {value:'Vacinação ou campanha de saúde',label:'Vacinação ou campanha de saúde',color:'#6B4E00',aliases:['Vacinação ou campanha de saúde']},
+    {value:'Acompanhamento de saúde do Bolsa Família',label:'Acompanhamento de saúde do Bolsa Família',color:'#28583C',aliases:['Acompanhamento de saúde do Bolsa Família']},
+    {value:'Cadastro ou atualização da família',label:'Cadastro ou atualização da família',color:'#5E3A00',aliases:['Cadastro ou atualização da família']},
+    {value:'Solicitar ficha de cadastro para Aposentadoria',label:'Solicitar ficha de cadastro para Aposentadoria',color:'#54386B',aliases:['Solicitar ficha de cadastro para Aposentadoria']},
+    {value:SERVICE_RECIPE,label:SERVICE_RECIPE,color:'#762338',aliases:[SERVICE_RECIPE]},
+    {value:SERVICE_EXAMS,label:SERVICE_EXAMS,color:'#30437E',aliases:[SERVICE_EXAMS,'Encaminhamento ou orientação para outro serviço da rede pública']},
+    {value:'Outro assunto comunitário relacionado à Unidade de Saúde Posto Matias',label:'Outro assunto comunitário relacionado à Unidade de Saúde Posto Matias',color:'#39484F',aliases:['Outro assunto comunitário relacionado à Unidade de Saúde Posto Matias']}
   ];
 
   var REMOVED=[
     'Informações sobre dias, horários e funcionamento da Unidade de Saúde Posto Matias',
-    'Solicitar atendimento odontológico de emergência (dentista)'
+    'Solicitar atendimento odontológico de emergência (dentista)',
+    'Solicitar atendimento com a Médica',
+    'Atendimento com a Médica'
   ];
 
   function el(id){return document.getElementById(id)}
@@ -100,10 +102,10 @@
       '#category.portal-service-native{display:none!important}',
       '.portal-service-picker{display:grid;gap:10px;width:100%}',
       '.portal-service-picker-toggle{width:100%;min-height:64px;padding:14px 16px;border:3px solid #69c7e7;border-radius:16px;background:#fff;color:#17394a;text-align:left;font-size:18px;font-weight:950;line-height:1.28;box-shadow:0 6px 15px rgba(4,44,70,.10)}',
-      '.portal-service-picker-toggle[data-selected="1"]{color:#fff;border-color:#d8eef7;box-shadow:0 9px 20px rgba(3,35,56,.22)}',
+      '.portal-service-picker-toggle[data-selected="1"]{color:#f2f7f8;border-color:#cfe4eb;box-shadow:0 9px 20px rgba(3,35,56,.22)}',
       '.portal-service-picker-panel{display:grid;gap:9px;padding:11px;border:2px solid #86a7b7;border-radius:17px;background:#eef5f8;box-shadow:0 16px 34px rgba(3,35,56,.18)}',
       '.portal-service-picker-panel[hidden]{display:none!important}',
-      '.portal-service-choice{width:100%;min-height:58px;padding:13px 15px;border:2px solid rgba(255,255,255,.75);border-radius:14px;color:#fff;text-align:left;font-size:17px;font-weight:900;line-height:1.28;box-shadow:0 5px 11px rgba(3,35,56,.18)}',
+      '.portal-service-choice{width:100%;min-height:58px;padding:13px 15px;border:2px solid rgba(214,232,238,.72);border-radius:14px;color:#f2f7f8;text-align:left;font-size:17px;font-weight:900;line-height:1.28;box-shadow:0 5px 11px rgba(3,35,56,.18)}',
       '.portal-service-choice:active{transform:scale(.99)}',
       '.portal-attachment-box{grid-column:1/-1;display:grid;gap:12px;margin-top:2px;padding:17px;border:3px solid #69c7e7;border-radius:18px;background:linear-gradient(145deg,#073a55,#0b5878);color:#fff;box-shadow:0 12px 26px rgba(3,35,56,.22)}',
       '.portal-attachment-box[hidden]{display:none!important}',
@@ -150,7 +152,7 @@
     var value=text(select.value);
     if(!value){toggle.dataset.selected='0';toggle.style.background='#fff';toggle.style.color='#17394a';toggle.textContent='Toque para escolher';return}
     var option=Array.prototype.find.call(select.options,function(o){return o.value===select.value});
-    toggle.dataset.selected='1';toggle.style.background=colorForValue(value);toggle.style.color='#fff';toggle.textContent=option?option.textContent:value
+    toggle.dataset.selected='1';toggle.style.background=colorForValue(value);toggle.style.color='#f2f7f8';toggle.textContent=option?option.textContent:value
   }
 
   function installPicker(){
@@ -163,7 +165,15 @@
     toggle.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',panel.hidden?'false':'true')});
     document.addEventListener('click',function(event){if(!wrap.contains(event.target)){panel.hidden=true;toggle.setAttribute('aria-expanded','false')}});
     renderPicker();applySelectedColor();
-    pickerObserver=new MutationObserver(function(){renderPicker();applySelectedColor()});
+    pickerObserver=new MutationObserver(function(){
+      var legacy=false;
+      Array.prototype.forEach.call(select.options,function(o){
+        var v=text(o.value),l=text(o.textContent);
+        if(REMOVED.indexOf(v)!==-1||REMOVED.indexOf(l)!==-1)legacy=true;
+      });
+      if(legacy)normalizeOptions();
+      renderPicker();applySelectedColor()
+    });
     pickerObserver.observe(select,{childList:true});
   }
 
