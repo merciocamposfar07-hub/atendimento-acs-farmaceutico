@@ -1,0 +1,83 @@
+name: Restaurar cache odontologico performance v115
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/restaurar_cache_odonto_performance_v115.py'
+      - '.github/workflows/restaurar-cache-odonto-performance-v115.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Aplicar cache-first odontológico
+        run: python3 scripts/restaurar_cache_odonto_performance_v115.py
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Validar fluxos odontológicos e desempenho
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/atualizar_teste_odontologia_servico_unico_v3.py
+          node scripts/test_dom_flows.js
+          node scripts/test_dental_confirmation_gate_v103.js
+          node scripts/test_performance_v101.js
+          node scripts/test_quality_gate_v101.js
+          git checkout -- scripts/test_dom_flows.js
+
+      - name: Conferir escopo do patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          printf '%s\n' \
+            index.html \
+            portal-odontologia-segunda-sexta.js \
+            scripts/test_performance_v101.js \
+            scripts/test_quality_gate_v101.js | sort > /tmp/esperado
+          git diff --name-only | sort > /tmp/alterado
+          diff -u /tmp/esperado /tmp/alterado
+          grep -F 'PORTAL_TACS_ODONTO_CACHE_FIRST_V115' portal-odontologia-segunda-sexta.js
+          grep -F "portalTacsDentalAgendaV103FullWeek:" portal-odontologia-segunda-sexta.js
+          grep -F 'CACHE_FRESH_MS = 90000' portal-odontologia-segunda-sexta.js
+          grep -F 'window.PortalTacsOdontologiaV98 = {' portal-odontologia-segunda-sexta.js
+          grep -F '20260818-cache-first-v115' index.html
+
+      - name: Publicar correção na main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html portal-odontologia-segunda-sexta.js scripts/test_performance_v101.js scripts/test_quality_gate_v101.js
+          git commit -m 'Restaura cache-first odontológico com revalidação segura'
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Disparar deploy oficial após validação
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' 'MUNICIPIOS_CHA_GRANDE_RETRY_CACHE_ODONTO_V115' > .github/apps-script-release-request
+          git add .github/apps-script-release-request
+          git commit -m 'Reexecuta publicação municipal após restaurar cache odontológico'
+          git pull --rebase origin main
+          git push origin main
