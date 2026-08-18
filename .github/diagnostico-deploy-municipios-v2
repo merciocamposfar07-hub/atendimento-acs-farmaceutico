@@ -1,9 +1,9 @@
 status=EXECUCAO_ENCONTRADA
-head_sha=e579370cc0de3ed98cd4c8b25845dce49d2d9eb9
-run_id=32187356608
+head_sha=86f55fbdba28053860a7ed2491d882c178cef225
+run_id=32187709175
 run_status=completed
 run_conclusion=failure
-created_at=2026-08-18T21:22:16Z
-updated_at=2026-08-18T21:22:31Z
+created_at=2026-08-18T21:26:19Z
+updated_at=2026-08-18T21:26:36Z
 jobs=testar-e-implantar:completed:failure
 failed_steps=Testar toda a integração
