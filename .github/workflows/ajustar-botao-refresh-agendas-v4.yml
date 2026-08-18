@@ -1,0 +1,56 @@
+name: Ajustar botao refresh Agendas V4
+
+on:
+  push:
+    paths:
+      - 'scripts/ajustar_botao_refresh_agendas_v4.py'
+      - '.github/workflows/ajustar-botao-refresh-agendas-v4.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Aplicar somente tamanho e posicao do botao flutuante
+        run: python3 scripts/ajustar_botao_refresh_agendas_v4.py
+
+      - name: Validar integridade e equivalencia com Portal do Morador
+        run: |
+          grep -q 'ATUALIZAR_PAGINA_FLUTUANTE_AGENDAS_V4_START' painel-oficial-agendas-vagas.html
+          grep -q 'right:12px!important' painel-oficial-agendas-vagas.html
+          grep -q 'bottom:calc(12px + env(safe-area-inset-bottom))!important' painel-oficial-agendas-vagas.html
+          grep -q 'min-height:46px!important' painel-oficial-agendas-vagas.html
+          grep -q 'padding:10px 15px!important' painel-oficial-agendas-vagas.html
+          grep -q 'font:900 15px/1.15' painel-oficial-agendas-vagas.html
+          grep -q 'min-height:44px!important' painel-oficial-agendas-vagas.html
+          grep -q 'padding:9px 13px!important' painel-oficial-agendas-vagas.html
+          grep -q 'font-size:14px!important' painel-oficial-agendas-vagas.html
+          grep -q 'function salvarAgenda(c)' painel-oficial-agendas-vagas.html
+          grep -q 'function restaurar()' painel-oficial-agendas-vagas.html
+          grep -q 'agenda-whatsapp-card-v1.js?v=20260818-agendas-refresh-float-v4' painel-oficial-agendas-vagas.html
+          test "$(git diff --name-only)" = 'painel-oficial-agendas-vagas.html'
+
+      - name: Publicar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add painel-oficial-agendas-vagas.html
+          git commit -m 'Iguala botao flutuante de Agendas ao tamanho do Portal'
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Validar arquivo publicado no GitHub
+        run: |
+          git pull --rebase origin main
+          grep -q 'ATUALIZAR_PAGINA_FLUTUANTE_AGENDAS_V4_START' painel-oficial-agendas-vagas.html
+          grep -q 'min-height:44px!important' painel-oficial-agendas-vagas.html
+          grep -q 'font-size:14px!important' painel-oficial-agendas-vagas.html
+          echo 'BOTAO_REFRESH_AGENDAS_V4_PUBLICADO_OK'
