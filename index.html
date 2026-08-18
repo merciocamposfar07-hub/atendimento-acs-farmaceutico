@@ -271,7 +271,7 @@
     scheduleMessage();updateForm();
     // A odontologia v98 faz a leitura principal. A rotina antiga fica apenas como fallback
     // caso o arquivo externo não carregue, evitando duas consultas simultâneas ao Apps Script.
-    setTimeout(function(){if(!window.PortalTacsOdontologiaV98)loadDental()},3000);
+    setTimeout(function(){if(!window.__PORTAL_TACS_ODONTOLOGIA_V98__)loadDental()},3000);
   }());
   </script>
   <script src="moradores-autofill.js?v=20260817-aguarde-v110"></script>
