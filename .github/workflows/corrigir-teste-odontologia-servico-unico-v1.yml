@@ -1,0 +1,66 @@
+name: Corrigir teste odontológico para agenda única v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-teste-odontologia-servico-unico-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: corrigir-teste-odontologia-servico-unico-v1
+  cancel-in-progress: false
+
+jobs:
+  corrigir-validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Atualizar somente o teste legado
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/atualizar_teste_odontologia_servico_unico_v1.py
+          git diff -- scripts/test_dom_flows.js
+          changed=$(git diff --name-only)
+          test "$changed" = 'scripts/test_dom_flows.js'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar toda a suíte do Portal TACS
+        run: npm test
+
+      - name: Validar contrato odontológico preservado
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "category.value = 'Solicitar atendimento odontológico (dentista)';" scripts/test_dom_flows.js
+          grep -Fq "#dentalSlots .sheet-dental-choice.emergency:not(:disabled)" scripts/test_dom_flows.js
+          grep -Fq "assert.equal(durableGet.type, 'emergencial');" scripts/test_dom_flows.js
+          grep -Fq "assert.equal(monday.vagasEmergenciais, 0" scripts/test_dom_flows.js
+
+      - name: Commitar teste e solicitar novo deploy municipal
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'MIGRACAO_LEGADO_MUNICIPIOS_CHA_GRANDE_V1_RETRY_TESTE_ODONTOLOGIA %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .github/apps-script-release-request
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/test_dom_flows.js .github/apps-script-release-request
+          git commit -m 'Atualiza teste odontológico para serviço único e reenvia deploy municipal'
+          git pull --rebase origin main
+          git push origin main
