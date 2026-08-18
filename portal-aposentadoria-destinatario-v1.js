@@ -37,7 +37,7 @@
     var box=document.createElement('section');
     box.id='retirementRecipientBoxV1';
     box.hidden=true;
-    box.innerHTML='<div class="retirement-recipient-guide"><span class="retirement-recipient-arrow" aria-hidden="true">↓</span><span>Agora informe para quem é a ficha de cadastro.</span></div><h3>A ficha de cadastro é para:</h3><div class="retirement-recipient-options" role="group" aria-label="Para quem é a ficha de cadastro"><button type="button" class="retirement-recipient-option" data-value="Para você" aria-pressed="false">Para você</button><button type="button" class="retirement-recipient-option" data-value="Para outra pessoa" aria-pressed="false">Para outra pessoa</button></div><input id="retirementRecipientValue" type="hidden" value="">';
+    box.innerHTML='<div class="retirement-recipient-guide"><span class="retirement-recipient-arrow" aria-hidden="true">↓</span><span>Agora informe para quem é a ficha de cadastro.</span></div><h3>A ficha de cadastro é para:</h3><div class="retirement-recipient-options" role="group" aria-label="Para quem é a ficha de cadastro"><button type="button" class="retirement-recipient-option" data-value="Pra mim" aria-pressed="false">Pra mim</button><button type="button" class="retirement-recipient-option" data-value="Para outra pessoa" aria-pressed="false">Para outra pessoa</button></div><input id="retirementRecipientValue" type="hidden" value="">';
     subjectField.parentNode.insertBefore(box,subjectField);
 
     box.addEventListener('click',function(event){
