@@ -24,13 +24,12 @@ jobs:
         run: |
           set -euo pipefail
           OUT=.github/diagnostico-deploy-municipios-v2
-          TARGET='a8ed3d3e7a1888def8169730999333bbd959332a'
+          TARGET='1ad9385e7e753684499ae5562011a4f174c8ddf1'
           JSON=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/deploy-apps-script-moradores.yml/runs?branch=main&per_page=30")
           RUN=$(printf '%s' "$JSON" | jq -c --arg target "$TARGET" '.workflow_runs[] | select(.head_sha==$target)' | head -n 1 || true)
           if [ -z "$RUN" ]; then
             {
-              echo 'status=SEM_EXECUCAO_PARA_A8ED3D3'
-              echo "total_runs=$(printf '%s' "$JSON" | jq -r '.total_count // 0')"
+              echo 'status=SEM_EXECUCAO_PARA_1AD9385'
               echo "latest_head=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].head_sha // ""')"
               echo "latest_status=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].status // ""')"
               echo "latest_conclusion=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].conclusion // ""')"
@@ -58,6 +57,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .github/diagnostico-deploy-municipios-v2
-          git commit -m 'Registra diagnóstico atual do deploy municipal' || exit 0
+          git commit -m 'Registra diagnóstico do deploy após corrigir dois testes' || exit 0
           git pull --rebase origin main
           git push origin main
