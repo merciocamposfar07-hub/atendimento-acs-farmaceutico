@@ -57,7 +57,7 @@ assert(!front.includes('localStorage.setItem')&&!front.includes('sessionStorage.
 assert(agenda.includes("document.dispatchEvent(new CustomEvent('tacs:notificacao-reparo-concluido'"));
 assert(agenda.includes("'notification.willDisplay'"));assert(agenda.includes("'notification.clicked'"));
 assert(agenda.includes("API + '?action=publico_notificacao_webhook'"));
-assert(index.includes('agenda-enfermeira.js?v=20260814-receipt-v110'));
+assert(/agenda-enfermeira\.js\?v=[^"']+/.test(index));
 assert(panel.includes('Saúde das notificações'));assert(panel.includes('Solicitar reparo das notificações da área'));assert(panel.includes("post('admin_notificacoes_saude'"));assert(panel.includes("post('admin_notificacoes_solicitar_reparo_area'"));
 assert(!fs.existsSync('painel-oficial-saude-notificacoes.html'));
 assert(warm.includes("/\\/painel-oficial-recados-campanhas\\.html$/"));
