@@ -12,7 +12,7 @@
  * - alterações estruturais são bloqueadas se deixarem uma área ativa sem contexto válido.
  */
 var TACS_ORGANIZACOES_MUNICIPIOS_V1=Object.freeze({
-  VERSAO:'1.1.0',
+  VERSAO:'1.2.0',
   CATALOGO_PROPERTY:'TACS_ORGANIZACOES_MUNICIPIOS_V1_CATALOGO',
   ORGANIZACAO_PADRAO:'ORG_ATUAL',
   MUNICIPIO_PADRAO:'MUN_ATUAL',
@@ -121,9 +121,25 @@ function tacsOrganizacoesMunicipiosV1Mapas_(catalogo){
 function tacsOrganizacoesMunicipiosV1MunicipioDaArea_(catalogo,areaId){
   areaId=tacsOrganizacoesMunicipiosV1Id_(areaId);
   var vinculo=catalogo.areas&&catalogo.areas[areaId];
-  return tacsOrganizacoesMunicipiosV1Id_(
-    vinculo&&vinculo.municipioId||TACS_ORGANIZACOES_MUNICIPIOS_V1.MUNICIPIO_PADRAO
-  );
+  var explicito=tacsOrganizacoesMunicipiosV1Id_(vinculo&&vinculo.municipioId||'');
+  if(explicito)return explicito;
+
+  var ativosReais=(catalogo.municipios||[]).filter(function(item){
+    return item&&item.ativo!==false&&
+      tacsOrganizacoesMunicipiosV1Id_(item.municipioId)!==TACS_ORGANIZACOES_MUNICIPIOS_V1.MUNICIPIO_PADRAO;
+  });
+  if(ativosReais.length===1){
+    return tacsOrganizacoesMunicipiosV1Id_(ativosReais[0].municipioId);
+  }
+
+  if(ativosReais.length===0){
+    var legado=(catalogo.municipios||[]).filter(function(item){
+      return item&&item.ativo!==false&&
+        tacsOrganizacoesMunicipiosV1Id_(item.municipioId)===TACS_ORGANIZACOES_MUNICIPIOS_V1.MUNICIPIO_PADRAO;
+    });
+    if(legado.length===1)return TACS_ORGANIZACOES_MUNICIPIOS_V1.MUNICIPIO_PADRAO;
+  }
+  return '';
 }
 
 function tacsOrganizacoesMunicipiosV1ValidarIntegridadeTerritorial_(catalogo){
@@ -300,9 +316,105 @@ function tacsOrganizacoesMunicipiosV1VincularArea_(areaId,municipioId,acesso){
   });
 }
 
+function tacsOrganizacoesMunicipiosV1MigrarLegadoChaGrande_(){
+  var leitura=tacsOrganizacoesMunicipiosV1LerCatalogo_();
+  var legadoOrg=TACS_ORGANIZACOES_MUNICIPIOS_V1.ORGANIZACAO_PADRAO;
+  var legadoMun=TACS_ORGANIZACOES_MUNICIPIOS_V1.MUNICIPIO_PADRAO;
+  var temLegado=(leitura.organizacoes||[]).some(function(item){
+    return tacsOrganizacoesMunicipiosV1Id_(item&&item.organizacaoId)===legadoOrg;
+  })||(leitura.municipios||[]).some(function(item){
+    return tacsOrganizacoesMunicipiosV1Id_(item&&item.municipioId)===legadoMun;
+  });
+  if(!temLegado)return leitura;
+
+  var reaisAtivos=(leitura.municipios||[]).filter(function(item){
+    return item&&item.ativo!==false&&tacsOrganizacoesMunicipiosV1Id_(item.municipioId)!==legadoMun;
+  });
+  if(reaisAtivos.length!==1)return leitura;
+  var destino=reaisAtivos[0];
+  var destinoId=tacsOrganizacoesMunicipiosV1Id_(destino.municipioId);
+  var destinoNome=tacsOrganizacoesMunicipiosV1Id_(destino.nome);
+  var destinoUf=tacsOrganizacoesMunicipiosV1Id_(destino.uf);
+  if(destinoId!=='CHA_GRANDE'&&destinoNome!=='CHA_GRANDE')return leitura;
+  if(destinoUf&&destinoUf!=='PE')return leitura;
+  var orgDestinoId=tacsOrganizacoesMunicipiosV1Id_(destino.organizacaoId);
+  if(!orgDestinoId||orgDestinoId===legadoOrg)return leitura;
+  var orgDestino=(leitura.organizacoes||[]).filter(function(item){
+    return item&&item.ativa!==false&&tacsOrganizacoesMunicipiosV1Id_(item.organizacaoId)===orgDestinoId;
+  })[0]||null;
+  if(!orgDestino)return leitura;
+
+  return tacsOrganizacoesMunicipiosV1ComLock_(function(){
+    var catalogo=tacsOrganizacoesMunicipiosV1LerCatalogo_();
+    var reais=(catalogo.municipios||[]).filter(function(item){
+      return item&&item.ativo!==false&&tacsOrganizacoesMunicipiosV1Id_(item.municipioId)!==legadoMun;
+    });
+    if(reais.length!==1)return catalogo;
+    var real=reais[0];
+    var realId=tacsOrganizacoesMunicipiosV1Id_(real.municipioId);
+    var realNome=tacsOrganizacoesMunicipiosV1Id_(real.nome);
+    var realUf=tacsOrganizacoesMunicipiosV1Id_(real.uf);
+    if(realId!=='CHA_GRANDE'&&realNome!=='CHA_GRANDE')return catalogo;
+    if(realUf&&realUf!=='PE')return catalogo;
+    var realOrg=tacsOrganizacoesMunicipiosV1Id_(real.organizacaoId);
+    if(!realOrg||realOrg===legadoOrg)return catalogo;
+    var orgOk=(catalogo.organizacoes||[]).some(function(item){
+      return item&&item.ativa!==false&&tacsOrganizacoesMunicipiosV1Id_(item.organizacaoId)===realOrg;
+    });
+    if(!orgOk)return catalogo;
+
+    catalogo.areas=catalogo.areas&&typeof catalogo.areas==='object'?catalogo.areas:{};
+    var areaIds={};
+    Object.keys(catalogo.areas).forEach(function(areaId){
+      areaIds[tacsOrganizacoesMunicipiosV1Id_(areaId)]=true;
+    });
+    if(typeof tacsTerritorioV1LerAreas_==='function'){
+      (tacsTerritorioV1LerAreas_()||[]).forEach(function(area){
+        var areaId=tacsOrganizacoesMunicipiosV1Id_(area&& (area.areaId||area.AREA_ID));
+        if(areaId)areaIds[areaId]=true;
+      });
+    }
+
+    var mudou=false;
+    Object.keys(areaIds).forEach(function(areaId){
+      var vinculo=catalogo.areas[areaId];
+      var municipioAtual=tacsOrganizacoesMunicipiosV1Id_(vinculo&&vinculo.municipioId||'');
+      if(!municipioAtual||municipioAtual===legadoMun){
+        catalogo.areas[areaId]={municipioId:realId};
+        mudou=true;
+      }
+    });
+
+    var usaMunLegado=Object.keys(catalogo.areas).some(function(areaId){
+      var vinculo=catalogo.areas[areaId];
+      return tacsOrganizacoesMunicipiosV1Id_(vinculo&&vinculo.municipioId||'')===legadoMun;
+    });
+    if(!usaMunLegado){
+      var antesMun=catalogo.municipios.length;
+      catalogo.municipios=catalogo.municipios.filter(function(item){
+        return tacsOrganizacoesMunicipiosV1Id_(item&&item.municipioId)!==legadoMun;
+      });
+      if(catalogo.municipios.length!==antesMun)mudou=true;
+    }
+
+    var usaOrgLegado=(catalogo.municipios||[]).some(function(item){
+      return tacsOrganizacoesMunicipiosV1Id_(item&&item.organizacaoId)===legadoOrg;
+    });
+    if(!usaOrgLegado){
+      var antesOrg=catalogo.organizacoes.length;
+      catalogo.organizacoes=catalogo.organizacoes.filter(function(item){
+        return tacsOrganizacoesMunicipiosV1Id_(item&&item.organizacaoId)!==legadoOrg;
+      });
+      if(catalogo.organizacoes.length!==antesOrg)mudou=true;
+    }
+
+    return mudou?tacsOrganizacoesMunicipiosV1PersistirSemLock_(catalogo):catalogo;
+  });
+}
+
 function tacsOrganizacoesMunicipiosV1DadosAdmin_(acesso){
   tacsOrganizacoesMunicipiosV1ExigirAdminGeral_(acesso);
-  var catalogo=tacsOrganizacoesMunicipiosV1LerCatalogo_();
+  var catalogo=tacsOrganizacoesMunicipiosV1MigrarLegadoChaGrande_();
   var areas=[];
   if(typeof tacsTerritorioV1LerAreas_==='function'){
     areas=(tacsTerritorioV1LerAreas_()||[]).map(function(area){
