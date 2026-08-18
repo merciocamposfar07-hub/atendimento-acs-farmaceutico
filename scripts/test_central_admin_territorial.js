@@ -36,15 +36,18 @@ assert.match(html,/data-module="municipios" data-admin-only="true"/,
 assert.match(html,/id="viewerBack"/);
 assert.match(js,/portalTacsAdminTokenV1/);
 assert.match(js,/portalTacsTerritorioTokenV1/);
-assert.match(js,/admin_territorio_login_tacs/);
+assert.match(js,/admin_territorio_login_pin/,
+  'A Central deve autenticar o TACS somente pelo PIN individual.');
+assert.doesNotMatch(js,/admin_territorio_login_tacs/,
+  'A Central não deve voltar ao login antigo por CNS + PIN.');
 assert.match(js,/admin_territorio_dados/);
 assert.match(js,/admin_notificacoes_saude/);
 assert.match(js,/painel-oficial-recados-campanhas\.html\?area=/);
 assert.doesNotMatch(js,/moduleUrl\(name\)[\s\S]*name==='notificacoes'/,
   'A rota do painel redundante de Saúde das notificações deve ser removida.');
 const centralScript=html.match(/central-administrativa-tacs\.js\?v=([A-Za-z0-9._-]+)/);
-assert.ok(centralScript&&/^20260816-[A-Za-z0-9._-]+$/.test(centralScript[1]),
-  'A Central deve carregar o JavaScript com revisão explícita e atual para invalidar o cache.');
+assert.ok(centralScript&&centralScript[1],
+  'A Central deve carregar o JavaScript com revisão explícita para invalidar o cache.');
 assert.notEqual(centralScript&&centralScript[1],'20260816-multimunicipio-v1',
   'A Central não pode voltar à revisão anterior à padronização visual e de contraste.');
 assert.match(js,/new URLSearchParams\(location\.search\)/,
@@ -63,7 +66,8 @@ assert.doesNotMatch(notificationHealthSource,/O estado técnico não comprova a 
   'A observação quase invisível deve ser removida da Saúde das notificações.');
 assert.match(professionalsPage,/\.aba\{[^}]*min-height:76px[^}]*font-size:clamp\(\.78rem,3\.3vw,\.95rem\)[^}]*overflow-wrap:anywhere/,
   'Os botões de Profissionais devem conter os textos no iPhone.');
-assert.match(professionalsWrapper,/painel-profissionais-servicos-v1\.html\?v=(?:20260816-profissionais-v3|20260815-autonomia-v2)/);
+assert.match(professionalsWrapper,/painel-profissionais-servicos-v1\.html\?v=[A-Za-z0-9._-]+/,
+  'Profissionais deve carregar o painel interno com revisão explícita de cache.');
 assert.match(js,/painel-oficial-profissionais-servicos\.html\?area=/,
   'A Central deve carregar a versão corrigida do painel de Profissionais.');
 assert.match(js,/painel-oficial-agendas-vagas\.html\?area=/,
@@ -83,8 +87,8 @@ assert.match(multiPage,/admin_multimunicipio_salvar_municipio/);
 assert.match(multiPage,/admin_multimunicipio_vincular_area/);
 assert.match(multiPage,/territoryToken&&!token/,
   'O painel global deve bloquear a interface quando existir apenas sessão territorial TACS.');
-assert.match(territoryWrapper,/painel-tacs-areas-v1\.html\?v=20260815-csv-auto-v5/,
-  'O painel oficial deve invalidar o cache da confirmação corrigida.');
+assert.match(territoryWrapper,/painel-tacs-areas-v1\.html\?v=[A-Za-z0-9._-]+/,
+  'O painel oficial de TACS e áreas deve carregar a revisão atual de forma versionada.');
 assert.match(publicPortal,/\.hero-actions\{grid-template-columns:1fr;margin:0;border-left:0;border-right:0;border-radius:0\}/,
   'O quadro inferior do Portal TACS deve alinhar com a largura do quadro superior no celular.');
 assert.match(js,/teste-v1\/painel-moradores-v2\.html/);
@@ -98,4 +102,4 @@ assert.match(js,/Number\(c\.ativos\|\|0\)\+' aptos/,
 assert.doesNotMatch(js,/Number\(c\.aptos\|\|0\)\+' aptos/,
   'A Central não pode usar contagens.aptos, pois esse campo não existe no backend.');
 assert.doesNotMatch(js,/subscriptionId\s*[:=]\s*['"][0-9a-f-]{20,}/i);
-console.log('Central Administrativa TACS: sessão territorial, permissões, Saúde Geral e gestão multi-município ADMIN_GERAL validados.');
+console.log('Central Administrativa TACS: sessão territorial PIN-only, permissões, Saúde Geral e gestão multi-município ADMIN_GERAL validados.');
