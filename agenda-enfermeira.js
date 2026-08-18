@@ -950,13 +950,15 @@
 
     if (isIos() && !isStandalone()) {
       status.textContent =
-        'No iPhone, adicione primeiro o Portal TACS à Tela de Início.';
+        'Ative os avisos neste aparelho para receber recados, campanhas e alterações de agenda.';
       help.textContent =
-        'Safari → Compartilhar → Adicionar à Tela de Início. Depois abra pelo ícone e volte a este botão.';
-      button.textContent = 'Ver instruções para iPhone';
+        'No iPhone, a ativação é concluída pelo Portal TACS aberto a partir do ícone da Tela de Início.';
+      button.textContent = 'Ativar avisos neste aparelho';
       button.addEventListener('click', function () {
+        status.textContent =
+          'Para ativar os avisos no iPhone, abra o Portal TACS pelo ícone da Tela de Início.';
         help.textContent =
-          'No Safari: toque no botão Compartilhar, escolha “Adicionar à Tela de Início”, confirme em Adicionar e abra o portal pelo novo ícone.';
+          'Compartilhar → Adicionar à Tela de Início → abra o Portal TACS pelo novo ícone → toque novamente em “Ativar avisos neste aparelho”.';
       });
       return;
     }
