@@ -1,1 +1,0 @@
-Símbolos visuais 3D das campanhas mensais, padronizados conforme referência aprovada em 17/08/2026.
