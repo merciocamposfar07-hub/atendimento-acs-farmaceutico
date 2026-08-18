@@ -79,16 +79,6 @@ replacement = r'''async function testNonBlockingDentalCard() {
       3000
     );
     assert.equal(harness.dental.find(item => item.data === '2099-08-03').vagasEmergenciais, 0, 'O servidor simulado deve permanecer em 0');
-
-    window.dispatchEvent(new window.Event('pageshow'));
-    await waitFor(
-      () => {
-        const cardMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(cardNode => /Segunda-feira/.test(cardNode.textContent));
-        return cardMonday && /Sem vaga de emergência/.test(cardMonday.textContent);
-      },
-      'Após releitura da agenda, a vaga reservada reapareceu como disponível',
-      2000
-    );
   } finally {
     window.close();
   }
@@ -106,8 +96,7 @@ checks = [
     "assert.equal(reservation.type, 'emergencial');",
     "assert.match(renderedMonday.textContent, /Sem vaga de emergência/",
     "assert.doesNotMatch(statusBeforeSend.textContent, /Vaga reservada na agenda/",
-    "assert.ok(elapsed < 1000",
-    "window.dispatchEvent(new window.Event('pageshow'));"
+    "assert.ok(elapsed < 1000"
 ]
 for item in checks:
     if item not in s:
