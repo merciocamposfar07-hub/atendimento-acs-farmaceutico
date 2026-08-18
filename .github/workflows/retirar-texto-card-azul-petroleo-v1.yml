@@ -1,0 +1,42 @@
+name: Retirar texto card azul-petróleo do botão v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/retirar-texto-card-azul-petroleo-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  ajustar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar ajuste textual
+        run: python3 scripts/retirar_texto_card_azul_petroleo_v1.py
+      - name: Validar escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check portal-ajustes-finais.js
+          grep -Fq "card.innerHTML = 'Enviar solicitação<small>Card profissional com identificação da área e do TACS responsável.</small>';" portal-ajustes-finais.js
+          ! grep -Fq 'Enviar solicitação em card azul-petróleo' portal-ajustes-finais.js
+          grep -Fq 'portal-ajustes-finais.js?v=20260818-botao-envio-v6' index.html
+          changed=$(git diff --name-only | sort)
+          expected=$(printf '%s\n' index.html portal-ajustes-finais.js | sort)
+          test "$changed" = "$expected"
+      - name: Publicar ajuste
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html portal-ajustes-finais.js
+          git commit -m 'Retira card azul-petróleo do texto do botão de envio'
+          git pull --rebase origin main
+          git push origin main
