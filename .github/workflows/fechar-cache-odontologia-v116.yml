@@ -1,0 +1,54 @@
+name: Fechar cache odontológico e API v116
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fechar-cache-odontologia-v116.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir-testar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Aplicar correção v116
+        run: python3 scripts/fechar_cache_odontologia_v116.py
+      - name: Validar sintaxe e escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check portal-odontologia-segunda-sexta.js
+          grep -Fq 'window.PortalTacsOdontologiaV98 = Object.freeze({' portal-odontologia-segunda-sexta.js
+          grep -Fq 'if (!cacheVisible) writeSlotsCache();' portal-odontologia-segunda-sexta.js
+          grep -Fq '20260818-cache-api-v116' index.html
+          changed=$(git diff --name-only | sort)
+          expected=$(printf '%s\n' index.html portal-odontologia-segunda-sexta.js scripts/test_performance_v101.js | sort)
+          test "$changed" = "$expected"
+      - name: Instalar dependências
+        run: npm ci
+      - name: Testar desempenho odontológico
+        run: node scripts/test_performance_v101.js
+      - name: Testar fluxo DOM completo
+        run: node scripts/test_dom_flows.js
+      - name: Testar contrato odontológico
+        run: node scripts/test_dental_confirmation_gate_v103.js
+      - name: Publicar somente arquivos validados
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html portal-odontologia-segunda-sexta.js scripts/test_performance_v101.js
+          git commit -m 'Fecha cache odontológico e restaura API pública v116'
+          git pull --rebase origin main
+          git push origin main
