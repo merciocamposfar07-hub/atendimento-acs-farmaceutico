@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Integração V1: carrega o módulo sem alterar os demais scripts do Portal TACS.
 path = Path('index.html')
 text = path.read_text(encoding='utf-8')
 marker = '<script src="portal-orientacao-morador.js?v=20260817-fluxo-guiado-v3"></script>'
