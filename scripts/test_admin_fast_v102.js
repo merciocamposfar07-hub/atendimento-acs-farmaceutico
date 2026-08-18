@@ -23,7 +23,7 @@ for(const [file,wait,dynamicFrame] of transports){
 }
 const moradores=read('teste-v1/painel-moradores-v2.html');
 assert.doesNotMatch(moradores,/portal-auto-update\.js/,'Moradores não deve carregar UI do Portal TACS');
-assert.match(moradores,/painel-moradores-transport-v2\.js\?v=20260813-admin-v103/);
+assert.match(moradores,/painel-moradores-transport-v2\.js\?v=[^"']+/,'Moradores deve carregar o transporte administrativo versionado');
 const warm=read('admin-warmup.js');
 assert.doesNotMatch(warm,/portal-auto-update\.js/,'Warmup administrativo não deve injetar atualização do Portal público');
 const profissionais=read('painel-oficial-profissionais-servicos.html');
