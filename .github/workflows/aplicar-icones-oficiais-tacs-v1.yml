@@ -1,0 +1,90 @@
+name: Aplicar ícones oficiais TACS v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/aplicar-icones-oficiais-tacs-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aplicar-icones-oficiais-tacs-v1
+  cancel-in-progress: false
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar rasterização SVG
+        run: python3 -m pip install --quiet cairosvg
+
+      - name: Gerar PNGs para iPhone e Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import cairosvg
+          from pathlib import Path
+          for source, stem in [
+              ('icons/portal-tacs-oficial.svg','icons/portal-tacs-oficial'),
+              ('icons/central-admin-saude.svg','icons/central-admin-saude'),
+          ]:
+              for size in (180,192,512):
+                  cairosvg.svg2png(url=source, write_to=f'{stem}-{size}.png', output_width=size, output_height=size)
+          PY
+
+      - name: Aplicar referências nos portais e manifestos
+        run: python3 scripts/aplicar_icones_oficiais_tacs_v1.py
+
+      - name: Validar alteração
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check central-administrativa-tacs.js
+          python3 -m json.tool manifest.webmanifest >/dev/null
+          python3 -m json.tool manifest-central-admin.webmanifest >/dev/null
+          grep -Fq 'portal-tacs-oficial-512.png?v=20260818-icones-oficiais-v1' index.html
+          grep -Fq 'central-admin-saude-512.png?v=20260818-icones-oficiais-v1' central-administrativa-tacs.html
+          grep -Fq "mode==='admin'?'/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icones-oficiais-v1':'/atendimento-acs-farmaceutico/icons/painel-tacs-areas-512.png?v=20260818-icones-oficiais-v1'" central-administrativa-tacs.js
+          test -s icons/portal-tacs-oficial-180.png
+          test -s icons/portal-tacs-oficial-192.png
+          test -s icons/portal-tacs-oficial-512.png
+          test -s icons/central-admin-saude-180.png
+          test -s icons/central-admin-saude-192.png
+          test -s icons/central-admin-saude-512.png
+          changed=$(git diff --name-only | sort)
+          expected=$(printf '%s\n' \
+            central-administrativa-tacs.html \
+            central-administrativa-tacs.js \
+            icons/central-admin-saude-180.png \
+            icons/central-admin-saude-192.png \
+            icons/central-admin-saude-512.png \
+            icons/portal-tacs-oficial-180.png \
+            icons/portal-tacs-oficial-192.png \
+            icons/portal-tacs-oficial-512.png \
+            index.html \
+            manifest-central-admin.webmanifest \
+            manifest.webmanifest | sort)
+          test "$changed" = "$expected"
+
+      - name: Publicar ícones oficiais
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html central-administrativa-tacs.html central-administrativa-tacs.js \
+            manifest.webmanifest manifest-central-admin.webmanifest \
+            icons/portal-tacs-oficial-180.png icons/portal-tacs-oficial-192.png icons/portal-tacs-oficial-512.png \
+            icons/central-admin-saude-180.png icons/central-admin-saude-192.png icons/central-admin-saude-512.png
+          git commit -m 'Aplica ícones oficiais no Portal TACS e na Central Administrativa'
+          git pull --rebase origin main
+          git push origin main
