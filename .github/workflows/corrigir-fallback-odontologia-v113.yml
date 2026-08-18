@@ -1,0 +1,39 @@
+name: Corrigir fallback odontológico duplicado v113
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-fallback-odontologia-v113.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar correção restrita
+        run: python3 scripts/corrigir_fallback_odontologia_v113.py
+      - name: Validar escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'if(!window.__PORTAL_TACS_ODONTOLOGIA_V98__)loadDental()' index.html
+          grep -Fq 'portal-odontologia-segunda-sexta.js?v=20260818-expiracao-horario-v112' index.html
+          changed=$(git diff --name-only)
+          test "$changed" = 'index.html'
+      - name: Publicar correção no main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Impede fallback odontológico antigo quando módulo atual está carregado'
+          git pull --rebase origin main
+          git push origin main
