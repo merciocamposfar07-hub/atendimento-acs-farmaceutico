@@ -1,0 +1,45 @@
+name: Corrigir ícone TACS na Central v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-icone-tacs-central-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar correção estreita
+        run: python3 scripts/corrigir_icone_tacs_central_v1.py
+
+      - name: Validar
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check central-administrativa-tacs.js
+          grep -Fq "if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}" central-administrativa-tacs.js
+          ! grep -Fq "mode==='admin'?'/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png" central-administrativa-tacs.js
+          grep -Fq 'central-administrativa-tacs.js?v=20260818-icone-central-todos-v2' central-administrativa-tacs.html
+          changed=$(git diff --name-only | sort)
+          expected=$(printf '%s\n' central-administrativa-tacs.html central-administrativa-tacs.js | sort)
+          test "$changed" = "$expected"
+
+      - name: Publicar
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add central-administrativa-tacs.html central-administrativa-tacs.js
+          git commit -m 'Usa novo ícone administrativo também no acesso TACS da Central'
+          git pull --rebase origin main
+          git push origin main
