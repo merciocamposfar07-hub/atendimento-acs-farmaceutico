@@ -1,0 +1,39 @@
+name: Atualizar teste territorial para PIN único v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/atualizar-teste-territorio-pin-only-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Atualizar somente o teste territorial
+        run: python3 scripts/atualizar_teste_territorio_pin_only_v1.py
+      - name: Validar escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "getElementById('tacsCnsAccess'), null" scripts/test_territorio_dom.js
+          grep -Fq 'admin_territorio_login_pin' scripts/test_territorio_dom.js
+          changed=$(git diff --name-only)
+          test "$changed" = 'scripts/test_territorio_dom.js'
+      - name: Publicar teste atualizado
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/test_territorio_dom.js
+          git commit -m 'Atualiza teste territorial para login TACS somente por PIN'
+          git pull --rebase origin main
+          git push origin main
