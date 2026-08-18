@@ -1,0 +1,101 @@
+name: Verificar deploy municipal final v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verificar-deploy-migracao-municipios-final-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Aguardar e verificar deployment
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          STATUS="$GITHUB_WORKSPACE/.github/migracao-municipios-deploy-final"
+          printf 'status=AGUARDANDO\n' > "$STATUS"
+          LIVE_DIR="$RUNNER_TEMP/apps-script-final"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const c=JSON.parse(process.env.CLASP_JSON); c.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(c,null,2)+'\n');
+          NODE
+
+          final=FALHA
+          source_ok=nao
+          deploy_ok=nao
+          health_ok=nao
+          version=119
+          for tentativa in $(seq 1 12); do
+            cd "$LIVE_DIR"
+            rm -f ZZZZ_32_OrganizacoesMunicipiosV1.js ZZZZ_32_OrganizacoesMunicipiosV1.gs || true
+            npx --yes @google/clasp@3.3.0 pull >/dev/null 2>&1 || true
+            source_ok=nao
+            if (grep -Fq "VERSAO:'1.2.0'" ZZZZ_32_OrganizacoesMunicipiosV1.js 2>/dev/null || grep -Fq "VERSAO:'1.2.0'" ZZZZ_32_OrganizacoesMunicipiosV1.gs 2>/dev/null) && \
+               (grep -Fq 'tacsOrganizacoesMunicipiosV1MigrarLegadoChaGrande_' ZZZZ_32_OrganizacoesMunicipiosV1.js 2>/dev/null || grep -Fq 'tacsOrganizacoesMunicipiosV1MigrarLegadoChaGrande_' ZZZZ_32_OrganizacoesMunicipiosV1.gs 2>/dev/null); then
+              source_ok=sim
+            fi
+
+            deployments=$(npx --yes @google/clasp@3.3.0 deployments 2>/dev/null || true)
+            version=$(printf '%s\n' "$deployments" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/){gsub(/^@/,"",$i); print $i; exit}}')
+            deploy_ok=nao
+            if [ -n "${version:-}" ] && [ "$version" -gt 119 ] 2>/dev/null; then deploy_ok=sim; fi
+
+            BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+            jap=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=agenda&areaId=JAPARANDUBA" || true)
+            mat=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=agenda&areaId=SITIO_MATIAS" || true)
+            health_ok=nao
+            if printf '%s' "$jap" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' && printf '%s' "$mat" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then health_ok=sim; fi
+
+            if [ "$source_ok" = sim ] && [ "$deploy_ok" = sim ] && [ "$health_ok" = sim ]; then
+              final=OK
+              break
+            fi
+            sleep 15
+          done
+
+          cd "$GITHUB_WORKSPACE"
+          {
+            printf 'status=%s\n' "$final"
+            printf 'source_v1_2_0=%s\n' "$source_ok"
+            printf 'deployment_acima_119=%s\n' "$deploy_ok"
+            printf 'health_areas=%s\n' "$health_ok"
+            printf 'deployment_version=%s\n' "${version:-nao_encontrada}"
+            printf 'verified_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > "$STATUS"
+
+      - name: Registrar verificação final
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/migracao-municipios-deploy-final
+          git commit -m 'Registra verificação final do deploy municipal' || exit 0
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Limpar credenciais
+        if: always()
+        run: rm -f "$HOME/.clasprc.json"
