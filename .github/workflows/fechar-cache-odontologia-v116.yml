@@ -52,3 +52,5 @@ jobs:
           git commit -m 'Fecha cache odontológico e restaura API pública v116'
           git pull --rebase origin main
           git push origin main
+
+# retry-v116-gate-transicao
