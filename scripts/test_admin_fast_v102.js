@@ -29,10 +29,10 @@ assert.doesNotMatch(warm,/portal-auto-update\.js/,'Warmup administrativo não de
 const profissionais=read('painel-oficial-profissionais-servicos.html');
 assert.match(profissionais,/cache:'default'/,'Profissionais deve reutilizar HTML versionado');
 assert.doesNotMatch(profissionais,/cache:'no-store'/,'Profissionais não deve forçar download integral');
-assert.match(profissionais,/20260816-profissionais-v3|20260815-autonomia-v2/);
+assert.match(profissionais,/painel-profissionais-servicos-v1\.html\?v=[^"']+/,'Profissionais deve carregar HTML com versão de cache');
 const recados=read('painel-oficial-recados-campanhas.html');
 assert.match(recados,/admin_publicacoes_dados/,'Recados standalone deve manter a rota administrativa territorial');
 assert.match(recados,/ponteConteudoV102_/,'Recados standalone deve manter transporte POST compatível com Safari');
 assert.doesNotMatch(recados,/document\.write/,'Recados standalone não deve retornar ao carregador frágil');
-assert.match(read('painel-oficial-agendas-vagas.html'),/admin-warmup\.js\?v=20260813-admin-v103/);
-console.log('ADMIN_LOGIN_V103_TRANSPORT_TESTS_OK');
+assert.match(read('painel-oficial-agendas-vagas.html'),/admin-warmup\.js\?v=[^"']+/,'Agendas deve manter warmup administrativo versionado');
+console.log('ADMIN_LOGIN_TRANSPORT_TESTS_OK');
