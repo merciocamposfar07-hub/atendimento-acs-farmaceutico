@@ -60,8 +60,8 @@ const migrationCatalog={
 props.set(sandbox.TACS_ORGANIZACOES_MUNICIPIOS_V1.CATALOGO_PROPERTY,JSON.stringify(migrationCatalog));
 const migrated=sandbox.tacsOrganizacoesMunicipiosV1DadosAdmin_({perfil:'ADMIN_GERAL'});
 assert.equal(migrated.versao,'1.2.0');
-assert.equal(migrated.municipios.some(x=>x.municipioId==='MUN_ATUAL'),false,'MUN_ATUAL deve ser removido após migrar todas as áreas');
-assert.equal(migrated.organizacoes.some(x=>x.organizacaoId==='ORG_ATUAL'),false,'ORG_ATUAL deve ser removido quando nenhum município depender dele');
+assert.equal(migrated.catalogo.municipios.some(x=>x.municipioId==='MUN_ATUAL'),false,'MUN_ATUAL deve ser removido após migrar todas as áreas');
+assert.equal(migrated.catalogo.organizacoes.some(x=>x.organizacaoId==='ORG_ATUAL'),false,'ORG_ATUAL deve ser removido quando nenhum município depender dele');
 assert.equal(migrated.areas.find(x=>x.areaId==='AREA_A').contexto.municipioId,'CHA_GRANDE');
 assert.equal(migrated.areas.find(x=>x.areaId==='AREA_B').contexto.municipioId,'CHA_GRANDE','área sem vínculo explícito deve adotar o único município real');
 assert.equal(migrated.areas.find(x=>x.areaId==='AREA_C').contexto.municipioId,'CHA_GRANDE','todas as áreas sem vínculo devem ser migradas para Chã Grande');
