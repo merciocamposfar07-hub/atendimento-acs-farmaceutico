@@ -9,17 +9,27 @@ const territorial=read('apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.g
 const card=read('portal-ajustes-finais.js');
 const admin=read('painel-oficial-agendas-vagas.html');
 
-// Reserva real começa no clique e possui redundância idempotente para Safari.
-assert.match(dental,/function reserveViaJsonp\(item\)/);
-assert.match(dental,/function queueDurableReservation\(item\)/);
-assert.match(dental,/action=reservar_get&areaId=/);
-assert.match(dental,/saveSlotsCache\(\);\s*queueDurableReservation\(item\);/);
-assert.match(dental,/pagehide[\s\S]*queueDurableReservation\(selection\)/);
+// Reserva real começa no clique. O controlador atual usa JSONP reservar_get
+// e confirma em segundo plano sem bloquear o envio do morador.
+assert.match(dental,/function postReservation\(item\)/);
+assert.match(dental,/params\.set\('action', 'reservar_get'\)/);
+assert.match(dental,/params\.set\('requestId', item\.requestId\)/);
+assert.match(dental,/params\.set\('date', item\.date\)/);
+assert.match(dental,/params\.set\('type', item\.type\)/);
+assert.match(dental,/function persistInBackground\(item\)/);
+assert.match(dental,/persistInBackground\(item\);/);
+assert.match(dental,/optimisticRemaining: Math\.max\(0, Number\(available\) - 1\)/);
+assert.match(dental,/if \(type === 'emergencial'\) slot\.emergency = item\.optimisticRemaining;/);
+
+// Serviço público odontológico permanece único; comum/emergencial é tipo de vaga.
+assert.match(dental,/category\.value = REGULAR;/);
+assert.match(dental,/var category = REGULAR;/);
+assert.match(dental,/Tipo de vaga odontológica:/);
 
 // Envio não volta a ser refém da latência do Apps Script.
 assert.match(dental,/var shouldDisable = !formReady\(\);/);
 assert.doesNotMatch(dental,/var shouldDisable = !formReady\(\) \|\| !selection\.confirmed/);
-assert.match(dental,/Boolean\(selection && formReady\(\)\)/);
+assert.match(dental,/Vaga selecionada\. A quantidade foi reduzida no portal e o envio pelo WhatsApp já está liberado/);
 assert.match(card,/return Boolean\(api\.formularioValido\(\)\)/);
 assert.match(card,/reserveDentalIfNeeded\(\)\.catch/);
 
@@ -35,5 +45,6 @@ assert.match(admin,/setInterval\(sincronizarVagasOdontologia,5000\)/);
 assert.match(admin,/edicaoPendente/);
 
 assert.match(config,/DENTAL_AGENDA_API_URL/);
-assert.match(index,/portal-odontologia-segunda-sexta\.js\?v=20260817-dental-sync-admin-v108/);
-console.log('DENTAL_SYNC_ADMIN_V108_OK');
+assert.match(index,/portal-odontologia-segunda-sexta\.js\?v=20260818-odontologia-unica-v114/);
+assert.match(index,/if\(!window\.__PORTAL_TACS_ODONTOLOGIA_V98__\)loadDental\(\)/);
+console.log('DENTAL_ODONTOLOGIA_UNICA_V114_OK');
