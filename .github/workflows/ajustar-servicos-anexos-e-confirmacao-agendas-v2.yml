@@ -1,0 +1,43 @@
+name: Ajustar servicos anexos e confirmacao agendas V2
+
+on:
+  push:
+    paths:
+      - 'scripts/ajustar-servicos-anexos-e-confirmacao-agendas-v2.py'
+      - '.github/workflows/ajustar-servicos-anexos-e-confirmacao-agendas-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Aplicar ajustes
+        run: python scripts/ajustar-servicos-anexos-e-confirmacao-agendas-v2.py
+      - name: Validar escopo
+        run: |
+          grep -q "medica: 'Solicitar consulta Médica'" portal-ajustes-finais.js
+          grep -q 'attachmentOptional=' index.html
+          grep -q 'servicos-anexos-v2' index.html
+          grep -q 'function coincideAlteracoes' painel-oficial-agendas-vagas.html
+          grep -q '#f2f7f8' portal-servicos-coloridos-anexos-v1.js
+          CHANGED="$(git diff --name-only | sort)"
+          EXPECTED="$(printf '%s\n' index.html painel-oficial-agendas-vagas.html portal-ajustes-finais.js portal-servicos-coloridos-anexos-v1.js | sort)"
+          test "$CHANGED" = "$EXPECTED"
+      - name: Publicar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html painel-oficial-agendas-vagas.html portal-ajustes-finais.js portal-servicos-coloridos-anexos-v1.js
+          git commit -m 'Corrige servicos anexos e falso alerta de agendas'
+          git pull --rebase origin main
+          git push origin main
