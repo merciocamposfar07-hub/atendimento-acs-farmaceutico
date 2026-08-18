@@ -1,0 +1,63 @@
+name: Botao flutuante Atualizar Agendas V3
+
+on:
+  push:
+    paths:
+      - 'scripts/adicionar_botao_flutuante_atualizar_agendas_v3.py'
+      - '.github/workflows/adicionar-botao-flutuante-atualizar-agendas-v3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Aplicar somente o botao flutuante
+        run: python3 scripts/adicionar_botao_flutuante_atualizar_agendas_v3.py
+
+      - name: Validar integracao e escopo
+        run: |
+          grep -q 'ATUALIZAR_PAGINA_FLUTUANTE_AGENDAS_V3_START' painel-oficial-agendas-vagas.html
+          grep -q 'id="atualizarPaginaAgendasFlutuante"' painel-oficial-agendas-vagas.html
+          grep -q 'position:fixed!important' painel-oficial-agendas-vagas.html
+          grep -q 'window.location.reload()' painel-oficial-agendas-vagas.html
+          grep -q 'agenda-whatsapp-card-v1.js?v=20260818-agendas-refresh-float-v3' painel-oficial-agendas-vagas.html
+          test "$(grep -c 'agenda-whatsapp-card-v1.js?v=20260818-agendas-refresh-float-v3' painel-oficial-agendas-vagas.html)" = '1'
+          grep -q 'function salvarAgenda(c)' painel-oficial-agendas-vagas.html
+          grep -q 'function restaurar()' painel-oficial-agendas-vagas.html
+          CHANGED=$(git diff --name-only)
+          test "$CHANGED" = 'painel-oficial-agendas-vagas.html'
+
+      - name: Publicar alteracao
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add painel-oficial-agendas-vagas.html
+          git commit -m 'Integra botao flutuante Atualizar pagina no painel de agendas'
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Validar publicacao real no GitHub Pages
+        run: |
+          URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html'
+          for i in $(seq 1 60); do
+            HTML=$(curl -fsSL "$URL?validacao=refresh-float-v3-$i-$(date +%s)" || true)
+            if echo "$HTML" | grep -q 'ATUALIZAR_PAGINA_FLUTUANTE_AGENDAS_V3_START' && \
+               echo "$HTML" | grep -q 'id="atualizarPaginaAgendasFlutuante"' && \
+               echo "$HTML" | grep -q 'position:fixed!important' && \
+               echo "$HTML" | grep -q 'window.location.reload()' && \
+               echo "$HTML" | grep -q 'agenda-whatsapp-card-v1.js?v=20260818-agendas-refresh-float-v3'; then
+              echo 'BOTAO_FLUTUANTE_AGENDAS_PUBLICADO_OK'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'O botao flutuante nao apareceu no GitHub Pages no prazo de validacao.' >&2
+          exit 1
