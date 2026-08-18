@@ -38,10 +38,20 @@ jobs:
         run: npm ci
       - name: Testar desempenho odontológico
         run: node scripts/test_performance_v101.js
+      - name: Preparar teste DOM pelo mesmo pretest oficial
+        run: python3 scripts/atualizar_teste_odontologia_servico_unico_v3.py
       - name: Testar fluxo DOM completo
         run: node scripts/test_dom_flows.js
       - name: Testar contrato odontológico
         run: node scripts/test_dental_confirmation_gate_v103.js
+      - name: Restaurar teste transformado e conferir escopo final
+        shell: bash
+        run: |
+          set -euo pipefail
+          git restore scripts/test_dom_flows.js
+          changed=$(git diff --name-only | sort)
+          expected=$(printf '%s\n' index.html portal-odontologia-segunda-sexta.js scripts/test_performance_v101.js | sort)
+          test "$changed" = "$expected"
       - name: Publicar somente arquivos validados
         shell: bash
         run: |
@@ -53,4 +63,4 @@ jobs:
           git pull --rebase origin main
           git push origin main
 
-# retry-v116-gate-transicao
+# retry-v116-pretest-oficial
