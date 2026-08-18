@@ -1,0 +1,50 @@
+name: Ajuste cache Central Admin V1
+
+on:
+  push:
+    paths:
+      - 'scripts/ajuste_cache_central_admin_v1.py'
+      - '.github/workflows/ajuste-cache-central-admin-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Aplicar somente a melhoria de cache da Central
+        run: python3 scripts/ajuste_cache_central_admin_v1.py
+
+      - name: Validar integração
+        run: |
+          grep -q "_cb='+Date.now()" central-administrativa-tacs.js
+          grep -q '20260818-admin-cache-bust-v1' central-administrativa-tacs.html
+          grep -q "function moduleUrl(name)" central-administrativa-tacs.js
+          grep -q "function openModule(name,title)" central-administrativa-tacs.js
+          grep -q "viewerFrame" central-administrativa-tacs.html
+          CHANGED=$(git diff --name-only | sort)
+          EXPECTED=$(printf '%s\n' central-administrativa-tacs.html central-administrativa-tacs.js | sort)
+          test "$CHANGED" = "$EXPECTED"
+
+      - name: Publicar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add central-administrativa-tacs.js central-administrativa-tacs.html
+          git commit -m 'Evita cache antigo ao abrir painéis pela Central'
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Validar arquivos publicados no repositório
+        run: |
+          git pull --ff-only origin main
+          grep -q "_cb='+Date.now()" central-administrativa-tacs.js
+          grep -q '20260818-admin-cache-bust-v1' central-administrativa-tacs.html
+          echo 'CACHE_CENTRAL_ADMIN_PUBLICADO_OK'
