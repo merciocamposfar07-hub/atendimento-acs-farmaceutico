@@ -16,6 +16,7 @@
   var rendering = false;
   var internalCategoryChange = false;
   var verifyTimer = null;
+  var expiryTimer = null; // PORTAL_TACS_ODONTO_EXPIRACAO_HORARIO_V1
 
   function el(id) { return document.getElementById(id); }
   function clean(value) { return String(value == null ? '' : value).trim(); }
@@ -75,6 +76,52 @@
     return Number.isFinite(stamp) && stamp >= dateStamp(recifeToday());
   }
 
+  function booleanValue(value) {
+    if (value === true || value === 1) return true;
+    var text = normalize(value);
+    return text === 'true' || text === '1' || text === 'sim' || text === 'yes' || text === 'ativo' || text === 'ativa';
+  }
+
+  function normalizeClock(value) {
+    var match = clean(value).match(/^([01]\d|2[0-3]):([0-5]\d)/);
+    return match ? match[1] + ':' + match[2] : '';
+  }
+
+  function recifeNowParts() {
+    var parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Recife',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date());
+    var result = {};
+    parts.forEach(function (part) { result[part.type] = part.value; });
+    return {
+      date: result.year + '-' + result.month + '-' + result.day,
+      time: result.hour + ':' + result.minute
+    };
+  }
+
+  function configuredExpiry(raw) {
+    if (!raw) return '';
+    return normalizeClock(raw.expiraAs || raw.encerraHorario || raw.encerra_horario || raw.expireAt || '');
+  }
+
+  function expiredByConfiguredTime(date, expiresAt) {
+    var limit = normalizeClock(expiresAt);
+    if (!limit) return false;
+    var now = recifeNowParts();
+    if (date < now.date) return true;
+    if (date > now.date) return false;
+    return now.time >= limit;
+  }
+
+  function closedOrExpiredSlot(raw, date) {
+    if (!raw) return true;
+    if (booleanValue(raw.encerrada) || booleanValue(raw.expirada) || booleanValue(raw.closed)) return true;
+    if (raw.ativo !== undefined && raw.ativo !== null && raw.ativo !== '' && !booleanValue(raw.ativo)) return true;
+    return expiredByConfiguredTime(date, configuredExpiry(raw));
+  }
+
   function numberValue(slot, type) {
     var candidates = type === 'emergencial'
       ? [slot.vagasEmergenciais, slot.emergency, slot.emergencial, slot.vagas_emergenciais]
@@ -90,14 +137,32 @@
   function normalizeSlot(raw, index) {
     var day = clean(raw && (raw.dia || raw.day));
     var date = normalizeDate(raw && (raw.data || raw.date));
-    if (ALLOWED_DAYS.indexOf(day) === -1 || !date || !currentDate(date)) return null;
+    if (ALLOWED_DAYS.indexOf(day) === -1 || !date || !currentDate(date) || closedOrExpiredSlot(raw, date)) return null;
     return {
       id: clean(raw.id || raw.codigo || raw.row || '') || day + '-' + date + '-' + index,
       day: day,
       date: date,
+      expiresAt: configuredExpiry(raw),
       common: numberValue(raw, 'comum'),
       emergency: numberValue(raw, 'emergencial')
     };
+  }
+
+  function pruneExpiredSlots() {
+    if (!isDental() || loading || !slots.length) return;
+    var before = slots.length;
+    slots = slots.filter(function (slot) {
+      return currentDate(slot.date) && !expiredByConfiguredTime(slot.date, slot.expiresAt);
+    });
+    if (slots.length === before) return;
+    if (selection && !slots.some(function (slot) { return slot.id === selection.id; })) selection = null;
+    renderAgenda();
+    refreshSend();
+  }
+
+  function startExpiryWatch() {
+    if (expiryTimer) return;
+    expiryTimer = setInterval(pruneExpiredSlots, 10000);
   }
 
   function setSubject(value) {
@@ -261,7 +326,9 @@
       });
       normalized.sort(function (a, b) { return dateStamp(a.date) - dateStamp(b.date); });
       slots = normalized;
+      startExpiryWatch();
       loading = false;
+      pruneExpiredSlots();
       renderAgenda();
       refreshSend();
     }).catch(function (error) {
