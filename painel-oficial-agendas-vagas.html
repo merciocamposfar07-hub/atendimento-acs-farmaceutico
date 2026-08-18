@@ -271,51 +271,43 @@ footer,.footer{
 <div class="barraFixa"><button id="desfazer" class="botao secundario undo oculto" type="button">Desfazer a última alteração</button></div>
 </section>
 </main>
-<!-- ATUALIZAR_PAGINA_FLUTUANTE_AGENDAS_V3_START -->
-<style id="agendaAtualizarPaginaFlutuanteV3Style">
+<!-- ATUALIZAR_PAGINA_FLUTUANTE_AGENDAS_V4_START -->
+<style id="agendaAtualizarPaginaFlutuanteV4Style">
 #atualizarPaginaAgendasFlutuante{
   position:fixed!important;
-  right:max(14px,calc(env(safe-area-inset-right) + 10px))!important;
-  bottom:max(92px,calc(env(safe-area-inset-bottom) + 82px))!important;
-  left:auto!important;
-  top:auto!important;
+  right:12px!important;
+  bottom:calc(12px + env(safe-area-inset-bottom))!important;
   z-index:2147483000!important;
+  min-height:46px!important;
   width:auto!important;
-  min-width:0!important;
-  max-width:calc(100vw - 28px)!important;
-  min-height:54px!important;
+  max-width:calc(100vw - 24px)!important;
   margin:0!important;
-  padding:10px 17px!important;
-  display:inline-flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:8px!important;
-  border:3px solid #d9f0f9!important;
+  border:2px solid rgba(255,255,255,.9)!important;
   border-radius:999px!important;
-  background:linear-gradient(145deg,#073a55,#0b5878)!important;
+  padding:10px 15px!important;
+  background:#073a55!important;
   color:#fff!important;
-  font-size:.94rem!important;
-  font-weight:900!important;
-  line-height:1!important;
-  white-space:nowrap!important;
-  box-shadow:0 9px 24px rgba(0,0,0,.30)!important;
+  font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.28)!important;
   cursor:pointer!important;
+  white-space:nowrap!important;
   touch-action:manipulation!important;
   -webkit-tap-highlight-color:transparent!important;
 }
-#atualizarPaginaAgendasFlutuante:active{transform:scale(.98)!important}
+#atualizarPaginaAgendasFlutuante:active{transform:translateY(1px)!important}
 #atualizarPaginaAgendasFlutuante:disabled{opacity:.76!important}
-@media(max-width:560px){
+@media(max-width:430px){
   #atualizarPaginaAgendasFlutuante{
-    right:14px!important;
-    bottom:max(92px,calc(env(safe-area-inset-bottom) + 82px))!important;
-    font-size:.92rem!important;
-    padding:10px 16px!important;
+    right:10px!important;
+    bottom:calc(10px + env(safe-area-inset-bottom))!important;
+    min-height:44px!important;
+    padding:9px 13px!important;
+    font-size:14px!important;
   }
 }
 </style>
-<button id="atualizarPaginaAgendasFlutuante" type="button" aria-label="Atualizar página" title="Atualizar página"><span aria-hidden="true">↻</span><span>Atualizar página</span></button>
-<script id="agendaAtualizarPaginaFlutuanteV3Script">
+<button id="atualizarPaginaAgendasFlutuante" type="button" aria-label="Atualizar esta página e refazer a conexão" title="Atualizar esta página e refazer a conexão"><span aria-hidden="true">↻</span><span>Atualizar página</span></button>
+<script id="agendaAtualizarPaginaFlutuanteV4Script">
 (function(){
   'use strict';
   function removerBotaoAntigo(){
@@ -339,7 +331,7 @@ footer,.footer{
   obs.observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
-<!-- ATUALIZAR_PAGINA_FLUTUANTE_AGENDAS_V3_END -->
+<!-- ATUALIZAR_PAGINA_FLUTUANTE_AGENDAS_V4_END -->
 
 <footer><p>Portal TACS • Painel administrativo oficial</p><p>Alterações confirmadas são aplicadas ao Portal do Morador</p></footer>
 <iframe name="ponteAgendaV1" class="ponte" src="about:blank" title="Envio seguro ao servidor"></iframe>
@@ -466,6 +458,6 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden)setT
 iniciarPainel();
 }());
 </script>
-<script src="/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260818-agendas-refresh-float-v3"></script>
+<script src="/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260818-agendas-refresh-float-v4"></script>
 </body>
 </html>
