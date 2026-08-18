@@ -1,0 +1,33 @@
+name: Registrar status odontologia v116
+
+on:
+  workflow_run:
+    workflows: ['Fechar cache odontológico e API v116']
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  registrar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Registrar resultado
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'run_id=%s\nhead_sha=%s\nconclusion=%s\nrecorded_at=%s\n' "$RUN_ID" "$HEAD_SHA" "$CONCLUSION" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .github/odontologia-v116-status
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/odontologia-v116-status
+          git commit -m 'Registra status odontologia v116'
+          git pull --rebase origin main
+          git push origin main
