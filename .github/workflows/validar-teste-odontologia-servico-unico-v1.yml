@@ -1,0 +1,52 @@
+name: Validar teste odontológico serviço único v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/validar-teste-odontologia-servico-unico-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Aplicar correção apenas no ambiente
+        run: python3 scripts/atualizar_teste_odontologia_servico_unico_v1.py
+      - name: Instalar dependências
+        run: npm ci
+      - name: Rodar todos os testes e registrar resultado
+        id: tests
+        shell: bash
+        run: |
+          set +e
+          npm test > "$RUNNER_TEMP/npm-test.log" 2>&1
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            printf 'status=PASS\n' > .github/validacao-teste-odontologia-status
+          else
+            printf 'status=FAIL\nexit_code=%s\n' "$code" > .github/validacao-teste-odontologia-status
+            tail -n 35 "$RUNNER_TEMP/npm-test.log" | sed 's/[[:cntrl:]]//g' >> .github/validacao-teste-odontologia-status
+          fi
+      - name: Registrar validação
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -- scripts/test_dom_flows.js
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/validacao-teste-odontologia-status
+          git commit -m 'Registra validação do teste odontológico atualizado' || exit 0
+          git pull --rebase origin main
+          git push origin main
