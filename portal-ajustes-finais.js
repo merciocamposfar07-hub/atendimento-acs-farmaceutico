@@ -740,7 +740,7 @@
     card.type = 'button';
     card.id = 'sendPetroleumCard';
     card.className = 'tacs-petroleum-button';
-    card.innerHTML = 'Enviar solicitação em card azul-petróleo<small>Card profissional com identificação da área e do TACS responsável.</small>';
+    card.innerHTML = 'Enviar solicitação<small>Card profissional com identificação da área e do TACS responsável.</small>';
     card.dataset.originalHtml = card.innerHTML;
     card.addEventListener('click', sendCard);
     wrapper.appendChild(card);
