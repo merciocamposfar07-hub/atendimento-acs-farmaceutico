@@ -60,7 +60,7 @@ jobs:
           test -s icons/central-admin-saude-180.png
           test -s icons/central-admin-saude-192.png
           test -s icons/central-admin-saude-512.png
-          changed=$(git diff --name-only | sort)
+          changed=$(git status --porcelain | sed 's/^...//' | sort)
           expected=$(printf '%s\n' \
             central-administrativa-tacs.html \
             central-administrativa-tacs.js \
