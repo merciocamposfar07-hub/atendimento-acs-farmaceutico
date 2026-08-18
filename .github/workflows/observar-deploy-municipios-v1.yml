@@ -1,0 +1,33 @@
+name: Observar deploy da migração municipal v1
+
+on:
+  workflow_run:
+    workflows: ['Implantar Apps Script de Moradores']
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  registrar:
+    if: github.event.workflow_run.head_sha == '56027825924528b8583b135dd64492d756d7b57f'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Registrar conclusão para validação
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > .github/migracao-municipios-deploy-status <<EOF
+          head_sha=${{ github.event.workflow_run.head_sha }}
+          conclusion=${{ github.event.workflow_run.conclusion }}
+          run_id=${{ github.event.workflow_run.id }}
+          completed_at=${{ github.event.workflow_run.updated_at }}
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/migracao-municipios-deploy-status
+          git commit -m 'Registra status do deploy da migração municipal'
+          git push origin main
