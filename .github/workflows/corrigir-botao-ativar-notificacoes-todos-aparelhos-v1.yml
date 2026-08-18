@@ -1,0 +1,48 @@
+name: Corrigir botao ativar notificacoes todos aparelhos V1
+
+on:
+  push:
+    paths:
+      - 'scripts/corrigir-botao-ativar-notificacoes-todos-aparelhos-v1.py'
+      - '.github/workflows/corrigir-botao-ativar-notificacoes-todos-aparelhos-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Aplicar ajuste restrito
+        run: python3 scripts/corrigir-botao-ativar-notificacoes-todos-aparelhos-v1.py
+
+      - name: Validar notificacoes preservadas
+        run: |
+          grep -F "button.textContent = 'Ativar avisos neste aparelho';" agenda-enfermeira.js
+          ! grep -F "Ver instruções para iPhone" agenda-enfermeira.js
+          grep -F "await OneSignal.Notifications.requestPermission();" agenda-enfermeira.js
+          grep -F "typeof push.optIn === 'function'" agenda-enfermeira.js
+          grep -F "window.OneSignalDeferred" agenda-enfermeira.js
+          grep -F "notificationRepairButton" agenda-enfermeira.js
+          grep -F "agenda-enfermeira.js?v=20260818-notif-all-devices-v1" index.html
+
+      - name: Confirmar escopo
+        run: |
+          CHANGED="$(git diff --name-only)"
+          printf '%s\n' "$CHANGED"
+          test "$(printf '%s\n' "$CHANGED" | sort)" = "$(printf '%s\n' 'agenda-enfermeira.js' 'index.html' | sort)"
+
+      - name: Publicar ajuste
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add agenda-enfermeira.js index.html
+          git commit -m "Mantem ativacao de notificacoes visivel em todos os aparelhos"
+          git pull --rebase origin main
+          git push origin main
