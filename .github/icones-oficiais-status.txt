@@ -1,0 +1,37 @@
+run_id=32197225102
+status=completed
+conclusion=failure
+head_sha=01d7b610402cacc1306734f83310f3849a2415c1
+created_at=2026-08-18T23:27:08Z
+--- failed log ---
+aplicar	Validar alteração	﻿2026-08-18T23:27:19.2085540Z ##[group]Run set -euo pipefail
+aplicar	Validar alteração	2026-08-18T23:27:19.2086015Z ^[[36;1mset -euo pipefail^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2086324Z ^[[36;1mnode --check central-administrativa-tacs.js^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2086730Z ^[[36;1mpython3 -m json.tool manifest.webmanifest >/dev/null^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2087208Z ^[[36;1mpython3 -m json.tool manifest-central-admin.webmanifest >/dev/null^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2087774Z ^[[36;1mgrep -Fq 'portal-tacs-oficial-512.png?v=20260818-icones-oficiais-v1' index.html^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2088452Z ^[[36;1mgrep -Fq 'central-admin-saude-512.png?v=20260818-icones-oficiais-v1' central-administrativa-tacs.html^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2089719Z ^[[36;1mgrep -Fq "mode==='admin'?'/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icones-oficiais-v1':'/atendimento-acs-farmaceutico/icons/painel-tacs-areas-512.png?v=20260818-icones-oficiais-v1'" central-administrativa-tacs.js^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2091127Z ^[[36;1mtest -s icons/portal-tacs-oficial-180.png^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2091551Z ^[[36;1mtest -s icons/portal-tacs-oficial-192.png^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2091913Z ^[[36;1mtest -s icons/portal-tacs-oficial-512.png^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2092277Z ^[[36;1mtest -s icons/central-admin-saude-180.png^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2092606Z ^[[36;1mtest -s icons/central-admin-saude-192.png^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2092930Z ^[[36;1mtest -s icons/central-admin-saude-512.png^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2093252Z ^[[36;1mchanged=$(git diff --name-only | sort)^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2093557Z ^[[36;1mexpected=$(printf '%s\n' \^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2093857Z ^[[36;1m  central-administrativa-tacs.html \^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2094184Z ^[[36;1m  central-administrativa-tacs.js \^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2094498Z ^[[36;1m  icons/central-admin-saude-180.png \^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2094811Z ^[[36;1m  icons/central-admin-saude-192.png \^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2095121Z ^[[36;1m  icons/central-admin-saude-512.png \^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2095426Z ^[[36;1m  icons/portal-tacs-oficial-180.png \^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2095766Z ^[[36;1m  icons/portal-tacs-oficial-192.png \^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2096386Z ^[[36;1m  icons/portal-tacs-oficial-512.png \^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2096674Z ^[[36;1m  index.html \^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2096940Z ^[[36;1m  manifest-central-admin.webmanifest \^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2097253Z ^[[36;1m  manifest.webmanifest | sort)^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2097531Z ^[[36;1mtest "$changed" = "$expected"^[[0m
+aplicar	Validar alteração	2026-08-18T23:27:19.2135713Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+aplicar	Validar alteração	2026-08-18T23:27:19.2136076Z ##[endgroup]
+aplicar	Validar alteração	2026-08-18T23:27:19.4796895Z ##[error]Process completed with exit code 1.
