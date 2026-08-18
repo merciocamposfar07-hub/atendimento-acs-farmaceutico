@@ -1,0 +1,46 @@
+name: Registrar status do deploy Apps Script v1
+
+on:
+  workflow_run:
+    workflows: ['Implantar Apps Script de Moradores']
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  registrar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Registrar execução concluída
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          set -euo pipefail
+          JOBS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100")
+          {
+            echo "run_id=$RUN_ID"
+            echo "head_sha=$HEAD_SHA"
+            echo "conclusion=$CONCLUSION"
+            echo "jobs=$(printf '%s' "$JOBS" | jq -r '[.jobs[] | (.name+":"+(.status//"")+":"+(.conclusion//""))] | join("|")')"
+            echo "failed_steps=$(printf '%s' "$JOBS" | jq -r '[.jobs[].steps[]? | select(.conclusion=="failure") | .name] | join("|")')"
+            echo "recorded_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > .github/apps-script-deploy-status
+      - name: Salvar status
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/apps-script-deploy-status
+          git commit -m 'Registra status do deploy Apps Script' || exit 0
+          git pull --rebase origin main
+          git push origin main
