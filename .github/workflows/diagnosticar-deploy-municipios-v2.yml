@@ -24,12 +24,12 @@ jobs:
         run: |
           set -euo pipefail
           OUT=.github/diagnostico-deploy-municipios-v2
-          TARGET='f23e667c84bb8b6db18b23410f17d82b48025eee'
-          JSON=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/deploy-apps-script-moradores.yml/runs?branch=main&per_page=20")
+          TARGET='a8ed3d3e7a1888def8169730999333bbd959332a'
+          JSON=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/deploy-apps-script-moradores.yml/runs?branch=main&per_page=30")
           RUN=$(printf '%s' "$JSON" | jq -c --arg target "$TARGET" '.workflow_runs[] | select(.head_sha==$target)' | head -n 1 || true)
           if [ -z "$RUN" ]; then
             {
-              echo 'status=SEM_EXECUCAO_PARA_F23E667'
+              echo 'status=SEM_EXECUCAO_PARA_A8ED3D3'
               echo "total_runs=$(printf '%s' "$JSON" | jq -r '.total_count // 0')"
               echo "latest_head=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].head_sha // ""')"
               echo "latest_status=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].status // ""')"
@@ -41,6 +41,7 @@ jobs:
             JOBS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100")
             {
               echo 'status=EXECUCAO_ENCONTRADA'
+              echo "head_sha=$(printf '%s' "$RUN" | jq -r '.head_sha // ""')"
               echo "run_id=$RUN_ID"
               echo "run_status=$(printf '%s' "$RUN" | jq -r '.status // ""')"
               echo "run_conclusion=$(printf '%s' "$RUN" | jq -r '.conclusion // ""')"
@@ -57,6 +58,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .github/diagnostico-deploy-municipios-v2
-          git commit -m 'Registra diagnóstico v2 do deploy municipal' || exit 0
+          git commit -m 'Registra diagnóstico atual do deploy municipal' || exit 0
           git pull --rebase origin main
           git push origin main
