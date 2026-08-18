@@ -1,6 +1,8 @@
-status=FALHA
-source_v1_2_0=nao
-deployment_acima_119=nao
+status=SUCESSO
+source_v1_2_0=sim
+deployment_acima_119=sim
 health_areas=sim
-deployment_version=119
-verified_at=2026-08-18T21:02:31Z
+deployment_version=121
+run_id=32191485012
+head_sha=57587c266a7380534f4201c5c997cdcc0230a729
+verified_at=2026-08-18T22:12:31Z
