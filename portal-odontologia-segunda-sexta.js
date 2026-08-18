@@ -219,7 +219,7 @@
     });
     if (slots.length === before) return;
     if (selection && !slots.some(function (slot) { return slot.id === selection.id; })) selection = null;
-    writeSlotsCache();
+    if (!cacheVisible) writeSlotsCache();
     renderAgenda();
     refreshSend();
   }
@@ -622,6 +622,7 @@
       if (item.type === 'emergencial') slot.emergency = item.originalCount;
       else slot.common = item.originalCount;
     }
+    writeSlotsCache();
     item.explicitFailure = true;
     item.errorMessage = error.message || 'Não foi possível reservar essa vaga.';
     selection = null;
@@ -800,6 +801,30 @@
 
     if (isDental()) loadAgenda(false);
   }
+
+  window.PortalTacsOdontologiaV98 = Object.freeze({
+    atualizar: function () { return loadAgenda(false); },
+    temCache: function () {
+      try { return Boolean(localStorage.getItem(dentalCacheKey())); }
+      catch (error) { return false; }
+    },
+    cacheKey: dentalCacheKey(),
+    selecao: function () {
+      if (!selection) return null;
+      return {
+        id: selection.id,
+        day: selection.day,
+        date: selection.date,
+        type: selection.type,
+        requestId: selection.requestId,
+        confirmed: Boolean(selection.confirmed),
+        slowSync: Boolean(selection.slowSync),
+        explicitFailure: Boolean(selection.explicitFailure)
+      };
+    },
+    prontoParaEnvio: function () { return Boolean(selection && formReady()); },
+    formularioValido: function () { return Boolean(selection && formReady()); }
+  });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();

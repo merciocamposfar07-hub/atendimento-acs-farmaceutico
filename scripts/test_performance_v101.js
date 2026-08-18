@@ -59,6 +59,11 @@ async function testDentalCacheFirst() {
   assert.equal(freshCommon.disabled, false, 'Cache de até 90s pode iniciar reserva, ainda validada no servidor');
   assert.ok(/Confirmando|Última agenda/.test(document.getElementById('dentalStatus').textContent), 'Status deve explicar revalidação em segundo plano');
   assert.equal(dom.window.__PORTAL_TACS_ODONTOLOGIA_V98__, true, 'Controlador odontológico atual deve estar carregado');
+  assert.ok(dom.window.PortalTacsOdontologiaV98, 'API odontológica usada pelo card principal deve estar exposta');
+  assert.equal(typeof dom.window.PortalTacsOdontologiaV98.atualizar, 'function');
+  assert.equal(typeof dom.window.PortalTacsOdontologiaV98.selecao, 'function');
+  assert.equal(typeof dom.window.PortalTacsOdontologiaV98.formularioValido, 'function');
+  assert.equal(dom.window.PortalTacsOdontologiaV98.cacheKey, 'portalTacsDentalAgendaV103FullWeek:JAPARANDUBA');
   dom.window.close();
 
   dom = await buildDentalDom(2 * 60 * 1000);
@@ -96,7 +101,7 @@ function testStaticSafety() {
 
   const index = read('index.html');
   assert.ok(/portal-auto-update\.js\?v=[A-Za-z0-9._-]+/.test(index), 'Atualização pública deve usar revisão explícita');
-  assert.ok(index.includes('portal-odontologia-segunda-sexta.js?v=20260818-cache-territorial-v115'), 'Odontologia deve invalidar cache do JavaScript ao ativar v115');
+  assert.ok(index.includes('portal-odontologia-segunda-sexta.js?v=20260818-cache-api-v116'), 'Odontologia deve invalidar cache do JavaScript ao ativar v116');
   assert.ok(index.includes('if(!window.__PORTAL_TACS_ODONTOLOGIA_V98__)loadDental()'), 'Fallback antigo só pode atuar se o controlador externo não carregar');
 
   const release = read('scripts/build_apps_script_release.js');
