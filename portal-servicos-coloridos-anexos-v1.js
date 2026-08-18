@@ -213,6 +213,16 @@
     setTimeout(function(){if(window.PortalTacsOrientacaoMoradorV1&&typeof window.PortalTacsOrientacaoMoradorV1.refreshGuide==='function')window.PortalTacsOrientacaoMoradorV1.refreshGuide()},80)
   }
 
+  function updateAttachmentSendLabel(required){
+    var send=getSend();if(!send)return;
+    if(!send.dataset.portalAttachmentOriginalHtml)send.dataset.portalAttachmentOriginalHtml=send.innerHTML;
+    if(required){
+      send.innerHTML='📲 Enviar pelo WhatsApp com arquivo<small>O arquivo selecionado será compartilhado junto com a solicitação.</small>';
+    }else if(send.dataset.portalAttachmentOriginalHtml){
+      send.innerHTML=send.dataset.portalAttachmentOriginalHtml;
+    }
+  }
+
   function lockSendIfNeeded(){
     var send=getSend();if(!send)return;
     var required=isAttachmentService(text(category()&&category().value));
@@ -236,7 +246,7 @@
       else{title.textContent='📎 Enviar foto ou arquivo da solicitação';help.textContent='Selecione a foto, PDF ou arquivo da solicitação para a marcação.'}
       if(!selectedFile)showAttachmentGuide();
     }
-    lockSendIfNeeded();applySelectedColor();
+    updateAttachmentSendLabel(required);lockSendIfNeeded();applySelectedColor();
     if(scroll&&required&&!selectedFile)showAttachmentGuide()
   }
 
