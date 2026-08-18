@@ -1,0 +1,48 @@
+name: Diagnosticar correção do teste odontológico v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnosticar-correcao-teste-odontologia-v1.yml'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  diagnosticar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Consultar execução corretiva
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?event=push&per_page=100"
+          data=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$API")
+          node - "$data" <<'NODE'
+          const fs=require('fs');
+          const data=JSON.parse(process.argv[2]);
+          const runs=(data.workflow_runs||[]).filter(r=>r.name==='Corrigir teste odontológico para agenda única v1');
+          const r=runs[0];
+          let out='status=NAO_ENCONTRADO\n';
+          if(r){
+            out=`status=${r.status}\nconclusion=${r.conclusion||''}\nrun_id=${r.id}\nhead_sha=${r.head_sha}\ncreated_at=${r.created_at}\nupdated_at=${r.updated_at}\n`;
+          }
+          fs.writeFileSync('.github/correcao-teste-odontologia-status',out);
+          NODE
+      - name: Registrar diagnóstico
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/correcao-teste-odontologia-status
+          git commit -m 'Registra resultado da correção do teste odontológico' || exit 0
+          git pull --rebase origin main
+          git push origin main
