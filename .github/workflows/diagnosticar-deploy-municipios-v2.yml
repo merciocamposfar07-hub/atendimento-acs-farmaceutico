@@ -24,12 +24,12 @@ jobs:
         run: |
           set -euo pipefail
           OUT=.github/diagnostico-deploy-municipios-v2
-          TARGET='e579370cc0de3ed98cd4c8b25845dce49d2d9eb9'
+          TARGET='86f55fbdba28053860a7ed2491d882c178cef225'
           JSON=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/deploy-apps-script-moradores.yml/runs?branch=main&per_page=30")
           RUN=$(printf '%s' "$JSON" | jq -c --arg target "$TARGET" '.workflow_runs[] | select(.head_sha==$target)' | head -n 1 || true)
           if [ -z "$RUN" ]; then
             {
-              echo 'status=SEM_EXECUCAO_PARA_E579370'
+              echo 'status=SEM_EXECUCAO_PARA_86F55FB'
               echo "latest_head=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].head_sha // ""')"
               echo "latest_status=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].status // ""')"
               echo "latest_conclusion=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].conclusion // ""')"
@@ -57,6 +57,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .github/diagnostico-deploy-municipios-v2
-          git commit -m 'Registra diagnóstico do deploy JSONP v2' || exit 0
+          git commit -m 'Registra diagnóstico do deploy municipal v3' || exit 0
           git pull --rebase origin main
           git push origin main
