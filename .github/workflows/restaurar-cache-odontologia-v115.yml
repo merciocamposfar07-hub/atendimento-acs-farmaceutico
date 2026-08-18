@@ -1,0 +1,47 @@
+name: Restaurar cache odontológico territorial v115
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/restaurar-cache-odontologia-v115.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  restaurar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar cache territorial v115
+        run: python3 scripts/restaurar_cache_odontologia_v115.py
+      - name: Validar escopo e sintaxe
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check portal-odontologia-segunda-sexta.js
+          grep -Fq "CACHE_PREFIX = 'portalTacsDentalAgendaV103FullWeek:'" portal-odontologia-segunda-sexta.js
+          grep -Fq 'CACHE_FRESH_MS = 90 * 1000' portal-odontologia-segunda-sexta.js
+          grep -Fq "params.set('areaId', currentAreaId());" portal-odontologia-segunda-sexta.js
+          grep -Fq '20260818-cache-territorial-v115' index.html
+          changed=$(git diff --name-only | sort)
+          expected=$(printf '%s\n' index.html portal-odontologia-segunda-sexta.js | sort)
+          test "$changed" = "$expected"
+      - name: Instalar dependências
+        run: npm ci
+      - name: Validar desempenho odontológico
+        run: node scripts/test_performance_v101.js
+      - name: Publicar correção
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html portal-odontologia-segunda-sexta.js
+          git commit -m 'Restaura cache odontológico territorial e revalidação em segundo plano'
+          git pull --rebase origin main
+          git push origin main
