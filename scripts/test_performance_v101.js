@@ -26,21 +26,22 @@ function dentalHtml() {
   </body></html>`;
 }
 
-async function buildDentalDom(ageMs) {
+async function buildDentalDom(ageMs, areaId='JAPARANDUBA') {
   const dom = new JSDOM(dentalHtml(), {
-    url: 'https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/',
+    url: `https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/?area=${areaId}`,
     runScripts: 'outside-only',
     pretendToBeVisual: true
   });
   const {window} = dom;
+  window.TACS_AREA_ID = areaId;
   window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/test/exec';
-  window.localStorage.setItem('portalTacsDentalAgendaV103FullWeek:JAPARANDUBA', JSON.stringify({
+  window.localStorage.setItem(`portalTacsDentalAgendaV103FullWeek:${areaId}`, JSON.stringify({
     savedAt: Date.now() - ageMs,
     data: {
       ok: true,
       dias: [{
         id: 'DENTISTA-TESTE', dia: 'Quinta-feira', data: '2099-08-13',
-        vagasComuns: 2, vagasEmergenciais: 1
+        vagasComuns: 2, vagasEmergenciais: 1, ativo:true
       }]
     }
   }));
@@ -55,16 +56,23 @@ async function testDentalCacheFirst() {
   assert.equal(document.querySelectorAll('.sheet-dental-card').length, 1, 'Agenda em cache deve aparecer sem esperar Apps Script');
   const freshCommon = document.querySelector('.sheet-dental-choice.common');
   assert.ok(freshCommon, 'Vaga comum em cache deve ser renderizada');
-  assert.equal(freshCommon.disabled, false, 'Cache muito recente pode iniciar reserva, que continuará validada no servidor');
+  assert.equal(freshCommon.disabled, false, 'Cache de até 90s pode iniciar reserva, ainda validada no servidor');
   assert.ok(/Confirmando|Última agenda/.test(document.getElementById('dentalStatus').textContent), 'Status deve explicar revalidação em segundo plano');
-  assert.ok(dom.window.PortalTacsOdontologiaV98 && typeof dom.window.PortalTacsOdontologiaV98.atualizar === 'function', 'Odontologia deve expor atualização sem reload total');
+  assert.equal(dom.window.__PORTAL_TACS_ODONTOLOGIA_V98__, true, 'Controlador odontológico atual deve estar carregado');
   dom.window.close();
 
   dom = await buildDentalDom(2 * 60 * 1000);
   document = dom.window.document;
   assert.equal(document.querySelectorAll('.sheet-dental-card').length, 1, 'Cache antigo, porém válido para visualização, deve evitar tela vazia');
   const staleCommon = document.querySelector('.sheet-dental-choice.common');
+  assert.ok(staleCommon, 'Cache antigo ainda deve mostrar a agenda');
   assert.equal(staleCommon.disabled, true, 'Cache acima de 90s não pode permitir reserva até confirmação atual');
+  assert.match(document.getElementById('dentalStatus').textContent,/Última agenda|Atualizando/);
+  dom.window.close();
+
+  dom = await buildDentalDom(5 * 1000, 'SITIO_MATIAS');
+  assert.equal(dom.window.document.querySelectorAll('.sheet-dental-card').length, 1, 'Cache deve funcionar isoladamente em outra área');
+  assert.ok(dom.window.localStorage.getItem('portalTacsDentalAgendaV103FullWeek:SITIO_MATIAS'), 'Cache deve ser territorial');
   dom.window.close();
 }
 
@@ -83,31 +91,35 @@ function testStaticSafety() {
 
   const agenda = read('painel-oficial-agendas-vagas.html');
   assert.ok(agenda.includes("DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV102:'+areaId"));
-  assert.ok(agenda.includes('Aguarde a confirmação dos dados atuais antes de salvar.'), 'Snapshot não pode habilitar escrita antes de revalidação');
+  assert.ok(agenda.includes('Aguarde a confirmação dos dados atuais antes de salvar.'), 'Snapshot administrativo não pode habilitar escrita antes de revalidação');
   assert.ok(agenda.includes('aplicarDados(r,true);salvarSnapshot(r);'));
 
   const index = read('index.html');
-  assert.ok(index.includes('portal-auto-update.js?v=20260812-v101'));
-  assert.ok(/portal-odontologia-segunda-sexta\.js\?v=[A-Za-z0-9._-]+/.test(index), 'Odontologia deve carregar com revisão explícita para invalidar cache');
-  assert.ok(index.includes('if(!window.PortalTacsOdontologiaV98)loadDental()'), 'Rotina odontológica antiga só pode atuar como fallback');
+  assert.ok(/portal-auto-update\.js\?v=[A-Za-z0-9._-]+/.test(index), 'Atualização pública deve usar revisão explícita');
+  assert.ok(index.includes('portal-odontologia-segunda-sexta.js?v=20260818-cache-territorial-v115'), 'Odontologia deve invalidar cache do JavaScript ao ativar v115');
+  assert.ok(index.includes('if(!window.__PORTAL_TACS_ODONTOLOGIA_V98__)loadDental()'), 'Fallback antigo só pode atuar se o controlador externo não carregar');
 
   const release = read('scripts/build_apps_script_release.js');
   assert.ok(release.includes("marker: 'TACS_PERFORMANCE_CACHE_V101'"), 'Arquivo neutro deve substituir a versão instável no Apps Script real');
 
   const dental = read('portal-odontologia-segunda-sexta.js');
+  assert.ok(dental.includes("CACHE_PREFIX = 'portalTacsDentalAgendaV103FullWeek:'"), 'Snapshot odontológico deve continuar disponível');
+  assert.ok(dental.includes('CACHE_FRESH_MS = 90 * 1000'), 'Snapshot acima de 90s deve exigir revalidação antes da escolha');
+  assert.ok(dental.includes('CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000'), 'Snapshot visual deve ter validade limitada');
   assert.ok(dental.includes("var REGULAR = 'Solicitar atendimento odontológico (dentista)'"));
-  assert.ok(dental.includes("var EMERGENCY = 'Solicitar atendimento odontológico de emergência (dentista)'"));
-  assert.ok(dental.includes("add('action', 'reservar')"), 'Reserva real deve permanecer via backend');
-  assert.ok(dental.includes("add('areaId', AREA_ID)"), 'Reserva deve permanecer vinculada à área do Portal');
+  assert.ok(dental.includes("params.set('action', 'reservar_get')"), 'Reserva real deve permanecer via backend JSONP atual');
+  assert.ok(dental.includes("params.set('areaId', currentAreaId())"), 'Reserva deve permanecer vinculada à área do Portal');
+  assert.ok(dental.includes("action=agenda&areaId=' + encodeURIComponent(currentAreaId())"), 'Leitura da agenda também deve ser territorial');
   assert.ok(dental.includes('optimisticRemaining: Math.max(0, Number(available) - 1)'), 'Redução imediata da vaga deve permanecer');
-  assert.ok(dental.includes('validDocument(el(\'cpf\') && el(\'cpf\').value)'), 'CPF/CNS deve permanecer aceito');
+  assert.ok(dental.includes("expiredByConfiguredTime(slot.date, slot.expiresAt)"), 'Expiração por hora de Recife deve continuar filtrando o snapshot');
+  assert.ok(dental.includes("validDocument(el('cpf') && el('cpf').value)"), 'CPF/CNS deve permanecer aceito');
 }
 
 (async () => {
   testBackendStabilityFallback();
   await testDentalCacheFirst();
   testStaticSafety();
-  console.log('PERFORMANCE_V101_TESTS_OK');
+  console.log('PERFORMANCE_V115_TESTS_OK');
 })().catch((error) => {
   console.error(error && error.stack ? error.stack : error);
   process.exit(1);
