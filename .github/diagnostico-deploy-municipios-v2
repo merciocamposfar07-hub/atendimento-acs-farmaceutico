@@ -1,9 +1,9 @@
 status=EXECUCAO_ENCONTRADA
-head_sha=1ad9385e7e753684499ae5562011a4f174c8ddf1
-run_id=32186975218
-run_status=in_progress
-run_conclusion=
-created_at=2026-08-18T21:17:52Z
-updated_at=2026-08-18T21:17:57Z
-jobs=testar-e-implantar:in_progress:
-failed_steps=
+head_sha=e579370cc0de3ed98cd4c8b25845dce49d2d9eb9
+run_id=32187356608
+run_status=completed
+run_conclusion=failure
+created_at=2026-08-18T21:22:16Z
+updated_at=2026-08-18T21:22:31Z
+jobs=testar-e-implantar:completed:failure
+failed_steps=Testar toda a integração
