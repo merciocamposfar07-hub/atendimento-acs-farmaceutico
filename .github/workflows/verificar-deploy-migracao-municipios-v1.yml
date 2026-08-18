@@ -29,7 +29,6 @@ jobs:
           node-version: '20'
 
       - name: Verificar projeto e deployment ativo
-        id: check
         shell: bash
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
@@ -69,7 +68,7 @@ jobs:
           VERSIONS=$(npx --yes @google/clasp@3.3.0 versions)
           VERSION_LINE=$(printf '%s\n' "$VERSIONS" | awk -v v="$VERSION" '$1==v {print; exit}')
           DEPLOY_OK=nao
-          if [ -n "$VERSION" ] && printf '%s' "$VERSION_LINE" | grep -Fq '5602782'; then
+          if [ -n "$VERSION" ] && printf '%s' "$VERSION_LINE" | grep -Fq 'f23e667'; then
             DEPLOY_OK=sim
           fi
 
@@ -86,9 +85,10 @@ jobs:
           {
             printf 'status=%s\n' "$FINAL"
             printf 'source_v1_2_0=%s\n' "$SOURCE_OK"
-            printf 'deployment_commit_5602782=%s\n' "$DEPLOY_OK"
+            printf 'deployment_trigger_f23e667=%s\n' "$DEPLOY_OK"
             printf 'health_areas=%s\n' "$HEALTH_OK"
             printf 'deployment_version=%s\n' "${VERSION:-nao_encontrada}"
+            printf 'version_line=%s\n' "$(printf '%s' "$VERSION_LINE" | tr '\n' ' ' | cut -c1-220)"
             printf 'verified_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > "$STATUS"
 
@@ -99,7 +99,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .github/migracao-municipios-deploy-status
-          git commit -m 'Registra verificação do deploy da migração municipal' || exit 0
+          git commit -m 'Registra nova verificação do deploy da migração municipal' || exit 0
           git pull --rebase origin main
           git push origin main
 
