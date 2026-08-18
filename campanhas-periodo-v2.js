@@ -376,7 +376,7 @@ function campaignSpecificIconSvg(key,theme){
   };
   var file=files[key];
   if(!file)return campaignIconSvg(theme);
-  return '<img src="assets/campanhas/'+file+'?v=1" alt="" aria-hidden="true" draggable="false" style="display:block;width:68px;height:68px;max-width:82%;max-height:82%;margin:auto;object-fit:contain;image-rendering:auto">';
+  return '<img src="assets/campanhas/'+file+'?v=padrao-agosto-20260817" alt="" aria-hidden="true" draggable="false" style="display:block;width:68px;height:68px;max-width:82%;max-height:82%;margin:auto;object-fit:contain;image-rendering:auto">';
 }
 
 function decorateCampaignSummary(box,meta){
