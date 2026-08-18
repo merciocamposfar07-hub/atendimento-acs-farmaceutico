@@ -1,5 +1,23 @@
 (function(){
 'use strict';
+
+/* RESTAURAÇÃO DO RASTREAMENTO DE ENTREGA
+   O painel oficial deixou de carregar diretamente admin-warmup.js.
+   Como este módulo mensal já é carregado pelo painel de campanhas,
+   ele garante novamente a carga do módulo que injeta
+   “Ver entrega desta notificação” em recados e campanhas. */
+(function garantirRastreamentoEntrega(){
+  try{
+    if(typeof document==='undefined'||typeof location==='undefined')return;
+    if(!/\/painel-oficial-recados-campanhas\.html$/.test(String(location.pathname||'')))return;
+    if(window.PortalTacsAdminWarmup||document.querySelector('script[src*="admin-warmup.js"]'))return;
+    var s=document.createElement('script');
+    s.src='/atendimento-acs-farmaceutico/admin-warmup.js?v=20260818-entrega-restaurada-v1';
+    s.async=false;
+    document.head.appendChild(s);
+  }catch(e){}
+}());
+
 if(window.PortalTacsCampanhasMensaisWhatsAppV12)return;
 window.PortalTacsCampanhasMensaisWhatsAppV12=true;
 var rendering=false,timer=null;
