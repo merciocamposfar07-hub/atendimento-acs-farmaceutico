@@ -1,0 +1,45 @@
+name: Integrar destinatario aposentadoria V1
+
+on:
+  push:
+    paths:
+      - 'scripts/integrar-destinatario-aposentadoria-v1.py'
+      - '.github/workflows/integrar-destinatario-aposentadoria-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Aplicar ajuste
+        run: python scripts/integrar-destinatario-aposentadoria-v1.py
+      - name: Validar escopo
+        run: |
+          grep -q 'portal-aposentadoria-destinatario-v1.js?v=20260818-aposentadoria-destino-v1' index.html
+          grep -q 'retirementRecipientValue' index.html
+          grep -q 'Solicitação para' index.html
+          grep -q 'recipient:' portal-ajustes-finais.js
+          grep -q "Solicitação para" portal-ajustes-finais.js
+          test -f portal-aposentadoria-destinatario-v1.js
+          CHANGED="$(git diff --name-only | sort)"
+          EXPECTED="$(printf '%s\n' index.html portal-ajustes-finais.js | sort)"
+          test "$CHANGED" = "$EXPECTED"
+      - name: Publicar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html portal-ajustes-finais.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Integra escolha para quem e a ficha de aposentadoria'
+          git pull --rebase origin main
+          git push origin main
