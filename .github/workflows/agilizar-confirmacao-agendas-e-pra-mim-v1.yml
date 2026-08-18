@@ -1,0 +1,47 @@
+name: Agilizar confirmacao agendas e Pra mim V1
+
+on:
+  push:
+    paths:
+      - 'scripts/agilizar-confirmacao-agendas-e-pra-mim-v1.py'
+      - '.github/workflows/agilizar-confirmacao-agendas-e-pra-mim-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Aplicar ajuste restrito
+        run: python scripts/agilizar-confirmacao-agendas-e-pra-mim-v1.py
+      - name: Validar escopo e integridade
+        run: |
+          grep -q 'data-value="Pra mim" aria-pressed="false">Pra mim</button>' portal-aposentadoria-destinatario-v1.js
+          grep -q 'portal-aposentadoria-destinatario-v1.js?v=20260818-aposentadoria-destino-v2' index.html
+          grep -q 'Agenda salva e confirmada pelo servidor.' painel-oficial-agendas-vagas.html
+          grep -q "post('admin_salvar_agenda',p,function(r)" painel-oficial-agendas-vagas.html
+          grep -q 'function restaurar()' painel-oficial-agendas-vagas.html
+          grep -q 'function sincronizarVagasOdontologia()' painel-oficial-agendas-vagas.html
+          grep -q 'atualizarPaginaAgendasFlutuante' painel-oficial-agendas-vagas.html
+          ! grep -q 'Agenda salva, mas os campos alterados ainda aguardam confirmação na próxima leitura.' painel-oficial-agendas-vagas.html
+          CHANGED="$(git diff --name-only | sort)"
+          EXPECTED="$(printf '%s\n' index.html painel-oficial-agendas-vagas.html portal-aposentadoria-destinatario-v1.js | sort)"
+          test "$CHANGED" = "$EXPECTED"
+      - name: Publicar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html painel-oficial-agendas-vagas.html portal-aposentadoria-destinatario-v1.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Agiliza confirmacao de agendas e troca Para voce por Pra mim'
+          git pull --rebase origin main
+          git push origin main
