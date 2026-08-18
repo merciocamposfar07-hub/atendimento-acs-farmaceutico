@@ -45,6 +45,9 @@ assert.match(admin,/setInterval\(sincronizarVagasOdontologia,5000\)/);
 assert.match(admin,/edicaoPendente/);
 
 assert.match(config,/DENTAL_AGENDA_API_URL/);
-assert.match(index,/portal-odontologia-segunda-sexta\.js\?v=20260818-odontologia-unica-v114/);
+assert.match(index,/portal-odontologia-segunda-sexta\.js\?v=20260818-cache-territorial-v115/);
 assert.match(index,/if\(!window\.__PORTAL_TACS_ODONTOLOGIA_V98__\)loadDental\(\)/);
-console.log('DENTAL_ODONTOLOGIA_UNICA_V114_OK');
+assert.match(dental,/CACHE_FRESH_MS = 90 \* 1000/);
+assert.match(dental,/function readAgendaCache\(\)/);
+assert.match(dental,/function currentAreaId\(\)/);
+console.log('DENTAL_CACHE_TERRITORIAL_V115_OK');
