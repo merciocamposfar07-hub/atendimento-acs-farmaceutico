@@ -1,0 +1,62 @@
+name: Diagnosticar deploy municipal v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnosticar-deploy-municipios-v2.yml'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  diagnosticar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Ler execução do deploy
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          OUT=.github/diagnostico-deploy-municipios-v2
+          TARGET='f23e667c84bb8b6db18b23410f17d82b48025eee'
+          JSON=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/deploy-apps-script-moradores.yml/runs?branch=main&per_page=20")
+          RUN=$(printf '%s' "$JSON" | jq -c --arg target "$TARGET" '.workflow_runs[] | select(.head_sha==$target)' | head -n 1 || true)
+          if [ -z "$RUN" ]; then
+            {
+              echo 'status=SEM_EXECUCAO_PARA_F23E667'
+              echo "total_runs=$(printf '%s' "$JSON" | jq -r '.total_count // 0')"
+              echo "latest_head=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].head_sha // ""')"
+              echo "latest_status=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].status // ""')"
+              echo "latest_conclusion=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].conclusion // ""')"
+              echo "latest_id=$(printf '%s' "$JSON" | jq -r '.workflow_runs[0].id // ""')"
+            } > "$OUT"
+          else
+            RUN_ID=$(printf '%s' "$RUN" | jq -r '.id')
+            JOBS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100")
+            {
+              echo 'status=EXECUCAO_ENCONTRADA'
+              echo "run_id=$RUN_ID"
+              echo "run_status=$(printf '%s' "$RUN" | jq -r '.status // ""')"
+              echo "run_conclusion=$(printf '%s' "$RUN" | jq -r '.conclusion // ""')"
+              echo "created_at=$(printf '%s' "$RUN" | jq -r '.created_at // ""')"
+              echo "updated_at=$(printf '%s' "$RUN" | jq -r '.updated_at // ""')"
+              echo "jobs=$(printf '%s' "$JOBS" | jq -r '[.jobs[] | (.name+":"+(.status//"")+":"+(.conclusion//""))] | join("|")')"
+              echo "failed_steps=$(printf '%s' "$JOBS" | jq -r '[.jobs[].steps[]? | select(.conclusion=="failure") | .name] | join("|")')"
+            } > "$OUT"
+          fi
+      - name: Registrar diagnóstico
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/diagnostico-deploy-municipios-v2
+          git commit -m 'Registra diagnóstico v2 do deploy municipal' || exit 0
+          git pull --rebase origin main
+          git push origin main
