@@ -14,9 +14,15 @@ new = """  assert.equal(window.document.getElementById('tacsCnsAccess'), null, '
   assert.match(source('teste-v1/painel-moradores-transport-v2.js'), /admin_territorio_login_pin/, 'O transporte deve usar a rota de login somente por PIN');
   dom.window.close();
 """
-if s.count(old) != 1:
-    raise SystemExit(f'Bloco legado CNS+PIN encontrado {s.count(old)} vez(es), esperado 1.')
-s = s.replace(old, new, 1)
+count_old = s.count(old)
+count_new = s.count(new)
+if count_old == 1:
+    s = s.replace(old, new, 1)
+elif count_old == 0 and count_new == 1:
+    pass
+else:
+    raise SystemExit(f'Estado inesperado do teste PIN-only: legado={count_old}, atual={count_new}.')
+
 for marker in [
     "getElementById('tacsCnsAccess'), null",
     "getElementById('tacsPinAccess')",
@@ -25,4 +31,4 @@ for marker in [
     if marker not in s:
         raise SystemExit('Gate PIN-only ausente: ' + marker)
 p.write_text(s, encoding='utf-8')
-print('Teste territorial atualizado para login TACS somente por PIN.')
+print('Teste territorial PIN-only validado/atualizado com idempotência.')
