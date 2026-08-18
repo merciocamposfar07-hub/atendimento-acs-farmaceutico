@@ -5,6 +5,7 @@ import re
 # 1) "Para você" -> "Pra mim" na ficha de aposentadoria;
 # 2) cache-bust apenas desse módulo no Portal;
 # 3) remover a releitura completa síncrona após um admin_salvar_agenda bem-sucedido.
+# Execução V1 confirmada em 18/08/2026.
 
 recipient = Path('portal-aposentadoria-destinatario-v1.js')
 index = Path('index.html')
