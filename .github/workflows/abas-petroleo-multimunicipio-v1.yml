@@ -1,0 +1,39 @@
+name: Abas azul-petróleo multi-município v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/abas-petroleo-multimunicipio-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar somente ajuste visual das abas
+        run: python3 scripts/abas_petroleo_multimunicipio_v1.py
+      - name: Validar escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'ABAS_PETROLEO_MULTIMUNICIPIO_V1' painel-oficial-organizacoes-municipios.html
+          grep -Fq 'border-color:#8edfff' painel-oficial-organizacoes-municipios.html
+          changed=$(git diff --name-only)
+          test "$changed" = 'painel-oficial-organizacoes-municipios.html'
+      - name: Publicar alteração visual
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add painel-oficial-organizacoes-municipios.html
+          git commit -m 'Deixa abas Organizações Municípios e Áreas em azul-petróleo'
+          git pull --rebase origin main
+          git push origin main
