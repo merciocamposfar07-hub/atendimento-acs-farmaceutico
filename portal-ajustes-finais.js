@@ -359,6 +359,7 @@
       document: clean(el('cpf') && el('cpf').value),
       locality: clean(el('locality') && el('locality').value),
       description: clean(el('subject') && el('subject').value),
+      recipient: clean(el('retirementRecipientValue') && el('retirementRecipientValue').value),
       areaId: identity.areaId,
       areaName: identity.areaName,
       unitName: identity.unitName,
@@ -658,6 +659,7 @@
     block('Nascimento e idade', data.birth + ' • ' + data.age, 2, 16, 35);
     block('CPF ou CNS', data.document, 1, 16, 35);
     block('Localidade / comunidade', data.locality, 3, 18, 34);
+    if (data.recipient) block('Solicitação para', data.recipient, 1, 16, 34);
     block('Descrição da solicitação', summary.description, 4, 13, 34);
     if (summary.day) block('Dia informado', summary.day, 1, 12, 32);
     if (summary.status) block('Situação', summary.status, 1, 8, 32);
