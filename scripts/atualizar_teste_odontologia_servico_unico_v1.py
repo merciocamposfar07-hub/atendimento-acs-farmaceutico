@@ -6,15 +6,19 @@ old = "category.value = 'Solicitar atendimento odontológico de emergência (den
 new = "category.value = 'Solicitar atendimento odontológico (dentista)';"
 
 count = s.count(old)
-if count != 1:
-    raise SystemExit(f'Esperava 1 ocorrência do serviço odontológico legado no teste; encontrei {count}.')
+if count != 2:
+    raise SystemExit(f'Esperava 2 ocorrências do serviço odontológico legado nos testes; encontrei {count}.')
 
-s = s.replace(old, new, 1)
+s = s.replace(old, new)
 
-# Gates: o teste continua validando a vaga emergencial dentro da agenda única.
+# Gates: os dois testes passam a abrir a agenda odontológica única,
+# mas continuam validando especificamente o fluxo das vagas emergenciais.
+if s.count(new) < 2:
+    raise SystemExit('Os dois testes não foram convertidos para o serviço odontológico único.')
+
 required = [
-    "category.value = 'Solicitar atendimento odontológico (dentista)';",
     "#dentalSlots .sheet-dental-choice.emergency:not(:disabled)",
+    "#dentalSlots .sheet-dental-choice.emergency",
     "assert.equal(durableGet.type, 'emergencial');",
     "assert.equal(durableGet.date, '2099-08-03');",
     "assert.equal(monday.vagasEmergenciais, 0",
@@ -24,4 +28,4 @@ if missing:
     raise SystemExit('Gates do teste odontológico falharam: ' + ' | '.join(missing))
 
 path.write_text(s, encoding='utf-8')
-print('Teste atualizado para a agenda odontológica única; validação emergencial preservada.')
+print('Dois testes atualizados para a agenda odontológica única; validações emergenciais preservadas.')
