@@ -17,6 +17,11 @@
   var internalCategoryChange = false;
   var verifyTimer = null;
   var expiryTimer = null; // PORTAL_TACS_ODONTO_EXPIRACAO_HORARIO_V1
+  var CACHE_PREFIX = 'portalTacsDentalAgendaV103FullWeek:';
+  var CACHE_FRESH_MS = 90 * 1000;
+  var CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+  var cacheVisible = false;
+  var cacheFresh = false;
 
   function el(id) { return document.getElementById(id); }
   function clean(value) { return String(value == null ? '' : value).trim(); }
@@ -148,6 +153,64 @@
     };
   }
 
+  function currentAreaId() {
+    var value = clean(window.TACS_AREA_ID || '');
+    if (!value) {
+      try { value = clean(new URLSearchParams(window.location.search || '').get('areaId') || new URLSearchParams(window.location.search || '').get('area')); } catch (ignore) {}
+    }
+    if (!value) {
+      try { value = clean(localStorage.getItem('portalTacsAreaIdV1')); } catch (ignoreStorage) {}
+    }
+    value = value.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 64);
+    return value || 'JAPARANDUBA';
+  }
+
+  function dentalCacheKey() { return CACHE_PREFIX + currentAreaId(); }
+
+  function normalizedAgenda(data) {
+    var normalized = [];
+    (Array.isArray(data && data.dias) ? data.dias : []).forEach(function (row, index) {
+      var slot = normalizeSlot(row, index);
+      if (slot) normalized.push(slot);
+    });
+    normalized.sort(function (a, b) { return dateStamp(a.date) - dateStamp(b.date); });
+    return normalized;
+  }
+
+  function readAgendaCache() {
+    try {
+      var raw = localStorage.getItem(dentalCacheKey());
+      if (!raw) return false;
+      var saved = JSON.parse(raw);
+      var age = Date.now() - Number(saved && saved.savedAt || 0);
+      if (!saved || !saved.data || !Number.isFinite(age) || age < 0 || age > CACHE_MAX_AGE_MS) return false;
+      slots = normalizedAgenda(saved.data);
+      cacheVisible = true;
+      cacheFresh = age <= CACHE_FRESH_MS;
+      startExpiryWatch();
+      return true;
+    } catch (error) { return false; }
+  }
+
+  function writeAgendaCache(data) {
+    try {
+      localStorage.setItem(dentalCacheKey(), JSON.stringify({savedAt:Date.now(),data:data}));
+    } catch (error) {}
+  }
+
+  function writeSlotsCache() {
+    writeAgendaCache({
+      ok:true,
+      dias:slots.map(function (slot) {
+        return {
+          id:slot.id,dia:slot.day,data:slot.date,
+          vagasComuns:slot.common,vagasEmergenciais:slot.emergency,
+          expiraAs:slot.expiresAt,ativo:true
+        };
+      })
+    });
+  }
+
   function pruneExpiredSlots() {
     if (!isDental() || loading || !slots.length) return;
     var before = slots.length;
@@ -156,6 +219,7 @@
     });
     if (slots.length === before) return;
     if (selection && !slots.some(function (slot) { return slot.id === selection.id; })) selection = null;
+    writeSlotsCache();
     renderAgenda();
     refreshSend();
   }
@@ -213,8 +277,14 @@
   }
 
   function statusText() {
+    if (loading && slots.length && cacheVisible) return cacheFresh
+      ? 'Confirmando a agenda atual em segundo plano...'
+      : 'Última agenda disponível. Atualizando em segundo plano...';
     if (loading) return 'Atualizando a agenda odontológica pela planilha...';
     if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
+    if (cacheVisible) return cacheFresh
+      ? 'Última agenda disponível. A confirmação online continuará em segundo plano.'
+      : 'Última agenda disponível. Aguarde a atualização para escolher uma vaga.';
     if (selection) {
       if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
       if (selection.explicitFailure) return selection.errorMessage || 'Não foi possível reservar essa vaga.';
@@ -267,7 +337,8 @@
         button.dataset.id = slot.id;
         button.dataset.type = type;
         button.dataset.value = value === null ? '' : String(value);
-        button.disabled = Boolean(selection && !same) || (!same && (value === null || value <= 0));
+        var staleCacheBlocked = cacheVisible && !cacheFresh && !same;
+        button.disabled = staleCacheBlocked || Boolean(selection && !same) || (!same && (value === null || value <= 0));
         button.textContent = vacancyLabel(value, type);
         if (same) button.classList.add('selected');
         actions.appendChild(button);
@@ -308,24 +379,23 @@
         else finish(null, data);
       };
       script.onerror = function () { finish(new Error('Não foi possível consultar a planilha odontológica.')); };
-      script.src = API + (API.indexOf('?') === -1 ? '?' : '&') + 'action=agenda&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
+      script.src = API + (API.indexOf('?') === -1 ? '?' : '&') + 'action=agenda&areaId=' + encodeURIComponent(currentAreaId()) + '&callback=' + encodeURIComponent(callbackName) + '&v=' + Date.now();
       document.head.appendChild(script);
     });
   }
 
   function loadAgenda(preserveSelection) {
     if (!isDental() || loading) return;
+    if (!preserveSelection && !selection && !slots.length) readAgendaCache();
+    var hadCachedSlots = cacheVisible && slots.length > 0;
     loading = true;
     if (!preserveSelection) selection = null;
     renderAgenda();
     fetchAgenda().then(function (data) {
-      var normalized = [];
-      (Array.isArray(data.dias) ? data.dias : []).forEach(function (row, index) {
-        var slot = normalizeSlot(row, index);
-        if (slot) normalized.push(slot);
-      });
-      normalized.sort(function (a, b) { return dateStamp(a.date) - dateStamp(b.date); });
-      slots = normalized;
+      slots = normalizedAgenda(data);
+      writeAgendaCache(data);
+      cacheVisible = false;
+      cacheFresh = true;
       startExpiryWatch();
       loading = false;
       pruneExpiredSlots();
@@ -333,10 +403,10 @@
       refreshSend();
     }).catch(function (error) {
       loading = false;
-      if (!preserveSelection) slots = [];
+      if (!hadCachedSlots && !preserveSelection) slots = [];
       renderAgenda();
       var status = el('dentalStatus');
-      if (status && !selection) {
+      if (status && !selection && !hadCachedSlots) {
         status.textContent = error.message || 'Não foi possível consultar a planilha odontológica.';
         status.className = 'dental-status error';
       }
@@ -462,7 +532,7 @@
 
       var params = new URLSearchParams();
       params.set('action', 'reservar_get');
-      params.set('areaId', window.TACS_AREA_ID || 'JAPARANDUBA');
+      params.set('areaId', currentAreaId());
       params.set('requestId', item.requestId);
       params.set('date', item.date);
       params.set('type', item.type);
@@ -489,6 +559,7 @@
     if (item.type === 'emergencial') slot.emergency = Math.max(0, Number(remaining));
     else slot.common = Math.max(0, Number(remaining));
     item.optimisticRemaining = Math.max(0, Number(remaining));
+    writeSlotsCache();
   }
 
   function verifyReservation(item, attempt) {
@@ -609,6 +680,7 @@
     selection = item;
     if (type === 'emergencial') slot.emergency = item.optimisticRemaining;
     else slot.common = item.optimisticRemaining;
+    writeSlotsCache();
 
     var category = el('category');
     if (category) {
