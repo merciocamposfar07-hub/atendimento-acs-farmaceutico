@@ -27,7 +27,11 @@ const sandbox={
 vm.createContext(sandbox);
 vm.runInContext(source,sandbox);
 
-assert.equal(sandbox.TACS_ORGANIZACOES_MUNICIPIOS_V1.VERSAO,'1.1.0');
+assert.equal(sandbox.TACS_ORGANIZACOES_MUNICIPIOS_V1.VERSAO,'1.2.0');
+assert.match(source,/function tacsOrganizacoesMunicipiosV1MigrarLegadoChaGrande_\(\)/);
+assert.match(source,/destinoId!=='CHA_GRANDE'&&destinoNome!=='CHA_GRANDE'/);
+assert.match(source,/if\(!usaMunLegado\)/);
+assert.match(source,/if\(!usaOrgLegado\)/);
 assert.match(source,/O TACS não pode mudar de município ou área pelo navegador/);
 assert.match(source,/Somente o administrador geral pode alterar organizações, municípios e vínculos territoriais/);
 assert.match(build,/ZZZZ_32_OrganizacoesMunicipiosV1\.gs/);
@@ -39,6 +43,28 @@ assert.equal(ctx.municipioId,'MUN_ATUAL');
 assert.equal(ctx.organizacaoId,'ORG_ATUAL');
 assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1ContextoAcesso_({perfil:'TACS',areaId:'AREA_A'},'AREA_B'),/não pode mudar/i);
 assert.throws(()=>sandbox.tacsOrganizacoesMunicipiosV1ContextoAcesso_({perfil:'ADMIN_MUNICIPAL',areaId:'AREA_A'},'AREA_A'),/não possui escopo/i);
+
+// Migração real do legado atual: placeholders + único município real Chã Grande/PE.
+const migrationCatalog={
+  versao:'1.1.0',atualizadaEm:'',
+  organizacoes:[
+    {organizacaoId:'ORG_ATUAL',nome:'Organização atual',ativa:true},
+    {organizacaoId:'SECRETARIA_SAUDE_CHA_GRANDE',nome:'Secretaria Municipal de Saúde de Chã Grande',ativa:true}
+  ],
+  municipios:[
+    {municipioId:'MUN_ATUAL',organizacaoId:'ORG_ATUAL',nome:'Município atual',uf:'',ativo:true},
+    {municipioId:'CHA_GRANDE',organizacaoId:'SECRETARIA_SAUDE_CHA_GRANDE',nome:'Chã Grande',uf:'PE',ativo:true}
+  ],
+  areas:{AREA_A:{municipioId:'MUN_ATUAL'}}
+};
+props.set(sandbox.TACS_ORGANIZACOES_MUNICIPIOS_V1.CATALOGO_PROPERTY,JSON.stringify(migrationCatalog));
+const migrated=sandbox.tacsOrganizacoesMunicipiosV1DadosAdmin_({perfil:'ADMIN_GERAL'});
+assert.equal(migrated.versao,'1.2.0');
+assert.equal(migrated.municipios.some(x=>x.municipioId==='MUN_ATUAL'),false,'MUN_ATUAL deve ser removido após migrar todas as áreas');
+assert.equal(migrated.organizacoes.some(x=>x.organizacaoId==='ORG_ATUAL'),false,'ORG_ATUAL deve ser removido quando nenhum município depender dele');
+assert.equal(migrated.areas.find(x=>x.areaId==='AREA_A').contexto.municipioId,'CHA_GRANDE');
+assert.equal(migrated.areas.find(x=>x.areaId==='AREA_B').contexto.municipioId,'CHA_GRANDE','área sem vínculo explícito deve adotar o único município real');
+assert.equal(migrated.areas.find(x=>x.areaId==='AREA_C').contexto.municipioId,'CHA_GRANDE','todas as áreas sem vínculo devem ser migradas para Chã Grande');
 
 const catalog={
   organizacoes:[
@@ -103,8 +129,8 @@ assert.equal(ctx.organizacaoId,'ORG_3');
 
 const dados=sandbox.tacsOrganizacoesMunicipiosV1DadosAdmin_(admin);
 assert.equal(dados.ok,true);
-assert.equal(dados.versao,'1.1.0');
+assert.equal(dados.versao,'1.2.0');
 assert.equal(dados.areas.length,3);
 assert.equal(dados.areas.find(x=>x.areaId==='AREA_C').contexto.municipioId,'MUN_3');
 
-console.log('Camada multi-município V1.1: organização → município → área validada, mutação só pelo administrador geral e TACS preso ao território da sessão.');
+console.log('Camada multi-município V1.2: migração de placeholders para Chã Grande, organização → município → área, mutação só pelo administrador geral e TACS preso ao território validados.');
