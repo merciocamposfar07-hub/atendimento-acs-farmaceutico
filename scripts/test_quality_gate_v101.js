@@ -49,7 +49,7 @@ registrar('dados', 'Cache global instável está explicitamente desativado', con
 registrar('dados', 'Módulo de desempenho não redefine doGet', !regex(backend, /\bdoGet\s*=\s*function/));
 registrar('dados', 'Módulo de desempenho não redefine doPost', !regex(backend, /\bdoPost\s*=\s*function/));
 registrar('dados', 'Módulo neutro não executa CacheService global', !contem(backend, 'CacheService.getScriptCache'));
-registrar('dados', 'Reserva odontológica real continua no backend', contem(dental, "add('action', 'reservar')"));
+registrar('dados', 'Reserva odontológica real continua no backend', contem(dental, "params.set('action', 'reservar_get')"));
 registrar('dados', 'Abatimento visual é unitário', contem(dental, 'optimisticRemaining: Math.max(0, Number(available) - 1)'));
 registrar('dados', 'CPF/CNS continua validado antes da reserva', contem(dental, "validDocument(el('cpf') && el('cpf').value)"));
 registrar('dados', 'Snapshot de agendas não libera escrita sem confirmação', contem(agenda, 'Aguarde a confirmação dos dados atuais antes de salvar.'));
@@ -64,7 +64,7 @@ registrar('desempenho', 'Timeout de pré-aquecimento limitado a 6 segundos', con
 registrar('desempenho', 'Atualização inteligente evita apagar caches duráveis', !contem(auto, "'portalTacsPublicDataV4'") && !contem(auto, "'portalTacsDentalAgendaV103FullWeek'"));
 registrar('desempenho', 'Primeira abertura da web app não recarrega só por faltar ?ptv', contem(auto, 'if(!pageSeen)') && !contem(auto, 'currentUrl=new URL'));
 registrar('desempenho', 'Autoatualização recarrega apenas quando a versão publicada muda', contem(auto, 'if(pageSeen!==remote)'));
-registrar('desempenho', 'Consulta odontológica duplicada antiga virou somente fallback', contem(index, 'if(!window.PortalTacsOdontologiaV98)loadDental()'));
+registrar('desempenho', 'Consulta odontológica duplicada antiga virou somente fallback', contem(index, 'if(!window.__PORTAL_TACS_ODONTOLOGIA_V98__)loadDental()'));
 registrar('desempenho', 'Arquivo neutro do backend é incluído no release para substituir a versão instável', contem(read('scripts/build_apps_script_release.js'), "marker: 'TACS_PERFORMANCE_CACHE_V101'"));
 
 registrar('resiliencia', 'Fluxo Safari/iframe possui teste dedicado', contem(adminTransport, 'transporte Safari'));
