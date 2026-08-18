@@ -613,7 +613,7 @@
     var category = el('category');
     if (category) {
       internalCategoryChange = true;
-      category.value = type === 'emergencial' ? EMERGENCY : REGULAR;
+      category.value = REGULAR;
       category.dispatchEvent(new Event('change', { bubbles: true }));
       internalCategoryChange = false;
     }
@@ -630,7 +630,7 @@
   function openWhatsApp() {
     if (!selection) return;
     var age = ageLabel(el('birth').value);
-    var category = selection.type === 'emergencial' ? EMERGENCY : REGULAR;
+    var category = REGULAR;
     var message = '*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n' +
       '*TACS - Técnico Agente Comunitário de Saúde*\n' +
       '*TACS responsável: Mércio José Campos dos Santos*\n\n' +
