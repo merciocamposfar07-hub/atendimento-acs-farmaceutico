@@ -1,0 +1,56 @@
+name: Migrar legado de municípios para Chã Grande v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/migrar-legado-municipios-cha-grande-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: migrar-legado-municipios-cha-grande-v1
+  cancel-in-progress: false
+
+jobs:
+  migrar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar migração controlada
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/migrar_legado_municipios_cha_grande_v1.py
+
+      - name: Validar sintaxe e escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_32_OrganizacoesMunicipiosV1.gs
+          grep -Fq "VERSAO:'1.2.0'" apps-script/ZZZZ_32_OrganizacoesMunicipiosV1.gs
+          grep -Fq 'tacsOrganizacoesMunicipiosV1MigrarLegadoChaGrande_' apps-script/ZZZZ_32_OrganizacoesMunicipiosV1.gs
+          grep -Fq "destinoId!=='CHA_GRANDE'" apps-script/ZZZZ_32_OrganizacoesMunicipiosV1.gs
+          grep -Fq 'if(!usaMunLegado)' apps-script/ZZZZ_32_OrganizacoesMunicipiosV1.gs
+          grep -Fq 'if(!usaOrgLegado)' apps-script/ZZZZ_32_OrganizacoesMunicipiosV1.gs
+          grep -Fq 'function tacsOrganizacoesMunicipiosV1VincularArea_' apps-script/ZZZZ_32_OrganizacoesMunicipiosV1.gs
+          changed=$(git diff --name-only)
+          test "$changed" = 'apps-script/ZZZZ_32_OrganizacoesMunicipiosV1.gs'
+
+      - name: Solicitar publicação segura do Apps Script
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'MIGRACAO_LEGADO_MUNICIPIOS_CHA_GRANDE_V1 %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .github/apps-script-release-request
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps-script/ZZZZ_32_OrganizacoesMunicipiosV1.gs .github/apps-script-release-request
+          git commit -m 'Migra placeholders de município para Chã Grande com segurança'
+          git pull --rebase origin main
+          git push origin main
