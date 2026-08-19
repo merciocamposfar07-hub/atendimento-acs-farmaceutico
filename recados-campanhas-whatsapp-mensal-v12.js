@@ -18,6 +18,21 @@
   }catch(e){}
 }());
 
+/* RELATÓRIO DE FEEDBACK V2
+   Camada exclusivamente administrativa. Reutiliza o mesmo resultado atual
+   e apenas separa estados de leitura sem alterar Push, webhooks ou comprovantes. */
+(function garantirRelatorioFeedbackV2(){
+  try{
+    if(typeof document==='undefined'||typeof location==='undefined')return;
+    if(!/\/painel-oficial-recados-campanhas\.html$/.test(String(location.pathname||'')))return;
+    if(window.PortalTacsRelatorioFeedbackV2||document.querySelector('script[src*="notificacao-relatorio-feedback-v2.js"]'))return;
+    var s=document.createElement('script');
+    s.src='/atendimento-acs-farmaceutico/notificacao-relatorio-feedback-v2.js?v=20260819-feedback-v2';
+    s.async=true;
+    document.head.appendChild(s);
+  }catch(e){}
+}());
+
 if(window.PortalTacsCampanhasMensaisWhatsAppV12)return;
 window.PortalTacsCampanhasMensaisWhatsAppV12=true;
 var rendering=false,timer=null;
@@ -37,7 +52,7 @@ function wrap(ctx,text,x,y,max,line,maxLines){var words=txt(text).split(/\s+/).f
 function assetByTitle(title){var n=norm(title),map={
 'janeiro roxo':'janeiro-roxo.svg','fevereiro laranja':'fevereiro-laranja.svg','marco roxo':'marco-roxo.svg','marco azul-marinho':'marco-azul-marinho.svg','abril verde':'abril-verde.svg','abril azul':'abril-azul.svg','maio amarelo':'maio-amarelo.svg','junho vermelho':'junho-vermelho.svg','julho amarelo':'julho-amarelo.svg','julho verde':'julho-verde.svg','agosto lilas':'agosto-lilas-referencia.svg','agosto dourado':'agosto-dourado-referencia.svg','setembro amarelo':'setembro-amarelo.svg','setembro verde':'setembro-verde.svg','outubro rosa':'outubro-rosa.svg','novembro azul':'novembro-azul.svg','dezembro vermelho':'dezembro-vermelho.svg','dezembro laranja':'dezembro-laranja.svg'};return map[n]||''}
 function artUrl(d){var f=assetByTitle(d&&d.title);return f?'/atendimento-acs-farmaceutico/assets/campanhas/'+f+'?v=20260817-padrao3d-final':''}
-function loadArt(d){return new Promise(function(resolve){var u=artUrl(d);if(!u){resolve(null);return}var im=new Image();im.onload=function(){resolve(im)};im.onerror=function(){resolve(null)};im.src=u})}
+function loadArt(d){return new Promise(function(resolve){var u=artUrl(d);if(!u){resolve(null);return}var im=new Image();im.onload=function(){resolve(im)};img.onerror=function(){resolve(null)};im.src=u})}
 function contain(ctx,img,x,y,w,h){if(!img)return;var r=Math.min(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*r,dh=img.naturalHeight*r;ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh)}
 function drawMonth(items,label){return Promise.all(items.map(function(d){return loadArt(d)})).then(function(arts){var c=document.createElement('canvas');c.width=1080;c.height=1920;var ctx=c.getContext('2d'),g=ctx.createLinearGradient(0,0,1080,1920);g.addColorStop(0,'#041f34');g.addColorStop(.58,'#073a55');g.addColorStop(1,'#0b5878');ctx.fillStyle=g;ctx.fillRect(0,0,1080,1920);ctx.strokeStyle='#21b9f3';ctx.lineWidth=6;rr(ctx,58,60,105,105,25);ctx.stroke();ctx.fillStyle='#fff';ctx.font='900 62px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('T',93,133);ctx.font='900 38px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('TACS – TÉCNICO AGENTE',188,100);ctx.fillText('COMUNITÁRIO DE SAÚDE',188,145);ctx.font='900 68px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('Campanhas da unidade',58,270);ctx.fillStyle='#64df9a';ctx.font='900 48px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(label,58,340);
 var n=Math.max(1,Math.min(items.length,3)),top=400,gap=28,total=1260,h=(total-gap*(n-1))/n;items.slice(0,3).forEach(function(d,i){var p=palette(d.theme),y=top+i*(h+gap),gr=ctx.createLinearGradient(50,y,1030,y+h);gr.addColorStop(0,p[0]);gr.addColorStop(1,p[1]);ctx.fillStyle=gr;rr(ctx,48,y,984,h,42);ctx.fill();ctx.strokeStyle=p[3];ctx.lineWidth=5;ctx.stroke();ctx.fillStyle=p[3];rr(ctx,82,y+34,350,62,28);ctx.fill();ctx.fillStyle='#fff';ctx.font='900 28px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('CAMPANHA DO MÊS',108,y+76);ctx.fillStyle=p[2];ctx.font='900 '+(n===1?62:48)+'px -apple-system,BlinkMacSystemFont,Arial';var ty=wrap(ctx,d.title,84,y+155,625,n===1?70:56,n===1?3:2)+18;if(d.subtitle){ctx.font='900 '+(n===1?37:31)+'px -apple-system,BlinkMacSystemFont,Arial';ty=wrap(ctx,d.subtitle,84,ty,610,n===1?46:38,n===1?3:2)+15}ctx.font='800 '+(n===1?39:31)+'px -apple-system,BlinkMacSystemFont,Arial';wrap(ctx,d.message,84,ty,610,n===1?51:39,n===1?7:4);if(arts[i]){var boxW=n===1?250:220,boxH=Math.max(190,h-210),boxX=748,boxY=y+120;contain(ctx,arts[i],boxX,boxY,boxW,boxH)}if(d.time){ctx.fillStyle=p[3];ctx.font='900 26px -apple-system,BlinkMacSystemFont,Arial';wrap(ctx,d.time,84,y+h-38,610,32,1)}});
