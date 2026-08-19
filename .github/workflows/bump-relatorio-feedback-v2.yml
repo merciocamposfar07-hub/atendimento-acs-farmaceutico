@@ -1,0 +1,45 @@
+name: Publicar relatório feedback v2
+
+on:
+  push:
+    paths:
+      - '.github/workflows/bump-relatorio-feedback-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar-versao:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Atualizar somente a versão do script de relatório
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('painel-oficial-recados-campanhas.html')
+          s = p.read_text(encoding='utf-8')
+          old = '<script src="/atendimento-acs-farmaceutico/recados-campanhas-whatsapp-mensal-v12.js?v=20260817-recados-cards-mensais-v12"></script>'
+          new = '<script src="/atendimento-acs-farmaceutico/recados-campanhas-whatsapp-mensal-v12.js?v=20260819-feedback-v2"></script>'
+          if old in s:
+              s = s.replace(old, new, 1)
+              p.write_text(s, encoding='utf-8')
+          elif new not in s:
+              raise SystemExit('Referência esperada não encontrada; nenhuma alteração aplicada.')
+          PY
+      - name: Confirmar alteração única
+        run: |
+          git diff --check
+          git diff -- painel-oficial-recados-campanhas.html
+      - name: Publicar
+        run: |
+          if git diff --quiet -- painel-oficial-recados-campanhas.html; then
+            echo 'Nada a publicar.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add painel-oficial-recados-campanhas.html
+          git commit -m 'Atualiza cache do relatório de feedback v2'
+          git push
