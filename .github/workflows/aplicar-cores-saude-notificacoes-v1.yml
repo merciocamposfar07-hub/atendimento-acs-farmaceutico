@@ -23,7 +23,7 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'SAUDE_NOTIFICACOES_CORES_CATEGORIAS_V1' painel-oficial-recados-campanhas.html
-          grep -Fq 'saude-aparelho-'+ painel-oficial-recados-campanhas.html
+          grep -Fq 'saude-aparelho-' painel-oficial-recados-campanhas.html
           changed="$(git diff --name-only)"
           test "$changed" = 'painel-oficial-recados-campanhas.html'
       - name: Publicar ajuste
@@ -36,3 +36,4 @@ jobs:
           git commit -m 'Aplica cores por categoria na saúde das notificações'
           git pull --rebase origin main
           git push origin main
+# disparo v2
