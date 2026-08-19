@@ -1,0 +1,38 @@
+name: Aplicar cores saúde notificações v1
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/aplicar-cores-saude-notificacoes-v1.yml'
+permissions:
+  contents: write
+concurrency:
+  group: aplicar-cores-saude-notificacoes-v1
+  cancel-in-progress: false
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar somente cores
+        run: python3 scripts/aplicar_cores_saude_notificacoes_v1.py
+      - name: Validar escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'SAUDE_NOTIFICACOES_CORES_CATEGORIAS_V1' painel-oficial-recados-campanhas.html
+          grep -Fq 'saude-aparelho-'+ painel-oficial-recados-campanhas.html
+          changed="$(git diff --name-only)"
+          test "$changed" = 'painel-oficial-recados-campanhas.html'
+      - name: Publicar ajuste
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add painel-oficial-recados-campanhas.html
+          git commit -m 'Aplica cores por categoria na saúde das notificações'
+          git pull --rebase origin main
+          git push origin main
