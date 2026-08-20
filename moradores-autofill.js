@@ -116,9 +116,10 @@
     style.id = 'tacsAutofillLoadingStyle';
     style.textContent = [
       '@keyframes tacsAutofillLoadingPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(234,172,43,.15)}50%{transform:scale(1.012);box-shadow:0 0 0 6px rgba(234,172,43,.13)}}',
-      '.help.id-cns-note.tacs-autofill-loading{display:grid!important;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:10px;margin-top:8px!important;padding:13px 15px!important;min-height:62px!important;border:2px solid #e2ad38!important;border-radius:14px!important;background:#fff3d8!important;color:#563807!important;font-size:16px!important;font-weight:900!important;line-height:1.38!important;white-space:pre-line!important;animation:tacsAutofillLoadingPulse 1.45s ease-in-out infinite;transform-origin:center}',
-      '.help.id-cns-note.tacs-autofill-loading::before{content:"⏳";display:grid;place-items:center;width:34px;height:34px;font-size:25px;line-height:1}',
-      '@media(prefers-reduced-motion:reduce){.help.id-cns-note.tacs-autofill-loading{animation:none!important;transform:none!important}}'
+      '@keyframes tacsAutofillHourglassTurn{0%{transform:rotate(0deg) scale(1)}25%{transform:rotate(-12deg) scale(1.08)}50%{transform:rotate(180deg) scale(1.12)}75%{transform:rotate(192deg) scale(1.08)}100%{transform:rotate(360deg) scale(1)}}',
+      '.help.id-cns-note.tacs-autofill-loading{display:grid!important;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:11px;margin-top:8px!important;padding:14px 16px!important;min-height:66px!important;border:2px solid #c88c08!important;border-radius:14px!important;background:#fff3d8!important;color:#082b43!important;-webkit-text-fill-color:#082b43!important;opacity:1!important;filter:none!important;text-shadow:none!important;font-size:16px!important;font-weight:900!important;line-height:1.38!important;white-space:pre-line!important;animation:tacsAutofillLoadingPulse 1.45s ease-in-out infinite;transform-origin:center}',
+      '.help.id-cns-note.tacs-autofill-loading::before{content:"⏳";display:grid;place-items:center;width:38px;height:38px;color:#7a4a00!important;-webkit-text-fill-color:#7a4a00!important;opacity:1!important;font-size:27px;line-height:1;animation:tacsAutofillHourglassTurn 1.25s ease-in-out infinite;transform-origin:center}',
+      '@media(prefers-reduced-motion:reduce){.help.id-cns-note.tacs-autofill-loading,.help.id-cns-note.tacs-autofill-loading::before{animation:none!important;transform:none!important}}'
     ].join('');
     document.head.appendChild(style);
   }
