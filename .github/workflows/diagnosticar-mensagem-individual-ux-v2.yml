@@ -1,0 +1,40 @@
+name: Diagnosticar mensagem individual UX V2
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/mensagem-individual-ux-v2
+      - name: Aplicar patch em memória de trabalho
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'BOOT'
+          from pathlib import Path
+          import re,textwrap
+          src=Path('.github/workflows/aplicar-mensagem-individual-ux-v2.yml').read_text(encoding='utf-8')
+          m=re.search(r"python3 - <<'PY'\n(.*?)\n          PY",src,re.S)
+          if not m: raise SystemExit('Aplicador não encontrado')
+          exec(compile(textwrap.dedent(m.group(1)),'aplicador','exec'),{})
+          BOOT
+      - name: Mostrar trecho e verificar sintaxe
+        shell: bash
+        run: |
+          nl -ba teste-v1/mensagem-individual-morador-v1.js | sed -n '1,90p'
+          node --check teste-v1/mensagem-individual-morador-v1.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mensagem-individual-ux-v2-gerada
+          path: teste-v1/mensagem-individual-morador-v1.js
+          retention-days: 1
