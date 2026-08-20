@@ -128,32 +128,8 @@
   }
 
   function smartRefresh(button){
-    if(isAdminPage()){
-      clearTransientConnectionState();
-      reloadFresh(Date.now());
-      return;
-    }
-
-    var original=button&&button.textContent;
     if(button){button.disabled=true;button.textContent='↻ Atualizando…'}
-    var tasks=[];
-    try{
-      var publico=window.PortalTacsPublicData;
-      if(publico&&typeof publico.refresh==='function')tasks.push(Promise.resolve(publico.refresh()).catch(function(){return null}));
-    }catch(e){}
-    try{
-      var dental=window.PortalTacsOdontologiaV98;
-      if(dental&&typeof dental.atualizar==='function')tasks.push(Promise.resolve(dental.atualizar()).catch(function(){return null}));
-    }catch(e){}
-    try{
-      var warm=window.PortalTacsAdminWarmup;
-      if(warm&&typeof warm.iniciar==='function')tasks.push(Promise.resolve(warm.iniciar(true)).catch(function(){return null}));
-    }catch(e){}
-    tasks.push(Promise.resolve(fetchVersion(true)).catch(function(){return null}));
-    Promise.all(tasks).finally(function(){
-      installTerritorialIdentityGuard();
-      if(button){button.disabled=false;button.textContent=original||'↻ Atualizar página'}
-    });
+    reloadFresh(Date.now());
   }
 
   function installUI(){
