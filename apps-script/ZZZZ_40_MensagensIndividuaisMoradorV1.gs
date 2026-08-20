@@ -148,6 +148,17 @@ function mensagemIndividualV1DataBr_(valor){
 function mensagemIndividualV1Conteudo_(p,morador){
   var tipo=mensagemIndividualV1Texto_(p.tipo).toUpperCase();
   if(TACS_MENSAGEM_INDIVIDUAL_V1.TIPOS.indexOf(tipo)===-1)throw new Error('Selecione o tipo da mensagem.');
+  var mensagemFinal=mensagemIndividualV1Texto_(p.mensagem).slice(0,700);
+  if(mensagemFinal.length>=3){
+    var titulos={
+      CONFIRMAR_ATENDIMENTO:'Portal TACS — Atendimento confirmado',
+      ALTERAR_DATA:'Portal TACS — Nova data do atendimento',
+      LEMBRETE:'Portal TACS — Lembrete de atendimento',
+      CANCELAMENTO:'Portal TACS — Atendimento cancelado',
+      OUTRA_MENSAGEM:'Portal TACS — Mensagem individual'
+    };
+    return {titulo:titulos[tipo]||'Portal TACS — Mensagem individual',mensagem:mensagemFinal};
+  }
   var nome=mensagemIndividualV1Texto_(morador.item.nome).split(' ')[0]||'Morador';
   var servico=mensagemIndividualV1Texto_(p.servico).slice(0,120);
   var hora=mensagemIndividualV1Texto_(p.hora);
