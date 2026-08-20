@@ -1,0 +1,79 @@
+name: Verificação família no autofill V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/aplicar_verificacao_familia_autofill_v1.py'
+      - '.github/workflows/verificacao-familia-autofill-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verificacao-familia-autofill-v1
+  cancel-in-progress: false
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar desacoplamento de escopo estrito
+        run: python scripts/aplicar_verificacao_familia_autofill_v1.py
+
+      - name: Validar escopo das mudanças
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- . \
+            ':(exclude)portal-notification-health.js' \
+            ':(exclude)moradores-autofill.js' \
+            ':(exclude)index.html' \
+            ':(exclude)scripts/build_apps_script_release.js' \
+            ':(exclude)scripts/test_notification_health_registry.js' \
+            ':(exclude)scripts/test_vinculo_familiar_notificacoes_v1.js'
+
+      - name: Validar marcadores e sintaxe
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check portal-notification-health.js
+          node --check moradores-autofill.js
+          cp apps-script/ZZZZ_39_VerificacaoFamiliaAutofillV1.gs "$RUNNER_TEMP/familia-autofill.js"
+          node --check "$RUNNER_TEMP/familia-autofill.js"
+          grep -q "portalTacsFamiliaAutofillV1:" moradores-autofill.js
+          grep -q "familiaReferencia=" moradores-autofill.js
+          grep -q "applyFamilyContext(payload)" moradores-autofill.js
+          ! grep -q "familyDeviceNotice" portal-notification-health.js
+          ! grep -q "showFamilyContext" portal-notification-health.js
+          grep -q "portal-notification-health.js?v=20260820-notif-only-v107" index.html
+          grep -q "moradores-autofill.js?v=20260820-familia-autofill-v111" index.html
+          grep -q "TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1" scripts/build_apps_script_release.js
+
+      - name: Rodar testes existentes do Portal
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+
+      - name: Publicar somente a correção validada
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Nenhuma alteração pendente.'
+            exit 0
+          fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add -- portal-notification-health.js moradores-autofill.js index.html scripts/build_apps_script_release.js scripts/test_notification_health_registry.js scripts/test_vinculo_familiar_notificacoes_v1.js
+          git commit -m 'Desacopla verificação familiar do OneSignal'
+          git push
