@@ -1,0 +1,11 @@
+{
+  "target_sha": "0fcbe5691f41adc6a8321f084a60b684fac42f93",
+  "run_id": "32429327407",
+  "status": "completed",
+  "conclusion": "success",
+  "job_conclusion": "success",
+  "html_url": "https://github.com/merciocamposfar07-hub/atendimento-acs-farmaceutico/actions/runs/32429327407",
+  "version_line": "Implantação validada: versão 143, deployment ***",
+  "health_line": "Health 1: moradores=sim territorio=sim csv=sim manutencao=sim isolamento=sim agenda_jap=sim/JAPARANDUBA agenda_matias=sim/SITIO_MATIAS publico_jap=sim/JAPARANDUBA publico_matias=sim/SITIO_MATIAS publico_msg=sem_mensagem conteudo=sim/JAPARANDUBA",
+  "test_line": "Comprovação de ciência e relatório de mensagens V1: contrato aprovado."
+}
