@@ -2,14 +2,32 @@
   'use strict';
   var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
   var currentResident=null,oneSignal=null,pendingRepairId='',pendingRepairSubscriptionId='',activeRequest='',lastFingerprint='',counter=0,openCounter=0;
-  var autoRepairTried={},repairCompleted={},repairMode='',repairStateCounter=0;
+  var autoRepairTried={},repairCompleted={},repairMode='',repairStateCounter=0,familyCheckTimer=null;
+  var FAMILY_STORAGE_PREFIX='portalTacsFamiliaConfirmadaV1:'; // FAMILIA_RESILIENTE_IPHONE_V1
   function text(v){return String(v==null?'':v).trim()}
   function digits(v){return text(v).replace(/\D/g,'')}
   function validDocument(v){var d=digits(v);return /^\d{11}$/.test(d)||/^\d{15}$/.test(d)}
   function uuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(text(v).toLowerCase())}
   function areaId(){var a='';try{if(window.PortalTacsArea&&typeof window.PortalTacsArea.id==='function')a=window.PortalTacsArea.id()}catch(e){}if(!a)a=window.TACS_AREA_ID||'';if(!a&&currentResident)a=currentResident.areaId||'';return text(a||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA'}
   function documentValue(){var e=document.getElementById('cpf'),d=e?digits(e.value):'';if(validDocument(d))return d;if(currentResident){d=digits(currentResident.documento||currentResident.cpf||currentResident.cns||'');if(validDocument(d))return d}return ''}
+  function familyStorageKey(){return FAMILY_STORAGE_PREFIX+areaId()}
+  function familyCodeFromResident(resident){
+    var value=text(resident&&(resident.endereco||resident.localidade||resident.comunidade)).toUpperCase();
+    if(!value)return '';
+    try{if(value.normalize)value=value.normalize('NFD').replace(/[\u0300-\u036f]/g,'')}catch(e){}
+    var match=value.match(/,\s*([0-9]{1,4}[A-Z]?)\s*\.\s*(?:ZONA\s+RURAL\b|ZONA\b|RURAL\b)/);
+    if(!match)match=value.match(/,\s*([0-9]{1,4}[A-Z]?)\s*\./);
+    return match?text(match[1]).toUpperCase():'';
+  }
+  function readConfirmedFamily(){try{return text(localStorage.getItem(familyStorageKey())).toUpperCase()}catch(e){return ''}}
+  function rememberConfirmedFamily(result){
+    var family=text(result&&result.familiaId).toUpperCase();
+    if(!family)return '';
+    try{localStorage.setItem(familyStorageKey(),family)}catch(e){}
+    return family;
+  }
   function state(){var push=oneSignal&&oneSignal.User&&oneSignal.User.PushSubscription,tags={};try{tags=oneSignal&&oneSignal.User&&typeof oneSignal.User.getTags==='function'?(oneSignal.User.getTags()||{}):{}}catch(e){}return {permission:Boolean(oneSignal&&oneSignal.Notifications&&oneSignal.Notifications.permission===true),optedIn:Boolean(push&&push.optedIn===true),subscriptionId:text(push&&push.id).toLowerCase(),token:text(push&&push.token),areaConfirmed:text(tags.area_tacs).toUpperCase()===areaId()}}
+  function waitSubscriptionState(limitMs){return new Promise(function(resolve){var start=Date.now();function test(){var st=state();if(uuid(st.subscriptionId)){resolve(st);return}if(Date.now()-start>=Number(limitMs||9000)){resolve(st);return}setTimeout(test,250)}test()})}
   function deviceInfo(){var ua=navigator.userAgent||'',platform=navigator.platform||'';return {device:/Android/i.test(ua)?'Android':/iPhone/i.test(ua)?'iPhone':/iPad/i.test(ua)?'iPad':'Aparelho',browser:/SamsungBrowser/i.test(ua)?'Samsung Internet':/Edg\//i.test(ua)?'Edge':/Firefox\//i.test(ua)?'Firefox':/CriOS|Chrome\//i.test(ua)?'Chrome':/Safari\//i.test(ua)?'Safari':'Navegador',os:/Android/i.test(ua)?'Android':/iPhone|iPad|iPod/i.test(ua)?'iOS/iPadOS':/Windows/i.test(ua)?'Windows':/Mac/i.test(platform)?'macOS':'Outro sistema'}}
   function requestId(){counter++;return 'notif_check_'+Date.now()+'_'+counter+'_'+Math.random().toString(36).slice(2,10)}
   function openRequestId(){openCounter++;return 'notif_open_'+Date.now()+'_'+openCounter+'_'+Math.random().toString(36).slice(2,10)}
@@ -81,8 +99,12 @@
   }
   function clearPendingRepair(){pendingRepairId='';pendingRepairSubscriptionId='';repairMode='';var box=document.getElementById('notificationOffer');if(box)box.removeAttribute('data-reparo-area')}
   function showFamilyContext(result){
+    if(result&&result.familiaId)rememberConfirmedFamily(result);
+    var linkedFamily=readConfirmedFamily(),residentFamily=familyCodeFromResident(currentResident);
+    var different=Boolean(result&&result.familiaDiferente===true);
+    if(!different&&linkedFamily&&residentFamily)different=linkedFamily!==residentFamily;
     var notice=document.getElementById('familyDeviceNotice');
-    if(!result||result.familiaDiferente!==true){if(notice&&notice.parentNode)notice.parentNode.removeChild(notice);return}
+    if(!different){if(notice&&notice.parentNode)notice.parentNode.removeChild(notice);return}
     if(!notice){
       notice=document.createElement('div');notice.id='familyDeviceNotice';notice.className='info amber full';notice.setAttribute('role','status');
       var status=document.getElementById('cpfStatus'),label=status&&status.closest?status.closest('label'):null;
@@ -90,10 +112,31 @@
     }
     notice.textContent='Esta pessoa pertence a outro cadastro familiar desta mesma área. Você pode continuar a solicitação normalmente.';
   }
-  function checkin(options){options=options||{};if(!oneSignal)return Promise.resolve(null);var st=state();if(!uuid(st.subscriptionId))return Promise.resolve(null);var info=deviceInfo(),doc=documentValue(),payload={subscriptionId:st.subscriptionId,areaId:areaId(),permission:st.permission?'true':'false',optedIn:st.optedIn?'true':'false',tokenAtivo:st.token?'true':'false',areaConfirmada:st.areaConfirmed?'true':'false',tipoAparelho:info.device,navegador:info.browser,sistema:info.os,reparoAplicado:text(options.reparoAplicado||'')};if(validDocument(doc))payload.documento=doc;if(options.reparoAplicado&&pendingRepairSubscriptionId)payload.reparoSubscriptionOriginal=pendingRepairSubscriptionId;var fp=[payload.subscriptionId,payload.areaId,payload.permission,payload.optedIn,payload.tokenAtivo,payload.areaConfirmada,payload.reparoAplicado,payload.reparoSubscriptionOriginal||'',payload.documento||''].join('|');if(!options.force&&fp===lastFingerprint)return Promise.resolve(null);lastFingerprint=fp;return postCheckin(payload).then(function(result){showFamilyContext(result);if(result&&result.reparoPendente)showPendingRepair(result);else if(result&&payload.reparoAplicado)clearPendingRepair();return result}).catch(function(){lastFingerprint='';activeRequest='';return null})}
-  function scheduleCheckin(force){setTimeout(function(){checkin({force:Boolean(force)})},350)}
+  function checkin(options){
+    options=options||{};
+    if(!oneSignal){showFamilyContext(null);return Promise.resolve(null)}
+    var initial=state();
+    var ready=uuid(initial.subscriptionId)?Promise.resolve(initial):waitSubscriptionState(10000);
+    return ready.then(function(st){
+      if(!uuid(st.subscriptionId)){showFamilyContext(null);return null}
+      var info=deviceInfo(),doc=documentValue(),payload={subscriptionId:st.subscriptionId,areaId:areaId(),permission:st.permission?'true':'false',optedIn:st.optedIn?'true':'false',tokenAtivo:st.token?'true':'false',areaConfirmada:st.areaConfirmed?'true':'false',tipoAparelho:info.device,navegador:info.browser,sistema:info.os,reparoAplicado:text(options.reparoAplicado||'')};
+      if(validDocument(doc))payload.documento=doc;
+      if(options.reparoAplicado&&pendingRepairSubscriptionId)payload.reparoSubscriptionOriginal=pendingRepairSubscriptionId;
+      var fp=[payload.subscriptionId,payload.areaId,payload.permission,payload.optedIn,payload.tokenAtivo,payload.areaConfirmada,payload.reparoAplicado,payload.reparoSubscriptionOriginal||'',payload.documento||''].join('|');
+      if(!options.force&&fp===lastFingerprint){showFamilyContext(null);return null}
+      lastFingerprint=fp;
+      return postCheckin(payload).then(function(result){
+        if(result&&result.familiaId)rememberConfirmedFamily(result);
+        showFamilyContext(result);
+        if(result&&result.reparoPendente)showPendingRepair(result);else if(result&&payload.reparoAplicado)clearPendingRepair();
+        return result;
+      }).catch(function(){lastFingerprint='';showFamilyContext(null);return null});
+    });
+  }
+  function scheduleCheckin(force){clearTimeout(familyCheckTimer);familyCheckTimer=setTimeout(function(){familyCheckTimer=null;checkin({force:Boolean(force)})},350)}
   document.addEventListener('click',function(event){var alvo=event&&event.target;if(!alvo||alvo.id!=='notificationRepairButton'||event.isTrusted!==true||!pendingRepairId)return;repairMode='MANUAL';postRepairState('MANUAL_INICIADO','O morador tocou no botão Reparar agora.')},true);
-  document.addEventListener('tacs:morador',function(event){currentResident=event&&event.detail||null;scheduleCheckin(true)});
+  document.addEventListener('tacs:morador',function(event){currentResident=event&&event.detail||null;showFamilyContext(null);scheduleCheckin(true)});
+  document.addEventListener('input',function(event){var target=event&&event.target;if(!target||target.id!=='cpf')return;currentResident=null;showFamilyContext(null)},true);
   document.addEventListener('tacs:notificacao-reparo-concluido',function(event){
     if(!pendingRepairId){scheduleCheckin(true);return}
     var id=pendingRepairId,automatico=Boolean(event&&event.detail&&event.detail.automatico),modo=automatico||repairMode==='AUTO'?'AUTO':'MANUAL';repairCompleted[id]=true;
@@ -101,6 +144,6 @@
     setTimeout(function(){checkin({force:true,reparoAplicado:id}).then(function(r){if(r&&r.ok===true&&!r.reparoPendente)clearPendingRepair()})},500)
   });
   window.OneSignalDeferred=window.OneSignalDeferred||[];
-  window.OneSignalDeferred.push(async function(OneSignal){oneSignal=OneSignal;var push=OneSignal.User&&OneSignal.User.PushSubscription;if(push&&typeof push.addEventListener==='function')push.addEventListener('change',function(){scheduleCheckin(true)});if(OneSignal.Notifications&&typeof OneSignal.Notifications.addEventListener==='function')OneSignal.Notifications.addEventListener('click',registerNotificationOpen);if(window.TACS_MORADOR_ATUAL)currentResident=window.TACS_MORADOR_ATUAL;scheduleCheckin(true)});
+  window.OneSignalDeferred.push(async function(OneSignal){oneSignal=OneSignal;var push=OneSignal.User&&OneSignal.User.PushSubscription;if(push&&typeof push.addEventListener==='function')push.addEventListener('change',function(){scheduleCheckin(true)});if(OneSignal.Notifications&&typeof OneSignal.Notifications.addEventListener==='function')OneSignal.Notifications.addEventListener('click',registerNotificationOpen);if(window.TACS_MORADOR_ATUAL)currentResident=window.TACS_MORADOR_ATUAL;showFamilyContext(null);scheduleCheckin(true)});
   window.PortalTacsSaudeNotificacoes={checkin:function(){return checkin({force:true})}};
 }());
