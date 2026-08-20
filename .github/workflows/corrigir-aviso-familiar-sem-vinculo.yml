@@ -1,0 +1,115 @@
+name: Corrigir aviso familiar sem vínculo
+
+on:
+  push:
+    branches:
+      - fix/restaurar-aviso-familiar-sem-vinculo-v2
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Aplicar correção estrita
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: esperado 1 ocorrência, encontrado {count}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          # 1) Backend: sem referência familiar NÃO pode adotar o CPF digitado.
+          path = 'apps-script/ZZZZ_39_VerificacaoFamiliaAutofillV1.gs'
+          replace_once(
+              path,
+              "var TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1=Object.freeze({VERSAO:'1.0.0'});",
+              "var TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1=Object.freeze({VERSAO:'1.0.1'});"
+          )
+          replace_once(
+              path,
+              """  var referencia=verificacaoFamiliaAutofillV1NormalizarFamilia_(familiaReferencia)||familiaBeneficiario;\n  var decisao=vinculoFamiliarNotifV1Decidir_(\n    {familiaId:referencia},\n    {familiaId:familiaBeneficiario}\n  );\n\n  payload.familiaId=referencia;\n  payload.familiaBeneficiario=familiaBeneficiario;\n  payload.familiaDiferente=decisao.acao==='OUTRA_FAMILIA';\n  payload.verificacaoFamiliaAutofillVersao=TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1.VERSAO;\n  if(payload.familiaDiferente){\n    payload.messageFamilia='Esta pessoa pertence a outro cadastro familiar desta mesma área. Você pode continuar a solicitação normalmente.';\n  }\n  return payload;""",
+              """  var referencia=verificacaoFamiliaAutofillV1NormalizarFamilia_(familiaReferencia);\n  if(!referencia){\n    payload.familiaId='';\n    payload.familiaBeneficiario=familiaBeneficiario;\n    payload.familiaDiferente=true;\n    payload.vinculoFamiliarAusente=true;\n    payload.verificacaoFamiliaAutofillVersao=TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1.VERSAO;\n    payload.messageFamilia='Esta pessoa pertence a outro cadastro familiar desta mesma área. Você pode continuar a solicitação normalmente.';\n    return payload;\n  }\n\n  var decisao=vinculoFamiliarNotifV1Decidir_(\n    {familiaId:referencia},\n    {familiaId:familiaBeneficiario}\n  );\n\n  payload.familiaId=referencia;\n  payload.familiaBeneficiario=familiaBeneficiario;\n  payload.familiaDiferente=decisao.acao==='OUTRA_FAMILIA';\n  payload.vinculoFamiliarAusente=false;\n  payload.verificacaoFamiliaAutofillVersao=TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1.VERSAO;\n  if(payload.familiaDiferente){\n    payload.messageFamilia='Esta pessoa pertence a outro cadastro familiar desta mesma área. Você pode continuar a solicitação normalmente.';\n  }\n  return payload;"""
+          )
+
+          # 2) Frontend: remover uma única vez a família criada automaticamente pela versão defeituosa.
+          path = 'moradores-autofill.js'
+          old_block = """  function familyStorageKey() {\n    return FAMILY_STORAGE_PREFIX + portalAreaId();\n  }\n\n  function legacyFamilyStorageKey() {\n    return LEGACY_FAMILY_STORAGE_PREFIX + portalAreaId();\n  }\n\n  function validFamilyCode(value) {\n    return /^[0-9]{1,4}[A-Z]?$/.test(String(value || '').trim().toUpperCase());\n  }\n\n  function familyReference() {\n    if (validFamilyCode(familyMemory)) return familyMemory;\n    try {\n      var current = String(localStorage.getItem(familyStorageKey()) || '').trim().toUpperCase();\n      var legacy = String(localStorage.getItem(legacyFamilyStorageKey()) || '').trim().toUpperCase();\n      familyMemory = validFamilyCode(current) ? current : (validFamilyCode(legacy) ? legacy : '');\n      if (familyMemory && !current) localStorage.setItem(familyStorageKey(), familyMemory);\n    } catch (e) {}\n    return validFamilyCode(familyMemory) ? familyMemory : '';\n  }\n\n  function rememberFamilyReference(payload) {\n    var current = familyReference();\n    if (current) return current;\n    var family = String(payload && payload.familiaId || '').trim().toUpperCase();\n    if (!/^[0-9]{1,4}[A-Z]?$/.test(family)) return '';\n    familyMemory = family;\n    try { localStorage.setItem(familyStorageKey(), family); } catch (e) {}\n    return family;\n  }"""
+          new_block = """  function familyStorageKey() {\n    return FAMILY_STORAGE_PREFIX + portalAreaId();\n  }\n\n  function legacyFamilyStorageKey() {\n    return LEGACY_FAMILY_STORAGE_PREFIX + portalAreaId();\n  }\n\n  function familyMigrationKey() {\n    return 'portalTacsFamiliaAutofillV2Migrado:' + portalAreaId(); // FAMILIA_AUTOFILL_DESCARTA_ADOCAO_INDEVIDA_V1\n  }\n\n  function validFamilyCode(value) {\n    return /^[0-9]{1,4}[A-Z]?$/.test(String(value || '').trim().toUpperCase());\n  }\n\n  function familyReference() {\n    if (validFamilyCode(familyMemory)) return familyMemory;\n    try {\n      var current = String(localStorage.getItem(familyStorageKey()) || '').trim().toUpperCase();\n      var legacy = String(localStorage.getItem(legacyFamilyStorageKey()) || '').trim().toUpperCase();\n      var migrated = localStorage.getItem(familyMigrationKey()) === '1';\n      if (validFamilyCode(legacy)) {\n        familyMemory = legacy;\n        if (current !== legacy) localStorage.setItem(familyStorageKey(), legacy);\n      } else if (!migrated) {\n        familyMemory = '';\n        if (validFamilyCode(current)) localStorage.removeItem(familyStorageKey());\n      } else {\n        familyMemory = validFamilyCode(current) ? current : '';\n      }\n      localStorage.setItem(familyMigrationKey(), '1');\n    } catch (e) {}\n    return validFamilyCode(familyMemory) ? familyMemory : '';\n  }\n\n  function rememberFamilyReference() {\n    return familyReference();\n  }"""
+          replace_once(path, old_block, new_block)
+
+          # 3) Forçar Safari/PWA a baixar o autofill corrigido.
+          replace_once(
+              'index.html',
+              'moradores-autofill.js?v=20260820-familia-autofill-v112',
+              'moradores-autofill.js?v=20260820-familia-autofill-v113'
+          )
+
+          # 4) Regressões explícitas para não reintroduzir a adoção automática.
+          path = 'scripts/test_vinculo_familiar_notificacoes_v1.js'
+          replace_once(
+              path,
+              "assert(FAMILY_AUTOFILL_SOURCE.includes(\"TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1=Object.freeze({VERSAO:'1.0.0'})\"));",
+              "assert(FAMILY_AUTOFILL_SOURCE.includes(\"TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1=Object.freeze({VERSAO:'1.0.1'})\"));"
+          )
+          replace_once(
+              path,
+              "assert(AUTOFILL_SOURCE.includes('localStorage.setItem(familyStorageKey(), familyMemory)'));",
+              "assert(AUTOFILL_SOURCE.includes('localStorage.removeItem(familyStorageKey())'));\nassert(AUTOFILL_SOURCE.includes('FAMILIA_AUTOFILL_DESCARTA_ADOCAO_INDEVIDA_V1'));\nassert(FAMILY_AUTOFILL_SOURCE.includes('payload.vinculoFamiliarAusente=true'));\nassert(!FAMILY_AUTOFILL_SOURCE.includes('||familiaBeneficiario'));"
+          )
+          replace_once(
+              path,
+              "assert(INDEX_SOURCE.includes('moradores-autofill.js?v=20260820-familia-autofill-v112'));",
+              "assert(INDEX_SOURCE.includes('moradores-autofill.js?v=20260820-familia-autofill-v113'));"
+          )
+          PY
+
+      - name: Testar toda a integração
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+
+      - name: Confirmar escopo e gravar correção na branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- \
+            apps-script/ZZZZ_39_VerificacaoFamiliaAutofillV1.gs \
+            moradores-autofill.js \
+            index.html \
+            scripts/test_vinculo_familiar_notificacoes_v1.js
+          git diff --cached --check
+          changed=$(git diff --cached --name-only)
+          expected=$(printf '%s\n' \
+            apps-script/ZZZZ_39_VerificacaoFamiliaAutofillV1.gs \
+            index.html \
+            moradores-autofill.js \
+            scripts/test_vinculo_familiar_notificacoes_v1.js | sort)
+          actual=$(printf '%s\n' "$changed" | sort)
+          test "$actual" = "$expected"
+          git commit -m 'Restaurar aviso familiar para aparelho sem vínculo'
+          git push origin HEAD:${{ github.ref_name }}
