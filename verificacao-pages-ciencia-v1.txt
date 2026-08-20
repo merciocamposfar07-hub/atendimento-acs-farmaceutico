@@ -1,0 +1,4 @@
+PAGES_CIENCIA_MENSAGENS_V1_OK
+confirmar-ciencia.html=Li e estou ciente
+mensagem-relatorio-entrega-v1.js=Relatório de entrega
+painel-moradores-v2.html=carrega ciencia-v1
