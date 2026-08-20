@@ -100,6 +100,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs',
     marker: 'TACS_CORRECAO_DATA_ODONTOLOGIA_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_37_VinculoFamiliarNotificacoesV1.gs',
+    marker: 'TACS_VINCULO_FAMILIAR_NOTIFICACOES_V1'
   }
 ];
 
