@@ -110,9 +110,34 @@
     };
   }
 
+  function ensureLoadingStatusStyle() {
+    if (document.getElementById('tacsAutofillLoadingStyle')) return;
+    var style = document.createElement('style');
+    style.id = 'tacsAutofillLoadingStyle';
+    style.textContent = [
+      '@keyframes tacsAutofillLoadingPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(234,172,43,.15)}50%{transform:scale(1.012);box-shadow:0 0 0 6px rgba(234,172,43,.13)}}',
+      '.help.id-cns-note.tacs-autofill-loading{display:grid!important;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:10px;margin-top:8px!important;padding:13px 15px!important;min-height:62px!important;border:2px solid #e2ad38!important;border-radius:14px!important;background:#fff3d8!important;color:#563807!important;font-size:16px!important;font-weight:900!important;line-height:1.38!important;white-space:pre-line!important;animation:tacsAutofillLoadingPulse 1.45s ease-in-out infinite;transform-origin:center}',
+      '.help.id-cns-note.tacs-autofill-loading::before{content:"⏳";display:grid;place-items:center;width:34px;height:34px;font-size:25px;line-height:1}',
+      '@media(prefers-reduced-motion:reduce){.help.id-cns-note.tacs-autofill-loading{animation:none!important;transform:none!important}}'
+    ].join('');
+    document.head.appendChild(style);
+  }
+
+  function setLoadingStatus(status) {
+    ensureLoadingStatusStyle();
+    status.textContent = 'Aguarde o carregamento automático dos seus dados.\nNão digite ainda.';
+    status.className = 'help id-cns-note tacs-autofill-loading';
+    status.setAttribute('role', 'status');
+    status.setAttribute('aria-live', 'polite');
+    status.setAttribute('aria-busy', 'true');
+  }
+
   function setStatus(status, text, type) {
     status.textContent = text;
     status.className = 'help id-cns-note' + (type ? ' ' + type : '');
+    status.removeAttribute('role');
+    status.removeAttribute('aria-live');
+    status.removeAttribute('aria-busy');
   }
 
   function resizeLocality() {
@@ -318,7 +343,7 @@
       cleanupTransport();
 
       if (attempt < 2) {
-        setStatus(status, 'Aguarde', '');
+        setLoadingStatus(status);
         setTimeout(function () {
           if (token === requestId) startJsonp(doc, token, attempt + 1);
         }, 700);
@@ -368,7 +393,7 @@
       activeTimeout = setTimeout(function () {
         if (token !== requestId) return;
         cleanupTransport();
-        setStatus(status, 'Aguarde', '');
+        setLoadingStatus(status);
         startJsonp(doc, token, 0);
       }, 6000);
 
@@ -389,7 +414,7 @@
       var token = ++requestId;
       cleanupTransport();
       clearResidentFields();
-      setStatus(status, 'Aguarde', '');
+      setLoadingStatus(status);
       startBridge(doc, token);
     }
 
@@ -401,7 +426,7 @@
 
       if (validCpf(doc) || validCns(doc)) {
         clearResidentFields();
-        setStatus(status, 'Documento completo. Aguarde', 'valid');
+        setLoadingStatus(status);
         timer = setTimeout(lookup, 350);
       } else if (doc.length) {
         clearResidentFields();
