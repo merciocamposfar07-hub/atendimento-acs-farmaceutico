@@ -1,6 +1,6 @@
 /**
  * ZZZZ_37_VinculoFamiliarNotificacoesV1.gs
- * Portal TACS — vínculo familiar de aparelhos de notificação V1.0.0
+ * Portal TACS — vínculo familiar de aparelhos de notificação V1.0.1
  *
  * Escopo estrito:
  * - não altera envio Push, OneSignal, webhooks ou feedback;
@@ -9,10 +9,12 @@
  *   para solicitar serviço para outro morador da mesma área;
  * - usa o código familiar existente no ENDERECO (ex.: "Sítio Japaranduba, 002. ...");
  * - beneficiário de outra família da mesma área não troca o vínculo do aparelho;
+ * - correção do código familiar no ENDERECO atualiza o vínculo somente pela mesma
+ *   pessoa de referência que originou o vínculo técnico;
  * - isolamento territorial continua a cargo da validação pública já existente.
  */
 var TACS_VINCULO_FAMILIAR_NOTIFICACOES_V1 = Object.freeze({
-  VERSAO:'1.0.0',
+  VERSAO:'1.0.1',
   SHEET:'TACS_NOTIFICACOES_FAMILIAS',
   HEADERS:Object.freeze([
     'SUBSCRIPTION_ID','AREA_ID','FAMILIA_ID','ID_PORTAL_REFERENCIA','NOME_REFERENCIA',
@@ -47,6 +49,10 @@ function vinculoFamiliarNotifV1Checkin_(p){
     if(legado&&legado.familiaId){
       vinculo=vinculoFamiliarNotifV1Gravar_(subscriptionId,areaId,legado,'MIGRADO_ID_PORTAL');
     }
+  }
+
+  if(vinculo){
+    vinculo=vinculoFamiliarNotifV1ReconciliarReferencia_(vinculo,areaId);
   }
 
   var decisao=vinculoFamiliarNotifV1Decidir_(vinculo,morador);
@@ -152,6 +158,72 @@ function vinculoFamiliarNotifV1Morador_(morador){
   };
 }
 
+function vinculoFamiliarNotifV1ReconciliarReferencia_(vinculo,areaId){
+  if(!vinculo||!vinculo.idPortal||!vinculo.familiaId)return vinculo;
+  var atual=vinculoFamiliarNotifV1ResolverMoradorId_(vinculo.idPortal,areaId);
+  if(!atual||!atual.familiaId||atual.idPortal!==vinculo.idPortal)return vinculo;
+  if(atual.familiaId===vinculo.familiaId&&(!atual.nome||atual.nome===vinculo.nome))return vinculo;
+  return vinculoFamiliarNotifV1AtualizarReferencia_(vinculo,atual)||vinculo;
+}
+
+function vinculoFamiliarNotifV1AtualizarReferencia_(vinculo,morador){
+  if(!vinculo||!morador||!vinculo.subscriptionId||!vinculo.areaId)return vinculo;
+  if(!vinculo.idPortal||!morador.idPortal||vinculo.idPortal!==morador.idPortal)return vinculo;
+  if(!morador.familiaId)return vinculo;
+  var ss=tacsTerritorioV1Planilha_();
+  var sheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_VINCULO_FAMILIAR_NOTIFICACOES_V1.SHEET,TACS_VINCULO_FAMILIAR_NOTIFICACOES_V1.HEADERS);
+  var lock=LockService.getScriptLock();
+  if(!lock.tryLock(10000))return vinculo;
+  try{
+    var last=sheet.getLastRow();if(last<=1)return vinculo;
+    var rows=sheet.getRange(2,1,last-1,TACS_VINCULO_FAMILIAR_NOTIFICACOES_V1.HEADERS.length).getDisplayValues();
+    for(var i=rows.length-1;i>=0;i--){
+      var existente=vinculoFamiliarNotifV1Linha_(rows[i]);
+      if(existente.subscriptionId!==vinculo.subscriptionId||existente.areaId!==vinculo.areaId)continue;
+      if(!existente.idPortal||existente.idPortal!==vinculo.idPortal||existente.idPortal!==morador.idPortal)return existente;
+      var agora=saudeNotificacoesV1Data_(new Date());
+      var values=[
+        existente.subscriptionId,existente.areaId,morador.familiaId,existente.idPortal,
+        morador.nome||existente.nome||'','CADASTRO_REFERENCIA_ATUALIZADO',
+        existente.vinculadoEm||agora,agora
+      ];
+      sheet.getRange(i+2,1,1,values.length).setValues([values]);
+      return vinculoFamiliarNotifV1Linha_(values);
+    }
+    return vinculo;
+  }finally{lock.releaseLock();}
+}
+
+function vinculoFamiliarNotifV1ReconciliarArea_(contexto){
+  if(!contexto||!contexto.areaId)return 0;
+  var ss=tacsTerritorioV1Planilha_();
+  var sheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_VINCULO_FAMILIAR_NOTIFICACOES_V1.SHEET,TACS_VINCULO_FAMILIAR_NOTIFICACOES_V1.HEADERS);
+  var last=sheet.getLastRow();if(last<=1)return 0;
+  var moradores=saudeNotificacoesV1MapaMoradores_(contexto)||{};
+  var rows=sheet.getRange(2,1,last-1,TACS_VINCULO_FAMILIAR_NOTIFICACOES_V1.HEADERS.length).getDisplayValues();
+  var lock=LockService.getScriptLock(),alterados=0;
+  if(!lock.tryLock(10000))return 0;
+  try{
+    for(var i=0;i<rows.length;i++){
+      var vinculo=vinculoFamiliarNotifV1Linha_(rows[i]);
+      if(vinculo.areaId!==contexto.areaId||!vinculo.idPortal)continue;
+      var bruto=moradores[vinculo.idPortal]||null;
+      var atual=bruto?vinculoFamiliarNotifV1Morador_(bruto):null;
+      if(!atual||!atual.familiaId||atual.idPortal!==vinculo.idPortal)continue;
+      if(atual.familiaId===vinculo.familiaId&&(!atual.nome||atual.nome===vinculo.nome))continue;
+      var agora=saudeNotificacoesV1Data_(new Date());
+      var values=[
+        vinculo.subscriptionId,vinculo.areaId,atual.familiaId,vinculo.idPortal,
+        atual.nome||vinculo.nome||'','CADASTRO_REFERENCIA_ATUALIZADO',
+        vinculo.vinculadoEm||agora,agora
+      ];
+      sheet.getRange(i+2,1,1,values.length).setValues([values]);
+      rows[i]=values;alterados++;
+    }
+  }finally{lock.releaseLock();}
+  return alterados;
+}
+
 function vinculoFamiliarNotifV1Ler_(subscriptionId,areaId){
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(subscriptionId))return null;
   var ss=tacsTerritorioV1Planilha_();
@@ -224,6 +296,7 @@ function vinculoFamiliarNotifV1MapaArea_(areaId){
 function vinculoFamiliarNotifV1SaudeAdmin_(contexto,acesso){
   var resultado=vinculoFamiliarNotifV1SaudeAdminAnterior_(contexto,acesso);
   if(!resultado||!Array.isArray(resultado.aparelhos))return resultado;
+  vinculoFamiliarNotifV1ReconciliarArea_(contexto);
   var mapa=vinculoFamiliarNotifV1MapaArea_(contexto.areaId);
   resultado.aparelhos.forEach(function(aparelho){
     var ref=vinculoFamiliarNotifV1Texto_(aparelho.subscriptionRef).toLowerCase();
