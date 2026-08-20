@@ -1,0 +1,122 @@
+name: Estabilizar botoes de mensagem no painel Moradores
+
+on:
+  push:
+    branches:
+      - fix/botoes-mensagem-familia-individual-v1
+
+permissions:
+  contents: write
+
+jobs:
+  ajustar-e-testar:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/botoes-mensagem-familia-individual-v1
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar somente os botoes autorizados
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          painel = Path('teste-v1/painel-moradores-v2.html')
+          integracao = Path('teste-v1/mensagem-individual-morador-integracao-v1.js')
+
+          p = painel.read_text(encoding='utf-8')
+          old_ref = 'mensagem-individual-morador-integracao-v1.js?v=20260820-v1'
+          new_ref = 'mensagem-individual-morador-integracao-v1.js?v=20260820-botoes-familia-v2'
+          if old_ref in p:
+              p = p.replace(old_ref, new_ref, 1)
+          elif new_ref not in p:
+              raise SystemExit('Referencia esperada da integracao nao encontrada no painel.')
+          painel.write_text(p, encoding='utf-8')
+
+          s = integracao.read_text(encoding='utf-8')
+          old_label = "b.textContent='🔔 Mensagem individual'"
+          new_label = "b.textContent='🔔 Enviar mensagem para este morador'"
+          if old_label in s:
+              s = s.replace(old_label, new_label, 1)
+          elif new_label not in s:
+              raise SystemExit('Botao individual esperado nao foi localizado.')
+
+          old_family_cache = "mensagem-familia-v1.js?v=20260820-familia-v1"
+          new_family_cache = "mensagem-familia-v1.js?v=20260820-familia-botoes-v2"
+          if old_family_cache in s:
+              s = s.replace(old_family_cache, new_family_cache, 1)
+          elif new_family_cache not in s:
+              raise SystemExit('Referencia do modulo familiar nao foi localizada.')
+
+          marker = ".msg-ind-card-button{"
+          if marker not in s:
+              needle = ".msg-familia-acao button{width:100%;min-height:56px;margin-top:12px;border:3px solid #69c7e7;border-radius:18px;background:linear-gradient(145deg,#073a55,#0b5878);color:#fff;font-weight:900;font-size:1rem}"
+              addition = needle + ".msg-ind-card-button{display:block!important;width:100%!important;min-height:54px!important;margin-top:12px!important;padding:11px 14px!important;border:3px solid #8df0b4!important;border-radius:18px!important;background:#fff!important;color:#073a55!important;text-align:center!important;font-weight:900!important;font-size:1rem!important;line-height:1.2!important}"
+              if needle not in s:
+                  raise SystemExit('Bloco de estilo familiar esperado nao foi localizado.')
+              s = s.replace(needle, addition, 1)
+
+          required = [
+              "Enviar mensagem para toda a família",
+              "Enviar mensagem para este morador",
+              ".msg-ind-card-button{",
+              "PortalTacsMensagemFamilia",
+              "PortalTacsMensagemIndividual"
+          ]
+          for item in required:
+              if item not in s:
+                  raise SystemExit('Contrato visual ausente: ' + item)
+
+          integracao.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Confirmar escopo antes dos testes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git diff --name-only)
+          printf '%s\n' "${changed[@]}"
+          test "${#changed[@]}" -eq 2
+          printf '%s\n' "${changed[@]}" | grep -Fx 'teste-v1/painel-moradores-v2.html'
+          printf '%s\n' "${changed[@]}" | grep -Fx 'teste-v1/mensagem-individual-morador-integracao-v1.js'
+
+      - name: Testar toda a integracao
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+          git diff --check
+
+      - name: Confirmar que testes nao alteraram outros arquivos
+        shell: bash
+        run: |
+          set -euo pipefail
+          extras=$(git diff --name-only | grep -v -E '^(teste-v1/painel-moradores-v2.html|teste-v1/mensagem-individual-morador-integracao-v1.js)$' || true)
+          if [ -n "$extras" ]; then
+            echo "Arquivos fora do escopo foram alterados:"
+            echo "$extras"
+            exit 1
+          fi
+
+      - name: Gravar somente a estabilizacao autorizada
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- teste-v1/painel-moradores-v2.html teste-v1/mensagem-individual-morador-integracao-v1.js
+          git diff --cached --check
+          git commit -m 'Exibir botoes de mensagem familiar e individual'
+          git push origin HEAD:fix/botoes-mensagem-familia-individual-v1
