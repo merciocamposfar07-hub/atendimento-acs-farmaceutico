@@ -39,7 +39,7 @@ function contextBase() {
 }
 
 const context = contextBase();
-assert.equal(context.TACS_VINCULO_FAMILIAR_NOTIFICACOES_V1.VERSAO, '1.0.0');
+assert.equal(context.TACS_VINCULO_FAMILIAR_NOTIFICACOES_V1.VERSAO, '1.0.1');
 assert.equal(
   context.vinculoFamiliarNotifV1CodigoEndereco_('Sítio JAPARANDUBA, 002. ZONA RURAL, Chã Grande - PE'),
   '002'
@@ -47,6 +47,10 @@ assert.equal(
 assert.equal(
   context.vinculoFamiliarNotifV1CodigoEndereco_('Sítio JAPARANDUBA, 012C. ZONA RURAL, Chã Grande - PE'),
   '012C'
+);
+assert.equal(
+  context.vinculoFamiliarNotifV1CodigoEndereco_('Sítio JAPARANDUBA, 012. ZONA RURAL, Chã Grande - PE'),
+  '012'
 );
 assert.equal(context.vinculoFamiliarNotifV1CodigoEndereco_('ENDEREÇO SEM CÓDIGO'), '');
 assert.equal(context.vinculoFamiliarNotifV1Decidir_(null, {familiaId: '002'}).acao, 'VINCULAR');
@@ -62,8 +66,10 @@ assert.equal(context.vinculoFamiliarNotifV1Decidir_({familiaId: '002'}, null).ac
 
 context.vinculoFamiliarNotifV1Ler_ = () => ({
   familiaId: '002',
+  idPortal: '72',
   nome: 'Maria',
-  subscriptionId: '11111111-1111-1111-1111-111111111111'
+  subscriptionId: '11111111-1111-1111-1111-111111111111',
+  areaId: 'JAPARANDUBA'
 });
 context.vinculoFamiliarNotifV1ResolverMoradorDocumento_ = () => ({
   familiaId: '003',
@@ -71,6 +77,7 @@ context.vinculoFamiliarNotifV1ResolverMoradorDocumento_ = () => ({
   nome: 'Outra pessoa'
 });
 context.vinculoFamiliarNotifV1ResolverLegado_ = () => null;
+context.vinculoFamiliarNotifV1ReconciliarReferencia_ = (vinculo) => vinculo;
 context.vinculoFamiliarNotifV1Gravar_ = () => {
   throw new Error('O vínculo familiar existente não pode ser trocado.');
 };
@@ -101,7 +108,9 @@ firstContext.vinculoFamiliarNotifV1ResolverMoradorDocumento_ = () => ({
 });
 firstContext.vinculoFamiliarNotifV1Gravar_ = (_subscription, _area, morador) => ({
   familiaId: morador.familiaId,
+  idPortal: morador.idPortal,
   nome: morador.nome,
+  areaId: 'JAPARANDUBA',
   subscriptionId: '22222222-2222-2222-2222-222222222222'
 });
 
@@ -114,4 +123,44 @@ assert.equal(firstLink.vinculadoFamilia, true);
 assert.equal(firstLink.familiaId, '002');
 assert.equal(firstLink.familiaDiferente, false);
 
-console.log('Vínculo familiar de notificações: código no ENDERECO, vínculo persistente e outra família da mesma área aprovados.');
+const correctionContext = contextBase();
+let correctionCalls = 0;
+correctionContext.vinculoFamiliarNotifV1ResolverMoradorId_ = () => ({
+  familiaId: '012',
+  idPortal: '120',
+  nome: 'Morador referência'
+});
+correctionContext.vinculoFamiliarNotifV1AtualizarReferencia_ = (vinculo, morador) => {
+  correctionCalls += 1;
+  return {...vinculo, familiaId: morador.familiaId, nome: morador.nome, origem: 'CADASTRO_REFERENCIA_ATUALIZADO'};
+};
+const corrected = correctionContext.vinculoFamiliarNotifV1ReconciliarReferencia_({
+  familiaId: '012C',
+  idPortal: '120',
+  nome: 'Morador referência',
+  areaId: 'JAPARANDUBA',
+  subscriptionId: '33333333-3333-3333-3333-333333333333'
+}, 'JAPARANDUBA');
+assert.equal(corrected.familiaId, '012');
+assert.equal(corrected.origem, 'CADASTRO_REFERENCIA_ATUALIZADO');
+assert.equal(correctionCalls, 1);
+
+correctionContext.vinculoFamiliarNotifV1ResolverMoradorId_ = () => ({
+  familiaId: '012',
+  idPortal: '999',
+  nome: 'Outra pessoa'
+});
+const protectedLink = correctionContext.vinculoFamiliarNotifV1ReconciliarReferencia_({
+  familiaId: '012C',
+  idPortal: '120',
+  nome: 'Morador referência',
+  areaId: 'JAPARANDUBA',
+  subscriptionId: '33333333-3333-3333-3333-333333333333'
+}, 'JAPARANDUBA');
+assert.equal(protectedLink.familiaId, '012C');
+assert.equal(correctionCalls, 1, 'Outra pessoa não pode corrigir/trocar o vínculo familiar do aparelho.');
+
+assert(SOURCE.includes('vinculoFamiliarNotifV1ReconciliarArea_(contexto);'));
+assert(SOURCE.includes('CADASTRO_REFERENCIA_ATUALIZADO'));
+
+console.log('Vínculo familiar de notificações: código no ENDERECO, vínculo persistente, outra família protegida e correção cadastral sincronizada.');
