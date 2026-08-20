@@ -1,0 +1,60 @@
+name: Validar mensagem individual UX V2
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/mensagem-individual-ux-v2
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Aplicar patch isolado da UX individual
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'BOOT'
+          from pathlib import Path
+          import re,textwrap
+          src=Path('.github/workflows/aplicar-mensagem-individual-ux-v2.yml').read_text(encoding='utf-8')
+          m=re.search(r"python3 - <<'PY'\n(.*?)\n          PY",src,re.S)
+          if not m:
+              raise SystemExit('Aplicador da UX não foi localizado.')
+          code=textwrap.dedent(m.group(1))
+          exec(compile(code,'aplicador-ux-v2','exec'),{})
+          BOOT
+      - name: Testar toda a integração
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+          git restore -- scripts/test_dom_flows.js scripts/test_territorio_dom.js
+          git diff --check
+      - name: Confirmar escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          extras=$(git diff --name-only | grep -v -E '^(teste-v1/mensagem-individual-morador-v1.js|apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs|teste-v1/painel-moradores-v2.html|scripts/test_mensagem_individual_morador_v1.js)$' || true)
+          if [ -n "$extras" ]; then echo "$extras"; exit 1; fi
+      - name: Gravar alterações validadas na branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- teste-v1/mensagem-individual-morador-v1.js apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs teste-v1/painel-moradores-v2.html scripts/test_mensagem_individual_morador_v1.js
+          git diff --cached --check
+          git commit -m 'Padronizar mensagem individual e prévia editável'
+          git push origin HEAD:feature/mensagem-individual-ux-v2
