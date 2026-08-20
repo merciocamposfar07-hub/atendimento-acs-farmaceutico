@@ -1,0 +1,23 @@
+const fs=require('fs');const vm=require('vm');
+function read(p){return fs.readFileSync(p,'utf8')}function ok(v,m){if(!v)throw new Error(m)}
+const backend=read('apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs');const report=read('teste-v1/mensagem-relatorio-entrega-v1.js');const page=read('confirmar-ciencia.html');const panel=read('teste-v1/painel-moradores-v2.html');const build=read('scripts/build_apps_script_release.js');
+new vm.Script(backend,{filename:'ZZZZ_42_ComprovacaoMensagensV1.gs'});new vm.Script(report,{filename:'mensagem-relatorio-entrega-v1.js'});
+ok(backend.includes('TACS_COMPROVACAO_MENSAGENS_V1'),'marker ausente');
+ok(backend.includes("['MENSAGEM_INDIVIDUAL','MENSAGEM_FAMILIA']"),'tipos de mensagem não isolados');
+ok(backend.includes("text:'Li e estou ciente'"),'botão explícito de ciência ausente');
+ok(backend.includes('confirmar-ciencia.html'),'página de ciência não usada no payload');
+ok(backend.includes('publico_mensagem_aberta_token'),'abertura por token ausente');
+ok(backend.includes('publico_mensagem_ciente_token'),'ciência por token ausente');
+ok(backend.includes('admin_mensagem_relatorio'),'relatório administrativo ausente');
+ok(backend.includes("estadoGeral='CIENCIA_TOTAL'"),'estado de ciência total ausente');
+ok(page.includes('✅ Li e estou ciente'),'página não exige ciência explícita');
+ok(page.includes("executar('publico_mensagem_aberta_token'"),'página não registra abertura');
+ok(page.includes("botao.addEventListener('click'"),'ciência não depende de clique explícito');
+ok(page.includes("executar('publico_mensagem_ciente_token'"),'clique não registra ciência');
+ok(report.includes('📋 Relatório de entrega'),'botão individual de relatório ausente');
+ok(report.includes('📋 Relatório da família'),'botão familiar de relatório ausente');
+ok(report.includes("escopo:'INDIVIDUAL'"),'consulta individual ausente');
+ok(report.includes("escopo:'FAMILIA'"),'consulta familiar ausente');
+ok(panel.includes('mensagem-relatorio-entrega-v1.js?v=20260820-ciencia-v1'),'painel não carrega relatório');
+ok(build.includes("apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs"),'build não inclui ZZZZ_42');
+console.log('Comprovação de ciência e relatório de mensagens V1: contrato aprovado.');

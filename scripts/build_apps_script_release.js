@@ -120,6 +120,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_41_BuscaEnvioFamiliaMoradoresV1.gs',
     marker: 'TACS_BUSCA_ENVIO_FAMILIA_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs',
+    marker: 'TACS_COMPROVACAO_MENSAGENS_V1'
   }
 ];
 
