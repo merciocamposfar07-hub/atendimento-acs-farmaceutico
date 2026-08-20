@@ -1,0 +1,72 @@
+name: Verificar runtime botoes Moradores V2
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-v2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Baixar JS publico do Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/teste-v1'
+          for i in $(seq 1 15); do
+            TS=$(date +%s%N)
+            curl -fsSL -H 'Cache-Control: no-cache' "$BASE/painel-moradores-v2.html?runtime=$TS" -o /tmp/painel.html || true
+            if grep -qF 'mensagem-individual-morador-integracao-v1.js?v=20260820-pos-render-v3' /tmp/painel.html; then break; fi
+            sleep 4
+          done
+          grep -qF 'mensagem-individual-morador-integracao-v1.js?v=20260820-pos-render-v3' /tmp/painel.html
+          TS=$(date +%s%N)
+          curl -fsSL -H 'Cache-Control: no-cache' "$BASE/mensagem-individual-morador-integracao-v1.js?v=20260820-pos-render-v3&runtime=$TS" -o /tmp/integracao.js
+      - name: Preparar jsdom
+        run: npm ci
+      - name: Validar criacao e acionamento dos botoes
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 15s node <<'NODE'
+          const fs=require('fs'),assert=require('node:assert/strict');
+          const {JSDOM}=require('jsdom');
+          const js=fs.readFileSync('/tmp/integracao.js','utf8');
+          const dom=new JSDOM(`<!doctype html><body>
+          <div id="operationStatus"></div><div id="searchArea"><h2></h2><p class="muted"></p><input id="query" value="038"></div>
+          <div id="results">
+          <div class="card"><button><strong>FÁBIO FERNANDO DE MELO</strong></button></div>
+          <div class="card"><button><strong>MARIA CRISTINA DOS SANTOS SILVA</strong></button></div>
+          <div class="card"><button><strong>DAVI LUCAS SANTOS DE MELO</strong></button></div>
+          <div class="card"><button><strong>ANA JÚLIA SANTOS DE MELO</strong></button></div></div>
+          <div id="formArea" class="hidden"><form id="residentForm"><div class="grid"></div><input id="originSheet"><input id="originRow"><input id="residentId"><input id="name"><input id="birth"><input id="cpf"><input id="cns"><input id="address"></form></div>
+          </body>`,{url:'https://merciocamposfar07-hub.github.io/',runScripts:'outside-only'});
+          const w=dom.window,d=w.document;
+          let fam=null,ind=null;
+          w.PortalTacsMensagemFamilia={abrir:(f,m)=>fam={f,m}};
+          w.PortalTacsMensagemIndividual={abrir:i=>ind=i};
+          d.querySelector('.card button').addEventListener('click',()=>{
+            d.getElementById('originSheet').value='MORADORES';d.getElementById('originRow').value='2';d.getElementById('residentId').value='TACS-000060';
+            d.getElementById('name').value='FÁBIO FERNANDO DE MELO';d.getElementById('birth').value='27/04/2000';d.getElementById('cns').value='203127264350009';
+            d.getElementById('address').value='Sítio JAPARANDUBA, 038. ZONA RURAL';d.getElementById('formArea').classList.remove('hidden');
+          });
+          w.eval(js);d.dispatchEvent(new w.Event('DOMContentLoaded',{bubbles:true}));
+          const wait=ms=>new Promise(r=>setTimeout(r,ms));
+          (async()=>{await wait(200);
+            const box=d.getElementById('msgFamiliaAcaoBuscaV1');assert.ok(box);assert.match(box.textContent,/Enviar mensagem para toda a família 038/);
+            const bs=[...d.querySelectorAll('.msg-ind-card-button')];assert.equal(bs.length,4);
+            box.querySelector('button').click();assert.equal(fam.f,'038');assert.equal(fam.m.length,4);
+            bs[0].click();await wait(350);assert.ok(ind);assert.equal(ind.origemAba,'MORADORES');assert.equal(ind.origemLinha,2);assert.equal(ind.moradorId,'TACS-000060');assert.equal(ind.familiaId,'038');
+            assert.ok(d.getElementById('msgIndividualFormActionV1'));
+            console.log('RUNTIME_BOTOES_MORADORES_OK: 1 geral + 4 individuais + selecao correta.');
+            w.close();process.exit(0);
+          })().catch(e=>{console.error(e);w.close();process.exit(1)});
+          NODE
