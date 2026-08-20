@@ -37,7 +37,8 @@ assert.match(panel,/mensagem-individual-morador-integracao-v1\.js\?v=/,'O painel
 assert.match(integration,/cadastro familiar/i,'A integração deve explicar a busca por cadastro familiar.');
 assert.match(integration,/002, 072/,'A interface deve exemplificar números familiares com zeros à esquerda.');
 assert.match(integration,/admin_mensagem_individual_buscar/,'A confirmação da busca familiar deve ocorrer no servidor.');
-assert.match(integration,/PortalTacsMensagemIndividual\.abrir\(item\)/,'O botão individual deve abrir somente o morador selecionado.');
+assert.match(integration,/var api=window\.PortalTacsMensagemIndividual/,'O botão deve usar exclusivamente a API da mensagem individual.');
+assert.match(integration,/api&&typeof api\.abrir==='function'\)api\.abrir\(item\)/,'O botão individual deve abrir exatamente o morador associado ao cartão.');
 assert.match(integration,/MutationObserver/,'A integração deve acrescentar o botão sem reescrever a renderização existente.');
 assert.match(transport,/admin_moradores_buscar/,'A busca original de moradores precisa permanecer intacta.');
 assert.doesNotMatch(transport,/admin_mensagem_individual_buscar/,'O transporte original não deve incorporar a nova rota.');
