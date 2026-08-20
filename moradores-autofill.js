@@ -11,6 +11,8 @@
   var activeCallback = '';
   var localityDisplay = null;
   var ageObserver = null;
+  var familyMemory = '';
+  var FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaAutofillV1:'; // FAMILIA_AUTOFILL_SEM_PUSH_V1
 
   function onlyDigits(value) {
     return String(value || '').replace(/\D/g, '').slice(0, 15);
@@ -36,6 +38,56 @@
         : window.TACS_AREA_ID;
     } catch (e) {}
     return normalizeArea(current) || 'JAPARANDUBA';
+  }
+
+  function familyStorageKey() {
+    return FAMILY_STORAGE_PREFIX + portalAreaId();
+  }
+
+  function familyReference() {
+    if (familyMemory) return familyMemory;
+    try {
+      familyMemory = String(localStorage.getItem(familyStorageKey()) || '').trim().toUpperCase();
+    } catch (e) {}
+    return /^[0-9]{1,4}[A-Z]?$/.test(familyMemory) ? familyMemory : '';
+  }
+
+  function rememberFamilyReference(payload) {
+    var current = familyReference();
+    if (current) return current;
+    var family = String(payload && payload.familiaId || '').trim().toUpperCase();
+    if (!/^[0-9]{1,4}[A-Z]?$/.test(family)) return '';
+    familyMemory = family;
+    try { localStorage.setItem(familyStorageKey(), family); } catch (e) {}
+    return family;
+  }
+
+  function clearFamilyNotice() {
+    var notice = document.getElementById('familyAutofillNotice');
+    if (notice && notice.parentNode) notice.parentNode.removeChild(notice);
+  }
+
+  function applyFamilyContext(payload) {
+    if (!payload || payload.familiaDiferente !== true) {
+      clearFamilyNotice();
+      rememberFamilyReference(payload);
+      return;
+    }
+    var notice = document.getElementById('familyAutofillNotice');
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.id = 'familyAutofillNotice';
+      notice.className = 'info amber full';
+      notice.setAttribute('role', 'status');
+      var status = document.getElementById('cpfStatus');
+      var label = status && status.closest ? status.closest('label') : null;
+      if (label && label.parentNode) label.parentNode.insertBefore(notice, label.nextSibling);
+      else {
+        var form = document.querySelector('.form-panel') || document.body;
+        form.appendChild(notice);
+      }
+    }
+    notice.textContent = payload.messageFamilia || 'Esta pessoa pertence a outro cadastro familiar desta mesma área. Você pode continuar a solicitação normalmente.';
   }
 
   function validCpf(value) {
@@ -243,6 +295,7 @@
     dispatchField(document.getElementById('motherName'), '');
     dispatchField(document.getElementById('fatherName'), '');
     window.TACS_MORADOR_ATUAL = null;
+    clearFamilyNotice();
   }
 
   function fillFields(payload) {
@@ -327,6 +380,7 @@
           return;
         }
         if (fillFields(payload)) {
+          applyFamilyContext(payload);
           setStatus(status, (validCns(input.value) ? 'Cartão SUS encontrado ✓ ' : 'CPF encontrado ✓ ') + 'Dados carregados automaticamente. Confira nome, nascimento e localidade; se algo estiver errado, corrija antes de continuar.', 'valid');
         } else {
           clearResidentFields();
@@ -366,7 +420,7 @@
       var script = document.createElement('script');
       activeScript = script;
       script.async = true;
-      script.src = API + '?action=buscar_morador&documento=' + encodeURIComponent(doc) + '&areaId=' + encodeURIComponent(portalAreaId()) + '&callback=' + encodeURIComponent(callback) + '&tentativa=' + attempt + '&v=' + Date.now();
+      script.src = API + '?action=buscar_morador&documento=' + encodeURIComponent(doc) + '&areaId=' + encodeURIComponent(portalAreaId()) + '&familiaReferencia=' + encodeURIComponent(familyReference()) + '&callback=' + encodeURIComponent(callback) + '&tentativa=' + attempt + '&v=' + Date.now();
       script.onerror = function () {
         failOrRetry(doc, token, attempt);
       };
@@ -387,7 +441,7 @@
       frame.hidden = true;
       frame.setAttribute('aria-hidden', 'true');
       frame.title = 'Consulta de cadastro';
-      frame.src = API + '?action=buscar_morador_bridge&documento=' + encodeURIComponent(doc) + '&areaId=' + encodeURIComponent(portalAreaId()) + '&nonce=' + encodeURIComponent(nonce) + '&v=' + Date.now();
+      frame.src = API + '?action=buscar_morador_bridge&documento=' + encodeURIComponent(doc) + '&areaId=' + encodeURIComponent(portalAreaId()) + '&familiaReferencia=' + encodeURIComponent(familyReference()) + '&nonce=' + encodeURIComponent(nonce) + '&v=' + Date.now();
 
       activeNonce = nonce;
       activeFrame = frame;

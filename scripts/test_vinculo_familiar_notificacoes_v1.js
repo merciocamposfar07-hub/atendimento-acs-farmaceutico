@@ -164,3 +164,26 @@ assert(SOURCE.includes('vinculoFamiliarNotifV1ReconciliarArea_(contexto);'));
 assert(SOURCE.includes('CADASTRO_REFERENCIA_ATUALIZADO'));
 
 console.log('Vínculo familiar de notificações: código no ENDERECO, vínculo persistente, outra família protegida e correção cadastral sincronizada.');
+
+
+const FAMILY_AUTOFILL_SOURCE = fs.readFileSync(
+  path.join(__dirname, '..', 'apps-script', 'ZZZZ_39_VerificacaoFamiliaAutofillV1.gs'),
+  'utf8'
+);
+const AUTOFILL_SOURCE = fs.readFileSync(path.join(__dirname, '..', 'moradores-autofill.js'), 'utf8');
+const NOTIFICATION_FRONT_SOURCE = fs.readFileSync(path.join(__dirname, '..', 'portal-notification-health.js'), 'utf8');
+const INDEX_SOURCE = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+
+assert(FAMILY_AUTOFILL_SOURCE.includes("TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1=Object.freeze({VERSAO:'1.0.0'})"));
+assert(FAMILY_AUTOFILL_SOURCE.includes('vinculoFamiliarNotifV1CodigoEndereco_'));
+assert(FAMILY_AUTOFILL_SOURCE.includes('vinculoFamiliarNotifV1Decidir_'));
+assert(FAMILY_AUTOFILL_SOURCE.includes("action!=='buscar_morador'&&action!=='buscar_morador_bridge'"));
+assert(AUTOFILL_SOURCE.includes("FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaAutofillV1:'"));
+assert(AUTOFILL_SOURCE.includes("familiaReferencia=' + encodeURIComponent(familyReference())"));
+assert(AUTOFILL_SOURCE.includes('applyFamilyContext(payload);'));
+assert(AUTOFILL_SOURCE.includes("notice.id = 'familyAutofillNotice'"));
+assert(!NOTIFICATION_FRONT_SOURCE.includes('familyDeviceNotice'));
+assert(!NOTIFICATION_FRONT_SOURCE.includes('showFamilyContext'));
+assert(INDEX_SOURCE.includes('portal-notification-health.js?v=20260820-notif-only-v107'));
+assert(INDEX_SOURCE.includes('moradores-autofill.js?v=20260820-familia-autofill-v111'));
+console.log('VERIFICACAO_FAMILIA_AUTOFILL_V1_TESTS_OK');

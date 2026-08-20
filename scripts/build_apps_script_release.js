@@ -108,6 +108,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_38_ContinuidadeVinculoFamiliaIphoneV1.gs',
     marker: 'TACS_CONTINUIDADE_VINCULO_FAMILIA_IPHONE_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_39_VerificacaoFamiliaAutofillV1.gs',
+    marker: 'TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1'
   }
 ];
 

@@ -81,16 +81,6 @@
     setTimeout(attemptAutomaticRepair,120)
   }
   function clearPendingRepair(){pendingRepairId='';pendingRepairSubscriptionId='';repairMode='';var box=document.getElementById('notificationOffer');if(box)box.removeAttribute('data-reparo-area')}
-  function showFamilyContext(result){
-    var notice=document.getElementById('familyDeviceNotice');
-    if(!result||result.familiaDiferente!==true){if(notice&&notice.parentNode)notice.parentNode.removeChild(notice);return}
-    if(!notice){
-      notice=document.createElement('div');notice.id='familyDeviceNotice';notice.className='info amber full';notice.setAttribute('role','status');
-      var status=document.getElementById('cpfStatus'),label=status&&status.closest?status.closest('label'):null;
-      if(label&&label.parentNode)label.parentNode.insertBefore(notice,label.nextSibling);else{var form=document.querySelector('.form-panel')||document.body;form.appendChild(notice)}
-    }
-    notice.textContent='Esta pessoa pertence a outro cadastro familiar desta mesma área. Você pode continuar a solicitação normalmente.';
-  }
   function checkin(options){
     options=options||{};
     if(!oneSignal)return Promise.resolve(null);
@@ -103,7 +93,7 @@
       var fp=[payload.subscriptionId,payload.areaId,payload.permission,payload.optedIn,payload.tokenAtivo,payload.areaConfirmada,payload.reparoAplicado,payload.reparoSubscriptionOriginal||'',payload.documento||''].join('|');
       if(!options.force&&fp===lastFingerprint)return null;
       lastFingerprint=fp;
-      return postCheckin(payload).then(function(result){showFamilyContext(result);if(result&&result.reparoPendente)showPendingRepair(result);else if(result&&payload.reparoAplicado)clearPendingRepair();return result}).catch(function(){lastFingerprint='';activeRequest='';return null});
+      return postCheckin(payload).then(function(result){if(result&&result.reparoPendente)showPendingRepair(result);else if(result&&payload.reparoAplicado)clearPendingRepair();return result}).catch(function(){lastFingerprint='';activeRequest='';return null});
     });
   }
   function scheduleCheckin(force){clearTimeout(familyCheckTimer);familyCheckTimer=setTimeout(function(){familyCheckTimer=null;checkin({force:Boolean(force)})},350)}
