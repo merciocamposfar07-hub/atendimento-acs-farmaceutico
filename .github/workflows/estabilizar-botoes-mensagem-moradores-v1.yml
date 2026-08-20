@@ -48,12 +48,8 @@ jobs:
           painel.write_text(p, encoding='utf-8')
 
           s = integracao.read_text(encoding='utf-8')
-          old_label = "b.textContent='🔔 Mensagem individual'"
-          new_label = "b.textContent='🔔 Enviar mensagem para este morador'"
-          if old_label in s:
-              s = s.replace(old_label, new_label, 1)
-          elif new_label not in s:
-              raise SystemExit('Botao individual esperado nao foi localizado.')
+          if "b.textContent='🔔 Mensagem individual'" not in s:
+              raise SystemExit('Texto validado do botao individual nao foi localizado.')
 
           old_family_cache = "mensagem-familia-v1.js?v=20260820-familia-v1"
           new_family_cache = "mensagem-familia-v1.js?v=20260820-familia-botoes-v2"
@@ -72,7 +68,7 @@ jobs:
 
           required = [
               "Enviar mensagem para toda a família",
-              "Enviar mensagem para este morador",
+              "Mensagem individual",
               ".msg-ind-card-button{",
               "PortalTacsMensagemFamilia",
               "PortalTacsMensagemIndividual"
