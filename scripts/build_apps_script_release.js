@@ -104,6 +104,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_37_VinculoFamiliarNotificacoesV1.gs',
     marker: 'TACS_VINCULO_FAMILIAR_NOTIFICACOES_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_38_ContinuidadeVinculoFamiliaIphoneV1.gs',
+    marker: 'TACS_CONTINUIDADE_VINCULO_FAMILIA_IPHONE_V1'
   }
 ];
 
