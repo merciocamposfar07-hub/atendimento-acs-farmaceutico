@@ -73,3 +73,5 @@ jobs:
           git add portal-notification-health.js index.html apps-script/ZZZZ_37_VinculoFamiliarNotificacoesV1.gs
           git commit -m 'Estabiliza vínculo familiar no iPhone'
           git push
+
+# Reexecução controlada em 2026-08-20 para concluir a correção resiliente no iPhone.
