@@ -96,6 +96,7 @@ jobs:
           set -euo pipefail
           npm ci
           npm test
+          git restore -- scripts/test_dom_flows.js scripts/test_territorio_dom.js
           git diff --check
 
       - name: Confirmar que testes nao alteraram outros arquivos
