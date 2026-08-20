@@ -1,0 +1,69 @@
+name: Migrar referência familiar legada V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/migrar_referencia_familiar_legada_v1.py'
+      - '.github/workflows/migrar-referencia-familiar-legada-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: migrar-referencia-familiar-legada-v1
+  cancel-in-progress: false
+
+jobs:
+  aplicar-validar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Migrar referência familiar antiga
+        run: python scripts/migrar_referencia_familiar_legada_v1.py
+
+      - name: Validar escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- . \
+            ':(exclude)moradores-autofill.js' \
+            ':(exclude)index.html' \
+            ':(exclude)scripts/test_vinculo_familiar_notificacoes_v1.js'
+
+      - name: Validar sintaxe e marcadores
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check moradores-autofill.js
+          grep -q "FAMILIA_AUTOFILL_MIGRA_LEGADO_V1" moradores-autofill.js
+          grep -q "portalTacsFamiliaConfirmadaV1:" moradores-autofill.js
+          grep -q "localStorage.getItem(legacyFamilyStorageKey())" moradores-autofill.js
+          grep -q "moradores-autofill.js?v=20260820-familia-autofill-v112" index.html
+
+      - name: Rodar testes do Portal
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+
+      - name: Publicar somente a migração validada
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Nenhuma alteração pendente.'
+            exit 0
+          fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add -- moradores-autofill.js index.html scripts/test_vinculo_familiar_notificacoes_v1.js
+          git commit -m 'Migra referência familiar antiga para o autofill'
+          git push
