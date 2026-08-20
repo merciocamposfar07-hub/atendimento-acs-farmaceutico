@@ -10,6 +10,10 @@ ok(backend.includes('publico_mensagem_aberta_token'),'abertura por token ausente
 ok(backend.includes('publico_mensagem_ciente_token'),'ciência por token ausente');
 ok(backend.includes('admin_mensagem_relatorio'),'relatório administrativo ausente');
 ok(backend.includes("estadoGeral='CIENCIA_TOTAL'"),'estado de ciência total ausente');
+ok(backend.includes("HISTORY_SHEET:'TACS_MENSAGENS_CIENCIA_V1'"),'histórico explícito não isolado');
+ok(backend.includes('comprovacaoMensagensV1RegistrarEvento_'),'registro do evento explícito ausente');
+ok(!backend.includes('var audit=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.AUDIT_SHEET)'),'relatório ainda mistura eventos legados');
+ok(report.includes('ev.mensagem'),'relatório não mostra o texto efetivamente enviado');
 ok(page.includes('✅ Li e estou ciente'),'página não exige ciência explícita');
 ok(page.includes("executar('publico_mensagem_aberta_token'"),'página não registra abertura');
 ok(page.includes("botao.addEventListener('click'"),'ciência não depende de clique explícito');

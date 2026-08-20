@@ -14,12 +14,15 @@ var TACS_COMPROVACAO_MENSAGENS_V1 = Object.freeze({
   RESULT_SECONDS:300,
   CIENCIA_PAGE:'https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/confirmar-ciencia.html',
   TIPOS:Object.freeze(['MENSAGEM_INDIVIDUAL','MENSAGEM_FAMILIA']),
-  MAX_EVENTOS:12
+  MAX_EVENTOS:12,
+  HISTORY_SHEET:'TACS_MENSAGENS_CIENCIA_V1',
+  HISTORY_HEADERS:Object.freeze(['EVENTO_ID','AREA_ID','TIPO','REFERENCIA_ID','TITULO','MENSAGEM','CRIADO_EM'])
 });
 
 var comprovacaoMensagensV1DoGetAnterior_;
 var comprovacaoMensagensV1DoPostAnterior_;
 var comprovacaoMensagensV1PayloadAnterior_;
+var comprovacaoMensagensV1PrepararAnterior_;
 
 (function instalarComprovacaoMensagensV1_(){
   if(typeof notificacoesAreaV1PayloadIndividual_==='function'){
@@ -30,6 +33,15 @@ var comprovacaoMensagensV1PayloadAnterior_;
         return comprovacaoMensagensV1PayloadAnterior_(appId,contexto,input,item);
       }
       return comprovacaoMensagensV1Payload_(appId,contexto,input,item);
+    };
+  }
+  if(typeof notificacoesAreaV1PrepararComprovantes_==='function'){
+    comprovacaoMensagensV1PrepararAnterior_=notificacoesAreaV1PrepararComprovantes_;
+    notificacoesAreaV1PrepararComprovantes_=function(contexto,input,alvos){
+      var preparados=comprovacaoMensagensV1PrepararAnterior_(contexto,input,alvos);
+      var tipo=comprovacaoMensagensV1Texto_(input&&input.tipo).toUpperCase();
+      if(TACS_COMPROVACAO_MENSAGENS_V1.TIPOS.indexOf(tipo)!==-1)comprovacaoMensagensV1RegistrarEvento_(contexto,input);
+      return preparados;
     };
   }
   if(typeof doGet==='function'){
@@ -66,6 +78,27 @@ function comprovacaoMensagensV1Payload_(appId,contexto,input,item){
       comprovacao:'CIENCIA_EXPLICITA_V1'
     }
   };
+}
+
+function comprovacaoMensagensV1GarantirHistorico_(ss){
+  var sheet=ss.getSheetByName(TACS_COMPROVACAO_MENSAGENS_V1.HISTORY_SHEET);
+  if(!sheet){sheet=ss.insertSheet(TACS_COMPROVACAO_MENSAGENS_V1.HISTORY_SHEET);sheet.getRange(1,1,1,TACS_COMPROVACAO_MENSAGENS_V1.HISTORY_HEADERS.length).setValues([TACS_COMPROVACAO_MENSAGENS_V1.HISTORY_HEADERS]);sheet.setFrozenRows(1);}
+  return sheet;
+}
+
+function comprovacaoMensagensV1RegistrarEvento_(contexto,input){
+  var evento=comprovacaoMensagensV1Texto_(input&&input.evento),tipo=comprovacaoMensagensV1Texto_(input&&input.tipo).toUpperCase();
+  if(!/^[A-Za-z0-9_-]{8,160}$/.test(evento)||TACS_COMPROVACAO_MENSAGENS_V1.TIPOS.indexOf(tipo)===-1)throw new Error('A mensagem não pôde ser registrada para comprovação de ciência.');
+  var ss=tacsTerritorioV1Planilha_(),sheet=comprovacaoMensagensV1GarantirHistorico_(ss),lock=LockService.getScriptLock();
+  if(!lock.tryLock(10000))throw new Error('O registro de ciência está ocupado. Tente enviar novamente em instantes.');
+  try{
+    if(sheet.getLastRow()>1){
+      var ids=sheet.getRange(2,1,sheet.getLastRow()-1,1).getDisplayValues();
+      for(var i=ids.length-1;i>=0;i--)if(comprovacaoMensagensV1Texto_(ids[i][0])===evento)return;
+    }
+    sheet.appendRow([evento,comprovacaoMensagensV1Texto_(contexto.areaId).toUpperCase(),tipo,comprovacaoMensagensV1Texto_(input.referencia),comprovacaoMensagensV1Texto_(input.titulo).slice(0,220),comprovacaoMensagensV1Texto_(input.mensagem).slice(0,900),new Date()]);
+    sheet.getRange(sheet.getLastRow(),7).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+  }finally{lock.releaseLock();}
 }
 
 function comprovacaoMensagensV1TratarGet_(e){
@@ -157,21 +190,21 @@ function comprovacaoMensagensV1Relatorio_(p,contexto){
 
 function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino){
   var ss=tacsTerritorioV1Planilha_();
-  var audit=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.AUDIT_SHEET);
+  var history=ss.getSheetByName(TACS_COMPROVACAO_MENSAGENS_V1.HISTORY_SHEET);
   var rec=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.RECEIPT_SHEET);
   var open=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.OPEN_SHEET);
   var eventos=[];
-  if(audit&&audit.getLastRow()>1){
-    var ar=audit.getRange(2,1,audit.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.AUDIT_HEADERS.length).getDisplayValues();
-    for(var i=ar.length-1;i>=0&&eventos.length<TACS_COMPROVACAO_MENSAGENS_V1.MAX_EVENTOS;i--){
-      var row=ar[i];
+  if(history&&history.getLastRow()>1){
+    var hr=history.getRange(2,1,history.getLastRow()-1,TACS_COMPROVACAO_MENSAGENS_V1.HISTORY_HEADERS.length).getDisplayValues();
+    for(var i=hr.length-1;i>=0&&eventos.length<TACS_COMPROVACAO_MENSAGENS_V1.MAX_EVENTOS;i--){
+      var row=hr[i];
       if(comprovacaoMensagensV1Texto_(row[1]).toUpperCase()!==contexto.areaId)continue;
       if(comprovacaoMensagensV1Texto_(row[2]).toUpperCase()!==tipo)continue;
       if(comprovacaoMensagensV1Texto_(row[3])!==referencia)continue;
-      eventos.push({eventoId:comprovacaoMensagensV1Texto_(row[0]),titulo:comprovacaoMensagensV1Texto_(row[4]),registradoEm:comprovacaoMensagensV1Texto_(row[9])});
+      eventos.push({eventoId:comprovacaoMensagensV1Texto_(row[0]),titulo:comprovacaoMensagensV1Texto_(row[4]),mensagem:comprovacaoMensagensV1Texto_(row[5]),registradoEm:comprovacaoMensagensV1Texto_(row[6])});
     }
   }
-  if(!eventos.length)return {ok:true,encontrado:false,destino:destino,historico:[],message:'Ainda não existe mensagem enviada para este destino.'};
+  if(!eventos.length)return {ok:true,encontrado:false,destino:destino,historico:[],message:'Ainda não existe mensagem com comprovação explícita enviada para este destino.'};
 
   var recRows=rec&&rec.getLastRow()>1?rec.getRange(2,1,rec.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).getDisplayValues():[];
   var openRows=open&&open.getLastRow()>1?open.getRange(2,1,open.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.OPEN_HEADERS.length).getDisplayValues():[];
