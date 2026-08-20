@@ -38,7 +38,7 @@ assert.match(familyBackend,/admin_mensagem_familia_result/);
 assert.match(familyBackend,/buscaEnvioFamiliaV1BuscarExata_/);
 assert.match(familyBackend,/buscaEnvioFamiliaV1CodigoMorador_\(morador\)!==familia/,'A família precisa ser comparada de forma exata, não por substring.');
 assert.match(familyBackend,/vistos\[id\]/,'O envio geral da família precisa deduplicar aparelhos.');
-assert.match(familyBackend,/FAMILIA_\+familia/,'O comprovante familiar precisa ter referência própria.');
+assert.match(familyBackend,/'FAMILIA_'\+familia/,'O comprovante familiar precisa ter referência própria.');
 assert.match(build,/ZZZZ_41_BuscaEnvioFamiliaMoradoresV1\.gs/);
 assert.match(build,/TACS_BUSCA_ENVIO_FAMILIA_V1/);
 
