@@ -1,0 +1,63 @@
+name: Verificar deploy ciencia mensagens v1
+
+on:
+  push:
+    branches:
+      - verify/deploy-ciencia-mensagens-v1
+    paths:
+      - '.github/workflows/verificar-deploy-ciencia-mensagens-v1.yml'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TARGET_SHA: 0fcbe5691f41adc6a8321f084a60b684fac42f93
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aguardar run oficial e registrar resultado
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          run_id=''
+          conclusion=''
+          html_url=''
+          status=''
+          for tentativa in $(seq 1 80); do
+            runs=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$api/actions/workflows/deploy-apps-script-moradores.yml/runs?event=push&branch=main&per_page=30")
+            run_id=$(printf '%s' "$runs" | jq -r --arg sha "$TARGET_SHA" '.workflow_runs[] | select(.head_sha==$sha) | .id' | head -n1)
+            if [ -n "$run_id" ]; then
+              status=$(printf '%s' "$runs" | jq -r --arg sha "$TARGET_SHA" '.workflow_runs[] | select(.head_sha==$sha) | .status' | head -n1)
+              conclusion=$(printf '%s' "$runs" | jq -r --arg sha "$TARGET_SHA" '.workflow_runs[] | select(.head_sha==$sha) | (.conclusion // "")' | head -n1)
+              html_url=$(printf '%s' "$runs" | jq -r --arg sha "$TARGET_SHA" '.workflow_runs[] | select(.head_sha==$sha) | .html_url' | head -n1)
+              if [ "$status" = 'completed' ]; then break; fi
+            fi
+            sleep 10
+          done
+          test -n "$run_id"
+          test "$status" = 'completed'
+          jobs=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$api/actions/runs/$run_id/jobs?per_page=100")
+          job_conclusion=$(printf '%s' "$jobs" | jq -r '.jobs[0].conclusion // ""')
+          curl -fsSL -L -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$api/actions/runs/$run_id/logs" -o /tmp/logs.zip
+          mkdir -p /tmp/logs && unzip -qq -o /tmp/logs.zip -d /tmp/logs
+          version_line=$(grep -Rho 'Implantação validada: versão [0-9][0-9]*[^[:cntrl:]]*' /tmp/logs | tail -n1 || true)
+          health_line=$(grep -Rho 'Health [123]: moradores=[^[:cntrl:]]*' /tmp/logs | tail -n1 || true)
+          test_line=$(grep -Rho 'Comprovação de ciência e relatório de mensagens V1: contrato aprovado\.' /tmp/logs | tail -n1 || true)
+          jq -n --arg target_sha "$TARGET_SHA" --arg run_id "$run_id" --arg status "$status" --arg conclusion "$conclusion" --arg job_conclusion "$job_conclusion" --arg html_url "$html_url" --arg version_line "$version_line" --arg health_line "$health_line" --arg test_line "$test_line" '{target_sha:$target_sha,run_id:$run_id,status:$status,conclusion:$conclusion,job_conclusion:$job_conclusion,html_url:$html_url,version_line:$version_line,health_line:$health_line,test_line:$test_line}' > verificacao-deploy-ciencia-v1.json
+          rm -f .github/workflows/verificar-deploy-ciencia-mensagens-v1.yml
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -- verificacao-deploy-ciencia-v1.json .github/workflows/verificar-deploy-ciencia-mensagens-v1.yml
+          git commit -m 'Registrar verificação do deploy de ciência'
+          git push origin HEAD:verify/deploy-ciencia-mensagens-v1
+          test "$conclusion" = 'success'
+          test "$job_conclusion" = 'success'
+          test -n "$version_line"
+          test -n "$test_line"
