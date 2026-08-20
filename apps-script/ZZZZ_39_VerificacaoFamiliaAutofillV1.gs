@@ -10,7 +10,7 @@
  * - a referência familiar é mantida pelo navegador por área e enviada apenas como
  *   código familiar para comparação; CPF/CNS não é armazenado por esta camada.
  */
-var TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1=Object.freeze({VERSAO:'1.0.0'});
+var TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1=Object.freeze({VERSAO:'1.0.1'});
 
 var verificacaoFamiliaAutofillV1TratarGetAnterior_=typeof moradoresAdminV1TratarGet_==='function'
   ?moradoresAdminV1TratarGet_:null;
@@ -54,7 +54,17 @@ function verificacaoFamiliaAutofillV1Enriquecer_(payload,familiaReferencia){
     return payload;
   }
 
-  var referencia=verificacaoFamiliaAutofillV1NormalizarFamilia_(familiaReferencia)||familiaBeneficiario;
+  var referencia=verificacaoFamiliaAutofillV1NormalizarFamilia_(familiaReferencia);
+  if(!referencia){
+    payload.familiaId='';
+    payload.familiaBeneficiario=familiaBeneficiario;
+    payload.familiaDiferente=true;
+    payload.vinculoFamiliarAusente=true;
+    payload.verificacaoFamiliaAutofillVersao=TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1.VERSAO;
+    payload.messageFamilia='Esta pessoa pertence a outro cadastro familiar desta mesma área. Você pode continuar a solicitação normalmente.';
+    return payload;
+  }
+
   var decisao=vinculoFamiliarNotifV1Decidir_(
     {familiaId:referencia},
     {familiaId:familiaBeneficiario}
@@ -63,6 +73,7 @@ function verificacaoFamiliaAutofillV1Enriquecer_(payload,familiaReferencia){
   payload.familiaId=referencia;
   payload.familiaBeneficiario=familiaBeneficiario;
   payload.familiaDiferente=decisao.acao==='OUTRA_FAMILIA';
+  payload.vinculoFamiliarAusente=false;
   payload.verificacaoFamiliaAutofillVersao=TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1.VERSAO;
   if(payload.familiaDiferente){
     payload.messageFamilia='Esta pessoa pertence a outro cadastro familiar desta mesma área. Você pode continuar a solicitação normalmente.';

@@ -174,7 +174,7 @@ const AUTOFILL_SOURCE = fs.readFileSync(path.join(__dirname, '..', 'moradores-au
 const NOTIFICATION_FRONT_SOURCE = fs.readFileSync(path.join(__dirname, '..', 'portal-notification-health.js'), 'utf8');
 const INDEX_SOURCE = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(FAMILY_AUTOFILL_SOURCE.includes("TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1=Object.freeze({VERSAO:'1.0.0'})"));
+assert(FAMILY_AUTOFILL_SOURCE.includes("TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1=Object.freeze({VERSAO:'1.0.1'})"));
 assert(FAMILY_AUTOFILL_SOURCE.includes('vinculoFamiliarNotifV1CodigoEndereco_'));
 assert(FAMILY_AUTOFILL_SOURCE.includes('vinculoFamiliarNotifV1Decidir_'));
 assert(FAMILY_AUTOFILL_SOURCE.includes("action!=='buscar_morador'&&action!=='buscar_morador_bridge'"));
@@ -182,12 +182,15 @@ assert(AUTOFILL_SOURCE.includes("FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaAutof
 assert(AUTOFILL_SOURCE.includes("LEGACY_FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaConfirmadaV1:'"));
 assert(AUTOFILL_SOURCE.includes('FAMILIA_AUTOFILL_MIGRA_LEGADO_V1'));
 assert(AUTOFILL_SOURCE.includes('localStorage.getItem(legacyFamilyStorageKey())'));
-assert(AUTOFILL_SOURCE.includes('localStorage.setItem(familyStorageKey(), familyMemory)'));
+assert(AUTOFILL_SOURCE.includes('localStorage.removeItem(familyStorageKey())'));
+assert(AUTOFILL_SOURCE.includes('FAMILIA_AUTOFILL_DESCARTA_ADOCAO_INDEVIDA_V1'));
+assert(FAMILY_AUTOFILL_SOURCE.includes('payload.vinculoFamiliarAusente=true'));
+assert(!FAMILY_AUTOFILL_SOURCE.includes('||familiaBeneficiario'));
 assert(AUTOFILL_SOURCE.includes("familiaReferencia=' + encodeURIComponent(familyReference())"));
 assert(AUTOFILL_SOURCE.includes('applyFamilyContext(payload);'));
 assert(AUTOFILL_SOURCE.includes("notice.id = 'familyAutofillNotice'"));
 assert(!NOTIFICATION_FRONT_SOURCE.includes('familyDeviceNotice'));
 assert(!NOTIFICATION_FRONT_SOURCE.includes('showFamilyContext'));
 assert(INDEX_SOURCE.includes('portal-notification-health.js?v=20260820-notif-only-v107'));
-assert(INDEX_SOURCE.includes('moradores-autofill.js?v=20260820-familia-autofill-v112'));
+assert(INDEX_SOURCE.includes('moradores-autofill.js?v=20260820-familia-autofill-v113'));
 console.log('VERIFICACAO_FAMILIA_AUTOFILL_V1_TESTS_OK');
