@@ -38,7 +38,7 @@ assert(official.includes('.preferenciaVisual,#alternarContraste{display:none!imp
 const portal = read('portal-ajustes-finais.js');
 assert(portal.includes("#sendWrittenTacs,.tacs-written-button{display:none!important}"), 'Portal: botão escrito antigo não está bloqueado');
 assert(!portal.includes('Enviar solicitação por escrito no WhatsApp'), 'Portal: botão verde escrito foi reintroduzido');
-assert(portal.includes('Enviar solicitação em card azul-petróleo'), 'Portal: botão único do card azul ausente');
+assert(portal.includes("card.id = 'sendPetroleumCard'"), 'Portal: botão único do card azul ausente');
 assert(portal.includes('PortalTacsTerritoryIdentity'), 'Portal: card não usa identidade territorial dinâmica');
 assert(portal.includes('tacsPublicAttentionPulse'), 'Portal: atenção sutil de recados/campanhas ausente');
 assert(portal.includes('prefers-reduced-motion:reduce'), 'Portal: pulsação não respeita redução de movimento');
