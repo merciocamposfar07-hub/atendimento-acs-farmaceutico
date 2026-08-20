@@ -1,0 +1,56 @@
+name: Validar relatorio ciencia mensagens v1
+
+on:
+  push:
+    branches:
+      - feature/relatorio-ciencia-mensagens-v1
+    paths:
+      - '.github/workflows/validar-relatorio-ciencia-mensagens-v1.yml'
+      - 'scripts/aplicar_relatorio_ciencia_mensagens_v1.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Aplicar melhoria isolada
+        run: python3 scripts/aplicar_relatorio_ciencia_mensagens_v1.py
+      - name: Validar sintaxe e contrato novo
+        run: |
+          node --check teste-v1/mensagem-relatorio-entrega-v1.js
+          node --check scripts/test_comprovacao_ciencia_mensagens_v1.js
+          node scripts/test_comprovacao_ciencia_mensagens_v1.js
+      - name: Rodar regressao completa
+        run: npm test
+      - name: Restaurar arquivos gerados pelo pretest
+        run: |
+          git checkout -- scripts/test_dom_flows.js scripts/test_territorio_dom.js || true
+      - name: Validar escopo final
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          permitidos='^(apps-script/ZZZZ_42_ComprovacaoMensagensV1\.gs|confirmar-ciencia\.html|teste-v1/mensagem-relatorio-entrega-v1\.js|teste-v1/painel-moradores-v2\.html|scripts/build_apps_script_release\.js|scripts/test_comprovacao_ciencia_mensagens_v1\.js|package\.json|scripts/aplicar_relatorio_ciencia_mensagens_v1\.py|\.github/workflows/validar-relatorio-ciencia-mensagens-v1\.yml)$'
+          extras="$(git diff --name-only | grep -Ev "$permitidos" || true)"
+          test -z "$extras" || { echo "Arquivos fora do escopo:"; echo "$extras"; exit 1; }
+      - name: Limpar ferramentas temporarias e publicar branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f scripts/aplicar_relatorio_ciencia_mensagens_v1.py .github/workflows/validar-relatorio-ciencia-mensagens-v1.yml
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -- apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs confirmar-ciencia.html teste-v1/mensagem-relatorio-entrega-v1.js teste-v1/painel-moradores-v2.html scripts/build_apps_script_release.js scripts/test_comprovacao_ciencia_mensagens_v1.js package.json scripts/aplicar_relatorio_ciencia_mensagens_v1.py .github/workflows/validar-relatorio-ciencia-mensagens-v1.yml
+          git commit -m 'Amplia comprovacao e relatorio de mensagens'
+          git push origin HEAD:feature/relatorio-ciencia-mensagens-v1
