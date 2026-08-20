@@ -61,7 +61,7 @@ assert.match(panel,/mensagem-individual-morador-v1\.js\?v=/,'O painel deve conti
 assert.match(panel,/mensagem-individual-morador-integracao-v1\.js\?v=/,'O painel deve continuar carregando a integração isolada.');
 assert.match(integration,/cadastro familiar/i,'A integração deve explicar a busca por cadastro familiar.');
 assert.match(integration,/002, 012, 072/,'A interface deve exemplificar números familiares com zeros à esquerda.');
-assert.match(integration,/^\s*function familiaConsulta\(v\).*\\d\{3\}/m,'A interface deve reconhecer código familiar de três dígitos.');
+assert.ok(integration.includes('function familiaConsulta(v)')&&integration.includes('/^\\d{3}[A-Z]?$/'),'A interface deve reconhecer código familiar de três dígitos.');
 assert.match(integration,/admin_mensagem_individual_buscar/,'A confirmação da busca deve ocorrer no servidor.');
 assert.match(integration,/Mensagem individual/,'Cada morador precisa ter ação individual.');
 assert.match(integration,/Enviar mensagem para toda a família/,'A busca familiar precisa ter ação geral da família.');
