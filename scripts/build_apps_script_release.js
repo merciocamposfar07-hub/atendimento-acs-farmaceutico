@@ -112,6 +112,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_39_VerificacaoFamiliaAutofillV1.gs',
     marker: 'TACS_VERIFICACAO_FAMILIA_AUTOFILL_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs',
+    marker: 'TACS_MENSAGEM_INDIVIDUAL_V1'
   }
 ];
 
