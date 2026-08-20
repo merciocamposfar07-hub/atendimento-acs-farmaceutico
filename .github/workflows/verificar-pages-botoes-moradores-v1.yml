@@ -1,0 +1,29 @@
+name: Verificar Pages botoes Moradores
+
+on:
+  push:
+    branches:
+      - verify/pages-botoes-moradores-20260820
+
+permissions:
+  contents: read
+
+jobs:
+  verificar-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar HTML e JS publicados no GitHub Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/teste-v1"
+          TS="$(date +%s)"
+          echo "Consultando $BASE"
+          curl -fsSL --retry 4 --retry-delay 3 -H 'Cache-Control: no-cache' "$BASE/painel-moradores-v2.html?verifica=$TS" -o painel.html
+          grep -F 'mensagem-individual-morador-integracao-v1.js?v=20260820-botoes-familia-v2' painel.html
+          curl -fsSL --retry 4 --retry-delay 3 -H 'Cache-Control: no-cache' "$BASE/mensagem-individual-morador-integracao-v1.js?v=20260820-botoes-familia-v2&verifica=$TS" -o integracao.js
+          grep -F "b.textContent='🔔 Mensagem individual'" integracao.js
+          grep -F 'Enviar mensagem para toda a família' integracao.js
+          grep -F '.msg-ind-card-button{' integracao.js
+          grep -F 'mensagem-familia-v1.js?v=20260820-familia-botoes-v2' integracao.js
+          echo 'PAGES_BOTOES_MORADORES_ATIVO_OK'
