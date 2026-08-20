@@ -1,0 +1,27 @@
+name: Validar mensagem individual por morador V1
+
+on:
+  push:
+    branches:
+      - feature/mensagem-individual-morador-v1
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Teste específico da mensagem individual
+        run: node scripts/test_mensagem_individual_morador_v1.js
+      - name: Suíte completa do Portal TACS
+        run: npm test
