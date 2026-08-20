@@ -13,6 +13,7 @@
   var ageObserver = null;
   var familyMemory = '';
   var FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaAutofillV1:'; // FAMILIA_AUTOFILL_SEM_PUSH_V1
+  var LEGACY_FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaConfirmadaV1:'; // FAMILIA_AUTOFILL_MIGRA_LEGADO_V1
 
   function onlyDigits(value) {
     return String(value || '').replace(/\D/g, '').slice(0, 15);
@@ -44,12 +45,23 @@
     return FAMILY_STORAGE_PREFIX + portalAreaId();
   }
 
+  function legacyFamilyStorageKey() {
+    return LEGACY_FAMILY_STORAGE_PREFIX + portalAreaId();
+  }
+
+  function validFamilyCode(value) {
+    return /^[0-9]{1,4}[A-Z]?$/.test(String(value || '').trim().toUpperCase());
+  }
+
   function familyReference() {
-    if (familyMemory) return familyMemory;
+    if (validFamilyCode(familyMemory)) return familyMemory;
     try {
-      familyMemory = String(localStorage.getItem(familyStorageKey()) || '').trim().toUpperCase();
+      var current = String(localStorage.getItem(familyStorageKey()) || '').trim().toUpperCase();
+      var legacy = String(localStorage.getItem(legacyFamilyStorageKey()) || '').trim().toUpperCase();
+      familyMemory = validFamilyCode(current) ? current : (validFamilyCode(legacy) ? legacy : '');
+      if (familyMemory && !current) localStorage.setItem(familyStorageKey(), familyMemory);
     } catch (e) {}
-    return /^[0-9]{1,4}[A-Z]?$/.test(familyMemory) ? familyMemory : '';
+    return validFamilyCode(familyMemory) ? familyMemory : '';
   }
 
   function rememberFamilyReference(payload) {

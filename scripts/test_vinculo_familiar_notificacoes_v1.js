@@ -179,11 +179,15 @@ assert(FAMILY_AUTOFILL_SOURCE.includes('vinculoFamiliarNotifV1CodigoEndereco_'))
 assert(FAMILY_AUTOFILL_SOURCE.includes('vinculoFamiliarNotifV1Decidir_'));
 assert(FAMILY_AUTOFILL_SOURCE.includes("action!=='buscar_morador'&&action!=='buscar_morador_bridge'"));
 assert(AUTOFILL_SOURCE.includes("FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaAutofillV1:'"));
+assert(AUTOFILL_SOURCE.includes("LEGACY_FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaConfirmadaV1:'"));
+assert(AUTOFILL_SOURCE.includes('FAMILIA_AUTOFILL_MIGRA_LEGADO_V1'));
+assert(AUTOFILL_SOURCE.includes('localStorage.getItem(legacyFamilyStorageKey())'));
+assert(AUTOFILL_SOURCE.includes('localStorage.setItem(familyStorageKey(), familyMemory)'));
 assert(AUTOFILL_SOURCE.includes("familiaReferencia=' + encodeURIComponent(familyReference())"));
 assert(AUTOFILL_SOURCE.includes('applyFamilyContext(payload);'));
 assert(AUTOFILL_SOURCE.includes("notice.id = 'familyAutofillNotice'"));
 assert(!NOTIFICATION_FRONT_SOURCE.includes('familyDeviceNotice'));
 assert(!NOTIFICATION_FRONT_SOURCE.includes('showFamilyContext'));
 assert(INDEX_SOURCE.includes('portal-notification-health.js?v=20260820-notif-only-v107'));
-assert(INDEX_SOURCE.includes('moradores-autofill.js?v=20260820-familia-autofill-v111'));
+assert(INDEX_SOURCE.includes('moradores-autofill.js?v=20260820-familia-autofill-v112'));
 console.log('VERIFICACAO_FAMILIA_AUTOFILL_V1_TESTS_OK');
