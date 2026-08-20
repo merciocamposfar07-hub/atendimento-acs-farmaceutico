@@ -62,7 +62,15 @@ assert.match(panel,/mensagem-individual-morador-integracao-v1\.js\?v=/,'O painel
 assert.match(integration,/cadastro familiar/i,'A integração deve explicar a busca por cadastro familiar.');
 assert.match(integration,/002, 012, 072/,'A interface deve exemplificar números familiares com zeros à esquerda.');
 assert.ok(integration.includes('function familiaConsulta(v)')&&integration.includes('/^\\d{3}[A-Z]?$/'),'A interface deve reconhecer código familiar de três dígitos.');
-assert.match(integration,/admin_mensagem_individual_buscar/,'A confirmação da busca deve ocorrer no servidor.');
+assert.doesNotMatch(integration,/search\.addEventListener\('click'/,'Os botões não podem depender do clique Buscar, pois o transporte principal bloqueia propagação.');
+assert.doesNotMatch(integration,/input\.addEventListener\('keydown'/,'Os botões não podem depender do Enter bloqueado pelo transporte principal.');
+assert.match(integration,/originSheet/,'A ação individual deve reaproveitar a origem já carregada pelo painel.');
+assert.match(integration,/originRow/,'A ação individual deve reaproveitar a linha já carregada pelo painel.');
+assert.match(integration,/residentId/,'A ação individual deve reaproveitar o identificador do cadastro selecionado.');
+assert.match(integration,/garantirBotoesCards/,'Os botões individuais devem nascer a partir dos cartões já renderizados.');
+assert.match(integration,/garantirBotaoFormulario/,'O morador selecionado deve ter botão individual também no formulário.');
+assert.match(transport,/function onSearchCapture/,'O teste precisa refletir o manipulador real que captura a busca.');
+assert.match(transport,/stopImmediatePropagation/,'O transporte principal continua bloqueando propagação e não deve ser alterado.');
 assert.match(integration,/Mensagem individual/,'Cada morador precisa ter ação individual.');
 assert.match(integration,/Enviar mensagem para toda a família/,'A busca familiar precisa ter ação geral da família.');
 assert.match(integration,/PortalTacsMensagemFamilia/,'A ação familiar deve usar módulo próprio.');
