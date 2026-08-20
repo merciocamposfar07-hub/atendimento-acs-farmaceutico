@@ -1,0 +1,75 @@
+name: Corrigir vínculo familiar iPhone V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/corrigir_vinculo_familiar_iphone_v1.py'
+      - '.github/workflows/corrigir-vinculo-familiar-iphone-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: corrigir-vinculo-familiar-iphone-v1
+  cancel-in-progress: false
+
+jobs:
+  corrigir-validar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar correção de escopo estrito
+        run: python scripts/corrigir_vinculo_familiar_iphone_v1.py
+
+      - name: Validar que somente os três arquivos autorizados mudaram
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- . \
+            ':(exclude)portal-notification-health.js' \
+            ':(exclude)index.html' \
+            ':(exclude)apps-script/ZZZZ_37_VinculoFamiliarNotificacoesV1.gs'
+
+      - name: Validar sintaxe e marcadores da correção
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check portal-notification-health.js
+          cp apps-script/ZZZZ_37_VinculoFamiliarNotificacoesV1.gs "$RUNNER_TEMP/vinculo-familiar.js"
+          node --check "$RUNNER_TEMP/vinculo-familiar.js"
+          grep -q 'FAMILIA_RESILIENTE_IPHONE_V1' portal-notification-health.js
+          grep -q 'portalTacsFamiliaConfirmadaV1:' portal-notification-health.js
+          grep -q 'waitSubscriptionState(10000)' portal-notification-health.js
+          grep -q "VERSAO:'1.0.2'" apps-script/ZZZZ_37_VinculoFamiliarNotificacoesV1.gs
+          grep -q 'MIGRADO_ONESIGNAL_ID' apps-script/ZZZZ_37_VinculoFamiliarNotificacoesV1.gs
+          grep -q 'vinculoFamiliarNotifV1ResolverContinuidade_' apps-script/ZZZZ_37_VinculoFamiliarNotificacoesV1.gs
+          grep -q 'portal-notification-health.js?v=20260820-familia-resiliente-v1' index.html
+          grep -q 'moradores-autofill.js?v=20260820-aguarde-v111' index.html
+
+      - name: Rodar testes existentes do Portal
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+
+      - name: Publicar somente a correção validada
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Nenhuma alteração pendente.'
+            exit 0
+          fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add portal-notification-health.js index.html apps-script/ZZZZ_37_VinculoFamiliarNotificacoesV1.gs
+          git commit -m 'Estabiliza vínculo familiar no iPhone'
+          git push
