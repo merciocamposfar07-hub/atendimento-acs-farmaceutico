@@ -52,7 +52,7 @@ assert.match(frontend,/documentoNovo/);
 assert.match(frontend,/pendingMissing=''[^;]*;pendingType=''/,'Ao entrar no fluxo familiar, documento não localizado anterior não pode ser reaproveitado em outro integrante.');
 assert.match(frontend,/OneSignalDeferred/,'A consulta pode aproveitar o vínculo familiar do aparelho sem alterar o Push.');
 
-assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260820-v1/);
+assert.match(loader,/portal-identificacao-familia-v1\.js\?v=[^\"']+/,'O carregador familiar precisa ter cache-buster explícito.');
 assert.match(loader,/isAdminPage\(\)\|\|document\.getElementById/,'A nova camada não deve ser carregada nos painéis administrativos.');
 assert.match(build,/ZZZZ_43_IdentificacaoFamiliarPublicaV1\.gs/);
 assert.match(build,/TACS_IDENTIFICACAO_FAMILIAR_PUBLICA_V1/);

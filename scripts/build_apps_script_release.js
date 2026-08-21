@@ -136,6 +136,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs',
     marker: 'TACS_APARELHO_TACS_TESTE_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_46_EstabilizacaoNotificacoesV8.gs',
+    marker: 'TACS_ESTABILIZACAO_NOTIFICACOES_V8'
   }
 ];
 
