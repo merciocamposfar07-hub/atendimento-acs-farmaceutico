@@ -1,0 +1,41 @@
+name: Corrigir cache aparelho TACS teste V1
+
+on:
+  push:
+    branches:
+      - fix/cache-aparelho-tacs-teste-v1
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Baixar branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/cache-aparelho-tacs-teste-v1
+          fetch-depth: 0
+      - name: Trocar somente o cache-bust autorizado
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('painel-oficial-recados-campanhas.html')
+          s=p.read_text(encoding='utf-8')
+          old='recados-campanhas-whatsapp-mensal-v12.js?v=20260817-recados-cards-mensais-v12'
+          new='recados-campanhas-whatsapp-mensal-v12.js?v=20260820-aparelho-tacs-teste-v1'
+          if s.count(old) != 1:
+              raise SystemExit(f'Esperada 1 ocorrência da URL antiga; encontradas {s.count(old)}.')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Remover rotina temporária e gravar correção
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/fix-cache-aparelho-tacs-teste-v1.yml
+          git add painel-oficial-recados-campanhas.html
+          git diff --cached --check
+          git commit -m "Atualizar cache do modo aparelho TACS teste"
+          git push origin HEAD:fix/cache-aparelho-tacs-teste-v1
