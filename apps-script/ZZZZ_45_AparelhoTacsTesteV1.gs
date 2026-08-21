@@ -181,7 +181,14 @@ function aparelhoTacsTesteV1TratarPost_(e){
       var atual=aparelhoTacsTesteV1RegistroDispositivo_(device,contexto.areaId),subAtual=atual&&atual.subscriptionId||sub;
       aparelhoTacsTesteV1SalvarDispositivo_(device,contexto.areaId,aparelhoTacsTesteV1Operador_(acesso,contexto),false,'',subAtual);
       resultado=aparelhoTacsTesteV1Estado_(device,subAtual,contexto,'');
-    }else resultado=aparelhoTacsTesteV1Estado_(device,sub,contexto,chave);
+    }else{
+      var precisaMigrar=Boolean(sub&&aparelhoTacsTesteV1LegacyAtivo_(sub,contexto.areaId)&&!aparelhoTacsTesteV1TokenValido_(device,contexto.areaId,chave));
+      if(precisaMigrar){
+        chave=aparelhoTacsTesteV1NovaChave_();
+        aparelhoTacsTesteV1SalvarDispositivo_(device,contexto.areaId,aparelhoTacsTesteV1Operador_(acesso,contexto),true,chave,sub);
+        resultado=aparelhoTacsTesteV1Estado_(device,sub,contexto,chave);resultado.chaveTecnica=chave;resultado.migradoLegado=true;
+      }else resultado=aparelhoTacsTesteV1Estado_(device,sub,contexto,chave);
+    }
   }catch(erro){resultado={ok:false,message:aparelhoTacsTesteV1Texto_(erro&&erro.message?erro.message:erro||'Erro inesperado.').slice(0,500)};}
   if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId))saudeNotificacoesV1GuardarResultado_(requestId,resultado);
   return saudeNotificacoesV1ResponderPost_(requestId,resultado);
@@ -207,9 +214,9 @@ function aparelhoTacsTesteV1FiltrarFamilia_(contexto,familia){var resultado=apar
 
 function aparelhoTacsTesteV1ConsultarFamilia_(p){
   p=p&&typeof p==='object'?p:{};var area=aparelhoTacsTesteV1Area_(p.areaId||p.area||''),device=aparelhoTacsTesteV1Dispositivo_(p.dispositivo||p.dispositivoTacs||p.deviceId),chave=aparelhoTacsTesteV1Chave_(p.chaveTacsTeste||p.chaveTecnica||''),sub=aparelhoTacsTesteV1Sub_(p.subscriptionId||p.subscription_id);
-  var autorizado=device&&aparelhoTacsTesteV1TokenValido_(device,area,chave);if(!autorizado)return aparelhoTacsTesteV1ConsultaFamiliaAnterior_(p);
-  if(sub)aparelhoTacsTesteV1AssociarSubscription_(device,area,chave,sub);
+  var tokenAutorizado=Boolean(device&&aparelhoTacsTesteV1TokenValido_(device,area,chave)),legadoAutorizado=Boolean(sub&&aparelhoTacsTesteV1LegacyAtivo_(sub,area)),autorizado=tokenAutorizado||legadoAutorizado;if(!autorizado)return aparelhoTacsTesteV1ConsultaFamiliaAnterior_(p);
+  if(tokenAutorizado&&sub)aparelhoTacsTesteV1AssociarSubscription_(device,area,chave,sub);
   var contexto=identificacaoFamiliarPublicaV1Contexto_(area),familia=identificacaoFamiliarPublicaV1NormalizarFamilia_(p.familia||p.familiaId||'');if(!familia)throw new Error('Informe um número de cadastro familiar válido.');
   var membros=identificacaoFamiliarPublicaV1Membros_(familia,contexto);if(!membros.length)return {ok:true,autorizada:false,requerConfirmacao:false,familiaId:familia,message:'Nenhum cadastro ativo desta família foi localizado na área atual.'};
-  return {ok:true,autorizada:true,requerConfirmacao:false,familiaId:familia,autorizacao:'APARELHO_TACS_TESTE',membros:membros,aparelhoTacsTeste:true};
+  return {ok:true,autorizada:true,requerConfirmacao:false,familiaId:familia,autorizacao:tokenAutorizado?'APARELHO_TACS_TESTE':'APARELHO_TACS_TESTE_LEGADO',membros:membros,aparelhoTacsTeste:true};
 }

@@ -47,6 +47,11 @@ const ok=sandbox.identificacaoFamiliarPublicaV1ConsultarFamilia_({areaId:'JAPARA
 assert.equal(ok.autorizada,true);
 assert.equal(ok.familiaId,'053');
 assert.equal(ok.autorizacao,'APARELHO_TACS_TESTE');
+sandbox.aparelhoTacsTesteV1TokenValido_=function(){return false};
+sandbox.aparelhoTacsTesteV1LegacyAtivo_=function(sub,area){return sub===SUB_TEST&&area==='JAPARANDUBA'};
+const legado=sandbox.identificacaoFamiliarPublicaV1ConsultarFamilia_({areaId:'JAPARANDUBA',familia:'53',subscriptionId:SUB_TEST});
+assert.equal(legado.autorizada,true,'Aparelho TACS/teste legado não pode voltar a pedir CPF/CNS.');
+assert.equal(legado.autorizacao,'APARELHO_TACS_TESTE_LEGADO');
 const protegido=sandbox.identificacaoFamiliarPublicaV1ConsultarFamilia_({areaId:'JAPARANDUBA',familia:'53',dispositivo:DEVICE_TEST});
 assert.equal(protegido.requerConfirmacao,true);
 assert.match(backend,/VERSAO:'1\.2\.0'/);
