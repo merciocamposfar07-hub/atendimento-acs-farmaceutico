@@ -8,3 +8,4 @@ canonical=tmp.read_text(encoding='utf-8')
 tmp.unlink(missing_ok=True)
 ns={'__file__':str(ROOT/'scripts/finalizar_modo_tacs_sem_push_v3_canonico.py'),'__name__':'__main__'}
 exec(compile(canonical,str(ROOT/'scripts/finalizar_modo_tacs_sem_push_v3_canonico.py'),'exec'),ns,ns)
+subprocess.run(['python3',str(ROOT/'scripts/restaurar_complemento_documental_tacs_v3.py')],check=True)
