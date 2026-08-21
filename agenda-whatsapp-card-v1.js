@@ -14,6 +14,7 @@ function loadImage(src){return new Promise(function(resolve,reject){var img=new 
 function fitFont(ctx,text,weight,start,min,maxWidth){var size=start;while(size>min){ctx.font=weight+' '+size+'px -apple-system,BlinkMacSystemFont,Arial';if(ctx.measureText(text).width<=maxWidth)return size;size--}ctx.font=weight+' '+min+'px -apple-system,BlinkMacSystemFont,Arial';return min}
 function drawPin(ctx,x,y){ctx.save();ctx.fillStyle='#72e3a4';ctx.beginPath();ctx.arc(x,y,15,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(x-10,y+10);ctx.lineTo(x,y+29);ctx.lineTo(x+10,y+10);ctx.closePath();ctx.fill();ctx.fillStyle='#073a55';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.restore()}
 
+
 function territory(){var i=window.PortalTacsTerritoryIdentity||{},p=new URLSearchParams(location.search||''),id=txt(i.areaId||p.get('area')||'JAPARANDUBA').toUpperCase(),area=txt(i.areaNome)||(id==='JAPARANDUBA'?'Sítio Japaranduba':id.replace(/_/g,' '));return{areaName:area,unitName:txt(i.unidadeNome)||'Unidade de Saúde',cityName:'Chã Grande - PE'}}
 function read(card){var t=territory(),summary=card.querySelector('summary'),title=summary&&summary.querySelector('h3');return{title:txt(title&&title.textContent)||field(card,'modulo')||'Agenda de atendimento',day:field(card,'dia'),date:field(card,'data'),time:field(card,'horario'),status:field(card,'situacao'),message:field(card,'mensagem'),common:Math.max(0,Number(field(card,'vagasComuns'))||0),emergency:Math.max(0,Number(field(card,'vagasEmergenciais'))||0),active:checked(card,'ativo'),extra:checked(card,'diaExtra'),areaName:t.areaName,unitName:t.unitName,cityName:t.cityName}}
 
@@ -28,14 +29,14 @@ function drawGroup(data){
   ctx.fillStyle=g;ctx.fillRect(0,0,1080,1920);
   ctx.globalAlpha=.10;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(950,240,290,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(120,1740,330,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
 
-  var badgeText='AGENDA COMPLETA DA UNIDADE',badgeX=70,badgeY=78,badgeW=650,badgeH=82;
-  ctx.fillStyle='#72e3a4';roundRect(ctx,badgeX,badgeY,badgeW,badgeH,41);ctx.fill();
-  ctx.fillStyle='#073a55';fitFont(ctx,badgeText,'900',32,27,badgeW-58);ctx.textAlign='center';ctx.fillText(badgeText,badgeX+badgeW/2,132);ctx.textAlign='left';
+  var badgeText='AGENDA COMPLETA DA UNIDADE',badgeX=54,badgeY=70,badgeW=790,badgeH=92;
+  ctx.fillStyle='#72e3a4';roundRect(ctx,badgeX,badgeY,badgeW,badgeH,46);ctx.fill();
+  ctx.fillStyle='#073a55';fitFont(ctx,badgeText,'900',36,31,badgeW-70);ctx.textAlign='center';ctx.fillText(badgeText,badgeX+badgeW/2,130);ctx.textAlign='left';
 
   ctx.fillStyle='#fff';ctx.font='900 64px -apple-system,BlinkMacSystemFont,Arial';
   var y=260;y=wrap(ctx,data.title,72,y,930,74,3)+25;
 
-  var days=data.days.slice(0,7),footerY=1540,startY=y,rowGap=16,availableHeight=Math.max(620,footerY-startY-26),rowH=Math.min(225,Math.max(148,Math.floor((availableHeight-rowGap*Math.max(0,days.length-1))/Math.max(1,days.length))));
+  var days=data.days.slice(0,7),footerY=1518,startY=y,rowGap=16,availableHeight=Math.max(620,footerY-startY-26),rowH=Math.min(225,Math.max(142,Math.floor((availableHeight-rowGap*Math.max(0,days.length-1))/Math.max(1,days.length))));
   days.forEach(function(day,index){
     var boxY=startY+index*(rowH+rowGap),compact=rowH<188;
     var titleOff=compact?40:48,metaOff=compact?72:88,statusOff=compact?104:124,countOff=compact?136:160;
@@ -49,19 +50,22 @@ function drawGroup(data){
     if(day.message&&rowH>=205){ctx.fillStyle='#536b78';ctx.font='700 23px -apple-system,BlinkMacSystemFont,Arial';wrap(ctx,day.message,105,boxY+194,820,28,1)}
   });
 
-  return loadImage(assetUrl('icons/portal-tacs-oficial-512.png')).then(function(logo){
-    var fx=54,fy=1548,fw=972,fh=306;
-    ctx.fillStyle='rgba(3,38,61,.94)';roundRect(ctx,fx,fy,fw,fh,34);ctx.fill();
-    ctx.strokeStyle='#38d88b';ctx.lineWidth=4;ctx.stroke();
+  return loadImage(assetUrl('icons/portal-tacs-oficial-card.jpg')).then(function(logo){
+    var fx=44,fy=1528,fw=992,fh=360;
+    ctx.fillStyle='rgba(3,38,61,.94)';roundRect(ctx,fx,fy,fw,fh,38);ctx.fill();
+    ctx.strokeStyle='#38d88b';ctx.lineWidth=5;ctx.stroke();
 
-    ctx.drawImage(logo,82,1582,222,222);
-    ctx.strokeStyle='rgba(114,227,164,.72)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(330,1580);ctx.lineTo(330,1824);ctx.stroke();
+    var logoH=286,logoW=Math.round(logoH*(logo.naturalWidth||logo.width)/(logo.naturalHeight||logo.height)),logoX=76,logoY=1565;
+    ctx.drawImage(logo,logoX,logoY,logoW,logoH);
+    var dividerX=logoX+logoW+34;
+    ctx.strokeStyle='rgba(114,227,164,.72)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(dividerX,1562);ctx.lineTo(dividerX,1851);ctx.stroke();
 
-    ctx.fillStyle='#72e3a4';ctx.font='900 48px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('PORTAL TACS',366,1628);
-    ctx.fillStyle='#fff';ctx.font='700 34px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.unitName,366,1681);
-    ctx.font='900 43px -apple-system,BlinkMacSystemFont,Arial';wrap(ctx,data.areaName,366,1734,585,50,2);
-    ctx.strokeStyle='rgba(114,227,164,.72)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(366,1777);ctx.lineTo(963,1777);ctx.stroke();
-    drawPin(ctx,382,1810);ctx.fillStyle='#fff';ctx.font='700 31px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.cityName||'Chã Grande - PE',416,1821);
+    var textX=dividerX+36;
+    ctx.fillStyle='#72e3a4';ctx.font='900 54px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('PORTAL TACS',textX,1619);
+    ctx.fillStyle='#fff';ctx.font='700 38px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.unitName,textX,1680);
+    ctx.font='900 48px -apple-system,BlinkMacSystemFont,Arial';wrap(ctx,data.areaName,textX,1743,980-textX,54,2);
+    ctx.strokeStyle='rgba(114,227,164,.72)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(textX,1794);ctx.lineTo(978,1794);ctx.stroke();
+    drawPin(ctx,textX+16,1829);ctx.fillStyle='#fff';ctx.font='700 34px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.cityName||'Chã Grande - PE',textX+50,1841);
     return c
   })
 }
