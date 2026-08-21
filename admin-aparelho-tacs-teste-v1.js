@@ -37,7 +37,6 @@
   }
   function subValido(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(txt(v).toLowerCase())}
   function requestId(){return 'ap_tacs_teste_'+Date.now()+'_'+Math.random().toString(36).slice(2,11)}
-  function esc(v){return txt(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 
   function estilo(){
     if(document.getElementById(STYLE_ID))return;
@@ -67,7 +66,7 @@
     if(!estado){st.textContent='Consultando o modo deste aparelho…';b.disabled=true;b.textContent='Aguarde…';b.dataset.active='0';return}
     var ativo=estado.aparelhoTacsTeste===true;
     st.textContent=txt(estado.message)||(ativo?'Aparelho em modo TACS / teste.':'Aparelho em modo normal.');
-    b.disabled=operando||estado.disponivel===false;
+    b.disabled=operando||(!ativo&&estado.disponivel===false);
     b.dataset.active=ativo?'1':'0';
     b.textContent=ativo?'Voltar este aparelho ao modo morador':'🛠 Marcar este aparelho como TACS / teste';
   }
