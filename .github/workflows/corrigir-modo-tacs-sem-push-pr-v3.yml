@@ -1,0 +1,176 @@
+name: Corrigir modo TACS por dispositivo V3
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/corrigir-modo-tacs-sem-push-v3-pr'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: corrigir-modo-tacs-device-v3-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  corrigir-testar-implantar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NO_COLOR: '1'
+    steps:
+      - name: Baixar branch da correção
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar correção segura V3
+        run: |
+          python3 scripts/corrigir_modo_tacs_sem_push_v3.py
+          python3 scripts/finalizar_modo_tacs_sem_push_v3.py
+
+      - name: Validar sintaxe e teste específico
+        run: |
+          node --check admin-aparelho-tacs-teste-v1.js
+          node --check portal-identificacao-familia-v1.js
+          node --check moradores-autofill.js
+          node --check --input-type=commonjs < apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs
+          node scripts/test_aparelho_tacs_teste_v1.js
+
+      - name: Testar toda a integração
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci
+          npm test
+
+      - name: Conferir escopo da alteração
+        run: |
+          git diff --check -- \
+            apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs \
+            admin-aparelho-tacs-teste-v1.js \
+            portal-identificacao-familia-v1.js \
+            moradores-autofill.js \
+            portal-auto-update.js \
+            recados-campanhas-whatsapp-mensal-v12.js \
+            painel-oficial-recados-campanhas.html \
+            index.html \
+            portal-version.json \
+            scripts/test_aparelho_tacs_teste_v1.js
+
+      - name: Validar credenciais de implantação
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar Apps Script real e montar módulos autorizados
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const config = JSON.parse(process.env.CLASP_JSON);
+          if (!config.scriptId || !/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId)) throw new Error('CLASP_JSON sem scriptId válido.');
+          config.rootDir = '.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR, '.clasp.json'), JSON.stringify(config, null, 2) + '\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+          cd "$GITHUB_WORKSPACE"
+          node scripts/build_apps_script_release.js "$LIVE_DIR"
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$LIVE_DIR" -type f \( -name '*.js' -o -name '*.gs' \) -print0)
+
+      - name: Implantar backend V1.2 com rollback
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          npx --yes @google/clasp@3.3.0 version "Backup antes do modo TACS por dispositivo - ${GITHUB_SHA::7}"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Modo TACS por dispositivo V1.2.0 - ${GITHUB_SHA::7}")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+          DEPLOYED=0
+          rollback() {
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático do modo TACS por dispositivo" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Modo TACS por dispositivo V1.2.0" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          ok=0
+          for tentativa in 1 2 3; do
+            manutencao=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=portal_manutencao_status&areaId=JAPARANDUBA") || true
+            familia=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=publico_familia_consultar&areaId=JAPARANDUBA&familia=053") || true
+            if printf '%s' "$manutencao" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' && printf '%s' "$familia" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
+              ok=1
+              break
+            fi
+            sleep 6
+          done
+          test "$ok" = '1'
+          trap - ERR
+          printf '%s\n' "$NEW_VERSION" > "$RUNNER_TEMP/tacs-new-version"
+
+      - name: Gravar arquivos validados na branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(cat "$RUNNER_TEMP/tacs-new-version")
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          printf 'DONE run=%s apps_script_version=%s completed_at=%s\n' "$GITHUB_RUN_ID" "$VERSION" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .github/corrigir-modo-tacs-sem-push-v3-pr-status
+          git add \
+            apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs \
+            admin-aparelho-tacs-teste-v1.js \
+            portal-identificacao-familia-v1.js \
+            moradores-autofill.js \
+            portal-auto-update.js \
+            recados-campanhas-whatsapp-mensal-v12.js \
+            painel-oficial-recados-campanhas.html \
+            index.html \
+            portal-version.json \
+            scripts/test_aparelho_tacs_teste_v1.js \
+            .github/corrigir-modo-tacs-sem-push-v3-pr-status
+          git commit -m 'Corrigir modo TACS por dispositivo sem depender do Push'
+          git push origin HEAD:${{ github.head_ref }}
+
+      - name: Remover credenciais temporárias
+        if: always()
+        run: rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/apps-script-live/.clasp.json"
