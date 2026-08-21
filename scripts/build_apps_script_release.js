@@ -140,6 +140,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_46_EstabilizacaoNotificacoesV8.gs',
     marker: 'TACS_ESTABILIZACAO_NOTIFICACOES_V8'
+  },
+  {
+    source: 'apps-script/ZZZZ_47_EstabilizacaoReparosV9.gs',
+    marker: 'TACS_ESTABILIZACAO_REPAROS_V9'
   }
 ];
 
