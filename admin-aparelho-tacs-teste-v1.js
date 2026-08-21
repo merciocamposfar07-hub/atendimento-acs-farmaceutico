@@ -4,8 +4,9 @@
   if(!/\/painel-oficial-recados-campanhas\.html$/.test(String(location.pathname||'')))return;
   if(window.PortalTacsAparelhoTesteAdminV1)return;window.PortalTacsAparelhoTesteAdminV1=true;
   var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+  var APP_ID='e2294b98-c72b-4f8c-a055-de28979676dc',SAFARI_ID='web.onesignal.auto.4bead971-106d-461b-853f-83aecbd62d40';
   var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1',TECH_TOKEN_PREFIX='portalTacsAparelhoTesteTokenV3:';
-  var BOX_ID='aparelhoTacsTesteV1Box',STYLE_ID='aparelhoTacsTesteV1Style',operando=false,ultimoEstado=null;
+  var BOX_ID='aparelhoTacsTesteV1Box',STYLE_ID='aparelhoTacsTesteV1Style',operando=false,ultimoEstado=null,oneSignalRef=null,oneSignalTentado=false;
   function txt(v){return String(v==null?'':v).trim()}
   function areaAtual(){var s=document.getElementById('areaEnvio'),a=txt(s&&s.value)||new URLSearchParams(location.search||'').get('area')||'JAPARANDUBA';return String(a).toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA'}
   function novoDevice(){var bytes=new Uint8Array(16),out='';if(window.crypto&&window.crypto.getRandomValues){window.crypto.getRandomValues(bytes);for(var i=0;i<bytes.length;i++)out+=('0'+bytes[i].toString(16)).slice(-2)}else out=Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);return'iphone-'+out}
@@ -13,7 +14,9 @@
   function tokenStorageKey(){return TECH_TOKEN_PREFIX+areaAtual()+':'+device()}
   function chaveTecnica(){try{return txt(localStorage.getItem(tokenStorageKey())||'')}catch(e){return''}}
   function salvarChave(v){try{if(v)localStorage.setItem(tokenStorageKey(),v);else localStorage.removeItem(tokenStorageKey())}catch(e){}}
-  function sessao(){var s={dispositivo:device(),areaId:areaAtual()},t=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',a=sessionStorage.getItem(TOKEN_KEY)||'';if(t)s.territorioToken=t;else if(a)s.token=a;var c=chaveTecnica();if(c)s.chaveTacsTeste=c;return s}
+  function subValido(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(txt(v).toLowerCase())}
+  function subscriptionId(){try{var p=oneSignalRef&&oneSignalRef.User&&oneSignalRef.User.PushSubscription,s=txt(p&&p.id).toLowerCase();return subValido(s)?s:''}catch(e){return''}}
+  function sessao(){var s={dispositivo:device(),areaId:areaAtual()},t=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',a=sessionStorage.getItem(TOKEN_KEY)||'';if(t)s.territorioToken=t;else if(a)s.token=a;var c=chaveTecnica(),sub=subscriptionId();if(c)s.chaveTacsTeste=c;if(sub)s.subscriptionId=sub;return s}
   function temSessao(){var s=sessao();return Boolean(s.territorioToken||s.token)}
   function requestId(){return'ap_tacs_device_'+Date.now()+'_'+Math.random().toString(36).slice(2,11)}
   function estilo(){if(document.getElementById(STYLE_ID))return;var s=document.createElement('style');s.id=STYLE_ID;s.textContent='#'+BOX_ID+'{margin:12px 0;padding:15px;border:2px solid #69c7e7;border-radius:17px;background:#eaf7fc;color:#073a55}#'+BOX_ID+' strong{display:block;font-size:1.08rem}#'+BOX_ID+' .apt-status{margin:7px 0 10px;font-weight:850;line-height:1.45}#'+BOX_ID+' .apt-help{margin:9px 0 0;color:#526d7b;font-size:.9rem;font-weight:750;line-height:1.45}#'+BOX_ID+' button{width:100%;min-height:54px;border:0;border-radius:15px;padding:12px 15px;background:#073a55;color:#fff;font-weight:950}#'+BOX_ID+' button[data-active="1"]{background:#607985}#'+BOX_ID+' button:disabled{opacity:.5;cursor:not-allowed}body.tema-petroleo #'+BOX_ID+'{background:#073a55;border-color:#69c7e7;color:#fff}body.tema-petroleo #'+BOX_ID+' .apt-help{color:#d8edf5}';document.head.appendChild(s)}
@@ -23,7 +26,25 @@
   function executar(modo){if(!temSessao())return Promise.reject(new Error('Entre no painel antes de configurar este aparelho.'));var id=requestId(),body=new URLSearchParams(),s=sessao();body.set('action','admin_notificacoes_aparelho_tacs_teste');body.set('requestId',id);body.set('modo',modo);Object.keys(s).forEach(function(k){body.set(k,s[k])});return fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){}).then(function(){return jsonpResultado(id,Date.now())})}
   function consultar(){if(operando)return;box();render(null);if(!temSessao()){render(null);return}executar('CONSULTAR').then(function(r){if(!r||r.ok!==true)throw new Error(txt(r&&r.message)||'Não foi possível consultar este aparelho.');if(r.chaveTecnica){salvarChave(r.chaveTecnica);r.autorizadoNesteAparelho=true}ultimoEstado=r;render(r)}).catch(function(e){render(ultimoEstado,e.message)})}
   function alternar(){if(operando)return;if(!ultimoEstado){consultar();return}var ativo=ultimoEstado.aparelhoTacsTeste===true&&ultimoEstado.autorizadoNesteAparelho===true,modo=ativo?'DESATIVAR':'ATIVAR',pergunta=ativo?'Voltar este aparelho ao modo morador?':'Ativar o modo TACS / teste neste aparelho? A autorização ficará vinculada a este navegador e a esta área.';if(!window.confirm(pergunta))return;operando=true;render(ultimoEstado);var b=box(),st=b&&b.querySelector('.apt-status');if(st)st.textContent=ativo?'Desativando o modo TACS / teste…':'Ativando e autorizando este aparelho…';executar(modo).then(function(r){if(!r||r.ok!==true)throw new Error(txt(r&&r.message)||'Não foi possível atualizar este aparelho.');if(modo==='ATIVAR'){if(!r.chaveTecnica)throw new Error('O servidor não devolveu a autorização técnica deste aparelho.');salvarChave(r.chaveTecnica);r.autorizadoNesteAparelho=true}else salvarChave('');ultimoEstado=r;operando=false;render(r);var atualizar=document.getElementById('atualizarSaudeNotificacoes');if(atualizar)setTimeout(function(){atualizar.click()},250)}).catch(function(e){operando=false;render(ultimoEstado,e.message)})}
-  function instalar(){box();consultar();var a=document.getElementById('areaEnvio');if(a)a.addEventListener('change',function(){ultimoEstado=null;setTimeout(consultar,150)});var sec=document.getElementById('saudeNotificacoes');if(sec&&typeof MutationObserver!=='undefined')new MutationObserver(function(){if(!sec.classList.contains('oculto'))setTimeout(consultar,100)}).observe(sec,{attributes:true,attributeFilter:['class']})}
+  function iniciarOneSignalOpcional(){
+    if(oneSignalTentado)return;oneSignalTentado=true;
+    window.OneSignalDeferred=window.OneSignalDeferred||[];
+    window.OneSignalDeferred.push(async function(OneSignal){
+      oneSignalRef=OneSignal;
+      try{
+        if(!window.__portalTacsAparelhoTesteOneSignalMigracaoV6){
+          window.__portalTacsAparelhoTesteOneSignalMigracaoV6=true;
+          await OneSignal.init({appId:APP_ID,safari_web_id:SAFARI_ID,serviceWorkerPath:'/atendimento-acs-farmaceutico/push/OneSignalSDKWorker.js',serviceWorkerParam:{scope:'/atendimento-acs-farmaceutico/push/'},autoResubscribe:true,notifyButton:{enable:false},allowLocalhostAsSecureOrigin:false});
+        }
+      }catch(e){}
+      setTimeout(consultar,120);
+      try{var push=OneSignal.User&&OneSignal.User.PushSubscription;if(push&&typeof push.addEventListener==='function')push.addEventListener('change',function(){setTimeout(consultar,120)})}catch(e){}
+    });
+    if(!document.querySelector('script[data-onesignal-sdk-migracao-tacs]')){
+      var sdk=document.createElement('script');sdk.src='https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';sdk.defer=true;sdk.dataset.onesignalSdkMigracaoTacs='1';document.head.appendChild(sdk);
+    }
+  }
+  function instalar(){box();consultar();iniciarOneSignalOpcional();var a=document.getElementById('areaEnvio');if(a)a.addEventListener('change',function(){ultimoEstado=null;setTimeout(consultar,150)});var sec=document.getElementById('saudeNotificacoes');if(sec&&typeof MutationObserver!=='undefined')new MutationObserver(function(){if(!sec.classList.contains('oculto'))setTimeout(consultar,100)}).observe(sec,{attributes:true,attributeFilter:['class']})}
   window.PortalTacsAparelhoTesteV3={deviceId:device,chave:chaveTecnica,consultar:consultar};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',instalar,{once:true});else instalar();
 }());

@@ -1,5 +1,5 @@
 {
-  "version": "modo-tacs-device-v5-20260821-1117",
-  "releasedAt": "2026-08-21T14:17:00Z",
-  "scope": "Reconhecimento do aparelho TACS/teste sem confirmação por CPF/CNS e atualização de cache no iPhone"
+  "version": "modo-tacs-device-v6-20260821-1136",
+  "releasedAt": "2026-08-21T14:36:00Z",
+  "scope": "Migração real do aparelho TACS/teste legado e espera curta da identificação técnica antes de pedir CPF/CNS"
 }
