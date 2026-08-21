@@ -5,14 +5,14 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: notificacoes-v8-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  simular-testar-e-preparar:
+  simular-e-testar:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -46,23 +46,20 @@ jobs:
           npm ci
           npm test 2>&1 | tee "$RUNNER_TEMP/npm-test.log"
 
-      - name: Conferir diff
+      - name: Conferir integridade do diff
         run: git diff --check
 
-      - name: Gravar arquivos somente após todos os testes
+      - name: Confirmar que arquivos de produção já estão na branch
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet; then
-            echo 'Arquivos já estão homologados nesta branch.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
+          git diff --exit-code -- \
+            apps-script/ZZZZ_46_EstabilizacaoNotificacoesV8.gs \
             scripts/build_apps_script_release.js \
             package.json \
             painel-oficial-recados-campanhas.html \
-            portal-version.json
-          git commit -m 'Estabilizar vínculos, Saúde e envio individual V8'
-          git push origin HEAD:${{ github.head_ref }}
+            portal-version.json \
+            scripts/test_estabilizacao_notificacoes_v8.js \
+            scripts/test_identificacao_familiar_publica_v1.js \
+            scripts/test_quality_gate_v101.js
+          echo 'Arquivos de produção e testes homologados já estão versionados.'
