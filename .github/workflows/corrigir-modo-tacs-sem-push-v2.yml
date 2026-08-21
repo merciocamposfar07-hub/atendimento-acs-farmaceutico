@@ -1,11 +1,9 @@
 name: Corrigir modo TACS sem Push V2
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/corrigir-modo-tacs-sem-push-v2'
   workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
 
 permissions:
   contents: write
@@ -15,25 +13,46 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  corrigir-e-validar:
+  corrigir-testar-implantar:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    env:
+      NO_COLOR: '1'
+      STATUS_FILE: '.github/corrigir-modo-tacs-sem-push-v2-status'
+
     steps:
       - name: Baixar repositório
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verificar se a correção ainda está pendente
+        id: pend
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "$STATUS_FILE" ] && grep -q '^DONE ' "$STATUS_FILE"; then
+            echo 'run=false' >> "$GITHUB_OUTPUT"
+            echo 'Correção já concluída anteriormente.'
+          else
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Preparar Node
+        if: steps.pend.outputs.run == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
 
       - name: Aplicar correção isolada
+        if: steps.pend.outputs.run == 'true'
         run: |
           python3 scripts/corrigir_modo_tacs_sem_push_v2.py
           python3 scripts/finalizar_modo_tacs_sem_push_v2.py
 
       - name: Validar sintaxe e teste específico
+        if: steps.pend.outputs.run == 'true'
         run: |
           node --check admin-aparelho-tacs-teste-v1.js
           node --check portal-identificacao-familia-v1.js
@@ -43,11 +62,15 @@ jobs:
           node scripts/test_aparelho_tacs_teste_v1.js
 
       - name: Testar toda a integração
+        if: steps.pend.outputs.run == 'true'
+        shell: bash
         run: |
+          set -o pipefail
           npm ci
-          npm test
+          npm test 2>&1 | tee "$RUNNER_TEMP/tacs-npm-test.log"
 
       - name: Conferir escopo da alteração
+        if: steps.pend.outputs.run == 'true'
         run: |
           git diff --check -- \
             apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs \
@@ -62,12 +85,102 @@ jobs:
             portal-version.json \
             scripts/test_aparelho_tacs_teste_v1.js
 
-      - name: Publicar correção validada no repositório
+      - name: Validar credenciais de implantação
+        if: steps.pend.outputs.run == 'true'
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar Apps Script real e montar somente módulos autorizados
+        if: steps.pend.outputs.run == 'true'
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const config = JSON.parse(process.env.CLASP_JSON);
+          if (!config.scriptId || !/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId)) {
+            throw new Error('CLASP_JSON não contém um scriptId válido.');
+          }
+          config.rootDir = '.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR, '.clasp.json'), JSON.stringify(config, null, 2) + '\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+          cd "$GITHUB_WORKSPACE"
+          node scripts/build_apps_script_release.js "$LIVE_DIR"
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$LIVE_DIR" -type f \( -name '*.js' -o -name '*.gs' \) -print0)
+
+      - name: Implantar backend corrigido com rollback automático
+        if: steps.pend.outputs.run == 'true'
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          npx --yes @google/clasp@3.3.0 version "Backup antes do modo TACS sem Push - ${GITHUB_SHA::7}"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Modo TACS sem Push V1.1.0 - ${GITHUB_SHA::7}")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+          DEPLOYED=0
+          rollback() {
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático do modo TACS sem Push" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Modo TACS sem Push V1.1.0" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          ok=0
+          for tentativa in 1 2 3; do
+            manutencao=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=portal_manutencao_status&areaId=JAPARANDUBA") || true
+            familia=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=publico_familia_consultar&areaId=JAPARANDUBA&familia=053") || true
+            if printf '%s' "$manutencao" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' && printf '%s' "$familia" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
+              ok=1
+              break
+            fi
+            sleep 6
+          done
+          test "$ok" = '1'
+          trap - ERR
+          printf '%s\n' "$NEW_VERSION" > "$RUNNER_TEMP/tacs-new-version"
+
+      - name: Publicar frontend e registrar sucesso
+        if: steps.pend.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
+          VERSION=$(cat "$RUNNER_TEMP/tacs-new-version")
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          printf 'DONE run=%s apps_script_version=%s commit_base=%s completed_at=%s\n' "$GITHUB_RUN_ID" "$VERSION" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$STATUS_FILE"
           git add \
             apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs \
             admin-aparelho-tacs-teste-v1.js \
@@ -79,10 +192,23 @@ jobs:
             painel-oficial-recados-campanhas.html \
             index.html \
             portal-version.json \
-            scripts/test_aparelho_tacs_teste_v1.js
-          if git diff --cached --quiet; then
-            echo 'Nenhuma alteração pendente.'
-            exit 0
-          fi
+            scripts/test_aparelho_tacs_teste_v1.js \
+            "$STATUS_FILE"
           git commit -m 'Corrigir modo TACS sem depender do Push'
           git push
+
+      - name: Registrar falha para diagnóstico
+        if: failure() && steps.pend.outputs.run == 'true'
+        shell: bash
+        run: |
+          set +e
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          printf 'FAILED run=%s commit_base=%s failed_at=%s\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$STATUS_FILE"
+          git add "$STATUS_FILE"
+          git commit -m 'Registrar falha da correção TACS sem Push' || true
+          git push || true
+
+      - name: Remover credenciais temporárias
+        if: always()
+        run: rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/apps-script-live/.clasp.json"
