@@ -1,5 +1,5 @@
 {
-  "version": "modo-tacs-device-v3-20260821-1021",
-  "releasedAt": "2026-08-21T13:21:00Z",
-  "scope": "Modo TACS/teste autorizado por dispositivo e busca familiar por número de cadastro"
+  "version": "modo-tacs-device-v5-20260821-1117",
+  "releasedAt": "2026-08-21T14:17:00Z",
+  "scope": "Reconhecimento do aparelho TACS/teste sem confirmação por CPF/CNS e atualização de cache no iPhone"
 }
