@@ -10,3 +10,4 @@ ns={'__file__':str(ROOT/'scripts/finalizar_modo_tacs_sem_push_v3_canonico.py'),'
 exec(compile(canonical,str(ROOT/'scripts/finalizar_modo_tacs_sem_push_v3_canonico.py'),'exec'),ns,ns)
 subprocess.run(['python3',str(ROOT/'scripts/restaurar_complemento_documental_tacs_v3.py')],check=True)
 subprocess.run(['python3',str(ROOT/'scripts/corrigir_reconhecimento_aparelho_tacs_v4.py')],check=True)
+subprocess.run(['python3',str(ROOT/'scripts/corrigir_cache_aparelho_tacs_v5.py')],check=True)
