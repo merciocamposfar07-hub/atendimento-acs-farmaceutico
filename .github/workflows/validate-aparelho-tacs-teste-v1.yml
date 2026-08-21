@@ -1,0 +1,25 @@
+name: Validar aparelho TACS teste V1
+
+on:
+  push:
+    branches:
+      - feature/aparelho-tacs-teste-v1
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Rodar suíte completa
+        run: npm test
