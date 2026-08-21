@@ -31,13 +31,16 @@ if extra not in cmd:
     data['scripts']['test']=cmd
     p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 
-# O carregador familiar já está na V7 em produção. O teste antigo ainda congelava
-# o cache-buster 20260820-v1; valida a existência de uma versão explícita, não um
-# valor histórico que não representa regra funcional.
+# Testes antigos não podem congelar números históricos de cache-buster.
 replace_once(
     Path('scripts/test_identificacao_familiar_publica_v1.js'),
     "assert.match(loader,/portal-identificacao-familia-v1\\.js\\?v=20260820-v1/);",
     "assert.match(loader,/portal-identificacao-familia-v1\\.js\\?v=[^\\\"']+/,'O carregador familiar precisa ter cache-buster explícito.');"
+)
+replace_once(
+    Path('scripts/test_quality_gate_v101.js'),
+    "registrar('usabilidade', 'Portal público mantém atualização sem recarga forçada', /portal-auto-update\\.js\\?v=202608(?:12-v101|21-tacs-device-v3)/.test(index));",
+    "registrar('usabilidade', 'Portal público mantém atualização sem recarga forçada', /portal-auto-update\\.js\\?v=[^\\\"']+/.test(index));"
 )
 
 panel=Path('painel-oficial-recados-campanhas.html')
