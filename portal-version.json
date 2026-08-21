@@ -1,5 +1,5 @@
 {
-  "version": "96e54cef0c88",
-  "releasedAt": "2026-08-21T13:16:12Z",
-  "scope": "Portal TACS e painéis administrativos"
+  "version": "modo-tacs-device-v3-20260821-1021",
+  "releasedAt": "2026-08-21T13:21:00Z",
+  "scope": "Modo TACS/teste autorizado por dispositivo e busca familiar por número de cadastro"
 }

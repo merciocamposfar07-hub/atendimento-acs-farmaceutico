@@ -495,6 +495,9 @@
         clearResidentFields();
         setLoadingStatus(status);
         timer = setTimeout(lookup, 350);
+      } else if (/^\d{2,4}$/.test(doc)) {
+        clearResidentFields();
+        setStatus(status, 'Número de cadastro familiar informado. Toque em Buscar esta família abaixo.', '');
       } else if (doc.length) {
         clearResidentFields();
         setStatus(status, 'Digite um CPF válido ou os 15 números do Cartão SUS (CNS).', 'invalid');
