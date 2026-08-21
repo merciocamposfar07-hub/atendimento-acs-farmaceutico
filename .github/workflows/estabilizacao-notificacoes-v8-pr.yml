@@ -1,0 +1,68 @@
+name: Homologar estabilização de notificações V8
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: notificacoes-v8-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  simular-testar-e-preparar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Baixar branch da correção
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar patch idempotente
+        run: python3 scripts/aplicar_estabilizacao_notificacoes_v8.py
+
+      - name: Validar sintaxe da camada crítica
+        run: |
+          node --check --input-type=commonjs < apps-script/ZZZZ_46_EstabilizacaoNotificacoesV8.gs
+          node --check scripts/test_estabilizacao_notificacoes_v8.js
+
+      - name: Simular paciente, Push, vínculo e envio individual
+        run: node scripts/test_estabilizacao_notificacoes_v8.js
+
+      - name: Rodar bateria completa do Portal TACS
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci
+          npm test 2>&1 | tee "$RUNNER_TEMP/npm-test.log"
+
+      - name: Conferir diff
+        run: git diff --check
+
+      - name: Gravar arquivos somente após todos os testes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Arquivos já estão homologados nesta branch.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            scripts/build_apps_script_release.js \
+            package.json \
+            painel-oficial-recados-campanhas.html \
+            portal-version.json
+          git commit -m 'Estabilizar vínculos, Saúde e envio individual V8'
+          git push origin HEAD:${{ github.head_ref }}
