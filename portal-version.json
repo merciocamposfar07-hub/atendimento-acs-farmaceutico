@@ -1,5 +1,5 @@
 {
-  "version": "modo-tacs-device-v6-20260821-1136",
-  "releasedAt": "2026-08-21T14:36:00Z",
-  "scope": "Migração real do aparelho TACS/teste legado e espera curta da identificação técnica antes de pedir CPF/CNS"
+  "version": "modo-tacs-handoff-v7-20260821-1148",
+  "releasedAt": "2026-08-21T14:48:00Z",
+  "scope": "Transferência segura do modo TACS/teste do painel para o contexto real do Portal no iPhone"
 }

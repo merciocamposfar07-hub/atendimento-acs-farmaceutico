@@ -164,16 +164,50 @@ function aparelhoTacsTesteV1Estado_(dispositivo,subscriptionId,contexto,chave){
   return {ok:true,areaId:area,dispositivoRef:device?device.slice(-10):'',subscriptionRef:(reg&&reg.subscriptionId||sub||'').slice(-8),disponivel:Boolean(device),aparelhoTacsTeste:ativo,autorizadoNesteAparelho:autorizado,recebeRecadosCampanhas:true,recebeMensagensIndividuaisFamiliares:false,message:ativo?(autorizado?'Modo TACS / teste ativo e autorizado neste aparelho. A busca pelo número do cadastro familiar está liberada.':'O modo TACS / teste está ativo no servidor, mas este navegador precisa renovar a autorização técnica.'):'Este aparelho pode ser marcado como TACS / teste sem depender das notificações Push.'};
 }
 
+function aparelhoTacsTesteV1HandoffCriar_(contexto,acesso){
+  var codigo=aparelhoTacsTesteV1NovaChave_(),area=aparelhoTacsTesteV1Area_(contexto&&contexto.areaId||''),operador=aparelhoTacsTesteV1Operador_(acesso,contexto);
+  if(!area)throw new Error('Área inválida para abrir o Portal em modo TACS / teste.');
+  var payload={areaId:area,operadorId:operador,criadoEm:Date.now()},key='TACS_TACS_TESTE_HANDOFF_'+aparelhoTacsTesteV1Hash_(codigo);
+  CacheService.getScriptCache().put(key,JSON.stringify(payload),600);
+  return codigo;
+}
+
+function aparelhoTacsTesteV1HandoffResgatar_(p){
+  p=p&&typeof p==='object'?p:{};
+  var codigo=aparelhoTacsTesteV1Chave_(p.codigo||p.handoff||p.codigoTransferencia||''),device=aparelhoTacsTesteV1Dispositivo_(p.dispositivo||p.deviceId),area=aparelhoTacsTesteV1Area_(p.areaId||p.area||'');
+  if(!codigo||!device||!area)throw new Error('A autorização temporária deste aparelho é inválida. Abra novamente pelo painel TACS.');
+  var cache=CacheService.getScriptCache(),key='TACS_TACS_TESTE_HANDOFF_'+aparelhoTacsTesteV1Hash_(codigo),raw=cache.get(key);
+  if(!raw)throw new Error('A autorização temporária expirou ou já foi utilizada. Abra novamente pelo painel TACS.');
+  var payload;try{payload=JSON.parse(raw)}catch(e){payload=null}
+  if(!payload||aparelhoTacsTesteV1Area_(payload.areaId)!==area)throw new Error('Esta autorização pertence a outra área.');
+  cache.remove(key);
+  var chave=aparelhoTacsTesteV1NovaChave_();
+  aparelhoTacsTesteV1SalvarDispositivo_(device,area,payload.operadorId||'TACS',true,chave,'');
+  var resultado=aparelhoTacsTesteV1Estado_(device,'',{areaId:area},chave);
+  resultado.ok=true;resultado.chaveTecnica=chave;resultado.transferidoParaPortal=true;
+  resultado.message='Modo TACS / teste autorizado neste Portal. A busca pelo cadastro familiar está liberada sem CPF/CNS.';
+  return resultado;
+}
+
+function aparelhoTacsTesteV1TratarResgate_(p){
+  var requestId=aparelhoTacsTesteV1Texto_(p&&p.requestId),resultado;
+  try{requestId=saudeNotificacoesV1ValidarRequestId_(requestId);resultado=aparelhoTacsTesteV1HandoffResgatar_(p);}catch(erro){resultado={ok:false,message:aparelhoTacsTesteV1Texto_(erro&&erro.message?erro.message:erro||'Erro inesperado.').slice(0,500)};}
+  if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId))saudeNotificacoesV1GuardarResultado_(requestId,resultado);
+  return saudeNotificacoesV1ResponderPost_(requestId,resultado);
+}
+
 function aparelhoTacsTesteV1TratarPost_(e){
-  var p=e&&e.parameter?e.parameter:{},action=aparelhoTacsTesteV1Texto_(p.action).toLowerCase();if(action!=='admin_notificacoes_aparelho_tacs_teste')return null;
+  var p=e&&e.parameter?e.parameter:{},action=aparelhoTacsTesteV1Texto_(p.action).toLowerCase();if(action==='publico_aparelho_tacs_resgatar')return aparelhoTacsTesteV1TratarResgate_(p);if(action!=='admin_notificacoes_aparelho_tacs_teste')return null;
   var requestId=aparelhoTacsTesteV1Texto_(p.requestId),resultado;
   try{
     requestId=saudeNotificacoesV1ValidarRequestId_(requestId);
     var acesso=tacsTerritorioV1ValidarAcesso_(p,false);saudeNotificacoesV1ExigirAcesso_(acesso);
     var contexto=moradoresAdminV1ResolverContexto_(acesso,p.areaId||p.area||''),device=aparelhoTacsTesteV1Dispositivo_(p.dispositivo||p.deviceId),sub=aparelhoTacsTesteV1Sub_(p.subscriptionId||p.subscription_id),modo=aparelhoTacsTesteV1Texto_(p.modo||'CONSULTAR').toUpperCase(),chave=aparelhoTacsTesteV1Chave_(p.chaveTacsTeste||p.chaveTecnica||'');
     if(!device)throw new Error('Este aparelho ainda não foi identificado pela Central TACS. Atualize a Central e tente novamente.');
-    if(['CONSULTAR','ATIVAR','DESATIVAR'].indexOf(modo)===-1)throw new Error('Modo do aparelho inválido.');
-    if(modo==='ATIVAR'){
+    if(['CONSULTAR','ATIVAR','DESATIVAR','TRANSFERIR'].indexOf(modo)===-1)throw new Error('Modo do aparelho inválido.');
+    if(modo==='TRANSFERIR'){
+      resultado={ok:true,areaId:contexto.areaId,codigoTransferencia:aparelhoTacsTesteV1HandoffCriar_(contexto,acesso),message:'Autorização temporária criada para abrir o Portal em modo TACS / teste.'};
+    }else if(modo==='ATIVAR'){
       chave=aparelhoTacsTesteV1NovaChave_();aparelhoTacsTesteV1SalvarDispositivo_(device,contexto.areaId,aparelhoTacsTesteV1Operador_(acesso,contexto),true,chave,sub);
       if(sub){aparelhoTacsTesteV1RemoverVinculoFamilia_(sub,contexto.areaId);aparelhoTacsTesteV1LimparMoradorRegistro_(sub,contexto.areaId);}
       resultado=aparelhoTacsTesteV1Estado_(device,sub,contexto,chave);resultado.chaveTecnica=chave;

@@ -41,7 +41,7 @@
     if(!/\/painel-oficial-recados-campanhas\.html$/.test(String(location.pathname||'')))return;
     if(window.PortalTacsAparelhoTesteAdminV1||document.querySelector('script[src*="admin-aparelho-tacs-teste-v1.js"]'))return;
     var s=document.createElement('script');
-    s.src='/atendimento-acs-farmaceutico/admin-aparelho-tacs-teste-v1.js?v=20260821-tacs-device-v6';
+    s.src='/atendimento-acs-farmaceutico/admin-aparelho-tacs-teste-v1.js?v=20260821-tacs-device-v7';
     s.async=true;
     document.head.appendChild(s);
   }catch(e){}

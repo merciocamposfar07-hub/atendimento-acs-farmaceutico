@@ -69,8 +69,26 @@ assert.match(admin,/Ativar modo TACS \/ teste/);
 assert.match(admin,/salvarChave\(r\.chaveTecnica\)/);
 assert.match(familyClient,/\^\\d\{2,4\}\$/);
 assert.match(familyClient,/chaveTacsTeste:technicalToken\(\)/);
-assert.match(familyClient,/dispositivo:deviceId\(\)/);
+assert.match(familyClient,/dispositivo:deviceId\(false\)/);
 assert.match(familyClient,/nome, nascimento e localidade/);
 assert.match(familyClient,/aguardarSubscription\(1800\)/);
-assert.match(loader,/admin-aparelho-tacs-teste-v1\.js\?v=20260821-tacs-device-v6/);
+assert.match(loader,/admin-aparelho-tacs-teste-v1\.js\?v=20260821-tacs-device-v7/);
+
+// Handoff V7: testa criação, resgate, uso único e isolamento por área.
+const handoffCache=new Map();
+sandbox.CacheService={getScriptCache:function(){return{put:function(k,v){handoffCache.set(k,v)},get:function(k){return handoffCache.get(k)||null},remove:function(k){handoffCache.delete(k)}}}};
+let seq=0;sandbox.aparelhoTacsTesteV1NovaChave_=function(){seq++;return ('handoffTOKEN'+String(seq).padStart(4,'0')+'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz').slice(0,64)};
+sandbox.aparelhoTacsTesteV1Hash_=function(v){return 'hash_'+String(v)};
+let salvo=null;sandbox.aparelhoTacsTesteV1SalvarDispositivo_=function(device,area,op,ativo,chave){salvo={device,area,op,ativo,chave};return{ativo:true}};
+sandbox.aparelhoTacsTesteV1Estado_=function(device,sub,ctx,chave){return{ok:true,areaId:ctx.areaId,aparelhoTacsTeste:true,autorizadoNesteAparelho:true,device,chaveRef:chave.slice(-4)}};
+const codigo=sandbox.aparelhoTacsTesteV1HandoffCriar_({areaId:'JAPARANDUBA'},{operadorId:'TACS_TESTE'});
+assert.ok(codigo.length>=40);
+const resgate=sandbox.aparelhoTacsTesteV1HandoffResgatar_({codigo,dispositivo:DEVICE_TEST,areaId:'JAPARANDUBA'});
+assert.equal(resgate.ok,true);assert.equal(resgate.transferidoParaPortal,true);assert.equal(salvo.device,DEVICE_TEST);assert.equal(salvo.area,'JAPARANDUBA');assert.equal(salvo.ativo,true);assert.ok(resgate.chaveTecnica.length>=40);
+assert.throws(()=>sandbox.aparelhoTacsTesteV1HandoffResgatar_({codigo,dispositivo:DEVICE_TEST,areaId:'JAPARANDUBA'}),/expirou|utilizada/,'Código TACS deve ser de uso único.');
+const codigoOutra=sandbox.aparelhoTacsTesteV1HandoffCriar_({areaId:'JAPARANDUBA'},{operadorId:'TACS_TESTE'});
+assert.throws(()=>sandbox.aparelhoTacsTesteV1HandoffResgatar_({codigo:codigoOutra,dispositivo:DEVICE_TEST,areaId:'MATIAS'}),/outra área/,'Handoff não pode atravessar área.');
+assert.match(backend,/publico_aparelho_tacs_resgatar/);assert.match(backend,/codigoTransferencia/);assert.match(admin,/Abrir Portal TACS em modo teste/);assert.match(admin,/TRANSFERIR/);assert.match(familyClient,/q\.get\('tacsTeste'\)/);assert.match(familyClient,/resgatarModoTacsTeste/);assert.match(familyClient,/publico_aparelho_tacs_resgatar/);assert.match(familyClient,/history\.replaceState/);assert.match(loader,/admin-aparelho-tacs-teste-v1\.js\?v=20260821-tacs-device-v7/);
+console.log('Handoff TACS V7 validado: código único, área isolada, Portal recebe autorização no próprio contexto do iPhone.');
+
 console.log('Modo TACS/teste V1.2 validado: autorização por dispositivo, sem dependência do Push, com fluxo comum protegido.');
