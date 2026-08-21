@@ -68,7 +68,16 @@ assert.match(familyClient,/dispositivo:deviceId\(\)/);
 assert.match(familyClient,/nome, nascimento e localidade/);
 assert.match(loader,/admin-aparelho-tacs-teste-v1\.js\?v=20260821-tacs-device-v3/);
 console.log('Modo TACS/teste V1.2 validado: autorização por dispositivo, sem dependência do Push, com fluxo comum protegido.');'''
-# A primeira linha foi escrita escapada apenas para manter este arquivo Python simples.
 TEST = TEST.replace("\\'use strict\\';", "'use strict';", 1)
 (ROOT/'scripts/test_aparelho_tacs_teste_v1.js').write_text(TEST.rstrip()+'\n',encoding='utf-8')
-print('Teste específico V3 finalizado.')
+
+# O teste de vínculo familiar deve validar o módulo carregado, não congelar o cache-buster antigo.
+p=ROOT/'scripts/test_vinculo_familiar_notificacoes_v1.js'
+text=p.read_text(encoding='utf-8')
+old="assert(INDEX_SOURCE.includes('moradores-autofill.js?v=20260820-familia-autofill-v112'));"
+new="assert(/moradores-autofill\\.js\\?v=202608(?:20-familia-autofill-v112|21-tacs-device-v3)/.test(INDEX_SOURCE));"
+if new not in text:
+    if old not in text:
+        raise SystemExit('test_vinculo_familiar_notificacoes_v1.js: asserção de cache esperada não encontrada')
+    p.write_text(text.replace(old,new,1),encoding='utf-8')
+print('Teste específico V3 e compatibilidade de cache finalizados.')
