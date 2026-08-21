@@ -1,12 +1,12 @@
 /**
- * Portal TACS — Seleção segura de integrante da família V1.0.0
+ * Portal TACS — Seleção segura de integrante da família V1.0.1
  *
  * Não expõe CPF/CNS na lista familiar. Cada integrante recebe um token opaco
  * temporário e o documento de acesso só é devolvido após a seleção daquele
  * integrante, com nova validação de área, família e situação ativa.
  */
 var TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1=Object.freeze({
-  VERSAO:'1.0.0',
+  VERSAO:'1.0.1',
   TOKEN_PREFIX:'tacs_familia_membro_v1_',
   TOKEN_SECONDS:900
 });
@@ -27,7 +27,7 @@ var selecaoMembroFamiliaPublicaV1DoGetAnterior_;
   }
 })();
 
-function identificacaoFamiliarPublicaV1Membros_(familia,contexto){
+function selecaoMembroFamiliaPublicaV1CriarLista_(familia,contexto){
   if(typeof buscaEnvioFamiliaV1BuscarExata_!=='function')throw new Error('A busca familiar ainda não está disponível.');
   var lista=buscaEnvioFamiliaV1BuscarExata_(familia,contexto).resultados||[],cache=CacheService.getScriptCache();
   return lista.map(function(item){
