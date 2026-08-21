@@ -1,5 +1,5 @@
 /**
- * Portal TACS — Identificação familiar pública e complemento documental V1.0.0
+ * Portal TACS — Identificação familiar pública e complemento documental V1.0.1
  *
  * Escopo isolado:
  * - permite consultar cadastro familiar na área pública atual usando 2/002, 34/034 etc.;
@@ -10,7 +10,7 @@
  * - registra auditoria e invalida somente o resumo de moradores da área.
  */
 var TACS_IDENTIFICACAO_FAMILIAR_PUBLICA_V1=Object.freeze({
-  VERSAO:'1.0.0',
+  VERSAO:'1.0.1',
   RESULT_PREFIX:'tacs_ident_familiar_publica_v1_',
   RESULT_SECONDS:300
 });
@@ -88,11 +88,8 @@ function identificacaoFamiliarPublicaV1CodigoMorador_(morador){
 }
 
 function identificacaoFamiliarPublicaV1Membros_(familia,contexto){
-  if(typeof buscaEnvioFamiliaV1BuscarExata_!=='function')throw new Error('A busca familiar ainda não está disponível.');
-  var lista=buscaEnvioFamiliaV1BuscarExata_(familia,contexto).resultados||[];
-  return lista.map(function(item){
-    return {nome:item.nome,nascimento:item.nascimento,endereco:item.endereco,localidade:item.endereco,areaId:contexto.areaId,areaNome:contexto.areaNome,status:'ATIVO',familiaId:familia};
-  });
+  if(typeof selecaoMembroFamiliaPublicaV1CriarLista_!=='function')throw new Error('A seleção segura dos integrantes ainda não está disponível.');
+  return selecaoMembroFamiliaPublicaV1CriarLista_(familia,contexto);
 }
 
 function identificacaoFamiliarPublicaV1AparelhoDaFamilia_(subscriptionId,contexto,familia){
