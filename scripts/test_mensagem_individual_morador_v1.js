@@ -21,11 +21,29 @@ new vm.Script(frontend,{filename:'mensagem-individual-morador-v1.js'});
 new vm.Script(familyFrontend,{filename:'mensagem-familia-v1.js'});
 new vm.Script(integration,{filename:'mensagem-individual-morador-integracao-v1.js'});
 
+const individualSandbox={console};
+vm.createContext(individualSandbox);
+new vm.Script(backend,{filename:'ZZZZ_40_MensagensIndividuaisMoradorV1.gs'}).runInContext(individualSandbox);
+assert.equal(individualSandbox.mensagemIndividualV1NormalizarFamilia_('64'),'064','Família 64 deve ser normalizada para 064.');
+assert.equal(individualSandbox.mensagemIndividualV1NormalizarFamilia_('064'),'064','Família 064 deve permanecer 064.');
+assert.equal(individualSandbox.mensagemIndividualV1FamiliasIguais_('64','064'),true,'64 e 064 devem representar a mesma família.');
+assert.equal(individualSandbox.mensagemIndividualV1FamiliasIguais_('64','065'),false,'Famílias diferentes não podem ser aproximadas.');
+individualSandbox.vinculoFamiliarNotifV1CodigoEndereco_=()=> '64';
+assert.equal(individualSandbox.mensagemIndividualV1FamiliaMorador_({endereco:'Sítio Japaranduba, 64. Zona Rural'}),'064','O código familiar lido do endereço deve ser canônico antes do envio.');
+const mapaLegado=individualSandbox.mensagemIndividualV1MapaFamilias_({
+  getSheetByName:()=>({
+    getLastRow:()=>2,
+    getLastColumn:()=>8,
+    getRange:()=>({getDisplayValues:()=>[['sub-64','JAPARANDUBA','64','','','','','']]})
+  })
+},'JAPARANDUBA');
+assert.equal(mapaLegado['sub-64'],'064','Vínculo antigo gravado como 64 deve ser lido como 064 sem reescrever a planilha.');
+
 assert.match(backend,/admin_mensagem_individual_buscar/);
 assert.match(backend,/admin_mensagem_individual_enviar/);
 assert.match(backend,/admin_mensagem_individual_status/);
 assert.match(backend,/TACS_NOTIFICACOES_FAMILIAS|TACS_VINCULO_FAMILIAR_NOTIF_V1/);
-assert.match(backend,/mapa\[id\]!==morador\.familiaId/,'O destinatário individual precisa continuar filtrado pela família vinculada no servidor.');
+assert.match(backend,/mensagemIndividualV1FamiliasIguais_\(mapa\[id\],morador\.familiaId\)/,'O destinatário individual precisa comparar famílias normalizadas no servidor.');
 assert.match(backend,/notificacoesAreaV1PrepararComprovantes_/);
 assert.match(backend,/notificacoesAreaV1AplicarRespostasEnvio_/);
 assert.match(backend,/RECEIPT_SHEET/);
@@ -160,4 +178,4 @@ assert.equal(alvos.length,2,'Família 012 deve receber uma vez por aparelho vinc
 assert.deepEqual(Array.from(alvos,a=>a.subscriptionId),['sub-a','sub-b']);
 assert.ok(alvos.every(a=>a.idPortal==='FAMILIA_012'));
 
-console.log('Mensagem individual + busca/envio familiar V1: família exata, deduplicação e isolamento validados.');
+console.log('Mensagem individual + busca/envio familiar V1: família exata, 64/064 equivalentes, deduplicação e isolamento validados.');
