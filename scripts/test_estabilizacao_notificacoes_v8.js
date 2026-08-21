@@ -26,8 +26,6 @@ const sandbox={
   vinculoFamiliarNotifV1ReconciliarReferencia_:v=>v,
   vinculoFamiliarNotifV1Decidir_:(v,m)=>{if(!m)return{acao:'NADA'};if(!v)return{acao:'VINCULAR'};return{acao:v.familiaId===m.familiaId?'MESMA_FAMILIA':'OUTRA_FAMILIA'}},
   vinculoFamiliarNotifV1Gravar_:(sub,area,m,origem)=>{const v={subscriptionId:sub,areaId:area,familiaId:m.familiaId,idPortal:m.idPortal,nome:m.nome,origem};gravacoes.push(v);return v},
-  notificacoesV8ResolverVinculoPorOneSignal_:()=>null,
-  notificacoesV8VincularRegistroSaude_:(sub,area,id)=>{registroVinculado=id;return true},
   CacheService:{getScriptCache:()=>({get:k=>cache.get(k)||null,put:(k,v)=>cache.set(k,v)})},
   LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{}})},
   tacsTerritorioV1Planilha_:()=>({getSheetByName:()=>null}),
@@ -46,6 +44,9 @@ const sandbox={
   TACS_SAUDE_NOTIFICACOES_V1:{REGISTRY_SHEET:'TACS_NOTIFICACOES_DISPOSITIVOS'}
 };
 vm.createContext(sandbox);new vm.Script(source).runInContext(sandbox);
+// As funções V8 são definidas pelo próprio módulo; os stubs de I/O entram depois da carga.
+sandbox.notificacoesV8ResolverVinculoPorOneSignal_=()=>null;
+sandbox.notificacoesV8VincularRegistroSaude_=(sub,area,id)=>{registroVinculado=id;return true};
 
 // 1) Primeiro acesso de Cristina: o CPF deve chegar à camada de Saúde e o vínculo familiar deve ser criado.
 const first=sandbox.vinculoFamiliarNotifV1Checkin_({subscriptionId:SUB,areaId:AREA,documento:'12345678901',permission:'true'});
