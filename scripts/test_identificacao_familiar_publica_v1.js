@@ -34,8 +34,8 @@ assert.match(backend,/moradoresAdminV1InvalidarResumo_/);
 
 assert.match(selection,/TOKEN_SECONDS:900/);
 assert.match(selection,/publico_familia_membro/);
-assert.match(selection,/token:token,nome:item\.nome,nascimento:item\.nascimento,temDocumento/,'A lista familiar deve devolver token, nome e nascimento, sem documento completo.');
-assert.doesNotMatch(selection,/return \{token:token[^\n]*cpf|return \{token:token[^\n]*cns/i,'CPF/CNS não podem aparecer na lista de integrantes.');
+assert.match(selection,/return \{token:token,nome:item\.nome,nascimento:item\.nascimento,temDocumento:/,'A lista familiar deve devolver token, nome e nascimento.');
+assert.doesNotMatch(selection,/return \{token:token[^\n]*(?:cpf:|cns:)/i,'CPF/CNS não podem ser campos da lista de integrantes.');
 assert.match(selection,/documentoAcesso:documento/,'Documento só pode ser liberado após selecionar o integrante pelo token temporário.');
 assert.match(selection,/CodigoMorador_\(registro\.morador\)!==familia/,'Seleção deve revalidar a família antes de liberar o integrante.');
 
@@ -49,6 +49,7 @@ assert.match(frontend,/Salvar .* neste cadastro/);
 assert.match(frontend,/O Portal só preenche campo vazio/);
 assert.match(frontend,/documentoLocalizador/);
 assert.match(frontend,/documentoNovo/);
+assert.match(frontend,/pendingMissing=''[^;]*;pendingType=''/,'Ao entrar no fluxo familiar, documento não localizado anterior não pode ser reaproveitado em outro integrante.');
 assert.match(frontend,/OneSignalDeferred/,'A consulta pode aproveitar o vínculo familiar do aparelho sem alterar o Push.');
 
 assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260820-v1/);
