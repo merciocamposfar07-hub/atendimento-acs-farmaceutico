@@ -1,0 +1,74 @@
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+TEST = r'''\'use strict\';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+const ROOT=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
+const backend=read('apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs');
+const admin=read('admin-aparelho-tacs-teste-v1.js');
+const familyClient=read('portal-identificacao-familia-v1.js');
+const loader=read('recados-campanhas-whatsapp-mensal-v12.js');
+const geral=read('apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs');
+new vm.Script(backend,{filename:'ZZZZ_45_AparelhoTacsTesteV1.gs'});
+new vm.Script(admin,{filename:'admin-aparelho-tacs-teste-v1.js'});
+new vm.Script(familyClient,{filename:'portal-identificacao-familia-v1.js'});
+const SUB_TEST='11111111-1111-4111-8111-11111111aaaa';
+const SUB_NORMAL='22222222-2222-4222-8222-22222222bbbb';
+const DEVICE_TEST='iphone-0123456789abcdef0123456789abcdef';
+const TOKEN_TEST='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN0123456789_abcd';
+let generalTargetSentinel=function(){return 'GERAL_INTACTO'};
+const sandbox={
+  console,
+  doPost:function(){return 'POST_ANTERIOR'},
+  saudeNotificacoesV1CheckinPublico_:function(p){return {ok:true,recebido:p}},
+  saudeNotificacoesV1SaudeAdmin_:function(){return {ok:true,contagens:{},aparelhos:[]}},
+  mensagemIndividualV1Alvos_:function(){return [{subscriptionId:SUB_TEST},{subscriptionId:SUB_NORMAL}]},
+  buscaEnvioFamiliaV1Alvos_:function(){return {alvos:[{subscriptionId:SUB_TEST},{subscriptionId:SUB_NORMAL}]}},
+  identificacaoFamiliarPublicaV1ConsultarFamilia_:function(){return {ok:true,autorizada:false,requerConfirmacao:true}},
+  moradoresAdminV1NormalizarAreaId_:function(v){return String(v||'').toUpperCase()},
+  notificacoesAreaV1AlvosAtivos_:generalTargetSentinel,
+  Object
+};
+vm.createContext(sandbox);
+new vm.Script(backend).runInContext(sandbox);
+sandbox.aparelhoTacsTesteV1MapaAtivos_=function(){return {[SUB_TEST]:true}};
+sandbox.aparelhoTacsTesteV1TokenValido_=function(device,area,token){return device===DEVICE_TEST&&area==='JAPARANDUBA'&&token===TOKEN_TEST};
+sandbox.aparelhoTacsTesteV1AssociarSubscription_=function(){return true};
+sandbox.identificacaoFamiliarPublicaV1Contexto_=function(area){return {areaId:area}};
+sandbox.identificacaoFamiliarPublicaV1NormalizarFamilia_=function(v){return String(v)==='53'?'053':String(v)};
+sandbox.identificacaoFamiliarPublicaV1Membros_=function(f){return f==='053'?[{token:'x',nome:'MORADOR',temDocumento:true}]:[]};
+const individual=Array.from(sandbox.mensagemIndividualV1Alvos_('app','key',{areaId:'JAPARANDUBA'},{}));
+assert.deepEqual(individual.map(x=>x.subscriptionId),[SUB_NORMAL]);
+const familiar=sandbox.buscaEnvioFamiliaV1Alvos_({areaId:'JAPARANDUBA'},'053');
+assert.deepEqual(Array.from(familiar.alvos).map(x=>x.subscriptionId),[SUB_NORMAL]);
+assert.equal(sandbox.notificacoesAreaV1AlvosAtivos_,generalTargetSentinel);
+const ok=sandbox.identificacaoFamiliarPublicaV1ConsultarFamilia_({areaId:'JAPARANDUBA',familia:'53',dispositivo:DEVICE_TEST,chaveTacsTeste:TOKEN_TEST,subscriptionId:SUB_TEST});
+assert.equal(ok.autorizada,true);
+assert.equal(ok.familiaId,'053');
+assert.equal(ok.autorizacao,'APARELHO_TACS_TESTE');
+const protegido=sandbox.identificacaoFamiliarPublicaV1ConsultarFamilia_({areaId:'JAPARANDUBA',familia:'53',dispositivo:DEVICE_TEST});
+assert.equal(protegido.requerConfirmacao,true);
+assert.match(backend,/VERSAO:'1\.2\.0'/);
+assert.match(backend,/CHAVE_HASH/);
+assert.match(backend,/computeDigest/);
+assert.match(backend,/chaveTacsTeste/);
+assert.doesNotMatch(backend,/notificacoesAreaV1AlvosAtivos_\s*=/);
+assert.match(geral,/notificacoesAreaV1AlvosAtivos_/);
+assert.match(admin,/portalTacsAparelhoTesteTokenV3:/);
+assert.match(admin,/admin_notificacoes_aparelho_tacs_teste/);
+assert.doesNotMatch(admin,/OneSignal/);
+assert.match(admin,/Ativar modo TACS \/ teste/);
+assert.match(familyClient,/\^\\d\{2,4\}\$/);
+assert.match(familyClient,/chaveTacsTeste:technicalToken\(\)/);
+assert.match(familyClient,/dispositivo:deviceId\(\)/);
+assert.match(familyClient,/nome, nascimento e localidade/);
+assert.match(loader,/admin-aparelho-tacs-teste-v1\.js\?v=20260821-tacs-device-v3/);
+console.log('Modo TACS/teste V1.2 validado: autorização por dispositivo, sem dependência do Push, com fluxo comum protegido.');'''
+# A primeira linha foi escrita escapada apenas para manter este arquivo Python simples.
+TEST = TEST.replace("\\'use strict\\';", "'use strict';", 1)
+(ROOT/'scripts/test_aparelho_tacs_teste_v1.js').write_text(TEST.rstrip()+'\n',encoding='utf-8')
+print('Teste específico V3 finalizado.')
