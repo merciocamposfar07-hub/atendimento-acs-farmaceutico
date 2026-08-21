@@ -1,5 +1,5 @@
 {
-  "version": "reparos-estabilizados-v9-20260821-1536",
-  "releasedAt": "2026-08-21T18:36:00Z",
-  "scope": "Watchdog de reparos, retomada de ciclos travados e distinção entre aguardando Portal e ação do morador"
+  "version": "fbc144017692",
+  "releasedAt": "2026-08-21T18:45:30Z",
+  "scope": "Portal TACS e painéis administrativos"
 }
