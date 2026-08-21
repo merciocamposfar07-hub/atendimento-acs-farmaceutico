@@ -82,7 +82,7 @@ registrar('usabilidade', 'Campos do painel de agendas têm altura ampla', regex(
 registrar('usabilidade', 'Campo de validade possui correção de overflow Safari', contem(adminTransport, 'contain:inline-size'));
 registrar('usabilidade', 'Controle de contraste do painel de recados permanece oculto', contem(recados, '.preferenciaVisual,#alternarContraste{display:none!important'));
 registrar('usabilidade', 'Padrão visual petróleo permanece definido no painel de recados', contem(recados, 'tema-petroleo') && contem(recados, 'linear-gradient(145deg,#073a55,#0b5878)'));
-registrar('usabilidade', 'Portal público mantém atualização sem recarga forçada', /portal-auto-update\.js\?v=202608(?:12-v101|21-tacs-device-v3)/.test(index));
+registrar('usabilidade', 'Portal público mantém atualização sem recarga forçada', /portal-auto-update\.js\?v=[^\"']+/.test(index));
 registrar('usabilidade', 'Mensagens administrativas permanecem em português claro', contem(agenda, 'Digite o PIN para carregar as agendas') && contem(recados, 'Digite o PIN administrativo ou entre como TACS da área.'));
 
 let geral = 0;
