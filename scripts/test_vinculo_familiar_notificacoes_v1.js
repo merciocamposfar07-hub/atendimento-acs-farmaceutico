@@ -189,5 +189,5 @@ assert(AUTOFILL_SOURCE.includes("notice.id = 'familyAutofillNotice'"));
 assert(!NOTIFICATION_FRONT_SOURCE.includes('familyDeviceNotice'));
 assert(!NOTIFICATION_FRONT_SOURCE.includes('showFamilyContext'));
 assert(INDEX_SOURCE.includes('portal-notification-health.js?v=20260820-notif-only-v107'));
-assert(INDEX_SOURCE.includes('moradores-autofill.js?v=20260820-familia-autofill-v112'));
+assert(/moradores-autofill\.js\?v=202608(?:20-familia-autofill-v112|21-tacs-device-v3)/.test(INDEX_SOURCE));
 console.log('VERIFICACAO_FAMILIA_AUTOFILL_V1_TESTS_OK');
