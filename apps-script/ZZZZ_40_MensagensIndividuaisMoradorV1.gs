@@ -1,5 +1,5 @@
 /**
- * Portal TACS — Mensagens individuais para moradores V1.0.0
+ * Portal TACS — Mensagens individuais para moradores V1.0.1
  *
  * Camada isolada. Não altera o emissor geral de recados/campanhas.
  * Fluxo: morador selecionado -> família do cadastro -> aparelhos Push ativos
@@ -7,7 +7,7 @@
  * exibição, abertura e confirmação.
  */
 var TACS_MENSAGEM_INDIVIDUAL_V1=Object.freeze({
-  VERSAO:'1.0.0',
+  VERSAO:'1.0.1',
   RESULT_PREFIX:'tacs_msg_individual_v1_result_',
   RESULT_SECONDS:300,
   TIPOS:Object.freeze(['CONFIRMAR_ATENDIMENTO','ALTERAR_DATA','LEMBRETE','CANCELAMENTO','OUTRA_MENSAGEM'])
@@ -74,9 +74,15 @@ function mensagemIndividualV1NormalizarFamilia_(valor){
   return numero+(m[2]||'');
 }
 
+function mensagemIndividualV1FamiliasIguais_(a,b){
+  var familiaA=mensagemIndividualV1NormalizarFamilia_(a);
+  var familiaB=mensagemIndividualV1NormalizarFamilia_(b);
+  return Boolean(familiaA&&familiaB&&familiaA===familiaB);
+}
+
 function mensagemIndividualV1FamiliaMorador_(morador){
   if(typeof vinculoFamiliarNotifV1CodigoEndereco_!=='function')throw new Error('A identificação familiar ainda não está disponível.');
-  return mensagemIndividualV1Texto_(vinculoFamiliarNotifV1CodigoEndereco_(morador&&morador.endereco||'')).toUpperCase();
+  return mensagemIndividualV1NormalizarFamilia_(vinculoFamiliarNotifV1CodigoEndereco_(morador&&morador.endereco||''));
 }
 
 function mensagemIndividualV1Buscar_(p,contexto){
@@ -86,7 +92,7 @@ function mensagemIndividualV1Buscar_(p,contexto){
   var base=moradoresAdminV1Buscar_(familia||q,contexto);
   var resultados=Array.isArray(base&&base.resultados)?base.resultados:[];
   if(familia){
-    resultados=resultados.filter(function(item){return mensagemIndividualV1FamiliaMorador_(item)===familia;});
+    resultados=resultados.filter(function(item){return mensagemIndividualV1FamiliasIguais_(mensagemIndividualV1FamiliaMorador_(item),familia);});
   }
   resultados=resultados.map(function(item){
     var copia={};Object.keys(item||{}).forEach(function(k){copia[k]=item[k];});
@@ -119,7 +125,7 @@ function mensagemIndividualV1MapaFamilias_(ss,areaId){
   var mapa={},nome=(typeof TACS_VINCULO_FAMILIAR_NOTIF_V1!=='undefined'&&TACS_VINCULO_FAMILIAR_NOTIF_V1.SHEET)||'TACS_NOTIFICACOES_FAMILIAS';
   var sheet=ss.getSheetByName(nome);if(!sheet||sheet.getLastRow()<=1)return mapa;
   sheet.getRange(2,1,sheet.getLastRow()-1,Math.min(sheet.getLastColumn(),8)).getDisplayValues().forEach(function(row){
-    var sub=mensagemIndividualV1Texto_(row[0]).toLowerCase(),area=mensagemIndividualV1Texto_(row[1]).toUpperCase(),familia=mensagemIndividualV1Texto_(row[2]).toUpperCase();
+    var sub=mensagemIndividualV1Texto_(row[0]).toLowerCase(),area=mensagemIndividualV1Texto_(row[1]).toUpperCase(),familia=mensagemIndividualV1NormalizarFamilia_(row[2]);
     if(sub&&area===mensagemIndividualV1Texto_(areaId).toUpperCase()&&familia)mapa[sub]=familia;
   });
   return mapa;
@@ -130,7 +136,7 @@ function mensagemIndividualV1Alvos_(appId,apiKey,contexto,morador){
   var ss=tacsTerritorioV1Planilha_(),mapa=mensagemIndividualV1MapaFamilias_(ss,contexto.areaId),vistos={};
   return todos.filter(function(alvo){
     var id=mensagemIndividualV1Texto_(alvo&&alvo.subscriptionId).toLowerCase();
-    if(!id||vistos[id]||mapa[id]!==morador.familiaId)return false;
+    if(!id||vistos[id]||!mensagemIndividualV1FamiliasIguais_(mapa[id],morador.familiaId))return false;
     vistos[id]=true;return true;
   }).map(function(alvo){
     return {subscriptionId:alvo.subscriptionId,idPortal:morador.referencia,tipoAparelho:alvo.tipoAparelho,navegador:alvo.navegador,sistema:alvo.sistema};
