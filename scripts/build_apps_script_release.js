@@ -124,6 +124,14 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs',
     marker: 'TACS_COMPROVACAO_MENSAGENS_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_43_IdentificacaoFamiliarPublicaV1.gs',
+    marker: 'TACS_IDENTIFICACAO_FAMILIAR_PUBLICA_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_44_SelecaoMembroFamiliaPublicaV1.gs',
+    marker: 'TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1'
   }
 ];
 

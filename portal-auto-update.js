@@ -196,6 +196,15 @@
     }
   }
 
+  function loadFamilyIdentification(){
+    if(isAdminPage()||document.getElementById('portalTacsIdentificacaoFamiliaScriptV1'))return;
+    var script=document.createElement('script');
+    script.id='portalTacsIdentificacaoFamiliaScriptV1';
+    script.async=true;
+    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260820-v1';
+    (document.head||document.documentElement).appendChild(script);
+  }
+
   window.PortalTacsAtualizacao={
     instalarUI:installUI,
     verificar:function(force){return fetchVersion(!!force)},
@@ -208,8 +217,10 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installUI,{once:true});
   else installUI();
   installTerritorialIdentityGuard();
+  loadFamilyIdentification();
   fetchVersion(true);
   window.addEventListener('pageshow',function(){installUI();installTerritorialIdentityGuard();fetchVersion(false)});
+  window.addEventListener('pageshow',loadFamilyIdentification);
   window.addEventListener('online',function(){wakeConnection();fetchVersion(true)});
   document.addEventListener('visibilitychange',onVisible);
 }());
