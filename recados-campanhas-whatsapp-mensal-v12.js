@@ -33,6 +33,20 @@
   }catch(e){}
 }());
 
+/* APARELHO TACS / TESTE V1
+   Carrega somente no painel oficial e não altera o fluxo de Recados/Campanhas. */
+(function garantirAparelhoTacsTesteV1(){
+  try{
+    if(typeof document==='undefined'||typeof location==='undefined')return;
+    if(!/\/painel-oficial-recados-campanhas\.html$/.test(String(location.pathname||'')))return;
+    if(window.PortalTacsAparelhoTesteAdminV1||document.querySelector('script[src*="admin-aparelho-tacs-teste-v1.js"]'))return;
+    var s=document.createElement('script');
+    s.src='/atendimento-acs-farmaceutico/admin-aparelho-tacs-teste-v1.js?v=20260820-v1';
+    s.async=true;
+    document.head.appendChild(s);
+  }catch(e){}
+}());
+
 if(window.PortalTacsCampanhasMensaisWhatsAppV12)return;
 window.PortalTacsCampanhasMensaisWhatsAppV12=true;
 var rendering=false,timer=null;

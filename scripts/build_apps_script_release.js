@@ -132,6 +132,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_44_SelecaoMembroFamiliaPublicaV1.gs',
     marker: 'TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs',
+    marker: 'TACS_APARELHO_TACS_TESTE_V1'
   }
 ];
 
