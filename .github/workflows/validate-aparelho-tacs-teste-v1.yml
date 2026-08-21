@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - feature/aparelho-tacs-teste-v1
+    paths-ignore:
+      - .github/aparelho-tacs-teste-validation-status
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validar:
@@ -22,4 +24,20 @@ jobs:
       - name: Instalar dependências
         run: npm ci
       - name: Rodar suíte completa
+        id: testes
+        continue-on-error: true
         run: npm test
+      - name: Registrar resultado verificável
+        if: always()
+        env:
+          TEST_OUTCOME: ${{ steps.testes.outcome }}
+        run: |
+          printf 'head_sha=%s\nconclusion=%s\nrecorded_at=%s\n' "$GITHUB_SHA" "$TEST_OUTCOME" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .github/aparelho-tacs-teste-validation-status
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- .github/aparelho-tacs-teste-validation-status
+          git commit -m 'Registra validação do aparelho TACS teste' || exit 0
+          git push
+      - name: Falhar se a suíte falhou
+        if: steps.testes.outcome != 'success'
+        run: exit 1
