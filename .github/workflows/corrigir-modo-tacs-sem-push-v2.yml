@@ -2,6 +2,10 @@ name: Corrigir modo TACS sem Push V2
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/corrigir-modo-tacs-sem-push-v2-run'
   schedule:
     - cron: '*/5 * * * *'
 
@@ -142,7 +146,7 @@ jobs:
           test -n "$PREVIOUS_VERSION"
           npx --yes @google/clasp@3.3.0 version "Backup antes do modo TACS sem Push - ${GITHUB_SHA::7}"
           npx --yes @google/clasp@3.3.0 push --force
-          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Modo TACS sem Push V1.1.0 - ${GITHUB_SHA::7}")
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Modo TACS por dispositivo V1.2.0 - ${GITHUB_SHA::7}")
           NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
           test -n "$NEW_VERSION"
           DEPLOYED=0
@@ -150,12 +154,12 @@ jobs:
             code=$?
             trap - ERR
             if [ "$DEPLOYED" = '1' ]; then
-              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático do modo TACS sem Push" "$DEPLOYMENT_ID" || true
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático do modo TACS por dispositivo" "$DEPLOYMENT_ID" || true
             fi
             exit "$code"
           }
           trap rollback ERR
-          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Modo TACS sem Push V1.1.0" "$DEPLOYMENT_ID"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Modo TACS por dispositivo V1.2.0" "$DEPLOYMENT_ID"
           DEPLOYED=1
           BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
           ok=0
@@ -194,7 +198,7 @@ jobs:
             portal-version.json \
             scripts/test_aparelho_tacs_teste_v1.js \
             "$STATUS_FILE"
-          git commit -m 'Corrigir modo TACS sem depender do Push'
+          git commit -m 'Corrigir modo TACS por dispositivo sem depender do Push'
           git push
 
       - name: Registrar falha para diagnóstico
