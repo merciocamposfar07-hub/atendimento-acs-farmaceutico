@@ -1,0 +1,88 @@
+name: Corrigir modo TACS sem Push V2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/corrigir-modo-tacs-sem-push-v2'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: corrigir-modo-tacs-sem-push-v2
+  cancel-in-progress: false
+
+jobs:
+  corrigir-e-validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar correção isolada
+        run: |
+          python3 scripts/corrigir_modo_tacs_sem_push_v2.py
+          python3 scripts/finalizar_modo_tacs_sem_push_v2.py
+
+      - name: Validar sintaxe e teste específico
+        run: |
+          node --check admin-aparelho-tacs-teste-v1.js
+          node --check portal-identificacao-familia-v1.js
+          node --check portal-notification-health.js
+          node --check moradores-autofill.js
+          node --check --input-type=commonjs < apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs
+          node scripts/test_aparelho_tacs_teste_v1.js
+
+      - name: Testar toda a integração
+        run: |
+          npm ci
+          npm test
+
+      - name: Conferir escopo da alteração
+        run: |
+          git diff --check -- \
+            apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs \
+            admin-aparelho-tacs-teste-v1.js \
+            portal-identificacao-familia-v1.js \
+            portal-notification-health.js \
+            moradores-autofill.js \
+            portal-auto-update.js \
+            recados-campanhas-whatsapp-mensal-v12.js \
+            painel-oficial-recados-campanhas.html \
+            index.html \
+            portal-version.json \
+            scripts/test_aparelho_tacs_teste_v1.js
+
+      - name: Publicar correção validada no repositório
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs \
+            admin-aparelho-tacs-teste-v1.js \
+            portal-identificacao-familia-v1.js \
+            portal-notification-health.js \
+            moradores-autofill.js \
+            portal-auto-update.js \
+            recados-campanhas-whatsapp-mensal-v12.js \
+            painel-oficial-recados-campanhas.html \
+            index.html \
+            portal-version.json \
+            scripts/test_aparelho_tacs_teste_v1.js
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração pendente.'
+            exit 0
+          fi
+          git commit -m 'Corrigir modo TACS sem depender do Push'
+          git push
