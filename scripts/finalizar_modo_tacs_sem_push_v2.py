@@ -1,9 +1,10 @@
 from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-p = ROOT / 'scripts/test_aparelho_tacs_teste_v1.js'
-text = p.read_text(encoding='utf-8')
-if text.startswith("\\'use strict\\';"):
-    text = "'use strict';" + text[len("\\'use strict\\';"):]
-p.write_text(text, encoding='utf-8')
-print('Finalização da correção aplicada.')
+import subprocess
+ROOT=Path(__file__).resolve().parents[1]
+tmp=ROOT/'scripts/.finalizar_v3_main.tmp'
+with tmp.open('w',encoding='utf-8') as out:
+    subprocess.run(['git','show','HEAD:scripts/finalizar_modo_tacs_sem_push_v3.py'],check=True,stdout=out)
+canonical=tmp.read_text(encoding='utf-8')
+tmp.unlink(missing_ok=True)
+ns={'__file__':str(ROOT/'scripts/finalizar_modo_tacs_sem_push_v3_canonico.py'),'__name__':'__main__'}
+exec(compile(canonical,str(ROOT/'scripts/finalizar_modo_tacs_sem_push_v3_canonico.py'),'exec'),ns,ns)
