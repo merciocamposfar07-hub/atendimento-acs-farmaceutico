@@ -20,14 +20,17 @@ function setStatus(msg,type){if(!status)return;status.textContent=msg;status.cla
 function getDevice(){var d='';try{d=localStorage.getItem(DEVICE_KEY)||''}catch(e){}return d}
 function queryTacsOnly(){try{return String(new URLSearchParams(location.search).get('acesso')||'').toLowerCase()==='tacs'}catch(e){return false}}
 function hasTerritorySession(){try{return !!text(sessionStorage.getItem(TERRITORY_TOKEN_KEY))}catch(e){return false}}
+function hasAdminSession(){try{return !!text(sessionStorage.getItem(ADMIN_TOKEN_KEY))}catch(e){return false}}
+function hasAnySession(){return hasTerritorySession()||hasAdminSession()}
 function rememberExclusiveMode(){
-  if(queryTacsOnly()||hasTerritorySession()){
-    try{sessionStorage.setItem(EXCLUSIVE_MODE_KEY,'tacs')}catch(e){}
-  }
+  try{
+    if(queryTacsOnly()||hasTerritorySession())sessionStorage.setItem(EXCLUSIVE_MODE_KEY,'tacs');
+    else sessionStorage.removeItem(EXCLUSIVE_MODE_KEY);
+  }catch(e){}
 }
 function exclusiveMode(){
   rememberExclusiveMode();
-  try{return queryTacsOnly()||hasTerritorySession()||sessionStorage.getItem(EXCLUSIVE_MODE_KEY)==='tacs'}catch(e){return queryTacsOnly()||hasTerritorySession()}
+  return queryTacsOnly()||hasTerritorySession();
 }
 function enforceExclusiveTacsUi(){
   if(!exclusiveMode())return;
@@ -79,7 +82,7 @@ function renderLogin(){
   var p=getProfile();
   if(p){
     if(cnsLabel)cnsLabel.hidden=true;
-    cnsInput.hidden=true;
+    if(cnsInput)cnsInput.hidden=true;
     remembered.hidden=false;
     remembered.innerHTML='<strong>Acesso rápido neste aparelho</strong><br>'+
       (p.nome?'<span>'+escapeHtml(p.nome)+'</span><br>':'')+
@@ -178,7 +181,134 @@ loginBtn.addEventListener('click',function(event){
   });
 },true);
 
+/* HOMOLOGACAO_ARQUITETURAL_V1 — navegação única, sessão reaproveitada e recuperação visual. */
+function normalArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
+function currentAreaId(){
+  var select=document.getElementById('adminArea');
+  if(select&&normalArea(select.value))return normalArea(select.value);
+  var p=getProfile();
+  if(p&&normalArea(p.areaId))return normalArea(p.areaId);
+  try{var q=new URLSearchParams(location.search);var a=normalArea(q.get('area')||q.get('areaId'));if(a)return a}catch(e){}
+  return 'JAPARANDUBA';
+}
+function stableModuleUrl(name){
+  var area=encodeURIComponent(currentAreaId());
+  var tacsOnly=hasTerritorySession()||queryTacsOnly();
+  var access=tacsOnly?'&acesso=tacs':'';
+  var revision='20260822-promocao-institucional-v1';
+  if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+'&v='+revision;
+  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v='+revision;
+  if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v='+revision;
+  if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+'&v='+revision;
+  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?v='+revision;
+  if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?v='+revision;
+  if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area+'&from=central';
+  return '';
+}
+function markPanelDirty(doc){
+  if(!doc||!doc.documentElement||doc.documentElement.dataset.tacsDirtyTracking==='1')return;
+  doc.documentElement.dataset.tacsDirtyTracking='1';
+  setTimeout(function(){
+    ['input','change'].forEach(function(type){doc.addEventListener(type,function(event){
+      var target=event.target;
+      if(!event.isTrusted||!target||target.disabled||target.readOnly)return;
+      var tag=String(target.tagName||'').toLowerCase();
+      if(tag==='input'||tag==='textarea'||tag==='select')doc.documentElement.dataset.tacsDirty='1';
+    },true)});
+  },900);
+}
+function hideRedundantPanelLogin(doc){
+  if(!hasAnySession()||!doc)return;
+  var pin=doc.getElementById('pin');
+  if(pin){pin.hidden=true;pin.setAttribute('aria-hidden','true')}
+  var label=doc.getElementById('pinLabel')||doc.querySelector('label[for="pin"]');
+  if(label)label.hidden=true;
+  var help=doc.getElementById('pinHelp');if(help)help.hidden=true;
+  Array.prototype.forEach.call(doc.querySelectorAll('button'),function(btn){
+    var t=text(btn.textContent).toLowerCase();
+    if(/^(entrar|validar|acessar)/.test(t)&&btn.id!=='sair'&&btn.id!=='logout')btn.hidden=true;
+  });
+  var title=doc.getElementById('accessTitle');
+  if(title)title.textContent=hasTerritorySession()?'Sessão TACS validada':'Sessão administrativa validada';
+  doc.documentElement.dataset.tacsSessionReused='1';
+}
+function installPanelRefresh(doc){
+  if(!doc||!doc.body||doc.getElementById('portalTacsAdminRefreshV1'))return;
+  var style=doc.createElement('style');
+  style.textContent='#portalTacsAdminRefreshV1{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:2147482000;min-height:46px;border:2px solid rgba(255,255,255,.92);border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer}#portalTacsAdminRefreshV1:active{transform:translateY(1px)}@media(max-width:430px){#portalTacsAdminRefreshV1{right:10px;bottom:calc(10px + env(safe-area-inset-bottom));min-height:44px;padding:9px 13px;font-size:14px}}';
+  (doc.head||doc.documentElement).appendChild(style);
+  var button=doc.createElement('button');
+  button.id='portalTacsAdminRefreshV1';button.type='button';button.textContent='↻ Atualizar página';
+  button.setAttribute('aria-label','Atualizar esta página e refazer a leitura');
+  button.addEventListener('click',function(){
+    if(doc.documentElement.dataset.tacsDirty==='1'&&!doc.defaultView.confirm('Há alterações que podem não ter sido salvas. Deseja atualizar a página mesmo assim?'))return;
+    button.disabled=true;button.textContent='↻ Atualizando…';doc.defaultView.location.reload();
+  });
+  doc.body.appendChild(button);
+}
+function enhanceViewerDocument(){
+  var frame=document.getElementById('viewerFrame');
+  if(!frame)return;
+  try{
+    var doc=frame.contentDocument;
+    if(!doc||!doc.body)return;
+    hideRedundantPanelLogin(doc);
+    markPanelDirty(doc);
+    installPanelRefresh(doc);
+  }catch(e){}
+}
+function installCentralPageRefresh(){
+  if(document.getElementById('portalTacsCentralRefreshV1'))return;
+  var style=document.createElement('style');
+  style.textContent='#portalTacsCentralRefreshV1{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:20000;min-height:46px;border:2px solid rgba(255,255,255,.92);border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer}@media(max-width:430px){#portalTacsCentralRefreshV1{right:10px;bottom:calc(10px + env(safe-area-inset-bottom));min-height:44px;padding:9px 13px;font-size:14px}}';
+  document.head.appendChild(style);
+  var button=document.createElement('button');button.id='portalTacsCentralRefreshV1';button.type='button';button.textContent='↻ Atualizar página';
+  button.addEventListener('click',function(){button.disabled=true;button.textContent='↻ Atualizando…';location.reload()});
+  document.body.appendChild(button);
+}
+function installInstitutionalNavigation(){
+  var grid=document.getElementById('moduleGrid');
+  if(grid&&grid.dataset.tacsInstitutionalNav!=='1'){
+    grid.dataset.tacsInstitutionalNav='1';
+    grid.addEventListener('click',function(event){
+      var btn=event.target&&event.target.closest?event.target.closest('.module'):null;
+      if(!btn||btn.disabled||btn.hidden)return;
+      var name=btn.dataset.module||'';
+      var url=stableModuleUrl(name);if(!url)return;
+      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+      if(name==='portal'){
+        try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
+        location.href=url;return;
+      }
+      var viewer=document.getElementById('viewer'),frame=document.getElementById('viewerFrame'),title=document.getElementById('viewerTitle');
+      if(!viewer||!frame)return;
+      if(title){var strong=btn.querySelector('strong');title.textContent=strong?strong.textContent:'Painel'}
+      frame.src=url;viewer.hidden=false;document.body.classList.add('viewer-open');
+    },true);
+  }
+  var frame=document.getElementById('viewerFrame');
+  if(frame&&frame.dataset.tacsInstitutionalEnhance!=='1'){
+    frame.dataset.tacsInstitutionalEnhance='1';
+    frame.addEventListener('load',function(){setTimeout(enhanceViewerDocument,0);setTimeout(enhanceViewerDocument,700)});
+  }
+  var back=document.getElementById('viewerBack');
+  if(back&&back.dataset.tacsDirtyGuard!=='1'){
+    back.dataset.tacsDirtyGuard='1';
+    back.addEventListener('click',function(event){
+      var f=document.getElementById('viewerFrame');
+      try{
+        var d=f&&f.contentDocument;
+        if(d&&d.documentElement.dataset.tacsDirty==='1'&&!window.confirm('Há alterações que podem não ter sido salvas. Deseja voltar à Central mesmo assim?')){
+          event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+        }
+      }catch(e){}
+    },true);
+  }
+  installCentralPageRefresh();
+}
+
 renderLogin();
+installInstitutionalNavigation();
 var tabTacs=document.getElementById('tabTacs');
 if(tabTacs)tabTacs.addEventListener('click',function(){setTimeout(function(){
   var p=getProfile();
