@@ -6,8 +6,11 @@
   var PAGE_VERSION_KEY='portalTacsAutoPageVersionV1:'+window.location.pathname;
   var CHECK_KEY='portalTacsAutoVersionCheckAtV1';
   var BUTTON_ID='portalTacsAtualizarPaginaV1';
+  var CENTRAL_RETURN_ID='portalTacsVoltarCentralV1';
   var STYLE_ID='portalTacsAtualizarPaginaStyleV1';
   var CHECK_INTERVAL=60000;
+  var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
+  var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
   var checking=false;
   var territorialObserver=null;
   var territorialLastStatus=null;
@@ -119,12 +122,38 @@
     if(document.getElementById(STYLE_ID))return;
     var style=document.createElement('style');
     style.id=STYLE_ID;
-    style.textContent='#'+BUTTON_ID+'{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:2147483000;min-height:46px;border:2px solid rgba(255,255,255,.9);border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;-webkit-tap-highlight-color:transparent}#'+BUTTON_ID+':active{transform:translateY(1px)}@media(max-width:430px){#'+BUTTON_ID+'{right:10px;bottom:calc(10px + env(safe-area-inset-bottom));min-height:44px;padding:9px 13px;font-size:14px}}';
+    style.textContent='#'+BUTTON_ID+'{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:2147483000;min-height:46px;border:2px solid rgba(255,255,255,.9);border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;-webkit-tap-highlight-color:transparent}#'+BUTTON_ID+':active{transform:translateY(1px)}#'+CENTRAL_RETURN_ID+'{position:fixed;left:12px;top:calc(12px + env(safe-area-inset-top));z-index:2147483000;min-height:46px;border:2px solid #69c7e7;border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;-webkit-tap-highlight-color:transparent}#'+CENTRAL_RETURN_ID+':active{transform:translateY(1px)}@media(max-width:430px){#'+BUTTON_ID+'{right:10px;bottom:calc(10px + env(safe-area-inset-bottom));min-height:44px;padding:9px 13px;font-size:14px}#'+CENTRAL_RETURN_ID+'{left:10px;top:calc(10px + env(safe-area-inset-top));min-height:44px;padding:9px 13px;font-size:14px}}';
     (document.head||document.documentElement).appendChild(style);
   }
 
   function isAdminPage(){
     return /(?:^|\/)(?:painel-oficial-|teste-v1\/painel-|admin)/.test(window.location.pathname||'');
+  }
+
+  function hasCentralSession(){
+    return !!(readStorage(sessionStorage,ADMIN_TOKEN_KEY)||readStorage(sessionStorage,TERRITORY_TOKEN_KEY));
+  }
+
+  function cameFromCentral(){
+    try{return String(new URLSearchParams(location.search||'').get('from')||'').toLowerCase()==='central'}catch(e){return false}
+  }
+
+  function installCentralReturnUI(){
+    if(!document.body||isAdminPage()||!cameFromCentral()||!hasCentralSession())return;
+    if(document.getElementById(CENTRAL_RETURN_ID))return;
+    ensureStyle();
+    var button=document.createElement('button');
+    button.id=CENTRAL_RETURN_ID;
+    button.type='button';
+    button.textContent='← Central';
+    button.setAttribute('aria-label','Voltar à Central Administrativa mantendo a sessão atual');
+    button.title='Voltar à Central Administrativa';
+    button.addEventListener('click',function(){
+      button.disabled=true;
+      button.textContent='← Voltando…';
+      window.location.href='/atendimento-acs-farmaceutico/central-administrativa-tacs.html?retorno=portal';
+    });
+    document.body.appendChild(button);
   }
 
   function smartRefresh(button){
@@ -136,6 +165,7 @@
     if(!document.body){setTimeout(installUI,40);return}
     ensureStyle();
     installTerritorialIdentityGuard();
+    installCentralReturnUI();
     var button=document.getElementById(BUTTON_ID);
     if(button)return;
     button=document.createElement('button');
@@ -192,6 +222,7 @@
     if(document.visibilityState==='visible'){
       installUI();
       installTerritorialIdentityGuard();
+      installCentralReturnUI();
       fetchVersion(false);
     }
   }
@@ -211,7 +242,8 @@
     atualizar:function(){reloadFresh(Date.now())},
     reconectar:wakeConnection,
     limparTemporarios:clearTransientConnectionState,
-    protegerIdentidadeTerritorial:installTerritorialIdentityGuard
+    protegerIdentidadeTerritorial:installTerritorialIdentityGuard,
+    instalarRetornoCentral:installCentralReturnUI
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installUI,{once:true});
@@ -219,7 +251,7 @@
   installTerritorialIdentityGuard();
   loadFamilyIdentification();
   fetchVersion(true);
-  window.addEventListener('pageshow',function(){installUI();installTerritorialIdentityGuard();fetchVersion(false)});
+  window.addEventListener('pageshow',function(){installUI();installTerritorialIdentityGuard();installCentralReturnUI();fetchVersion(false)});
   window.addEventListener('pageshow',loadFamilyIdentification);
   window.addEventListener('online',function(){wakeConnection();fetchVersion(true)});
   document.addEventListener('visibilitychange',onVisible);
