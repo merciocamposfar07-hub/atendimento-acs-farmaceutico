@@ -1,5 +1,18 @@
 (function(){
   'use strict';
+  try{
+    if(typeof document==='undefined'||typeof location==='undefined')return;
+    if(!/\/painel-oficial-recados-campanhas\.html$/.test(String(location.pathname||'')))return;
+    if(window.PortalTacsOneSignalHealthRecoveryV1||document.querySelector('script[src*="recados-campanhas-health-recovery-v1.js"]'))return;
+    var h=document.createElement('script');
+    h.src='/atendimento-acs-farmaceutico/recados-campanhas-health-recovery-v1.js?v=20260822-health-autorecovery-v1';
+    h.async=true;
+    document.head.appendChild(h);
+  }catch(e){}
+}());
+
+(function(){
+  'use strict';
   if(typeof window==='undefined'||typeof document==='undefined'||typeof location==='undefined')return;
   if(!/\/painel-oficial-recados-campanhas\.html$/.test(String(location.pathname||'')))return;
   if(window.PortalTacsRelatorioFeedbackV2)return;
