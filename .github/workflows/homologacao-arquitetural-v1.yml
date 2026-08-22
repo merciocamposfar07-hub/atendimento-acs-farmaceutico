@@ -1,0 +1,79 @@
+name: Homologação arquitetural institucional v1
+
+on:
+  push:
+    branches: [homologacao-arquitetural-v1]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homologacao-arquitetural-v1
+  cancel-in-progress: true
+
+jobs:
+  qualidade-estatica:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Executar gate completo do projeto
+        run: npm test
+
+  navegadores-reais:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Instalar base do projeto
+        run: npm ci
+      - name: Instalar Playwright somente para homologação
+        run: |
+          npm install --no-save --no-package-lock @playwright/test@1.55.0
+          npx playwright install --with-deps chromium firefox webkit
+      - name: Iniciar servidor local isolado
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory .. > /tmp/portal-tacs-http.log 2>&1 &
+          echo $! > /tmp/portal-tacs-http.pid
+          sleep 2
+          curl -fsS http://127.0.0.1:4173/atendimento-acs-farmaceutico/index.html >/dev/null
+      - name: Executar matriz Blink Gecko WebKit
+        run: |
+          rm -f homologacao-cross-engine.ndjson
+          npx playwright test -c playwright.homologacao.config.js
+      - name: Consolidar métricas quantitativas
+        if: always()
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='homologacao-cross-engine.ndjson';
+          if(!fs.existsSync(p)){console.log('Sem relatório cross-engine.');process.exit(0)}
+          const rows=fs.readFileSync(p,'utf8').trim().split(/\n+/).filter(Boolean).map(JSON.parse);
+          const byBrowser={};
+          for(const r of rows){(byBrowser[r.browserName]||(byBrowser[r.browserName]=[])).push(r)}
+          const elapsed=rows.map(r=>Number(r.elapsedMs)).filter(Number.isFinite).sort((a,b)=>a-b);
+          const pctl=q=>elapsed.length?elapsed[Math.min(elapsed.length-1,Math.floor((elapsed.length-1)*q))]:null;
+          const summary={cenarios:rows.length,browsers:Object.fromEntries(Object.entries(byBrowser).map(([k,v])=>[k,v.length])),overflowMaxPx:Math.max(0,...rows.map(r=>Number(r.overflowPx)||0)),elapsedMs:{min:elapsed[0]||null,p50:pctl(.5),p95:pctl(.95),max:elapsed.at(-1)||null}};
+          fs.writeFileSync('homologacao-cross-engine-summary.json',JSON.stringify(summary,null,2));
+          console.log(JSON.stringify(summary,null,2));
+          NODE
+      - name: Guardar evidências da homologação
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: homologacao-arquitetural-cross-engine
+          path: |
+            homologacao-cross-engine.ndjson
+            homologacao-cross-engine-summary.json
+          if-no-files-found: warn
