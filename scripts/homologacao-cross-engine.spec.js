@@ -42,7 +42,7 @@ for (const vp of portalViewports) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await blockExternal(page);
     const started = Date.now();
-    await page.goto('/index.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('index.html', { waitUntil: 'domcontentloaded' });
     const arrow = page.locator('.portal-flow-arrow[data-guide-key="document"]');
     await expect(arrow).toBeVisible();
     await expect.poll(async () => arrow.getAttribute('data-arrow-direction')).toBe(vp.direction);
@@ -64,7 +64,7 @@ for (const vp of [
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await blockExternal(page);
     const started = Date.now();
-    await page.goto('/central-administrativa-tacs.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('central-administrativa-tacs.html', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#tabAdmin')).toBeVisible();
     await expect(page.locator('#tabTacs')).toBeVisible();
     await expect(page.locator('#portalTacsCentralRefreshV1')).toBeVisible();
@@ -78,7 +78,7 @@ test('Portal vindo da Central mostra retorno sem credencial na URL', async ({ pa
   await page.setViewportSize({ width: 390, height: 844 });
   await blockExternal(page);
   await page.addInitScript(() => sessionStorage.setItem('portalTacsAdminTokenV1', 'sessao-teste-sem-credencial-na-url'));
-  await page.goto('/index.html?from=central&area=JAPARANDUBA', { waitUntil: 'domcontentloaded' });
+  await page.goto('index.html?from=central&area=JAPARANDUBA', { waitUntil: 'domcontentloaded' });
   const back = page.locator('#portalTacsVoltarCentralV1');
   await expect(back).toBeVisible();
   expect(page.url()).not.toContain('token=');
@@ -91,7 +91,7 @@ test('Portal vindo da Central mostra retorno sem credencial na URL', async ({ pa
 test('Portal público comum não expõe retorno administrativo', async ({ page, browserName }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await blockExternal(page);
-  await page.goto('/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto('index.html', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#portalTacsVoltarCentralV1')).toHaveCount(0);
   const m = await metrics(page);
   expect(m.overflowPx).toBeLessThanOrEqual(1);
