@@ -35,14 +35,17 @@ function pct(values, p) {
 function safeName(s) { return s.replace(/[^a-z0-9_-]+/gi, '-'); }
 
 async function inspectPage(browserName, browser, pageDef, vp, mode) {
-  const context = await browser.newContext({
+  const contextOptions = {
     viewport: { width: vp.width, height: vp.height },
-    isMobile: vp.isMobile,
     hasTouch: vp.hasTouch,
     locale: 'pt-BR',
     timezoneId: 'America/Recife',
     serviceWorkers: 'allow'
-  });
+  };
+  // O Firefox do Playwright não aceita a opção isMobile. A matriz mantém
+  // viewport + touch para Firefox e usa emulação móvel completa em Chromium/WebKit.
+  if (browserName !== 'firefox') contextOptions.isMobile = vp.isMobile;
+  const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
   const pageErrors = [];
   const consoleErrors = [];
@@ -166,7 +169,7 @@ async function inspectPage(browserName, browser, pageDef, vp, mode) {
     critical
   };
 
-  const shouldScreenshot = mode.name === 'live-readonly' && vp.name !== 'desktop' || critical.length;
+  const shouldScreenshot = (mode.name === 'live-readonly' && vp.name !== 'desktop') || critical.length;
   if (shouldScreenshot) {
     const file = safeName(`${browserName}-${pageDef.name}-${vp.name}-${mode.name}.png`);
     await page.screenshot({ path: path.join(OUT, file), fullPage: true }).catch(() => {});
