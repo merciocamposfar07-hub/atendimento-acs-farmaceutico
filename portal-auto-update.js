@@ -202,10 +202,6 @@
         if(!remote)return null;
         var pageSeen=readStorage(localStorage,PAGE_VERSION_KEY);
         writeStorage(localStorage,GLOBAL_VERSION_KEY,remote);
-
-        // Primeira leitura: apenas registra a versão que esta página recebeu.
-        // Nas próximas aberturas, a ausência de ?ptv na start_url do iOS não deve
-        // causar uma recarga extra. Só recarrega quando a versão publicada mudou.
         if(!pageSeen){
           writeStorage(localStorage,PAGE_VERSION_KEY,remote);
           return remote;
@@ -225,6 +221,7 @@
       installUI();
       installTerritorialIdentityGuard();
       installCentralReturnUI();
+      loadInstitutionalPortal();
       fetchVersion(false);
     }
   }
@@ -235,6 +232,17 @@
     script.id='portalTacsIdentificacaoFamiliaScriptV1';
     script.async=true;
     script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260821-tacs-device-v7';
+    (document.head||document.documentElement).appendChild(script);
+  }
+
+  function loadInstitutionalPortal(){
+    if(isAdminPage()||document.getElementById('portalTacsInstitucionalSuporteScriptV1'))return;
+    var path=String(window.location.pathname||'');
+    if(!/\/atendimento-acs-farmaceutico\/(?:index\.html)?$/.test(path))return;
+    var script=document.createElement('script');
+    script.id='portalTacsInstitucionalSuporteScriptV1';
+    script.async=true;
+    script.src='/atendimento-acs-farmaceutico/portal-institucional-suporte-v1.js?v=20260822-institucional-suporte-v1';
     (document.head||document.documentElement).appendChild(script);
   }
 
@@ -252,8 +260,9 @@
   else installUI();
   installTerritorialIdentityGuard();
   loadFamilyIdentification();
+  loadInstitutionalPortal();
   fetchVersion(true);
-  window.addEventListener('pageshow',function(){installUI();installTerritorialIdentityGuard();installCentralReturnUI();fetchVersion(false)});
+  window.addEventListener('pageshow',function(){installUI();installTerritorialIdentityGuard();installCentralReturnUI();loadInstitutionalPortal();fetchVersion(false)});
   window.addEventListener('pageshow',loadFamilyIdentification);
   window.addEventListener('online',function(){wakeConnection();fetchVersion(true)});
   document.addEventListener('visibilitychange',onVisible);
