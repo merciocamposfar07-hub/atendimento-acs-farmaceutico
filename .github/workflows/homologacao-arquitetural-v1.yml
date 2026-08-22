@@ -19,13 +19,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
+      - name: Comprovar ambiente Node
+        run: |
+          node --version
+          npm --version
+          node -e "const major=Number(process.versions.node.split('.')[0]); if(major<24) process.exit(1)"
       - name: Instalar dependências
         run: npm ci
+      - name: Auditar dependências permanentes
+        run: npm audit --audit-level=high
       - name: Executar gate completo do projeto
         run: npm test
 
@@ -33,16 +40,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
+      - name: Comprovar ambiente Node
+        run: |
+          node --version
+          npm --version
+          node -e "const major=Number(process.versions.node.split('.')[0]); if(major<24) process.exit(1)"
       - name: Instalar base do projeto
         run: npm ci
-      - name: Instalar Playwright somente para homologação
+      - name: Instalar e auditar Playwright de homologação
         run: |
-          npm install --no-save --no-package-lock @playwright/test@1.55.0
+          npm install --no-save @playwright/test@1.62.1
+          npm ls @playwright/test --depth=0
+          npm audit --audit-level=high
           npx playwright install --with-deps chromium firefox webkit
       - name: Iniciar servidor local isolado
         run: |
@@ -72,7 +86,7 @@ jobs:
           NODE
       - name: Guardar evidências da homologação
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: homologacao-arquitetural-cross-engine
           path: |
