@@ -9,9 +9,11 @@
   var sendArrowShownForService = '';
   var selectionConfirmed = false;
   var flowArrow = null;
+  var flowArrowTarget = null;
   var alertObserver = null;
   var formObserver = null;
   var initialized = false;
+  var orientFrame = 0;
 
   function el(id) { return (typeof document !== 'undefined' && document && typeof document.getElementById === 'function') ? document.getElementById(id) : null; }
   function digits(value) { return String(value || '').replace(/\D/g, ''); }
@@ -32,8 +34,26 @@
 
   function ensurePublicIcon() {
     var base = '/atendimento-acs-farmaceutico/icons/';
-    ensureHeadLink('icon', base + 'painel-moradores.svg', { type: 'image/svg+xml' });
-    ensureHeadLink('apple-touch-icon', base + 'painel-moradores-180.png', { sizes: '180x180' });
+    var iconHref = base + 'portal-tacs-oficial.svg?v=20260822-identidade-pwa-v2';
+    var appleHref = base + 'portal-tacs-oficial-512.png?v=20260822-identidade-pwa-v2';
+    var existingIcon = document.querySelector('link[rel="icon"]');
+    var existingApple = document.querySelector('link[rel="apple-touch-icon"]');
+    if (existingIcon) {
+      existingIcon.href = iconHref;
+      existingIcon.type = 'image/svg+xml';
+    } else {
+      ensureHeadLink('icon', iconHref, { type: 'image/svg+xml' });
+    }
+    if (existingApple) {
+      existingApple.href = appleHref;
+      existingApple.setAttribute('sizes', '512x512');
+    } else {
+      ensureHeadLink('apple-touch-icon', appleHref, { sizes: '512x512' });
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('link[data-portal-tacs-public-icon="1"]'), function (node) {
+      if (node.rel === 'icon') node.href = iconHref;
+      if (node.rel === 'apple-touch-icon') node.href = appleHref;
+    });
     var meta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
     if (!meta) {
       meta = document.createElement('meta');
@@ -44,18 +64,24 @@
   }
 
   function addStyle() {
-    if (document.getElementById('portal-guide-style-v2')) return;
-    var old = document.getElementById('portal-guide-style-v1');
-    if (old) old.remove();
+    if (document.getElementById('portal-guide-style-v3')) return;
+    var oldV1 = document.getElementById('portal-guide-style-v1');
+    var oldV2 = document.getElementById('portal-guide-style-v2');
+    if (oldV1) oldV1.remove();
+    if (oldV2) oldV2.remove();
     var style = document.createElement('style');
-    style.id = 'portal-guide-style-v2';
+    style.id = 'portal-guide-style-v3';
     style.textContent = [
       '.portal-flow-arrow{display:flex;align-items:center;gap:10px;width:100%;max-width:100%;min-width:0;margin:0 0 12px;padding:10px 14px;border:2px solid #70e39f;border-radius:20px;background:#073a55;color:#fff;font-size:15px;font-weight:950;line-height:1.3;box-shadow:0 9px 22px rgba(3,42,64,.20);overflow:hidden}',
       '.portal-flow-arrow>span:last-child{min-width:0;overflow-wrap:anywhere;word-break:normal}',
-      '.portal-flow-arrow .portal-arrow-symbol{display:inline-block;flex:0 0 auto;color:#7af0a8;font-size:25px;line-height:1;animation:portalArrowBlink 1.1s ease-in-out infinite}',
+      '.portal-flow-arrow .portal-arrow-symbol{display:inline-block;flex:0 0 auto;color:#7af0a8;font-size:25px;line-height:1;animation:portalArrowPulse 1.1s ease-in-out infinite}',
+      '.portal-flow-arrow[data-arrow-direction="right"] .portal-arrow-symbol{transform-origin:center}',
+      '.portal-flow-arrow[data-arrow-direction="left"] .portal-arrow-symbol{transform-origin:center}',
+      '.portal-flow-arrow[data-guide-key="document"][data-arrow-direction="right"]{align-self:center}',
       '.portal-alert-guide{display:inline-flex;align-items:center;gap:8px;max-width:100%;margin:0 0 10px;padding:7px 11px;border:2px solid #70e39f;border-radius:999px;background:#073a55;color:#fff;font-size:14px;font-weight:950;line-height:1.2}',
-      '.portal-alert-guide .portal-arrow-symbol{display:inline-block;flex:0 0 auto;color:#7af0a8;font-size:21px;animation:portalArrowBlink 1.1s ease-in-out infinite}',
-      '@keyframes portalArrowBlink{0%,100%{opacity:.35;transform:translateY(0)}50%{opacity:1;transform:translateY(5px)}}',
+      '.portal-alert-guide .portal-arrow-symbol{display:inline-block;flex:0 0 auto;color:#7af0a8;font-size:21px;animation:portalArrowPulse 1.1s ease-in-out infinite}',
+      '@keyframes portalArrowPulse{0%,100%{opacity:.35}50%{opacity:1}}',
+      '@media(max-width:720px){.portal-flow-arrow[data-guide-key="document"]{grid-column:auto}.portal-flow-arrow[data-guide-key="document"] .portal-arrow-symbol{font-size:26px}}',
       '@media(prefers-reduced-motion:reduce){.portal-flow-arrow .portal-arrow-symbol,.portal-alert-guide .portal-arrow-symbol{animation:none!important}}'
     ].join('');
     document.head.appendChild(style);
@@ -71,6 +97,7 @@
   function removeFlowArrow() {
     if (flowArrow && flowArrow.parentNode) flowArrow.parentNode.removeChild(flowArrow);
     flowArrow = null;
+    flowArrowTarget = null;
     Array.prototype.forEach.call(document.querySelectorAll('.portal-flow-arrow'), function (node) { node.remove(); });
   }
 
@@ -126,13 +153,54 @@
     return node;
   }
 
+  function arrowGlyph(direction) {
+    if (direction === 'right') return '→';
+    if (direction === 'left') return '←';
+    if (direction === 'up') return '↑';
+    return '↓';
+  }
+
+  function orientFlowArrowNow() {
+    orientFrame = 0;
+    if (!flowArrow || !flowArrowTarget || !flowArrow.isConnected || !flowArrowTarget.isConnected) return;
+    var arrowRect = flowArrow.getBoundingClientRect();
+    var targetRect = flowArrowTarget.getBoundingClientRect();
+    if (!arrowRect.width || !targetRect.width) return;
+    var ax = arrowRect.left + arrowRect.width / 2;
+    var ay = arrowRect.top + arrowRect.height / 2;
+    var tx = targetRect.left + targetRect.width / 2;
+    var ty = targetRect.top + targetRect.height / 2;
+    var dx = tx - ax;
+    var dy = ty - ay;
+    var direction;
+    if (Math.abs(dx) > Math.abs(dy) * 0.72) direction = dx >= 0 ? 'right' : 'left';
+    else direction = dy >= 0 ? 'down' : 'up';
+    flowArrow.dataset.arrowDirection = direction;
+    var symbol = flowArrow.querySelector('.portal-arrow-symbol');
+    if (symbol) symbol.textContent = arrowGlyph(direction);
+  }
+
+  function orientFlowArrow() {
+    if (orientFrame || typeof window.requestAnimationFrame !== 'function') {
+      if (!orientFrame) setTimeout(orientFlowArrowNow, 0);
+      return;
+    }
+    orientFrame = window.requestAnimationFrame(orientFlowArrowNow);
+  }
+
   function placeArrow(target, text, key) {
     if (!target || !target.parentNode) return;
-    if (flowArrow && flowArrow.dataset.guideKey === key) return;
+    if (flowArrow && flowArrow.dataset.guideKey === key) {
+      flowArrowTarget = target;
+      orientFlowArrow();
+      return;
+    }
     removeFlowArrow();
     flowArrow = makeArrow(text);
     flowArrow.dataset.guideKey = key;
+    flowArrowTarget = target;
     target.parentNode.insertBefore(flowArrow, target);
+    orientFlowArrow();
   }
 
   function cpfTarget() {
@@ -294,6 +362,9 @@
       revealSendAfterChoice();
     });
 
+    window.addEventListener('resize', orientFlowArrow, { passive: true });
+    window.addEventListener('orientationchange', function () { setTimeout(orientFlowArrow, 80); });
+
     window.addEventListener('pagehide', function () {
       if (!sendIntent) return;
       try { sessionStorage.setItem('portalTacsResetAfterSendV1', '1'); } catch (e) {}
@@ -307,7 +378,7 @@
         if (reset) sessionStorage.removeItem('portalTacsResetAfterSendV1');
       } catch (e) {}
       if (reset) clearForm();
-      else setTimeout(updateFlowGuide, 0);
+      else setTimeout(function () { updateFlowGuide(); orientFlowArrow(); }, 0);
     });
   }
 
@@ -331,7 +402,9 @@
 
   window.PortalTacsOrientacaoMoradorV1 = Object.freeze({
     reset: clearForm,
-    refreshGuide: updateFlowGuide
+    refreshGuide: updateFlowGuide,
+    refreshArrowDirection: orientFlowArrow,
+    ensurePublicIcon: ensurePublicIcon
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });

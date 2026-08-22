@@ -1,0 +1,37 @@
+name: Normalizar UI administrativa na homologação v1
+
+on:
+  push:
+    branches: [homologacao-arquitetural-v1]
+    paths:
+      - '.github/workflows/normalizar-admin-ui-homologacao-v1.yml'
+      - 'scripts/injetar_admin_ui_standard_v1.py'
+      - 'admin-ui-standard.inline.css'
+
+permissions:
+  contents: write
+
+jobs:
+  normalizar:
+    if: github.ref == 'refs/heads/homologacao-arquitetural-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: homologacao-arquitetural-v1
+      - name: Aplicar fonte visual única nos painéis
+        run: python3 scripts/injetar_admin_ui_standard_v1.py
+      - name: Confirmar e registrar somente se houver diferença
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Nenhuma diferença visual pendente.'
+            exit 0
+          fi
+          git config user.name 'Portal TACS Homologação'
+          git config user.email 'actions@users.noreply.github.com'
+          git add central-administrativa-tacs.html painel-oficial-organizacoes-municipios.html painel-oficial-agendas-vagas.html painel-oficial-profissionais-servicos.html painel-oficial-recados-campanhas.html painel-oficial-tacs-areas.html teste-v1/painel-moradores-v2.html teste-v1/painel-tacs-areas-v1.html
+          git commit -m 'Homologação B: normaliza padrão visual administrativo'
+          git push origin HEAD:homologacao-arquitetural-v1
