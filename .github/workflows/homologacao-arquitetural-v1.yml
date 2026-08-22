@@ -3,13 +3,15 @@ name: Homologação arquitetural institucional v1
 on:
   push:
     branches: [homologacao-arquitetural-v1]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: homologacao-arquitetural-v1
+  group: homologacao-arquitetural-v1-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
