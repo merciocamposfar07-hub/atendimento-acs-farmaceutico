@@ -1,0 +1,84 @@
+name: Patch isolado suporte aos moradores V1
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-suporte-moradores-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar:
+    if: github.ref == 'refs/heads/reparo-institucional-suporte-push-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Inserir módulo dedicado sem alterar os módulos existentes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          central=Path('central-administrativa-tacs.html')
+          text=central.read_text(encoding='utf-8')
+          support='<button class="module available" data-module="suporte" data-permission="MORADORES_LER" type="button"><span class="icon">🛟</span><div><strong>Suporte aos moradores</strong><span>Diagnosticar aparelhos e orientar reparos sem alterar os vínculos existentes.</span></div></button>'
+          if 'data-module="suporte"' not in text:
+              needle='<button class="module available" data-module="moradores" data-permission="MORADORES_LER" type="button"><span class="icon">👥</span><div><strong>Moradores</strong><span>Buscar, cadastrar e atualizar moradores da área.</span></div></button>'
+              if needle not in text:
+                  raise SystemExit('Âncora do módulo Moradores não encontrada; patch bloqueado.')
+              text=text.replace(needle,needle+'\n'+support,1)
+          script='<script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=20260822-suporte-moradores-v1"></script>'
+          if script not in text:
+              if '</body>' not in text:
+                  raise SystemExit('Fechamento body da Central não encontrado; patch bloqueado.')
+              text=text.replace('</body>',script+'\n</body>',1)
+          central.write_text(text,encoding='utf-8')
+
+          builder=Path('scripts/build_apps_script_release.js')
+          b=builder.read_text(encoding='utf-8')
+          if "marker: 'TACS_SUPORTE_MORADORES_V1'" not in b:
+              anchor="  {\n    source: 'apps-script/ZZZZ_47_EstabilizacaoReparosV9.gs',\n    marker: 'TACS_ESTABILIZACAO_REPAROS_V9'\n  }\n];"
+              repl="  {\n    source: 'apps-script/ZZZZ_47_EstabilizacaoReparosV9.gs',\n    marker: 'TACS_ESTABILIZACAO_REPAROS_V9'\n  },\n  {\n    source: 'apps-script/ZZZZ_48_SuporteMoradoresV1.gs',\n    marker: 'TACS_SUPORTE_MORADORES_V1'\n  }\n];"
+              if anchor not in b:
+                  raise SystemExit('Âncora do módulo 47 não encontrada; patch bloqueado.')
+              b=b.replace(anchor,repl,1)
+              builder.write_text(b,encoding='utf-8')
+
+          pkg=Path('package.json')
+          data=json.loads(pkg.read_text(encoding='utf-8'))
+          test=data['scripts']['test']
+          cmd='node scripts/test_suporte_moradores_v1.js'
+          if cmd not in test:
+              data['scripts']['test']=test+' && '+cmd
+          pkg.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Validar sintaxe e contrato do suporte
+        run: |
+          node --check --input-type=commonjs < apps-script/ZZZZ_48_SuporteMoradoresV1.gs
+          node --check central-suporte-moradores-v1.js
+          node scripts/test_suporte_moradores_v1.js
+      - name: Executar regressão completa
+        run: |
+          npm ci
+          npm test
+      - name: Registrar somente os arquivos autorizados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add central-administrativa-tacs.html scripts/build_apps_script_release.js package.json
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "Patch já aplicado."
+            exit 0
+          fi
+          git commit -m "Integra suporte aos moradores na Central"
+          git push origin HEAD:reparo-institucional-suporte-push-v1
