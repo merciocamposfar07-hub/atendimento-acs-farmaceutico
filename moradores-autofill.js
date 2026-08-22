@@ -6,9 +6,14 @@
   var requestId = 0;
   var activeFrame = null;
   var activeScript = null;
-  var activeTimeout = null;
+  var activeBridgeTimeout = null;
+  var activeJsonpTimeout = null;
+  var adaptiveHedgeTimer = null;
   var activeNonce = '';
   var activeCallback = '';
+  var completedRequestId = 0;
+  var HEDGE_DELAY_MS = 1250;
+  var BRIDGE_LIMIT_MS = 6500;
   var localityDisplay = null;
   var ageObserver = null;
   var familyMemory = '';
@@ -338,8 +343,12 @@
   }
 
   function cleanupTransport() {
-    if (activeTimeout) clearTimeout(activeTimeout);
-    activeTimeout = null;
+    if (activeBridgeTimeout) clearTimeout(activeBridgeTimeout);
+    if (activeJsonpTimeout) clearTimeout(activeJsonpTimeout);
+    if (adaptiveHedgeTimer) clearTimeout(adaptiveHedgeTimer);
+    activeBridgeTimeout = null;
+    activeJsonpTimeout = null;
+    adaptiveHedgeTimer = null;
     activeNonce = '';
 
     if (activeFrame) {
@@ -353,6 +362,30 @@
       activeScript = null;
     }
 
+    if (activeCallback) {
+      try { delete window[activeCallback]; } catch (e) { window[activeCallback] = undefined; }
+      activeCallback = '';
+    }
+  }
+
+  function finishBridgeOnly() {
+    if (activeBridgeTimeout) clearTimeout(activeBridgeTimeout);
+    activeBridgeTimeout = null;
+    activeNonce = '';
+    if (activeFrame) {
+      if (activeFrame.parentNode) activeFrame.parentNode.removeChild(activeFrame);
+      activeFrame = null;
+    }
+  }
+
+  function finishJsonpOnly() {
+    if (activeJsonpTimeout) clearTimeout(activeJsonpTimeout);
+    activeJsonpTimeout = null;
+    if (activeScript) {
+      activeScript.onerror = null;
+      if (activeScript.parentNode) activeScript.parentNode.removeChild(activeScript);
+      activeScript = null;
+    }
     if (activeCallback) {
       try { delete window[activeCallback]; } catch (e) { window[activeCallback] = undefined; }
       activeCallback = '';
@@ -380,7 +413,8 @@
     setStatus(status, 'Digite seu CPF ou Cartão SUS (CNS). Seus dados serão carregados automaticamente para conferência.', '');
 
     function complete(payload, token) {
-      if (token !== requestId) return;
+      if (token !== requestId || token === completedRequestId) return;
+      completedRequestId = token;
       cleanupTransport();
 
       if (payload && payload.ok === true && payload.encontrado === true) {
@@ -406,22 +440,24 @@
     }
 
     function failOrRetry(doc, token, attempt) {
-      if (token !== requestId) return;
-      cleanupTransport();
+      if (token !== requestId || token === completedRequestId) return;
+      finishJsonpOnly();
 
       if (attempt < 2) {
         setLoadingStatus(status);
         setTimeout(function () {
-          if (token === requestId) startJsonp(doc, token, attempt + 1);
+          if (token === requestId && token !== completedRequestId) startJsonp(doc, token, attempt + 1, Boolean(activeFrame));
         }, 700);
       } else {
+        cleanupTransport();
         setStatus(status, 'Não foi possível consultar agora. Tente novamente.', 'invalid');
       }
     }
 
-    function startJsonp(doc, token, attempt) {
-      if (token !== requestId) return;
-      cleanupTransport();
+    function startJsonp(doc, token, attempt, keepBridge) {
+      if (token !== requestId || token === completedRequestId) return;
+      if (!keepBridge) cleanupTransport();
+      else finishJsonpOnly();
 
       var callback = 'moradorTacs_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
       activeCallback = callback;
@@ -437,7 +473,7 @@
         failOrRetry(doc, token, attempt);
       };
 
-      activeTimeout = setTimeout(function () {
+      activeJsonpTimeout = setTimeout(function () {
         failOrRetry(doc, token, attempt);
       }, 6500);
 
@@ -445,7 +481,7 @@
     }
 
     function startBridge(doc, token) {
-      if (token !== requestId) return;
+      if (token !== requestId || token === completedRequestId) return;
       cleanupTransport();
 
       var nonce = 'morador-' + Date.now() + '-' + Math.floor(Math.random() * 1000000);
@@ -457,12 +493,21 @@
 
       activeNonce = nonce;
       activeFrame = frame;
-      activeTimeout = setTimeout(function () {
-        if (token !== requestId) return;
-        cleanupTransport();
+
+      adaptiveHedgeTimer = setTimeout(function () {
+        if (token !== requestId || token === completedRequestId || !activeFrame || activeScript) return;
         setLoadingStatus(status);
-        startJsonp(doc, token, 0);
-      }, 6000);
+        startJsonp(doc, token, 0, true);
+      }, HEDGE_DELAY_MS);
+
+      activeBridgeTimeout = setTimeout(function () {
+        if (token !== requestId || token === completedRequestId) return;
+        finishBridgeOnly();
+        if (!activeScript) {
+          setLoadingStatus(status);
+          startJsonp(doc, token, 0, false);
+        }
+      }, BRIDGE_LIMIT_MS);
 
       document.body.appendChild(frame);
     }
@@ -479,6 +524,7 @@
       if (!(validCpf(doc) || validCns(doc))) return;
 
       var token = ++requestId;
+      completedRequestId = 0;
       cleanupTransport();
       clearResidentFields();
       setLoadingStatus(status);

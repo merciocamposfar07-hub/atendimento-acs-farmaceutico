@@ -85,7 +85,7 @@ window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZ
     var script = document.createElement('script');
     script.id = 'portal-conteudo-publico-v1-script';
     script.src = new URL(
-      'assets/js/portal-conteudo-publico-v1.js?v=20260812-multiarea-v1',
+      'assets/js/portal-conteudo-publico-v1.js?v=20260822-promocao-institucional-v1',
       base
     ).href;
     script.async = true;
