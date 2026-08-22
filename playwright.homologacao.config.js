@@ -11,7 +11,7 @@ module.exports = defineConfig({
   retries: 0,
   reporter: [['line']],
   use: {
-    baseURL: 'http://127.0.0.1:4173/atendimento-acs-farmaceutico',
+    baseURL: 'http://127.0.0.1:4173/atendimento-acs-farmaceutico/',
     serviceWorkers: 'block',
     ignoreHTTPSErrors: true
   },
