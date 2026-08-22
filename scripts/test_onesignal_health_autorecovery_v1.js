@@ -1,0 +1,21 @@
+const fs=require('fs');
+const assert=require('assert');
+const health=fs.readFileSync('recados-campanhas-health-recovery-v1.js','utf8');
+const feedback=fs.readFileSync('notificacao-relatorio-feedback-v2.js','utf8');
+const panel=fs.readFileSync('painel-oficial-recados-campanhas.html','utf8');
+
+assert(health.includes('RETRY_DELAYS=[1800,5000,12000]'),'Retentativas automáticas devem ser limitadas e progressivas');
+assert(health.includes("button.click()"),'Recuperação deve reutilizar a leitura segura já existente no painel');
+assert(health.includes("window.addEventListener('online'"),'Conferência deve retomar ao voltar a conexão');
+assert(health.includes("visibilitychange"),'Conferência deve retomar ao voltar à tela');
+assert(health.includes('Última conferência válida'),'Falha repetida deve preservar e identificar a última conferência válida');
+assert(health.includes("'erro'"),'Falha repetida deve ficar visível como erro');
+assert(health.includes('Conferido agora às'),'Sucesso deve exibir horário da conferência atual');
+assert(health.includes('Os últimos dados foram preservados'),'Falha remota não pode apagar o último estado conhecido');
+assert(!/admin_(?:notificacao_enviar|publicacoes_notificar|mensagem_individual)/.test(health),'Recuperação de saúde não pode disparar envio Push');
+assert(!/unsubscribe|optOut|removeItem\s*\([^)]*(?:subscription|Dispositivo|OneSignal)/i.test(health),'Recuperação não pode alterar vínculos de aparelhos');
+assert(feedback.includes('recados-campanhas-health-recovery-v1.js'),'Painel deve carregar a recuperação automática');
+assert(feedback.includes('PortalTacsRelatorioFeedbackV2'),'Relatório de feedback existente deve permanecer carregado');
+assert(panel.includes('admin_notificacoes_saude_rapida')&&panel.includes('admin_notificacoes_saude_remota'),'Leitura rápida + conferência remota original devem permanecer intactas');
+assert(panel.includes('Os últimos dados continuam visíveis'),'Fallback original deve continuar preservando os dados');
+console.log('ONESIGNAL_HEALTH_AUTORECOVERY_V1_OK: 3 retentativas progressivas, retomada online/visível, timestamp e vínculos preservados.');
