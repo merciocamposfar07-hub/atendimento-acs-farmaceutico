@@ -5,6 +5,7 @@
   var ACTION = 'publico_conteudo';
   var TARGET_ID = 'noticeArea';
   var TIMEOUT_MS = 15000;
+  var IDLE_FALLBACK_MS = 900;
 
   function texto(valor) {
     return valor === null || valor === undefined ? '' : String(valor).trim();
@@ -225,10 +226,11 @@
   }
 
   window.PortalTacsConteudoPublicoV1 = Object.freeze({
-    versao: '1.1.0',
+    versao: '1.2.0',
     somenteLeitura: true,
     renderizacaoAutomatica: false,
     leituraAutomatica: true,
+    leituraSilenciosaAdiada: true,
     areaId: AREA_ID,
     normalizarResposta: normalizarResposta,
     renderizar: renderizar,
@@ -239,9 +241,17 @@
     carregar({ renderizar: false });
   }
 
+  function agendarLeituraSilenciosa() {
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(iniciarLeituraSilenciosa, { timeout: 1400 });
+      return;
+    }
+    window.setTimeout(iniciarLeituraSilenciosa, IDLE_FALLBACK_MS);
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', iniciarLeituraSilenciosa, { once: true });
+    document.addEventListener('DOMContentLoaded', agendarLeituraSilenciosa, { once: true });
   } else {
-    iniciarLeituraSilenciosa();
+    agendarLeituraSilenciosa();
   }
 })(window, document);
