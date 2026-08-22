@@ -122,7 +122,7 @@
     if(document.getElementById(STYLE_ID))return;
     var style=document.createElement('style');
     style.id=STYLE_ID;
-    style.textContent='#'+BUTTON_ID+'{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:2147483000;min-height:46px;border:2px solid rgba(255,255,255,.9);border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;-webkit-tap-highlight-color:transparent}#'+BUTTON_ID+':active{transform:translateY(1px)}#'+CENTRAL_RETURN_ID+'{position:fixed;left:12px;top:calc(12px + env(safe-area-inset-top));z-index:2147483000;min-height:46px;border:2px solid #69c7e7;border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;-webkit-tap-highlight-color:transparent}#'+CENTRAL_RETURN_ID+':active{transform:translateY(1px)}@media(max-width:430px){#'+BUTTON_ID+'{right:10px;bottom:calc(10px + env(safe-area-inset-bottom));min-height:44px;padding:9px 13px;font-size:14px}#'+CENTRAL_RETURN_ID+'{left:10px;top:calc(10px + env(safe-area-inset-top));min-height:44px;padding:9px 13px;font-size:14px}}';
+    style.textContent='#'+BUTTON_ID+'{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:2147483000;min-height:46px;border:2px solid rgba(255,255,255,.9);border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;-webkit-tap-highlight-color:transparent}#'+BUTTON_ID+':active{transform:translateY(1px)}#'+CENTRAL_RETURN_ID+'{position:relative;z-index:3;display:inline-flex;align-items:center;justify-content:center;min-height:46px;margin:0 0 18px;border:2px solid #69c7e7;border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;-webkit-tap-highlight-color:transparent}#'+CENTRAL_RETURN_ID+':active{transform:translateY(1px)}@media(max-width:430px){#'+BUTTON_ID+'{right:10px;bottom:calc(10px + env(safe-area-inset-bottom));min-height:44px;padding:9px 13px;font-size:14px}#'+CENTRAL_RETURN_ID+'{min-height:44px;margin-bottom:16px;padding:9px 13px;font-size:14px}}';
     (document.head||document.documentElement).appendChild(style);
   }
 
@@ -153,7 +153,9 @@
       button.textContent='← Voltando…';
       window.location.href='/atendimento-acs-farmaceutico/central-administrativa-tacs.html?retorno=portal';
     });
-    document.body.appendChild(button);
+    var hero=document.querySelector('.hero');
+    if(hero)hero.insertBefore(button,hero.firstChild);
+    else document.body.appendChild(button);
   }
 
   function smartRefresh(button){
