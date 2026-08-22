@@ -1,0 +1,46 @@
+name: Aplicar promoção B na homologação v1
+
+on:
+  push:
+    branches: [homologacao-arquitetural-v1]
+    paths:
+      - '.github/workflows/aplicar-promocao-b-homologacao-v1.yml'
+      - 'scripts/aplicar_autofill_adaptativo_v1.py'
+      - 'scripts/aplicar_promocao_frontend_v1.py'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar:
+    if: github.ref == 'refs/heads/homologacao-arquitetural-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: homologacao-arquitetural-v1
+      - name: Aplicar autofill adaptativo de leitura
+        run: python3 scripts/aplicar_autofill_adaptativo_v1.py
+      - name: Aplicar versionamento de convergência
+        run: python3 scripts/aplicar_promocao_frontend_v1.py
+      - name: Validar sintaxe JavaScript alterada
+        run: |
+          node --check moradores-autofill.js
+          node --check portal-auto-update.js
+          node --check portal-orientacao-morador.js
+          node --check central-tacs-login-rapido-v1.js
+          node --check agenda-config.js
+      - name: Registrar alterações somente na branch B
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Nenhuma alteração pendente.'
+            exit 0
+          fi
+          git config user.name 'Portal TACS Homologação'
+          git config user.email 'actions@users.noreply.github.com'
+          git add moradores-autofill.js index.html agenda-config.js central-administrativa-tacs.html
+          git commit -m 'Homologação B: aplica autofill adaptativo e convergência de versão'
+          git push origin HEAD:homologacao-arquitetural-v1
