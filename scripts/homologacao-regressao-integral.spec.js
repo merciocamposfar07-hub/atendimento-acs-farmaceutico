@@ -33,7 +33,9 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
 
   const modules=['moradores','agendas','recados','profissionais','suporte','territorio','municipios'];
 
-  // Primeiro ciclo: garante uma instância de cada painel e grava estado interno.
+  // Primeiro ciclo: só grava o marcador depois que o próprio controlador declara
+  // o painel pronto. Assim um load inicial ainda em andamento não é confundido
+  // com recarga causada pela navegação.
   for(const name of modules){
     const button=page.locator(`#moduleGrid .module[data-module="${name}"]`);
     await expect(button).toBeVisible();
@@ -41,8 +43,8 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
     await expect(page.locator(`#portalTacsAdminPreloadPoolV1 iframe[data-module="${name}"]`)).toHaveCount(1);
     await page.waitForFunction(moduleName=>{
       const frame=document.querySelector(`#portalTacsAdminPreloadPoolV1 iframe[data-module="${moduleName}"]`);
-      try{return Boolean(frame&&frame.contentDocument&&frame.contentDocument.body)}catch(error){return false}
-    },name);
+      try{return Boolean(frame&&frame.dataset.tacsReady==='1'&&frame.contentDocument&&frame.contentDocument.body)}catch(error){return false}
+    },name,{timeout:30000});
     await page.evaluate(moduleName=>{
       const frame=document.querySelector(`#portalTacsAdminPreloadPoolV1 iframe[data-module="${moduleName}"]`);
       window.__bloco16Refs=window.__bloco16Refs||{};
@@ -78,7 +80,6 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
     expect(afterIdle[name].loads,`${name}: painel inativo não pode recarregar`).toBe(0);
   }
 
-  // Segundo ciclo: reabre tudo de forma instantânea e sem recarga.
   const timings=[];
   for(const name of modules){
     const reopen=await page.evaluate(moduleName=>{
@@ -87,13 +88,7 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
       const frame=document.querySelector(`#portalTacsAdminPreloadPoolV1 iframe[data-module="${moduleName}"]`);
       let marker='';
       try{marker=frame&&frame.contentDocument&&frame.contentDocument.getElementById(`bloco16-${moduleName}`)?.value||''}catch(error){}
-      return {
-        ms:performance.now()-started,
-        visible:!document.getElementById('viewer').hidden,
-        sameNode:Boolean(frame&&frame===window.__bloco16Refs[moduleName]),
-        marker,
-        loads:Number(window.__bloco16Loads[moduleName]||0)
-      };
+      return {ms:performance.now()-started,visible:!document.getElementById('viewer').hidden,sameNode:Boolean(frame&&frame===window.__bloco16Refs[moduleName]),marker,loads:Number(window.__bloco16Loads[moduleName]||0)};
     },name);
     expect(reopen.visible,`${name}: deve responder visualmente no mesmo toque`).toBe(true);
     expect(reopen.ms,`${name}: reabertura deve ficar abaixo de 100 ms`).toBeLessThan(100);
