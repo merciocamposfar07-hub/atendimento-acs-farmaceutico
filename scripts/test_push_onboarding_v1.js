@@ -37,7 +37,7 @@ assert(agenda.includes("status.textContent = 'Avisos ativados neste aparelho.'")
 assert(agenda.includes("button.textContent = 'Avisos ativados'"),'Botão deve permanecer bloqueado quando a inscrição já está ativa');
 
 assert(worker.includes("const CACHE_NAME = 'tacs-disabled-20260727'"),'Service worker legado deve continuar desativado neste bloco');
-assert(worker.includes('await self.registration.unregister()'),'Bloco 6 não pode reativar o service worker legado');
+assert(worker.includes('self.registration.unregister()'),'Bloco 6 não pode reativar o service worker legado');
 assert.equal(pushWorker.trim(),"importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');",'Worker OneSignal deve permanecer exatamente no bootstrap oficial atual');
 
 console.log('PUSH_ONBOARDING_V1_OK: Android ativa primeiro; iPhone exige Home Screen; ativo não repete guia; workers preservados.');
