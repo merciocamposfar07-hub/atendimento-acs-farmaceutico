@@ -4,7 +4,8 @@ const assert=require('assert');
 function read(p){return fs.readFileSync(p,'utf8')}
 
 const central=read('central-administrativa-tacs.html');
-const nav=read('central-suporte-moradores-v1.js');
+const bootstrap=read('central-suporte-moradores-v1.js');
+const performance=read('central-admin-performance-v1.js');
 const panelV1=read('painel-suporte-moradores.html');
 const panelV2=read('painel-suporte-moradores-v2.html');
 const portal=read('portal-institucional-suporte-v1.js');
@@ -14,9 +15,11 @@ const builder=read('scripts/build_apps_script_release.js');
 
 assert.strictEqual((central.match(/data-module="suporte"/g)||[]).length,1,'Central deve ter exatamente um módulo Suporte aos moradores');
 assert(central.includes('<strong>Suporte aos moradores</strong>'),'Rótulo do módulo de suporte ausente');
-assert(central.includes('central-suporte-moradores-v1.js'),'Central não carrega a navegação dedicada de suporte');
-assert(nav.includes('painel-suporte-moradores-v2.html'),'Navegação do suporte não aponta para a interface dedicada V2');
-assert(!nav.includes('painel-oficial-agendas-vagas.html')&&!nav.includes('painel-oficial-profissionais-servicos.html'),'Suporte não pode ser incorporado a Agendas ou Profissionais');
+assert(central.includes('central-suporte-moradores-v1.js'),'Central não carrega o bootstrap de suporte/desempenho');
+assert(bootstrap.includes('BLOCO_1_CONTROLE_UNICO_V1'),'Bootstrap do suporte deve respeitar o controlador único da Central');
+assert(!bootstrap.includes('painel-suporte-moradores-v2.html'),'Bootstrap do suporte não pode navegar diretamente para painéis');
+assert(performance.includes("if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html"),'Controlador oficial não aponta Suporte para a interface dedicada V2');
+assert(performance.includes("name==='suporte'"),'Controlador oficial deve tratar Suporte como módulo próprio');
 
 assert(panelV1.includes('Vínculos protegidos'),'Diagnóstico deve explicar a preservação dos vínculos');
 assert(panelV1.includes('admin_suporte_moradores_diagnostico'),'Interface de diagnóstico não usa o endpoint dedicado');
@@ -62,4 +65,4 @@ assert(backend.includes("Resposta interna salva sem aviso Push."),'Resposta inte
 assert(builder.includes("source: 'apps-script/ZZZZ_48_SuporteMoradoresV1.gs'"),'Builder do Apps Script não inclui o módulo de suporte');
 assert(builder.includes("marker: 'TACS_SUPORTE_MORADORES_V1'"),'Builder não valida o marcador do suporte');
 
-console.log('Suporte aos moradores V2: módulo dedicado, rodapé institucional, chamados internos e preservação de vínculos validados.');
+console.log('Suporte aos moradores V2: módulo dedicado sob controlador único, rodapé institucional, chamados internos e preservação de vínculos validados.');
