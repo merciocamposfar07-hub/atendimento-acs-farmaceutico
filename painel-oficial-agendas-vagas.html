@@ -23,7 +23,7 @@ label{display:block;font-weight:850;margin:12px 0 6px}.campo{width:100%;min-heig
 .acoes{display:grid;gap:10px;margin-top:15px}.botao{width:100%;min-height:56px;border:0;border-radius:16px;padding:13px 16px;background:var(--petroleo);color:#fff;font-weight:900}.botao.verde{background:var(--verde)}.botao.secundario{background:#607985}.botao.perigo{background:#972f2f}.botao:disabled{opacity:.45;cursor:not-allowed}
 .status{padding:13px 14px;border:2px solid #cad9df;border-radius:16px;background:#f5f8fa;font-weight:800;overflow-wrap:anywhere}.status.ok{border-color:#9ed6b2;background:var(--verde-bg);color:#08723a}.status.erro{border-color:#d88a8a;background:var(--erro-bg);color:var(--erro)}.status.aviso{border-color:#e1aa3f;background:var(--aviso-bg);color:var(--aviso)}
 .resumo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.numero{background:#eef7fb;border:2px solid #c2d6df;border-radius:18px;padding:14px}.numero strong{display:block;font-size:2rem;line-height:1}.numero span{display:block;margin-top:6px;color:var(--muted);font-weight:800}
-.filtros{display:grid;gap:10px;margin-bottom:14px}.lista{display:grid;gap:12px}.cartao{border:2px solid #c4d4db;border-radius:19px;background:#fbfdfe;overflow:hidden}.cartao summary{list-style:none;padding:15px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.cartao summary::-webkit-details-marker{display:none}.tituloItem{display:flex;gap:10px;align-items:flex-start}.icone{font-size:1.7rem;line-height:1}.sub{color:var(--muted);font-size:.92rem;font-weight:700}.sinal{border-radius:999px;padding:5px 9px;font-size:.82rem;font-weight:900;white-space:nowrap}.sinal.ativo{background:var(--verde-bg);color:#08723a}.sinal.inativo{background:var(--erro-bg);color:var(--erro)}.corpo{padding:0 15px 16px;border-top:1px solid #d9e3e7}.linhaChecks{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}.check{display:flex;align-items:center;gap:10px;border:2px solid #cbd9df;border-radius:14px;padding:11px;background:#fff;font-weight:800}.check input{width:23px;height:23px;margin:0}.vazio{padding:18px;border:2px dashed #b8cbd4;border-radius:17px;text-align:center;color:var(--muted);font-weight:800}.oculto{display:none!important}.ponte{position:fixed!important;left:-10000px!important;top:-10000px!important;width:2px!important;height:2px!important;border:0!important;opacity:.01!important;pointer-events:none!important}.barraFixa{position:sticky;bottom:10px;z-index:5;margin-top:14px}.undo{box-shadow:0 10px 25px rgba(0,0,0,.18)}footer{background:var(--petroleo);color:#fff;padding:24px 18px calc(24px + env(safe-area-inset-bottom));text-align:center}footer p{margin:5px 0}
+.filtros{display:grid;gap:10px;margin-bottom:14px}.lista{display:grid;gap:12px}.cartao{border:2px solid #c4d4db;border-radius:19px;background:#fbfdfe;overflow:hidden}.cartao summary{list-style:none;padding:15px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.cartao summary::-webkit-details-marker{display:none}.tituloItem{display:flex;gap:10px;align-items:flex-start}.icone{font-size:1.7rem;line-height:1}.sub{color:var(--muted);font-size:.92rem;font-weight:700}.sinal{border-radius:999px;padding:5px 9px;font-size:.82rem;font-weight:900;white-space:nowrap}.sinal.ativo{background:var(--verde-bg);color:#08723a}.sinal.inativo{background:var(--erro-bg);color:var(--erro)}.corpo{padding:0 15px 16px;border-top:1px solid #d9e3e7}.linhaChecks{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}.check{display:flex;align-items:center;gap:10px;border:2px solid #cbd9df;border-radius:14px;padding:11px;background:#fff;font-weight:800}.check input{width:23px;height:23px;margin:0}.vazio{padding:18px;border:2px dashed #b8cbd4;border-radius:17px;text-align:center;color:var(--muted);font-weight:800}.oculto{display:none!important}.ponte{position:absolute!important;left:0!important;top:0!important;width:1px!important;height:1px!important;border:0!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;z-index:-1!important}.barraFixa{position:sticky;bottom:10px;z-index:5;margin-top:14px}.undo{box-shadow:0 10px 25px rgba(0,0,0,.18)}footer{background:var(--petroleo);color:#fff;padding:24px 18px calc(24px + env(safe-area-inset-bottom));text-align:center}footer p{margin:5px 0}
 input[type="date"].campo,input[type="time"].campo{display:block;width:100%!important;min-width:0!important;max-width:100%!important;inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;box-sizing:border-box!important}.corpo,.corpo>*{min-width:0}
 /* AJUSTE_LAYOUT_AGENDAS_PROFISSIONAIS_V1 — aplica o padrão Safari/iPhone já definido no projeto. */
 .cartao .corpo,.cartao .corpo>*{min-width:0!important;max-width:100%!important;box-sizing:border-box!important}
@@ -277,17 +277,26 @@ footer,.footer{
 <div class="barraFixa"><button id="desfazer" class="botao secundario undo oculto" type="button">Desfazer a última alteração</button></div>
 </section>
 </main>
+
+<style id="agendaSafariPaintFixV1">
+html,body,main,.painel,.lista,.grupoProfissional,.agendaProfissionalCorpo,.cartao{
+  -webkit-backface-visibility:visible!important;
+  backface-visibility:visible!important;
+  will-change:auto!important;
+  contain:none!important;
+}
+</style>
 <!-- ATUALIZAR_PAGINA_FLUTUANTE_AGENDAS_V4_START -->
 <style id="agendaAtualizarPaginaFlutuanteV4Style">
 #atualizarPaginaAgendasFlutuante{
-  position:fixed!important;
-  right:12px!important;
-  bottom:calc(12px + env(safe-area-inset-bottom))!important;
+  position:relative!important;
+  right:auto!important;
+  bottom:auto!important;
   z-index:2147483000!important;
   min-height:46px!important;
   width:auto!important;
   max-width:calc(100vw - 24px)!important;
-  margin:0!important;
+  margin:0 12px 16px auto!important;
   border:2px solid rgba(255,255,255,.9)!important;
   border-radius:999px!important;
   padding:10px 15px!important;
@@ -304,8 +313,8 @@ footer,.footer{
 #atualizarPaginaAgendasFlutuante:disabled{opacity:.76!important}
 @media(max-width:430px){
   #atualizarPaginaAgendasFlutuante{
-    right:10px!important;
-    bottom:calc(10px + env(safe-area-inset-bottom))!important;
+    right:auto!important;
+    bottom:auto!important;
     min-height:44px!important;
     padding:9px 13px!important;
     font-size:14px!important;
