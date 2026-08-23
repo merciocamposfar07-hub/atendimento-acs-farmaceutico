@@ -57,9 +57,11 @@ test('CPF não localizado é vinculado somente ao integrante escolhido da famíl
   await expect.poll(()=>page.locator('#cpfStatus').evaluate(el=>el.dataset.familyDocObserver||'')).toBe('1');
   await page.locator('#cpf').fill(NEW_CPF);
   await page.locator('#cpf').dispatchEvent('input');
-  await page.locator('#cpfStatus').evaluate((el)=>{el.textContent='CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).';});
+  await page.evaluate(({documento})=>{
+    document.dispatchEvent(new CustomEvent('tacs:documento-nao-localizado',{detail:{documento,tipoDocumento:'CPF',areaId:'JAPARANDUBA'}}));
+  },{documento:NEW_CPF});
 
-  await expect.poll(()=>familyConsults,{message:'O status de CPF não localizado precisa disparar a consulta da família lembrada.'}).toBeGreaterThan(0);
+  await expect.poll(()=>familyConsults,{message:'O contrato semântico de documento não localizado precisa disparar a consulta da família lembrada.'}).toBeGreaterThan(0);
   expect(familyConsultFamily).toBe(FAMILY);
   await expect(page.locator('#portalFamilyLookupV1')).not.toHaveAttribute('hidden','');
   await expect(page.getByText('De quem é este CPF?')).toBeVisible();
