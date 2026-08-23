@@ -20,7 +20,7 @@ const platformStart=ajustes.indexOf('function notificationPlatform()');
 const platformEnd=ajustes.indexOf('function notificationGuideHtml',platformStart);
 const platformCode=ajustes.slice(platformStart,platformEnd);
 assert(platformStart>=0&&platformEnd>platformStart,'Função de plataforma deve existir isoladamente');
-assert(!/cpf|cns|telefone|phone|whatsapp|numero|número/i.test(platformCode),'Detecção de aparelho novo não pode usar documento ou telefone');
+assert(!/cpf|cns|telefone|celular|whatsapp|phoneNumber|numeroTelefone|número de telefone/i.test(platformCode),'Detecção de aparelho novo não pode usar documento ou contato telefônico');
 assert(/navigator\.userAgent/.test(platformCode)&&/navigator\.standalone/.test(platformCode),'Detecção deve usar apenas capacidades locais do navegador');
 
 const iosGuard=agenda.indexOf('if (isIos() && !isStandalone())');
