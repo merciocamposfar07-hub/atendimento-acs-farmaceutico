@@ -71,7 +71,7 @@ function installInstitutional(race){
 function assertInstitutionalTerritory(race){
   const meta=race.window.document.querySelector('.portal-footer-meta');
   assert.ok(meta,'Rodapé institucional precisa existir.');
-  assert.equal(meta.textContent.replace(/\s+/g,' ').trim(),'USF Muntuns Sítio Muntuns • Chã Grande/PE');
+  assert.deepEqual(Array.from(meta.childNodes).map(node=>node.textContent.trim()).filter(Boolean),['USF Muntuns','Sítio Muntuns • Chã Grande/PE']);
   assert.equal(race.window.document.querySelector('.portal-footer-owner span').textContent,'Mércio José Campos dos Santos','Identidade territorial não pode substituir a autoria da plataforma.');
 }
 
