@@ -2,6 +2,10 @@
 
 const { test, expect } = require('@playwright/test');
 
+// O cenário percorre sete painéis e ainda supera deliberadamente o timer legado
+// de 5 s. O orçamento de interação continua validado separadamente em <100 ms.
+test.setTimeout(60000);
+
 async function blockExternal(page){
   await page.route('https://script.google.com/**',route=>route.abort());
   await page.route('https://script.googleusercontent.com/**',route=>route.abort());
@@ -33,9 +37,9 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
 
   const modules=['moradores','agendas','recados','profissionais','suporte','territorio','municipios'];
 
-  // Primeiro ciclo: só grava o marcador depois que o próprio controlador declara
-  // o painel pronto. Assim um load inicial ainda em andamento não é confundido
-  // com recarga causada pela navegação.
+  // Primeiro ciclo: grava o marcador somente depois que o documento local do
+  // painel substitui o about:blank. A homologação bloqueia Apps Script/OneSignal,
+  // portanto não pode depender do marcador tacsReady, que representa dados vivos.
   for(const name of modules){
     const button=page.locator(`#moduleGrid .module[data-module="${name}"]`);
     await expect(button).toBeVisible();
@@ -43,7 +47,11 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
     await expect(page.locator(`#portalTacsAdminPreloadPoolV1 iframe[data-module="${name}"]`)).toHaveCount(1);
     await page.waitForFunction(moduleName=>{
       const frame=document.querySelector(`#portalTacsAdminPreloadPoolV1 iframe[data-module="${moduleName}"]`);
-      try{return Boolean(frame&&frame.dataset.tacsReady==='1'&&frame.contentDocument&&frame.contentDocument.body)}catch(error){return false}
+      try{
+        if(!frame||!frame.contentDocument||!frame.contentDocument.body)return false;
+        const expectedPath=new URL(frame.getAttribute('src')||'',location.href).pathname;
+        return frame.contentWindow.location.pathname===expectedPath;
+      }catch(error){return false}
     },name,{timeout:30000});
     await page.evaluate(moduleName=>{
       const frame=document.querySelector(`#portalTacsAdminPreloadPoolV1 iframe[data-module="${moduleName}"]`);
