@@ -66,6 +66,11 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
       if(!marker){marker=doc.createElement('input');marker.id=`bloco16-${moduleName}`;doc.body.appendChild(marker)}
       marker.value=`estado-${moduleName}`;
     },name);
+    // Firefox pode despachar o load do elemento iframe logo após o documento já
+    // estar complete. Zera a linha de base somente depois desse evento inicial;
+    // qualquer navegação real ainda apaga o marcador e/ou incrementa o contador.
+    await page.waitForTimeout(250);
+    await page.evaluate(moduleName=>{window.__bloco16Loads[moduleName]=0},name);
     await page.locator('#viewerBack').click();
     await expect(page.locator('#viewer')).toBeHidden();
   }
