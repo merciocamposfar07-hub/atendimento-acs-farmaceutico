@@ -49,6 +49,7 @@ function institutionalFooter(){
   footer.className='portal-institutional-footer';
   footer.innerHTML='<div class="portal-footer-grid"><div class="portal-footer-block"><span class="portal-footer-eyebrow">Portal TACS</span><strong class="portal-footer-title">Técnico Agente Comunitário de Saúde</strong><span class="portal-footer-meta">Unidade de Saúde Posto Matias<br>Sítio Japaranduba • Chã Grande/PE</span></div><div class="portal-footer-owner"><strong>Idealização e gestão da plataforma</strong><span>Mércio José Campos dos Santos</span></div></div><nav class="portal-footer-links" aria-label="Informações institucionais"><button class="portal-footer-link" type="button" data-portal-info="privacy">Privacidade</button><button class="portal-footer-link" type="button" data-portal-info="accessibility">Acessibilidade</button><button class="portal-footer-link" type="button" data-portal-info="about">Sobre</button><button class="portal-footer-link" type="button" data-portal-info="support">Suporte</button></nav><div class="portal-footer-brand">'+brandSvg()+'<div><strong>Conecta Saúde Comunitária</strong><span>Plataforma de saúde comunitária</span></div><span class="portal-footer-version" id="portalFooterVersionV1">Versão atual</span></div>';
   var oldPrivacy=document.querySelector('.privacy');if(oldPrivacy)oldPrivacy.hidden=true;
+  try{window.dispatchEvent(new CustomEvent('portal-tacs-institutional-footer-ready'))}catch(e){}
 }
 
 function modal(){
