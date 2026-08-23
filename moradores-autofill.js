@@ -12,6 +12,8 @@
   var activeNonce = '';
   var activeCallback = '';
   var completedRequestId = 0;
+  var negativeRequestId = 0;
+  var negativeProofs = {};
   var HEDGE_DELAY_MS = 1250;
   var BRIDGE_LIMIT_MS = 6500;
   var localityDisplay = null;
@@ -412,8 +414,35 @@
     if (label && label.firstChild) label.firstChild.textContent = 'CPF ou Cartão SUS (CNS) ';
     setStatus(status, 'Digite seu CPF ou Cartão SUS (CNS). Seus dados serão carregados automaticamente para conferência.', '');
 
-    function complete(payload, token) {
+    function complete(payload, token, proofKey, jsonpAttempt) {
       if (token !== requestId || token === completedRequestId) return;
+
+      if (payload && payload.ok === true && payload.encontrado === false) {
+        if (negativeRequestId !== token) {
+          negativeRequestId = token;
+          negativeProofs = {};
+        }
+        var negativeKey = String(proofKey || ('proof-' + Date.now() + '-' + Math.random()));
+        negativeProofs[negativeKey] = true;
+
+        if (negativeKey.indexOf('bridge:') === 0) finishBridgeOnly();
+        else if (negativeKey.indexOf('jsonp:') === 0) finishJsonpOnly();
+
+        if (Object.keys(negativeProofs).length < 2) {
+          setLoadingStatus(status);
+          var retryDoc = onlyDigits(input.value);
+          if (!activeFrame && !activeScript && (validCpf(retryDoc) || validCns(retryDoc))) {
+            var nextAttempt = Math.min(2, Number(jsonpAttempt || 0) + 1);
+            setTimeout(function () {
+              if (token === requestId && token !== completedRequestId && !activeFrame && !activeScript) {
+                startJsonp(retryDoc, token, nextAttempt, false);
+              }
+            }, 250);
+          }
+          return;
+        }
+      }
+
       completedRequestId = token;
       cleanupTransport();
 
@@ -462,7 +491,7 @@
       var callback = 'moradorTacs_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
       activeCallback = callback;
       window[callback] = function (data) {
-        complete(data, token);
+        complete(data, token, 'jsonp:' + callback, attempt);
       };
 
       var script = document.createElement('script');
@@ -516,7 +545,7 @@
       if (!activeFrame || event.source !== activeFrame.contentWindow) return;
       var message = event.data;
       if (!message || message.source !== 'portal-tacs-morador' || message.nonce !== activeNonce) return;
-      complete(message.payload, requestId);
+      complete(message.payload, requestId, 'bridge:' + message.nonce, 0);
     });
 
     function lookup() {
@@ -525,6 +554,8 @@
 
       var token = ++requestId;
       completedRequestId = 0;
+      negativeRequestId = token;
+      negativeProofs = {};
       cleanupTransport();
       clearResidentFields();
       setLoadingStatus(status);
