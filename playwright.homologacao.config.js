@@ -3,7 +3,7 @@ const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './scripts',
-  testMatch: ['homologacao-cross-engine.spec.js','homologacao-performance-budget.spec.js'],
+  testMatch: ['homologacao-cross-engine.spec.js','homologacao-performance-budget.spec.js','homologacao-push-onboarding.spec.js'],
   timeout: 30000,
   expect: { timeout: 7000 },
   fullyParallel: false,
