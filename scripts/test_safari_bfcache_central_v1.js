@@ -14,8 +14,13 @@ assert.ok(
   'Ao voltar, o painel administrativo carregado deve ser preservado no pool'
 );
 assert.ok(
-  performance.includes('var existing=frames[name];') && performance.includes('if(existing&&existing.isConnected)return existing;'),
-  'ensureFrame deve reutilizar a instância já conectada em vez de recriar iframe'
+  performance.includes('var frame=frames[name];') &&
+  performance.includes('if(frame&&frame.dataset.tacsKey===sessionKey()&&frame.parentNode)return frame;'),
+  'ensureFrame deve reutilizar a instância da mesma sessão enquanto ela permanecer conectada'
+);
+assert.ok(
+  performance.includes('if(frame&&frame.parentNode)frame.remove();') && performance.includes('delete frames[name];'),
+  'Iframe só pode ser descartado quando deixa de pertencer à sessão atual'
 );
 assert.ok(
   !/function closeViewer[\s\S]*?src\s*=\s*['\"]about:blank['\"]/.test(performance),
@@ -30,8 +35,8 @@ assert.ok(
   'Instalação inicial deve continuar idempotente e separada da restauração por pageshow'
 );
 assert.ok(
-  performance.includes('function beginPreload()') && performance.includes('preloadStartedFor=key;'),
-  'pageshow deve reutilizar a rotina de preload protegida por chave de sessão'
+  performance.includes('function beginPreload()') && performance.includes('if(preloadStartedFor===currentKey)return;') && performance.includes('preloadStartedFor=currentKey;'),
+  'pageshow deve reutilizar a rotina de preload protegida pela chave da sessão'
 );
 
 console.log('Safari/iPhone Bloco 13: pageshow, BFCache e reuso persistente de painel validados sem troca de arquitetura.');
