@@ -74,6 +74,38 @@ for (const vp of [
   });
 }
 
+test('Central usa um único controlador efetivo e preserva painel ao voltar', async ({ page, browserName }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await blockExternal(page);
+  await page.goto('central-administrativa-tacs.html', { waitUntil: 'domcontentloaded' });
+  await expect.poll(() => page.evaluate(() => Boolean(window.PortalTacsCentralPerformanceV1))).toBe(true);
+
+  await page.evaluate(() => {
+    sessionStorage.setItem('portalTacsAdminTokenV1', 'sessao-homologacao-bloco1');
+    const modules = document.getElementById('modulesPanel');
+    if (modules) modules.hidden = false;
+    const support = document.querySelector('#moduleGrid .module[data-module="suporte"]');
+    if (support) { support.hidden = false; support.disabled = false; }
+  });
+
+  const support = page.locator('#moduleGrid .module[data-module="suporte"]');
+  await expect(support).toBeVisible();
+  await support.click();
+  await expect(page.locator('#viewer')).toBeVisible();
+  await expect(page.locator('#viewer iframe[data-module="suporte"]')).toHaveCount(1);
+  const src = await page.locator('#viewer iframe[data-module="suporte"]').getAttribute('src');
+  expect(src || '').toContain('painel-suporte-moradores-v2.html');
+  expect(src || '').not.toContain('_cb=');
+
+  await page.locator('#viewerBack').click();
+  await expect(page.locator('#viewer')).toBeHidden();
+  await expect(page.locator('#portalTacsAdminPreloadPoolV1 iframe[data-module="suporte"]')).toHaveCount(1);
+  const preservedSrc = await page.locator('#portalTacsAdminPreloadPoolV1 iframe[data-module="suporte"]').getAttribute('src');
+  expect(preservedSrc).toBe(src);
+
+  writeResult({ kind: 'central-single-controller', browserName, viewport: 'central-mobile-390', controller: true, preserved: true });
+});
+
 test('Portal vindo da Central mostra retorno sem credencial na URL', async ({ page, browserName }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await blockExternal(page);
