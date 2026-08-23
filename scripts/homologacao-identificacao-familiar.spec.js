@@ -49,6 +49,7 @@ test('CPF não localizado é vinculado somente ao integrante escolhido da famíl
   },{area:AREA,family:FAMILY,sub:SUB});
 
   await page.addScriptTag({url:'portal-identificacao-familia-v1.js?homologacao=bloco9'});
+  await expect.poll(()=>page.locator('#cpfStatus').evaluate(el=>el.dataset.familyDocObserver||'')).toBe('1');
   await page.locator('#cpf').fill(NEW_CPF);
   await page.locator('#cpf').dispatchEvent('input');
   await page.locator('#cpfStatus').evaluate((el)=>{el.textContent='CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).';});
