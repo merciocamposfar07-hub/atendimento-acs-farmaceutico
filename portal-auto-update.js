@@ -5,6 +5,7 @@
   var GLOBAL_VERSION_KEY='portalTacsAutoVersionV1';
   var PAGE_VERSION_KEY='portalTacsAutoPageVersionV1:'+window.location.pathname;
   var CHECK_KEY='portalTacsAutoVersionCheckAtV1';
+  var FORCED_RELEASE_KEY='portalTacsAutoForcedReleaseV1';
   var BUTTON_ID='portalTacsAtualizarPaginaV1';
   var CENTRAL_RETURN_ID='portalTacsVoltarCentralV1';
   var STYLE_ID='portalTacsAtualizarPaginaStyleV1';
@@ -14,6 +15,7 @@
   var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
   var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
   var checking=false;
+  var reloading=false;
   var territorialObserver=null;
   var territorialLastStatus=null;
 
@@ -27,6 +29,34 @@
       'portalTacsAdminStatusV5',
       'portalTacsAppsScriptWarmAtV1'
     ].forEach(function(key){removeStorage(localStorage,key)});
+  }
+
+  function currentPageVersion(){
+    var meta=document.querySelector('meta[name="portal-release"]');
+    return String(meta&&meta.getAttribute('content')||'').trim();
+  }
+
+  function purgeLegacyDeliveryState(){
+    var jobs=[];
+    if('serviceWorker' in navigator&&typeof navigator.serviceWorker.getRegistrations==='function'){
+      jobs.push(navigator.serviceWorker.getRegistrations().then(function(registrations){
+        return Promise.all(registrations.filter(function(registration){
+          try{
+            var scopePath=new URL(registration.scope,location.href).pathname;
+            return scopePath==='/atendimento-acs-farmaceutico/'&&scopePath.indexOf('/push/')===-1;
+          }catch(e){return false}
+        }).map(function(registration){return registration.unregister()}));
+      }).catch(function(){return null}));
+    }
+    if('caches' in window&&typeof caches.keys==='function'){
+      jobs.push(caches.keys().then(function(keys){
+        return Promise.all(keys.filter(function(key){
+          var value=String(key||'').toLowerCase();
+          return value.indexOf('onesignal')===-1&&/^(?:tacs-|portal-tacs-|atendimento-acs)/.test(value);
+        }).map(function(key){return caches.delete(key)}));
+      }).catch(function(){return null}));
+    }
+    return Promise.all(jobs);
   }
 
   function isLegacyIdentityStatus(text){
@@ -116,8 +146,13 @@
   }
 
   function reloadFresh(version){
+    if(reloading)return;
+    reloading=true;
     clearTransientConnectionState();
-    window.location.replace(freshUrl(version||Date.now()));
+    var target=freshUrl(version||Date.now()),moved=false;
+    function move(){if(moved)return;moved=true;window.location.replace(target)}
+    window.setTimeout(move,800);
+    purgeLegacyDeliveryState().then(move,move);
   }
 
   function ensureStyle(){
@@ -129,7 +164,7 @@
   }
 
   function isAdminPage(){
-    return /(?:^|\/)(?:painel-oficial-|teste-v1\/painel-|admin)/.test(window.location.pathname||'');
+    return /(?:^|\/)(?:central-administrativa-tacs\.html|painel-oficial-|teste-v1\/painel-|admin)/.test(window.location.pathname||'');
   }
 
   function isEmbeddedAdminPage(){
@@ -171,9 +206,9 @@
 
   function installUI(){
     if(!document.body){setTimeout(installUI,40);return}
-    if(isEmbeddedAdminPage()){
-      var embeddedButton=document.getElementById(BUTTON_ID);
-      if(embeddedButton)embeddedButton.remove();
+    if(isAdminPage()){
+      var adminButton=document.getElementById(BUTTON_ID);
+      if(adminButton)adminButton.remove();
       return;
     }
     ensureStyle();
@@ -212,14 +247,16 @@
         var remote=String(data&&data.version||'').trim();
         if(!remote)return null;
         var pageSeen=readStorage(localStorage,PAGE_VERSION_KEY);
+        var pageRelease=currentPageVersion();
+        var releaseMismatch=!pageRelease||pageRelease!==remote;
+        var forcedRelease=readStorage(sessionStorage,FORCED_RELEASE_KEY);
         writeStorage(localStorage,GLOBAL_VERSION_KEY,remote);
-        if(!pageSeen){
-          writeStorage(localStorage,PAGE_VERSION_KEY,remote);
-          return remote;
-        }
-        if(pageSeen!==remote){
-          writeStorage(localStorage,PAGE_VERSION_KEY,remote);
+        if(pageSeen!==remote)writeStorage(localStorage,PAGE_VERSION_KEY,remote);
+        if(releaseMismatch&&forcedRelease!==remote){
+          writeStorage(sessionStorage,FORCED_RELEASE_KEY,remote);
           reloadFresh(remote);
+        }else if(!releaseMismatch){
+          removeStorage(sessionStorage,FORCED_RELEASE_KEY);
         }
         return remote;
       })
@@ -297,7 +334,8 @@
     reconectar:wakeConnection,
     limparTemporarios:clearTransientConnectionState,
     protegerIdentidadeTerritorial:installTerritorialIdentityGuard,
-    instalarRetornoCentral:installCentralReturnUI
+    instalarRetornoCentral:installCentralReturnUI,
+    purgarEntregaLegada:purgeLegacyDeliveryState
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installUI,{once:true});

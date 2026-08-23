@@ -150,7 +150,7 @@ async function main() {
   assert.ok(index.indexOf('portal-public-data.js') < index.indexOf('agenda-enfermeira.js'));
   assert.ok(index.indexOf('portal-public-data.js') < index.indexOf('portal-controle-integral.js'));
   assert.match(index, /rel="preconnect" href="https:\/\/script\.google\.com"/);
-  assert.match(index, /20260812-multiarea-v1/);
+  assert.match(index, /portal-public-data\.js\?v=[^"']+/, 'O transporte público deve usar o carimbo integral da publicação.');
   assert.match(source, /TIMEOUT_MS=25000/);
   assert.match(source, /REFRESH_MIN_MS=30\*1000/);
   assert.match(source, /portalTacsPublicInvalidateAtV1/);

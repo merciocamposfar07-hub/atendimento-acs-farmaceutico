@@ -23,6 +23,7 @@ assert.doesNotMatch(quick, /name==='portal'\|\|name==='recados'/);
 assert.doesNotMatch(central, /if\(name==='recados'\)\{location\.href=url;return\}/);
 assert.match(centralHtml, /\.viewer iframe\{display:block;width:100%;min-width:0;min-height:0;flex:1 1 auto/);
 assert.doesNotMatch(centralHtml, /\.viewer\{[^}]*height:100(?:d?vh|%)/);
-assert.match(centralHtml, /20260823-recados-safari-render-v1/);
+assert.match(centralHtml, /central-administrativa-tacs\.js\?v=[^"']+/,
+  'A Central deve carregar o controlador com o carimbo integral da publicação.');
 
 console.log('RECADOS_SAFARI_RENDER_V1_OK');

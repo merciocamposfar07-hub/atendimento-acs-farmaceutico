@@ -9,12 +9,14 @@ const quick=read('central-tacs-login-rapido-v1.js');
 const support=read('central-suporte-moradores-v1.js');
 const performance=read('central-admin-performance-v1.js');
 
-const directController='central-admin-performance-v1.js?v=20260823-central-navigation-v2';
+const directControllerMatch=central.match(/central-admin-performance-v1\.js\?v=([^"']+)/);
+assert(directControllerMatch,'Central deve carregar o controlador rápido com revisão explícita');
+const directController=directControllerMatch[0];
 assert(central.includes('rel="preload" as="script" href="/atendimento-acs-farmaceutico/'+directController+'"'),'Central deve iniciar o download do controlador rápido durante a leitura do HTML');
 assert(central.includes('<script src="/atendimento-acs-farmaceutico/'+directController+'"></script>'),'Controlador rápido deve ser carregado diretamente pela Central');
 assert(central.indexOf(directController)<central.indexOf('central-tacs-login-rapido-v1.js'),'Controlador rápido precisa carregar antes do login rápido instalar compatibilidades de navegação');
 assert(central.indexOf(directController)<central.indexOf('central-suporte-moradores-v1.js'),'Controlador rápido precisa estar pronto antes do bootstrap de suporte');
-assert(central.includes('central-suporte-moradores-v1.js?v=20260823-admin-performance-v1'),'Central deve preservar o bootstrap de suporte e fallback');
+assert(/central-suporte-moradores-v1\.js\?v=[^"']+/.test(central),'Central deve preservar o bootstrap de suporte e fallback com revisão explícita');
 assert(support.includes('central-admin-performance-v1.js?v=20260823-admin-performance-v1'),'Bootstrap deve preservar fallback do controlador oficial');
 assert(support.includes('BLOCO_1_CONTROLE_UNICO_V1'),'Contrato de controlador único do Bloco 1 ausente');
 assert(support.includes("document.addEventListener('click',navigationGate,true)"),'Gate de compatibilidade deve continuar seguro se o carregamento direto falhar');

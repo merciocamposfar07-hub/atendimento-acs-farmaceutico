@@ -24,7 +24,7 @@ c=context.reparosV9ClassificarCiclo_({}, {reparoId:'r4',concluidoEm:'2026-08-21 
 assert.strictEqual(c.fase,'CONCLUIDO');assert.strictEqual(c.travado,false);
 
 assert.match(build,/ZZZZ_47_EstabilizacaoReparosV9\.gs/,'A V9 precisa entrar no pacote oficial do Apps Script.');
-assert.match(index,/portal-notification-repair-v9\.js\?v=20260821-repair-v9/,'O Portal precisa carregar o watchdog V9 com cache-buster.');
+assert.match(index,/portal-notification-repair-v9\.js\?v=[^"']+/,'O Portal precisa carregar o watchdog V9 com o carimbo integral da publicação.');
 assert.doesNotMatch(frontend,/\.optOut\(/,'A estabilização V9 nunca deve desligar o Push para tentar repará-lo.');
 assert.match(frontend,/tried>=2/,'A autorrecuperação deve ter limite de tentativas.');
 assert.match(frontend,/AUTO_FALHOU/,'Falha automática precisa ser registrada.');
