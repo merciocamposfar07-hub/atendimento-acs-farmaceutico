@@ -1,0 +1,74 @@
+name: Corrigir nutricionista sem vaga emergencial V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-nutricionista-sem-vaga-emergencial-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remover campo emergencial somente da nutricionista
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('painel-oficial-agendas-vagas.html')
+          text = path.read_text(encoding='utf-8')
+
+          marker = '/* Nutricionista não utiliza vagas emergenciais; odontologia permanece inalterada. */'
+          css = '''/* Nutricionista não utiliza vagas emergenciais; odontologia permanece inalterada. */
+          .cartao[data-chave^="NUTRICIONISTA|"] label:has(+ input[name="vagasEmergenciais"]),
+          .cartao[data-chave^="NUTRICIONISTA|"] input[name="vagasEmergenciais"]{
+            display:none!important;
+          }
+
+          '''
+
+          if marker not in text:
+              anchor = 'footer,.footer{'
+              if anchor not in text:
+                  raise SystemExit('Âncora visual esperada não encontrada no painel de agendas.')
+              text = text.replace(anchor, css + anchor, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validar escopo da correção
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'cartao[data-chave^="NUTRICIONISTA|"] input[name="vagasEmergenciais"]' painel-oficial-agendas-vagas.html
+          grep -Fq "normalId(a.MODULO)==='ODONTOLOGIA'" painel-oficial-agendas-vagas.html
+          grep -Fq '<label>Vagas emergenciais</label><input class="campo" name="vagasEmergenciais"' painel-oficial-agendas-vagas.html
+
+      - name: Publicar correção
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- painel-oficial-agendas-vagas.html; then
+            echo 'Correção já aplicada.'
+            exit 0
+          fi
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add painel-oficial-agendas-vagas.html
+          git commit -m 'Oculta vagas emergenciais da nutricionista'
+          for tentativa in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((tentativa*2))
+          done
+          exit 1
