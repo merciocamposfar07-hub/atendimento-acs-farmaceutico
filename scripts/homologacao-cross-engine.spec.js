@@ -97,3 +97,32 @@ test('Portal público comum não expõe retorno administrativo', async ({ page, 
   expect(m.overflowPx).toBeLessThanOrEqual(1);
   writeResult({ kind: 'public-no-central-return', browserName, viewport: 'iphone-390', visible: false, ...m });
 });
+
+test('Botão Atualizar refaz a navegação com cache-bust real', async ({ page, browserName }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await blockExternal(page);
+  await page.goto('index.html', { waitUntil: 'domcontentloaded' });
+  const refresh = page.locator('#portalTacsAtualizarPaginaV1');
+  await expect(refresh).toBeVisible();
+  await Promise.all([
+    page.waitForURL(url => {
+      const u = new URL(url);
+      return u.pathname.endsWith('/index.html') && u.searchParams.get('ptrefresh') === '1' && /^\d+$/.test(u.searchParams.get('ptv') || '');
+    }),
+    refresh.click()
+  ]);
+  const u = new URL(page.url());
+  expect(u.searchParams.get('ptrefresh')).toBe('1');
+  expect(u.searchParams.get('ptv')).toMatch(/^\d+$/);
+  writeResult({ kind: 'portal-refresh', browserName, viewport: 'iphone-390', refreshed: true });
+});
+
+test('Rodapé usa o símbolo oficial da Conecta Saúde Comunitária', async ({ page, browserName }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await blockExternal(page);
+  await page.goto('index.html', { waitUntil: 'domcontentloaded' });
+  const logo = page.locator('.portal-footer-brand [data-conecta-oficial="1"]');
+  await expect(logo).toBeVisible();
+  await expect(logo).toHaveAttribute('aria-label', 'Símbolo oficial Conecta Saúde Comunitária');
+  writeResult({ kind: 'conecta-brand', browserName, viewport: 'iphone-390', official: true });
+});
