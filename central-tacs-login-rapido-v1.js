@@ -195,9 +195,9 @@ function stableModuleUrl(name){
   var area=encodeURIComponent(currentAreaId());
   var tacsOnly=hasTerritorySession()||queryTacsOnly();
   var access=tacsOnly?'&acesso=tacs':'';
-  var revision='20260822-promocao-institucional-v1';
+  var revision='20260823-recados-sem-iframe-v1';
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+'&v='+revision;
-  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v='+revision;
+  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&from=central&v='+revision;
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?v='+revision;
@@ -267,7 +267,7 @@ function installInstitutionalNavigation(){
       var name=btn.dataset.module||'';
       var url=stableModuleUrl(name);if(!url)return;
       event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-      if(name==='portal'){
+      if(name==='portal'||name==='recados'){
         try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
         location.href=url;return;
       }

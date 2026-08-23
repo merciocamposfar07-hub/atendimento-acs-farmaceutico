@@ -256,10 +256,32 @@ footer,.footer{
     transition-duration:.001ms!important;
   }
 }
+
+/* No iPhone, este painel longo precisa rolar como página própria. O Safari
+   deixa áreas sem pintura quando ele é rolado dentro de um iframe fixo. */
+.central-direto-bar{
+  position:sticky;top:0;z-index:1000;
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;
+  padding:calc(10px + env(safe-area-inset-top)) 12px 10px;
+  background:#073a55;color:#fff;border-bottom:3px solid #69c7e7;
+}
+.central-direto-bar[hidden]{display:none!important}
+.central-direto-voltar{
+  display:inline-flex;align-items:center;justify-content:center;min-height:46px;
+  border:2px solid #69c7e7;border-radius:22px;padding:8px 13px;
+  background:#fff;color:#073a55;font-weight:900;text-decoration:none;
+}
+.central-direto-titulo{min-width:0;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.central-direto.central-direto-sessao #loginAdminTab,
+body.central-direto.central-direto-sessao #loginTacsTab,
+body.central-direto.central-direto-sessao #adminLogin,
+body.central-direto.central-direto-sessao #tacsLogin{display:none!important}
 </style>
 <!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->
 </head>
 <body>
+<nav id="centralDiretoBar" class="central-direto-bar" aria-label="Navegação da Central Administrativa" hidden><a class="central-direto-voltar" href="/atendimento-acs-farmaceutico/central-administrativa-tacs.html?retorno=recados">← Central</a><strong class="central-direto-titulo">Recados e campanhas</strong></nav>
+<script id="centralDiretoRecadosV1">(function(){try{var p=new URLSearchParams(location.search||'');if(String(p.get('from')||'').toLowerCase()!=='central')return;document.body.classList.add('central-direto');if(sessionStorage.getItem('portalTacsAdminTokenV1')||sessionStorage.getItem('portalTacsTerritorioTokenV1'))document.body.classList.add('central-direto-sessao');var b=document.getElementById('centralDiretoBar');if(b)b.hidden=false}catch(e){}}());</script>
 <header><span class="selo">PAINEL ADMINISTRATIVO OFICIAL</span><h1>Recados e campanhas</h1><p>Publicações administrativas do Portal TACS.</p></header>
 <main>
 <div class="preferenciaVisual"><button id="alternarContraste" class="contrasteBotao" type="button" aria-pressed="false">◐ Usar cartões azul-petróleo</button></div>
