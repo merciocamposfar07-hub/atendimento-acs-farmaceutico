@@ -32,13 +32,15 @@ jobs:
       - name: Aplicar, testar e gravar Bloco 4
         run: |
           test -f scripts/aplicar_bloco4_request_manager_v1.py
+          test -f scripts/ajustar_bloco4_consumo_inicial_v1.py
           python3 scripts/aplicar_bloco4_request_manager_v1.py
+          python3 scripts/ajustar_bloco4_consumo_inicial_v1.py
           node --check scripts/test_admin_request_dedup_v1.js
           node scripts/test_admin_request_dedup_v1.js
           npm ci
           npm test
           git checkout -- scripts/test_dom_flows.js scripts/test_territorio_dom.js
-          ALLOWED='central-administrativa-tacs.js|central-admin-performance-v1.js|painel-oficial-agendas-vagas.html|teste-v1/painel-profissionais-servicos-v1.html|scripts/test_admin_request_dedup_v1.js|package.json|scripts/aplicar_bloco4_request_manager_v1.py'
+          ALLOWED='central-administrativa-tacs.js|central-admin-performance-v1.js|painel-oficial-agendas-vagas.html|teste-v1/painel-profissionais-servicos-v1.html|scripts/test_admin_request_dedup_v1.js|package.json|scripts/aplicar_bloco4_request_manager_v1.py|scripts/ajustar_bloco4_consumo_inicial_v1.py'
           TRACKED=$(git status --short | sed -E 's/^.. //')
           echo "$TRACKED"
           EXTRA=$(printf '%s\n' "$TRACKED" | grep -Ev "^($ALLOWED)$" || true)
@@ -52,8 +54,9 @@ jobs:
           ! grep -q "jsonp('publico_conteudo',{areaId:context.areaId}" central-administrativa-tacs.js
           grep -q 'profissionais:2400' central-admin-performance-v1.js
           grep -q 'portalTacsAdminSharedReadV1:admin_dados:v1:' painel-oficial-agendas-vagas.html
-          grep -q 'portalTacsAdminSharedReadV1:admin_dados:v1:' teste-v1/painel-profissionais-servicos-v1.html
-          git rm scripts/aplicar_bloco4_request_manager_v1.py
+          grep -q 'sharedAdminReadConsumido?null:lerSharedAdminDados()' painel-oficial-agendas-vagas.html
+          grep -q 'sharedAdminReadConsumido?null:lerSharedAdminDados()' teste-v1/painel-profissionais-servicos-v1.html
+          git rm scripts/aplicar_bloco4_request_manager_v1.py scripts/ajustar_bloco4_consumo_inicial_v1.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add central-administrativa-tacs.js central-admin-performance-v1.js painel-oficial-agendas-vagas.html teste-v1/painel-profissionais-servicos-v1.html scripts/test_admin_request_dedup_v1.js package.json
