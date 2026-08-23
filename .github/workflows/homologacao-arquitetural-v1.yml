@@ -4,7 +4,7 @@ on:
   push:
     branches: [homologacao-arquitetural-v1]
   pull_request:
-    branches: [main]
+    branches: [main, homologacao-arquitetural-v1]
   workflow_dispatch:
 
 permissions:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   aplicar-bloco3-na-pr:
-    if: github.event_name == 'push'
+    if: github.event_name == 'pull_request' && github.base_ref == 'homologacao-arquitetural-v1' && github.head_ref == 'central-bloco3-local-first-v1'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -25,24 +25,22 @@ jobs:
         with:
           ref: central-bloco3-local-first-v1
           fetch-depth: 0
-      - name: Confirmar executor de branch
-        run: test -f scripts/aplicar_bloco3_local_first_v1.py
-      - name: Aplicar somente Bloco 3
-        run: python3 scripts/aplicar_bloco3_local_first_v1.py
-      - name: Validar contrato local-first
-        run: |
-          node --check scripts/test_admin_local_first_v1.js
-          node scripts/test_admin_local_first_v1.js
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
-      - name: Instalar dependências
-        run: npm ci
-      - name: Executar regressão completa antes de gravar
-        run: npm test
-      - name: Confirmar escopo fechado
+      - name: Aplicar, testar e gravar somente se ainda pendente
         run: |
+          if grep -q 'portalTacsAdminSnapshotV1:agendas:' painel-oficial-agendas-vagas.html; then
+            echo 'Bloco 3 já aplicado na branch; nenhuma reaplicação necessária.'
+            exit 0
+          fi
+          test -f scripts/aplicar_bloco3_local_first_v1.py
+          python3 scripts/aplicar_bloco3_local_first_v1.py
+          node --check scripts/test_admin_local_first_v1.js
+          node scripts/test_admin_local_first_v1.js
+          npm ci
+          npm test
           ALLOWED='painel-oficial-agendas-vagas.html|painel-oficial-recados-campanhas.html|teste-v1/painel-profissionais-servicos-v1.html|scripts/test_admin_local_first_v1.js|package.json'
           TRACKED=$(git diff --name-only)
           echo "$TRACKED"
@@ -52,21 +50,18 @@ jobs:
             echo "$EXTRA"
             exit 1
           fi
-          grep -q 'portalTacsAdminSnapshotV1:agendas:' painel-oficial-agendas-vagas.html
           grep -q 'portalTacsAdminSnapshotV1:recados:' painel-oficial-recados-campanhas.html
           grep -q 'portalTacsAdminSnapshotV1:profissionais:' teste-v1/painel-profissionais-servicos-v1.html
           ! grep -q 'portalTacsAdminSnapshotV1:moradores:' teste-v1/painel-moradores-v2.html
-      - name: Remover executores temporários da PR e gravar resultado validado
-        run: |
-          rm -f scripts/aplicar_bloco3_local_first_v1.py .github/workflows/bloco3-local-first-v1.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add painel-oficial-agendas-vagas.html painel-oficial-recados-campanhas.html teste-v1/painel-profissionais-servicos-v1.html scripts/test_admin_local_first_v1.js package.json
           git commit -m 'Bloco 3: dados local-first seguros nos painéis administrativos'
           git pull --rebase origin central-bloco3-local-first-v1
           git push origin central-bloco3-local-first-v1
 
   qualidade-estatica:
+    if: github.event_name != 'pull_request' || github.base_ref != 'homologacao-arquitetural-v1'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -88,6 +83,7 @@ jobs:
         run: npm test
 
   navegadores-reais:
+    if: github.event_name != 'pull_request' || github.base_ref != 'homologacao-arquitetural-v1'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
