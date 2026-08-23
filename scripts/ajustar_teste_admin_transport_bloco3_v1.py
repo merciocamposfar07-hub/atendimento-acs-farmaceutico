@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 
 # Executor auxiliar temporário do Bloco 3 — não entra na main.
+# Reexecução técnica após correção do controle de escopo da homologação.
 # Atualiza somente contratos que fixavam a antiga chave de cache por área.
 p=Path('scripts/test_admin_transport.js')
 s=p.read_text(encoding='utf-8')
