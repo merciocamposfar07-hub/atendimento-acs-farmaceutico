@@ -1,0 +1,118 @@
+# gate-retrigger-20260823
+name: Estabilizacao Central Performance V2
+
+on:
+  push:
+    branches: [estabilizacao-central-performance-v2]
+    paths:
+      - '.github/workflows/estabilizacao-central-performance-v2.yml'
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  estabilizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: estabilizacao-central-performance-v2
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Consolidar controlador da Central
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p=Path('central-administrativa-tacs.html')
+          s=p.read_text(encoding='utf-8')
+          needle='<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260823-recados-safari-render-v1"></script>\n<script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=20260823-agendas-safari-paint-v1"></script>'
+          repl='<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260823-recados-safari-render-v1"></script>\n<script src="/atendimento-acs-farmaceutico/central-admin-performance-v1.js?v=20260823-central-estabilizacao-v2"></script>\n<script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=20260823-central-estabilizacao-v2"></script>'
+          if needle not in s:
+              raise SystemExit('Loader esperado da Central não encontrado')
+          p.write_text(s.replace(needle,repl,1),encoding='utf-8')
+
+          p=Path('central-tacs-login-rapido-v1.js')
+          s=p.read_text(encoding='utf-8')
+          needle="function installInstitutionalNavigation(){\n  var grid=document.getElementById('moduleGrid');"
+          repl="function installInstitutionalNavigation(){\n  if(window.PortalTacsCentralPerformanceV1)return;\n  var grid=document.getElementById('moduleGrid');"
+          if needle not in s:
+              raise SystemExit('Navegação institucional legada não encontrada')
+          p.write_text(s.replace(needle,repl,1),encoding='utf-8')
+
+          p=Path('central-suporte-moradores-v1.js')
+          s=p.read_text(encoding='utf-8')
+          needle="function loadPerformanceLayer(){if(window.PortalTacsCentralPerformanceV1||document.getElementById('portalTacsCentralPerformanceLoaderV1'))return;var script=document.createElement('script');script.id='portalTacsCentralPerformanceLoaderV1';script.src='/atendimento-acs-farmaceutico/central-admin-performance-v1.js?v=20260823-admin-performance-v1';script.async=false;document.head.appendChild(script)}\nloadPerformanceLayer();\nif(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();window.addEventListener('pageshow',function(){install();loadPerformanceLayer()});"
+          repl="if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();window.addEventListener('pageshow',install);"
+          if needle not in s:
+              raise SystemExit('Loader dinâmico de performance do suporte não encontrado')
+          p.write_text(s.replace(needle,repl,1),encoding='utf-8')
+
+          p=Path('scripts/test_central_admin_performance_v1.js')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace("const performance=read('central-admin-performance-v1.js');", "const performance=read('central-admin-performance-v1.js');\nconst quick=read('central-tacs-login-rapido-v1.js');")
+          old="assert(central.includes('central-suporte-moradores-v1.js?v=20260823-admin-performance-v1'),'Central deve carregar a revisão de desempenho sem mudar o layout dos cartões');\nassert(support.includes('central-admin-performance-v1.js?v=20260823-admin-performance-v1'),'Camada de desempenho não foi carregada pela Central');"
+          new="assert(central.includes('central-admin-performance-v1.js?v=20260823-central-estabilizacao-v2'),'Central deve carregar diretamente o controlador oficial de desempenho');\nassert(central.indexOf('central-admin-performance-v1.js') < central.indexOf('central-tacs-login-rapido-v1.js'),'Controlador de desempenho deve estar ativo antes das camadas de compatibilidade');\nassert(!support.includes('portalTacsCentralPerformanceLoaderV1'),'Suporte não pode injetar uma segunda instância do controlador de desempenho');\nassert(quick.includes('if(window.PortalTacsCentralPerformanceV1)return'),'Login rápido não pode instalar uma segunda navegação quando o controlador oficial já está ativo');"
+          if old not in s:
+              raise SystemExit('Contrato anterior de performance não encontrado')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+
+      - name: Validar sintaxe e escopo
+        run: |
+          set -euo pipefail
+          node --check central-administrativa-tacs.js
+          node --check central-admin-performance-v1.js
+          node --check central-tacs-login-rapido-v1.js
+          node --check central-suporte-moradores-v1.js
+          git diff --check
+          python3 - <<'PY'
+          import subprocess
+          changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          allowed={
+            'central-administrativa-tacs.html',
+            'central-tacs-login-rapido-v1.js',
+            'central-suporte-moradores-v1.js',
+            'scripts/test_central_admin_performance_v1.js'
+          }
+          extra=changed-allowed
+          missing=allowed-changed
+          if extra: raise SystemExit('Arquivos inesperados alterados: '+', '.join(sorted(extra)))
+          if missing: raise SystemExit('Arquivos esperados não alterados: '+', '.join(sorted(missing)))
+          print('OK: escopo fechado nos quatro arquivos previstos')
+          PY
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Gates direcionados
+        run: |
+          set -euo pipefail
+          node scripts/test_central_admin_performance_v1.js
+          node scripts/test_multiagent_quick_login.js
+          node scripts/test_tacs_admin_visibility.js
+          node scripts/test_ui_contract_v1.js
+          node scripts/test_admin_ui_standard_v1.js
+          node scripts/test_suporte_moradores_v1.js
+
+      - name: Suite completa de regressao
+        run: npm test
+
+      - name: Commitar somente apos todos os testes
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git rm .github/workflows/estabilizacao-central-performance-v2.yml
+          git add central-administrativa-tacs.html central-tacs-login-rapido-v1.js central-suporte-moradores-v1.js scripts/test_central_admin_performance_v1.js
+          git commit -m 'Estabiliza controlador unico de navegacao da Central'
+          git push origin HEAD:estabilizacao-central-performance-v2

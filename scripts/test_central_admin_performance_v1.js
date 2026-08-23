@@ -6,9 +6,12 @@ function read(p){return fs.readFileSync(p,'utf8')}
 const central=read('central-administrativa-tacs.html');
 const support=read('central-suporte-moradores-v1.js');
 const performance=read('central-admin-performance-v1.js');
+const quick=read('central-tacs-login-rapido-v1.js');
 
-assert(central.includes('central-suporte-moradores-v1.js?v=20260823-admin-performance-v1'),'Central deve carregar a revisão de desempenho sem mudar o layout dos cartões');
-assert(support.includes('central-admin-performance-v1.js?v=20260823-admin-performance-v1'),'Camada de desempenho não foi carregada pela Central');
+assert(central.includes('central-admin-performance-v1.js?v=20260823-central-estabilizacao-v2'),'Central deve carregar diretamente o controlador oficial de desempenho');
+assert(central.indexOf('central-admin-performance-v1.js') < central.indexOf('central-tacs-login-rapido-v1.js'),'Controlador de desempenho deve estar ativo antes das camadas de compatibilidade');
+assert(!support.includes('portalTacsCentralPerformanceLoaderV1'),'Suporte não pode injetar uma segunda instância do controlador de desempenho');
+assert(quick.includes('if(window.PortalTacsCentralPerformanceV1)return'),'Login rápido não pode instalar uma segunda navegação quando o controlador oficial já está ativo');
 assert(support.includes('painel-suporte-moradores-v2.html'),'Navegação dedicada de suporte deve permanecer preservada');
 assert(!support.includes('painel-oficial-agendas-vagas.html')&&!support.includes('painel-oficial-profissionais-servicos.html'),'Suporte deve continuar desacoplado dos demais módulos');
 
