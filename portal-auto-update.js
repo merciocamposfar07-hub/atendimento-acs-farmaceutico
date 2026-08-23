@@ -8,6 +8,7 @@
   var BUTTON_ID='portalTacsAtualizarPaginaV1';
   var CENTRAL_RETURN_ID='portalTacsVoltarCentralV1';
   var STYLE_ID='portalTacsAtualizarPaginaStyleV1';
+  var CONECTA_SCRIPT_ID='portalTacsConectaOficialScriptV1';
   var CHECK_INTERVAL=60000;
   var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
   var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
@@ -235,15 +236,29 @@
     (document.head||document.documentElement).appendChild(script);
   }
 
-  function loadInstitutionalPortal(){
-    if(isAdminPage()||document.getElementById('portalTacsInstitucionalSuporteScriptV1'))return;
+  function loadConectaBrand(){
+    if(isAdminPage()||document.getElementById(CONECTA_SCRIPT_ID))return;
     var path=String(window.location.pathname||'');
     if(!/\/atendimento-acs-farmaceutico\/(?:index\.html)?$/.test(path))return;
     var script=document.createElement('script');
-    script.id='portalTacsInstitucionalSuporteScriptV1';
+    script.id=CONECTA_SCRIPT_ID;
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-institucional-suporte-v1.js?v=20260822-institucional-suporte-v1';
+    script.src='/atendimento-acs-farmaceutico/portal-conecta-oficial-v1.js?v=20260822-conecta-oficial-v1';
     (document.head||document.documentElement).appendChild(script);
+  }
+
+  function loadInstitutionalPortal(){
+    if(isAdminPage())return;
+    var path=String(window.location.pathname||'');
+    if(!/\/atendimento-acs-farmaceutico\/(?:index\.html)?$/.test(path))return;
+    if(!document.getElementById('portalTacsInstitucionalSuporteScriptV1')){
+      var script=document.createElement('script');
+      script.id='portalTacsInstitucionalSuporteScriptV1';
+      script.async=true;
+      script.src='/atendimento-acs-farmaceutico/portal-institucional-suporte-v1.js?v=20260822-institucional-suporte-v1';
+      (document.head||document.documentElement).appendChild(script);
+    }
+    loadConectaBrand();
   }
 
   window.PortalTacsAtualizacao={
