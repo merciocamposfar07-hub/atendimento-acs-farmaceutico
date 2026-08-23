@@ -8,13 +8,64 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: homologacao-arquitetural-v1-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  aplicar-bloco3-na-pr:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar branch do Bloco 3
+        uses: actions/checkout@v7
+        with:
+          ref: central-bloco3-local-first-v1
+          fetch-depth: 0
+      - name: Confirmar executor de branch
+        run: test -f scripts/aplicar_bloco3_local_first_v1.py
+      - name: Aplicar somente Bloco 3
+        run: python3 scripts/aplicar_bloco3_local_first_v1.py
+      - name: Validar contrato local-first
+        run: |
+          node --check scripts/test_admin_local_first_v1.js
+          node scripts/test_admin_local_first_v1.js
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Executar regressão completa antes de gravar
+        run: npm test
+      - name: Confirmar escopo fechado
+        run: |
+          ALLOWED='painel-oficial-agendas-vagas.html|painel-oficial-recados-campanhas.html|teste-v1/painel-profissionais-servicos-v1.html|scripts/test_admin_local_first_v1.js|package.json'
+          TRACKED=$(git diff --name-only)
+          echo "$TRACKED"
+          EXTRA=$(printf '%s\n' "$TRACKED" | grep -Ev "^($ALLOWED)$" || true)
+          if [ -n "$EXTRA" ]; then
+            echo 'Arquivos funcionais fora do escopo:'
+            echo "$EXTRA"
+            exit 1
+          fi
+          grep -q 'portalTacsAdminSnapshotV1:agendas:' painel-oficial-agendas-vagas.html
+          grep -q 'portalTacsAdminSnapshotV1:recados:' painel-oficial-recados-campanhas.html
+          grep -q 'portalTacsAdminSnapshotV1:profissionais:' teste-v1/painel-profissionais-servicos-v1.html
+          ! grep -q 'portalTacsAdminSnapshotV1:moradores:' teste-v1/painel-moradores-v2.html
+      - name: Remover executores temporários da PR e gravar resultado validado
+        run: |
+          rm -f scripts/aplicar_bloco3_local_first_v1.py .github/workflows/bloco3-local-first-v1.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Bloco 3: dados local-first seguros nos painéis administrativos'
+          git pull --rebase origin central-bloco3-local-first-v1
+          git push origin central-bloco3-local-first-v1
+
   qualidade-estatica:
     runs-on: ubuntu-latest
     timeout-minutes: 15
