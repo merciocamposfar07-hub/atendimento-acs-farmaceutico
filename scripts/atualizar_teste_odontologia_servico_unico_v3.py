@@ -51,15 +51,13 @@ replacement = r'''async function testNonBlockingDentalCard() {
     let renderedMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(card => /Segunda-feira/.test(card.textContent));
     assert.match(renderedMonday.textContent, /1 vaga de emergência disponível/, 'A tela deve manter a quantidade anterior enquanto a confirmação está em trânsito');
 
-    // Este harness antigo não implementa buscar_morador. Dispare somente o CPF,
-    // dê tempo para a consulta fictícia encerrar e então preencha os dados manuais.
-    // Não dependemos do texto de cpfStatus porque outras camadas podem reescrevê-lo.
-    setField(window, '#cpf', '52998224725');
-    await wait(350);
-    setField(window, '#birth', '28121984');
-    setField(window, '#name', 'Paciente Teste Confirmação');
-    setField(window, '#locality', 'Sítio Japaranduba');
-    setField(window, '#subject', 'Solicitação odontológica simulada.');
+    // O objetivo deste cenário é a reserva odontológica, não o autofill de morador.
+    // Preencher diretamente evita disparar buscar_morador e mantém os blocos de teste isolados.
+    window.document.querySelector('#cpf').value = '52998224725';
+    window.document.querySelector('#birth').value = '28/12/1984';
+    window.document.querySelector('#name').value = 'Paciente Teste Confirmação';
+    window.document.querySelector('#locality').value = 'Sítio Japaranduba';
+    window.document.querySelector('#subject').value = 'Solicitação odontológica simulada.';
 
     const pendingSelection = window.PortalTacsOdontologiaV98 && window.PortalTacsOdontologiaV98.selecao
       ? window.PortalTacsOdontologiaV98.selecao()
@@ -134,9 +132,8 @@ checks = [
     "harness.records.dentalReservations.length === reservationsBeforeClick + 1",
     "assert.equal(reservation.type, 'emergencial');",
     "assert.match(renderedMonday.textContent, /1 vaga de emergência disponível/",
-    "setField(window, '#cpf', '52998224725');",
-    "await wait(350);",
-    "setField(window, '#birth', '28121984');",
+    "window.document.querySelector('#cpf').value = '52998224725';",
+    "window.document.querySelector('#birth').value = '28/12/1984';",
     "assert.equal(pendingSelection.confirmed, false",
     "assert.equal(send.disabled, true",
     "window.PortalTacsOdontologiaV98.formularioValido()",
