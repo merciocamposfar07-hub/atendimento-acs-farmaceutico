@@ -13,6 +13,9 @@ test('CPF não localizado é vinculado somente ao integrante escolhido da famíl
   let complementBody='';
   let familyConsults=0;
   let familyConsultFamily='';
+  let familyCallback='';
+  const pageErrors=[];
+  page.on('pageerror',err=>pageErrors.push(String(err&&err.message||err)));
 
   await page.route('**/macros/s/**', async route => {
     const request=route.request();
@@ -28,6 +31,7 @@ test('CPF não localizado é vinculado somente ao integrante escolhido da famíl
     if(action==='publico_familia_consultar'){
       familyConsults++;
       familyConsultFamily=url.searchParams.get('familia')||'';
+      familyCallback=callback;
       payload={ok:true,autorizada:true,familiaId:FAMILY,membros:[
         {token:'fm_aaaaaaaaaaaaaaaaaaaaaaaa',nome:'Maria',nascimento:'01/01/1985',temDocumento:true},
         {token:'fm_bbbbbbbbbbbbbbbbbbbbbbbb',nome:'Miguel',nascimento:'02/02/2020',temDocumento:true}
@@ -63,8 +67,12 @@ test('CPF não localizado é vinculado somente ao integrante escolhido da famíl
 
   await expect.poll(()=>familyConsults,{message:'O contrato semântico de documento não localizado precisa disparar a consulta da família lembrada.'}).toBeGreaterThan(0);
   expect(familyConsultFamily).toBe(FAMILY);
+  expect(familyCallback).toMatch(/^__tacsFam_/);
   await expect(page.locator('#portalFamilyLookupV1')).not.toHaveAttribute('hidden','');
-  await expect(page.getByText('De quem é este CPF?')).toBeVisible();
+  await expect.poll(async()=>await page.locator('#portalFamilyLookupV1').innerText(),{
+    message:`A resposta JSONP da família precisa renderizar os integrantes. callback=${familyCallback}; pageErrors=${pageErrors.join(' | ')}`
+  }).toContain('De quem é este CPF?');
+  expect(pageErrors).toEqual([]);
   await expect(page.getByRole('button',{name:/Maria/})).toBeVisible();
   await expect(page.getByRole('button',{name:/Miguel/})).toBeVisible();
   expect(complementBody).toBe('');
