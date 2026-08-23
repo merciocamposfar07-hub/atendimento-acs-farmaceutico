@@ -19,47 +19,117 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Aplicar somente o ajuste dos 4 baloes-resumo
-        run: python3 scripts/ajuste_resumo_agendas_petroleo_v1.py
-
-      - name: Validar escopo e integridade
+      - name: Aplicar correção estrutural de Agendas no iPhone
         run: |
-          grep -q 'AJUSTE_RESUMO_AGENDAS_PETROLEO_V1' painel-oficial-agendas-vagas.html
-          grep -q '#resumo.resumo .numero{' painel-oficial-agendas-vagas.html
-          grep -q 'qAgendas' painel-oficial-agendas-vagas.html
-          grep -q 'qAtivas' painel-oficial-agendas-vagas.html
-          grep -q 'qProf' painel-oficial-agendas-vagas.html
-          grep -q 'qVagas' painel-oficial-agendas-vagas.html
-          grep -q 'function salvarAgenda(c)' painel-oficial-agendas-vagas.html
-          grep -q 'function restaurar()' painel-oficial-agendas-vagas.html
-          CHANGED=$(git diff --name-only)
-          test "$CHANGED" = 'painel-oficial-agendas-vagas.html'
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
 
-      - name: Publicar
+          qpath=Path('central-tacs-login-rapido-v1.js')
+          q=qpath.read_text(encoding='utf-8')
+          old="if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v=20260823-agendas-safari-paint-v1';"
+          new="if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&from=central&v=20260823-agendas-ios-direct-v1';"
+          if old not in q: raise SystemExit('rota atual de agendas não encontrada')
+          q=q.replace(old,new,1)
+          anchor="function installInstitutionalNavigation(){\n"
+          helper="function isIOSWebKit(){var ua=String(navigator.userAgent||'');return /iP(hone|ad|od)/.test(ua)&&/AppleWebKit/i.test(ua)}\n"
+          if anchor not in q: raise SystemExit('âncora da navegação não encontrada')
+          q=q.replace(anchor,helper+anchor,1)
+          oldnav="      if(name==='portal'){\n        try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}\n        location.href=url;return;\n      }\n      var viewer=document.getElementById('viewer'),frame=document.getElementById('viewerFrame'),title=document.getElementById('viewerTitle');"
+          newnav="      if(name==='portal'||(name==='agendas'&&isIOSWebKit())){\n        try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}\n        location.href=url;return;\n      }\n      var viewer=document.getElementById('viewer'),frame=document.getElementById('viewerFrame'),title=document.getElementById('viewerTitle');"
+          if oldnav not in q: raise SystemExit('bloco de abertura não encontrado')
+          q=q.replace(oldnav,newnav,1)
+          qpath.write_text(q,encoding='utf-8')
+
+          ppath=Path('painel-oficial-agendas-vagas.html')
+          p=ppath.read_text(encoding='utf-8')
+          if 'agendaCentralDirectNavV1' in p: raise SystemExit('barra direta já existe')
+          block=r'''
+<!-- AGENDAS_IOS_DIRECT_NAV_V1_START -->
+<script id="agendaCentralDirectClassV1">(function(){try{if(new URLSearchParams(location.search).get('from')==='central')document.documentElement.classList.add('agenda-from-central')}catch(e){}})();</script>
+<style id="agendaCentralDirectNavV1">
+html.agenda-from-central body>header{display:none!important}
+#agendaCentralReturnV1{position:sticky;top:0;z-index:2147482000;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:#073a55;color:#fff;border-bottom:3px solid #69c7e7}
+#agendaCentralReturnV1 .agenda-central-back{min-height:46px;border:2px solid #69c7e7;border-radius:22px;padding:8px 13px;background:#fff;color:#073a55;font-weight:900;line-height:1.1;white-space:nowrap}
+#agendaCentralReturnV1 .agenda-central-title{min-width:0;font-weight:900;font-size:1.06rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.agenda-from-central,html.agenda-from-central body{overflow-x:hidden!important;overflow-y:auto!important}
+</style>
+<script id="agendaCentralDirectNavScriptV1">
+(function(){'use strict';function install(){var f='';try{f=new URLSearchParams(location.search).get('from')||''}catch(e){}if(f!=='central'||!document.body||document.getElementById('agendaCentralReturnV1'))return;var bar=document.createElement('div');bar.id='agendaCentralReturnV1';bar.innerHTML='<button class="agenda-central-back" type="button">← Central</button><div class="agenda-central-title">Agendas e vagas</div>';document.body.insertBefore(bar,document.body.firstChild);var back=bar.querySelector('.agenda-central-back');if(back)back.addEventListener('click',function(){var destino='/atendimento-acs-farmaceutico/central-administrativa-tacs.html';try{if(sessionStorage.getItem('portalTacsTerritorioTokenV1'))destino+='?acesso=tacs'}catch(e){}location.href=destino})}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install()})();
+</script>
+<!-- AGENDAS_IOS_DIRECT_NAV_V1_END -->
+'''
+          if '</head>' not in p: raise SystemExit('head não encontrado')
+          p=p.replace('</head>',block+'\n</head>',1)
+          ppath.write_text(p,encoding='utf-8')
+
+          hpath=Path('central-administrativa-tacs.html')
+          h=hpath.read_text(encoding='utf-8')
+          oldh='/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=20260823-agendas-safari-paint-v1'
+          newh='/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=20260823-agendas-ios-direct-v1'
+          if oldh not in h: raise SystemExit('loader atual não encontrado')
+          h=h.replace(oldh,newh,1)
+          hpath.write_text(h,encoding='utf-8')
+          PY
+
+      - name: Validar sintaxe e rota sem iframe
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add painel-oficial-agendas-vagas.html
-          git commit -m 'Padroniza 4 resumos de Agendas em azul-petroleo'
+          set -euo pipefail
+          node --check central-tacs-login-rapido-v1.js
+          git diff --check
+          python3 - <<'PY'
+          from pathlib import Path
+          q=Path('central-tacs-login-rapido-v1.js').read_text(encoding='utf-8')
+          p=Path('painel-oficial-agendas-vagas.html').read_text(encoding='utf-8')
+          h=Path('central-administrativa-tacs.html').read_text(encoding='utf-8')
+          assert "name==='agendas'&&isIOSWebKit()" in q
+          assert "&from=central&v=20260823-agendas-ios-direct-v1" in q
+          assert q.index("name==='agendas'&&isIOSWebKit()") < q.index("var viewer=document.getElementById('viewer')")
+          assert 'agendaCentralReturnV1' in p
+          assert "DOMContentLoaded',install" in p
+          assert '20260823-agendas-ios-direct-v1' in h
+          print('OK: iPhone sai do caminho do iframe antes de abrir Agendas')
+          PY
+
+      - name: Testar renderização da rota direta em navegador
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          mkdir -p /tmp/tacs-test/atendimento-acs-farmaceutico
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('painel-oficial-agendas-vagas.html').read_text(encoding='utf-8')
+          src=src.replace('<script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=20260813-admin-v103"></script>','')
+          Path('/tmp/tacs-test/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html').write_text(src,encoding='utf-8')
+          PY
+          python3 -m http.server 8123 --directory /tmp/tacs-test >/tmp/tacs-http.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          sleep 1
+          URL='http://127.0.0.1:8123/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area=JAPARANDUBA&from=central&v=20260823-agendas-ios-direct-v1'
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,844 --virtual-time-budget=1200 --dump-dom "$URL" >/tmp/agenda-dom.html
+          grep -q 'id="agendaCentralReturnV1"' /tmp/agenda-dom.html
+          grep -q '← Central' /tmp/agenda-dom.html
+          grep -q 'Agendas e vagas' /tmp/agenda-dom.html
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,844 --virtual-time-budget=1200 --screenshot=/tmp/agenda-direct.png "$URL"
+          python3 - <<'PY'
+          import struct
+          d=open('/tmp/agenda-direct.png','rb').read(32)
+          assert d[:8]==b'\x89PNG\r\n\x1a\n'
+          w,h=struct.unpack('>II',d[16:24])
+          assert (w,h)==(390,844),(w,h)
+          print('OK: Chromium renderizou a página direta em 390x844')
+          PY
+
+      - name: Restaurar workflow original e publicar só após testes
+        run: |
+          set -euo pipefail
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git checkout HEAD^ -- .github/workflows/ajuste-resumo-agendas-petroleo-v1.yml
+          if [ -f .github/workflows/aplicar-agendas-ios-direto-v1.yml ]; then git rm .github/workflows/aplicar-agendas-ios-direto-v1.yml; fi
+          git add central-tacs-login-rapido-v1.js painel-oficial-agendas-vagas.html central-administrativa-tacs.html .github/workflows/ajuste-resumo-agendas-petroleo-v1.yml
+          git commit -m 'Agendas iPhone sem iframe — testes estruturais e navegador aprovados'
           git pull --rebase origin main
-          git push origin main
-
-      - name: Validar no GitHub Pages
-        run: |
-          URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html'
-          for i in $(seq 1 60); do
-            HTML=$(curl -fsSL "$URL?validacao=petroleo-v1-$i-$(date +%s)" || true)
-            if echo "$HTML" | grep -q 'AJUSTE_RESUMO_AGENDAS_PETROLEO_V1' && \
-               echo "$HTML" | grep -q 'qAgendas' && \
-               echo "$HTML" | grep -q 'qAtivas' && \
-               echo "$HTML" | grep -q 'qProf' && \
-               echo "$HTML" | grep -q 'qVagas' && \
-               echo "$HTML" | grep -q 'function salvarAgenda(c)' && \
-               echo "$HTML" | grep -q 'function restaurar()'; then
-              echo 'RESUMO_AGENDAS_PETROLEO_PUBLICADO_OK'
-              exit 0
-            fi
-            sleep 5
-          done
-          echo 'A revisão visual não apareceu no GitHub Pages no prazo.' >&2
-          exit 1
+          git push origin HEAD:main
