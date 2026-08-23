@@ -1,4 +1,5 @@
 'use strict';
+// Disparo controlado da homologação da correção de consistência entre aparelhos.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
