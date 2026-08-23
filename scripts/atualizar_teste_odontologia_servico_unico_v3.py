@@ -43,8 +43,6 @@ replacement = r'''async function testNonBlockingDentalCard() {
     assert.equal(reservation.date, '2099-08-03');
     assert.match(reservation.requestId, /^MATIAS-/);
 
-    // O servidor simulado já processou o abatimento, mas a interface não pode
-    // presumir sucesso antes de receber a confirmação dessa mesma solicitação.
     assert.equal(
       harness.dental.find(item => item.data === '2099-08-03').vagasEmergenciais,
       0,
@@ -63,8 +61,6 @@ replacement = r'''async function testNonBlockingDentalCard() {
       'O gate odontológico não pode liberar o envio antes da confirmação'
     );
 
-    // No portal completo outra camada pode escrever temporariamente “Carregando as vagas...”.
-    // O contrato crítico aqui é não exibir sucesso nem liberar envio antes da resposta.
     const statusPending = window.document.querySelector('#dentalStatus');
     assert.doesNotMatch(statusPending.textContent, /Vaga reservada na agenda|O envio pelo WhatsApp está liberado/, 'Não pode existir sucesso antes da confirmação');
 
@@ -75,14 +71,28 @@ replacement = r'''async function testNonBlockingDentalCard() {
     );
     renderedMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(card => /Segunda-feira/.test(card.textContent));
     assert.match(renderedMonday.textContent, /Sem vaga de emergência/, 'Somente após a confirmação a tela deve aplicar a quantidade devolvida pelo servidor');
-    await waitFor(
-      () => Boolean(window.PortalTacsOdontologiaV98 && window.PortalTacsOdontologiaV98.formularioValido()),
-      'O gate odontológico não foi liberado após a confirmação',
-      1000
-    );
 
-    // A interface final esconde #send e usa o botão profissional. Se ele estiver
-    // instalado neste harness, precisa obedecer ao mesmo gate confirmado.
+    try {
+      await waitFor(
+        () => Boolean(window.PortalTacsOdontologiaV98 && window.PortalTacsOdontologiaV98.formularioValido()),
+        'O gate odontológico não foi liberado após a confirmação',
+        1000
+      );
+    } catch (error) {
+      const snapshot = {
+        selection: window.PortalTacsOdontologiaV98 && window.PortalTacsOdontologiaV98.selecao ? window.PortalTacsOdontologiaV98.selecao() : null,
+        name: window.document.querySelector('#name')?.value || '',
+        locality: window.document.querySelector('#locality')?.value || '',
+        cpf: window.document.querySelector('#cpf')?.value || '',
+        birth: window.document.querySelector('#birth')?.value || '',
+        subject: window.document.querySelector('#subject')?.value || '',
+        category: window.document.querySelector('#category')?.value || '',
+        ageStatus: window.document.querySelector('#ageStatus')?.textContent || '',
+        cpfStatus: window.document.querySelector('#cpfStatus')?.textContent || ''
+      };
+      throw new Error(error.message + ' :: ' + JSON.stringify(snapshot));
+    }
+
     const visibleCard = window.document.querySelector('#sendPetroleumCard');
     if (visibleCard) {
       await waitFor(() => !visibleCard.disabled, 'O botão visível de envio não foi liberado após a confirmação', 1000);
@@ -112,6 +122,7 @@ checks = [
     "window.PortalTacsOdontologiaV98.formularioValido()",
     "assert.doesNotMatch(statusPending.textContent, /Vaga reservada na agenda|O envio pelo WhatsApp está liberado/",
     "assert.match(renderedMonday.textContent, /Sem vaga de emergência/",
+    "const snapshot = {",
     "const visibleCard = window.document.querySelector('#sendPetroleumCard');"
 ]
 for item in checks:
