@@ -51,7 +51,19 @@ replacement = r'''async function testNonBlockingDentalCard() {
     let renderedMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(card => /Segunda-feira/.test(card.textContent));
     assert.match(renderedMonday.textContent, /1 vaga de emergência disponível/, 'A tela deve manter a quantidade anterior enquanto a confirmação está em trânsito');
 
-    await fillPatient(window, 'Paciente Teste Confirmação', 'Solicitação odontológica simulada.');
+    // Este harness antigo não implementa buscar_morador. Dispare somente o CPF,
+    // espere a resposta fictícia terminar e então preencha os demais dados manuais.
+    // Assim o mock não apaga nome/localidade/nascimento depois do preenchimento.
+    setField(window, '#cpf', '52998224725');
+    await waitFor(
+      () => /buscar_morador/.test(window.document.querySelector('#cpfStatus')?.textContent || ''),
+      'A busca fictícia buscar_morador não terminou no harness'
+    );
+    setField(window, '#birth', '28121984');
+    setField(window, '#name', 'Paciente Teste Confirmação');
+    setField(window, '#locality', 'Sítio Japaranduba');
+    setField(window, '#subject', 'Solicitação odontológica simulada.');
+
     const send = window.document.querySelector('#send');
     assert.ok(send, 'Controle-base de envio não encontrado');
     assert.equal(send.disabled, true, 'O envio precisa continuar bloqueado antes da confirmação do servidor');
@@ -118,6 +130,9 @@ checks = [
     "harness.records.dentalReservations.length === reservationsBeforeClick + 1",
     "assert.equal(reservation.type, 'emergencial');",
     "assert.match(renderedMonday.textContent, /1 vaga de emergência disponível/",
+    "setField(window, '#cpf', '52998224725');",
+    "() => /buscar_morador/.test(window.document.querySelector('#cpfStatus')?.textContent || '')",
+    "setField(window, '#birth', '28121984');",
     "assert.equal(send.disabled, true",
     "window.PortalTacsOdontologiaV98.formularioValido()",
     "assert.doesNotMatch(statusPending.textContent, /Vaga reservada na agenda|O envio pelo WhatsApp está liberado/",
