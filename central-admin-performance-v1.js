@@ -88,17 +88,6 @@ function preparePanelDocument(frame){
   if(!getSession().ok)return;
   doc.documentElement.dataset.portalTacsCentralSession='1';
 
-  var style=doc.getElementById('portalTacsCentralSessionStyleV1');
-  if(!style){
-    style=doc.createElement('style');
-    style.id='portalTacsCentralSessionStyleV1';
-    style.textContent='\
-#portalTacsCentralRefreshV1,#portalTacsAdminRefreshV1,#atualizarPaginaAgendasFlutuante,[id*="atualizarPagina"][id*="Flutuante"]{display:none!important}\
-html[data-portal-tacs-central-session="1"] #loginAdminTab,html[data-portal-tacs-central-session="1"] #loginTacsTab{display:none!important}\
-';
-    doc.head.appendChild(style);
-  }
-
   ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','tacsPinLogin','login','entrar','loginTacs','entrarTacs','adminLoginButton','tacsLoginButton','logout','sair','logoutButton','accessActions','pinHelp','adminLogin','tacsLogin','loginAdminTab','loginTacsTab'].forEach(function(id){hideNode(doc.getElementById(id))});
   ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','tacsPinLogin'].forEach(function(id){
     try{doc.querySelectorAll('label[for="'+id+'"]').forEach(hideNode)}catch(e){}
@@ -126,13 +115,9 @@ html[data-portal-tacs-central-session="1"] #loginAdminTab,html[data-portal-tacs-
     }
   }
 
-  doc.querySelectorAll('#portalTacsCentralRefreshV1,#portalTacsAdminRefreshV1,#atualizarPaginaAgendasFlutuante,[id*="atualizarPagina"][id*="Flutuante"]').forEach(hideNode);
   if(!doc.documentElement.dataset.centralUiObserver&&frame.contentWindow&&frame.contentWindow.MutationObserver){
     doc.documentElement.dataset.centralUiObserver='1';
-    new frame.contentWindow.MutationObserver(function(){
-      hideRedundantAccessCopy(doc);
-      doc.querySelectorAll('#portalTacsCentralRefreshV1,#portalTacsAdminRefreshV1,#atualizarPaginaAgendasFlutuante,[id*="atualizarPagina"][id*="Flutuante"]').forEach(hideNode);
-    }).observe(doc.body,{childList:true,subtree:true});
+    new frame.contentWindow.MutationObserver(function(){hideRedundantAccessCopy(doc)}).observe(doc.body,{childList:true,subtree:true});
   }
 }
 function panelLooksReady(name,frame){
@@ -260,9 +245,6 @@ function closeViewerFast(){
   document.body.classList.remove('viewer-open');
   return true;
 }
-function removeCentralRefresh(){
-  var b=document.getElementById('portalTacsCentralRefreshV1');if(b)b.remove();
-}
 function installCaptureNavigation(){
   document.addEventListener('click',function(event){
     var back=event.target&&event.target.closest?event.target.closest('#viewerBack'):null;
@@ -287,7 +269,6 @@ function installAreaWatcher(){
 function installSessionWatcher(){
   var last='';
   function tick(){
-    removeCentralRefresh();
     var s=getSession(),now=(s.tacs?'tacs:':'admin:')+(s.territorio||s.admin);
     if(s.ok&&now!==last){last=now;setTimeout(beginPreload,80)}
     if(!s.ok&&last){last='';resetFrames()}
@@ -295,7 +276,7 @@ function installSessionWatcher(){
   tick();
   setInterval(tick,250);
   if(watcher)watcher.disconnect();
-  watcher=new MutationObserver(function(){removeCentralRefresh();beginPreload()});
+  watcher=new MutationObserver(function(){beginPreload()});
   watcher.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','disabled']});
 }
 function install(){
@@ -303,13 +284,12 @@ function install(){
   installCaptureNavigation();
   installAreaWatcher();
   installSessionWatcher();
-  removeCentralRefresh();
   beginPreload();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
-window.addEventListener('pageshow',function(){removeCentralRefresh();beginPreload()});
+window.addEventListener('pageshow',beginPreload);
 window.PortalTacsCentralPerformance={
-  version:'1.0.1',
+  version:'1.0.2',
   beginPreload:beginPreload,
   resetFrames:resetFrames,
   showFrame:showFrame,
