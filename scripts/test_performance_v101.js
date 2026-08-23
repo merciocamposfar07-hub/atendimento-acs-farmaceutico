@@ -118,7 +118,8 @@ function testStaticSafety() {
   assert.ok(dental.includes("params.set('action', 'reservar_get')"), 'Reserva real deve permanecer via backend JSONP atual');
   assert.ok(dental.includes("params.set('areaId', currentAreaId())"), 'Reserva deve permanecer vinculada à área do Portal');
   assert.ok(dental.includes("action=agenda&areaId=' + encodeURIComponent(currentAreaId())"), 'Leitura da agenda também deve ser territorial');
-  assert.ok(dental.includes('optimisticRemaining: Math.max(0, Number(available) - 1)'), 'Redução imediata da vaga deve permanecer');
+  assert.ok(!dental.includes('optimisticRemaining: Math.max(0, Number(available) - 1)'), 'Abatimento otimista no navegador não pode reaparecer');
+  assert.ok(dental.includes('selection.confirmed &&'), 'Gate de envio odontológico deve exigir confirmação real do servidor');
   assert.ok(dental.includes("expiredByConfiguredTime(slot.date, slot.expiresAt)"), 'Expiração por hora de Recife deve continuar filtrando o snapshot');
   assert.ok(dental.includes("validDocument(el('cpf') && el('cpf').value)"), 'CPF/CNS deve permanecer aceito');
 }

@@ -288,8 +288,8 @@
     if (selection) {
       if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
       if (selection.explicitFailure) return selection.errorMessage || 'Não foi possível reservar essa vaga.';
-      if (selection.slowSync) return 'Vaga selecionada. A atualização da planilha está demorando, mas o envio pelo WhatsApp já está liberado.';
-      return 'Vaga selecionada. A quantidade foi reduzida no portal e o envio pelo WhatsApp já está liberado.';
+      if (selection.slowSync) return 'A confirmação da vaga está demorando. Não envie ainda. O Portal continuará confirmando automaticamente.';
+      return 'Confirmando sua vaga na agenda. Não envie ainda.';
     }
     return 'Toque na vaga comum ou na vaga de emergência do dia desejado.';
   }
@@ -464,6 +464,7 @@
   function formReady() {
     return Boolean(
       selection &&
+      selection.confirmed &&
       clean(el('name') && el('name').value).length >= 3 &&
       clean(el('locality') && el('locality').value) &&
       validDocument(el('cpf') && el('cpf').value) &&
@@ -478,7 +479,10 @@
     var shouldDisable = !formReady();
     if (send.hidden) send.hidden = false;
     if (send.disabled !== shouldDisable) send.disabled = shouldDisable;
-    if (send.dataset) delete send.dataset.dentalReservationPending;
+    if (send.dataset) {
+      if (selection.confirmed) delete send.dataset.dentalReservationPending;
+      else send.dataset.dentalReservationPending = '1';
+    }
   }
 
   function makeCode() {
@@ -558,55 +562,52 @@
     if (!slot || !Number.isFinite(Number(remaining))) return;
     if (item.type === 'emergencial') slot.emergency = Math.max(0, Number(remaining));
     else slot.common = Math.max(0, Number(remaining));
-    item.optimisticRemaining = Math.max(0, Number(remaining));
+    item.serverRemaining = Math.max(0, Number(remaining));
     writeSlotsCache();
   }
 
+  function reservationTerminalError(error) {
+    return ['INVALID_REQUEST','INVALID_DATE','PAST_DATE','INVALID_TYPE','DATE_NOT_FOUND','CLOSED','EXPIRED','NO_SLOTS','CONFLICT'].indexOf(clean(error && error.code)) !== -1;
+  }
+
+  function confirmReservation(item, result) {
+    if (!selection || selection.requestId !== item.requestId) return false;
+    var resultDate = normalizeDate(result && result.date);
+    var resultType = clean(result && result.type).toLowerCase();
+    if ((resultDate && resultDate !== item.date) || (resultType && resultType !== item.type)) {
+      var conflict = new Error('Este código de solicitação já está associado a outra vaga.');
+      conflict.code = 'CONFLICT';
+      throw conflict;
+    }
+    if (!Number.isFinite(Number(result && result.remaining))) {
+      var invalid = new Error('O servidor ainda não confirmou a quantidade restante.');
+      invalid.code = 'INVALID_RESPONSE';
+      throw invalid;
+    }
+    applyServerRemaining(item, result.remaining);
+    item.confirmed = true;
+    item.slowSync = false;
+    item.explicitFailure = false;
+    clearTimeout(verifyTimer);
+    renderAgenda();
+    refreshSend();
+    return true;
+  }
+
   function verifyReservation(item, attempt) {
-    if (!selection || selection.requestId !== item.requestId) return;
-    fetchAgenda().then(function (data) {
-      var rows = Array.isArray(data.dias) ? data.dias : [];
-      var found = null;
-      for (var i = 0; i < rows.length; i += 1) {
-        if (normalizeDate(rows[i] && (rows[i].data || rows[i].date)) === item.date) { found = rows[i]; break; }
-      }
-      var serverCount = found ? numberValue(found, item.type) : null;
-      if (serverCount !== null && serverCount <= item.optimisticRemaining) {
-        applyServerRemaining(item, serverCount);
-        item.confirmed = true;
-        item.slowSync = false;
-        renderAgenda();
-        refreshSend();
+    if (!selection || selection.requestId !== item.requestId || item.confirmed) return;
+    postReservation(item).then(function (result) {
+      confirmReservation(item, result);
+    }).catch(function (error) {
+      if (!selection || selection.requestId !== item.requestId || item.confirmed) return;
+      if (reservationTerminalError(error)) {
+        handleExplicitReservationFailure(item, error);
         return;
       }
-      if (attempt < 2) {
-        postReservation(item).then(function (result) {
-          if (result.alreadyReserved && (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type)) {
-            var conflict = new Error('Este formulário já reservou outra data.');
-            conflict.code = 'CONFLICT';
-            throw conflict;
-          }
-          if (Number.isFinite(Number(result.remaining))) applyServerRemaining(item, result.remaining);
-          item.confirmed = true;
-          item.slowSync = false;
-          renderAgenda();
-          refreshSend();
-        }).catch(function (error) {
-          if (error.code && error.code !== 'TIMEOUT') handleExplicitReservationFailure(item, error);
-          else scheduleVerify(item, attempt + 1, 2500);
-        });
-      } else {
-        item.slowSync = true;
-        renderAgenda();
-        refreshSend();
-      }
-    }).catch(function () {
-      if (attempt < 2) scheduleVerify(item, attempt + 1, 2500);
-      else {
-        item.slowSync = true;
-        renderAgenda();
-        refreshSend();
-      }
+      item.slowSync = attempt >= 1;
+      renderAgenda();
+      refreshSend();
+      scheduleVerify(item, attempt + 1, attempt < 2 ? 1200 : 4000);
     });
   }
 
@@ -617,12 +618,6 @@
 
   function handleExplicitReservationFailure(item, error) {
     if (!selection || selection.requestId !== item.requestId) return;
-    var slot = slotForSelection(item);
-    if (slot) {
-      if (item.type === 'emergencial') slot.emergency = item.originalCount;
-      else slot.common = item.originalCount;
-    }
-    writeSlotsCache();
     item.explicitFailure = true;
     item.errorMessage = error.message || 'Não foi possível reservar essa vaga.';
     selection = null;
@@ -639,22 +634,7 @@
   }
 
   function persistInBackground(item) {
-    postReservation(item).then(function (result) {
-      if (!selection || selection.requestId !== item.requestId) return;
-      if (result.alreadyReserved && (normalizeDate(result.date) !== item.date || clean(result.type) !== item.type)) {
-        var conflict = new Error('Este formulário já reservou outra data. Reabra o portal para escolher uma nova vaga.');
-        conflict.code = 'CONFLICT';
-        throw conflict;
-      }
-      if (Number.isFinite(Number(result.remaining))) applyServerRemaining(item, result.remaining);
-      item.confirmed = true;
-      item.slowSync = false;
-      renderAgenda();
-      refreshSend();
-    }).catch(function (error) {
-      if (error.code && error.code !== 'TIMEOUT') handleExplicitReservationFailure(item, error);
-      else scheduleVerify(item, 0, 1200);
-    });
+    verifyReservation(item, 0);
   }
 
   function selectDental(button) {
@@ -672,16 +652,13 @@
       type: type,
       requestId: makeCode(),
       originalCount: Number(available),
-      optimisticRemaining: Math.max(0, Number(available) - 1),
+      serverRemaining: null,
       confirmed: false,
       slowSync: false,
       explicitFailure: false
     };
 
     selection = item;
-    if (type === 'emergencial') slot.emergency = item.optimisticRemaining;
-    else slot.common = item.optimisticRemaining;
-    writeSlotsCache();
 
     var category = el('category');
     if (category) {
@@ -701,7 +678,7 @@
   }
 
   function openWhatsApp() {
-    if (!selection) return;
+    if (!selection || !selection.confirmed) return;
     var age = ageLabel(el('birth').value);
     var category = REGULAR;
     var message = '*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n' +
@@ -793,10 +770,10 @@
     }).observe(list, { childList: true, subtree: true });
 
     document.addEventListener('visibilitychange', function () {
-      if (!document.hidden && isDental()) loadAgenda(false);
+      if (!document.hidden && isDental()) loadAgenda(Boolean(selection && !selection.confirmed));
     });
     window.addEventListener('pageshow', function () {
-      if (isDental()) loadAgenda(false);
+      if (isDental()) loadAgenda(Boolean(selection && !selection.confirmed));
     });
 
     if (isDental()) loadAgenda(false);

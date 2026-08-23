@@ -50,7 +50,7 @@ registrar('dados', 'Módulo de desempenho não redefine doGet', !regex(backend, 
 registrar('dados', 'Módulo de desempenho não redefine doPost', !regex(backend, /\bdoPost\s*=\s*function/));
 registrar('dados', 'Módulo neutro não executa CacheService global', !contem(backend, 'CacheService.getScriptCache'));
 registrar('dados', 'Reserva odontológica real continua no backend', contem(dental, "params.set('action', 'reservar_get')"));
-registrar('dados', 'Abatimento visual é unitário', contem(dental, 'optimisticRemaining: Math.max(0, Number(available) - 1)'));
+registrar('dados', 'Abatimento odontológico depende da confirmação real do servidor', !contem(dental, 'optimisticRemaining: Math.max(0, Number(available) - 1)') && contem(dental, 'selection.confirmed &&'));
 registrar('dados', 'CPF/CNS continua validado antes da reserva', contem(dental, "validDocument(el('cpf') && el('cpf').value)"));
 registrar('dados', 'Snapshot de agendas não libera escrita sem confirmação', contem(agenda, 'Aguarde a confirmação dos dados atuais antes de salvar.'));
 registrar('dados', 'Proteção contra profissional duplicado permanece', contem(profissionais, 'Profissional já cadastrado'));
