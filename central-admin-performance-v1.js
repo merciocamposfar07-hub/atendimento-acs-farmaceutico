@@ -8,6 +8,7 @@ var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var AREA_KEY='portalTacsCentralAreaV1';
 var PROFILE_KEY='portalTacsAcessoRapidoV1';
 var REVISION='20260823-admin-performance-v1';
+var DIRTY_MESSAGE='Há alterações que podem não ter sido salvas. Deseja voltar à Central mesmo assim?';
 var frames={};
 var activeName='';
 var preloadStartedFor='';
@@ -81,12 +82,31 @@ function hideRedundantAccessCopy(doc){
     if(/\bPIN\b/i.test(value)&&/(salvo|administrador|TACS|autenticad|acesso)/i.test(value))hideNode(node);
   });
 }
+function markPanelDirty(doc){
+  if(!doc||!doc.documentElement||doc.documentElement.dataset.tacsDirtyTracking==='1')return;
+  doc.documentElement.dataset.tacsDirtyTracking='1';
+  setTimeout(function(){
+    ['input','change'].forEach(function(type){doc.addEventListener(type,function(event){
+      var target=event.target;
+      if(!event.isTrusted||!target||target.disabled||target.readOnly)return;
+      var tag=String(target.tagName||'').toLowerCase();
+      if(tag==='input'||tag==='textarea'||tag==='select')doc.documentElement.dataset.tacsDirty='1';
+    },true)});
+  },900);
+}
+function removePanelRefresh(doc){
+  if(!doc)return;
+  var button=doc.getElementById('portalTacsAdminRefreshV1');
+  if(button)button.remove();
+}
 function preparePanelDocument(frame){
   var doc;
   try{doc=frame.contentDocument}catch(e){return}
   if(!doc||!doc.documentElement||!doc.body)return;
   if(!getSession().ok)return;
   doc.documentElement.dataset.portalTacsCentralSession='1';
+  markPanelDirty(doc);
+  removePanelRefresh(doc);
 
   ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','tacsPinLogin','login','entrar','loginTacs','entrarTacs','adminLoginButton','tacsLoginButton','logout','sair','logoutButton','accessActions','pinHelp','adminLogin','tacsLogin','loginAdminTab','loginTacsTab'].forEach(function(id){hideNode(doc.getElementById(id))});
   ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','tacsPinLogin'].forEach(function(id){
@@ -237,7 +257,18 @@ function showFrame(name,title){
   try{frame.focus()}catch(e){}
   return true;
 }
-function closeViewerFast(){
+function activePanelIsDirty(){
+  if(!activeName||!frames[activeName])return false;
+  try{
+    var doc=frames[activeName].contentDocument;
+    return Boolean(doc&&doc.documentElement&&doc.documentElement.dataset.tacsDirty==='1');
+  }catch(e){return false}
+}
+function closeViewerFast(options){
+  options=options||{};
+  if(!options.force&&activePanelIsDirty()){
+    if(typeof window.confirm!=='function'||!window.confirm(DIRTY_MESSAGE))return false;
+  }
   var viewer=document.getElementById('viewer');
   if(activeName&&frames[activeName]){frameHiddenStyle(frames[activeName]);ensurePool().appendChild(frames[activeName])}
   activeName='';
@@ -280,6 +311,7 @@ function installSessionWatcher(){
   watcher.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','disabled']});
 }
 function install(){
+  document.documentElement.dataset.portalTacsPerformanceInstalled='1';
   ensurePool();
   installCaptureNavigation();
   installAreaWatcher();
@@ -289,7 +321,7 @@ function install(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 window.addEventListener('pageshow',beginPreload);
 window.PortalTacsCentralPerformance={
-  version:'1.0.2',
+  version:'1.1.0',
   beginPreload:beginPreload,
   resetFrames:resetFrames,
   showFrame:showFrame,
