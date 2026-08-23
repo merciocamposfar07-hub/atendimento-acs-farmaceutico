@@ -228,6 +228,12 @@ summary span:not(.signal),.technical-id,.long-text{
   word-break:break-word;
 }
 
+/* Nutricionista não utiliza vagas emergenciais; odontologia permanece inalterada. */
+.cartao[data-chave^="NUTRICIONISTA|"] label:has(+ input[name="vagasEmergenciais"]),
+.cartao[data-chave^="NUTRICIONISTA|"] input[name="vagasEmergenciais"]{
+  display:none!important;
+}
+
 footer,.footer{
   max-width:100%;
   line-height:1.35;
