@@ -1,0 +1,197 @@
+name: Corrigir Agendas iOS sem iframe V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-agendas-ios-sem-iframe-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir-e-testar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar correção estrutural somente em Agendas no iOS
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          central_js = Path('central-tacs-login-rapido-v1.js')
+          q = central_js.read_text(encoding='utf-8')
+
+          old_route = "if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v=20260823-agendas-safari-paint-v1';"
+          new_route = "if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&from=central&v=20260823-agendas-ios-direct-v1';"
+          if old_route not in q:
+              raise SystemExit('Rota atual de Agendas não encontrada; nenhuma alteração foi feita.')
+          q = q.replace(old_route, new_route, 1)
+
+          anchor = "function installInstitutionalNavigation(){\n"
+          helper = "function isIOSWebKit(){var ua=String(navigator.userAgent||'');return /iP(hone|ad|od)/.test(ua)&&/AppleWebKit/i.test(ua)}\n"
+          if helper not in q:
+              if anchor not in q:
+                  raise SystemExit('Âncora da navegação institucional não encontrada.')
+              q = q.replace(anchor, helper + anchor, 1)
+
+          old_click = "      if(name==='portal'){\n        try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}\n        location.href=url;return;\n      }\n      var viewer=document.getElementById('viewer'),frame=document.getElementById('viewerFrame'),title=document.getElementById('viewerTitle');"
+          new_click = "      if(name==='portal'||(name==='agendas'&&isIOSWebKit())){\n        try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}\n        location.href=url;return;\n      }\n      var viewer=document.getElementById('viewer'),frame=document.getElementById('viewerFrame'),title=document.getElementById('viewerTitle');"
+          if old_click not in q:
+              raise SystemExit('Bloco atual de abertura institucional não encontrado.')
+          q = q.replace(old_click, new_click, 1)
+          central_js.write_text(q, encoding='utf-8')
+
+          panel = Path('painel-oficial-agendas-vagas.html')
+          s = panel.read_text(encoding='utf-8')
+          if 'agendaCentralDirectNavV1' in s:
+              raise SystemExit('Barra direta já existe; abortando para evitar duplicidade.')
+
+          direct_block = r'''
+<!-- AGENDAS_IOS_DIRECT_NAV_V1_START -->
+<script id="agendaCentralDirectClassV1">
+(function(){try{if(new URLSearchParams(location.search).get('from')==='central')document.documentElement.classList.add('agenda-from-central')}catch(e){}})();
+</script>
+<style id="agendaCentralDirectNavV1">
+html.agenda-from-central body>header{display:none!important}
+#agendaCentralReturnV1{
+  position:sticky;top:0;z-index:2147482000;
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;
+  padding:calc(10px + env(safe-area-inset-top)) 12px 10px;
+  background:#073a55;color:#fff;border-bottom:3px solid #69c7e7;
+}
+#agendaCentralReturnV1 .agenda-central-back{
+  min-height:46px;border:2px solid #69c7e7;border-radius:22px;padding:8px 13px;
+  background:#fff;color:#073a55;font-weight:900;line-height:1.1;white-space:nowrap;
+}
+#agendaCentralReturnV1 .agenda-central-title{
+  min-width:0;font-weight:900;font-size:1.06rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+html.agenda-from-central,html.agenda-from-central body{overflow-x:hidden!important;overflow-y:auto!important}
+</style>
+<script id="agendaCentralDirectNavScriptV1">
+(function(){
+  'use strict';
+  var fromCentral='';
+  try{fromCentral=new URLSearchParams(location.search).get('from')||''}catch(e){}
+  if(fromCentral!=='central')return;
+  if(document.getElementById('agendaCentralReturnV1'))return;
+  var bar=document.createElement('div');
+  bar.id='agendaCentralReturnV1';
+  bar.innerHTML='<button class="agenda-central-back" type="button">← Central</button><div class="agenda-central-title">Agendas e vagas</div>';
+  document.body.insertBefore(bar,document.body.firstChild);
+  var back=bar.querySelector('.agenda-central-back');
+  if(back)back.addEventListener('click',function(){
+    var destino='/atendimento-acs-farmaceutico/central-administrativa-tacs.html';
+    try{if(sessionStorage.getItem('portalTacsTerritorioTokenV1'))destino+='?acesso=tacs'}catch(e){}
+    location.href=destino;
+  });
+})();
+</script>
+<!-- AGENDAS_IOS_DIRECT_NAV_V1_END -->
+'''
+          head_end = '</head>'
+          if head_end not in s:
+              raise SystemExit('Fechamento de head não encontrado.')
+          s = s.replace(head_end, direct_block + '\n' + head_end, 1)
+          panel.write_text(s, encoding='utf-8')
+
+          central_html = Path('central-administrativa-tacs.html')
+          c = central_html.read_text(encoding='utf-8')
+          old_loader = '/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=20260823-agendas-safari-paint-v1'
+          new_loader = '/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=20260823-agendas-ios-direct-v1'
+          if old_loader not in c:
+              raise SystemExit('Loader atual da Central não encontrado.')
+          c = c.replace(old_loader, new_loader, 1)
+          central_html.write_text(c, encoding='utf-8')
+          PY
+
+      - name: Testes estáticos e de sintaxe
+        run: |
+          set -euo pipefail
+          git diff --check
+          node --check central-tacs-login-rapido-v1.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+
+          q=Path('central-tacs-login-rapido-v1.js').read_text(encoding='utf-8')
+          p=Path('painel-oficial-agendas-vagas.html').read_text(encoding='utf-8')
+          c=Path('central-administrativa-tacs.html').read_text(encoding='utf-8')
+
+          assert "name==='agendas'&&isIOSWebKit()" in q
+          assert "&from=central&v=20260823-agendas-ios-direct-v1" in q
+          assert q.index("name==='agendas'&&isIOSWebKit()") < q.index("var viewer=document.getElementById('viewer')")
+          assert 'agendaCentralReturnV1' in p
+          assert 'html.agenda-from-central body>header{display:none!important}' in p
+          assert '20260823-agendas-ios-direct-v1' in c
+
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',p,flags=re.S|re.I)
+          for i,src in enumerate(scripts):
+              if not src.strip():
+                  continue
+              path=Path(tempfile.gettempdir())/f'agenda-inline-{i}.js'
+              path.write_text(src,encoding='utf-8')
+              subprocess.run(['node','--check',str(path)],check=True)
+          print('OK: sintaxe e invariantes estruturais validados')
+          PY
+
+      - name: Smoke test em navegador real do runner
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          mkdir -p /tmp/tacs-site
+          ln -s "$GITHUB_WORKSPACE" /tmp/tacs-site/atendimento-acs-farmaceutico
+          python3 -m http.server 8123 --directory /tmp/tacs-site >/tmp/tacs-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 1
+          URL='http://127.0.0.1:8123/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area=JAPARANDUBA&from=central&v=20260823-agendas-ios-direct-v1'
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,844 --virtual-time-budget=1200 --dump-dom "$URL" >/tmp/agenda-dom.html
+          grep -q 'id="agendaCentralReturnV1"' /tmp/agenda-dom.html
+          grep -q '← Central' /tmp/agenda-dom.html
+          grep -q 'Agendas e vagas' /tmp/agenda-dom.html
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,844 --virtual-time-budget=1200 --screenshot=/tmp/agenda-direct.png "$URL"
+          python3 - <<'PY'
+          from PIL import Image
+          im=Image.open('/tmp/agenda-direct.png').convert('RGB')
+          assert im.size==(390,844), im.size
+          # A faixa superior precisa estar efetivamente pintada e não ser um quadro vazio uniforme.
+          crop=im.crop((0,0,390,140))
+          colors=crop.getcolors(maxcolors=1000000) or []
+          assert len(colors)>20, len(colors)
+          print('OK: página direta renderizada em navegador, barra superior visível')
+          PY
+
+      - name: Garantir escopo da alteração
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess
+          changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          allowed={
+            'central-tacs-login-rapido-v1.js',
+            'painel-oficial-agendas-vagas.html',
+            'central-administrativa-tacs.html'
+          }
+          extra=changed-allowed
+          if extra:
+              raise SystemExit('Arquivos inesperados alterados: '+', '.join(sorted(extra)))
+          print('OK: escopo fechado nos 3 arquivos esperados')
+          PY
+
+      - name: Publicar somente após os testes passarem
+        run: |
+          set -euo pipefail
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git rm .github/workflows/corrigir-agendas-ios-sem-iframe-v1.yml
+          git add central-tacs-login-rapido-v1.js painel-oficial-agendas-vagas.html central-administrativa-tacs.html
+          git commit -m 'Remove iframe de Agendas no iPhone após testes de renderização'
+          git pull --rebase origin main
+          git push origin HEAD:main
