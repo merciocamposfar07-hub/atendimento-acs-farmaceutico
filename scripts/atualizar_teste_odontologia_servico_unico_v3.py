@@ -17,7 +17,7 @@ pattern = re.compile(
 
 replacement = r'''async function testNonBlockingDentalCard() {
   const harness = new Harness();
-  harness.reservationMessageDelay = 1500;
+  harness.reservationMessageDelay = 5000;
   const dom = await harness.dom('index.html');
   const {window} = dom;
   try {
@@ -64,6 +64,12 @@ replacement = r'''async function testNonBlockingDentalCard() {
     setField(window, '#locality', 'Sítio Japaranduba');
     setField(window, '#subject', 'Solicitação odontológica simulada.');
 
+    const pendingSelection = window.PortalTacsOdontologiaV98 && window.PortalTacsOdontologiaV98.selecao
+      ? window.PortalTacsOdontologiaV98.selecao()
+      : null;
+    assert.ok(pendingSelection, 'A seleção odontológica pendente desapareceu');
+    assert.equal(pendingSelection.confirmed, false, 'A janela pendente do teste terminou antes da validação');
+
     const send = window.document.querySelector('#send');
     assert.ok(send, 'Controle-base de envio não encontrado');
     assert.equal(send.disabled, true, 'O envio precisa continuar bloqueado antes da confirmação do servidor');
@@ -79,7 +85,7 @@ replacement = r'''async function testNonBlockingDentalCard() {
     await waitFor(
       () => /Vaga reservada na agenda/.test(window.document.querySelector('#dentalStatus').textContent),
       'A confirmação real da reserva não concluiu',
-      3500
+      7000
     );
     renderedMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(card => /Segunda-feira/.test(card.textContent));
     assert.match(renderedMonday.textContent, /Sem vaga de emergência/, 'Somente após a confirmação a tela deve aplicar a quantidade devolvida pelo servidor');
@@ -126,6 +132,7 @@ if count != 1:
     raise SystemExit(f'Função testNonBlockingDentalCard não localizada exatamente uma vez: {count}.')
 
 checks = [
+    "harness.reservationMessageDelay = 5000;",
     "category.value = 'Solicitar atendimento odontológico (dentista)';",
     "harness.records.dentalReservations.length === reservationsBeforeClick + 1",
     "assert.equal(reservation.type, 'emergencial');",
@@ -133,9 +140,11 @@ checks = [
     "setField(window, '#cpf', '52998224725');",
     "() => /buscar_morador/.test(window.document.querySelector('#cpfStatus')?.textContent || '')",
     "setField(window, '#birth', '28121984');",
+    "assert.equal(pendingSelection.confirmed, false",
     "assert.equal(send.disabled, true",
     "window.PortalTacsOdontologiaV98.formularioValido()",
     "assert.doesNotMatch(statusPending.textContent, /Vaga reservada na agenda|O envio pelo WhatsApp está liberado/",
+    "'A confirmação real da reserva não concluiu',\n      7000",
     "assert.match(renderedMonday.textContent, /Sem vaga de emergência/",
     "const snapshot = {",
     "const visibleCard = window.document.querySelector('#sendPetroleumCard');"
