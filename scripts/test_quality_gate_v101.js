@@ -29,10 +29,10 @@ const testesEsperados = [
   'test_moradores_v145.js','test_portal_maintenance.js','test_territorio_csv_notifications.js',
   'test_public_area_identification.js','test_public_area_resolver.js','test_publicacoes_territoriais.js',
   'test_territorio_dom.js','test_notification_repair_button.js','test_notification_repair_confirmation.js',
-  'test_performance_v101.js'
+  'test_performance_v101.js','test_admin_local_first_v1.js'
 ];
 for (const teste of testesEsperados) registrar('regressao', `Suíte obrigatória encadeada: ${teste}`, contem(comandoTestes, teste));
-registrar('regressao', 'Gate percentual executado por último', /test_performance_v101\.js\s*&&\s*node scripts\/test_quality_gate_v101\.js\s*$/.test(comandoTestes));
+registrar('regressao', 'Gate percentual executado por último', /node scripts\/test_quality_gate_v101\.js\s*$/.test(comandoTestes));
 
 const backend = read('apps-script/ZZZZ_21_PerformanceCacheV101.gs');
 const dental = read('portal-odontologia-segunda-sexta.js');
