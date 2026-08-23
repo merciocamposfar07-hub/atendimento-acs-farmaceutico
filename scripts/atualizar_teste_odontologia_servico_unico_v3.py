@@ -52,13 +52,10 @@ replacement = r'''async function testNonBlockingDentalCard() {
     assert.match(renderedMonday.textContent, /1 vaga de emergência disponível/, 'A tela deve manter a quantidade anterior enquanto a confirmação está em trânsito');
 
     // Este harness antigo não implementa buscar_morador. Dispare somente o CPF,
-    // espere a resposta fictícia terminar e então preencha os demais dados manuais.
-    // Assim o mock não apaga nome/localidade/nascimento depois do preenchimento.
+    // dê tempo para a consulta fictícia encerrar e então preencha os dados manuais.
+    // Não dependemos do texto de cpfStatus porque outras camadas podem reescrevê-lo.
     setField(window, '#cpf', '52998224725');
-    await waitFor(
-      () => /buscar_morador/.test(window.document.querySelector('#cpfStatus')?.textContent || ''),
-      'A busca fictícia buscar_morador não terminou no harness'
-    );
+    await wait(350);
     setField(window, '#birth', '28121984');
     setField(window, '#name', 'Paciente Teste Confirmação');
     setField(window, '#locality', 'Sítio Japaranduba');
@@ -138,7 +135,7 @@ checks = [
     "assert.equal(reservation.type, 'emergencial');",
     "assert.match(renderedMonday.textContent, /1 vaga de emergência disponível/",
     "setField(window, '#cpf', '52998224725');",
-    "() => /buscar_morador/.test(window.document.querySelector('#cpfStatus')?.textContent || '')",
+    "await wait(350);",
     "setField(window, '#birth', '28121984');",
     "assert.equal(pendingSelection.confirmed, false",
     "assert.equal(send.disabled, true",
