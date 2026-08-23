@@ -1,0 +1,1 @@
+Executar correção estrutural de Agendas no iPhone e validar antes de mesclar.
