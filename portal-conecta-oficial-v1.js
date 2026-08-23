@@ -2,7 +2,7 @@
 'use strict';
 if(typeof window==='undefined'||typeof document==='undefined')return;
 if(window.PortalTacsConectaOficialV1)return;
-window.PortalTacsConectaOficialV1={version:'1.1.0'};
+window.PortalTacsConectaOficialV1={version:'1.1.1'};
 
 var SELECTOR='.portal-footer-brand';
 var ATTR='data-conecta-oficial';
@@ -18,6 +18,7 @@ function criarImagem(){
   img.setAttribute(ATTR,'1');
   img.src=SRC;
   img.alt='Conecta Saúde Comunitária';
+  img.setAttribute('aria-label','Símbolo oficial Conecta Saúde Comunitária');
   img.width=48;
   img.height=48;
   img.decoding='async';
