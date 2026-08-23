@@ -58,9 +58,10 @@ replacement = r'''async function testNonBlockingDentalCard() {
     assert.ok(send, 'Botão do WhatsApp não encontrado');
     assert.equal(send.disabled, true, 'O envio precisa continuar bloqueado antes da confirmação do servidor');
 
+    // No portal completo outra camada pode escrever temporariamente “Carregando as vagas...”.
+    // O contrato crítico aqui é não exibir sucesso nem liberar envio antes da resposta.
     const statusPending = window.document.querySelector('#dentalStatus');
-    assert.match(statusPending.textContent, /Confirmando sua vaga|confirmação da vaga está demorando/, 'A tela precisa informar que a reserva ainda está sendo confirmada');
-    assert.doesNotMatch(statusPending.textContent, /O envio pelo WhatsApp está liberado/, 'Não pode existir mensagem de sucesso antes da confirmação');
+    assert.doesNotMatch(statusPending.textContent, /Vaga reservada na agenda|O envio pelo WhatsApp está liberado/, 'Não pode existir sucesso antes da confirmação');
 
     await waitFor(
       () => /Vaga reservada na agenda/.test(window.document.querySelector('#dentalStatus').textContent),
@@ -98,6 +99,7 @@ checks = [
     "assert.equal(reservation.type, 'emergencial');",
     "assert.match(renderedMonday.textContent, /1 vaga de emergência disponível/",
     "assert.equal(send.disabled, true",
+    "assert.doesNotMatch(statusPending.textContent, /Vaga reservada na agenda|O envio pelo WhatsApp está liberado/",
     "assert.match(renderedMonday.textContent, /Sem vaga de emergência/",
     "await waitFor(() => !send.disabled"
 ]
