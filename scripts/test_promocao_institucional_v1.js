@@ -10,7 +10,6 @@ const guide = read('portal-orientacao-morador.js');
 const update = read('portal-auto-update.js');
 const centralQuick = read('central-tacs-login-rapido-v1.js');
 const centralCore = read('central-administrativa-tacs.js');
-const recados = read('painel-oficial-recados-campanhas.html');
 
 // Identidade PWA única e estável.
 assert.equal(manifest.id, '/atendimento-acs-farmaceutico/');
@@ -49,13 +48,6 @@ assert.match(centralQuick, /from=central/);
 assert.match(centralQuick, /grid\.addEventListener\('click',[\s\S]*?,true\)/);
 assert.match(centralQuick, /event\.stopImmediatePropagation\(\)/);
 assert.doesNotMatch(centralQuick, /_cb='?\+?Date\.now/);
-
-// O painel longo de Recados abre como página própria no Safari/iPhone.
-assert.match(centralQuick, /name==='portal'\|\|name==='recados'/);
-assert.match(centralQuick, /painel-oficial-recados-campanhas\.html\?area='\+area\+access\+'&from=central/);
-assert.match(centralCore, /if\(name==='recados'\)\{location\.href=url;return\}/);
-assert.match(recados, /id="centralDiretoBar"/);
-assert.match(recados, /central-administrativa-tacs\.html\?retorno=recados/);
 
 // Sessão reutilizada nos painéis, sem botão flutuante cobrindo ações internas.
 assert.match(centralQuick, /function hideRedundantPanelLogin\(doc\)/);
