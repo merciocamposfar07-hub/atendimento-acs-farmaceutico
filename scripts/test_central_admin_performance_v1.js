@@ -9,11 +9,16 @@ const quick=read('central-tacs-login-rapido-v1.js');
 const support=read('central-suporte-moradores-v1.js');
 const performance=read('central-admin-performance-v1.js');
 
-assert(central.includes('central-suporte-moradores-v1.js?v=20260823-admin-performance-v1'),'Central deve carregar o bootstrap oficial de desempenho sem mudar o layout dos cartões');
-assert(support.includes('central-admin-performance-v1.js?v=20260823-admin-performance-v1'),'Bootstrap não aponta para o controlador oficial de desempenho');
+const directController='central-admin-performance-v1.js?v=20260823-central-navigation-v2';
+assert(central.includes('rel="preload" as="script" href="/atendimento-acs-farmaceutico/'+directController+'"'),'Central deve iniciar o download do controlador rápido durante a leitura do HTML');
+assert(central.includes('<script src="/atendimento-acs-farmaceutico/'+directController+'"></script>'),'Controlador rápido deve ser carregado diretamente pela Central');
+assert(central.indexOf(directController)<central.indexOf('central-tacs-login-rapido-v1.js'),'Controlador rápido precisa carregar antes do login rápido instalar compatibilidades de navegação');
+assert(central.indexOf(directController)<central.indexOf('central-suporte-moradores-v1.js'),'Controlador rápido precisa estar pronto antes do bootstrap de suporte');
+assert(central.includes('central-suporte-moradores-v1.js?v=20260823-admin-performance-v1'),'Central deve preservar o bootstrap de suporte e fallback');
+assert(support.includes('central-admin-performance-v1.js?v=20260823-admin-performance-v1'),'Bootstrap deve preservar fallback do controlador oficial');
 assert(support.includes('BLOCO_1_CONTROLE_UNICO_V1'),'Contrato de controlador único do Bloco 1 ausente');
-assert(support.includes("document.addEventListener('click',navigationGate,true)"),'Gate de captura deve existir antes da camada oficial ficar pronta');
-assert(support.includes('if(window.PortalTacsCentralPerformanceV1)return;'),'Gate deve liberar o evento somente depois que o controlador oficial assumir');
+assert(support.includes("document.addEventListener('click',navigationGate,true)"),'Gate de compatibilidade deve continuar seguro se o carregamento direto falhar');
+assert(support.includes('if(window.PortalTacsCentralPerformanceV1)return;'),'Fallback não pode instalar segunda instância quando o controlador direto já existe');
 assert(!support.includes('function openSupport('),'Suporte não pode manter um controlador próprio de navegação');
 assert(!support.includes('.module[data-module="suporte"]'),'Suporte não pode interceptar seu cartão separadamente');
 assert(!support.includes('frame.src=url'),'Bootstrap não pode abrir painel por conta própria');
@@ -30,15 +35,21 @@ assert(performance.includes('ensurePool().appendChild(frames[activeName])'),'Ao 
 assert(!performance.includes('_cb=Date.now()'),'Controlador oficial não pode criar cache-buster novo a cada toque');
 assert(!/function closeViewerFast\([\s\S]*?src\s*=\s*['"]about:blank['"]/.test(performance),'Voltar à Central não pode descarregar o painel administrativo ativo');
 
+assert(performance.includes("dataset.tacsDirtyTracking='1'"),'Controlador rápido precisa assumir rastreamento de alterações não salvas');
+assert(performance.includes("dataset.tacsDirty='1'"),'Edição real de campo deve marcar o painel como alterado');
+assert(performance.includes('activePanelIsDirty()'),'Retorno à Central precisa verificar alterações do painel ativo');
+assert(performance.includes('window.confirm(DIRTY_MESSAGE)'),'Retorno não pode descartar alterações sem confirmação do operador');
+assert(performance.includes("getElementById('portalTacsAdminRefreshV1')"),'Controlador rápido deve remover refresh interno redundante do painel carregado');
+assert(performance.includes("dataset.portalTacsPerformanceInstalled='1'"),'Controlador deve expor marcador de instalação para homologação do primeiro toque');
+assert(performance.includes("version:'1.1.0'"),'Versão do controlador do Bloco 2 não foi aplicada');
+
 /*
- * Os listeners legados ainda existem nesta etapa por compatibilidade com login,
- * permissões e rollback. O gate bloqueia sua execução até o controlador oficial
- * assumir e, depois, o listener de captura do controlador oficial encerra o
- * evento antes de chegar a eles. O Bloco 1 testa o comportamento efetivo, sem
- * remover rotinas de autenticação que não fazem parte deste escopo.
+ * Listeners legados permanecem no código por compatibilidade e rollback, mas o
+ * controlador oficial é carregado diretamente antes deles e intercepta a rota
+ * efetiva. Este bloco não modifica autenticação, permissões ou login rápido.
  */
 assert(base.includes("el('moduleGrid').addEventListener('click'"),'Compatibilidade da Central-base foi alterada fora do escopo');
-assert(quick.includes('function installInstitutionalNavigation()'),'Login rápido foi alterado fora do escopo do Bloco 1');
+assert(quick.includes('function installInstitutionalNavigation()'),'Login rápido foi alterado fora do escopo do Bloco 2');
 
 ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','login','entrar','loginTacs','entrarTacs'].forEach((id)=>{
   assert(performance.includes("'"+id+"'"),'Controle redundante não tratado na sessão da Central: '+id);
@@ -53,4 +64,4 @@ assert(!/removeItem\s*\(/.test(performance),'Otimização não pode apagar token
 assert(central.includes('<strong>Moradores</strong>')&&central.includes('<strong>Recados e campanhas</strong>')&&central.includes('<strong>Agendas e vagas</strong>')&&central.includes('<strong>Profissionais e serviços</strong>'),'Cartões administrativos principais precisam permanecer no layout atual');
 assert(central.includes('<strong>TACS e áreas</strong>')&&central.includes('<strong>Municípios e organizações</strong>')&&central.includes('<strong>Portal do Morador</strong>'),'Cartões administrativos restritos/públicos precisam permanecer no layout atual');
 
-console.log('Central Administrativa Bloco 1: um único controlador efetivo de navegação, compatibilidade de sessão preservada e pool rápido validado.');
+console.log('Central Administrativa Bloco 2: controlador pré-carregado antes do primeiro toque, retorno rápido preservado e proteção contra perda de edição validada.');
