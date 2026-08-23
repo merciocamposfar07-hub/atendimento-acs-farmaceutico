@@ -11,6 +11,8 @@ function jsonp(callback,payload){return `${callback}(${JSON.stringify(payload)})
 
 test('CPF não localizado é vinculado somente ao integrante escolhido da família', async ({page}) => {
   let complementBody='';
+  let familyConsults=0;
+  let familyConsultFamily='';
 
   await page.route('**/macros/s/**', async route => {
     const request=route.request();
@@ -24,6 +26,8 @@ test('CPF não localizado é vinculado somente ao integrante escolhido da famíl
     const callback=url.searchParams.get('callback')||'';
     let payload;
     if(action==='publico_familia_consultar'){
+      familyConsults++;
+      familyConsultFamily=url.searchParams.get('familia')||'';
       payload={ok:true,autorizada:true,familiaId:FAMILY,membros:[
         {token:'fm_aaaaaaaaaaaaaaaaaaaaaaaa',nome:'Maria',nascimento:'01/01/1985',temDocumento:true},
         {token:'fm_bbbbbbbbbbbbbbbbbbbbbbbb',nome:'Miguel',nascimento:'02/02/2020',temDocumento:true}
@@ -47,6 +51,7 @@ test('CPF não localizado é vinculado somente ao integrante escolhido da famíl
     localStorage.setItem(`portalTacsFamiliaAutofillV1:${area}`,family);
     window.OneSignalDeferred={push(fn){fn({User:{PushSubscription:{id:sub}}});}};
   },{area:AREA,family:FAMILY,sub:SUB});
+  await expect.poll(()=>page.evaluate(area=>localStorage.getItem(`portalTacsFamiliaAutofillV1:${area}`)||'',AREA)).toBe(FAMILY);
 
   await page.addScriptTag({url:'portal-identificacao-familia-v1.js?homologacao=bloco9'});
   await expect.poll(()=>page.locator('#cpfStatus').evaluate(el=>el.dataset.familyDocObserver||'')).toBe('1');
@@ -54,6 +59,9 @@ test('CPF não localizado é vinculado somente ao integrante escolhido da famíl
   await page.locator('#cpf').dispatchEvent('input');
   await page.locator('#cpfStatus').evaluate((el)=>{el.textContent='CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).';});
 
+  await expect.poll(()=>familyConsults,{message:'O status de CPF não localizado precisa disparar a consulta da família lembrada.'}).toBeGreaterThan(0);
+  expect(familyConsultFamily).toBe(FAMILY);
+  await expect(page.locator('#portalFamilyLookupV1')).not.toHaveAttribute('hidden','');
   await expect(page.getByText('De quem é este CPF?')).toBeVisible();
   await expect(page.getByRole('button',{name:/Maria/})).toBeVisible();
   await expect(page.getByRole('button',{name:/Miguel/})).toBeVisible();
