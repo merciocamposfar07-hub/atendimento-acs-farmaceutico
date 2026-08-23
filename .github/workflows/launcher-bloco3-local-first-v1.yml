@@ -1,0 +1,63 @@
+name: Launcher temporario Bloco 3 Local First V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/launcher-bloco3-local-first-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar-na-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar somente a branch de homologacao
+        uses: actions/checkout@v4
+        with:
+          ref: central-bloco3-local-first-v1
+          fetch-depth: 0
+
+      - name: Confirmar que o executor temporario existe somente na branch
+        run: |
+          test -f scripts/aplicar_bloco3_local_first_v1.py
+          test -f .github/workflows/bloco3-local-first-v1.yml
+
+      - name: Aplicar Bloco 3 na worktree da branch
+        run: python3 scripts/aplicar_bloco3_local_first_v1.py
+
+      - name: Teste especifico local-first
+        run: |
+          node --check scripts/test_admin_local_first_v1.js
+          node scripts/test_admin_local_first_v1.js
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Regressao completa
+        run: npm test
+
+      - name: Confirmar escopo funcional
+        run: |
+          ALLOWED='painel-oficial-agendas-vagas.html|painel-oficial-recados-campanhas.html|teste-v1/painel-profissionais-servicos-v1.html|scripts/test_admin_local_first_v1.js|package.json|scripts/aplicar_bloco3_local_first_v1.py|.github/workflows/bloco3-local-first-v1.yml'
+          EXTRA=$(git diff --name-only | grep -Ev "^($ALLOWED)$" || true)
+          if [ -n "$EXTRA" ]; then
+            echo 'Arquivos fora do escopo:'
+            echo "$EXTRA"
+            exit 1
+          fi
+          grep -q 'portalTacsAdminSnapshotV1:agendas:' painel-oficial-agendas-vagas.html
+          grep -q 'portalTacsAdminSnapshotV1:recados:' painel-oficial-recados-campanhas.html
+          grep -q 'portalTacsAdminSnapshotV1:profissionais:' teste-v1/painel-profissionais-servicos-v1.html
+          ! grep -q 'portalTacsAdminSnapshotV1:moradores:' teste-v1/painel-moradores-v2.html
+
+      - name: Remover ferramentas temporarias da branch e gravar resultado validado
+        run: |
+          rm -f scripts/aplicar_bloco3_local_first_v1.py .github/workflows/bloco3-local-first-v1.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Bloco 3: dados local-first seguros nos paineis administrativos'
+          git pull --rebase origin central-bloco3-local-first-v1
+          git push origin central-bloco3-local-first-v1
