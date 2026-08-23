@@ -243,7 +243,7 @@
     var script=document.createElement('script');
     script.id=CONECTA_SCRIPT_ID;
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-conecta-oficial-v1.js?v=20260823-conecta-estavel-v2';
+    script.src='/atendimento-acs-farmaceutico/portal-conecta-oficial-v1.js?v=20260823-conecta-estavel-v4';
     (document.head||document.documentElement).appendChild(script);
   }
 
