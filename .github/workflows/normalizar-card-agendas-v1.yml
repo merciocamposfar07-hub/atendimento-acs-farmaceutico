@@ -1,0 +1,57 @@
+name: Normalizar card institucional agendas V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/normalizar-card-agendas-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  normalizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Manter uma única referência do gerador institucional
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('painel-oficial-agendas-vagas.html')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r'\n?<script src="/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1\.js\?v=[^"]+"></script>', '', s)
+          marcador='</body>'
+          linha='<script src="/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260823-card-institucional-v1"></script>\n'
+          if marcador not in s:
+              raise SystemExit('Fechamento </body> não encontrado.')
+          s=s.replace(marcador,linha+marcador,1)
+          if s.count('agenda-whatsapp-card-v1.js?v=20260823-card-institucional-v1') != 1:
+              raise SystemExit('A referência institucional não ficou única.')
+          p.write_text(s,encoding='utf-8')
+          PY
+          rm -f .github/workflows/aplicar-cache-card-institucional-agendas-v1.yml
+          rm -f .github/workflows/normalizar-card-agendas-v1.yml
+
+      - name: Publicar correção restrita
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add painel-oficial-agendas-vagas.html .github/workflows/aplicar-cache-card-institucional-agendas-v1.yml .github/workflows/normalizar-card-agendas-v1.yml || true
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Normaliza carregamento do card institucional nas agendas'
+          for tentativa in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((tentativa*2))
+          done
+          exit 1
