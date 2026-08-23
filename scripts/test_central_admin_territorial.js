@@ -41,7 +41,10 @@ assert.match(js,/admin_territorio_login_pin/,
 assert.doesNotMatch(js,/admin_territorio_login_tacs/,
   'A Central não deve voltar ao login antigo por CNS + PIN.');
 assert.match(js,/admin_territorio_dados/);
-assert.match(js,/admin_notificacoes_saude/);
+assert.match(js,/admin_notificacoes_saude_rapida/,
+  'A Central deve consultar somente a saúde rápida local das notificações no carregamento.');
+assert.doesNotMatch(js,/post\('admin_notificacoes_saude'/,
+  'A Central não deve disparar a consulta pesada/remota de saúde das notificações no carregamento.');
 assert.match(js,/painel-oficial-recados-campanhas\.html\?area=/);
 assert.doesNotMatch(js,/moduleUrl\(name\)[\s\S]*name==='notificacoes'/,
   'A rota do painel redundante de Saúde das notificações deve ser removida.');
@@ -94,8 +97,8 @@ assert.match(publicPortal,/\.hero-actions\{grid-template-columns:1fr;margin:0;bo
   'O quadro inferior do Portal TACS deve alinhar com a largura do quadro superior no celular.');
 assert.match(js,/teste-v1\/painel-moradores-v2\.html/);
 assert.match(js,/filter\(function\(a\)\{return a&&a\.ativa!==false\}\)/);
-assert.match(js,/post\('admin_moradores_status'[\s\S]*post\('admin_notificacoes_saude'/,
-  'Saúde de moradores deve terminar antes da consulta autenticada das notificações.');
+assert.match(js,/post\('admin_moradores_status'[\s\S]*post\('admin_notificacoes_saude_rapida'/,
+  'Saúde de moradores deve terminar antes da consulta rápida autenticada das notificações.');
 assert.match(notificationHealthBackend,/contagens=\{ativos:0,inativos:0,reparo:0,semConfirmacao:0,total:0\}/,
   'O contrato do backend deve expor a quantidade apta em contagens.ativos.');
 assert.match(js,/Number\(c\.ativos\|\|0\)\+' aptos/,

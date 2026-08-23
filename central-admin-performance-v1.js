@@ -232,8 +232,9 @@ function beginPreload(){
   var order=['moradores','agendas','recados','profissionais','suporte','territorio','municipios'];
   var allowed=allowedModules();
   order=order.filter(function(name){return allowed.indexOf(name)!==-1});
-  order.forEach(function(name,index){
-    setTimeout(function(){if(getSession().ok&&sessionKey()===currentKey)ensureFrame(name)},index<4?index*220:900+(index-4)*350);
+  var delays={moradores:0,agendas:260,recados:850,profissionais:2400,suporte:3200,territorio:3900,municipios:4600};
+  order.forEach(function(name){
+    setTimeout(function(){if(getSession().ok&&sessionKey()===currentKey)ensureFrame(name)},Number(delays[name]||0));
   });
 }
 function resetFrames(){
