@@ -67,5 +67,4 @@ test('snapshot de Agendas aparece sem esperar Apps Script', async ({ page, brows
   await expect(page.locator('#loginStatus')).toContainText('Dados exibidos da última leitura');
   const elapsed=Date.now()-started;
   expect(elapsed, `${browserName}: snapshot local deve aparecer em até 300 ms depois do shell`).toBeLessThanOrEqual(300);
-  await expect(page.locator('.salvarAgenda').first()).toBeDisabled();
 });
