@@ -26,7 +26,7 @@ new_refresh="""function refreshHealth(){
   jsonp('portal_manutencao_status',{areaId:context.areaId},function(r){mark('healthMaintenance',r&&r.ok?(r.ativa?'Ativa':'Desligada'):'Indisponível',r&&r.ok?(r.ativa?'warn':'ok'):'err');concluir()});
   post('admin_moradores_status',{areaId:context.areaId},function(r){
     mark('healthResidents',r&&r.ok?(r.total+' moradores'):'Falha',r&&r.ok?'ok':'err');concluir();
-    post('admin_notificacoes_saude_rapida',{areaId:context.areaId},function(n){if(n&&n.ok){var c=n.contagens||{};mark('healthNotifications',String(Number(c.ativos||0))+' aptos',Number(c.reparo||0)>0?'warn':'ok')}else mark('healthNotifications','Falha','err');concluir()},'admin_notificacoes_saude_result');
+    post('admin_notificacoes_saude_rapida',{areaId:context.areaId},function(n){if(n&&n.ok){var c=n.contagens||{};mark('healthNotifications',Number(c.ativos||0)+' aptos',Number(c.reparo||0)>0?'warn':'ok')}else mark('healthNotifications','Falha','err');concluir()},'admin_notificacoes_saude_result');
   },'admin_moradores_result');
   jsonp('painel_publico',{areaId:context.areaId},function(r){mark('healthAgenda',r&&r.ok?'Acessível':'Falha',r&&r.ok?'ok':'err');concluir()});
   jsonp('publico_conteudo_status',{areaId:context.areaId},function(r){mark('healthContent',r&&r.ok?'Acessível':'Falha',r&&r.ok?'ok':'err');concluir()});
