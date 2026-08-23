@@ -7,12 +7,20 @@ on:
     paths:
       - 'scripts/aplicar_bloco3_local_first_v1.py'
       - '.github/workflows/bloco3-local-first-v1.yml'
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/aplicar_bloco3_local_first_v1.py'
+      - '.github/workflows/bloco3-local-first-v1.yml'
 
 permissions:
   contents: write
 
 jobs:
   aplicar-testar-commit:
+    if: github.event_name == 'push' || github.head_ref == 'central-bloco3-local-first-v1'
     runs-on: ubuntu-latest
     steps:
       - name: Baixar branch do Bloco 3
