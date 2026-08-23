@@ -22,9 +22,27 @@
   function setTextAfterStrong(container,value){
     if(!container)return;
     var strong=container.querySelector('strong');
-    if(!strong)return;
-    while(strong.nextSibling)container.removeChild(strong.nextSibling);
-    container.appendChild(document.createTextNode(value));
+    if(!strong||!strong.parentNode)return;
+    var parent=strong.parentNode;
+    while(strong.nextSibling)parent.removeChild(strong.nextSibling);
+    parent.appendChild(document.createTextNode(value));
+  }
+  function applyFooter(){
+    var institutionalMeta=document.querySelector('footer .portal-footer-meta');
+    if(institutionalMeta){
+      institutionalMeta.textContent='';
+      institutionalMeta.appendChild(document.createTextNode(identity.unidadeNome));
+      institutionalMeta.appendChild(document.createElement('br'));
+      institutionalMeta.appendChild(document.createTextNode(identity.areaNome+' • Chã Grande/PE'));
+      return;
+    }
+    var footer=document.querySelectorAll('footer > div');
+    if(footer[0])setTextAfterStrong(footer[0],identity.tacsNome);
+    if(footer[1]){
+      var footerStrong=footer[1].querySelector('strong');
+      if(footerStrong)footerStrong.textContent='Serviço da '+identity.unidadeNome;
+      setTextAfterStrong(footer[1],identity.areaNome+' • Chã Grande/PE');
+    }
   }
   function apply(data){
     if(!valid(data))return false;
@@ -58,13 +76,7 @@
     var purpose=document.querySelector('.purpose p');
     if(purpose)purpose.textContent='Solicitar ou obter informações sobre serviços oferecidos pela '+identity.unidadeNome+', como atendimento odontológico, vacinação, visita, cadastro, acompanhamento e orientação sobre o funcionamento da unidade.';
 
-    var footer=document.querySelectorAll('footer > div');
-    if(footer[0])setTextAfterStrong(footer[0],identity.tacsNome);
-    if(footer[1]){
-      var footerStrong=footer[1].querySelector('strong');
-      if(footerStrong)footerStrong.textContent='Serviço da '+identity.unidadeNome;
-      setTextAfterStrong(footer[1],identity.areaNome+' • Chã Grande/PE');
-    }
+    applyFooter();
 
     document.title='TACS - Técnico Agente Comunitário de Saúde | '+identity.unidadeNome;
     var description=document.querySelector('meta[name="description"]');
