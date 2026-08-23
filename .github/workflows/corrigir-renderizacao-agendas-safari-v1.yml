@@ -1,0 +1,107 @@
+name: Corrigir renderizacao Agendas Safari V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-renderizacao-agendas-safari-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Corrigir somente a pintura do painel de Agendas no Safari
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          panel = Path('painel-oficial-agendas-vagas.html')
+          s = panel.read_text(encoding='utf-8')
+
+          old_ponte = '.ponte{position:fixed!important;left:-10000px!important;top:-10000px!important;width:2px!important;height:2px!important;border:0!important;opacity:.01!important;pointer-events:none!important}'
+          new_ponte = '.ponte{position:absolute!important;left:0!important;top:0!important;width:1px!important;height:1px!important;border:0!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;z-index:-1!important}'
+          if old_ponte not in s:
+              raise SystemExit('Ponte fixa esperada não encontrada; abortando sem alterar o painel.')
+          s = s.replace(old_ponte, new_ponte, 1)
+
+          marker = '<style id="agendaAtualizarPaginaFlutuanteV4Style">'
+          start = s.find(marker)
+          end = s.find('</style>', start)
+          if start < 0 or end < 0:
+              raise SystemExit('Bloco do botão Atualizar não encontrado; abortando.')
+          block = s[start:end]
+          replacements = {
+              'position:fixed!important;': 'position:relative!important;',
+              'right:12px!important;': 'right:auto!important;',
+              'bottom:calc(12px + env(safe-area-inset-bottom))!important;': 'bottom:auto!important;',
+              'margin:0!important;': 'margin:0 12px 16px auto!important;',
+              'right:10px!important;': 'right:auto!important;',
+              'bottom:calc(10px + env(safe-area-inset-bottom))!important;': 'bottom:auto!important;'
+          }
+          for old, new in replacements.items():
+              if old not in block:
+                  raise SystemExit('Regra esperada não encontrada no botão: ' + old)
+              block = block.replace(old, new, 1)
+          s = s[:start] + block + s[end:]
+
+          safari_css = '''\n<style id="agendaSafariPaintFixV1">\nhtml,body,main,.painel,.lista,.grupoProfissional,.agendaProfissionalCorpo,.cartao{\n  -webkit-backface-visibility:visible!important;\n  backface-visibility:visible!important;\n  will-change:auto!important;\n  contain:none!important;\n}\n</style>\n'''
+          anchor = '<!-- ATUALIZAR_PAGINA_FLUTUANTE_AGENDAS_V4_START -->'
+          if 'agendaSafariPaintFixV1' not in s:
+              if anchor not in s:
+                  raise SystemExit('Âncora de estabilização não encontrada.')
+              s = s.replace(anchor, safari_css + anchor, 1)
+
+          panel.write_text(s, encoding='utf-8')
+
+          quick = Path('central-tacs-login-rapido-v1.js')
+          q = quick.read_text(encoding='utf-8')
+          old_frame = "frame.name=frameName;frame.src='about:blank';frame.style.cssText='position:fixed;left:-10000px;top:-10000px;width:2px;height:2px;border:0;opacity:.01';"
+          new_frame = "frame.name=frameName;frame.src='about:blank';frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;visibility:hidden;pointer-events:none;z-index:-1';"
+          if old_frame not in q:
+              raise SystemExit('Iframe técnico fixo da Central não encontrado; abortando.')
+          q = q.replace(old_frame, new_frame, 1)
+
+          old_agenda = "if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v='+revision;"
+          new_agenda = "if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v=20260823-agendas-safari-paint-v1';"
+          if old_agenda not in q:
+              raise SystemExit('Rota estável de Agendas não encontrada; abortando.')
+          q = q.replace(old_agenda, new_agenda, 1)
+          quick.write_text(q, encoding='utf-8')
+
+          central = Path('central-administrativa-tacs.html')
+          c = central.read_text(encoding='utf-8')
+          old_loader = '/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=20260823-recados-safari-render-v1'
+          new_loader = '/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=20260823-agendas-safari-paint-v1'
+          if old_loader not in c:
+              raise SystemExit('Carregador atual da navegação central não encontrado; abortando.')
+          c = c.replace(old_loader, new_loader, 1)
+          central.write_text(c, encoding='utf-8')
+          PY
+
+      - name: Validar JavaScript e escopo
+        run: |
+          set -euo pipefail
+          node --check central-tacs-login-rapido-v1.js
+          grep -q 'agendaSafariPaintFixV1' painel-oficial-agendas-vagas.html
+          grep -q 'position:absolute!important;left:0!important;top:0!important;width:1px!important;height:1px!important' painel-oficial-agendas-vagas.html
+          grep -q '20260823-agendas-safari-paint-v1' central-tacs-login-rapido-v1.js
+          grep -q '20260823-agendas-safari-paint-v1' central-administrativa-tacs.html
+
+      - name: Publicar correção isolada e remover este workflow temporário
+        run: |
+          set -euo pipefail
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git rm .github/workflows/corrigir-renderizacao-agendas-safari-v1.yml
+          git add painel-oficial-agendas-vagas.html central-tacs-login-rapido-v1.js central-administrativa-tacs.html
+          git commit -m 'Corrige falha de pintura de Agendas no Safari sem alterar dados'
+          git pull --rebase origin main
+          git push origin HEAD:main
