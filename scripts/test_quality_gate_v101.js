@@ -62,8 +62,8 @@ registrar('desempenho', 'Painel de agendas abre última leitura imediatamente', 
 registrar('desempenho', 'Pré-aquecimento reaproveita conexão recente por 3 minutos', contem(warmup, 'var WARM_MS=3*60*1000;'));
 registrar('desempenho', 'Timeout de pré-aquecimento limitado a 6 segundos', contem(warmup, 'var TIMEOUT_MS=6000;'));
 registrar('desempenho', 'Atualização inteligente evita apagar caches duráveis', !contem(auto, "'portalTacsPublicDataV4'") && !contem(auto, "'portalTacsDentalAgendaV103FullWeek'"));
-registrar('desempenho', 'Primeira abertura da web app não recarrega só por faltar ?ptv', contem(auto, 'if(!pageSeen)') && !contem(auto, 'currentUrl=new URL'));
-registrar('desempenho', 'Autoatualização recarrega apenas quando a versão publicada muda', contem(auto, 'if(pageSeen!==remote)'));
+registrar('desempenho', 'A página compara seu carimbo com a versão publicada', contem(auto, 'function currentPageVersion()') && contem(auto, 'releaseMismatch&&forcedRelease!==remote'));
+registrar('desempenho', 'A autoatualização evita repetição de recarga para a mesma versão', contem(auto, 'FORCED_RELEASE_KEY') && contem(auto, 'forcedRelease!==remote'));
 registrar('desempenho', 'Consulta odontológica duplicada antiga virou somente fallback', contem(index, 'if(!window.__PORTAL_TACS_ODONTOLOGIA_V98__)loadDental()'));
 registrar('desempenho', 'Arquivo neutro do backend é incluído no release para substituir a versão instável', contem(read('scripts/build_apps_script_release.js'), "marker: 'TACS_PERFORMANCE_CACHE_V101'"));
 

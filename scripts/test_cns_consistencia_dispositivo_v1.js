@@ -8,8 +8,8 @@ const root = path.resolve(__dirname, '..');
 const autofill = fs.readFileSync(path.join(root, 'moradores-autofill.js'), 'utf8');
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert.match(index, /moradores-autofill\.js\?v=20260823-cns-device-v1/,
-  'O Portal precisa forçar a versão nova do autofill para todos os aparelhos.');
+assert.match(index, /moradores-autofill\.js\?v=[^"']+/,
+  'O Portal precisa carregar o autofill com o carimbo integral da publicação.');
 assert.match(autofill, /var negativeRequestId = 0;/);
 assert.match(autofill, /var negativeProofs = \{\};/);
 assert.match(autofill, /Object\.keys\(negativeProofs\)\.length < 2/,

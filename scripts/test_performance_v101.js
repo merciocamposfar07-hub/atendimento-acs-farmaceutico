@@ -87,8 +87,9 @@ function testStaticSafety() {
   assert.ok(auto.includes('smartRefresh(button)'));
   assert.ok(!auto.includes("'portalTacsPublicDataV4'"), 'Atualizar não deve apagar cache público V4');
   assert.ok(!auto.includes("'portalTacsDentalAgendaV103FullWeek'"), 'Atualizar não deve apagar snapshot odontológico completo');
-  assert.ok(auto.includes('if(!pageSeen)'), 'Primeira leitura de versão não deve forçar recarga');
-  assert.ok(auto.includes('if(pageSeen!==remote)'), 'Recarga automática deve ocorrer somente quando a versão mudar');
+  assert.ok(auto.includes('function currentPageVersion()'), 'Atualização deve comparar o carimbo real da página');
+  assert.ok(auto.includes('releaseMismatch&&forcedRelease!==remote'), 'Recarga automática deve ocorrer quando a página estiver em outra versão');
+  assert.ok(auto.includes('function purgeLegacyDeliveryState()'), 'Atualização deve remover apenas o estado legado de entrega');
 
   const warm = read('admin-warmup.js');
   assert.ok(warm.includes('var TIMEOUT_MS=6000;'));
@@ -104,7 +105,7 @@ function testStaticSafety() {
 
   const index = read('index.html');
   assert.ok(/portal-auto-update\.js\?v=[A-Za-z0-9._-]+/.test(index), 'Atualização pública deve usar revisão explícita');
-  assert.ok(index.includes('portal-odontologia-segunda-sexta.js?v=20260818-cache-api-v116'), 'Odontologia deve invalidar cache do JavaScript ao ativar v116');
+  assert.ok(/portal-odontologia-segunda-sexta\.js\?v=[^"']+/.test(index), 'Odontologia deve usar o carimbo integral da publicação');
   assert.ok(index.includes('if(!window.__PORTAL_TACS_ODONTOLOGIA_V98__)loadDental()'), 'Fallback antigo só pode atuar se o controlador externo não carregar');
 
   const release = read('scripts/build_apps_script_release.js');
