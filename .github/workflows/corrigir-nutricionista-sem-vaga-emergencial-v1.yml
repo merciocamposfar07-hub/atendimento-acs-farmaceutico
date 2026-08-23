@@ -1,4 +1,4 @@
-name: Corrigir nutricionista sem vaga emergencial V1
+name: Corrigir nutricionista sem vaga emergencial V2
 
 on:
   push:
@@ -18,15 +18,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Remover campo emergencial somente da nutricionista
+      - name: Remover emergência da nutricionista no painel e nos cards
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
-          path = Path('painel-oficial-agendas-vagas.html')
-          text = path.read_text(encoding='utf-8')
+          panel = Path('painel-oficial-agendas-vagas.html')
+          panel_text = panel.read_text(encoding='utf-8')
 
           marker = '/* Nutricionista não utiliza vagas emergenciais; odontologia permanece inalterada. */'
           css = '''/* Nutricionista não utiliza vagas emergenciais; odontologia permanece inalterada. */
@@ -36,36 +37,68 @@ jobs:
           }
 
           '''
-
-          if marker not in text:
+          if marker not in panel_text:
               anchor = 'footer,.footer{'
-              if anchor not in text:
+              if anchor not in panel_text:
                   raise SystemExit('Âncora visual esperada não encontrada no painel de agendas.')
-              text = text.replace(anchor, css + anchor, 1)
+              panel_text = panel_text.replace(anchor, css + anchor, 1)
 
-          path.write_text(text, encoding='utf-8')
+          card = Path('agenda-whatsapp-card-v1.js')
+          card_text = card.read_text(encoding='utf-8')
+
+          if "return{module:field(card,'modulo'),title:" not in card_text:
+              old = "return{title:txt(title&&title.textContent)||field(card,'modulo')||'Agenda de atendimento',"
+              new = "return{module:field(card,'modulo'),title:txt(title&&title.textContent)||field(card,'modulo')||'Agenda de atendimento',"
+              if old not in card_text:
+                  raise SystemExit('Leitura do módulo não localizada no gerador do card.')
+              card_text = card_text.replace(old, new, 1)
+
+          old_individual = "ctx.fillStyle='#a52d2d';ctx.fillText(data.emergency+' vaga(s) de emergência',118,y);y+=76;"
+          new_individual = "if(txt(data.module).toUpperCase()!=='NUTRICIONISTA'){ctx.fillStyle='#a52d2d';ctx.fillText(data.emergency+' vaga(s) de emergência',118,y);y+=76}else{y+=14;}"
+          if new_individual not in card_text:
+              if old_individual not in card_text:
+                  raise SystemExit('Linha emergencial do card individual não localizada.')
+              card_text = card_text.replace(old_individual, new_individual, 1)
+
+          old_group = "ctx.fillStyle='#a52d2d';ctx.fillText(day.emergency+' emergência',330,boxY+countOff);"
+          new_group = "if(txt(day.module).toUpperCase()!=='NUTRICIONISTA'){ctx.fillStyle='#a52d2d';ctx.fillText(day.emergency+' emergência',330,boxY+countOff);}"
+          if new_group not in card_text:
+              if old_group not in card_text:
+                  raise SystemExit('Linha emergencial do card completo não localizada.')
+              card_text = card_text.replace(old_group, new_group, 1)
+
+          card.write_text(card_text, encoding='utf-8')
+
+          new_ref = 'agenda-whatsapp-card-v1.js?v=20260823-nutricionista-sem-emergencia-v2'
+          panel_text, n = re.subn(r'agenda-whatsapp-card-v1\.js\?v=[^"\']+', new_ref, panel_text, count=1)
+          if n != 1 and new_ref not in panel_text:
+              raise SystemExit('Referência do gerador de card não localizada no painel.')
+          panel.write_text(panel_text, encoding='utf-8')
           PY
 
-      - name: Validar escopo da correção
+      - name: Validar correção completa
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'cartao[data-chave^="NUTRICIONISTA|"] input[name="vagasEmergenciais"]' painel-oficial-agendas-vagas.html
+          node --check agenda-whatsapp-card-v1.js
+          grep -Fq "return{module:field(card,'modulo'),title:" agenda-whatsapp-card-v1.js
+          grep -Fq "txt(data.module).toUpperCase()!=='NUTRICIONISTA'" agenda-whatsapp-card-v1.js
+          grep -Fq "txt(day.module).toUpperCase()!=='NUTRICIONISTA'" agenda-whatsapp-card-v1.js
+          grep -Fq 'agenda-whatsapp-card-v1.js?v=20260823-nutricionista-sem-emergencia-v2' painel-oficial-agendas-vagas.html
           grep -Fq "normalId(a.MODULO)==='ODONTOLOGIA'" painel-oficial-agendas-vagas.html
-          grep -Fq '<label>Vagas emergenciais</label><input class="campo" name="vagasEmergenciais"' painel-oficial-agendas-vagas.html
 
-      - name: Publicar correção
+      - name: Publicar correção completa
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- painel-oficial-agendas-vagas.html; then
-            echo 'Correção já aplicada.'
+          if git diff --quiet -- painel-oficial-agendas-vagas.html agenda-whatsapp-card-v1.js; then
+            echo 'Correção completa já aplicada.'
             exit 0
           fi
           git config user.name 'Portal TACS'
           git config user.email 'actions@users.noreply.github.com'
-          git add painel-oficial-agendas-vagas.html
-          git commit -m 'Oculta vagas emergenciais da nutricionista'
+          git add painel-oficial-agendas-vagas.html agenda-whatsapp-card-v1.js
+          git commit -m 'Remove emergência da nutricionista também nos cards'
           for tentativa in 1 2 3; do
             git pull --rebase origin main || true
             if git push origin HEAD:main; then exit 0; fi
