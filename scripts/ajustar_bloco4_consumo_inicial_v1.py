@@ -1,5 +1,6 @@
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
+# Shared read é somente bootstrap; releituras após qualquer escrita continuam obrigatoriamente no servidor.
 for rel in ['painel-oficial-agendas-vagas.html','teste-v1/painel-profissionais-servicos-v1.html']:
     p=ROOT/rel
     s=p.read_text(encoding='utf-8')
