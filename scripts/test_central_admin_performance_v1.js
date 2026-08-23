@@ -28,10 +28,18 @@ assert(!support.includes('frame.src=url'),'Bootstrap não pode abrir painel por 
 });
 assert(performance.includes("event.target.closest('#moduleGrid .module[data-module]')"),'Controlador oficial precisa ser o dono da navegação dos cartões');
 assert(performance.includes("event.target.closest('#viewerBack')"),'Controlador oficial precisa ser o dono do retorno à Central');
-assert(performance.includes("name==='portal'"),'Portal público precisa permanecer fora do pool administrativo');
-assert(performance.includes('portalTacsAdminPreloadPoolV1'),'Pool de painéis pré-carregados ausente');
+assert(performance.includes("name==='portal'"),'Portal público precisa permanecer fora do host administrativo');
+assert(performance.includes('portalTacsAdminPreloadPoolV1'),'Host de painéis pré-carregados ausente');
 assert(performance.includes('ensureFrame(name)'),'Reuso da instância carregada do painel ausente');
-assert(performance.includes('ensurePool().appendChild(frames[activeName])'),'Ao voltar à Central o painel carregado deve ser preservado no pool');
+assert(performance.includes("viewer.insertBefore(pool,original)")&&performance.includes('host.appendChild(frame);'),'Painel deve nascer uma única vez no host estável do visualizador');
+
+const showFrame=performance.match(/function showFrame\(name,title\)\{[\s\S]*?\n\}/)?.[0]||'';
+const closeViewer=performance.match(/function closeViewerFast\(options\)\{[\s\S]*?\n\}/)?.[0]||'';
+assert(showFrame&&closeViewer,'Rotinas de abrir/voltar da Central precisam permanecer disponíveis');
+assert(!showFrame.includes('appendChild(frame)')&&!showFrame.includes('appendChild(frames['),'Abrir/trocar painel não pode mover iframe já carregado');
+assert(!closeViewer.includes('appendChild(frame)')&&!closeViewer.includes('appendChild(frames['),'Voltar à Central não pode mover iframe já carregado');
+assert(showFrame.includes('frameHiddenStyle(frames[activeName])'),'Trocar painel deve apenas ocultar o anterior');
+assert(closeViewer.includes('frameHiddenStyle(frames[activeName])'),'Voltar à Central deve apenas ocultar o painel ativo');
 assert(!performance.includes('_cb=Date.now()'),'Controlador oficial não pode criar cache-buster novo a cada toque');
 assert(!/function closeViewerFast\([\s\S]*?src\s*=\s*['"]about:blank['"]/.test(performance),'Voltar à Central não pode descarregar o painel administrativo ativo');
 
@@ -41,7 +49,7 @@ assert(performance.includes('activePanelIsDirty()'),'Retorno à Central precisa 
 assert(performance.includes('window.confirm(DIRTY_MESSAGE)'),'Retorno não pode descartar alterações sem confirmação do operador');
 assert(performance.includes("getElementById('portalTacsAdminRefreshV1')"),'Controlador rápido deve remover refresh interno redundante do painel carregado');
 assert(performance.includes("dataset.portalTacsPerformanceInstalled='1'"),'Controlador deve expor marcador de instalação para homologação do primeiro toque');
-assert(performance.includes("version:'1.1.0'"),'Versão do controlador do Bloco 2 não foi aplicada');
+assert(performance.includes("version:'1.2.0'"),'Versão persistente do controlador do Bloco 13 não foi aplicada');
 
 /*
  * Listeners legados permanecem no código por compatibilidade e rollback, mas o
@@ -49,7 +57,7 @@ assert(performance.includes("version:'1.1.0'"),'Versão do controlador do Bloco 
  * efetiva. Este bloco não modifica autenticação, permissões ou login rápido.
  */
 assert(base.includes("el('moduleGrid').addEventListener('click'"),'Compatibilidade da Central-base foi alterada fora do escopo');
-assert(quick.includes('function installInstitutionalNavigation()'),'Login rápido foi alterado fora do escopo do Bloco 2');
+assert(quick.includes('function installInstitutionalNavigation()'),'Login rápido foi alterado fora do escopo do Bloco 13');
 
 ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','login','entrar','loginTacs','entrarTacs'].forEach((id)=>{
   assert(performance.includes("'"+id+"'"),'Controle redundante não tratado na sessão da Central: '+id);
@@ -64,4 +72,4 @@ assert(!/removeItem\s*\(/.test(performance),'Otimização não pode apagar token
 assert(central.includes('<strong>Moradores</strong>')&&central.includes('<strong>Recados e campanhas</strong>')&&central.includes('<strong>Agendas e vagas</strong>')&&central.includes('<strong>Profissionais e serviços</strong>'),'Cartões administrativos principais precisam permanecer no layout atual');
 assert(central.includes('<strong>TACS e áreas</strong>')&&central.includes('<strong>Municípios e organizações</strong>')&&central.includes('<strong>Portal do Morador</strong>'),'Cartões administrativos restritos/públicos precisam permanecer no layout atual');
 
-console.log('Central Administrativa Bloco 2: controlador pré-carregado antes do primeiro toque, retorno rápido preservado e proteção contra perda de edição validada.');
+console.log('Central Administrativa Bloco 13: controlador pré-carregado, host estável sem reparenting, retorno instantâneo e proteção contra perda de edição validados.');
