@@ -43,7 +43,9 @@ jobs:
           node scripts/test_admin_local_first_v1.js
           npm ci
           npm test
-          ALLOWED='painel-oficial-agendas-vagas.html|painel-oficial-recados-campanhas.html|teste-v1/painel-profissionais-servicos-v1.html|scripts/test_admin_local_first_v1.js|scripts/test_admin_transport.js|package.json'
+          # O pretest atualiza estes contratos gerados. Eles não fazem parte do Bloco 3.
+          git checkout -- scripts/test_dom_flows.js scripts/test_territorio_dom.js
+          ALLOWED='painel-oficial-agendas-vagas.html|painel-oficial-recados-campanhas.html|teste-v1/painel-profissionais-servicos-v1.html|scripts/test_admin_local_first_v1.js|scripts/test_admin_transport.js|scripts/test_performance_v101.js|package.json'
           TRACKED=$(git diff --name-only)
           echo "$TRACKED"
           EXTRA=$(printf '%s\n' "$TRACKED" | grep -Ev "^($ALLOWED)$" || true)
@@ -57,7 +59,7 @@ jobs:
           ! grep -q 'portalTacsAdminSnapshotV1:moradores:' teste-v1/painel-moradores-v2.html
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add painel-oficial-agendas-vagas.html painel-oficial-recados-campanhas.html teste-v1/painel-profissionais-servicos-v1.html scripts/test_admin_local_first_v1.js scripts/test_admin_transport.js package.json
+          git add painel-oficial-agendas-vagas.html painel-oficial-recados-campanhas.html teste-v1/painel-profissionais-servicos-v1.html scripts/test_admin_local_first_v1.js scripts/test_admin_transport.js scripts/test_performance_v101.js package.json
           git commit -m 'Bloco 3: dados local-first seguros nos painéis administrativos'
           git pull --rebase origin central-bloco3-local-first-v1
           git push origin central-bloco3-local-first-v1
