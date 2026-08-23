@@ -183,9 +183,6 @@ function monitorReady(name,frame){
     if(panelLooksReady(name,frame)){
       frame.dataset.tacsReady='1';
       frame.dataset.tacsReadyAt=String(Date.now());
-      if(name==='agendas')setTimeout(function(){
-        if(activeName!==name&&frames[name]===frame&&frame.parentNode){frame.remove();delete frames[name]}
-      },5000);
       return;
     }
     if(Date.now()-started<30000)setTimeout(check,180);

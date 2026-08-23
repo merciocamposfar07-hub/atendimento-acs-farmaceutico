@@ -3,7 +3,7 @@ const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './scripts',
-  testMatch: ['homologacao-cross-engine.spec.js','homologacao-performance-budget.spec.js','homologacao-push-onboarding.spec.js','homologacao-identificacao-familiar.spec.js','homologacao-familia-aparelho-beneficiario.spec.js','homologacao-matriz-identificacao.spec.js','homologacao-reserva-confirmada.spec.js','homologacao-safari-bfcache.spec.js','homologacao-service-worker-isolation.spec.js'],
+  testMatch: ['homologacao-cross-engine.spec.js','homologacao-performance-budget.spec.js','homologacao-push-onboarding.spec.js','homologacao-identificacao-familiar.spec.js','homologacao-familia-aparelho-beneficiario.spec.js','homologacao-matriz-identificacao.spec.js','homologacao-reserva-confirmada.spec.js','homologacao-safari-bfcache.spec.js','homologacao-service-worker-isolation.spec.js','homologacao-interface-acoes.spec.js'],
   timeout: 30000,
   expect: { timeout: 7000 },
   fullyParallel: false,
