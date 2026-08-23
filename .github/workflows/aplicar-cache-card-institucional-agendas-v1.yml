@@ -1,0 +1,51 @@
+name: Aplicar cache card institucional agendas V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/aplicar-cache-card-institucional-agendas-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Atualizar somente a versão do gerador de card
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('painel-oficial-agendas-vagas.html')
+          s=p.read_text(encoding='utf-8')
+          import re
+          novo='agenda-whatsapp-card-v1.js?v=20260823-card-institucional-v1'
+          s2,n=re.subn(r'agenda-whatsapp-card-v1\.js\?v=[^"\']+',novo,s,count=1)
+          if n != 1:
+              raise SystemExit(f'Esperava substituir 1 referência do gerador; encontrei {n}.')
+          p.write_text(s2,encoding='utf-8')
+          PY
+          grep -Fq 'agenda-whatsapp-card-v1.js?v=20260823-card-institucional-v1' painel-oficial-agendas-vagas.html
+          rm -f .github/workflows/aplicar-cache-card-institucional-agendas-v1.yml
+
+      - name: Publicar somente painel e remover workflow temporário
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add painel-oficial-agendas-vagas.html .github/workflows/aplicar-cache-card-institucional-agendas-v1.yml
+          git commit -m 'Ativa modelo institucional dos cards de agendas'
+          for tentativa in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((tentativa*2))
+          done
+          exit 1
