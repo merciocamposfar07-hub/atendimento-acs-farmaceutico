@@ -54,15 +54,18 @@ function moduleUrl(name){
 }
 function ensurePool(){
   if(pool&&pool.parentNode)return pool;
+  var viewer=document.getElementById('viewer');
+  if(!viewer)return null;
   pool=document.createElement('div');
   pool.id='portalTacsAdminPreloadPoolV1';
   pool.setAttribute('aria-hidden','true');
-  pool.style.cssText='position:fixed;left:-200vw;top:0;width:430px;height:820px;overflow:hidden;opacity:.01;pointer-events:none;z-index:-1';
-  document.body.appendChild(pool);
+  pool.style.cssText='display:flex;flex:1 1 auto;min-width:0;min-height:0;overflow:hidden;position:relative;background:#dfeef3';
+  var original=document.getElementById('viewerFrame');
+  if(original){original.hidden=true;viewer.insertBefore(pool,original)}else viewer.appendChild(pool);
   return pool;
 }
 function frameHiddenStyle(frame){
-  frame.style.cssText='display:block;width:390px;height:780px;border:0;background:#dfeef3;opacity:.01;pointer-events:none';
+  frame.style.cssText='display:none;width:100%;min-width:0;min-height:0;height:auto;flex:1 1 auto;border:0;background:#dfeef3;pointer-events:none';
   frame.setAttribute('aria-hidden','true');
 }
 function frameVisibleStyle(frame){
@@ -191,6 +194,7 @@ function monitorReady(name,frame){
 }
 function createFrame(name){
   var url=moduleUrl(name);if(!url)return null;
+  var host=ensurePool();if(!host)return null;
   var frame=document.createElement('iframe');
   frame.title=titles[name]||'Painel administrativo';
   frame.dataset.module=name;
@@ -198,7 +202,7 @@ function createFrame(name){
   frame.loading='eager';
   frame.src=url;
   frameHiddenStyle(frame);
-  ensurePool().appendChild(frame);
+  host.appendChild(frame);
   frame.addEventListener('load',function(){
     preparePanelDocument(frame);
     monitorReady(name,frame);
@@ -240,18 +244,19 @@ function beginPreload(){
 function resetFrames(){
   Object.keys(frames).forEach(function(name){var f=frames[name];if(f&&f.parentNode)f.remove()});
   frames={};activeName='';preloadStartedFor='';
-  var original=document.getElementById('viewerFrame');if(original){original.src='about:blank';original.hidden=false}
+  var original=document.getElementById('viewerFrame');if(original){original.src='about:blank';original.hidden=true}
+  if(pool)pool.setAttribute('aria-hidden','true');
 }
 function showFrame(name,title){
   var viewer=document.getElementById('viewer'),viewerTitle=document.getElementById('viewerTitle');
   if(!viewer)return false;
   var frame=ensureFrame(name);if(!frame)return false;
   var original=document.getElementById('viewerFrame');if(original)original.hidden=true;
-  if(activeName&&frames[activeName]&&frames[activeName]!==frame){frameHiddenStyle(frames[activeName]);ensurePool().appendChild(frames[activeName])}
+  if(activeName&&frames[activeName]&&frames[activeName]!==frame)frameHiddenStyle(frames[activeName]);
   activeName=name;
   if(viewerTitle)viewerTitle.textContent=title||titles[name]||'Painel';
   frameVisibleStyle(frame);
-  viewer.appendChild(frame);
+  var host=ensurePool();if(host)host.removeAttribute('aria-hidden');
   viewer.hidden=false;
   document.body.classList.add('viewer-open');
   preparePanelDocument(frame);
@@ -271,8 +276,9 @@ function closeViewerFast(options){
     if(typeof window.confirm!=='function'||!window.confirm(DIRTY_MESSAGE))return false;
   }
   var viewer=document.getElementById('viewer');
-  if(activeName&&frames[activeName]){frameHiddenStyle(frames[activeName]);ensurePool().appendChild(frames[activeName])}
+  if(activeName&&frames[activeName])frameHiddenStyle(frames[activeName]);
   activeName='';
+  if(pool)pool.setAttribute('aria-hidden','true');
   if(viewer)viewer.hidden=true;
   document.body.classList.remove('viewer-open');
   return true;
@@ -322,7 +328,7 @@ function install(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 window.addEventListener('pageshow',beginPreload);
 window.PortalTacsCentralPerformance={
-  version:'1.1.0',
+  version:'1.2.0',
   beginPreload:beginPreload,
   resetFrames:resetFrames,
   showFrame:showFrame,
