@@ -275,7 +275,7 @@
       var script=document.createElement('script');
       script.id=INSTITUTIONAL_SCRIPT_ID;
       script.async=false;
-      script.src='/atendimento-acs-farmaceutico/portal-institucional-suporte-v1.js?v=20260822-institucional-suporte-v1';
+      script.src='/atendimento-acs-farmaceutico/portal-institucional-suporte-v1.js?v=20260823-bloco18-footer-race-v1';
       script.addEventListener('load',afterInstitutionalReady,{once:true});
       (document.head||document.documentElement).appendChild(script);
       return;
