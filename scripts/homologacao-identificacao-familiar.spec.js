@@ -21,7 +21,7 @@ test('CPF não localizado é vinculado somente ao integrante escolhido da famíl
     const request=route.request();
     if(request.method()==='POST'){
       complementBody=request.postData()||'';
-      await route.fulfill({status:200,contentType:'text/plain',body:'OK'});
+      await route.fulfill({status:200,contentType:'text/plain; charset=utf-8',body:'OK'});
       return;
     }
     const url=new URL(request.url());
@@ -46,11 +46,11 @@ test('CPF não localizado é vinculado somente ao integrante escolhido da famíl
     }else{
       payload={ok:false,message:`Ação inesperada: ${action}`};
     }
-    await route.fulfill({status:200,contentType:'application/javascript',body:jsonp(callback,payload)});
+    await route.fulfill({status:200,contentType:'application/javascript; charset=utf-8',body:jsonp(callback,payload)});
   });
 
   await page.goto('portal-version.json');
-  await page.setContent(`<!doctype html><html><head></head><body><form><label>Documento <input id="cpf" inputmode="numeric"><span id="cpfStatus"></span></label></form></body></html>`);
+  await page.setContent(`<!doctype html><html><head><meta charset="utf-8"></head><body><form><label>Documento <input id="cpf" inputmode="numeric"><span id="cpfStatus"></span></label></form></body></html>`);
   await page.evaluate(({area,family,sub})=>{
     localStorage.setItem(`portalTacsFamiliaAutofillV1:${area}`,family);
     window.OneSignalDeferred={push(fn){fn({User:{PushSubscription:{id:sub}}});}};
