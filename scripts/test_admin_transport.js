@@ -184,7 +184,11 @@ function verifyStaticSource(config) {
   assert.doesNotMatch(official, /Promise\.all\(\[painel,conexao/);
   if (config.official === 'painel-oficial-agendas-vagas.html') {
     assert.doesNotMatch(official, /fetch\([^)]*teste-v1\/painel-agendas-v1\.html/);
-    assert.match(official, /DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV102:'\+areaId/);
+    assert.match(official, /portalTacsAdminSnapshotV1:agendas:/);
+    assert.match(official, /function cacheIdentity\(\)/);
+    assert.match(official, /p&&p\.tacsId/);
+    assert.match(official, /p&&p\.areaId/);
+    assert.doesNotMatch(official, /DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV102:'\+areaId/);
   } else if (config.official === 'painel-oficial-recados-campanhas.html') {
     // Recados e campanhas é standalone e não depende mais do carregador HTML legado.
     assert.match(official, /admin_publicacoes_dados/);
