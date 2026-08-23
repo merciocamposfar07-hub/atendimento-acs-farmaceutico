@@ -1,4 +1,5 @@
 'use strict';
+// Bloco 6: contrato permanente de onboarding Push por plataforma.
 const fs=require('fs');
 const assert=require('assert');
 
