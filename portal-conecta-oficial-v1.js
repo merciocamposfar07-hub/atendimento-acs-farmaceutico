@@ -2,7 +2,7 @@
 'use strict';
 if(typeof window==='undefined'||typeof document==='undefined')return;
 if(window.PortalTacsConectaOficialV1)return;
-window.PortalTacsConectaOficialV1={version:'1.0.2'};
+window.PortalTacsConectaOficialV1={version:'1.0.3'};
 
 var SELECTOR='.portal-footer-brand';
 var ATTR='data-conecta-oficial';
@@ -38,14 +38,7 @@ function simbolo(){
 function aplicar(){
   var brand=document.querySelector(SELECTOR);
   if(!brand)return false;
-  var oficial=brand.querySelector('['+ATTR+'="1"]');
-  if(oficial){
-    var caixaAtual=document.createElement('span');
-    caixaAtual.innerHTML=simbolo();
-    var atualizado=caixaAtual.firstElementChild;
-    if(atualizado)oficial.replaceWith(atualizado);
-    return true;
-  }
+  if(brand.querySelector('['+ATTR+'="1"]'))return true;
   var antigo=brand.querySelector('svg,img');
   var caixa=document.createElement('span');
   caixa.innerHTML=simbolo();
