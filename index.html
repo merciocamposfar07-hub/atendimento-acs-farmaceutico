@@ -7,10 +7,12 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="theme-color" content="#062c46">
+  <meta name="color-scheme" content="light only">
+  <meta name="portal-release" content="20260823-integral-ui-v1">
   <meta name="description" content="Canal do TACS - Técnico Agente Comunitário de Saúde Mércio José Campos dos Santos, vinculado à Unidade de Saúde Posto Matias, para moradores do Sítio Japaranduba, Chã Grande/PE.">
-  <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial.svg?v=20260818-icones-oficiais-v1">
-  <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=20260822-promocao-institucional-v1">
-  <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest.webmanifest?v=20260822-promocao-institucional-v1">
+  <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial.svg?v=20260823-integral-ui-v1">
+  <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=20260823-integral-ui-v1">
+  <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest.webmanifest?v=20260823-integral-ui-v1">
   <meta name="apple-mobile-web-app-title" content="Portal TACS">
   <link rel="preconnect" href="https://script.google.com">
   <link rel="preconnect" href="https://script.googleusercontent.com">
@@ -28,6 +30,7 @@
   </script>
   <style>
     :root{
+      color-scheme:only light;
       --navy:#062c46;--navy-2:#0a4265;--navy-3:#0d5f8a;--ink:#112a3b;--muted:#415b69;
       --green:#079447;--green-dark:#06763a;--green-soft:#e7f6ed;--white:#fff;--canvas:#e9eff3;
       --line:#9db4c1;--line-dark:#6e8c9c;--amber:#a85b00;--amber-soft:#fff3d8;
@@ -58,7 +61,7 @@
     .responsible{position:relative;z-index:1;display:flex;gap:10px;align-items:flex-start;margin-top:13px;color:#fff;font-size:17px;line-height:1.45}
     .responsible-icon{width:30px;height:30px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;background:var(--green);font-weight:950}
     .responsible b{display:block}
-    .hero-actions{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;margin:-1px clamp(18px,4vw,38px) 0;border:1px solid #8ea9b6;border-radius:0 0 19px 19px;background:#fff;box-shadow:0 14px 30px rgba(4,44,70,.14)}
+    .hero-actions{position:relative;z-index:2;display:grid;grid-template-columns:1fr;margin:-1px clamp(18px,4vw,38px) 0;border:1px solid #8ea9b6;border-radius:0 0 19px 19px;background:#fff;box-shadow:0 14px 30px rgba(4,44,70,.14)}
     .action-card{display:flex;gap:14px;align-items:center;padding:20px 22px}.action-card+ .action-card{border-left:1px solid #b8c9d1}
     .action-icon{width:52px;height:52px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;background:var(--green-soft);color:var(--green-dark);font-size:25px;font-weight:950}
     .action-card small{display:block;color:var(--green-dark);font-size:13px;font-weight:950;letter-spacing:.05em;text-transform:uppercase}
@@ -100,13 +103,13 @@
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
-<body>
+<body class="tema-petroleo">
   <main class="shell">
     <section class="panel">
       <header class="hero">
         <div class="hero-top">
           <div class="identity">
-            <div class="mark" aria-hidden="true"><img src="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=20260822-promocao-institucional-v1" alt=""></div>
+            <div class="mark" aria-hidden="true"><img src="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=20260823-integral-ui-v1" alt=""></div>
             <div>
               <strong>TACS - Técnico Agente Comunitário de Saúde</strong>
               <span>Serviço vinculado à Unidade de Saúde Posto Matias</span>
@@ -120,9 +123,8 @@
         <div class="responsible"><span class="responsible-icon" aria-hidden="true">✓</span><div>TACS - Técnico Agente Comunitário de Saúde<b>Mércio José Campos dos Santos</b></div></div>
       </header>
 
-      <section class="hero-actions" aria-label="Informações do atendimento">
-        <div class="action-card"><span class="action-icon" aria-hidden="true">◷</span><div><small>Atendimento</small><strong>Segunda a sexta • 08h às 16h</strong></div></div>
-        <div class="action-card"><span class="action-icon" aria-hidden="true">☎</span><div><small>Envio pelo WhatsApp</small><p>Após o preenchimento, sua solicitação será enviada ao TACS - Técnico Agente Comunitário de Saúde.</p></div></div>
+      <section class="hero-actions" aria-label="Envio da solicitação">
+        <div class="action-card whatsapp-action"><span class="action-icon" aria-hidden="true">☎</span><div><small>Envio pelo WhatsApp</small><p>Após o preenchimento, sua solicitação será enviada ao TACS - Técnico Agente Comunitário de Saúde.</p></div></div>
       </section>
 
       <div class="content">
@@ -208,13 +210,13 @@
     </section>
   </main>
 
-  <script src="agenda-config.js?v=20260822-promocao-institucional-v1"></script>
-  <script src="portal-area-resolver.js?v=20260812-area-identificacao-v1"></script>
-  <script src="portal-public-data.js?v=20260823-bloco18-footer-race-v1"></script>
-  <script src="portal-manutencao.js?v=20260812-multiarea-v1"></script>
-  <script src="agenda-enfermeira.js?v=20260818-notif-all-devices-v1"></script>
-  <script src="portal-notification-health.js?v=20260820-notif-only-v107"></script>
-  <script src="portal-notification-repair-v9.js?v=20260821-repair-v9"></script>
+  <script src="agenda-config.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-area-resolver.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-public-data.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-manutencao.js?v=20260823-integral-ui-v1"></script>
+  <script src="agenda-enfermeira.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-notification-health.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-notification-repair-v9.js?v=20260823-integral-ui-v1"></script>
   <script>
   (function(){
     'use strict';
@@ -245,6 +247,7 @@
     function maskDate(field){var d=field.value.replace(/\D/g,'').slice(0,8);field.value=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d}
     function maskCpf(field){var d=field.value.replace(/\D/g,'').slice(0,11);field.value=d.length>9?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9):d.length>6?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6):d.length>3?d.slice(0,3)+'.'+d.slice(3):d}
     function validCpf(value){var d=String(value||'').replace(/\D/g,'');if(!/^\d{11}$/.test(d)||/^(\d)\1{10}$/.test(d))return false;var s=0,i;for(i=0;i<9;i++)s+=Number(d.charAt(i))*(10-i);var a=(s*10)%11;if(a===10)a=0;if(a!==Number(d.charAt(9)))return false;s=0;for(i=0;i<10;i++)s+=Number(d.charAt(i))*(11-i);var b=(s*10)%11;if(b===10)b=0;return b===Number(d.charAt(10))}
+    function validCns(value){return /^\d{15}$/.test(String(value||'').replace(/\D/g,''))}
     function normalizeText(value){var text=String(value||'').toLowerCase();return text.normalize?text.normalize('NFD').replace(/[\u0300-\u036f]/g,''):text}
     function isClinicalSubject(value){var t=normalizeText(value);if(!t)return false;var patterns=[/\b(medicamento|medicamentos|medicacao|remedio|remedios|farmaco|bula)\b/,/\b(dose|dosagem|posologia|mg|mcg|ml|comprimido|capsula|gotas|xarope|pomada)\b/,/\b(receita|prescricao|prescrito|prescrever)\b/,/\b(efeito colateral|efeito adverso|interacao medicamentosa)\b/,/\b(suplemento|suplementos|vitamina|vitaminas|manipulado|manipulados|protocolo vitaminico)\b/,/\b(avaliar|analisar|interpretar)\b.*\b(exame|resultado)\b/,/\b(posso|devo|como|quando|que horas)\s+(tomar|usar)\b/];for(var i=0;i<patterns.length;i++)if(patterns[i].test(t))return true;return false}
     function dentalType(category){if(category===DENTAL_REGULAR)return 'comum';if(category===DENTAL_EMERGENCY)return 'emergencial';return ''}
@@ -261,12 +264,12 @@
     function loadDental(){dentalState='loading';renderDental();if(!DENTAL_API){failAgenda();return}var cb='dentalAgenda'+Date.now()+Math.floor(Math.random()*10000),script=document.createElement('script'),done=false,timer=setTimeout(function(){if(done)return;done=true;delete window[cb];if(script.parentNode)script.remove();failAgenda()},12000);window[cb]=function(data){if(done)return;done=true;clearTimeout(timer);delete window[cb];if(script.parentNode)script.remove();try{acceptAgenda(data)}catch(e){failAgenda()}};script.onerror=function(){if(done)return;done=true;clearTimeout(timer);delete window[cb];if(script.parentNode)script.remove();failAgenda()};script.src=DENTAL_API+(DENTAL_API.indexOf('?')===-1?'?':'&')+'action=agenda&areaId='+encodeURIComponent(PORTAL_AREA_ID)+'&callback='+encodeURIComponent(cb)+'&v='+Date.now();document.head.appendChild(script)}
     function reserveSlot(){var type=dentalType(el('category').value);if(!type||!selectedDentalSlot||!DENTAL_API||selectedDentalSlot._padraoFrontend)return Promise.resolve({ok:true,skipped:true});return new Promise(function(resolve,reject){var nonce='agenda-'+Date.now()+'-'+randomSuffix(),frameName='dentalReservation'+Date.now()+Math.floor(Math.random()*10000),iframe=document.createElement('iframe'),form=document.createElement('form'),done=false,timer;function cleanup(){clearTimeout(timer);window.removeEventListener('message',receive);if(form.parentNode)form.remove();setTimeout(function(){if(iframe.parentNode)iframe.remove()},250)}function finish(error,data){if(done)return;done=true;cleanup();error?reject(error):resolve(data)}function receive(event){if(event.source!==iframe.contentWindow)return;var data=event.data;if(!data||data.source!=='agenda-odontologica-tacs'||data.nonce!==nonce)return;data.ok?finish(null,data):finish(new Error(data.message||'Não foi possível reservar a vaga.'))}function add(name,value){var input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input)}iframe.name=frameName;iframe.hidden=true;iframe.setAttribute('aria-hidden','true');form.method='post';form.action=DENTAL_API;form.target=frameName;form.hidden=true;add('action','reservar');add('areaId',PORTAL_AREA_ID);add('requestId',requestCode);add('date',selectedDentalSlot.data);add('type',type);add('nonce',nonce);window.addEventListener('message',receive);document.body.append(iframe,form);timer=setTimeout(function(){finish(new Error('A confirmação da vaga demorou. Tente novamente.'))},20000);form.submit()})}
     function dentalLine(){if(!selectedDentalSlot)return '';var type=dentalType(el('category').value),v=vacancies(selectedDentalSlot,type);return '\nTipo de vaga odontológica: '+(type==='emergencial'?'emergencial':'comum')+'\nDia escolhido: '+selectedDentalSlot.dia+' — '+formatDate(selectedDentalSlot.data)+(selectedDentalSlot.reserved?'\nReserva automática: confirmada':v===null?'':'\nVagas exibidas no momento da escolha: '+v)}
-    function updateIdentity(){var age=ageFromBirth(el('birth').value),ageStatus=el('ageStatus'),cpfOk=validCpf(el('cpf').value),birthComplete=el('birth').value.replace(/\D/g,'').length===8,cpfComplete=el('cpf').value.replace(/\D/g,'').length===11;if(age!==null){ageStatus.textContent='Idade: '+age+(age===1?' ano':' anos');ageStatus.className='help valid'}else{ageStatus.textContent=birthComplete?'Confira a data informada.':'Digite pelo teclado. A idade será calculada automaticamente.';ageStatus.className=birthComplete?'help invalid':'help'}if(cpfOk){el('cpfStatus').textContent='CPF conferido ✓';el('cpfStatus').className='help valid'}else{el('cpfStatus').textContent=cpfComplete?'Confira os números do CPF.':'Digite o CPF para identificação na Unidade de Saúde Posto Matias.';el('cpfStatus').className=cpfComplete?'help invalid':'help'}return age!==null&&cpfOk}
+    function updateIdentity(){var age=ageFromBirth(el('birth').value),ageStatus=el('ageStatus'),status=el('cpfStatus'),doc=String(el('cpf').value||'').replace(/\D/g,''),cpfOk=validCpf(doc),cnsOk=validCns(doc),documentOk=cpfOk||cnsOk,documentComplete=doc.length===11||doc.length===15,territorial=status&&status.classList.contains('id-cns-note');if(age!==null){ageStatus.textContent='Idade: '+age+(age===1?' ano':' anos');ageStatus.className='help valid'}else{ageStatus.textContent=el('birth').value.replace(/\D/g,'').length===8?'Confira a data informada.':'Digite pelo teclado. A idade será calculada automaticamente.';ageStatus.className=el('birth').value.replace(/\D/g,'').length===8?'help invalid':'help'}if(!territorial&&status){if(documentOk){status.textContent=(cnsOk?'Cartão SUS':'CPF')+' conferido ✓';status.className='help valid'}else{status.textContent=documentComplete?'Confira os números informados.':'Digite o CPF ou Cartão SUS (CNS).';status.className=documentComplete?'help invalid':'help'}}return age!==null&&documentOk}
     function requestText(){return el('category').value===IMPLANON?el('implanonChoice').value.trim():el('subject').value.trim()}
     function portalDisponivel(){return !window.PortalTacsManutencao||window.PortalTacsManutencao.disponivel()}
     function updateForm(){var category=el('category').value,isImplanon=category===IMPLANON,type=dentalType(category),isDental=Boolean(type),subject=requestText(),attachmentOptional=category==='Solicitar renovação de receita médica'||category==='Solicitar marcação de exames — Ultrassom / Fisioterapeuta',retirementOptional=category==='Solicitar ficha de cadastro para Aposentadoria',clinical=!isImplanon&&isClinicalSubject(subject),identity=updateIdentity(),dentalOk=!isDental||(dentalState==='ready'&&scheduleConfigured(type)&&Boolean(selectedDentalSlot)),retirementOk=!retirementOptional||Boolean(el('retirementRecipientValue')&&el('retirementRecipientValue').value);el('implanonField').hidden=!isImplanon;el('subjectField').hidden=isImplanon;el('dentalSchedule').hidden=!isDental;el('dentalEmergency').hidden=category!==DENTAL_EMERGENCY;if(!isImplanon)el('implanonChoice').value='';if((!isDental||selectedDentalType!==type)&&selectedDentalSlot){selectedDentalSlot=null;selectedDentalType=''}if(isDental)renderDental();el('routingAlert').hidden=!clinical;el('send').hidden=clinical;el('send').disabled=!portalDisponivel()||reservationPending||clinical||!(category&&el('name').value.trim().length>=3&&identity&&el('locality').value.trim()&&(subject||attachmentOptional||retirementOptional)&&dentalOk&&retirementOk)}
     function openWhatsApp(message){window.location.href='https://wa.me/'+WHATSAPP_NUMBER+'?text='+encodeURIComponent(message)}
-    function sendMessage(){if(!requestCode)requestCode=makeRequestCode();var age=ageFromBirth(el('birth').value),category=el('category').value,label=category===IMPLANON?'Solicitação sobre o Implanon':'Descrição';var message='*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n*TACS - Técnico Agente Comunitário de Saúde*\n*TACS responsável: Mércio José Campos dos Santos*\n\nCódigo: '+requestCode+'\nData e horário do envio: '+recifeDateTime()+'\nCategoria: '+category+dentalLine()+'\nNome completo: '+el('name').value.trim()+'\nData de nascimento: '+formatDate(el('birth').value)+'\nIdade: '+age+(age===1?' ano':' anos')+'\nCPF: '+el('cpf').value+'\nOnde mora: '+el('locality').value.trim()+(category==='Solicitar ficha de cadastro para Aposentadoria'&&el('retirementRecipientValue')&&el('retirementRecipientValue').value?'\nSolicitação para: '+el('retirementRecipientValue').value:'')+'\n'+label+': '+requestText()+'\n\nEste código é apenas uma referência para localizar a conversa.';openWhatsApp(message)}
+    function sendMessage(){if(!requestCode)requestCode=makeRequestCode();var age=ageFromBirth(el('birth').value),category=el('category').value,label=category===IMPLANON?'Solicitação sobre o Implanon':'Descrição';var message='*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n*TACS - Técnico Agente Comunitário de Saúde*\n*TACS responsável: Mércio José Campos dos Santos*\n\nCódigo: '+requestCode+'\nData e horário do envio: '+recifeDateTime()+'\nCategoria: '+category+dentalLine()+'\nNome completo: '+el('name').value.trim()+'\nData de nascimento: '+formatDate(el('birth').value)+'\nIdade: '+age+(age===1?' ano':' anos')+'\nCPF/CNS: '+el('cpf').value+'\nOnde mora: '+el('locality').value.trim()+(category==='Solicitar ficha de cadastro para Aposentadoria'&&el('retirementRecipientValue')&&el('retirementRecipientValue').value?'\nSolicitação para: '+el('retirementRecipientValue').value:'')+'\n'+label+': '+requestText()+'\n\nEste código é apenas uma referência para localizar a conversa.';openWhatsApp(message)}
     function handleSend(){if(!portalDisponivel()){showToast('O Portal TACS está em manutenção ou ainda está verificando a disponibilidade.');updateForm();return}var category=el('category').value;if(category!==IMPLANON&&isClinicalSubject(requestText())){updateForm();return}if(!requestCode)requestCode=makeRequestCode();if(!dentalType(category)){sendMessage();return}reserveSlot().then(function(result){var type=dentalType(category);if(result&&Number.isFinite(Number(result.remaining))){if(type==='emergencial')selectedDentalSlot.vagasEmergenciais=Number(result.remaining);else selectedDentalSlot.vagasComuns=Number(result.remaining)}selectedDentalSlot.reserved=Boolean(result&&!result.skipped)}).catch(function(){loadDental()});sendMessage()}
     function scheduleMessage(){var parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),v={};for(var i=0;i<parts.length;i++)v[parts[i].type]=parts[i].value;var weekday=v.weekday!=='Sat'&&v.weekday!=='Sun',minutes=Number(v.hour)*60+Number(v.minute),open=weekday&&minutes>=480&&minutes<960;if(!open){el('scheduleInfo').hidden=false;el('scheduleInfo').innerHTML='<strong>Você está escrevendo fora do horário do TACS - Técnico Agente Comunitário de Saúde da Unidade de Saúde Posto Matias.</strong> A mensagem poderá ser enviada agora e será respondida no próximo expediente, das 08h às 16h.'}}
     el('category').addEventListener('change',updateForm);el('implanonChoice').addEventListener('change',updateForm);['name','locality','subject'].forEach(function(id){el(id).addEventListener('input',updateForm)});el('birth').addEventListener('input',function(){maskDate(this);updateForm()});el('cpf').addEventListener('input',function(){maskCpf(this);updateForm()});el('send').addEventListener('click',handleSend);window.addEventListener('portal-tacs-manutencao',updateForm);
@@ -276,13 +279,13 @@
     setTimeout(function(){if(!window.__PORTAL_TACS_ODONTOLOGIA_V98__)loadDental()},3000);
   }());
   </script>
-  <script src="moradores-autofill.js?v=20260823-cns-device-v1"></script>
-  <script src="portal-auto-update.js?v=20260823-bloco18-footer-race-v1"></script>
-  <script src="portal-controle-integral.js?v=20260817-campanhas-cards-v4"></script>
-  <script src="portal-ajustes-finais.js?v=20260818-botao-envio-v6"></script>
-  <script src="portal-odontologia-segunda-sexta.js?v=20260818-cache-api-v116"></script>
-  <script src="portal-orientacao-morador.js?v=20260822-promocao-institucional-v1"></script>
-  <script src="portal-servicos-coloridos-anexos-v1.js?v=20260818-servicos-anexos-v3"></script>
-  <script src="portal-aposentadoria-destinatario-v1.js?v=20260818-aposentadoria-destino-v2"></script>
+  <script src="moradores-autofill.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-auto-update.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-controle-integral.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-ajustes-finais.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-odontologia-segunda-sexta.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-orientacao-morador.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-servicos-coloridos-anexos-v1.js?v=20260823-integral-ui-v1"></script>
+  <script src="portal-aposentadoria-destinatario-v1.js?v=20260823-integral-ui-v1"></script>
 </body>
 </html>

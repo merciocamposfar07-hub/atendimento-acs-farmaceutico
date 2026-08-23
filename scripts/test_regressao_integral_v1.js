@@ -27,6 +27,7 @@ const requiredStatic = [
   'test_familia_aparelho_beneficiario_v1.js',
   'test_matriz_identificacao_morador_v1.js',
   'test_performance_v101.js',
+  'test_portal_release_integrity_v1.js',
   'test_quality_gate_v101.js'
 ];
 for (const file of requiredStatic) {
@@ -44,7 +45,8 @@ const requiredBrowser = [
   'homologacao-safari-bfcache.spec.js',
   'homologacao-service-worker-isolation.spec.js',
   'homologacao-interface-acoes.spec.js',
-  'homologacao-regressao-integral.spec.js'
+  'homologacao-regressao-integral.spec.js',
+  'homologacao-portal-release-layout.spec.js'
 ];
 for (const file of requiredBrowser) {
   assert.ok(playwright.includes(file), `Matriz Playwright perdeu cenário crítico: ${file}`);

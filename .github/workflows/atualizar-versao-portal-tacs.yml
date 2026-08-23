@@ -5,18 +5,20 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'abrir.html'
+      - 'central-administrativa-tacs.html'
+      - 'central-*.js'
       - 'portal-*.js'
-      - 'agenda-config.js'
+      - 'agenda-*.js'
       - 'moradores-autofill.js'
-      - 'painel-oficial-agendas-vagas.html'
-      - 'painel-oficial-profissionais-servicos.html'
-      - 'painel-oficial-recados-campanhas.html'
-      - 'teste-v1/painel-moradores-v2.html'
-      - 'teste-v1/painel-moradores-transport-v2.js'
-      - 'teste-v1/painel-profissionais-servicos-v1.html'
-      - 'teste-v1/painel-recados-campanhas-v1.html'
-      - 'admin-warmup.js'
-      - 'portal-auto-update.js'
+      - 'admin-*.js'
+      - 'admin-*.css'
+      - 'painel-oficial-*.html'
+      - 'teste-v1/**'
+      - 'manifest*.webmanifest'
+      - 'icons/**'
+      - 'assets/**'
+      - '.github/workflows/atualizar-versao-portal-tacs.yml'
   workflow_dispatch:
 
 permissions:
@@ -28,29 +30,57 @@ concurrency:
 
 jobs:
   versionar:
+    if: github.event_name != 'push' || github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Registrar nova versao para autoatualizacao
+      - name: Registrar versão única e carimbar arquivos públicos
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import json, os, datetime
-          sha=os.environ.get('GITHUB_SHA','')[:12] or 'manual'
+          python3 - <<'PY'
+          import json, os, datetime, re
+          from pathlib import Path
+
+          sha=(os.environ.get('GITHUB_SHA','')[:12] or 'manual')
           now=datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z')
-          data={'version': sha, 'releasedAt': now, 'scope': 'Portal TACS e painéis administrativos'}
-          with open('portal-version.json','w',encoding='utf-8') as f:
-              json.dump(data,f,ensure_ascii=False,indent=2)
-              f.write('\n')
+          entries=[Path('index.html'),Path('abrir.html'),Path('central-administrativa-tacs.html')]
+          allowed=('.js','.css','.webmanifest','.json','.svg','.png')
+          asset=re.compile(r'(?P<attr>\b(?:src|href))=(?P<quote>["\'])(?P<url>[^"\']+)(?P=quote)',re.I)
+
+          def stamp(path):
+              text=path.read_text(encoding='utf-8')
+              def replace(match):
+                  url=match.group('url')
+                  if re.match(r'^(?:https?:)?//',url,re.I) or url.startswith(('#','data:')):
+                      return match.group(0)
+                  base=url.split('?',1)[0]
+                  if not base.lower().endswith(allowed):
+                      return match.group(0)
+                  quote=match.group('quote')
+                  return f"{match.group('attr')}={quote}{base}?v={sha}{quote}"
+              text=asset.sub(replace,text)
+              text=re.sub(
+                  r'(<meta\s+name=["\']portal-release["\']\s+content=["\'])[^"\']*(["\']\s*/?>)',
+                  lambda m:m.group(1)+sha+m.group(2),
+                  text,
+                  flags=re.I
+              )
+              path.write_text(text,encoding='utf-8')
+
+          for entry in entries:
+              stamp(entry)
+
+          data={'version':sha,'releasedAt':now,'scope':'Portal TACS e painéis administrativos'}
+          Path('portal-version.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
           git config user.name 'Portal TACS'
           git config user.email 'actions@users.noreply.github.com'
-          git add portal-version.json
+          git add index.html abrir.html central-administrativa-tacs.html portal-version.json
           git diff --cached --quiet && exit 0
-          git commit -m 'Atualiza versão automática do Portal TACS'
+          git commit -m 'Atualiza versão integral do Portal TACS'
           for tentativa in 1 2 3; do
             git pull --rebase origin main || true
             if git push origin HEAD:main; then exit 0; fi
