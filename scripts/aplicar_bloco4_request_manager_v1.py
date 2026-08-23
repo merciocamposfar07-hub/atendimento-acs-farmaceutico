@@ -14,8 +14,8 @@ def replace_once(path, old, new):
 # CENTRAL: colapsa verificações repetidas e troca rotas pesadas quando já existe rota leve.
 central=ROOT/'central-administrativa-tacs.js'
 s=central.read_text(encoding='utf-8')
-old="var context=null, active=null, currentRequest=null, mode='admin';"
-new="var context=null, active=null, currentRequest=null, mode='admin';\nvar healthRefreshInFlight=false,healthRefreshAt=0,HEALTH_REFRESH_TTL=30000;"
+old="var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='';"
+new="var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='';\nvar healthRefreshInFlight=false,healthRefreshAt=0,HEALTH_REFRESH_TTL=30000;"
 if old not in s: raise SystemExit('Marcador de estado da Central ausente')
 s=s.replace(old,new,1)
 start=s.index('function refreshHealth(){')
