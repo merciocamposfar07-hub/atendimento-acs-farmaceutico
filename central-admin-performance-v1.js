@@ -6,6 +6,7 @@ window.PortalTacsCentralPerformanceV1=true;
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var AREA_KEY='portalTacsCentralAreaV1';
+var PROFILE_KEY='portalTacsAcessoRapidoV1';
 var REVISION='20260823-admin-performance-v1';
 var frames={};
 var activeName='';
@@ -30,8 +31,11 @@ function getSession(){
   return {territorio:territorio,admin:admin,ok:Boolean(territorio||admin),tacs:Boolean(territorio)};
 }
 function areaId(){
-  var select=document.getElementById('adminArea'),a=normArea(select&&select.value);
+  var s=getSession(),select=document.getElementById('adminArea'),a=normArea(select&&select.value);
   if(a)return a;
+  if(s.tacs){
+    try{var profile=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');a=normArea(profile&&profile.areaId);if(a)return a}catch(e){}
+  }
   try{a=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}
   return a||'JAPARANDUBA';
 }
@@ -70,7 +74,7 @@ function hideRedundantAccessCopy(doc){
   if(!doc)return;
   doc.querySelectorAll('h2,h3').forEach(function(node){
     var value=text(node.textContent).toLowerCase();
-    if(value==='acesso administrativo'||value==='acesso às publicações'||value==='acesso as publicações'||value==='acesso territorial')hideNode(node);
+    if(value==='acesso administrativo'||value==='acesso às publicações'||value==='acesso as publicações'||value==='acesso territorial'||value==='entrar')hideNode(node);
   });
   doc.querySelectorAll('p.muted').forEach(function(node){
     var value=text(node.textContent);
@@ -95,8 +99,8 @@ html[data-portal-tacs-central-session="1"] #loginAdminTab,html[data-portal-tacs-
     doc.head.appendChild(style);
   }
 
-  ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','login','entrar','loginTacs','entrarTacs','logout','sair','accessActions','pinHelp','adminLogin','tacsLogin','loginAdminTab','loginTacsTab'].forEach(function(id){hideNode(doc.getElementById(id))});
-  ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes'].forEach(function(id){
+  ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','tacsPinLogin','login','entrar','loginTacs','entrarTacs','adminLoginButton','tacsLoginButton','logout','sair','logoutButton','accessActions','pinHelp','adminLogin','tacsLogin','loginAdminTab','loginTacsTab'].forEach(function(id){hideNode(doc.getElementById(id))});
+  ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','tacsPinLogin'].forEach(function(id){
     try{doc.querySelectorAll('label[for="'+id+'"]').forEach(hideNode)}catch(e){}
   });
 
@@ -106,6 +110,7 @@ html[data-portal-tacs-central-session="1"] #loginAdminTab,html[data-portal-tacs-
     var tab=doc.getElementById(id),parent=tab&&tab.parentElement;
     if(parent&&parent.classList.contains('abas'))hideNode(parent);
   });
+  if(doc.getElementById('dashboard')&&doc.getElementById('loginPanel'))hideNode(doc.getElementById('loginPanel'));
   hideRedundantAccessCopy(doc);
 
   var status=doc.getElementById('loginStatus');
@@ -152,6 +157,14 @@ function panelLooksReady(name,frame){
   }
   if(name==='suporte'){
     return Boolean(doc.querySelector('main')&&doc.querySelector('.panel,.card,.painel'));
+  }
+  if(name==='territorio'){
+    var dashboard=doc.getElementById('dashboard');
+    return Boolean(dashboard&&!dashboard.classList.contains('hidden'));
+  }
+  if(name==='municipios'){
+    var summaryPanel=doc.getElementById('summaryPanel'),contentPanel=doc.getElementById('contentPanel');
+    return Boolean(summaryPanel&&!summaryPanel.hidden&&contentPanel&&!contentPanel.hidden);
   }
   return Boolean(doc.querySelector('main')&&(doc.querySelector('.lista,.list,.card,.painel,.panel')||doc.querySelector('section')));
 }
@@ -296,7 +309,7 @@ function install(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 window.addEventListener('pageshow',function(){removeCentralRefresh();beginPreload()});
 window.PortalTacsCentralPerformance={
-  version:'1.0.0',
+  version:'1.0.1',
   beginPreload:beginPreload,
   resetFrames:resetFrames,
   showFrame:showFrame,
