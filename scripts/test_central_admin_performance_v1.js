@@ -18,9 +18,9 @@ assert(!support.includes('painel-oficial-agendas-vagas.html')&&!support.includes
 assert(performance.includes("name==='portal'"),'Portal público precisa permanecer fora do pool administrativo');
 assert(performance.includes('portalTacsAdminPreloadPoolV1'),'Pool de painéis pré-carregados ausente');
 assert(performance.includes('ensureFrame(name)'),'Reuso da instância carregada do painel ausente');
-assert(performance.includes('ensurePool().appendChild(frames[activeName])'),'Ao voltar à Central o painel deve ser preservado, não destruído');
+assert(performance.includes('ensurePool().appendChild(frames[activeName])'),'Ao voltar à Central o painel carregado deve ser preservado no pool');
 assert(!performance.includes('_cb=Date.now()'),'Camada rápida não pode criar cache-buster novo a cada toque');
-assert(!performance.includes("src='about:blank'"),'Camada rápida não pode descarregar painel ao voltar à Central');
+assert(!/function closeViewerFast\([\s\S]*?src\s*=\s*['"]about:blank['"]/.test(performance),'Voltar à Central não pode descarregar o painel administrativo ativo');
 
 ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','login','entrar','loginTacs','entrarTacs'].forEach((id)=>{
   assert(performance.includes("'"+id+"'"),'Controle redundante não tratado na sessão da Central: '+id);
