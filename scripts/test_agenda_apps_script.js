@@ -319,7 +319,10 @@ assert.doesNotMatch(
 );
 
 const opener = fs.readFileSync(path.join(__dirname, '..', 'abrir.html'), 'utf8');
-assert.match(opener, /\.\/index\.html\?v=20260805-agenda-sync-v1/);
+assert.match(opener, /portal-version\.json\?t=/);
+assert.match(opener, /index\.html\?ptv=/);
+assert.match(opener, /scopePath===APP_SCOPE&&scopePath\.indexOf\('\/push\/'\)===-1/);
+assert.doesNotMatch(opener, /index\.html\?v=20260805-agenda-sync-v1/);
 
 const mainBackend = fs.readFileSync(
   path.join(__dirname, '..', 'apps-script-controle-integral.gs'),
