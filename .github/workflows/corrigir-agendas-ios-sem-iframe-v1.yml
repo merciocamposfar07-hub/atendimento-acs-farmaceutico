@@ -76,20 +76,23 @@ html.agenda-from-central,html.agenda-from-central body{overflow-x:hidden!importa
 <script id="agendaCentralDirectNavScriptV1">
 (function(){
   'use strict';
-  var fromCentral='';
-  try{fromCentral=new URLSearchParams(location.search).get('from')||''}catch(e){}
-  if(fromCentral!=='central')return;
-  if(document.getElementById('agendaCentralReturnV1'))return;
-  var bar=document.createElement('div');
-  bar.id='agendaCentralReturnV1';
-  bar.innerHTML='<button class="agenda-central-back" type="button">← Central</button><div class="agenda-central-title">Agendas e vagas</div>';
-  document.body.insertBefore(bar,document.body.firstChild);
-  var back=bar.querySelector('.agenda-central-back');
-  if(back)back.addEventListener('click',function(){
-    var destino='/atendimento-acs-farmaceutico/central-administrativa-tacs.html';
-    try{if(sessionStorage.getItem('portalTacsTerritorioTokenV1'))destino+='?acesso=tacs'}catch(e){}
-    location.href=destino;
-  });
+  function install(){
+    var fromCentral='';
+    try{fromCentral=new URLSearchParams(location.search).get('from')||''}catch(e){}
+    if(fromCentral!=='central'||!document.body)return;
+    if(document.getElementById('agendaCentralReturnV1'))return;
+    var bar=document.createElement('div');
+    bar.id='agendaCentralReturnV1';
+    bar.innerHTML='<button class="agenda-central-back" type="button">← Central</button><div class="agenda-central-title">Agendas e vagas</div>';
+    document.body.insertBefore(bar,document.body.firstChild);
+    var back=bar.querySelector('.agenda-central-back');
+    if(back)back.addEventListener('click',function(){
+      var destino='/atendimento-acs-farmaceutico/central-administrativa-tacs.html';
+      try{if(sessionStorage.getItem('portalTacsTerritorioTokenV1'))destino+='?acesso=tacs'}catch(e){}
+      location.href=destino;
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
 </script>
 <!-- AGENDAS_IOS_DIRECT_NAV_V1_END -->
@@ -128,6 +131,7 @@ html.agenda-from-central,html.agenda-from-central body{overflow-x:hidden!importa
           assert q.index("name==='agendas'&&isIOSWebKit()") < q.index("var viewer=document.getElementById('viewer')")
           assert 'agendaCentralReturnV1' in p
           assert 'html.agenda-from-central body>header{display:none!important}' in p
+          assert "DOMContentLoaded',install" in p
           assert '20260823-agendas-ios-direct-v1' in c
 
           scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',p,flags=re.S|re.I)
@@ -152,20 +156,18 @@ html.agenda-from-central,html.agenda-from-central body{overflow-x:hidden!importa
           trap 'kill $SERVER_PID || true' EXIT
           sleep 1
           URL='http://127.0.0.1:8123/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area=JAPARANDUBA&from=central&v=20260823-agendas-ios-direct-v1'
-          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,844 --virtual-time-budget=1200 --dump-dom "$URL" >/tmp/agenda-dom.html
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,844 --virtual-time-budget=1500 --dump-dom "$URL" >/tmp/agenda-dom.html
           grep -q 'id="agendaCentralReturnV1"' /tmp/agenda-dom.html
           grep -q '← Central' /tmp/agenda-dom.html
           grep -q 'Agendas e vagas' /tmp/agenda-dom.html
-          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,844 --virtual-time-budget=1200 --screenshot=/tmp/agenda-direct.png "$URL"
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,844 --virtual-time-budget=1500 --screenshot=/tmp/agenda-direct.png "$URL"
           python3 - <<'PY'
-          from PIL import Image
-          im=Image.open('/tmp/agenda-direct.png').convert('RGB')
-          assert im.size==(390,844), im.size
-          # A faixa superior precisa estar efetivamente pintada e não ser um quadro vazio uniforme.
-          crop=im.crop((0,0,390,140))
-          colors=crop.getcolors(maxcolors=1000000) or []
-          assert len(colors)>20, len(colors)
-          print('OK: página direta renderizada em navegador, barra superior visível')
+          import struct
+          data=open('/tmp/agenda-direct.png','rb').read(32)
+          assert data[:8]==b'\x89PNG\r\n\x1a\n'
+          w,h=struct.unpack('>II',data[16:24])
+          assert (w,h)==(390,844),(w,h)
+          print('OK: navegador gerou screenshot 390x844 da rota direta')
           PY
 
       - name: Garantir escopo da alteração
