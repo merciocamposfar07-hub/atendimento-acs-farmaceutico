@@ -95,7 +95,10 @@ function testStaticSafety() {
   assert.ok(warm.includes('var WARM_MS=3*60*1000;'));
 
   const agenda = read('painel-oficial-agendas-vagas.html');
-  assert.ok(agenda.includes("DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV102:'+areaId"));
+  assert.ok(agenda.includes('portalTacsAdminSnapshotV1:agendas:'), 'Snapshot de Agendas deve usar namespace local-first versionado');
+  assert.ok(agenda.includes('function cacheIdentity()'), 'Snapshot de Agendas deve ser separado por identidade autenticada');
+  assert.ok(agenda.includes('p&&p.tacsId') && agenda.includes('p&&p.areaId'), 'Snapshot TACS deve exigir TACS + área');
+  assert.ok(!agenda.includes("DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV102:'+areaId"), 'Chave antiga somente por área não pode permanecer');
   assert.ok(agenda.includes('Aguarde a confirmação dos dados atuais antes de salvar.'), 'Snapshot administrativo não pode habilitar escrita antes de revalidação');
   assert.ok(agenda.includes('aplicarDados(r,true);salvarSnapshot(r);'));
 
