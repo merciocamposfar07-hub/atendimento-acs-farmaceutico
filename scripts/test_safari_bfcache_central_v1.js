@@ -10,8 +10,10 @@ assert.ok(
   'A Central deve reagir ao pageshow para restauração/BFCache do Safari'
 );
 assert.ok(
-  performance.includes("ensurePool().appendChild(frames[activeName])"),
-  'Ao voltar, o painel administrativo carregado deve ser preservado no pool'
+  performance.includes("pool.id='portalTacsAdminPreloadPoolV1';") &&
+  performance.includes("viewer.insertBefore(pool,original)") &&
+  performance.includes("host.appendChild(frame);"),
+  'Os painéis devem ser criados uma vez em um host estável dentro do visualizador'
 );
 assert.ok(
   performance.includes('var frame=frames[name];') &&
@@ -22,8 +24,25 @@ assert.ok(
   performance.includes('if(frame&&frame.parentNode)frame.remove();') && performance.includes('delete frames[name];'),
   'Iframe só pode ser descartado quando deixa de pertencer à sessão atual'
 );
+
+const showFrame = performance.match(/function showFrame\(name,title\)\{[\s\S]*?\n\}/)?.[0] || '';
+const closeViewer = performance.match(/function closeViewerFast\(options\)\{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(showFrame, 'showFrame deve continuar presente');
+assert.ok(closeViewer, 'closeViewerFast deve continuar presente');
 assert.ok(
-  !/function closeViewer[\s\S]*?src\s*=\s*['\"]about:blank['\"]/.test(performance),
+  !showFrame.includes('appendChild(frame)') && !showFrame.includes('appendChild(frames['),
+  'Abrir ou trocar painel não pode reparentear iframe já carregado'
+);
+assert.ok(
+  !closeViewer.includes('appendChild(frame)') && !closeViewer.includes('appendChild(frames['),
+  'Voltar à Central não pode reparentear iframe já carregado'
+);
+assert.ok(
+  showFrame.includes('frameHiddenStyle(frames[activeName])') && closeViewer.includes('frameHiddenStyle(frames[activeName])'),
+  'Troca e retorno devem apenas ocultar o iframe, preservando seu documento interno'
+);
+assert.ok(
+  !/function closeViewerFast[\s\S]*?src\s*=\s*['\"]about:blank['\"]/.test(performance),
   'Voltar à Central não pode descarregar o iframe preservado'
 );
 assert.ok(
@@ -39,4 +58,4 @@ assert.ok(
   'pageshow deve reutilizar a rotina de preload protegida pela chave da sessão'
 );
 
-console.log('Safari/iPhone Bloco 13: pageshow, BFCache e reuso persistente de painel validados sem troca de arquitetura.');
+console.log('Safari/iPhone Bloco 13: host estável, pageshow, BFCache e reuso persistente de painel validados.');
