@@ -45,3 +45,5 @@ for trecho in ('function render()', 'function salvarAgenda(c)', 'function restau
 # A alteração é estritamente CSS; não renomeia nem remove nenhum contador.
 assert final.count('class="numero"') == 4
 print('AJUSTE_RESUMO_AGENDAS_PETROLEO_V1_OK')
+
+# Trigger técnico 2026-08-23: executa a validação estrutural do painel Agendas no workflow.
