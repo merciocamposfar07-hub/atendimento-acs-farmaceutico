@@ -38,19 +38,21 @@ if nova in prof_src:
 elif original not in prof_src:
     raise SystemExit('MENSAGEM_ORIGINAL_PROFISSIONAIS_NAO_ENCONTRADA')
 
-# O gate percentual deve continuar sendo a última barreira da suíte.
+# O gate percentual continua a última barreira, com performance imediatamente antes dele.
 pkg_path=Path('package.json')
 pkg=json.loads(pkg_path.read_text(encoding='utf-8'))
 test=pkg.get('scripts',{}).get('test','')
 local='node scripts/test_admin_local_first_v1.js'
+performance='node scripts/test_performance_v101.js'
 gate='node scripts/test_quality_gate_v101.js'
 parts=[x.strip() for x in test.split('&&') if x.strip()]
 parts=[x for x in parts if x!=local]
-if gate not in parts:
-    raise SystemExit('GATE_PERCENTUAL_NAO_ENCONTRADO')
-idx=parts.index(gate)
-parts.insert(idx,local)
+if performance not in parts or gate not in parts:
+    raise SystemExit('SEQUENCIA_PERFORMANCE_QUALITY_GATE_NAO_ENCONTRADA')
+if parts.index(gate) != len(parts)-1 or parts.index(performance) != len(parts)-2:
+    raise SystemExit('SEQUENCIA_FINAL_PERFORMANCE_QUALITY_GATE_FOI_ALTERADA')
+parts.insert(parts.index(performance),local)
 pkg['scripts']['test']=' && '.join(parts)
 pkg_path.write_text(json.dumps(pkg,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 
-print('CONTRATOS_BLOCO3_ATUALIZADOS_E_GATE_PERCENTUAL_PRESERVADO')
+print('CONTRATOS_BLOCO3_ATUALIZADOS_COM_SEQUENCIA_FINAL_PRESERVADA')
