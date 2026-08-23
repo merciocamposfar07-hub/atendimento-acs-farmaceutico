@@ -48,7 +48,7 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
     await page.waitForFunction(moduleName=>{
       const frame=document.querySelector(`#portalTacsAdminPreloadPoolV1 iframe[data-module="${moduleName}"]`);
       try{
-        if(!frame||!frame.contentDocument||!frame.contentDocument.body)return false;
+        if(!frame||!frame.contentDocument||!frame.contentDocument.body||frame.contentDocument.readyState!=='complete')return false;
         const expectedPath=new URL(frame.getAttribute('src')||'',location.href).pathname;
         return frame.contentWindow.location.pathname===expectedPath;
       }catch(error){return false}
