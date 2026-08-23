@@ -232,19 +232,10 @@ function hideRedundantPanelLogin(doc){
   if(title)title.textContent=hasTerritorySession()?'Sessão TACS validada':'Sessão administrativa validada';
   doc.documentElement.dataset.tacsSessionReused='1';
 }
-function installPanelRefresh(doc){
-  if(!doc||!doc.body||doc.getElementById('portalTacsAdminRefreshV1'))return;
-  var style=doc.createElement('style');
-  style.textContent='#portalTacsAdminRefreshV1{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:2147482000;min-height:46px;border:2px solid rgba(255,255,255,.92);border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer}#portalTacsAdminRefreshV1:active{transform:translateY(1px)}@media(max-width:430px){#portalTacsAdminRefreshV1{right:10px;bottom:calc(10px + env(safe-area-inset-bottom));min-height:44px;padding:9px 13px;font-size:14px}}';
-  (doc.head||doc.documentElement).appendChild(style);
-  var button=doc.createElement('button');
-  button.id='portalTacsAdminRefreshV1';button.type='button';button.textContent='↻ Atualizar página';
-  button.setAttribute('aria-label','Atualizar esta página e refazer a leitura');
-  button.addEventListener('click',function(){
-    if(doc.documentElement.dataset.tacsDirty==='1'&&!doc.defaultView.confirm('Há alterações que podem não ter sido salvas. Deseja atualizar a página mesmo assim?'))return;
-    button.disabled=true;button.textContent='↻ Atualizando…';doc.defaultView.location.reload();
-  });
-  doc.body.appendChild(button);
+function removePanelRefresh(doc){
+  if(!doc)return;
+  var button=doc.getElementById('portalTacsAdminRefreshV1');
+  if(button)button.remove();
 }
 function enhanceViewerDocument(){
   var frame=document.getElementById('viewerFrame');
@@ -254,7 +245,7 @@ function enhanceViewerDocument(){
     if(!doc||!doc.body)return;
     hideRedundantPanelLogin(doc);
     markPanelDirty(doc);
-    installPanelRefresh(doc);
+    removePanelRefresh(doc);
   }catch(e){}
 }
 function installCentralPageRefresh(){

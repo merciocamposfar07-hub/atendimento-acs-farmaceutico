@@ -131,6 +131,10 @@
     return /(?:^|\/)(?:painel-oficial-|teste-v1\/painel-|admin)/.test(window.location.pathname||'');
   }
 
+  function isEmbeddedAdminPage(){
+    try{return isAdminPage()&&window.self!==window.top}catch(e){return isAdminPage()}
+  }
+
   function hasCentralSession(){
     return !!(readStorage(sessionStorage,ADMIN_TOKEN_KEY)||readStorage(sessionStorage,TERRITORY_TOKEN_KEY));
   }
@@ -166,6 +170,11 @@
 
   function installUI(){
     if(!document.body){setTimeout(installUI,40);return}
+    if(isEmbeddedAdminPage()){
+      var embeddedButton=document.getElementById(BUTTON_ID);
+      if(embeddedButton)embeddedButton.remove();
+      return;
+    }
     ensureStyle();
     installTerritorialIdentityGuard();
     installCentralReturnUI();

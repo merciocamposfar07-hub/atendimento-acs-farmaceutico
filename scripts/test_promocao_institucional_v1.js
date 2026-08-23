@@ -49,10 +49,13 @@ assert.match(centralQuick, /grid\.addEventListener\('click',[\s\S]*?,true\)/);
 assert.match(centralQuick, /event\.stopImmediatePropagation\(\)/);
 assert.doesNotMatch(centralQuick, /_cb='?\+?Date\.now/);
 
-// Sessão reutilizada nos painéis e recuperação universal com proteção de edição.
+// Sessão reutilizada nos painéis, sem botão flutuante cobrindo ações internas.
 assert.match(centralQuick, /function hideRedundantPanelLogin\(doc\)/);
 assert.match(centralQuick, /tacsSessionReused/);
-assert.match(centralQuick, /portalTacsAdminRefreshV1/);
+assert.match(centralQuick, /function removePanelRefresh\(doc\)/);
+assert.doesNotMatch(centralQuick, /function installPanelRefresh\(doc\)/);
+assert.match(centralCore, /#portalTacsAtualizarPaginaV1,#portalTacsAdminRefreshV1\{display:none!important\}/);
+assert.match(update, /function isEmbeddedAdminPage\(\)/);
 assert.match(centralQuick, /portalTacsCentralRefreshV1/);
 assert.match(centralQuick, /event\.isTrusted/);
 assert.match(centralQuick, /Há alterações que podem não ter sido salvas/);
