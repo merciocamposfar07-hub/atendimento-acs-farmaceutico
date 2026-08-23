@@ -64,6 +64,7 @@ assert.doesNotMatch(frontend,/function selectMember\([^)]*\)\{pendingMissing=''/
 assert.match(frontend,/FAMILY_STORAGE_PREFIX='portalTacsFamiliaAutofillV1:'/,'A família já conhecida pelo navegador deve ser reaproveitada sem pedir o número novamente.');
 assert.match(frontend,/function rememberedFamily\(\)/);
 assert.match(frontend,/setTimeout\(startOwnerSelection,0\)/,'Após CPF/CNS não localizado, o Portal deve iniciar a seleção segura do proprietário.');
+assert.match(frontend,/pendingMissing&&current===pendingMissing/,'Um render atrasado do campo não pode esconder a escolha do proprietário do documento pendente no WebKit.');
 assert.match(frontend,/documento ficará guardado somente nesta tela/,'Sem família conhecida, o documento pode ficar apenas em memória enquanto o usuário confirma a família.');
 assert.doesNotMatch(frontend,/localStorage\.setItem\([^\n]*(?:pendingMissing|documentoNovo)/i,'CPF/CNS não localizado não pode ser persistido no navegador.');
 assert.match(frontend,/OneSignalDeferred/,'A consulta pode aproveitar o vínculo familiar do aparelho sem alterar o Push.');
