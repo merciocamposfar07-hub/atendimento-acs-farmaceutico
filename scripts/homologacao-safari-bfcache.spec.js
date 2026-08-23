@@ -32,7 +32,7 @@ test('Central preserva a mesma instância após retorno e pageshow/BFCache', asy
   await page.waitForFunction(() => {
     const frame = document.querySelector('#viewer iframe[data-module="suporte"]');
     try {
-      return Boolean(frame && frame.contentWindow && frame.contentWindow.location.pathname.includes('painel-suporte-moradores-v2.html'));
+      return Boolean(frame && frame.contentDocument && frame.contentDocument.body && frame.contentWindow.location.pathname.includes('painel-suporte-moradores-v2.html'));
     } catch (error) {
       return false;
     }
@@ -41,19 +41,45 @@ test('Central preserva a mesma instância após retorno e pageshow/BFCache', asy
   const firstState = await page.evaluate(() => {
     const frame = document.querySelector('#viewer iframe[data-module="suporte"]');
     window.__bloco13FrameRef = frame;
+    window.__bloco13LoadCount = 0;
+    frame.addEventListener('load', () => { window.__bloco13LoadCount += 1; });
     frame.dataset.bloco13Identity = 'mesmo-iframe';
-    frame.contentWindow.__bloco13PanelState = 'estado-preservado';
+    const marker = frame.contentDocument.createElement('input');
+    marker.id = 'bloco13StateMarker';
+    marker.value = 'estado-preservado';
+    frame.contentDocument.body.appendChild(marker);
     return {
       count: document.querySelectorAll('iframe[data-module="suporte"]').length,
-      src: frame.getAttribute('src') || ''
+      src: frame.getAttribute('src') || '',
+      marker: frame.contentDocument.getElementById('bloco13StateMarker')?.value || ''
     };
   });
   expect(firstState.count).toBe(1);
   expect(firstState.src).not.toContain('_cb=');
+  expect(firstState.marker).toBe('estado-preservado');
 
   await page.locator('#viewerBack').click();
   await expect(page.locator('#viewer')).toBeHidden();
   await expect(page.locator('#portalTacsAdminPreloadPoolV1 iframe[data-module="suporte"]')).toHaveCount(1);
+  await page.waitForTimeout(300);
+
+  const afterClose = await page.evaluate(() => {
+    const frame = document.querySelector('iframe[data-module="suporte"]');
+    return {
+      count: document.querySelectorAll('iframe[data-module="suporte"]').length,
+      sameNode: Boolean(frame && frame === window.__bloco13FrameRef),
+      identity: frame ? frame.dataset.bloco13Identity || '' : '',
+      marker: frame && frame.contentDocument ? frame.contentDocument.getElementById('bloco13StateMarker')?.value || '' : '',
+      loadCount: Number(window.__bloco13LoadCount || 0)
+    };
+  });
+
+  console.log(JSON.stringify({ kind: 'bloco13-after-close-diagnostic', browserName, ...afterClose }));
+  expect(afterClose.count).toBe(1);
+  expect(afterClose.sameNode).toBe(true);
+  expect(afterClose.identity).toBe('mesmo-iframe');
+  expect(afterClose.loadCount, 'Mover o iframe ao pool não pode disparar novo load').toBe(0);
+  expect(afterClose.marker, 'O DOM interno do painel deve sobreviver ao retorno').toBe('estado-preservado');
 
   await page.evaluate(() => {
     let event;
@@ -64,19 +90,18 @@ test('Central preserva a mesma instância após retorno e pageshow/BFCache', asy
   await page.waitForTimeout(350);
 
   const afterPageShow = await page.evaluate(() => {
-    const frames = Array.from(document.querySelectorAll('iframe[data-module="suporte"]'));
-    const frame = frames[0] || null;
+    const frame = document.querySelector('iframe[data-module="suporte"]');
     return {
-      count: frames.length,
+      count: document.querySelectorAll('iframe[data-module="suporte"]').length,
       sameNode: Boolean(frame && frame === window.__bloco13FrameRef),
-      identity: frame ? frame.dataset.bloco13Identity || '' : '',
-      state: frame && frame.contentWindow ? frame.contentWindow.__bloco13PanelState || '' : ''
+      marker: frame && frame.contentDocument ? frame.contentDocument.getElementById('bloco13StateMarker')?.value || '' : '',
+      loadCount: Number(window.__bloco13LoadCount || 0)
     };
   });
   expect(afterPageShow.count).toBe(1);
   expect(afterPageShow.sameNode).toBe(true);
-  expect(afterPageShow.identity).toBe('mesmo-iframe');
-  expect(afterPageShow.state).toBe('estado-preservado');
+  expect(afterPageShow.loadCount).toBe(0);
+  expect(afterPageShow.marker).toBe('estado-preservado');
 
   const reopen = await page.evaluate(() => {
     const button = document.querySelector('#moduleGrid .module[data-module="suporte"]');
@@ -87,7 +112,8 @@ test('Central preserva a mesma instância após retorno e pageshow/BFCache', asy
       elapsedMs: performance.now() - started,
       visible: !document.getElementById('viewer').hidden,
       sameNode: Boolean(frame && frame === window.__bloco13FrameRef),
-      state: frame && frame.contentWindow ? frame.contentWindow.__bloco13PanelState || '' : '',
+      marker: frame && frame.contentDocument ? frame.contentDocument.getElementById('bloco13StateMarker')?.value || '' : '',
+      loadCount: Number(window.__bloco13LoadCount || 0),
       count: document.querySelectorAll('iframe[data-module="suporte"]').length
     };
   });
@@ -95,8 +121,9 @@ test('Central preserva a mesma instância após retorno e pageshow/BFCache', asy
   expect(reopen.visible).toBe(true);
   expect(reopen.elapsedMs).toBeLessThan(100);
   expect(reopen.sameNode).toBe(true);
-  expect(reopen.state).toBe('estado-preservado');
+  expect(reopen.loadCount).toBe(0);
+  expect(reopen.marker).toBe('estado-preservado');
   expect(reopen.count).toBe(1);
 
-  console.log(JSON.stringify({ kind: 'safari-bfcache-panel-reuse', browserName, touchElapsedMs: Math.round(reopen.elapsedMs * 100) / 100, sameNode: true, preservedState: true }));
+  console.log(JSON.stringify({ kind: 'safari-bfcache-panel-reuse', browserName, touchElapsedMs: Math.round(reopen.elapsedMs * 100) / 100, sameNode: true, preservedState: true, loadCount: reopen.loadCount }));
 });
