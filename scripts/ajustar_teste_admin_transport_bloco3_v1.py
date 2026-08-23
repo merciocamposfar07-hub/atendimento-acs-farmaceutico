@@ -1,7 +1,8 @@
 from pathlib import Path
+import json
 
 # Executor auxiliar temporário do Bloco 3 — não entra na main.
-# Atualiza somente contratos de teste que fixavam a antiga chave de cache por área.
+# Atualiza somente contratos que fixavam a antiga chave de cache por área.
 p=Path('scripts/test_admin_transport.js')
 s=p.read_text(encoding='utf-8')
 old="    assert.match(official, /DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV102:'\\+areaId/);"
@@ -36,4 +37,20 @@ if nova in prof_src:
     prof.write_text(prof_src.replace(nova,original,1),encoding='utf-8')
 elif original not in prof_src:
     raise SystemExit('MENSAGEM_ORIGINAL_PROFISSIONAIS_NAO_ENCONTRADA')
-print('CONTRATOS_BLOCO3_ATUALIZADOS_SEM_MUDANCA_PARALELA')
+
+# O gate percentual deve continuar sendo a última barreira da suíte.
+pkg_path=Path('package.json')
+pkg=json.loads(pkg_path.read_text(encoding='utf-8'))
+test=pkg.get('scripts',{}).get('test','')
+local='node scripts/test_admin_local_first_v1.js'
+gate='node scripts/test_quality_gate_v101.js'
+parts=[x.strip() for x in test.split('&&') if x.strip()]
+parts=[x for x in parts if x!=local]
+if gate not in parts:
+    raise SystemExit('GATE_PERCENTUAL_NAO_ENCONTRADO')
+idx=parts.index(gate)
+parts.insert(idx,local)
+pkg['scripts']['test']=' && '.join(parts)
+pkg_path.write_text(json.dumps(pkg,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+print('CONTRATOS_BLOCO3_ATUALIZADOS_E_GATE_PERCENTUAL_PRESERVADO')
