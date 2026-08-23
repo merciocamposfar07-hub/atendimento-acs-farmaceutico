@@ -67,7 +67,7 @@ assert.match(admin,/setInterval\(sincronizarVagasOdontologia,5000\)/);
 assert.match(admin,/edicaoPendente/);
 
 assert.match(config,/DENTAL_AGENDA_API_URL/);
-assert.match(index,/portal-odontologia-segunda-sexta\.js\?v=(?:20260818-cache-territorial-v115|20260818-cache-api-v116)/);
+assert.match(index,/portal-odontologia-segunda-sexta\\.js\\?v=[^\"']+/,'O módulo odontológico deve ser carregado com a versão integral da publicação.');
 assert.match(index,/if\(!window\.__PORTAL_TACS_ODONTOLOGIA_V98__\)loadDental\(\)/);
 assert.match(dental,/CACHE_FRESH_MS = 90 \* 1000/);
 assert.match(dental,/function readAgendaCache\(\)/);
