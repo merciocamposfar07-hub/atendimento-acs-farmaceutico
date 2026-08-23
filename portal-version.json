@@ -1,5 +1,5 @@
 {
-  "version": "cns-device-20260823-v1",
-  "releasedAt": "2026-08-23T15:37:13Z",
-  "scope": "Correção de consistência CPF/CNS entre dispositivos no Portal TACS"
+  "version": "af7e20f874bb",
+  "releasedAt": "2026-08-23T15:42:27Z",
+  "scope": "Portal TACS e painéis administrativos"
 }
