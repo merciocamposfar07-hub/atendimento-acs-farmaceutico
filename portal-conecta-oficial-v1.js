@@ -2,11 +2,15 @@
 'use strict';
 if(typeof window==='undefined'||typeof document==='undefined')return;
 if(window.PortalTacsConectaOficialV1)return;
-window.PortalTacsConectaOficialV1={version:'1.0.0'};
+window.PortalTacsConectaOficialV1={version:'1.0.1'};
 
 var SELECTOR='.portal-footer-brand';
 var ATTR='data-conecta-oficial';
 var observer=null;
+var retryTimer=null;
+var retryCount=0;
+var MAX_RETRIES=120;
+var RETRY_MS=100;
 
 function simbolo(){
   return '<svg '+ATTR+'="1" viewBox="0 0 72 72" role="img" aria-label="Símbolo oficial Conecta Saúde Comunitária" xmlns="http://www.w3.org/2000/svg">'+
@@ -37,14 +41,30 @@ function aplicar(){
   return true;
 }
 
+function programarNovaTentativa(){
+  if(retryTimer||retryCount>=MAX_RETRIES)return;
+  retryTimer=setTimeout(function(){
+    retryTimer=null;
+    retryCount++;
+    aplicar();
+    programarNovaTentativa();
+  },RETRY_MS);
+}
+
 function iniciar(){
-  if(aplicar())return;
-  if(!document.documentElement)return;
-  observer=new MutationObserver(function(){if(aplicar()&&observer){observer.disconnect();observer=null}});
-  observer.observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(function(){if(observer){observer.disconnect();observer=null}aplicar()},12000);
+  aplicar();
+  if(document.documentElement&&!observer){
+    observer=new MutationObserver(function(){aplicar()});
+    observer.observe(document.documentElement,{childList:true,subtree:true});
+    setTimeout(function(){
+      if(observer){observer.disconnect();observer=null}
+      if(retryTimer){clearTimeout(retryTimer);retryTimer=null}
+      aplicar();
+    },15000);
+  }
+  programarNovaTentativa();
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',iniciar,{once:true});else iniciar();
-window.addEventListener('pageshow',aplicar);
+window.addEventListener('pageshow',function(){retryCount=0;iniciar()});
 }());
