@@ -1,4 +1,5 @@
 'use strict';
+const fs = require('fs');
 const { test, expect } = require('@playwright/test');
 
 const AREA='JAPARANDUBA';
@@ -57,7 +58,8 @@ test('CPF não localizado é vinculado somente ao integrante escolhido da famíl
   },{area:AREA,family:FAMILY,sub:SUB});
   await expect.poll(()=>page.evaluate(area=>localStorage.getItem(`portalTacsFamiliaAutofillV1:${area}`)||'',AREA)).toBe(FAMILY);
 
-  await page.addScriptTag({url:'portal-identificacao-familia-v1.js?homologacao=bloco9'});
+  const familyRuntime=fs.readFileSync('portal-identificacao-familia-v1.js','utf8');
+  await page.addScriptTag({content:familyRuntime});
   await expect.poll(()=>page.locator('#cpfStatus').evaluate(el=>el.dataset.familyDocObserver||'')).toBe('1');
   await page.locator('#cpf').fill(NEW_CPF);
   await page.locator('#cpf').dispatchEvent('input');
