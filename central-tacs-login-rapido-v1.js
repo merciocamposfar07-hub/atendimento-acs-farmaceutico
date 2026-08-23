@@ -258,6 +258,7 @@ function installCentralPageRefresh(){
   document.body.appendChild(button);
 }
 function installInstitutionalNavigation(){
+  if(window.PortalTacsCentralPerformanceV1)return;
   var grid=document.getElementById('moduleGrid');
   if(grid&&grid.dataset.tacsInstitutionalNav!=='1'){
     grid.dataset.tacsInstitutionalNav='1';
