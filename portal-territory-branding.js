@@ -106,6 +106,10 @@
     return loading;
   }
 
+  window.addEventListener('portal-tacs-institutional-footer-ready',function(){
+    if(identity)applyFooter();
+  });
+
   window.PortalTacsTerritoryBranding=Object.freeze({
     load:fetchIdentity,
     current:function(){return identity;},
