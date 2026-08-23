@@ -8,6 +8,7 @@
   var BUTTON_ID='portalTacsAtualizarPaginaV1';
   var CENTRAL_RETURN_ID='portalTacsVoltarCentralV1';
   var STYLE_ID='portalTacsAtualizarPaginaStyleV1';
+  var INSTITUTIONAL_SCRIPT_ID='portalTacsInstitucionalSuporteScriptV1';
   var CONECTA_SCRIPT_ID='portalTacsConectaOficialScriptV1';
   var CHECK_INTERVAL=60000;
   var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
@@ -249,25 +250,44 @@
     if(isAdminPage()||document.getElementById(CONECTA_SCRIPT_ID))return;
     var path=String(window.location.pathname||'');
     if(!/\/atendimento-acs-farmaceutico\/(?:index\.html)?$/.test(path))return;
+    if(!document.querySelector('.portal-footer-brand'))return;
     var script=document.createElement('script');
     script.id=CONECTA_SCRIPT_ID;
-    script.async=true;
+    script.async=false;
     script.src='/atendimento-acs-farmaceutico/portal-conecta-oficial-v1.js?v=20260823-conecta-estavel-v4';
     (document.head||document.documentElement).appendChild(script);
+  }
+
+  function afterInstitutionalReady(){
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded',loadConectaBrand,{once:true});
+      return;
+    }
+    loadConectaBrand();
   }
 
   function loadInstitutionalPortal(){
     if(isAdminPage())return;
     var path=String(window.location.pathname||'');
     if(!/\/atendimento-acs-farmaceutico\/(?:index\.html)?$/.test(path))return;
-    if(!document.getElementById('portalTacsInstitucionalSuporteScriptV1')){
+    var existing=document.getElementById(INSTITUTIONAL_SCRIPT_ID);
+    if(!existing){
       var script=document.createElement('script');
-      script.id='portalTacsInstitucionalSuporteScriptV1';
-      script.async=true;
+      script.id=INSTITUTIONAL_SCRIPT_ID;
+      script.async=false;
       script.src='/atendimento-acs-farmaceutico/portal-institucional-suporte-v1.js?v=20260822-institucional-suporte-v1';
+      script.addEventListener('load',afterInstitutionalReady,{once:true});
       (document.head||document.documentElement).appendChild(script);
+      return;
     }
-    loadConectaBrand();
+    if(window.PortalTacsInstitucionalSuporteV1){
+      afterInstitutionalReady();
+      return;
+    }
+    if(existing.dataset.portalConectaLoadHook!=='1'){
+      existing.dataset.portalConectaLoadHook='1';
+      existing.addEventListener('load',afterInstitutionalReady,{once:true});
+    }
   }
 
   window.PortalTacsAtualizacao={
