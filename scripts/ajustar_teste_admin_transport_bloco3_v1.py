@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Executor auxiliar temporário do Bloco 3 — não entra na main.
 p=Path('scripts/test_admin_transport.js')
 s=p.read_text(encoding='utf-8')
 old="    assert.match(official, /DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV102:'\\+areaId/);"
