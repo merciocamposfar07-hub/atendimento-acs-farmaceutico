@@ -4,19 +4,22 @@ on:
   push:
     branches:
       - fix-cns-device-consistency-v1
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: github.event.head_commit.message == 'Bootstrap CNS device consistency patch'
+    if: github.event_name == 'pull_request' || github.event.head_commit.message == 'Bootstrap CNS device consistency patch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: fix-cns-device-consistency-v1
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
 
       - name: Apply focused CNS consistency patch
@@ -152,4 +155,4 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add moradores-autofill.js index.html portal-version.json
           git commit -m "Corrige falso SUS não encontrado entre dispositivos"
-          git push origin HEAD:fix-cns-device-consistency-v1
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
