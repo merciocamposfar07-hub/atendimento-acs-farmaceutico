@@ -35,6 +35,9 @@ jobs:
         run: node scripts/test_push_onboarding_v1.js
       - name: Regressão completa
         run: npm test
+      - name: Restaurar somente arquivos regenerados pelo pretest
+        run: |
+          git checkout -- scripts/test_dom_flows.js scripts/test_territorio_dom.js
       - name: Garantir workers e escopo fechado
         run: |
           sha256sum -c /tmp/workers-antes.sha
