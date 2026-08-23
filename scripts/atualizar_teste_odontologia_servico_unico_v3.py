@@ -4,7 +4,7 @@ import re
 p = Path('scripts/test_dom_flows.js')
 s = p.read_text(encoding='utf-8')
 
-# O serviço odontológico público agora é único; a escolha comum/emergencial ocorre dentro da agenda.
+# O serviço odontológico público permanece único; comum/emergencial é tipo de vaga.
 s = s.replace(
     "category.value = 'Solicitar atendimento odontológico de emergência (dentista)';",
     "category.value = 'Solicitar atendimento odontológico (dentista)';"
@@ -26,7 +26,7 @@ replacement = r'''async function testNonBlockingDentalCard() {
     dispatch(window, category, 'change');
     await waitFor(
       () => window.document.querySelector('#dentalSlots .sheet-dental-choice.emergency:not(:disabled)'),
-      'A vaga emergencial única não apareceu para o teste não bloqueante'
+      'A vaga emergencial única não apareceu para o teste de confirmação'
     );
 
     const reservationsBeforeClick = harness.records.dentalReservations.length;
@@ -35,7 +35,7 @@ replacement = r'''async function testNonBlockingDentalCard() {
 
     await waitFor(
       () => harness.records.dentalReservations.length === reservationsBeforeClick + 1,
-      'A reserva em segundo plano não foi iniciada no clique da vaga'
+      'A reserva não foi iniciada no clique da vaga'
     );
     const reservation = harness.records.dentalReservations.at(-1);
     assert.equal(reservation.action, 'reservar_get');
@@ -43,42 +43,44 @@ replacement = r'''async function testNonBlockingDentalCard() {
     assert.equal(reservation.date, '2099-08-03');
     assert.match(reservation.requestId, /^MATIAS-/);
 
+    // O servidor simulado já processou o abatimento, mas a interface não pode
+    // presumir sucesso antes de receber a confirmação dessa mesma solicitação.
     assert.equal(
       harness.dental.find(item => item.data === '2099-08-03').vagasEmergenciais,
       0,
-      'A última vaga emergencial precisa virar 0 já no clique'
+      'O servidor simulado deve abater a vaga exatamente uma vez'
     );
-    const renderedMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(card => /Segunda-feira/.test(card.textContent));
-    assert.match(renderedMonday.textContent, /Sem vaga de emergência/, 'A tela deve mostrar 0 imediatamente após o clique');
+    let renderedMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(card => /Segunda-feira/.test(card.textContent));
+    assert.match(renderedMonday.textContent, /1 vaga de emergência disponível/, 'A tela deve manter a quantidade anterior enquanto a confirmação está em trânsito');
 
-    await fillPatient(window, 'Paciente Teste Não Bloqueante', 'Solicitação odontológica simulada.');
+    await fillPatient(window, 'Paciente Teste Confirmação', 'Solicitação odontológica simulada.');
     const send = window.document.querySelector('#send');
     assert.ok(send, 'Botão do WhatsApp não encontrado');
-    await waitFor(() => !send.disabled, 'O botão do WhatsApp permaneceu bloqueado esperando a planilha', 800);
+    assert.equal(send.disabled, true, 'O envio precisa continuar bloqueado antes da confirmação do servidor');
 
-    const statusBeforeSend = window.document.querySelector('#dentalStatus');
-    assert.match(statusBeforeSend.textContent, /Vaga selecionada/, 'A seleção deve ser aceita antes da confirmação do servidor');
-    assert.doesNotMatch(statusBeforeSend.textContent, /Vaga reservada na agenda/, 'O teste precisa enviar enquanto a confirmação ainda está em trânsito');
-
-    const reservationsBeforeSend = harness.records.dentalReservations.length;
-    const started = Date.now();
-    send.click();
-    await waitFor(
-      () => harness.records.whatsAppMessages.length === 1,
-      'O WhatsApp não abriu durante a sincronização da vaga',
-      1000
-    );
-    const elapsed = Date.now() - started;
-    assert.ok(elapsed < 1000, `O WhatsApp ficou bloqueado ${elapsed} ms esperando a agenda`);
-    assert.equal(harness.records.dentalReservations.length, reservationsBeforeSend, 'Enviar ao WhatsApp não pode criar outra reserva');
-    assert.equal(harness.records.alerts.length, 0, 'O envio ao WhatsApp não pode mostrar alerta de confirmação da vaga');
+    const statusPending = window.document.querySelector('#dentalStatus');
+    assert.match(statusPending.textContent, /Confirmando sua vaga|confirmação da vaga está demorando/, 'A tela precisa informar que a reserva ainda está sendo confirmada');
+    assert.doesNotMatch(statusPending.textContent, /O envio pelo WhatsApp está liberado/, 'Não pode existir mensagem de sucesso antes da confirmação');
 
     await waitFor(
       () => /Vaga reservada na agenda/.test(window.document.querySelector('#dentalStatus').textContent),
-      'A confirmação em segundo plano não concluiu',
-      3000
+      'A confirmação real da reserva não concluiu',
+      3500
     );
-    assert.equal(harness.dental.find(item => item.data === '2099-08-03').vagasEmergenciais, 0, 'O servidor simulado deve permanecer em 0');
+    renderedMonday = Array.from(window.document.querySelectorAll('#dentalSlots .sheet-dental-card')).find(card => /Segunda-feira/.test(card.textContent));
+    assert.match(renderedMonday.textContent, /Sem vaga de emergência/, 'Somente após a confirmação a tela deve aplicar a quantidade devolvida pelo servidor');
+    await waitFor(() => !send.disabled, 'O botão do WhatsApp não foi liberado após a confirmação', 1000);
+
+    const reservationsBeforeSend = harness.records.dentalReservations.length;
+    send.click();
+    await waitFor(
+      () => harness.records.whatsAppMessages.length === 1,
+      'O WhatsApp não abriu depois da reserva confirmada',
+      1000
+    );
+    assert.equal(harness.records.dentalReservations.length, reservationsBeforeSend, 'Enviar ao WhatsApp não pode criar outra reserva');
+    assert.equal(harness.records.alerts.length, 0, 'O envio confirmado não deve mostrar alerta indevido');
+    assert.equal(harness.dental.find(item => item.data === '2099-08-03').vagasEmergenciais, 0, 'A vaga deve permanecer abatida uma única vez');
   } finally {
     window.close();
   }
@@ -94,16 +96,14 @@ checks = [
     "category.value = 'Solicitar atendimento odontológico (dentista)';",
     "harness.records.dentalReservations.length === reservationsBeforeClick + 1",
     "assert.equal(reservation.type, 'emergencial');",
+    "assert.match(renderedMonday.textContent, /1 vaga de emergência disponível/",
+    "assert.equal(send.disabled, true",
     "assert.match(renderedMonday.textContent, /Sem vaga de emergência/",
-    "assert.doesNotMatch(statusBeforeSend.textContent, /Vaga reservada na agenda/",
-    "assert.ok(elapsed < 1000"
+    "await waitFor(() => !send.disabled"
 ]
 for item in checks:
     if item not in s:
         raise SystemExit('Contrato do teste atualizado incompleto: ' + item)
 
-if 'PortalTacsOdontologiaV98.cacheKey' in s or 'PortalTacsOdontologiaV98.selecao' in s or 'PortalTacsOdontologiaV98.atualizar' in s:
-    raise SystemExit('O teste ainda depende da API privada odontológica antiga.')
-
 p.write_text(s, encoding='utf-8')
-print('Teste não bloqueante atualizado para DOM e reserva real do controlador atual.')
+print('Teste odontológico atualizado para confirmação real do servidor antes do envio.')
