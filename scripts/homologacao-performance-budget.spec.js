@@ -25,7 +25,8 @@ test('orçamento de interação da Central: toque, retorno e reabertura', async 
     const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');
     const viewer=document.getElementById('viewer');
     const t=performance.now(); b.click();
-    return {ms:performance.now()-t,visible:Boolean(viewer&&!viewer.hidden)};
+    const style=getComputedStyle(viewer);
+    return {ms:performance.now()-t,visible:Boolean(viewer&&!viewer.hidden&&style.visibility==='visible'&&style.pointerEvents!=='none')};
   });
   expect(first.visible).toBe(true);
   expect(first.ms, `${browserName}: primeiro toque deve responder abaixo de 100 ms`).toBeLessThan(100);
@@ -35,16 +36,30 @@ test('orçamento de interação da Central: toque, retorno e reabertura', async 
     const viewer=document.getElementById('viewer');
     const b=document.getElementById('viewerBack');
     const t=performance.now(); b.click();
-    return {ms:performance.now()-t,hidden:Boolean(viewer&&viewer.hidden)};
+    const style=getComputedStyle(viewer);
+    const frame=document.querySelector('#viewer iframe[data-module="suporte"]');
+    return {
+      ms:performance.now()-t,
+      hiddenAttribute:Boolean(viewer&&viewer.hidden),
+      visibility:style.visibility,
+      pointerEvents:style.pointerEvents,
+      frameHeight:frame?frame.getBoundingClientRect().height:0,
+      frameInnerHeight:frame&&frame.contentWindow?frame.contentWindow.innerHeight:0
+    };
   });
-  expect(back.hidden).toBe(true);
+  expect(back.hiddenAttribute, `${browserName}: retorno iOS-safe não pode colapsar o viewer`).toBe(false);
+  expect(back.visibility, `${browserName}: retorno deve esconder visualmente o viewer`).toBe('hidden');
+  expect(back.pointerEvents, `${browserName}: viewer estacionado não pode capturar toque`).toBe('none');
+  expect(back.frameHeight, `${browserName}: iframe estacionado deve manter altura real`).toBeGreaterThan(0);
+  expect(back.frameInnerHeight, `${browserName}: viewport interno não pode zerar no retorno`).toBeGreaterThan(0);
   expect(back.ms, `${browserName}: retorno à Central deve responder abaixo de 150 ms`).toBeLessThan(150);
 
   const reopen=await page.evaluate(() => {
     const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');
     const viewer=document.getElementById('viewer');
     const t=performance.now(); b.click();
-    return {ms:performance.now()-t,visible:Boolean(viewer&&!viewer.hidden)};
+    const style=getComputedStyle(viewer);
+    return {ms:performance.now()-t,visible:Boolean(viewer&&!viewer.hidden&&style.visibility==='visible'&&style.pointerEvents!=='none')};
   });
   expect(reopen.visible).toBe(true);
   expect(reopen.ms, `${browserName}: painel preservado deve reabrir abaixo de 300 ms`).toBeLessThan(300);
