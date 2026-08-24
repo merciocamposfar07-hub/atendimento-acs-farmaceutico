@@ -30,43 +30,35 @@ function stabilizeViewer(){
 function stabilizePool(){
   var p=pool();
   if(!p)return;
-  var wanted={
-    display:'flex',
-    flex:'1 1 0%',
-    width:'100%',
-    height:'0px',
-    minWidth:'0px',
-    minHeight:'0px',
-    overflow:'hidden',
-    overscrollBehavior:'contain',
-    position:'relative',
-    touchAction:'auto',
-    background:'#dfeef3'
-  };
-  Object.keys(wanted).forEach(function(key){if(p.style[key]!==wanted[key])p.style[key]=wanted[key]});
+  p.style.setProperty('display','flex');
+  p.style.setProperty('flex','1 1 0%');
+  p.style.setProperty('width','100%');
+  p.style.setProperty('height','0');
+  p.style.setProperty('min-width','0');
+  p.style.setProperty('min-height','0');
+  p.style.setProperty('overflow','hidden');
+  p.style.setProperty('overscroll-behavior','contain');
+  p.style.setProperty('position','relative');
+  p.style.setProperty('touch-action','auto');
 }
 
 function stabilizeFrame(frame){
   if(!frame||frame.tagName!=='IFRAME')return;
   frame.setAttribute('scrolling','yes');
   if(frame.getAttribute('aria-hidden')==='true'||frame.style.display==='none')return;
-  var wanted={
-    display:'block',
-    width:'100%',
-    height:'100%',
-    maxHeight:'100%',
-    minWidth:'0px',
-    minHeight:'0px',
-    flex:'1 1 0%',
-    border:'0px',
-    background:'#dfeef3',
-    opacity:'1',
-    overflow:'auto',
-    overscrollBehavior:'contain',
-    touchAction:'auto',
-    pointerEvents:'auto'
-  };
-  Object.keys(wanted).forEach(function(key){if(frame.style[key]!==wanted[key])frame.style[key]=wanted[key]});
+  frame.style.setProperty('display','block');
+  frame.style.setProperty('width','100%');
+  frame.style.setProperty('height','100%');
+  frame.style.setProperty('max-height','100%');
+  frame.style.setProperty('min-width','0');
+  frame.style.setProperty('min-height','0');
+  frame.style.setProperty('flex','1 1 0%');
+  frame.style.setProperty('border','0');
+  frame.style.setProperty('opacity','1');
+  frame.style.setProperty('overflow','auto');
+  frame.style.setProperty('overscroll-behavior','contain');
+  frame.style.setProperty('touch-action','auto');
+  frame.style.setProperty('pointer-events','auto');
 }
 
 function stabilizeAll(){
@@ -84,11 +76,11 @@ function installObserver(){
     var needs=false;
     mutations.forEach(function(m){
       if(m.type==='childList')needs=true;
-      if(m.type==='attributes'&&m.target&&m.target.tagName==='IFRAME')needs=true;
+      if(m.type==='attributes'&&(m.target&&m.target.tagName==='IFRAME'||m.target===pool()))needs=true;
     });
     if(needs)setTimeout(stabilizeAll,0);
   });
-  observer.observe(v,{childList:true,subtree:true,attributes:true,attributeFilter:['style','aria-hidden']});
+  observer.observe(v,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-hidden']});
 }
 
 function scheduleAfterPanelOpen(event){
