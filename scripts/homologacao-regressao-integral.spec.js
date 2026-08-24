@@ -50,7 +50,15 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
       try{
         if(!frame||!frame.contentDocument||!frame.contentDocument.body||frame.contentDocument.readyState!=='complete')return false;
         const expectedPath=new URL(frame.getAttribute('src')||'',location.href).pathname;
-        return frame.contentWindow.location.pathname===expectedPath;
+        if(frame.contentWindow.location.pathname!==expectedPath)return false;
+        // Território é um wrapper: após o load ele busca o painel real e troca o
+        // documento com document.open/write/close. Só consideramos estável quando
+        // o <base> injetado pelo wrapper prova que essa substituição terminou.
+        if(moduleName==='territorio'){
+          const base=frame.contentDocument.querySelector('base[href="/atendimento-acs-farmaceutico/teste-v1/"]');
+          if(!base)return false;
+        }
+        return true;
       }catch(error){return false}
     },name,{timeout:30000});
     await page.evaluate(moduleName=>{
