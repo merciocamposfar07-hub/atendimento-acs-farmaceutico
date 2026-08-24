@@ -8,6 +8,7 @@ const index=read('index.html');
 const agenda=read('agenda-enfermeira.js');
 const rootWorker=read('service-worker.js');
 const pushWorker=read('push/OneSignalSDKWorker.js');
+const autoUpdate=read('portal-auto-update.js');
 
 const activeRuntime=[
   'index.html',
@@ -58,4 +59,13 @@ assert.ok(rootWorker.includes("const CACHE_NAME = 'tacs-disabled-20260727'"),'Se
 assert.ok(rootWorker.includes('self.registration.unregister()'),'Worker legado deve continuar se desregistrando');
 assert.ok(!/importScripts\([^)]*OneSignal/i.test(rootWorker),'Worker legado de raiz não pode incorporar OneSignal');
 
-console.log('ONESIGNAL_SW_ISOLATION_V1_OK: runtime ativo sem worker raiz; OneSignal único e segregado em /push/; iPhone guard preservado.');
+assert.ok(autoUpdate.includes("scopePath==='/atendimento-acs-farmaceutico/'&&scopePath.indexOf('/push/')===-1"),'Limpeza de versão antiga só pode desregistrar o escopo raiz legado, nunca /push/');
+assert.ok(autoUpdate.includes("value.indexOf('onesignal')===-1"),'Limpeza de caches deve preservar qualquer cache OneSignal');
+assert.ok(autoUpdate.includes("purgarEntregaLegada:purgeLegacyDeliveryState"),'Rotina auditável de limpeza legada deve continuar exposta sem mudar o runtime Push');
+const purgeStart=autoUpdate.indexOf('function purgeLegacyDeliveryState()');
+const purgeEnd=autoUpdate.indexOf('function isLegacyIdentityStatus',purgeStart);
+const purgeBody=autoUpdate.slice(purgeStart,purgeEnd);
+assert.ok(purgeStart>=0&&purgeEnd>purgeStart,'Rotina de limpeza legada deve permanecer delimitada');
+assert.ok(!/(?:window\.)?location\.(?:replace|reload)\s*\(|(?:window\.)?location\.href\s*=/.test(purgeBody),'Limpeza de worker/cache não pode navegar ou recarregar a página por conta própria');
+
+console.log('ONESIGNAL_SW_ISOLATION_V1_OK: runtime ativo sem worker raiz; OneSignal único em /push/; limpeza legada preserva worker/cache Push e não navega sozinha.');
