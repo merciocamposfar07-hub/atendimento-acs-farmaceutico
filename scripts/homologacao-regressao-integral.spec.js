@@ -38,8 +38,10 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
   const modules=['moradores','agendas','recados','profissionais','suporte','territorio','municipios'];
 
   // Primeiro ciclo: grava o marcador somente depois que o documento local do
-  // painel substitui o about:blank. A homologação bloqueia Apps Script/OneSignal,
-  // portanto não pode depender do marcador tacsReady, que representa dados vivos.
+  // painel substitui o about:blank. Alguns módulos oficiais são wrappers que,
+  // após o load do iframe, buscam o HTML operacional e substituem o documento
+  // com document.open/write/close. Neles, o <base> injetado é a prova de que o
+  // documento real já tomou o lugar do wrapper provisório.
   for(const name of modules){
     const button=page.locator(`#moduleGrid .module[data-module="${name}"]`);
     await expect(button).toBeVisible();
@@ -51,10 +53,7 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
         if(!frame||!frame.contentDocument||!frame.contentDocument.body||frame.contentDocument.readyState!=='complete')return false;
         const expectedPath=new URL(frame.getAttribute('src')||'',location.href).pathname;
         if(frame.contentWindow.location.pathname!==expectedPath)return false;
-        // Território é um wrapper: após o load ele busca o painel real e troca o
-        // documento com document.open/write/close. Só consideramos estável quando
-        // o <base> injetado pelo wrapper prova que essa substituição terminou.
-        if(moduleName==='territorio'){
+        if(moduleName==='territorio'||moduleName==='profissionais'){
           const base=frame.contentDocument.querySelector('base[href="/atendimento-acs-farmaceutico/teste-v1/"]');
           if(!base)return false;
         }
