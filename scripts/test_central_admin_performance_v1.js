@@ -45,13 +45,26 @@ assert(closeViewer.includes('frameHiddenStyle(frames[activeName])'),'Voltar à C
 assert(!performance.includes('_cb=Date.now()'),'Controlador oficial não pode criar cache-buster novo a cada toque');
 assert(!/function closeViewerFast\([\s\S]*?src\s*=\s*['"]about:blank['"]/.test(performance),'Voltar à Central não pode descarregar o painel administrativo ativo');
 
+/* Safari/iOS: iframe carregado não pode ser colapsado por display:none/hidden. */
+assert(performance.includes("pool.style.cssText='display:block;flex:1 1 auto"),'Pool persistente deve manter viewport real');
+assert(performance.includes("frame.style.cssText='display:block;position:absolute;inset:0;width:100%;height:100%"),'Iframe estacionado deve continuar dimensionado');
+assert(!performance.includes("frame.style.cssText='display:none"),'Iframe carregado não pode voltar a usar display:none');
+assert(performance.includes("frame.style.cssText='display:block;position:absolute;inset:0;width:100%;height:100%;min-width:0;min-height:0;border:0;background:#dfeef3;visibility:hidden;opacity:0;pointer-events:none;z-index:0'"),'Estado estacionado deve usar visibility/opacity sem destruir viewport');
+assert(performance.includes('function viewerParkedStyle(viewer)'),'Viewer precisa de estado estacionado próprio para iOS');
+assert(performance.includes("viewer.style.visibility='hidden'"),'Viewer estacionado deve ficar invisível sem colapsar');
+assert(performance.includes("viewer.style.pointerEvents='none'"),'Viewer estacionado não pode capturar toque');
+assert(performance.includes('viewer.hidden=false;'),'Viewer estacionado deve permanecer dimensionado');
+assert(closeViewer.includes('viewerParkedStyle(viewer)'),'Voltar à Central deve estacionar o viewer sem hidden/display:none');
+assert(!closeViewer.includes('viewer.hidden=true'),'Voltar à Central não pode zerar o viewport do iframe no Safari');
+assert(showFrame.includes('viewerVisibleStyle(viewer)'),'Reabertura deve apenas tornar o viewer visível');
+
 assert(performance.includes("dataset.tacsDirtyTracking='1'"),'Controlador rápido precisa assumir rastreamento de alterações não salvas');
 assert(performance.includes("dataset.tacsDirty='1'"),'Edição real de campo deve marcar o painel como alterado');
 assert(performance.includes('activePanelIsDirty()'),'Retorno à Central precisa verificar alterações do painel ativo');
 assert(performance.includes('window.confirm(DIRTY_MESSAGE)'),'Retorno não pode descartar alterações sem confirmação do operador');
 assert(performance.includes("getElementById('portalTacsAdminRefreshV1')"),'Controlador rápido deve remover refresh interno redundante do painel carregado');
 assert(performance.includes("dataset.portalTacsPerformanceInstalled='1'"),'Controlador deve expor marcador de instalação para homologação do primeiro toque');
-assert(performance.includes("version:'1.2.0'"),'Versão persistente do controlador do Bloco 13 não foi aplicada');
+assert(performance.includes("version:'1.2.0'"),'Versão persistente do controlador do Bloco 13 não foi preservada');
 
 /*
  * Listeners legados permanecem no código por compatibilidade e rollback, mas o
@@ -59,7 +72,7 @@ assert(performance.includes("version:'1.2.0'"),'Versão persistente do controlad
  * efetiva. Este bloco não modifica autenticação, permissões ou login rápido.
  */
 assert(base.includes("el('moduleGrid').addEventListener('click'"),'Compatibilidade da Central-base foi alterada fora do escopo');
-assert(quick.includes('function installInstitutionalNavigation()'),'Login rápido foi alterado fora do escopo do Bloco 13');
+assert(quick.includes('function installInstitutionalNavigation()'),'Login rápido foi alterado fora do escopo do hotfix iOS');
 
 ['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','login','entrar','loginTacs','entrarTacs'].forEach((id)=>{
   assert(performance.includes("'"+id+"'"),'Controle redundante não tratado na sessão da Central: '+id);
@@ -74,4 +87,4 @@ assert(!/removeItem\s*\(/.test(performance),'Otimização não pode apagar token
 assert(central.includes('<strong>Moradores</strong>')&&central.includes('<strong>Recados e campanhas</strong>')&&central.includes('<strong>Agendas e vagas</strong>')&&central.includes('<strong>Profissionais e serviços</strong>'),'Cartões administrativos principais precisam permanecer no layout atual');
 assert(central.includes('<strong>TACS e áreas</strong>')&&central.includes('<strong>Municípios e organizações</strong>')&&central.includes('<strong>Portal do Morador</strong>'),'Cartões administrativos restritos/públicos precisam permanecer no layout atual');
 
-console.log('Central Administrativa Bloco 13: controlador pré-carregado, host estável sem reparenting, retorno instantâneo e proteção contra perda de edição validados.');
+console.log('Central Administrativa: host estável, viewport persistente no iOS, retorno instantâneo e proteção contra perda de edição validados.');
