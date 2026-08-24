@@ -46,6 +46,15 @@ function stabilizeFrame(frame){
   if(!frame||frame.tagName!=='IFRAME')return;
   frame.setAttribute('scrolling','yes');
   if(frame.getAttribute('aria-hidden')==='true'||frame.style.display==='none')return;
+  /*
+   * Safari/iPhone pode deixar tiles transparentes quando um iframe rolável
+   * continua position:absolute depois de alternar visibility/opacity.
+   * O frame ativo participa do layout do pool; os frames estacionados seguem
+   * absolutos na camada de desempenho. Isso preserva estado/preload e elimina
+   * a faixa vazia que cortava conteúdo e interceptava os botões.
+   */
+  frame.style.setProperty('position','relative');
+  frame.style.setProperty('inset','auto');
   frame.style.setProperty('display','block');
   frame.style.setProperty('width','100%');
   frame.style.setProperty('height','100%');
@@ -54,7 +63,9 @@ function stabilizeFrame(frame){
   frame.style.setProperty('min-height','0');
   frame.style.setProperty('flex','1 1 0%');
   frame.style.setProperty('border','0');
+  frame.style.setProperty('visibility','visible');
   frame.style.setProperty('opacity','1');
+  frame.style.setProperty('z-index','1');
   frame.style.setProperty('overflow','auto');
   frame.style.setProperty('overscroll-behavior','contain');
   frame.style.setProperty('touch-action','auto');
