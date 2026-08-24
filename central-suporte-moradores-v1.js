@@ -5,6 +5,8 @@ window.PortalTacsCentralSuporteMoradoresV1=true;
 
 var PERFORMANCE_SCRIPT_ID='portalTacsCentralPerformanceLoaderV1';
 var PERFORMANCE_SRC='/atendimento-acs-farmaceutico/central-admin-performance-v1.js?v=20260823-admin-performance-v1';
+var STABILITY_SCRIPT_ID='portalTacsCentralScrollStabilityLoaderV1';
+var STABILITY_SRC='/atendimento-acs-farmaceutico/central-admin-scroll-stability-v1.js?v=20260824-scroll-stability-v1';
 
 /*
  * BLOCO_1_CONTROLE_UNICO_V1
@@ -37,20 +39,35 @@ function beginOfficialPreload(){
   if(controller&&typeof controller.beginPreload==='function')controller.beginPreload();
 }
 
+function loadStabilityLayer(){
+  if(window.PortalTacsCentralScrollStabilityV1)return;
+  if(document.getElementById(STABILITY_SCRIPT_ID))return;
+  var script=document.createElement('script');
+  script.id=STABILITY_SCRIPT_ID;
+  script.src=STABILITY_SRC;
+  script.async=false;
+  document.head.appendChild(script);
+}
+
+function afterPerformanceReady(){
+  beginOfficialPreload();
+  loadStabilityLayer();
+}
+
 function loadPerformanceLayer(){
-  if(window.PortalTacsCentralPerformanceV1){beginOfficialPreload();return;}
+  if(window.PortalTacsCentralPerformanceV1){afterPerformanceReady();return;}
   if(document.getElementById(PERFORMANCE_SCRIPT_ID))return;
   var script=document.createElement('script');
   script.id=PERFORMANCE_SCRIPT_ID;
   script.src=PERFORMANCE_SRC;
   script.async=false;
-  script.onload=beginOfficialPreload;
+  script.onload=afterPerformanceReady;
   document.head.appendChild(script);
 }
 
 loadPerformanceLayer();
 window.addEventListener('pageshow',function(){
-  if(window.PortalTacsCentralPerformanceV1)beginOfficialPreload();
+  if(window.PortalTacsCentralPerformanceV1)afterPerformanceReady();
   else loadPerformanceLayer();
 });
 }());
