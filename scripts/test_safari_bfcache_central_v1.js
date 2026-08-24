@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const assert = require('node:assert/strict');
 
 const performance = fs.readFileSync('central-admin-performance-v1.js', 'utf8');
+const scrollStability = fs.readFileSync('central-admin-scroll-stability-v1.js', 'utf8');
 
 assert.ok(
   performance.includes("window.addEventListener('pageshow',beginPreload);"),
@@ -58,4 +59,26 @@ assert.ok(
   'pageshow deve reutilizar a rotina de preload protegida pela chave da sessão'
 );
 
-console.log('Safari/iPhone Bloco 13: host estável, pageshow, BFCache e reuso persistente de painel validados.');
+assert.ok(
+  scrollStability.includes("frame.style.setProperty('left','-200vw');") &&
+  scrollStability.includes("frame.style.setProperty('visibility','hidden');") &&
+  scrollStability.includes("frame.style.setProperty('pointer-events','none');"),
+  'Iframe preservado e inativo deve ficar fisicamente fora do viewport e sem superfície de toque'
+);
+assert.ok(
+  scrollStability.includes("frame.style.setProperty('position','relative');") &&
+  scrollStability.includes("frame.style.setProperty('left','0');") &&
+  scrollStability.includes("frame.style.setProperty('visibility','visible');") &&
+  scrollStability.includes("frame.style.setProperty('pointer-events','auto');"),
+  'Somente o iframe ativo deve ocupar a superfície visível e tocável'
+);
+assert.ok(
+  scrollStability.includes("frame.style.setProperty('inset','auto');"),
+  'A estabilização deve neutralizar o inset:0 herdado do empilhamento absoluto antes de reposicionar as camadas'
+);
+assert.ok(
+  scrollStability.includes('HOTFIX_MORADORES_SAFARI_LAYER_V1'),
+  'A proteção específica contra recorte de compositor no Safari/iPhone deve permanecer identificável'
+);
+
+console.log('Safari/iPhone: BFCache preservado e iframes inativos isolados da superfície de pintura/toque.');
