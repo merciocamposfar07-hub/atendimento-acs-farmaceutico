@@ -9,6 +9,22 @@ var observer=null;
 function viewer(){return document.getElementById('viewer')}
 function pool(){return document.getElementById('portalTacsAdminPreloadPoolV1')}
 
+/*
+ * iOS/WebKit: um iframe já carregado não deve alternar display:none/block.
+ * Essa alternância pode descartar a superfície de composição e, ao voltar,
+ * repintar apenas partes do documento (grandes áreas vazias/cortadas).
+ * Mantemos a instância renderizada no mesmo host e escondemos somente por
+ * visibility/opacity/pointer-events. O runtime interno e o estado permanecem.
+ */
+function installStableFrameCss(){
+  var id='portalTacsStableIframePaintV1';
+  if(document.getElementById(id))return;
+  var style=document.createElement('style');
+  style.id=id;
+  style.textContent='\n#portalTacsAdminPreloadPoolV1>iframe{position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;max-height:100%!important;min-width:0!important;min-height:0!important;border:0!important;background:#dfeef3!important;}\n#portalTacsAdminPreloadPoolV1>iframe[aria-hidden="true"]{visibility:hidden!important;opacity:0!important;pointer-events:none!important;z-index:0!important;}\n#portalTacsAdminPreloadPoolV1>iframe:not([aria-hidden="true"]){visibility:visible!important;opacity:1!important;pointer-events:auto!important;z-index:1!important;}\n';
+  document.head.appendChild(style);
+}
+
 function stabilizeViewer(){
   var v=viewer();
   if(!v)return;
@@ -45,23 +61,27 @@ function stabilizePool(){
 function stabilizeFrame(frame){
   if(!frame||frame.tagName!=='IFRAME')return;
   frame.setAttribute('scrolling','yes');
-  if(frame.getAttribute('aria-hidden')==='true'||frame.style.display==='none')return;
-  frame.style.setProperty('display','block');
-  frame.style.setProperty('width','100%');
-  frame.style.setProperty('height','100%');
-  frame.style.setProperty('max-height','100%');
-  frame.style.setProperty('min-width','0');
-  frame.style.setProperty('min-height','0');
-  frame.style.setProperty('flex','1 1 0%');
-  frame.style.setProperty('border','0');
-  frame.style.setProperty('opacity','1');
+  var hidden=frame.getAttribute('aria-hidden')==='true';
+  frame.style.setProperty('position','absolute','important');
+  frame.style.setProperty('inset','0','important');
+  frame.style.setProperty('display','block','important');
+  frame.style.setProperty('width','100%','important');
+  frame.style.setProperty('height','100%','important');
+  frame.style.setProperty('max-height','100%','important');
+  frame.style.setProperty('min-width','0','important');
+  frame.style.setProperty('min-height','0','important');
+  frame.style.setProperty('border','0','important');
   frame.style.setProperty('overflow','auto');
   frame.style.setProperty('overscroll-behavior','contain');
   frame.style.setProperty('touch-action','auto');
-  frame.style.setProperty('pointer-events','auto');
+  frame.style.setProperty('visibility',hidden?'hidden':'visible','important');
+  frame.style.setProperty('opacity',hidden?'0':'1','important');
+  frame.style.setProperty('pointer-events',hidden?'none':'auto','important');
+  frame.style.setProperty('z-index',hidden?'0':'1','important');
 }
 
 function stabilizeAll(){
+  installStableFrameCss();
   stabilizeViewer();
   stabilizePool();
   var p=pool();
@@ -115,6 +135,7 @@ function handleBackTouch(event){
 
 function install(){
   document.documentElement.dataset.portalTacsScrollStabilityInstalled='1';
+  installStableFrameCss();
   stabilizeAll();
   installObserver();
   document.addEventListener('pointerdown',scheduleAfterPanelOpen,true);
