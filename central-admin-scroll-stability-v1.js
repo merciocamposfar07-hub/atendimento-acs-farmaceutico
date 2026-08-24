@@ -114,8 +114,11 @@ function handleBackTouch(event){
   event.preventDefault();
   event.stopPropagation();
   if(event.stopImmediatePropagation)event.stopImmediatePropagation();
-  back.disabled=true;
-  try{controller.closeViewer()}finally{setTimeout(function(){back.disabled=false},450)}
+  var closed=controller.closeViewer();
+  if(closed===false){
+    back.disabled=true;
+    setTimeout(function(){back.disabled=false},450);
+  }
 }
 
 function install(){
