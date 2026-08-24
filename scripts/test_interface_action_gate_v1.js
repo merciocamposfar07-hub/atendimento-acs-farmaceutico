@@ -9,6 +9,7 @@ const npmGate=String(pkg.scripts&&pkg.scripts.test||'');
 const playwright=read('playwright.homologacao.config.js');
 const central=read('central-administrativa-tacs.html');
 const index=read('index.html');
+const autoUpdate=read('portal-auto-update.js');
 
 const requiredStatic=[
   'test_dom_flows.js',
@@ -45,7 +46,8 @@ for(const moduleName of ['moradores','agendas','recados','profissionais','suport
 assert.match(central,/id=["']viewerBack["']/,'Bloco 15: retorno à Central ausente');
 assert.match(index,/id=["']send["']/,'Bloco 15: ação pública de envio ausente');
 assert.ok(index.includes('agenda-enfermeira.js'),'Bloco 15: controlador de ativação de avisos deve permanecer carregado');
-assert.ok(index.includes('portal-identificacao-familia-v1.js'),'Bloco 15: seleção segura de integrante deve permanecer carregada');
+assert.ok(index.includes('portal-auto-update.js'),'Bloco 15: carregador complementar do Portal deve permanecer ativo');
+assert.ok(autoUpdate.includes('portal-identificacao-familia-v1.js'),'Bloco 15: seleção segura de integrante deve permanecer na cadeia real de carregamento');
 assert.ok(index.includes('portal-odontologia-segunda-sexta.js'),'Bloco 15: confirmação de vaga deve permanecer carregada');
 
 console.log('INTERFACE_ACTION_GATE_V1_OK: cartões, retorno, envio, Push, família e reserva permanecem cobertos por testes funcionais e matriz real.');
