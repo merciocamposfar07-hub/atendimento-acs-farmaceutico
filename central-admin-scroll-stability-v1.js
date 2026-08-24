@@ -45,8 +45,47 @@ function stabilizePool(){
 function stabilizeFrame(frame){
   if(!frame||frame.tagName!=='IFRAME')return;
   frame.setAttribute('scrolling','yes');
-  if(frame.getAttribute('aria-hidden')==='true'||frame.style.display==='none')return;
+
+  var hidden=frame.getAttribute('aria-hidden')==='true'||frame.style.display==='none';
+  if(hidden){
+    if(frame.style.display==='none')return;
+    /*
+     * HOTFIX_MORADORES_SAFARI_LAYER_V1
+     * Mantém o iframe carregado e dimensionado para preservar BFCache/estado,
+     * porém estaciona fisicamente a camada fora do viewport. No iOS Safari,
+     * vários iframes absolutos sobre o mesmo retângulo podem deixar tiles sem
+     * pintura e interromper a superfície de toque do iframe ativo.
+     */
+    frame.style.setProperty('display','block');
+    frame.style.setProperty('position','absolute');
+    frame.style.setProperty('inset','auto');
+    frame.style.setProperty('left','-200vw');
+    frame.style.setProperty('top','0');
+    frame.style.setProperty('right','auto');
+    frame.style.setProperty('bottom','auto');
+    frame.style.setProperty('width','100%');
+    frame.style.setProperty('height','100%');
+    frame.style.setProperty('max-height','100%');
+    frame.style.setProperty('min-width','0');
+    frame.style.setProperty('min-height','0');
+    frame.style.setProperty('border','0');
+    frame.style.setProperty('visibility','hidden');
+    frame.style.setProperty('opacity','0');
+    frame.style.setProperty('overflow','auto');
+    frame.style.setProperty('overscroll-behavior','contain');
+    frame.style.setProperty('touch-action','auto');
+    frame.style.setProperty('pointer-events','none');
+    return;
+  }
+
+  /* Somente o painel ativo ocupa a superfície visível e tocável. */
   frame.style.setProperty('display','block');
+  frame.style.setProperty('position','relative');
+  frame.style.setProperty('inset','auto');
+  frame.style.setProperty('left','0');
+  frame.style.setProperty('top','0');
+  frame.style.setProperty('right','auto');
+  frame.style.setProperty('bottom','auto');
   frame.style.setProperty('width','100%');
   frame.style.setProperty('height','100%');
   frame.style.setProperty('max-height','100%');
@@ -54,6 +93,7 @@ function stabilizeFrame(frame){
   frame.style.setProperty('min-height','0');
   frame.style.setProperty('flex','1 1 0%');
   frame.style.setProperty('border','0');
+  frame.style.setProperty('visibility','visible');
   frame.style.setProperty('opacity','1');
   frame.style.setProperty('overflow','auto');
   frame.style.setProperty('overscroll-behavior','contain');

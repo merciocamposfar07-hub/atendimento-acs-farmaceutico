@@ -8,7 +8,7 @@ async function blockExternal(page) {
   await page.route('https://api.onesignal.com/**', route => route.abort());
 }
 
-test('Central: painéis longos rolam e o botão Central sempre retorna', async ({ page, browserName }) => {
+test('Central: painéis longos rolam, não se sobrepõem e continuam tocáveis', async ({ page, browserName }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await blockExternal(page);
   await page.goto('central-administrativa-tacs.html', { waitUntil: 'domcontentloaded' });
@@ -25,7 +25,13 @@ test('Central: painéis longos rolam e o botão Central sempre retorna', async (
       const button = document.querySelector(`#moduleGrid .module[data-module="${name}"]`);
       if (button) { button.hidden = false; button.disabled = false; }
     });
+    const controller = window.PortalTacsCentralPerformance;
+    if (controller && typeof controller.beginPreload === 'function') controller.beginPreload();
   });
+
+  await expect.poll(() => page.evaluate(() => (
+    document.querySelectorAll('#portalTacsAdminPreloadPoolV1 iframe[data-module]').length >= 2
+  ))).toBe(true);
 
   const modules = ['moradores','agendas','recados','profissionais','suporte'];
   for (const name of modules) {
@@ -44,6 +50,17 @@ test('Central: painéis longos rolam e o botão Central sempre retorna', async (
       catch (error) { return false; }
     }, name);
 
+    await expect.poll(() => page.evaluate(moduleName => {
+      const pool = document.getElementById('portalTacsAdminPreloadPoolV1');
+      const active = pool && pool.querySelector(`iframe[data-module="${moduleName}"]`);
+      if (!pool || !active) return -1;
+      const ar = active.getBoundingClientRect();
+      const intersects = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      return [...pool.querySelectorAll('iframe[data-module]')]
+        .filter(frame => frame !== active)
+        .filter(frame => intersects(ar, frame.getBoundingClientRect())).length;
+    }, name)).toBe(0);
+
     const layout = await page.evaluate(moduleName => {
       const viewer = document.getElementById('viewer');
       const bar = viewer && viewer.querySelector('.viewer-bar');
@@ -54,6 +71,17 @@ test('Central: painéis longos rolam e o botão Central sempre retorna', async (
       const br = bar.getBoundingClientRect();
       const pr = pool.getBoundingClientRect();
       const fr = frame.getBoundingClientRect();
+      const intersects = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      const inactive = [...pool.querySelectorAll('iframe[data-module]')].filter(item => item !== frame);
+      const inactivePoolOverlapCount = inactive.filter(item => intersects(pr, item.getBoundingClientRect())).length;
+      const inactiveTouchableCount = inactive.filter(item => {
+        const style = getComputedStyle(item);
+        return style.pointerEvents !== 'none' && intersects(pr, item.getBoundingClientRect());
+      }).length;
+      const inactiveStillDimensioned = inactive.every(item => {
+        const rect = item.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && getComputedStyle(item).display !== 'none';
+      });
       return {
         viewerHeight: vr.height,
         barHeight: br.height,
@@ -61,7 +89,11 @@ test('Central: painéis longos rolam e o botão Central sempre retorna', async (
         frameHeight: fr.height,
         viewportHeight: window.innerHeight,
         frameDisplay: getComputedStyle(frame).display,
-        framePointerEvents: getComputedStyle(frame).pointerEvents
+        framePosition: getComputedStyle(frame).position,
+        framePointerEvents: getComputedStyle(frame).pointerEvents,
+        inactivePoolOverlapCount,
+        inactiveTouchableCount,
+        inactiveStillDimensioned
       };
     }, name);
 
@@ -71,28 +103,48 @@ test('Central: painéis longos rolam e o botão Central sempre retorna', async (
     expect(Math.abs(layout.poolHeight - layout.frameHeight)).toBeLessThanOrEqual(2);
     expect(layout.frameHeight).toBeLessThanOrEqual(layout.viewportHeight);
     expect(layout.frameDisplay).toBe('block');
+    expect(layout.framePosition).toBe('relative');
     expect(layout.framePointerEvents).toBe('auto');
+    expect(layout.inactivePoolOverlapCount, 'Nenhum iframe inativo pode ocupar a área pintada do painel ativo').toBe(0);
+    expect(layout.inactiveTouchableCount, 'Nenhum iframe inativo pode interceptar a superfície de toque').toBe(0);
+    expect(layout.inactiveStillDimensioned, 'Painéis inativos devem continuar carregados e dimensionados para preservar estado/BFCache').toBe(true);
 
     const handle = await iframe.elementHandle();
     const child = await handle.contentFrame();
     expect(child).not.toBeNull();
     const scrollY = await child.evaluate(async () => {
-      const old = document.getElementById('homologacao-scroll-spacer-v1');
-      if (old) old.remove();
+      const oldSpacer = document.getElementById('homologacao-scroll-spacer-v1');
+      if (oldSpacer) oldSpacer.remove();
+      const oldButton = document.getElementById('homologacao-touch-action-v1');
+      if (oldButton) oldButton.remove();
       const spacer = document.createElement('div');
       spacer.id = 'homologacao-scroll-spacer-v1';
       spacer.style.cssText = 'height:2600px;width:1px;pointer-events:none;';
       document.body.appendChild(spacer);
+      const action = document.createElement('button');
+      action.id = 'homologacao-touch-action-v1';
+      action.type = 'button';
+      action.textContent = 'Teste de toque';
+      action.style.cssText = 'display:block;min-height:64px;min-width:220px;margin:16px auto 120px;';
+      action.addEventListener('click', () => {
+        document.documentElement.dataset.homologacaoTouchCount = String(Number(document.documentElement.dataset.homologacaoTouchCount || 0) + 1);
+      });
+      document.body.appendChild(action);
       window.scrollTo(0, 1600);
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       return window.scrollY;
     });
     expect(scrollY).toBeGreaterThan(300);
 
+    const touchAction = child.locator('#homologacao-touch-action-v1');
+    await touchAction.scrollIntoViewIfNeeded();
+    await touchAction.click();
+    await expect.poll(() => child.evaluate(() => Number(document.documentElement.dataset.homologacaoTouchCount || 0))).toBe(1);
+
     await page.locator('#viewerBack').click();
     await expect(page.locator('#viewer')).toBeHidden();
     await expect(page.locator(`#portalTacsAdminPreloadPoolV1 iframe[data-module="${name}"]`)).toHaveCount(1);
   }
 
-  console.log(`CENTRAL_SCROLL_STABILITY_V1_OK ${browserName}: ${modules.length}/${modules.length} painéis rolaram e retornaram à Central.`);
+  console.log(`CENTRAL_SCROLL_STABILITY_V2_OK ${browserName}: ${modules.length}/${modules.length} painéis rolaram, ficaram sem sobreposição e responderam ao toque.`);
 });
