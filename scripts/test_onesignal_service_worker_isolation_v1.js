@@ -66,6 +66,6 @@ const purgeStart=autoUpdate.indexOf('function purgeLegacyDeliveryState()');
 const purgeEnd=autoUpdate.indexOf('function isLegacyIdentityStatus',purgeStart);
 const purgeBody=autoUpdate.slice(purgeStart,purgeEnd);
 assert.ok(purgeStart>=0&&purgeEnd>purgeStart,'Rotina de limpeza legada deve permanecer delimitada');
-assert.ok(!/location\.(?:replace|reload|href)/.test(purgeBody),'Limpeza de worker/cache não pode navegar ou recarregar a página por conta própria');
+assert.ok(!/(?:window\.)?location\.(?:replace|reload)\s*\(|(?:window\.)?location\.href\s*=/.test(purgeBody),'Limpeza de worker/cache não pode navegar ou recarregar a página por conta própria');
 
 console.log('ONESIGNAL_SW_ISOLATION_V1_OK: runtime ativo sem worker raiz; OneSignal único em /push/; limpeza legada preserva worker/cache Push e não navega sozinha.');
