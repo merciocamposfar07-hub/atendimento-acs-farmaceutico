@@ -1,10 +1,21 @@
 (function(){
 'use strict';
-if(window.PortalTacsCentralBackButtonV1)return;
+/*
+ * Alguns painéis oficiais carregam outro HTML com document.open()/document.write().
+ * Nesses casos o objeto window sobrevive, mas o DOM inteiro é substituído.
+ * Portanto NÃO podemos bloquear a segunda execução apenas por uma flag global:
+ * só bloqueamos quando o botão realmente existe no DOM atual.
+ */
+if(window.PortalTacsCentralBackButtonV1&&document.getElementById('portalTacsBackCentralV1'))return;
 window.PortalTacsCentralBackButtonV1=true;
 
 var path=String(location.pathname||'');
-var isAdminPanel=(/\/teste-v1\/painel-moradores-v2\.html$/i.test(path)||/\/painel-suporte-moradores-v2\.html$/i.test(path)||/\/painel-oficial-(?:recados-campanhas|agendas-vagas|profissionais-servicos|tacs-areas|organizacoes-municipios)\.html$/i.test(path));
+var isAdminPanel=(
+  /\/teste-v1\/painel-moradores-v2\.html$/i.test(path)||
+  /\/painel-suporte-moradores-v2\.html$/i.test(path)||
+  /\/painel-oficial-(?:recados-campanhas|agendas-vagas|profissionais-servicos|tacs-areas|organizacoes-municipios)\.html$/i.test(path)||
+  /\/teste-v1\/painel-(?:profissionais-servicos|tacs-areas)-v1\.html$/i.test(path)
+);
 var params;
 try{params=new URLSearchParams(location.search||'')}catch(e){params=null}
 var fromCentral=params&&String(params.get('from')||'').toLowerCase()==='central';
@@ -29,6 +40,7 @@ function centralUrl(){
 
 function install(){
   if(document.getElementById('portalTacsBackCentralV1'))return;
+  if(!document.body){setTimeout(install,0);return;}
   var bar=document.createElement('div');
   bar.id='portalTacsBackCentralV1';
   bar.setAttribute('role','navigation');
@@ -41,11 +53,6 @@ function install(){
   btn.addEventListener('click',function(){
     btn.disabled=true;
     try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
-    /*
-     * Quando o painel foi aberto pela Central, voltar pelo histórico restaura a
-     * própria Central já autenticada e no segundo estágio, em vez de recriá-la
-     * na tela de login. Se não houver histórico confiável, usamos a URL salva.
-     */
     if(fromCentral&&history.length>1){
       history.back();
       return;
