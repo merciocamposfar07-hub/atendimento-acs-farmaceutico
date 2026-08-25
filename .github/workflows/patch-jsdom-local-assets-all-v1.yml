@@ -1,0 +1,48 @@
+name: Patch JSDOM assets locais em testes V1
+
+on:
+  push:
+    branches: [stabilizacao-auditoria-20260825]
+    paths:
+      - 'scripts/patch_jsdom_local_assets_all_v1.py'
+      - '.github/workflows/patch-jsdom-local-assets-all-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir-validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Corrigir harnesses JSDOM que usam assets locais
+        run: python3 scripts/patch_jsdom_local_assets_all_v1.py
+      - name: Validar sintaxe dos testes modificados
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git diff --name-only -- scripts | grep -E '^scripts/test_.*\.js$' || true)
+          for file in "${changed[@]}"; do node --check "$file"; done
+          node scripts/test_admin_transport.js
+          node scripts/test_dynamic_professionals_dom.js
+      - name: Persistir harnesses corrigidos
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git diff --name-only -- scripts | grep -E '^scripts/test_.*\.js$' || true)
+          if [ ${#changed[@]} -eq 0 ]; then echo 'Nenhum harness pendente.'; exit 0; fi
+          git diff --check -- "${changed[@]}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- "${changed[@]}"
+          git commit -m 'Corrige harnesses JSDOM para carregar assets locais'
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
