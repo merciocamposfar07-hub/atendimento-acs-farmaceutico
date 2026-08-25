@@ -40,7 +40,16 @@ function install(){
   btn.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-height:48px;border:2px solid #69c7e7;border-radius:16px;padding:9px 16px;background:#fff;color:#073a55;font:inherit;font-weight:900;line-height:1.15;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
   btn.addEventListener('click',function(){
     btn.disabled=true;
-    try{sessionStorage.removeItem('portalTacsRetornoCentralV1')}catch(e){}
+    try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
+    /*
+     * Quando o painel foi aberto pela Central, voltar pelo histórico restaura a
+     * própria Central já autenticada e no segundo estágio, em vez de recriá-la
+     * na tela de login. Se não houver histórico confiável, usamos a URL salva.
+     */
+    if(fromCentral&&history.length>1){
+      history.back();
+      return;
+    }
     location.assign(centralUrl());
   });
   bar.appendChild(btn);
