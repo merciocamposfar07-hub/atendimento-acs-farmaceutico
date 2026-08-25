@@ -53,10 +53,9 @@ function installRecadosRenderSafe(){
 installRecadosRenderSafe();
 
 /*
- * Reduz o DOM simultâneo das listas longas. O código original continua dono dos
- * dados e das ações; aqui apenas destacamos cartões excedentes e os devolvemos
- * em blocos quando o usuário pede. Isso evita dezenas de formulários completos
- * renderizados ao mesmo tempo no WebKit.
+ * Reduz o DOM simultâneo apenas da lista de Recados.
+ * A lista de Campanhas é controlada pelo módulo mensal (ano/mês e campanhas autorizadas)
+ * e não pode ter seus cartões removidos do DOM antes dessa filtragem.
  */
 function installRecadosDomWindow(){
   if(!isRecados)return;
@@ -64,8 +63,7 @@ function installRecadosDomWindow(){
   var states={};
 
   function labelFor(id,remaining){
-    var nome=id==='listaCampanhas'?'campanhas':'recados';
-    return 'Mostrar mais '+nome+' ('+remaining+')';
+    return 'Mostrar mais recados ('+remaining+')';
   }
 
   function makeControl(id,state){
@@ -93,7 +91,7 @@ function installRecadosDomWindow(){
     if(oldControl)oldControl.remove();
     state.rest=[];
     var items=Array.prototype.slice.call(list.children).filter(function(el){return el.matches&&el.matches('details.item')});
-    var section=list.closest('#secaoRecados,#secaoCampanhas');
+    var section=list.closest('#secaoRecados');
     var initial=section&&section.classList.contains('oculto')?0:PAGE;
     items.slice(initial).forEach(function(el){state.rest.push(el);el.remove()});
     var control=makeControl(id,state);if(control)list.appendChild(control);
@@ -130,7 +128,7 @@ function installRecadosDomWindow(){
     reconnect(state);
   }
 
-  ['listaRecados','listaCampanhas'].forEach(function(id){
+  ['listaRecados'].forEach(function(id){
     var list=document.getElementById(id);if(!list)return;
     var state={list:list,rest:[],observer:null};
     state.observer=new MutationObserver(function(){compactFresh(id)});
@@ -140,9 +138,8 @@ function installRecadosDomWindow(){
     compactFresh(id);
   });
 
-  var recados=document.getElementById('abaRecados'),campanhas=document.getElementById('abaCampanhas');
+  var recados=document.getElementById('abaRecados');
   if(recados)recados.addEventListener('click',function(){setTimeout(function(){ensureFirstPage('listaRecados')},0)});
-  if(campanhas)campanhas.addEventListener('click',function(){setTimeout(function(){ensureFirstPage('listaCampanhas')},0)});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installRecadosDomWindow,{once:true});
 else installRecadosDomWindow();
