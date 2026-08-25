@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 
+// Auditoria estrutural independente; qualquer falha encerra a execução com status 1.
 const root=process.cwd();
 const ignoreDirs=new Set(['.git','node_modules']);
 const errors=[];
