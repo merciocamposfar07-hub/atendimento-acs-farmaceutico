@@ -9,7 +9,7 @@ permissions:
 jobs:
   auditoria:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,3 +19,18 @@ jobs:
           node-version: '22'
       - name: Auditoria estrutural, sintática e regressões
         run: node tools/auditoria-integral.mjs
+      - name: Instalar Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Servir projeto localmente
+        run: |
+          cd ..
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/portal-http.log 2>&1 &
+          echo $! >/tmp/portal-http.pid
+          sleep 2
+      - name: Simulação real dos fluxos críticos
+        run: node tools/teste-browser.mjs
+      - name: Log do servidor em falha
+        if: failure()
+        run: cat /tmp/portal-http.log || true
