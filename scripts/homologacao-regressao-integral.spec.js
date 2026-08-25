@@ -38,8 +38,10 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
   const modules=['moradores','agendas','recados','profissionais','suporte','territorio','municipios'];
 
   // Primeiro ciclo: grava o marcador somente depois que o documento local do
-  // painel substitui o about:blank. A homologação bloqueia Apps Script/OneSignal,
-  // portanto não pode depender do marcador tacsReady, que representa dados vivos.
+  // painel substitui o about:blank. Alguns módulos oficiais são wrappers que,
+  // após o load do iframe, buscam o HTML operacional e substituem o documento
+  // com document.open/write/close. Neles, o <base> injetado é a prova de que o
+  // documento real já tomou o lugar do wrapper provisório.
   for(const name of modules){
     const button=page.locator(`#moduleGrid .module[data-module="${name}"]`);
     await expect(button).toBeVisible();
@@ -50,7 +52,12 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
       try{
         if(!frame||!frame.contentDocument||!frame.contentDocument.body||frame.contentDocument.readyState!=='complete')return false;
         const expectedPath=new URL(frame.getAttribute('src')||'',location.href).pathname;
-        return frame.contentWindow.location.pathname===expectedPath;
+        if(frame.contentWindow.location.pathname!==expectedPath)return false;
+        if(moduleName==='territorio'||moduleName==='profissionais'){
+          const base=frame.contentDocument.querySelector('base[href="/atendimento-acs-farmaceutico/teste-v1/"]');
+          if(!base)return false;
+        }
+        return true;
       }catch(error){return false}
     },name,{timeout:30000});
     await page.evaluate(moduleName=>{
@@ -66,16 +73,12 @@ test('regressão integral mantém todos os painéis vivos entre navegações',as
       if(!marker){marker=doc.createElement('input');marker.id=`bloco16-${moduleName}`;doc.body.appendChild(marker)}
       marker.value=`estado-${moduleName}`;
     },name);
-    // Firefox pode despachar o load do elemento iframe logo após o documento já
-    // estar complete. Zera a linha de base somente depois desse evento inicial;
-    // qualquer navegação real ainda apaga o marcador e/ou incrementa o contador.
     await page.waitForTimeout(250);
     await page.evaluate(moduleName=>{window.__bloco16Loads[moduleName]=0},name);
     await page.locator('#viewerBack').click();
     await expect(page.locator('#viewer')).toBeHidden();
   }
 
-  // Supera o timer legado que antes descartava Agendas.
   await page.waitForTimeout(5600);
 
   const afterIdle=await page.evaluate(moduleNames=>Object.fromEntries(moduleNames.map(name=>{
