@@ -7,9 +7,10 @@ var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var AREA_KEY='portalTacsCentralAreaV1';
 var RETURN_KEY='portalTacsCentralReturnUrlV1';
+var RETURN_FLAG_KEY='portalTacsRetornoCentralV1';
 var PAINT_STYLE_ID='portalTacsCentralIosPaintGuardV3';
 var SAFE_NAV_FLAG='portalTacsSafeNavigationV1';
-var REVISION='20260824-admin-safe-nav-v3';
+var REVISION='20260824-admin-safe-nav-v4';
 
 function text(v){return String(v==null?'':v).trim()}
 function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
@@ -24,6 +25,18 @@ function hasTerritorySession(){
 }
 function hasAnySession(){
   try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'')||text(sessionStorage.getItem(ADMIN_TOKEN_KEY)||''))}catch(e){return false}
+}
+
+/* Evita mostrar novamente o formulário de login ao retornar de um painel. */
+function installReturnGuard(){
+  var returning=false;
+  try{returning=sessionStorage.getItem(RETURN_FLAG_KEY)==='1'}catch(e){}
+  if(!returning)return;
+  if(hasAnySession()){
+    var login=document.getElementById('loginPanel');
+    if(login)login.hidden=true;
+  }
+  try{sessionStorage.removeItem(RETURN_FLAG_KEY)}catch(e){}
 }
 
 /*
@@ -105,7 +118,7 @@ function installSafeNavigation(){
 
     try{
       sessionStorage.setItem(RETURN_KEY,location.href);
-      sessionStorage.setItem('portalTacsRetornoCentralV1','1');
+      sessionStorage.setItem(RETURN_FLAG_KEY,'1');
     }catch(e){}
 
     button.setAttribute('aria-busy','true');
@@ -115,6 +128,7 @@ function installSafeNavigation(){
 }
 
 function boot(){
+  installReturnGuard();
   installPaintGuard();
   installSafeNavigation();
 }
