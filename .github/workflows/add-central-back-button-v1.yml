@@ -1,0 +1,65 @@
+name: Adicionar voltar a Central V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/add-central-back-button-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inserir botão de retorno nos painéis administrativos
+        shell: python
+        run: |
+          from pathlib import Path
+
+          tag = '<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260824-v1"></script>'
+          targets = [
+              Path('teste-v1/painel-moradores-v2.html'),
+              Path('painel-suporte-moradores-v2.html'),
+              Path('painel-oficial-recados-campanhas.html'),
+              Path('painel-oficial-agendas-vagas.html'),
+              Path('painel-oficial-profissionais-servicos.html'),
+              Path('painel-oficial-tacs-areas.html'),
+              Path('painel-oficial-organizacoes-municipios.html'),
+              Path('index.html'),
+          ]
+
+          for path in targets:
+              if not path.exists():
+                  print(f'AVISO: arquivo não encontrado: {path}')
+                  continue
+              text = path.read_text(encoding='utf-8')
+              if 'central-back-button-v1.js' in text:
+                  print(f'OK já presente: {path}')
+                  continue
+              if '</body>' not in text:
+                  raise SystemExit(f'ERRO: </body> não encontrado em {path}')
+              text = text.replace('</body>', tag + '\n</body>', 1)
+              path.write_text(text, encoding='utf-8')
+              print(f'INSERIDO: {path}')
+
+          central = Path('central-suporte-moradores-v1.js')
+          if central.exists():
+              text = central.read_text(encoding='utf-8')
+              text = text.replace("var REVISION='20260824-admin-safe-nav-v1';", "var REVISION='20260824-admin-safe-nav-v2';")
+              central.write_text(text, encoding='utf-8')
+
+      - name: Gravar alterações
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add teste-v1/painel-moradores-v2.html painel-suporte-moradores-v2.html painel-oficial-recados-campanhas.html painel-oficial-agendas-vagas.html painel-oficial-profissionais-servicos.html painel-oficial-tacs-areas.html painel-oficial-organizacoes-municipios.html index.html central-suporte-moradores-v1.js
+          git commit -m 'Restaurar botão Voltar à Central na navegação sem iframe'
+          git push
