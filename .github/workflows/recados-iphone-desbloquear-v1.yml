@@ -1,0 +1,54 @@
+name: Corrigir bloqueio do painel Recados no iPhone
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/recados-iphone-desbloquear-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Separar leitura rápida da conferência remota do OneSignal
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('painel-oficial-recados-campanhas.html')
+          text=p.read_text(encoding='utf-8')
+
+          nova = r'''function carregarSaudeNotificacoes(){if(!(token||territorioToken)||ativa)return;document.getElementById('saudeNotificacoes').classList.remove('oculto');status('saudeNotificacoesStatus','Carregando o último estado conhecido dos aparelhos…','aviso');post('admin_notificacoes_saude_rapida',sessao(),function(r){if(!r||r.ok!==true){status('saudeNotificacoesStatus',txt(r&&r.message||'Não foi possível carregar a Saúde das notificações.'),'erro');return}renderSaudeNotificacoes(r);status('saudeNotificacoesStatus','Dados carregados. Toque em Atualizar situação para conferir o estado atual no OneSignal.','ok')},'admin_notificacoes_saude_result')}
+function atualizarSaudeNotificacoesRemota(){if(!(token||territorioToken)||ativa)return;document.getElementById('saudeNotificacoes').classList.remove('oculto');status('saudeNotificacoesStatus','Conferindo o estado atual no OneSignal…','aviso');post('admin_notificacoes_saude_remota',sessao(),function(remoto){if(remoto&&remoto.ok===true){renderSaudeNotificacoes(remoto);return}status('saudeNotificacoesStatus','A conferência do OneSignal não terminou agora. Os últimos dados continuam visíveis.','aviso')},'admin_notificacoes_saude_result')}
+'''
+
+          pattern=r"function carregarSaudeNotificacoes\(\)\{.*?\}\n(?=function solicitarReparoNotificacoesArea)"
+          text,n=re.subn(pattern,nova,text,count=1,flags=re.S)
+          if n!=1:
+              raise SystemExit('Não encontrei exatamente a função carregarSaudeNotificacoes para substituir.')
+
+          old="document.getElementById('atualizarSaudeNotificacoes').addEventListener('click',carregarSaudeNotificacoes);"
+          new="document.getElementById('atualizarSaudeNotificacoes').addEventListener('click',atualizarSaudeNotificacoesRemota);"
+          if old not in text:
+              raise SystemExit('Não encontrei o listener do botão Atualizar situação.')
+          text=text.replace(old,new,1)
+
+          p.write_text(text,encoding='utf-8')
+          PY
+          git diff --check
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add painel-oficial-recados-campanhas.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Desbloquear Recados durante conferência do OneSignal'
+          git pull --rebase origin main
+          git push origin HEAD:main
