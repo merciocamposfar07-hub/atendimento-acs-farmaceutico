@@ -1,4 +1,4 @@
-name: Filtrar campanhas do mês vigente V13
+name: Validar separação do filtro mensal V14
 
 on:
   push:
@@ -9,81 +9,56 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  corrigir-validar-publicar:
+  validar-sem-interferir-no-painel:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Baixar repositório
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Aplicar somente filtro mensal
+      - name: Aplicar rotina em modo idempotente
         run: python3 scripts/filtrar_campanhas_mes_vigente_v13.py
 
-      - name: Validar sintaxe e regra
+      - name: Validar sintaxe, escopo e não interferência
         shell: bash
         run: |
           set -euo pipefail
           node --check recados-campanhas-whatsapp-mensal-v12.js
           grep -q 'function currentMonthKey()' recados-campanhas-whatsapp-mensal-v12.js
           grep -q "monthKey(card)===vigente" recados-campanhas-whatsapp-mensal-v12.js
-          grep -q "card.hidden=!mostrar" recados-campanhas-whatsapp-mensal-v12.js
-          grep -q 'recados-campanhas-whatsapp-mensal-v12.js?v=20260817-campanha-vigente-v13' painel-oficial-recados-campanhas.html
-          # Preserva as paletas já definidas para agosto.
+          ! grep -q "card.hidden=!mostrar" recados-campanhas-whatsapp-mensal-v12.js
+          grep -q 'campanhas-periodo-v2.js?v=20260825-campanhas-estavel-v14' painel-oficial-recados-campanhas.html
+          grep -q 'recados-campanhas-whatsapp-mensal-v12.js?v=20260825-campanhas-estavel-v14' painel-oficial-recados-campanhas.html
           grep -q "lilas:\['#ead9ff'" recados-campanhas-whatsapp-mensal-v12.js
           grep -q "dourado:\['#ffe7a3'" recados-campanhas-whatsapp-mensal-v12.js
-          # Não alterar outros módulos.
           allowed='^(recados-campanhas-whatsapp-mensal-v12.js|painel-oficial-recados-campanhas.html)$'
           bad=$(git diff --name-only | grep -Ev "$allowed" || true)
           if [ -n "$bad" ]; then echo "Arquivo fora do escopo: $bad"; exit 1; fi
 
-      - name: Simular agosto de 2026
+      - name: Simular administração por período e WhatsApp mensal independentes
         shell: bash
         run: |
           set -euo pipefail
           node - <<'NODE'
           function monthKey(v){const m=String(v).match(/^(\d{4})-(\d{2})-/);return m?m[1]+'-'+m[2]:''}
-          const vigente='2026-08';
           const cards=[
             {inicio:'2026-01-01',ativo:true,titulo:'Janeiro'},
             {inicio:'2026-08-01',ativo:true,titulo:'Agosto Lilás'},
             {inicio:'2026-08-01',ativo:true,titulo:'Agosto Dourado'},
             {inicio:'2026-09-01',ativo:true,titulo:'Setembro'}
           ];
-          const visiveis=cards.filter(c=>c.ativo&&monthKey(c.inicio)===vigente);
-          if(visiveis.length!==2) process.exit(2);
-          if(visiveis[0].titulo!=='Agosto Lilás'||visiveis[1].titulo!=='Agosto Dourado') process.exit(3);
-          console.log('AGOSTO_2026_DUAS_CAMPANHAS_UM_GRUPO_OK');
+          const admin=(periodo)=>cards.filter(c=>c.ativo&&monthKey(c.inicio)===periodo);
+          const whatsapp=cards.filter(c=>c.ativo&&monthKey(c.inicio)==='2026-08');
+          if(admin('2026-01').length!==1) process.exit(2);
+          if(admin('2026-08').length!==2) process.exit(3);
+          if(admin('2026-09').length!==1) process.exit(4);
+          if(whatsapp.length!==2) process.exit(5);
+          if(admin('2026-01')[0].titulo!=='Janeiro') process.exit(6);
+          console.log('FILTRO_ADMIN_E_WHATSAPP_INDEPENDENTES_OK');
           NODE
 
-      - name: Publicar
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git diff --quiet; then echo 'Nenhuma alteração pendente.'; exit 0; fi
-          git config user.name 'merciocamposfar07-hub'
-          git config user.email 'merciocamposfar07@icloud.com'
-          git add recados-campanhas-whatsapp-mensal-v12.js painel-oficial-recados-campanhas.html
-          git commit -m 'Exibe somente campanhas do mês vigente no painel'
-          git pull --rebase origin main
-          git push origin HEAD:main
-
-      - name: Validar GitHub Pages
-        shell: bash
-        run: |
-          set -euo pipefail
-          base='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico'
-          ok=0
-          for i in $(seq 1 30); do
-            page=$(curl -fsSL --max-time 20 "$base/painel-oficial-recados-campanhas.html?v=20260817-campanha-vigente-v13&_=$RANDOM" || true)
-            js=$(curl -fsSL --max-time 20 "$base/recados-campanhas-whatsapp-mensal-v12.js?v=20260817-campanha-vigente-v13&_=$RANDOM" || true)
-            if printf '%s' "$page" | grep -q '20260817-campanha-vigente-v13' \
-              && printf '%s' "$js" | grep -q 'currentMonthKey' \
-              && printf '%s' "$js" | grep -q 'card.hidden=!mostrar'; then ok=1; break; fi
-            sleep 5
-          done
-          test "$ok" = 1
+      - name: Garantir que a rotina não tenta reescrever produção
+        run: git diff --exit-code

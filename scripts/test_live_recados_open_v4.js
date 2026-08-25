@@ -1,4 +1,25 @@
 'use strict';
+
+// PORTAL_TACS_JSDOM_LOCAL_ASSETS_V1
+const {ResourceLoader: __PortalTacsResourceLoader} = require('jsdom');
+const __portalTacsFs = require('node:fs');
+const __portalTacsPath = require('node:path');
+class __PortalTacsLocalResourceLoader extends __PortalTacsResourceLoader {
+  fetch(url) {
+    let parsed;
+    try { parsed = new URL(url); } catch (error) { return null; }
+    const prefix = '/atendimento-acs-farmaceutico/';
+    if (!parsed.pathname.startsWith(prefix)) return null;
+    const relative = decodeURIComponent(parsed.pathname.slice(prefix.length)).replace(/^\/+/, '');
+    const root = __portalTacsPath.resolve(__dirname, '..');
+    const target = __portalTacsPath.resolve(root, relative);
+    if (target !== root && !target.startsWith(root + __portalTacsPath.sep)) return null;
+    if (!__portalTacsFs.existsSync(target) || !__portalTacsFs.statSync(target).isFile()) return null;
+    return Promise.resolve(__portalTacsFs.readFileSync(target));
+  }
+}
+function __portalTacsLocalResources(){ return new __PortalTacsLocalResourceLoader(); }
+
 const assert = require('assert');
 const {JSDOM, VirtualConsole} = require('jsdom');
 const REV='20260816-recados-emergency-v4';
@@ -8,7 +29,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const vc=new VirtualConsole();
   const errors=[];
   vc.on('jsdomError',e=>errors.push(String(e&&e.message||e)));
-  const dom=await JSDOM.fromURL(URL,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
+  const dom=await JSDOM.fromURL(URL,{runScripts:'dangerously',resources: __portalTacsLocalResources(),pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
     w.fetch=(input,opts)=>global.fetch(new URL(String(input),w.location.href).href,opts);
     w.alert=()=>{};
     w.matchMedia=w.matchMedia||(()=>({matches:false,addListener(){},removeListener(){},addEventListener(){},removeEventListener(){}}));

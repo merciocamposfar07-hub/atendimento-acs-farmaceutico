@@ -1,4 +1,4 @@
-name: Restaurar cards recados campanhas V12
+name: Restaurar cards recados campanhas V14 estável
 
 on:
   push:
@@ -11,9 +11,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: restaurar-cards-recados-campanhas-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   restaurar-validar-publicar:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
       - name: Baixar repositorio
         uses: actions/checkout@v4
@@ -24,9 +29,9 @@ jobs:
           node-version: '20'
 
       - name: Aplicar restauracao limitada ao painel de recados
-        run: python scripts/restaurar_cards_recados_campanhas_v12.py
+        run: python3 scripts/restaurar_cards_recados_campanhas_v12.py
 
-      - name: Validar sintaxe e escopo
+      - name: Validar sintaxe, cache e separação de responsabilidades
         shell: bash
         run: |
           set -euo pipefail
@@ -34,17 +39,19 @@ jobs:
           node --check recados-campanhas-whatsapp-mensal-v12.js
           grep -q 'Aguarde…' painel-oficial-recados-campanhas.html
           ! grep -q 'Executando testes internos da página' painel-oficial-recados-campanhas.html
-          grep -q 'recados-campanhas-whatsapp-card-v9.js?v=20260817-recados-cards-mensais-v12' painel-oficial-recados-campanhas.html
-          grep -q 'recados-campanhas-whatsapp-mensal-v12.js?v=20260817-recados-cards-mensais-v12' painel-oficial-recados-campanhas.html
+          grep -q 'campanhas-periodo-v2.js?v=20260825-campanhas-estavel-v14' painel-oficial-recados-campanhas.html
+          grep -q 'recados-campanhas-whatsapp-card-v9.js?v=20260825-campanhas-estavel-v14' painel-oficial-recados-campanhas.html
+          grep -q 'recados-campanhas-whatsapp-mensal-v12.js?v=20260825-campanhas-estavel-v14' painel-oficial-recados-campanhas.html
           grep -q 'Postar recado no Status do WhatsApp' recados-campanhas-whatsapp-card-v9.js
           grep -q 'Postar campanhas de ' recados-campanhas-whatsapp-mensal-v12.js
+          ! grep -q 'card.hidden=!mostrar' recados-campanhas-whatsapp-mensal-v12.js
           grep -q "lilas:\['#ead9ff'" recados-campanhas-whatsapp-mensal-v12.js
           grep -q "dourado:\['#ffe7a3'" recados-campanhas-whatsapp-mensal-v12.js
           allowed='^(painel-oficial-recados-campanhas.html|recados-campanhas-whatsapp-card-v9.js|central-administrativa-tacs.js|central-administrativa-tacs.html)$'
           bad=$(git diff --name-only | grep -Ev "$allowed" || true)
           if [ -n "$bad" ]; then echo "Arquivo fora do escopo: $bad"; exit 1; fi
 
-      - name: Publicar alteracoes
+      - name: Publicar alteracoes no mesmo branch
         shell: bash
         run: |
           set -euo pipefail
@@ -52,21 +59,24 @@ jobs:
           git config user.name 'merciocamposfar07-hub'
           git config user.email 'merciocamposfar07@icloud.com'
           git add painel-oficial-recados-campanhas.html recados-campanhas-whatsapp-card-v9.js central-administrativa-tacs.js central-administrativa-tacs.html
-          git commit -m 'Restaura cards de recados e agrupa campanhas por mes'
-          git push
+          git commit -m 'Estabiliza cards e filtro administrativo de campanhas'
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
 
       - name: Validar GitHub Pages publicado
+        if: github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
           base='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico'
           ok=0
           for i in $(seq 1 30); do
-            page=$(curl -fsSL --max-time 20 "$base/painel-oficial-recados-campanhas.html?v=20260817-recados-cards-mensais-v12&_=$RANDOM" || true)
-            monthly=$(curl -fsSL --max-time 20 "$base/recados-campanhas-whatsapp-mensal-v12.js?v=20260817-recados-cards-mensais-v12&_=$RANDOM" || true)
-            if printf '%s' "$page" | grep -q 'Aguarde…' \
-              && printf '%s' "$page" | grep -q 'recados-campanhas-whatsapp-mensal-v12.js' \
-              && printf '%s' "$monthly" | grep -q 'PortalTacsCampanhasMensaisWhatsAppV12'; then ok=1; break; fi
+            page=$(curl -fsSL --max-time 20 "$base/painel-oficial-recados-campanhas.html?v=20260825-campanhas-estavel-v14&_=$RANDOM" || true)
+            monthly=$(curl -fsSL --max-time 20 "$base/recados-campanhas-whatsapp-mensal-v12.js?v=20260825-campanhas-estavel-v14&_=$RANDOM" || true)
+            if printf '%s' "$page" | grep -q 'campanhas-periodo-v2.js?v=20260825-campanhas-estavel-v14' \
+              && printf '%s' "$page" | grep -q 'recados-campanhas-whatsapp-mensal-v12.js?v=20260825-campanhas-estavel-v14' \
+              && printf '%s' "$monthly" | grep -q 'PortalTacsCampanhasMensaisWhatsAppV12' \
+              && ! printf '%s' "$monthly" | grep -q 'card.hidden=!mostrar'; then ok=1; break; fi
             sleep 5
           done
           test "$ok" = 1

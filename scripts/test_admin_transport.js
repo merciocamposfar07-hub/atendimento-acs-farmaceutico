@@ -4,9 +4,28 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const {JSDOM, VirtualConsole} = require('jsdom');
+const {JSDOM, VirtualConsole, ResourceLoader} = require('jsdom');
 
 const ROOT = path.resolve(__dirname, '..');
+
+class LocalPortalResourceLoader extends ResourceLoader {
+  fetch(url) {
+    let parsed;
+    try { parsed = new URL(url); } catch (error) { return null; }
+    if (parsed.origin !== 'https://portal.test') return null;
+    const prefix = '/atendimento-acs-farmaceutico/';
+    if (!parsed.pathname.startsWith(prefix)) return null;
+    const relative = decodeURIComponent(parsed.pathname.slice(prefix.length)).replace(/^\/+/, '');
+    const target = path.resolve(ROOT, relative);
+    if (target !== ROOT && !target.startsWith(ROOT + path.sep)) return null;
+    if (!fs.existsSync(target) || !fs.statSync(target).isFile()) return null;
+    return Promise.resolve(fs.readFileSync(target));
+  }
+}
+
+function localResources() {
+  return new LocalPortalResourceLoader();
+}
 const CASES = [
   {
     file: 'teste-v1/painel-agendas-v1.html',
@@ -274,7 +293,7 @@ async function testDirectResponse(config) {
   const dom = new JSDOM(baseHtml(config), {
     url: `https://portal.test/${config.file}`,
     runScripts: 'dangerously',
-    resources: 'usable',
+    resources: localResources(),
     pretendToBeVisual: true,
     virtualConsole,
     beforeParse(window) {
