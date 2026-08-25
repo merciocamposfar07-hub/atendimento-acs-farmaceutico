@@ -1,0 +1,34 @@
+name: Simulacao real Portal TACS
+on:
+  push:
+    branches:
+      - audit-estabilizacao-20260825
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Servir projeto localmente
+        run: |
+          cd ..
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/portal-http.log 2>&1 &
+          echo $! >/tmp/portal-http.pid
+          sleep 2
+      - name: Simulação real dos fluxos críticos
+        run: node tools/teste-browser.mjs
+      - name: Log do servidor em falha
+        if: failure()
+        run: cat /tmp/portal-http.log || true
