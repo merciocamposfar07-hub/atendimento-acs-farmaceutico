@@ -28,13 +28,13 @@ async function smoke(path,label){
 await smoke('/atendimento-acs-farmaceutico/central-administrativa-tacs.html','Central administrativa');
 await smoke('/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html','Painel recados/campanhas');
 
-// Regressão funcional real do filtro Campanhas por ano/mês, executando o JS real no Chromium.
 {
   const page=await context.newPage();
   const pageErrors=[];
   page.on('pageerror',e=>pageErrors.push(String(e&&e.message||e)));
-  // Primeiro fixa uma origem HTTP real para localStorage/sessionStorage e scripts do projeto.
-  await page.goto(base+'/atendimento-acs-farmaceutico/index.html',{waitUntil:'domcontentloaded'});
+  // Usa uma URL inexistente apenas para fixar a origem HTTP. Nenhum script do portal
+  // público fica rodando em paralelo com a fixture de regressão.
+  await page.goto(base+'/atendimento-acs-farmaceutico/__fixture_campanhas__.html',{waitUntil:'domcontentloaded'}).catch(()=>{});
   await page.setContent(`<!doctype html><html><body>
     <section id="secaoCampanhas">
       <div class="acoes novo"></div>
@@ -48,8 +48,6 @@ await smoke('/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html
     <select id="areaEnvio"><option value="JAPARANDUBA" selected>JAPARANDUBA</option></select>
   </body></html>`);
 
-  // Simula o contrato real admin_publicacoes_dados. Assim o módulo percorre o mesmo
-  // caminho assíncrono que usa em produção antes de criar ano, meses e filtro.
   await page.evaluate(()=>{
     window.PortalTacsRecadosCampanhasV12={
       post:function(action,payload,callback){
@@ -67,8 +65,7 @@ await smoke('/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html
   await page.waitForSelector('#campPeriodBox',{timeout:10000});
   await page.waitForSelector('#campMonthTabs .camp-month-tab',{timeout:10000});
   await page.selectOption('#campYear','2026');
-  const august=page.getByRole('button',{name:'Agosto',exact:true});
-  await august.click();
+  await page.getByRole('button',{name:'Agosto',exact:true}).click();
   await page.waitForTimeout(250);
   const stateAug=await page.evaluate(()=>({
     aug1:document.querySelector('[data-id="aug1"]').hidden,
@@ -101,7 +98,6 @@ await smoke('/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html
   }));
   assert(stateSep.aug1===true&&stateSep.sep1===false,'Campanhas: troca para Setembro/2026 não funcionou');
   assert(/Setembro.*2026.*1 campanha/i.test(stateSep.summary),'Campanhas: resumo Setembro/2026 incorreto: '+stateSep.summary);
-
   assert(pageErrors.length===0,'Campanhas: erro JavaScript no Chromium: '+pageErrors.join(' | '));
   await page.close();
 }
