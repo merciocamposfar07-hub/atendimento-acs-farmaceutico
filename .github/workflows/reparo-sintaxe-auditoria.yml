@@ -19,6 +19,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           p=Path('scripts/repair_ui_recados_card_v2.js')
           s=p.read_text(encoding='utf-8')
           marker='const helpers = `  function escapeRegExp(value) {'
@@ -29,14 +30,16 @@ jobs:
           if end < 0:
               raise SystemExit('Limite do bloco helper não encontrado; reparo abortado.')
           block=s[start:end]
-          if '${}' not in block:
-              raise SystemExit('Interpolação inválida ${} não encontrada no bloco esperado; reparo abortado.')
-          # Em vez de tentar equilibrar barras antes de ${}, usamos uma interpolação válida
-          # cujo resultado literal é "${}" dentro do código gerado.
-          fixed=block.replace('${}', "${'${}'}", 1)
+          # Dentro do template externo, `${}` abre uma interpolação JS inválida.
+          # Substituímos apenas essa sequência, incluindo as barras anteriores,
+          # por \x24{} no código-fonte do template. Ao avaliar o template, \x24
+          # vira o caractere $, preservando exatamente o regex desejado no helper gerado.
+          fixed,n=re.subn(r'\\+\$\{\}', r'\\x24{}', block, count=1)
+          if n != 1:
+              raise SystemExit(f'Esperada 1 ocorrência problemática; encontradas {n}. Reparo abortado.')
           s2=s[:start]+fixed+s[end:]
           p.write_text(s2,encoding='utf-8')
-          print('Regex gerado preservado com interpolação externa sintaticamente válida.')
+          print('Sequência problemática substituída por escape hexadecimal seguro.')
           PY
           node --check scripts/repair_ui_recados_card_v2.js
       - name: Commit do reparo
