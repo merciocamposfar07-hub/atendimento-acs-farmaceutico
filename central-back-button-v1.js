@@ -4,25 +4,42 @@
 var path=String(location.pathname||'');
 
 /*
- * SAFARI / iPHONE — estabilização específica do painel Recados e campanhas.
- * As capturas reais mostraram cortes mesmo com o painel aberto como página completa,
- * portanto a causa restante está dentro deste documento. Removemos apenas gatilhos
- * de composição do WebKit: sticky, iframe técnico visível à composição, contain e
- * transform de estado. Nenhuma regra funcional de recados/campanhas/Push é alterada.
+ * SAFARI / iPHONE — modo de renderização leve do painel Recados e campanhas.
+ *
+ * As capturas reais mostram perda de pintura mesmo com o painel aberto como página
+ * completa. Para reduzir pressão de composição do WebKit, este modo remove apenas
+ * efeitos gráficos caros e camadas de composição do painel. Regras funcionais,
+ * dados, Push, OneSignal, botões e formulários permanecem ativos.
  */
 function installRecadosRenderSafe(){
   if(!/\/painel-oficial-recados-campanhas\.html$/i.test(path))return;
-  if(document.getElementById('portalTacsRecadosRenderSafeV1'))return;
+  if(document.getElementById('portalTacsRecadosRenderSafeV2'))return;
   var style=document.createElement('style');
-  style.id='portalTacsRecadosRenderSafeV1';
+  style.id='portalTacsRecadosRenderSafeV2';
   style.textContent=[
-    'html,body{height:auto!important;min-height:100%!important;overflow-x:hidden!important;}',
-    'main{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}',
+    'html{height:auto!important;min-height:100%!important;overflow-x:hidden!important;scroll-behavior:auto!important;}',
+    'body{height:auto!important;min-height:100%!important;overflow-x:hidden!important;overflow-y:visible!important;-webkit-overflow-scrolling:auto!important;background:#eaf2f6!important;}',
+    'main{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;contain:none!important;content-visibility:visible!important;}',
+    'header,footer,main,.card,.item,.numero,.areaEnvio,.manutencao,.saude-notificacoes,.saude-resumo,.saude-lista,.saude-aparelho,.saude-vazio,.saude-numero,.botao,.aba,.status,.validadeCampo{contain:none!important;content-visibility:visible!important;will-change:auto!important;transform:none!important;filter:none!important;-webkit-filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important;}',
+    'header{background:#073a55!important;}',
+    'footer{background:#073a55!important;}',
+    '.card{background:#fff!important;}',
+    'body.tema-petroleo .numero,body.tema-petroleo .areaEnvio,body.tema-petroleo .item{background:#073a55!important;background-image:none!important;box-shadow:none!important;}',
+    '.numero,.areaEnvio,.item,.manutencao,.saude-aparelho,.saude-vazio,.status{background-image:none!important;}',
+    '.botao,.aba.ativa{background:#073a55!important;background-image:none!important;box-shadow:none!important;}',
+    '.botao.vermelho,.manutencaoBotao{background:#a52d2d!important;}',
+    '.manutencao.ativa .manutencaoBotao{background:#148a46!important;}',
     '.barra{position:static!important;bottom:auto!important;z-index:auto!important;transform:none!important;will-change:auto!important;}',
     '.ponte{display:none!important;position:absolute!important;left:-9999px!important;top:-9999px!important;width:0!important;height:0!important;min-width:0!important;min-height:0!important;border:0!important;opacity:0!important;pointer-events:none!important;}',
-    '.validadeCampo{contain:none!important;}',
-    '.saude-resumo button.saude-numero,.saude-resumo button.saude-numero[aria-pressed="true"]{transform:none!important;will-change:auto!important;}',
-    '.card,.item,.saude-notificacoes,.saude-resumo,.saude-lista{will-change:auto!important;backface-visibility:visible!important;}'
+    '.validadeCampo{contain:none!important;overflow:hidden!important;}',
+    '.saude-resumo button.saude-numero,.saude-resumo button.saude-numero[aria-pressed="true"]{transform:none!important;will-change:auto!important;box-shadow:none!important;background-image:none!important;}',
+    '.saude-resumo button.saude-numero[data-saude-filtro="ATIVO"]{background:#087064!important;}',
+    '.saude-resumo button.saude-numero[data-saude-filtro="INATIVO"]{background:#962f35!important;}',
+    '.saude-resumo button.saude-numero[data-saude-filtro="REPARO"]{background:#aa7f00!important;}',
+    '.saude-resumo button.saude-numero[data-saude-filtro="SEM_CONFIRMACAO"]{background:#c45100!important;}',
+    '.card,.item,.saude-notificacoes,.saude-resumo,.saude-lista,.saude-aparelho{backface-visibility:visible!important;-webkit-backface-visibility:visible!important;perspective:none!important;-webkit-perspective:none!important;}',
+    '*,*::before,*::after{animation:none!important;transition:none!important;}',
+    '.oculto{display:none!important;}'
   ].join('\n');
   (document.head||document.documentElement).appendChild(style);
 }
