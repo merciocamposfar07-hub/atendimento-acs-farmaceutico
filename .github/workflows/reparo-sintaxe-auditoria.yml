@@ -15,19 +15,26 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: audit-estabilizacao-20260825
-      - name: Corrigir somente a sequência que quebra o parser
+      - name: Corrigir somente a interpolação inválida no regex gerado
         run: |
           python - <<'PY'
           from pathlib import Path
           p=Path('scripts/repair_ui_recados_card_v2.js')
           s=p.read_text(encoding='utf-8')
-          bad='^' + ('\\' * 4) + '${}'
-          good='^' + ('\\' * 5) + '${}'
-          if bad not in s:
-              raise SystemExit('Trecho de sintaxe esperado não encontrado; reparo abortado sem alterar outros pontos.')
-          s2=s.replace(bad,good,1)
+          marker='const helpers = `  function escapeRegExp(value) {'
+          start=s.find(marker)
+          if start < 0:
+              raise SystemExit('Bloco helper esperado não encontrado; reparo abortado.')
+          end=s.find('function corporateRequest(data)', start)
+          if end < 0:
+              raise SystemExit('Limite do bloco helper não encontrado; reparo abortado.')
+          block=s[start:end]
+          if '${}' not in block:
+              raise SystemExit('Interpolação inválida ${} não encontrada no bloco esperado; reparo abortado.')
+          fixed=block.replace('${}', r'\${}', 1)
+          s2=s[:start]+fixed+s[end:]
           p.write_text(s2,encoding='utf-8')
-          print('Ocorrência corrigida:', s.count(bad), '->', s2.count(bad))
+          print('Interpolação literal escapada somente no helper escapeRegExp.')
           PY
           node --check scripts/repair_ui_recados_card_v2.js
       - name: Commit do reparo
