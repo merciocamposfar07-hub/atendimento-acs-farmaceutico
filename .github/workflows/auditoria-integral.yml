@@ -1,0 +1,21 @@
+name: Auditoria integral Portal TACS
+on:
+  push:
+    branches:
+      - audit-estabilizacao-20260825
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  auditoria:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Auditoria estrutural, sintática e regressões
+        run: node tools/auditoria-integral.mjs
