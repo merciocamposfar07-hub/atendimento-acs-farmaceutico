@@ -48,18 +48,21 @@ function stabilizeFrame(frame){
 
   var hidden=frame.getAttribute('aria-hidden')==='true'||frame.style.display==='none';
   if(hidden){
-    if(frame.style.display==='none')return;
     /*
-     * HOTFIX_MORADORES_SAFARI_LAYER_V1
-     * Mantém o iframe carregado e dimensionado para preservar BFCache/estado,
-     * porém estaciona fisicamente a camada fora do viewport. No iOS Safari,
-     * vários iframes absolutos sobre o mesmo retângulo podem deixar tiles sem
-     * pintura e interromper a superfície de toque do iframe ativo.
+     * HOTFIX_IOS_IFRAME_COMPOSITOR_V2
+     * No Safari/WebKit do iPhone, visibility:hidden/opacity:0 e até mesmo
+     * estacionar o iframe fora do viewport podem manter uma camada gráfica
+     * composta viva. Essa camada pode reaparecer como um retângulo #dfeef3
+     * cobrindo trechos do painel ativo durante a rolagem.
+     *
+     * A solução robusta é retirar completamente o iframe INATIVO da composição
+     * com display:none. O documento continua no DOM e mantém src/estado para o
+     * preload; quando o módulo volta a ser ativo, ele é exibido novamente.
      */
-    frame.style.setProperty('display','block');
+    frame.style.setProperty('display','none','important');
     frame.style.setProperty('position','absolute');
     frame.style.setProperty('inset','auto');
-    frame.style.setProperty('left','-200vw');
+    frame.style.setProperty('left','0');
     frame.style.setProperty('top','0');
     frame.style.setProperty('right','auto');
     frame.style.setProperty('bottom','auto');
@@ -71,15 +74,12 @@ function stabilizeFrame(frame){
     frame.style.setProperty('border','0');
     frame.style.setProperty('visibility','hidden');
     frame.style.setProperty('opacity','0');
-    frame.style.setProperty('overflow','auto');
-    frame.style.setProperty('overscroll-behavior','contain');
-    frame.style.setProperty('touch-action','auto');
     frame.style.setProperty('pointer-events','none');
     return;
   }
 
-  /* Somente o painel ativo ocupa a superfície visível e tocável. */
-  frame.style.setProperty('display','block');
+  /* Somente o painel ativo existe na superfície gráfica visível e tocável. */
+  frame.style.setProperty('display','block','important');
   frame.style.setProperty('position','relative');
   frame.style.setProperty('inset','auto');
   frame.style.setProperty('left','0');
@@ -154,7 +154,7 @@ function handleBackTouch(event){
 }
 
 function install(){
-  document.documentElement.dataset.portalTacsScrollStabilityInstalled='1';
+  document.documentElement.dataset.portalTacsScrollStabilityInstalled='2';
   stabilizeAll();
   installObserver();
   document.addEventListener('pointerdown',scheduleAfterPanelOpen,true);
