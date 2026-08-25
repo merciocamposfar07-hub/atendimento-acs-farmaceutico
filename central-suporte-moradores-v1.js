@@ -10,7 +10,7 @@ var RETURN_KEY='portalTacsCentralReturnUrlV1';
 var RETURN_FLAG_KEY='portalTacsRetornoCentralV1';
 var PAINT_STYLE_ID='portalTacsCentralIosPaintGuardV3';
 var SAFE_NAV_FLAG='portalTacsSafeNavigationV1';
-var REVISION='20260824-admin-safe-nav-v4';
+var REVISION='20260825-admin-safe-nav-v5';
 
 function text(v){return String(v==null?'':v).trim()}
 function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
@@ -99,6 +99,19 @@ function moduleUrl(name){
   return '';
 }
 
+/*
+ * Ao voltar pelo histórico, o Safari restaura o DOM exatamente como estava.
+ * A revisão anterior colocava pointer-events:none no cartão tocado antes da navegação;
+ * esse estado podia voltar do BFCache e deixar cartões sem resposta tátil.
+ * Nunca mais deixamos estado de bloqueio inline nos módulos.
+ */
+function restoreModuleTouchState(){
+  document.querySelectorAll('.module[data-module]').forEach(function(button){
+    button.style.removeProperty('pointer-events');
+    button.removeAttribute('aria-busy');
+  });
+}
+
 function installSafeNavigation(){
   if(document.documentElement.dataset[SAFE_NAV_FLAG]==='1')return;
   document.documentElement.dataset[SAFE_NAV_FLAG]='1';
@@ -107,7 +120,6 @@ function installSafeNavigation(){
     var target=event.target;
     var button=target&&target.closest?target.closest('.module[data-module]'):null;
     if(!button||button.hidden||button.disabled)return;
-    if(!hasAnySession()&&button.dataset.module!=='portal')return;
 
     var url=moduleUrl(button.dataset.module||'');
     if(!url)return;
@@ -121,19 +133,31 @@ function installSafeNavigation(){
       sessionStorage.setItem(RETURN_FLAG_KEY,'1');
     }catch(e){}
 
-    button.setAttribute('aria-busy','true');
-    button.style.pointerEvents='none';
-    location.assign(url);
+    /* Não desabilitar nem retirar pointer-events: o BFCache do iPhone preserva isso ao voltar. */
+    button.removeAttribute('aria-busy');
+    button.style.removeProperty('pointer-events');
+
+    try{
+      location.assign(url);
+    }catch(e){
+      /* Se a navegação falhar por qualquer motivo, o cartão continua utilizável. */
+      button.removeAttribute('aria-busy');
+      button.style.removeProperty('pointer-events');
+    }
   },true);
 }
 
 function boot(){
   installReturnGuard();
   installPaintGuard();
+  restoreModuleTouchState();
   installSafeNavigation();
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
 else boot();
-window.addEventListener('pageshow',boot);
+window.addEventListener('pageshow',function(){
+  restoreModuleTouchState();
+  installPaintGuard();
+});
 }());
