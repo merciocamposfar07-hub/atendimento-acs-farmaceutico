@@ -1,4 +1,25 @@
 'use strict';
+
+// PORTAL_TACS_JSDOM_LOCAL_ASSETS_V1
+const {ResourceLoader: __PortalTacsResourceLoader} = require('jsdom');
+const __portalTacsFs = require('node:fs');
+const __portalTacsPath = require('node:path');
+class __PortalTacsLocalResourceLoader extends __PortalTacsResourceLoader {
+  fetch(url) {
+    let parsed;
+    try { parsed = new URL(url); } catch (error) { return null; }
+    const prefix = '/atendimento-acs-farmaceutico/';
+    if (!parsed.pathname.startsWith(prefix)) return null;
+    const relative = decodeURIComponent(parsed.pathname.slice(prefix.length)).replace(/^\/+/, '');
+    const root = __portalTacsPath.resolve(__dirname, '..');
+    const target = __portalTacsPath.resolve(root, relative);
+    if (target !== root && !target.startsWith(root + __portalTacsPath.sep)) return null;
+    if (!__portalTacsFs.existsSync(target) || !__portalTacsFs.statSync(target).isFile()) return null;
+    return Promise.resolve(__portalTacsFs.readFileSync(target));
+  }
+}
+function __portalTacsLocalResources(){ return new __PortalTacsLocalResourceLoader(); }
+
 const assert=require('assert');
 const {JSDOM,VirtualConsole}=require('jsdom');
 const REV='20260816-recados-standalone-v6';
@@ -11,7 +32,7 @@ async function openOnce(query,attempt){
   vc.on('jsdomError',e=>errors.push('jsdom:'+String(e&&e.message||e)));
   vc.on('error',e=>errors.push('console:'+String(e)));
   const url=BASE+'?'+query+'&v='+REV+'&_='+Date.now()+'-'+attempt;
-  const dom=await JSDOM.fromURL(url,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
+  const dom=await JSDOM.fromURL(url,{runScripts:'dangerously',resources: __portalTacsLocalResources(),pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
     w.alert=()=>{};w.confirm=()=>false;
     w.matchMedia=w.matchMedia||(()=>({matches:false,addListener(){},removeListener(){},addEventListener(){},removeEventListener(){}}));
     w.addEventListener('error',e=>errors.push('window:'+String(e.message||e.error||'erro')));

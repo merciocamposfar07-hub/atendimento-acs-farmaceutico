@@ -1,5 +1,26 @@
 'use strict';
 
+// PORTAL_TACS_JSDOM_LOCAL_ASSETS_V1
+const {ResourceLoader: __PortalTacsResourceLoader} = require('jsdom');
+const __portalTacsFs = require('node:fs');
+const __portalTacsPath = require('node:path');
+class __PortalTacsLocalResourceLoader extends __PortalTacsResourceLoader {
+  fetch(url) {
+    let parsed;
+    try { parsed = new URL(url); } catch (error) { return null; }
+    const prefix = '/atendimento-acs-farmaceutico/';
+    if (!parsed.pathname.startsWith(prefix)) return null;
+    const relative = decodeURIComponent(parsed.pathname.slice(prefix.length)).replace(/^\/+/, '');
+    const root = __portalTacsPath.resolve(__dirname, '..');
+    const target = __portalTacsPath.resolve(root, relative);
+    if (target !== root && !target.startsWith(root + __portalTacsPath.sep)) return null;
+    if (!__portalTacsFs.existsSync(target) || !__portalTacsFs.statSync(target).isFile()) return null;
+    return Promise.resolve(__portalTacsFs.readFileSync(target));
+  }
+}
+function __portalTacsLocalResources(){ return new __PortalTacsLocalResourceLoader(); }
+
+
 const assert = require('assert');
 const { JSDOM, VirtualConsole } = require('jsdom');
 
@@ -16,7 +37,7 @@ function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
   const dom = await JSDOM.fromURL(LIVE, {
     runScripts: 'dangerously',
-    resources: 'usable',
+    resources: __portalTacsLocalResources(),
     pretendToBeVisual: true,
     virtualConsole: vc,
     beforeParse(window) {
