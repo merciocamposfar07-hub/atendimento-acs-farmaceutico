@@ -46,7 +46,12 @@ jobs:
 
           sha=(os.environ.get('GITHUB_SHA','')[:12] or 'manual')
           now=datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z')
-          entries=[Path('index.html'),Path('abrir.html'),Path('central-administrativa-tacs.html')]
+          entries=[
+              Path('index.html'),
+              Path('abrir.html'),
+              Path('central-administrativa-tacs.html'),
+              Path('painel-oficial-recados-campanhas.html'),
+          ]
           allowed=('.js','.css','.webmanifest','.json','.svg','.png')
           asset=re.compile(r'(?P<attr>\b(?:src|href))=(?P<quote>["\'])(?P<url>[^"\']+)(?P=quote)',re.I)
 
@@ -78,7 +83,7 @@ jobs:
           PY
           git config user.name 'Portal TACS'
           git config user.email 'actions@users.noreply.github.com'
-          git add index.html abrir.html central-administrativa-tacs.html portal-version.json
+          git add index.html abrir.html central-administrativa-tacs.html painel-oficial-recados-campanhas.html portal-version.json
           git diff --cached --quiet && exit 0
           git commit -m 'Atualiza versão integral do Portal TACS'
           for tentativa in 1 2 3; do
