@@ -27,11 +27,21 @@ assert(frontend.includes("appendHidden(form,'mes'"), 'Campanhas: mês não é en
 assert(frontend.includes("appendHidden(form,'validade'"), 'Campanhas: validade não é enviada');
 assert(frontend.includes('ORGANIZACAO_NOME'), 'Campanhas: organização não aparece no contexto');
 assert(frontend.includes('min-inline-size:0'), 'Campanhas: proteção contra extravasamento da validade no Safari ausente');
+assert(frontend.includes('card.hidden=!show'), 'Campanhas: filtro administrativo por período deixou de controlar os cartões');
+
+const monthly = read('recados-campanhas-whatsapp-mensal-v12.js');
+assert(monthly.includes("monthKey(card)===vigente"), 'WhatsApp mensal: seleção do mês vigente ausente');
+assert(!monthly.includes('card.hidden=!mostrar'), 'Regressão crítica: módulo do WhatsApp voltou a esconder cartões do painel administrativo');
+
+const legacyFixer = read('scripts/filtrar_campanhas_mes_vigente_v13.py');
+assert(!legacyFixer.includes("repl=\"function render()"), 'Regressão crítica: reparador legado ainda substitui integralmente o render mensal');
+assert(legacyFixer.includes("s.replace('card.hidden=!mostrar;','')"), 'Guardrail V14: reparador legado não remove a interferência administrativa');
 
 const official = read('painel-oficial-recados-campanhas.html');
 assert(official.includes('admin_publicacoes_dados'), 'Painel oficial: versão standalone territorial ausente');
 assert(!official.includes('document.write'), 'Painel oficial: carregador legado frágil foi reintroduzido');
-assert(official.includes('campanhas-periodo-v2.js'), 'Painel oficial: extensão mensal V2 não está carregada');
+assert(official.includes('campanhas-periodo-v2.js?v=20260825-campanhas-estavel-v14'), 'Painel oficial: extensão mensal V2 está com revisão de cache obsoleta');
+assert(official.includes('recados-campanhas-whatsapp-mensal-v12.js?v=20260825-campanhas-estavel-v14'), 'Painel oficial: WhatsApp mensal está com revisão de cache obsoleta');
 assert(official.includes('Campanhas no mês') || official.includes('campanhas-periodo-v2.js'), 'Painel oficial: organização mensal não está disponível');
 assert(official.includes('.preferenciaVisual,#alternarContraste{display:none!important'), 'Painel oficial: controle de contraste voltou a ficar visível');
 
@@ -54,4 +64,4 @@ assert(municipal.includes('Vínculo salvo:'), 'Municípios: mensagem nominal de 
 assert(/\.signal\{[^}]*background:var\(--p\)/.test(municipal), 'Municípios: balão de status não usa azul-petróleo');
 assert(!municipal.includes('<button id="portalTacsContrastToggleV1"'), 'Municípios: botão de contraste foi reintroduzido');
 
-console.log('Campanhas/portal V9: meses, validade e painel standalone preservados.');
+console.log('Campanhas V14: filtro administrativo, WhatsApp mensal e cache separados e protegidos.');
