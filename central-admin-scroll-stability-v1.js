@@ -148,7 +148,8 @@ function installObserver(){
       if(m.type==='childList')needs=true;
       if(m.type==='attributes'&&(m.target&&m.target.tagName==='IFRAME'||m.target===pool()||m.target===v))needs=true;
     });
-    if(needs)setTimeout(stabilizeAll,0);
+    /* MutationObserver roda antes da próxima pintura; não introduzir setTimeout aqui. */
+    if(needs)stabilizeAll();
   });
   observer.observe(v,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-hidden']});
 }
@@ -180,7 +181,10 @@ function handleBackTouch(event){
   if(closed===false){
     back.disabled=true;
     setTimeout(function(){back.disabled=false},450);
+    return;
   }
+  /* Fecha e retira a camada da superfície visível no mesmo gesto. */
+  stabilizeAll();
 }
 
 function install(){
