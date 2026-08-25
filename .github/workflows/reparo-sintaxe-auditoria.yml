@@ -31,10 +31,12 @@ jobs:
           block=s[start:end]
           if '${}' not in block:
               raise SystemExit('Interpolação inválida ${} não encontrada no bloco esperado; reparo abortado.')
-          fixed=block.replace('${}', r'\${}', 1)
+          # Em vez de tentar equilibrar barras antes de ${}, usamos uma interpolação válida
+          # cujo resultado literal é "${}" dentro do código gerado.
+          fixed=block.replace('${}', "${'${}'}", 1)
           s2=s[:start]+fixed+s[end:]
           p.write_text(s2,encoding='utf-8')
-          print('Interpolação literal escapada somente no helper escapeRegExp.')
+          print('Regex gerado preservado com interpolação externa sintaticamente válida.')
           PY
           node --check scripts/repair_ui_recados_card_v2.js
       - name: Commit do reparo
