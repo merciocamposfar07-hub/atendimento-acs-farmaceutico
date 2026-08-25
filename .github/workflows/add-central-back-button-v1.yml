@@ -1,4 +1,4 @@
-name: Adicionar voltar a Central V2
+name: Adicionar voltar a Central V3
 
 on:
   push:
@@ -18,8 +18,9 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
 
-          tag = '<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260824-v2"></script>'
+          tag = '<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260824-v3"></script>'
           targets = [
               Path('teste-v1/painel-moradores-v2.html'),
               Path('painel-suporte-moradores-v2.html'),
@@ -37,7 +38,6 @@ jobs:
                   continue
               text = path.read_text(encoding='utf-8')
               if 'central-back-button-v1.js' in text:
-                  import re
                   novo = re.sub(r'<script src="/atendimento-acs-farmaceutico/central-back-button-v1\.js\?v=[^"]+"></script>', tag, text)
                   if novo != text:
                       path.write_text(novo, encoding='utf-8')
@@ -51,12 +51,6 @@ jobs:
               path.write_text(text, encoding='utf-8')
               print(f'INSERIDO: {path}')
 
-          central = Path('central-suporte-moradores-v1.js')
-          if central.exists():
-              text = central.read_text(encoding='utf-8')
-              text = text.replace("var REVISION='20260824-admin-safe-nav-v2';", "var REVISION='20260824-admin-safe-nav-v3';")
-              central.write_text(text, encoding='utf-8')
-
       - name: Gravar alterações
         shell: bash
         run: |
@@ -66,6 +60,6 @@ jobs:
           fi
           git config user.name 'Portal TACS'
           git config user.email 'actions@users.noreply.github.com'
-          git add teste-v1/painel-moradores-v2.html painel-suporte-moradores-v2.html painel-oficial-recados-campanhas.html painel-oficial-agendas-vagas.html painel-oficial-profissionais-servicos.html painel-oficial-tacs-areas.html painel-oficial-organizacoes-municipios.html index.html central-suporte-moradores-v1.js
-          git commit -m 'Forçar exibição do botão Voltar à Central'
+          git add teste-v1/painel-moradores-v2.html painel-suporte-moradores-v2.html painel-oficial-recados-campanhas.html painel-oficial-agendas-vagas.html painel-oficial-profissionais-servicos.html painel-oficial-tacs-areas.html painel-oficial-organizacoes-municipios.html index.html
+          git commit -m 'Atualizar retorno para Central autenticada'
           git push
