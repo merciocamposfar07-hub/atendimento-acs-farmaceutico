@@ -1,5 +1,33 @@
 (function(){
 'use strict';
+
+var path=String(location.pathname||'');
+
+/*
+ * SAFARI / iPHONE — estabilização específica do painel Recados e campanhas.
+ * As capturas reais mostraram cortes mesmo com o painel aberto como página completa,
+ * portanto a causa restante está dentro deste documento. Removemos apenas gatilhos
+ * de composição do WebKit: sticky, iframe técnico visível à composição, contain e
+ * transform de estado. Nenhuma regra funcional de recados/campanhas/Push é alterada.
+ */
+function installRecadosRenderSafe(){
+  if(!/\/painel-oficial-recados-campanhas\.html$/i.test(path))return;
+  if(document.getElementById('portalTacsRecadosRenderSafeV1'))return;
+  var style=document.createElement('style');
+  style.id='portalTacsRecadosRenderSafeV1';
+  style.textContent=[
+    'html,body{height:auto!important;min-height:100%!important;overflow-x:hidden!important;}',
+    'main{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}',
+    '.barra{position:static!important;bottom:auto!important;z-index:auto!important;transform:none!important;will-change:auto!important;}',
+    '.ponte{display:none!important;position:absolute!important;left:-9999px!important;top:-9999px!important;width:0!important;height:0!important;min-width:0!important;min-height:0!important;border:0!important;opacity:0!important;pointer-events:none!important;}',
+    '.validadeCampo{contain:none!important;}',
+    '.saude-resumo button.saude-numero,.saude-resumo button.saude-numero[aria-pressed="true"]{transform:none!important;will-change:auto!important;}',
+    '.card,.item,.saude-notificacoes,.saude-resumo,.saude-lista{will-change:auto!important;backface-visibility:visible!important;}'
+  ].join('\n');
+  (document.head||document.documentElement).appendChild(style);
+}
+installRecadosRenderSafe();
+
 /*
  * Alguns painéis oficiais carregam outro HTML com document.open()/document.write().
  * Nesses casos o objeto window sobrevive, mas o DOM inteiro é substituído.
@@ -9,7 +37,6 @@
 if(window.PortalTacsCentralBackButtonV1&&document.getElementById('portalTacsBackCentralV1'))return;
 window.PortalTacsCentralBackButtonV1=true;
 
-var path=String(location.pathname||'');
 var isAdminPanel=(
   /\/teste-v1\/painel-moradores-v2\.html$/i.test(path)||
   /\/painel-suporte-moradores-v2\.html$/i.test(path)||
