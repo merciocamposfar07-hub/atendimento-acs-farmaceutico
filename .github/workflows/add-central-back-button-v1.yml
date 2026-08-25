@@ -1,4 +1,4 @@
-name: Adicionar voltar a Central V5
+name: Adicionar voltar a Central V6
 
 on:
   push:
@@ -20,9 +20,8 @@ jobs:
           from pathlib import Path
           import re
 
-          tag = '<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260825-v5"></script>'
+          tag = '<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260825-v6"></script>'
           targets = [
-              # Painéis abertos diretamente pela Central
               Path('teste-v1/painel-moradores-v2.html'),
               Path('painel-suporte-moradores-v2.html'),
               Path('painel-oficial-recados-campanhas.html'),
@@ -30,10 +29,8 @@ jobs:
               Path('painel-oficial-profissionais-servicos.html'),
               Path('painel-oficial-tacs-areas.html'),
               Path('painel-oficial-organizacoes-municipios.html'),
-              # Documentos reais usados pelos wrappers com document.write().
               Path('teste-v1/painel-profissionais-servicos-v1.html'),
               Path('teste-v1/painel-tacs-areas-v1.html'),
-              # Portal público: o script só exibe o retorno quando veio da Central.
               Path('index.html'),
           ]
 
@@ -66,5 +63,5 @@ jobs:
           git config user.name 'Portal TACS'
           git config user.email 'actions@users.noreply.github.com'
           git add teste-v1/painel-moradores-v2.html painel-suporte-moradores-v2.html painel-oficial-recados-campanhas.html painel-oficial-agendas-vagas.html painel-oficial-profissionais-servicos.html painel-oficial-tacs-areas.html painel-oficial-organizacoes-municipios.html teste-v1/painel-profissionais-servicos-v1.html teste-v1/painel-tacs-areas-v1.html index.html
-          git commit -m 'Aplicar Voltar à Central V5 em todos os painéis'
+          git commit -m 'Aplicar estabilização V6 e retorno à Central'
           git push
