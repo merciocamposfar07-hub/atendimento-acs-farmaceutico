@@ -1,0 +1,43 @@
+name: Reparo determinístico da auditoria
+on:
+  push:
+    branches:
+      - audit-estabilizacao-20260825
+permissions:
+  contents: write
+jobs:
+  reparar:
+    if: github.event.head_commit.message != 'Aplicar reparo determinístico da sintaxe detectada'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: audit-estabilizacao-20260825
+      - name: Corrigir somente a sequência que quebra o parser
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/repair_ui_recados_card_v2.js')
+          s=p.read_text(encoding='utf-8')
+          bad='^' + ('\\' * 4) + '${}'
+          good='^' + ('\\' * 5) + '${}'
+          if bad not in s:
+              raise SystemExit('Trecho de sintaxe esperado não encontrado; reparo abortado sem alterar outros pontos.')
+          s2=s.replace(bad,good,1)
+          p.write_text(s2,encoding='utf-8')
+          print('Ocorrência corrigida:', s.count(bad), '->', s2.count(bad))
+          PY
+          node --check scripts/repair_ui_recados_card_v2.js
+      - name: Commit do reparo
+        run: |
+          git config user.name "Portal TACS Audit"
+          git config user.email "actions@users.noreply.github.com"
+          git add scripts/repair_ui_recados_card_v2.js
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração necessária"
+            exit 0
+          fi
+          git commit -m "Aplicar reparo determinístico da sintaxe detectada"
+          git push origin HEAD:audit-estabilizacao-20260825
