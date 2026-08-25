@@ -15,10 +15,23 @@ Até as duas execuções físicas serem confirmadas, o status deste arquivo perm
 
 ## Status
 
-- Pré-homologação automatizada: **PENDENTE DO GATE DESTA BRANCH**
+- Pré-homologação automatizada: **APROVADA — run #177, 87/87 testes**
+- Chromium automatizado: **APROVADO**
+- Firefox automatizado: **APROVADO**
+- WebKit automatizado: **APROVADO**
 - iPhone físico: **PENDENTE**
 - Android físico: **PENDENTE**
 - Status global: **PENDENTE_APARELHOS_FISICOS**
+
+Evidência automatizada da run #177:
+
+- 87/87 testes aprovados;
+- painéis longos: 5/5 com rolagem, sem sobreposição e com toque funcional em Chromium, Firefox e WebKit;
+- reabertura integral dos painéis em WebKit: 1–2 ms na rodada, `loadCount=0`, mesma instância e estado preservado;
+- `pageshow`/BFCache: mesma instância, estado preservado e viewport persistente;
+- service worker legado de raiz: 0 registros na abertura comum;
+- overflow máximo na matriz responsiva: 0 px;
+- artifact da rodada: `9543961750`.
 
 ## Critérios obrigatórios no iPhone físico
 
