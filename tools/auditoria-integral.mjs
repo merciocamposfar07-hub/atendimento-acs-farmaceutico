@@ -31,14 +31,12 @@ function localPath(fromFile,ref){
 
 const files=walk(root);
 
-// 1) Sintaxe JavaScript/MJS: impede publicação com erro de parse.
-for(const f of files.filter(f=>/\.(?:js|mjs)$/i.test(f))){
+for(const f of files.filter(f=>/\.(?:js|mjs|gs)$/i.test(f))){
   const r=spawnSync(process.execPath,['--check',f],{encoding:'utf8'});
   checked.push('syntax:'+rel(f));
   if(r.status!==0)errors.push(`ERRO DE SINTAXE ${rel(f)}\n${r.stderr||r.stdout}`);
 }
 
-// 2) Referências locais em HTML: scripts, CSS, manifestos, imagens e iframes não podem apontar para arquivos inexistentes.
 for(const f of files.filter(f=>/\.html?$/i.test(f))){
   const text=fs.readFileSync(f,'utf8');
   const refRe=/\b(?:src|href)\s*=\s*["']([^"']+)["']/gi;
@@ -48,13 +46,11 @@ for(const f of files.filter(f=>/\.html?$/i.test(f))){
     if(!p)continue;
     if(!existsRepo(p))errors.push(`REFERÊNCIA LOCAL AUSENTE em ${rel(f)} -> ${m[1]} (${p})`);
   }
-  // IDs duplicados quebram getElementById e listeners em iPhone/Safari.
-  const ids=[...text.matchAll(/\bid\s*=\s*["']([^"']+)["']/gi)].map(x=>x[1]);
+  const ids=[...text.matchAll(/\sid\s*=\s*["']([^"']+)["']/gi)].map(x=>x[1]);
   const dup=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];
   if(dup.length)errors.push(`IDs DUPLICADOS em ${rel(f)}: ${dup.join(', ')}`);
 }
 
-// 3) Manifestos: ícones/start_url locais devem existir quando forem arquivos do repositório.
 for(const f of files.filter(f=>/\.(?:webmanifest|json)$/i.test(f))){
   let data;try{data=JSON.parse(fs.readFileSync(f,'utf8'))}catch(e){
     if(!rel(f).includes('/')) warnings.push(`JSON inválido ou não-JSON: ${rel(f)}: ${e.message}`);
@@ -65,7 +61,6 @@ for(const f of files.filter(f=>/\.(?:webmanifest|json)$/i.test(f))){
   for(const r of refs){const p=localPath(f,r);if(p&&!existsRepo(p))errors.push(`ÍCONE DE MANIFESTO AUSENTE em ${rel(f)} -> ${r} (${p})`)}
 }
 
-// 4) Regressões funcionais específicas já observadas no painel de campanhas.
 const mensal='recados-campanhas-whatsapp-mensal-v12.js';
 if(existsRepo(mensal)){
   const t=fs.readFileSync(path.join(root,mensal),'utf8');
@@ -86,14 +81,13 @@ if(existsRepo(painel)){
   }
 }
 
-// 5) Procura marcadores típicos de conflito/merge que invalidam páginas.
 for(const f of files.filter(f=>/\.(?:html?|js|mjs|css|gs|json|webmanifest|yml|yaml)$/i.test(f))){
   const t=fs.readFileSync(f,'utf8');
   if(/^<{7}|^={7}|^>{7}/m.test(t))errors.push(`MARCADOR DE MERGE NÃO RESOLVIDO em ${rel(f)}`);
 }
 
 console.log(`Arquivos verificados: ${files.length}`);
-console.log(`Checagens de sintaxe JS/MJS: ${checked.length}`);
+console.log(`Checagens de sintaxe JS/MJS/GS: ${checked.length}`);
 if(warnings.length){console.log('\nAVISOS');for(const w of warnings)console.log('- '+w)}
 if(errors.length){
   console.error(`\nFALHAS (${errors.length})`);
