@@ -9,7 +9,7 @@ var AREA_KEY='portalTacsCentralAreaV1';
 var RETURN_KEY='portalTacsCentralReturnUrlV1';
 var PAINT_STYLE_ID='portalTacsCentralIosPaintGuardV3';
 var SAFE_NAV_FLAG='portalTacsSafeNavigationV1';
-var REVISION='20260824-admin-safe-nav-v2';
+var REVISION='20260824-admin-safe-nav-v3';
 
 function text(v){return String(v==null?'':v).trim()}
 function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
