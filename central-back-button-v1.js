@@ -3,12 +3,15 @@
 if(window.PortalTacsCentralBackButtonV1)return;
 window.PortalTacsCentralBackButtonV1=true;
 
+var path=String(location.pathname||'');
+var isAdminPanel=(/\/teste-v1\/painel-moradores-v2\.html$/i.test(path)||/\/painel-suporte-moradores-v2\.html$/i.test(path)||/\/painel-oficial-(?:recados-campanhas|agendas-vagas|profissionais-servicos|tacs-areas|organizacoes-municipios)\.html$/i.test(path));
 var params;
 try{params=new URLSearchParams(location.search||'')}catch(e){params=null}
 var fromCentral=params&&String(params.get('from')||'').toLowerCase()==='central';
 var returnFlag=false;
 try{returnFlag=sessionStorage.getItem('portalTacsRetornoCentralV1')==='1'}catch(e){}
-if(!fromCentral&&!returnFlag)return;
+/* Nos painéis administrativos o retorno deve existir sempre. No Portal público, somente quando aberto pela Central. */
+if(!isAdminPanel&&!fromCentral&&!returnFlag)return;
 
 function centralUrl(){
   var saved='';
@@ -30,11 +33,11 @@ function install(){
   bar.id='portalTacsBackCentralV1';
   bar.setAttribute('role','navigation');
   bar.setAttribute('aria-label','Retorno à Central Administrativa');
-  bar.style.cssText='position:relative;z-index:10;background:#073a55;border-bottom:3px solid #69c7e7;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;box-sizing:border-box;width:100%;';
+  bar.style.cssText='position:relative;z-index:2147483000;background:#073a55;border-bottom:3px solid #69c7e7;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;box-sizing:border-box;width:100%;display:block;';
   var btn=document.createElement('button');
   btn.type='button';
   btn.textContent='← Voltar à Central';
-  btn.style.cssText='min-height:48px;border:2px solid #69c7e7;border-radius:16px;padding:9px 16px;background:#fff;color:#073a55;font:inherit;font-weight:900;line-height:1.15;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
+  btn.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-height:48px;border:2px solid #69c7e7;border-radius:16px;padding:9px 16px;background:#fff;color:#073a55;font:inherit;font-weight:900;line-height:1.15;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
   btn.addEventListener('click',function(){
     btn.disabled=true;
     try{sessionStorage.removeItem('portalTacsRetornoCentralV1')}catch(e){}
