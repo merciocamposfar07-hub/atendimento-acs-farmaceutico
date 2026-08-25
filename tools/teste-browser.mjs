@@ -14,7 +14,6 @@ async function smoke(path,label){
   await page.route('**/*',async route=>{
     const url=route.request().url();
     if(url.startsWith(base)) return route.continue();
-    // Isola a simulação de serviços externos sem deixar a página quebrar por rede.
     return route.fulfill({status:200,contentType:'application/json',body:'{}'});
   });
   const r=await page.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});
@@ -34,6 +33,8 @@ await smoke('/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html
   const page=await context.newPage();
   const pageErrors=[];
   page.on('pageerror',e=>pageErrors.push(String(e&&e.message||e)));
+  // Primeiro fixa uma origem HTTP real para localStorage/sessionStorage e scripts do projeto.
+  await page.goto(base+'/atendimento-acs-farmaceutico/index.html',{waitUntil:'domcontentloaded'});
   await page.setContent(`<!doctype html><html><body>
     <section id="secaoCampanhas">
       <div class="acoes novo"></div>
@@ -46,8 +47,25 @@ await smoke('/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html
     </section>
     <select id="areaEnvio"><option value="JAPARANDUBA" selected>JAPARANDUBA</option></select>
   </body></html>`);
+
+  // Simula o contrato real admin_publicacoes_dados. Assim o módulo percorre o mesmo
+  // caminho assíncrono que usa em produção antes de criar ano, meses e filtro.
+  await page.evaluate(()=>{
+    window.PortalTacsRecadosCampanhasV12={
+      post:function(action,payload,callback){
+        if(action!=='admin_publicacoes_dados') throw new Error('Ação inesperada no teste: '+action);
+        setTimeout(function(){callback({ok:true,contextoMunicipal:{areaNome:'Sítio Japaranduba'},campanhas:[
+          {ID:'aug1',ANO:'2026',MES:'08'},
+          {ID:'aug2',ANO:'2026',MES:'08'},
+          {ID:'sep1',ANO:'2026',MES:'09'},
+          {ID:'old1',ANO:'2025',MES:'08'}
+        ]})},10);
+      }
+    };
+  });
   await page.addScriptTag({url:base+'/atendimento-acs-farmaceutico/campanhas-periodo-v2.js'});
   await page.waitForSelector('#campPeriodBox',{timeout:10000});
+  await page.waitForSelector('#campMonthTabs .camp-month-tab',{timeout:10000});
   await page.selectOption('#campYear','2026');
   const august=page.getByRole('button',{name:'Agosto',exact:true});
   await august.click();
@@ -63,7 +81,6 @@ await smoke('/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html
   assert(stateAug.sep1===true&&stateAug.old1===true,'Campanhas: filtro Agosto/2026 misturou outro mês/ano');
   assert(/Agosto.*2026.*2 campanhas/i.test(stateAug.summary),'Campanhas: resumo Agosto/2026 não informa 2 campanhas: '+stateAug.summary);
 
-  // Carrega também o módulo mensal real. Ele NÃO pode alterar a visibilidade administrativa.
   await page.addScriptTag({url:base+'/atendimento-acs-farmaceutico/recados-campanhas-whatsapp-mensal-v12.js'});
   await page.waitForTimeout(250);
   const afterMonthly=await page.evaluate(()=>({
