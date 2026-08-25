@@ -50,6 +50,17 @@ test('Central: painéis longos rolam, não se sobrepõem e continuam tocáveis',
       catch (error) { return false; }
     }, name);
 
+    // O clique e o controlador de estabilidade podem cair em frames distintos da
+    // mesma pintura. Medimos somente depois que o iframe realmente atingiu o
+    // estado ativo exigido pelo runtime; a exigência continua sendo relative,
+    // visível e tocável, sem sleep nem tolerância a estado incorreto.
+    await expect.poll(() => page.evaluate(moduleName => {
+      const frame = document.querySelector(`#portalTacsAdminPreloadPoolV1 iframe[data-module="${moduleName}"]`);
+      if (!frame) return 'ausente';
+      const style = getComputedStyle(frame);
+      return `${style.position}|${style.pointerEvents}|${style.visibility}`;
+    }, name)).toBe('relative|auto|visible');
+
     await expect.poll(() => page.evaluate(moduleName => {
       const pool = document.getElementById('portalTacsAdminPreloadPoolV1');
       const active = pool && pool.querySelector(`iframe[data-module="${moduleName}"]`);
