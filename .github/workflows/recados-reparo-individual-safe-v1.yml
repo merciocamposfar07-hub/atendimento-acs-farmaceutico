@@ -28,23 +28,7 @@ jobs:
 
           p=Path('admin-warmup.js')
           s=p.read_text(encoding='utf-8')
-          old=r'''  function solicitar(botao){
-            if(!botao||botao.disabled)return;
-            var ref=texto(botao.dataset.ref).toLowerCase(),nome=texto(botao.dataset.nome)||'este aparelho';
-            if(!/^[0-9a-f]{8}$/.test(ref)){status('Referência técnica inválida. Atualize a situação e tente novamente.','erro');return}
-            var api=window.PortalTacsRecadosCampanhasV12;
-            if(!api||typeof api.post!=='function'){status('O painel ainda está preparando a conexão. Tente novamente em alguns segundos.','aviso');return}
-            if(!window.confirm('Solicitar reparo somente para '+nome+'? Os demais aparelhos não serão alterados.'))return;
-            botao.disabled=true;botao.textContent='Solicitando reparo…';status('Solicitando reparo somente para '+nome+'…','aviso');
-            var payload=sessao();payload.subscriptionRef=ref;
-            api.post('admin_notificacoes_solicitar_reparo_aparelho',payload,function(r){
-              if(!r||r.ok!==true){botao.disabled=false;botao.textContent='🔧 Solicitar reparo deste aparelho';status(texto(r&&r.message||'Não foi possível solicitar o reparo deste aparelho.'),'erro');return}
-              status(texto(r.message||'Reparo solicitado somente para este aparelho.'),'ok');
-              var atualizar=document.getElementById('atualizarSaudeNotificacoes');if(atualizar)setTimeout(function(){atualizar.click()},250);
-            },'admin_notificacoes_saude_result');
-          }
-          '''
-          new=r'''  function reparoApi(){
+          novo=r'''  function reparoApi(){
             var warm=window.PortalTacsAdminWarmup;
             return texto(warm&&warm.api)||'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
           }
@@ -79,13 +63,17 @@ jobs:
               botao.disabled=true;botao.classList.remove('verde');botao.classList.add('cinza');botao.textContent='✓ Reparo solicitado para este aparelho';
               status(texto(r.message||'Reparo solicitado somente para este aparelho.')+' A lista não será recarregada automaticamente. Toque em Atualizar situação somente quando quiser conferir o estado no OneSignal.','ok');
             });
-          }
-          '''
-          if old not in s:
-              if 'function postReparoIsolado(payload,cb)' not in s:
-                  raise SystemExit('Trecho exato do reparo individual não encontrado; abortando sem alterar.')
-          else:
-              s=s.replace(old,new,1)
+          }'''
+
+          if 'function postReparoIsolado(payload,cb)' not in s:
+              inicio=s.find('  function solicitar(botao){')
+              fim=s.find('\n\n  function instalarEstiloEntrega()',inicio)
+              if inicio < 0 or fim < 0:
+                  raise SystemExit('Função de reparo individual não localizada; abortando sem alterar.')
+              trecho=s[inicio:fim]
+              if "api.post('admin_notificacoes_solicitar_reparo_aparelho'" not in trecho:
+                  raise SystemExit('A função localizada não é a implementação esperada; abortando sem alterar.')
+              s=s[:inicio]+novo+s[fim:]
               p.write_text(s,encoding='utf-8')
 
           q=Path('recados-campanhas-whatsapp-mensal-v12.js')
@@ -133,4 +121,4 @@ jobs:
           git pull --rebase origin main
           git push origin HEAD:main
 
-# disparo-v1: 2026-08-26
+# disparo-v2: 2026-08-26
