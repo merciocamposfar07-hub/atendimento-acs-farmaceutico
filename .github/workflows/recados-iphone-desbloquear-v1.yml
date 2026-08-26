@@ -45,3 +45,5 @@ jobs:
           git commit -m 'Estabilizar Recados sem bloquear pelo OneSignal'
           git pull --rebase origin main
           git push origin HEAD:main
+
+# disparo-v2: 2026-08-26
