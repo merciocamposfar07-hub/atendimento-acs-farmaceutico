@@ -2,7 +2,8 @@ name: Corrigir estabilidade do painel Recados no iPhone
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - '.github/workflows/recados-iphone-desbloquear-v1.yml'
 
@@ -13,94 +14,34 @@ jobs:
   corrigir:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Baixar projeto
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Isolar OneSignal e estabilizar pintura do Safari
+
+      - name: Aplicar correção cirúrgica
+        run: python3 scripts/fix_recados_estabilidade_v2.py
+
+      - name: Validar sintaxe e escopo
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          painel = Path('painel-oficial-recados-campanhas.html')
-          text = painel.read_text(encoding='utf-8')
-
-          marcador = 'var saudeRemotaAtiva=null;'
-          if marcador not in text:
-              nova = r'''var saudeRemotaAtiva=null;
-function postSaudeRemotaNaoBloqueante(payload,cb){
-  if(saudeRemotaAtiva){cb({ok:false,temporario:true,message:'A conferência técnica já está em andamento.'});return}
-  var id=requestId('admin_notificacoes_saude_remota'),campos={},frame=document.createElement('iframe'),form=document.createElement('form'),frameName='ponteSaude_'+Date.now()+'_'+Math.floor(Math.random()*1000),limite=Date.now()+22000,pollTimer=null,submitTimer=null,concluida=false;
-  Object.keys(payload||{}).forEach(function(k){campos[k]=payload[k]});campos.action='admin_notificacoes_saude_remota';campos.requestId=id;
-  frame.name=frameName;frame.setAttribute('name',frameName);frame.className='ponte';frame.setAttribute('aria-hidden','true');frame.src='about:blank';
-  form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.setAttribute('target',frameName);form.className='ponte';
-  Object.keys(campos).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=txt(campos[k]);form.appendChild(i)});
-  function limpar(){clearTimeout(pollTimer);clearTimeout(submitTimer);if(form.parentNode)form.remove();if(frame.parentNode)setTimeout(function(){if(frame.parentNode)frame.remove()},200)}
-  function finalizarSaude(r){if(concluida)return;concluida=true;limpar();saudeRemotaAtiva=null;cb(r||{ok:false,temporario:true,message:'A conferência técnica não devolveu resposta.'})}
-  function consultarSaude(){if(concluida)return;jsonp('admin_notificacoes_saude_result',{requestId:id},function(r){if(concluida)return;if(r&&r.ok===true&&r.pendente===false){finalizarSaude(r.result);return}if(Date.now()>=limite){finalizarSaude({ok:false,temporario:true,message:'A conferência do OneSignal não terminou no tempo desta tela.'});return}pollTimer=setTimeout(consultarSaude,750)})}
-  var enviado=false;function enviar(){if(enviado||concluida)return;enviado=true;try{form.submit()}catch(e){finalizarSaude({ok:false,temporario:true,message:'Não foi possível iniciar a conferência técnica.'});return}pollTimer=setTimeout(consultarSaude,500)}
-  saudeRemotaAtiva={id:id};document.body.appendChild(frame);document.body.appendChild(form);frame.addEventListener('load',enviar,{once:true});submitTimer=setTimeout(enviar,140);
-}
-function atualizarSaudeNotificacoesRemota(){
-  if(!(token||territorioToken))return;
-  var botao=document.getElementById('atualizarSaudeNotificacoes'),areaSolicitada=areaId;
-  document.getElementById('saudeNotificacoes').classList.remove('oculto');
-  if(saudeRemotaAtiva){status('saudeNotificacoesStatus','A conferência do OneSignal já está em andamento em segundo plano. Recados e campanhas continuam disponíveis.','aviso');return}
-  if(botao)botao.disabled=true;
-  status('saudeNotificacoesStatus','Conferindo o estado atual no OneSignal em segundo plano. Recados e campanhas continuam disponíveis.','aviso');
-  postSaudeRemotaNaoBloqueante(sessao(),function(remoto){if(botao)botao.disabled=false;if(areaId!==areaSolicitada)return;if(remoto&&remoto.ok===true){renderSaudeNotificacoes(remoto);return}status('saudeNotificacoesStatus','A conferência do OneSignal não terminou agora. Os últimos dados continuam visíveis e o painel permaneceu disponível.','aviso')});
-}
-'''
-              pattern = r"function atualizarSaudeNotificacoesRemota\(\)\{.*?\}\n(?=function solicitarReparoNotificacoesArea)"
-              text, n = re.subn(pattern, nova, text, count=1, flags=re.S)
-              if n != 1:
-                  raise SystemExit('Não encontrei exatamente a função remota de Saúde para substituir.')
-
-          text, nversao = re.subn(
-              r'central-back-button-v1\.js\?v=[^"\']+',
-              'central-back-button-v1.js?v=20260826-recados-estabilidade-v2',
-              text,
-              count=1
-          )
-          if nversao != 1:
-              raise SystemExit('Não encontrei o carregamento do central-back-button-v1.js para versionar.')
-          painel.write_text(text, encoding='utf-8')
-
-          render = Path('central-back-button-v1.js')
-          rtext = render.read_text(encoding='utf-8')
-          antigo = "'html{height:auto!important;min-height:100%!important;overflow-x:hidden!important;overflow-y:auto!important;scroll-behavior:auto!important;}',"
-          novo = "'html{height:auto!important;min-height:100%!important;overflow-x:hidden!important;overflow-y:visible!important;scroll-behavior:auto!important;}',"
-          if antigo in rtext:
-              rtext = rtext.replace(antigo, novo, 1)
-          elif novo not in rtext:
-              raise SystemExit('Não encontrei a regra de rolagem do Recados para estabilizar.')
-          render.write_text(rtext, encoding='utf-8')
-          PY
-
           git diff --check
           node --check central-back-button-v1.js
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          html=Path('painel-oficial-recados-campanhas.html').read_text(encoding='utf-8')
-          scripts=[]
-          for attrs,body in re.findall(r'<script([^>]*)>(.*?)</script>',html,flags=re.S|re.I):
-              if 'src=' not in attrs.lower(): scripts.append(body)
-          Path('/tmp/recados-inline.js').write_text('\n;\n'.join(scripts),encoding='utf-8')
-          assert 'var saudeRemotaAtiva=null;' in html
-          assert 'Recados e campanhas continuam disponíveis.' in html
-          assert 'central-back-button-v1.js?v=20260826-recados-estabilidade-v2' in html
-          render=Path('central-back-button-v1.js').read_text(encoding='utf-8')
-          assert 'overflow-y:visible!important;scroll-behavior:auto!important' in render
-          PY
           node --check /tmp/recados-inline.js
+          git diff -- painel-oficial-recados-campanhas.html central-back-button-v1.js
 
+      - name: Publicar somente a correção validada
+        shell: bash
+        run: |
+          set -euo pipefail
           git config user.name 'Portal TACS'
           git config user.email 'actions@users.noreply.github.com'
           git add painel-oficial-recados-campanhas.html central-back-button-v1.js
-          git diff --cached --quiet && exit 0
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
           git commit -m 'Estabilizar Recados sem bloquear pelo OneSignal'
           git pull --rebase origin main
           git push origin HEAD:main
