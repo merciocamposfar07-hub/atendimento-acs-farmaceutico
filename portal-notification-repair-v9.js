@@ -44,9 +44,18 @@
     running=true;try{var result=await health.checkin();if(result&&result.reparoPendente){showManual('O Portal está verificando automaticamente as notificações deste aparelho. Se a atualização não concluir, use “Reparar agora”.');await executeRepair(result)}return result}catch(e){return null}finally{running=false}
   }
   function schedule(ms){clearTimeout(timer);timer=setTimeout(function(){inspect()},Number(ms||25000))}
+  function loadReadiness(){
+    if(document.querySelector('script[data-notification-readiness-v1]'))return;
+    var s=document.createElement('script');
+    s.src='portal-notification-readiness-v1.js?v=20260826-readiness-v1';
+    s.defer=true;
+    s.dataset.notificationReadinessV1='1';
+    document.head.appendChild(s);
+  }
   document.addEventListener('tacs:morador',function(){schedule(25000)});
   document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')schedule(25000)});
   window.OneSignalDeferred=window.OneSignalDeferred||[];
   window.OneSignalDeferred.push(function(OneSignal){oneSignal=OneSignal;var push=OneSignal.User&&OneSignal.User.PushSubscription;if(push&&typeof push.addEventListener==='function')push.addEventListener('change',function(){schedule(5000)});schedule(25000)});
   window.PortalTacsReparoV9={verificar:inspect,executarReparo:executeRepair,estado:state};
+  loadReadiness();
 }());
