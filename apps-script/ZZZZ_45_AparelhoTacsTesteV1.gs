@@ -229,11 +229,23 @@ function aparelhoTacsTesteV1TratarPost_(e){
 }
 
 function aparelhoTacsTesteV1Checkin_(p){
-  p=p&&typeof p==='object'?p:{};var sub=aparelhoTacsTesteV1Sub_(p.subscriptionId||p.subscription_id),area=aparelhoTacsTesteV1Area_(p.areaId||p.area||'JAPARANDUBA');
-  if(!sub||!aparelhoTacsTesteV1LegacyAtivo_(sub,area))return aparelhoTacsTesteV1CheckinAnterior_(p);
-  aparelhoTacsTesteV1RemoverVinculoFamilia_(sub,area);aparelhoTacsTesteV1LimparMoradorRegistro_(sub,area);
-  var parametros={};Object.keys(p).forEach(function(k){parametros[k]=p[k];});delete parametros.documento;delete parametros.cpf;delete parametros.cns;
-  var resultado=aparelhoTacsTesteV1CheckinAnterior_(parametros);if(!resultado||typeof resultado!=='object')resultado={ok:true};resultado.aparelhoTacsTeste=true;resultado.vinculadoFamilia=false;resultado.familiaId='';resultado.familiaDiferente=false;resultado.message='Aparelho TACS / teste ativo. O Push geral permanece separado e nenhum vínculo familiar é criado durante os testes.';return resultado;
+  p=p&&typeof p==='object'?p:{};
+  var sub=aparelhoTacsTesteV1Sub_(p.subscriptionId||p.subscription_id),area=aparelhoTacsTesteV1Area_(p.areaId||p.area||'JAPARANDUBA');
+  var device=aparelhoTacsTesteV1Dispositivo_(p.dispositivo||p.dispositivoTacs||p.deviceId),chave=aparelhoTacsTesteV1Chave_(p.chaveTacsTeste||p.chaveTecnica||'');
+  var tokenAutorizado=Boolean(device&&chave&&aparelhoTacsTesteV1TokenValido_(device,area,chave));
+  if(sub&&tokenAutorizado)aparelhoTacsTesteV1AssociarSubscription_(device,area,chave,sub);
+  var protegido=tokenAutorizado;
+  if(!protegido&&sub)protegido=Boolean(aparelhoTacsTesteV1MapaAtivos_(area)[sub]);
+  if(!sub||!protegido)return aparelhoTacsTesteV1CheckinAnterior_(p);
+  aparelhoTacsTesteV1RemoverVinculoFamilia_(sub,area);
+  aparelhoTacsTesteV1LimparMoradorRegistro_(sub,area);
+  var parametros={};Object.keys(p).forEach(function(k){parametros[k]=p[k];});
+  delete parametros.documento;delete parametros.cpf;delete parametros.cns;
+  var resultado=aparelhoTacsTesteV1CheckinAnterior_(parametros);
+  if(!resultado||typeof resultado!=='object')resultado={ok:true};
+  resultado.aparelhoTacsTeste=true;resultado.vinculadoMorador=false;resultado.vinculadoFamilia=false;resultado.familiaId='';resultado.familiaDiferente=false;
+  resultado.message='Aparelho TACS / teste ativo. Este aparelho fica fora de vínculos com moradores e famílias durante os testes.';
+  return resultado;
 }
 
 function aparelhoTacsTesteV1SaudeAdmin_(contexto,acesso){

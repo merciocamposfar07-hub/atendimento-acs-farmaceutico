@@ -3,10 +3,14 @@
   var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
   var currentResident=null,oneSignal=null,pendingRepairId='',pendingRepairSubscriptionId='',activeRequest='',lastFingerprint='',counter=0,openCounter=0;
   var autoRepairTried={},repairCompleted={},repairMode='',repairStateCounter=0,familyCheckTimer=null;
+  var TEST_DEVICE_KEY='portalTacsDispositivoV1',TEST_TOKEN_PREFIX='portalTacsAparelhoTesteTokenV3:';
   function text(v){return String(v==null?'':v).trim()}
   function digits(v){return text(v).replace(/\D/g,'')}
   function validDocument(v){var d=digits(v);return /^\d{11}$/.test(d)||/^\d{15}$/.test(d)}
   function uuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(text(v).toLowerCase())}
+  function testDeviceId(){try{return text(localStorage.getItem(TEST_DEVICE_KEY)||'')}catch(e){return''}}
+  function testTechnicalToken(device){device=text(device);if(!device)return'';try{return text(localStorage.getItem(TEST_TOKEN_PREFIX+areaId()+':'+device)||'')}catch(e){return''}}
+  function testHandoffPending(){try{return /(?:^|[#&])tacsTeste=/.test(String(location.hash||''))}catch(e){return false}}
   function areaId(){var a='';try{if(window.PortalTacsArea&&typeof window.PortalTacsArea.id==='function')a=window.PortalTacsArea.id()}catch(e){}if(!a)a=window.TACS_AREA_ID||'';if(!a&&currentResident)a=currentResident.areaId||'';return text(a||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA'}
   function documentValue(){var e=document.getElementById('cpf'),d=e?digits(e.value):'';if(validDocument(d))return d;if(currentResident){d=digits(currentResident.documento||currentResident.cpf||currentResident.cns||'');if(validDocument(d))return d}return ''}
   function state(){var push=oneSignal&&oneSignal.User&&oneSignal.User.PushSubscription,tags={};try{tags=oneSignal&&oneSignal.User&&typeof oneSignal.User.getTags==='function'?(oneSignal.User.getTags()||{}):{}}catch(e){}return {permission:Boolean(oneSignal&&oneSignal.Notifications&&oneSignal.Notifications.permission===true),optedIn:Boolean(push&&push.optedIn===true),subscriptionId:text(push&&push.id).toLowerCase(),token:text(push&&push.token),areaConfirmed:text(tags.area_tacs).toUpperCase()===areaId()}}
@@ -87,10 +91,12 @@
     var initial=state(),ready=uuid(initial.subscriptionId)?Promise.resolve(initial):waitSubscriptionState(10000);
     return ready.then(function(st){
       if(!uuid(st.subscriptionId))return null;
-      var info=deviceInfo(),doc=documentValue(),payload={subscriptionId:st.subscriptionId,areaId:areaId(),permission:st.permission?'true':'false',optedIn:st.optedIn?'true':'false',tokenAtivo:st.token?'true':'false',areaConfirmada:st.areaConfirmed?'true':'false',tipoAparelho:info.device,navegador:info.browser,sistema:info.os,reparoAplicado:text(options.reparoAplicado||'')};
-      if(validDocument(doc))payload.documento=doc;
+      var info=deviceInfo(),doc=documentValue(),testDevice=testDeviceId(),testToken=testTechnicalToken(testDevice),testMode=Boolean(testDevice&&testToken)||testHandoffPending(),payload={subscriptionId:st.subscriptionId,areaId:areaId(),permission:st.permission?'true':'false',optedIn:st.optedIn?'true':'false',tokenAtivo:st.token?'true':'false',areaConfirmada:st.areaConfirmed?'true':'false',tipoAparelho:info.device,navegador:info.browser,sistema:info.os,reparoAplicado:text(options.reparoAplicado||'')};
+      if(testDevice)payload.dispositivo=testDevice;
+      if(testToken)payload.chaveTacsTeste=testToken;
+      if(!testMode&&validDocument(doc))payload.documento=doc;
       if(options.reparoAplicado&&pendingRepairSubscriptionId)payload.reparoSubscriptionOriginal=pendingRepairSubscriptionId;
-      var fp=[payload.subscriptionId,payload.areaId,payload.permission,payload.optedIn,payload.tokenAtivo,payload.areaConfirmada,payload.reparoAplicado,payload.reparoSubscriptionOriginal||'',payload.documento||''].join('|');
+      var fp=[payload.subscriptionId,payload.areaId,payload.permission,payload.optedIn,payload.tokenAtivo,payload.areaConfirmada,payload.reparoAplicado,payload.reparoSubscriptionOriginal||'',payload.dispositivo||'',payload.chaveTacsTeste?'TACS_TESTE':'',payload.documento||''].join('|');
       if(!options.force&&fp===lastFingerprint)return null;
       lastFingerprint=fp;
       return postCheckin(payload).then(function(result){if(result&&result.reparoPendente)showPendingRepair(result);else if(result&&payload.reparoAplicado)clearPendingRepair();return result}).catch(function(){lastFingerprint='';activeRequest='';return null});
