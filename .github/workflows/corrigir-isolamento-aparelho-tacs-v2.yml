@@ -1,0 +1,37 @@
+name: Aplicar isolamento do aparelho TACS teste
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/corrigir_isolamento_aparelho_tacs_v1.py'
+      - '.github/workflows/corrigir-isolamento-aparelho-tacs-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar e validar
+        run: |
+          set -e
+          python3 scripts/corrigir_isolamento_aparelho_tacs_v1.py
+          git diff --check
+          node --check portal-notification-health.js
+          node --check --input-type=commonjs < apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs
+      - name: Publicar arquivos corrigidos
+        run: |
+          set -e
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add apps-script/ZZZZ_45_AparelhoTacsTesteV1.gs portal-notification-health.js index.html .github/apps-script-release-request
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Isolar aparelho TACS teste de vínculos com moradores'
+          git pull --rebase origin main
+          git push origin HEAD:main
