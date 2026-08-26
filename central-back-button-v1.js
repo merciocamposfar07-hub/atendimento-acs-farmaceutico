@@ -15,7 +15,7 @@ function installRecadosRenderSafe(){
   var style=document.createElement('style');
   style.id='portalTacsRecadosRenderSafeV3';
   style.textContent=[
-    'html{height:auto!important;min-height:100%!important;overflow-x:hidden!important;overflow-y:visible!important;scroll-behavior:auto!important;}',
+    'html{height:auto!important;min-height:100%!important;overflow-x:hidden!important;overflow-y:auto!important;scroll-behavior:auto!important;}',
     'body{height:auto!important;min-height:100%!important;overflow-x:hidden!important;overflow-y:visible!important;background:#eaf2f6!important;}',
     'main{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;contain:none!important;content-visibility:visible!important;}',
     'header,footer,main,.card,.item,.numero,.areaEnvio,.manutencao,.saude-notificacoes,.saude-resumo,.saude-lista,.saude-aparelho,.saude-vazio,.saude-numero,.botao,.aba,.status,.validadeCampo{contain:none!important;content-visibility:visible!important;will-change:auto!important;transform:none!important;filter:none!important;-webkit-filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important;}',

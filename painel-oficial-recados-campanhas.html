@@ -451,39 +451,7 @@ function renderSaudeNotificacoes(r){
   status('saudeNotificacoesStatus',msg,r.oneSignalConsultado===true?'ok':'aviso');
 }
 function carregarSaudeNotificacoes(){if(!(token||territorioToken)||ativa)return;document.getElementById('saudeNotificacoes').classList.remove('oculto');status('saudeNotificacoesStatus','Carregando o último estado conhecido dos aparelhos…','aviso');post('admin_notificacoes_saude_rapida',sessao(),function(r){if(!r||r.ok!==true){status('saudeNotificacoesStatus',txt(r&&r.message||'Não foi possível carregar a Saúde das notificações.'),'erro');return}renderSaudeNotificacoes(r);status('saudeNotificacoesStatus','Dados carregados. Toque em Atualizar situação para conferir o estado atual no OneSignal.','ok')},'admin_notificacoes_saude_result')}
-var saudeRemotaAtiva=null;
-function postSaudeRemotaNaoBloqueante(payload,cb){
-  if(saudeRemotaAtiva){cb({ok:false,temporario:true,message:'A conferência técnica já está em andamento.'});return}
-  var id=requestId('admin_notificacoes_saude_remota'),campos={},frame=document.createElement('iframe'),form=document.createElement('form'),frameName='ponteSaude_'+Date.now()+'_'+Math.floor(Math.random()*1000),limite=Date.now()+22000,pollTimer=null,submitTimer=null,concluida=false;
-  Object.keys(payload||{}).forEach(function(k){campos[k]=payload[k]});
-  campos.action='admin_notificacoes_saude_remota';campos.requestId=id;
-  frame.name=frameName;frame.setAttribute('name',frameName);frame.className='ponte';frame.setAttribute('aria-hidden','true');frame.src='about:blank';
-  form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.setAttribute('target',frameName);form.className='ponte';
-  Object.keys(campos).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=txt(campos[k]);form.appendChild(i)});
-  function limpar(){clearTimeout(pollTimer);clearTimeout(submitTimer);if(form.parentNode)form.remove();if(frame.parentNode)setTimeout(function(){if(frame.parentNode)frame.remove()},200)}
-  function finalizarSaude(r){if(concluida)return;concluida=true;limpar();saudeRemotaAtiva=null;cb(r||{ok:false,temporario:true,message:'A conferência técnica não devolveu resposta.'})}
-  function consultarSaude(){if(concluida)return;jsonp('admin_notificacoes_saude_result',{requestId:id},function(r){if(concluida)return;if(r&&r.ok===true&&r.pendente===false){finalizarSaude(r.result);return}if(Date.now()>=limite){finalizarSaude({ok:false,temporario:true,message:'A conferência do OneSignal não terminou no tempo desta tela.'});return}pollTimer=setTimeout(consultarSaude,750)})}
-  var enviado=false;
-  function enviar(){if(enviado||concluida)return;enviado=true;try{form.submit()}catch(e){finalizarSaude({ok:false,temporario:true,message:'Não foi possível iniciar a conferência técnica.'});return}pollTimer=setTimeout(consultarSaude,500)}
-  saudeRemotaAtiva={id:id};
-  document.body.appendChild(frame);document.body.appendChild(form);
-  frame.addEventListener('load',enviar,{once:true});
-  submitTimer=setTimeout(enviar,140);
-}
-function atualizarSaudeNotificacoesRemota(){
-  if(!(token||territorioToken))return;
-  var botao=document.getElementById('atualizarSaudeNotificacoes'),areaSolicitada=areaId;
-  document.getElementById('saudeNotificacoes').classList.remove('oculto');
-  if(saudeRemotaAtiva){status('saudeNotificacoesStatus','A conferência do OneSignal já está em andamento em segundo plano. Recados e campanhas continuam disponíveis.','aviso');return}
-  if(botao)botao.disabled=true;
-  status('saudeNotificacoesStatus','Conferindo o estado atual no OneSignal em segundo plano. Recados e campanhas continuam disponíveis.','aviso');
-  postSaudeRemotaNaoBloqueante(sessao(),function(remoto){
-    if(botao)botao.disabled=false;
-    if(areaId!==areaSolicitada)return;
-    if(remoto&&remoto.ok===true){renderSaudeNotificacoes(remoto);return}
-    status('saudeNotificacoesStatus','A conferência do OneSignal não terminou agora. Os últimos dados continuam visíveis e o painel permaneceu disponível.','aviso');
-  });
-}
+function atualizarSaudeNotificacoesRemota(){if(!(token||territorioToken)||ativa)return;document.getElementById('saudeNotificacoes').classList.remove('oculto');status('saudeNotificacoesStatus','Conferindo o estado atual no OneSignal…','aviso');post('admin_notificacoes_saude_remota',sessao(),function(remoto){if(remoto&&remoto.ok===true){renderSaudeNotificacoes(remoto);return}status('saudeNotificacoesStatus','A conferência do OneSignal não terminou agora. Os últimos dados continuam visíveis.','aviso')},'admin_notificacoes_saude_result')}
 function solicitarReparoNotificacoesArea(){if(!(token||territorioToken)||ativa)return;var atual=areas.find(function(a){return txt(a.areaId)===areaId}),nome=txt(atual&&atual.areaNome||areaId);if(!confirm('Solicitar reparo das notificações para os aparelhos identificados de '+nome+'? Cada aparelho será orientado quando abrir o Portal TACS.'))return;status('saudeNotificacoesStatus','Registrando solicitação de reparo para '+nome+'…','aviso');post('admin_notificacoes_solicitar_reparo_area',sessao(),function(r){if(!r||r.ok!==true){status('saudeNotificacoesStatus',txt(r&&r.message||'Não foi possível solicitar o reparo.'),'erro');return}status('saudeNotificacoesStatus','Reparo solicitado. Os aparelhos serão orientados na próxima abertura do Portal.','ok');setTimeout(carregarSaudeNotificacoes,250)},'admin_notificacoes_saude_result')}
 
 function render(){document.getElementById('qRecados').textContent=dados.recados.length;document.getElementById('qRecadosAtivos').textContent=dados.recados.filter(function(x){return bool(x.ATIVO)}).length;document.getElementById('qCampanhas').textContent=dados.campanhas.length;document.getElementById('qCampanhasAtivas').textContent=dados.campanhas.filter(function(x){return bool(x.ATIVO)}).length;renderRecados();renderCampanhas();atualizarBloqueioMutacoes()}
@@ -541,7 +509,7 @@ var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!teste
   if(aba)aba.addEventListener('click',carregar,{once:true});
 }());
 </script>
-<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260826-recados-estabilidade-v2"></script>
+<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=0db398050474"></script>
 <script src="/atendimento-acs-farmaceutico/recados-campanhas-whatsapp-card-v9.js?v=20260817-recados-cards-mensais-v12"></script>
 <script src="/atendimento-acs-farmaceutico/recados-campanhas-whatsapp-mensal-v12.js?v=20260817-recados-cards-mensais-v12"></script>
 </body>
