@@ -77,3 +77,5 @@ class LocalPortalResourceLoader extends ResourceLoader {
           git commit -m 'Permitir scripts locais no teste administrativo'
           git pull --rebase origin main
           git push origin HEAD:main
+
+# disparo-v2: 2026-08-26
