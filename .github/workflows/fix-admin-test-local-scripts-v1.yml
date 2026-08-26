@@ -1,0 +1,79 @@
+name: Corrigir teste administrativo para scripts locais
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/fix-admin-test-local-scripts-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Adaptar somente o harness de teste
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/test_admin_transport.js')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace("const {JSDOM, VirtualConsole} = require('jsdom');", "const {JSDOM, VirtualConsole, ResourceLoader} = require('jsdom');", 1)
+          anchor="const ROOT = path.resolve(__dirname, '..');\n"
+          helper="""const ROOT = path.resolve(__dirname, '..');
+
+class LocalPortalResourceLoader extends ResourceLoader {
+  fetch(url) {
+    let parsed;
+    try { parsed = new URL(url); } catch (_) { return null; }
+    if (parsed.origin !== 'https://portal.test') return null;
+    let relative = decodeURIComponent(parsed.pathname || '')
+      .replace(/^\\/atendimento-acs-farmaceutico\\//, '')
+      .replace(/^\\//, '');
+    const full = path.resolve(ROOT, relative);
+    if (full !== ROOT && !full.startsWith(ROOT + path.sep)) return null;
+    if (!fs.existsSync(full) || !fs.statSync(full).isFile()) return null;
+    return Promise.resolve(fs.readFileSync(full));
+  }
+}
+"""
+          if 'class LocalPortalResourceLoader extends ResourceLoader' not in s:
+              if anchor not in s: raise SystemExit('Âncora ROOT não encontrada; abortando.')
+              s=s.replace(anchor,helper,1)
+          old="    resources: 'usable',"
+          new="    resources: new LocalPortalResourceLoader(),"
+          if old in s:
+              s=s.replace(old,new,1)
+          elif new not in s:
+              raise SystemExit('Configuração resources esperada não encontrada; abortando.')
+          p.write_text(s,encoding='utf-8')
+          PY
+
+      - name: Validar o teste corrigido
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          node --check scripts/test_admin_transport.js
+          npm ci
+          node scripts/test_admin_transport.js
+
+      - name: Publicar somente o harness de teste
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add scripts/test_admin_transport.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Permitir scripts locais no teste administrativo'
+          git pull --rebase origin main
+          git push origin HEAD:main
