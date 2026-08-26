@@ -183,21 +183,42 @@
     wrap.appendChild(b);cartao.appendChild(wrap);
   }
   function aplicar(){document.querySelectorAll('#saudeNotificacoesLista .saude-aparelho').forEach(botaoPara)}
-  function solicitar(botao){
-    if(!botao||botao.disabled)return;
-    var ref=texto(botao.dataset.ref).toLowerCase(),nome=texto(botao.dataset.nome)||'este aparelho';
-    if(!/^[0-9a-f]{8}$/.test(ref)){status('Referência técnica inválida. Atualize a situação e tente novamente.','erro');return}
-    var api=window.PortalTacsRecadosCampanhasV12;
-    if(!api||typeof api.post!=='function'){status('O painel ainda está preparando a conexão. Tente novamente em alguns segundos.','aviso');return}
-    if(!window.confirm('Solicitar reparo somente para '+nome+'? Os demais aparelhos não serão alterados.'))return;
-    botao.disabled=true;botao.textContent='Solicitando reparo…';status('Solicitando reparo somente para '+nome+'…','aviso');
-    var payload=sessao();payload.subscriptionRef=ref;
-    api.post('admin_notificacoes_solicitar_reparo_aparelho',payload,function(r){
-      if(!r||r.ok!==true){botao.disabled=false;botao.textContent='🔧 Solicitar reparo deste aparelho';status(texto(r&&r.message||'Não foi possível solicitar o reparo deste aparelho.'),'erro');return}
-      status(texto(r.message||'Reparo solicitado somente para este aparelho.'),'ok');
-      var atualizar=document.getElementById('atualizarSaudeNotificacoes');if(atualizar)setTimeout(function(){atualizar.click()},250);
-    },'admin_notificacoes_saude_result');
-  }
+  function reparoApi(){
+  var warm=window.PortalTacsAdminWarmup;
+  return texto(warm&&warm.api)||'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+}
+function reparoRequestId(){return'admin_reparo_individual_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
+function consultarResultadoReparo(id,limite,cb){
+  var api=reparoApi(),nome='__portalTacsReparoIndividual_'+Date.now()+'_'+Math.floor(Math.random()*100000),script=document.createElement('script'),encerrado=false,timer=null;
+  function limpar(){clearTimeout(timer);try{delete window[nome]}catch(e){window[nome]=undefined}if(script.parentNode)script.remove()}
+  function repetir(){if(Date.now()>=limite){cb({ok:false,temporario:true,message:'O servidor ainda está confirmando o reparo. O painel permaneceu disponível; aguarde e tente Atualizar situação depois.'});return}setTimeout(function(){consultarResultadoReparo(id,limite,cb)},700)}
+  function finalizar(r){if(encerrado)return;encerrado=true;limpar();if(r&&r.ok===true&&r.pendente===false){cb(r.result||{ok:false,message:'Resposta vazia do reparo.'});return}repetir()}
+  window[nome]=finalizar;script.async=true;script.onerror=function(){finalizar(null)};
+  script.src=api+(api.indexOf('?')<0?'?':'&')+'action=admin_notificacoes_saude_result&requestId='+encodeURIComponent(id)+'&callback='+encodeURIComponent(nome)+'&_='+Date.now();
+  document.head.appendChild(script);timer=setTimeout(function(){finalizar(null)},4500);
+}
+function postReparoIsolado(payload,cb){
+  var api=reparoApi(),id=reparoRequestId(),body=new URLSearchParams(),limite=Date.now()+22000;
+  Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k])});
+  body.set('action','admin_notificacoes_solicitar_reparo_aparelho');body.set('requestId',id);
+  fetch(api+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});
+  setTimeout(function(){consultarResultadoReparo(id,limite,cb)},350);
+}
+function solicitar(botao){
+  if(!botao||botao.disabled)return;
+  var ref=texto(botao.dataset.ref).toLowerCase(),nome=texto(botao.dataset.nome)||'este aparelho';
+  if(!/^[0-9a-f]{8}$/.test(ref)){status('Referência técnica inválida. Atualize a situação e tente novamente.','erro');return}
+  var payload=sessao();
+  if(!(payload.token||payload.territorioToken)){status('A sessão administrativa não está disponível. Entre novamente no painel.','erro');return}
+  if(!window.confirm('Solicitar reparo somente para '+nome+'? Os demais aparelhos não serão alterados.'))return;
+  botao.disabled=true;botao.textContent='Solicitando reparo…';status('Solicitando reparo somente para '+nome+'. Recados e campanhas continuam disponíveis.','aviso');
+  payload.subscriptionRef=ref;
+  postReparoIsolado(payload,function(r){
+    if(!r||r.ok!==true){botao.disabled=false;botao.classList.remove('cinza');botao.classList.add('verde');botao.textContent='🔧 Solicitar reparo deste aparelho';status(texto(r&&r.message||'Não foi possível solicitar o reparo deste aparelho.'),'erro');return}
+    botao.disabled=true;botao.classList.remove('verde');botao.classList.add('cinza');botao.textContent='✓ Reparo solicitado para este aparelho';
+    status(texto(r.message||'Reparo solicitado somente para este aparelho.')+' A lista não será recarregada automaticamente. Toque em Atualizar situação somente quando quiser conferir o estado no OneSignal.','ok');
+  });
+}
 
   function instalarEstiloEntrega(){
     if(document.getElementById('rastreamentoEntregaNotificacaoEstilo'))return;

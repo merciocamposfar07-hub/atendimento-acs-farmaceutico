@@ -12,7 +12,7 @@
     if(!/\/painel-oficial-recados-campanhas\.html$/.test(String(location.pathname||'')))return;
     if(window.PortalTacsAdminWarmup||document.querySelector('script[src*="admin-warmup.js"]'))return;
     var s=document.createElement('script');
-    s.src='/atendimento-acs-farmaceutico/admin-warmup.js?v=20260818-entrega-restaurada-v1';
+    s.src='/atendimento-acs-farmaceutico/admin-warmup.js?v=20260826-reparo-individual-safe-v1';
     s.async=false;
     document.head.appendChild(s);
   }catch(e){}
