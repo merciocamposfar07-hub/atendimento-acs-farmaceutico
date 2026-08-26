@@ -1,0 +1,64 @@
+name: Publicar verificação visual das notificações
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/portal-notification-readiness-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Inserir diagnóstico no Portal TACS
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          marker = '  <script src="portal-notification-health.js?v=20260826-tacs-test-isolation-v1"></script>\n'
+          insert = marker + '  <script src="portal-notification-readiness-v1.js?v=20260826-readiness-v1"></script>\n'
+
+          if 'portal-notification-readiness-v1.js' not in text:
+              if text.count(marker) != 1:
+                  raise SystemExit('Marcador único do notification-health não encontrado em index.html')
+              text = text.replace(marker, insert, 1)
+              path.write_text(text, encoding='utf-8')
+
+          final = path.read_text(encoding='utf-8')
+          if final.count('portal-notification-readiness-v1.js') != 1:
+              raise SystemExit('O diagnóstico de notificações deve ser carregado exatamente uma vez')
+          PY
+
+      - name: Validar escopo e sintaxe
+        shell: bash
+        run: |
+          node --check portal-notification-readiness-v1.js
+          node --check agenda-enfermeira.js
+          node --check portal-notification-health.js
+          node scripts/test_push_onboarding_v1.js
+          git diff --check
+          git diff -- index.html
+
+      - name: Publicar somente o carregamento do diagnóstico
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html; then
+            echo 'index.html já contém a versão solicitada.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Exibir diagnóstico das notificações no Portal'
+          git pull --rebase origin main
+          git push origin HEAD:main
