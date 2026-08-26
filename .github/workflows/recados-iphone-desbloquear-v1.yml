@@ -1,4 +1,4 @@
-name: Corrigir estabilidade do painel Recados no iPhone
+name: Reverter correcao instavel do painel Recados
 
 on:
   push:
@@ -11,27 +11,74 @@ permissions:
   contents: write
 
 jobs:
-  corrigir:
+  reverter:
     runs-on: ubuntu-latest
     steps:
-      - name: Baixar projeto
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Aplicar correção cirúrgica
-        run: python3 scripts/fix_recados_estabilidade_v2.py
+      - name: Restaurar estado anterior conhecido
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
 
-      - name: Validar sintaxe e escopo
+          painel = Path('painel-oficial-recados-campanhas.html')
+          text = painel.read_text(encoding='utf-8')
+
+          inicio = 'var saudeRemotaAtiva=null;'
+          original = "function atualizarSaudeNotificacoesRemota(){if(!(token||territorioToken)||ativa)return;document.getElementById('saudeNotificacoes').classList.remove('oculto');status('saudeNotificacoesStatus','Conferindo o estado atual no OneSignal…','aviso');post('admin_notificacoes_saude_remota',sessao(),function(remoto){if(remoto&&remoto.ok===true){renderSaudeNotificacoes(remoto);return}status('saudeNotificacoesStatus','A conferência do OneSignal não terminou agora. Os últimos dados continuam visíveis.','aviso')},'admin_notificacoes_saude_result')}\n"
+
+          if inicio in text:
+              pattern = r"var saudeRemotaAtiva=null;.*?(?=function solicitarReparoNotificacoesArea)"
+              text, n = re.subn(pattern, original, text, count=1, flags=re.S)
+              if n != 1:
+                  raise SystemExit('Falha ao localizar exatamente o bloco instavel do OneSignal.')
+
+          text = text.replace(
+              'central-back-button-v1.js?v=20260826-recados-estabilidade-v2',
+              'central-back-button-v1.js?v=0db398050474',
+              1
+          )
+          painel.write_text(text, encoding='utf-8')
+
+          render = Path('central-back-button-v1.js')
+          rtext = render.read_text(encoding='utf-8')
+          instavel = "'html{height:auto!important;min-height:100%!important;overflow-x:hidden!important;overflow-y:visible!important;scroll-behavior:auto!important;}',"
+          estavel = "'html{height:auto!important;min-height:100%!important;overflow-x:hidden!important;overflow-y:auto!important;scroll-behavior:auto!important;}',"
+          if instavel in rtext:
+              rtext = rtext.replace(instavel, estavel, 1)
+          elif estavel not in rtext:
+              raise SystemExit('Regra de rolagem esperada nao foi encontrada.')
+          render.write_text(rtext, encoding='utf-8')
+          PY
+
+      - name: Validar antes de publicar
         shell: bash
         run: |
           set -euo pipefail
           git diff --check
           node --check central-back-button-v1.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('painel-oficial-recados-campanhas.html').read_text(encoding='utf-8')
+          scripts=[]
+          for attrs,body in re.findall(r'<script([^>]*)>(.*?)</script>',html,flags=re.S|re.I):
+              if 'src=' not in attrs.lower(): scripts.append(body)
+          Path('/tmp/recados-inline.js').write_text('\n;\n'.join(scripts),encoding='utf-8')
+          assert 'var saudeRemotaAtiva=null;' not in html
+          assert "function atualizarSaudeNotificacoesRemota(){if(!(token||territorioToken)||ativa)return;" in html
+          assert 'central-back-button-v1.js?v=0db398050474' in html
+          render=Path('central-back-button-v1.js').read_text(encoding='utf-8')
+          assert 'overflow-y:auto!important;scroll-behavior:auto!important' in render
+          PY
           node --check /tmp/recados-inline.js
-          git diff -- painel-oficial-recados-campanhas.html central-back-button-v1.js
 
-      - name: Publicar somente a correção validada
+      - name: Publicar reversao
         shell: bash
         run: |
           set -euo pipefail
@@ -39,11 +86,11 @@ jobs:
           git config user.email 'actions@users.noreply.github.com'
           git add painel-oficial-recados-campanhas.html central-back-button-v1.js
           if git diff --cached --quiet; then
-            echo 'Nenhuma alteração necessária.'
+            echo 'Estado anterior ja restaurado.'
             exit 0
           fi
-          git commit -m 'Estabilizar Recados sem bloquear pelo OneSignal'
+          git commit -m 'Reverter correcao instavel do painel Recados'
           git pull --rebase origin main
           git push origin HEAD:main
 
-# disparo-v2: 2026-08-26
+# rollback-imediato: 2026-08-26
