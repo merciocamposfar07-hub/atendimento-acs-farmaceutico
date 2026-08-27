@@ -148,6 +148,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_48_SuporteMoradoresV1.gs',
     marker: 'TACS_SUPORTE_MORADORES_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_49_SaneamentoHistoricoAparelhoTacsV1.gs',
+    marker: 'TACS_SANEAMENTO_HISTORICO_APARELHO_V1'
   }
 ];
 
