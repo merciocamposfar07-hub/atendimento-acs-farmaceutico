@@ -91,17 +91,16 @@ jobs:
           LIVE_DIR="$LIVE_DIR" node - <<'NODE'
           const fs=require('fs');const path=require('path');
           const live=process.env.LIVE_DIR;
-          const files=fs.readdirSync(live).filter(n=>/\.(?:gs|js)$/.test(n));
           const mods=[
-            ['TACS_NOTIFICACOES_AREA_V1','apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs'],
-            ['TACS_MENSAGEM_INDIVIDUAL_V1','apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs'],
-            ['TACS_COMPROVACAO_MENSAGENS_V1','apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs']
+            ['ZZZZ_19_NotificacoesSegmentadasV1.js','apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs'],
+            ['ZZZZ_40_MensagensIndividuaisMoradorV1.js','apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs'],
+            ['ZZZZ_42_ComprovacaoMensagensV1.js','apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs']
           ];
-          for(const [marker,sourcePath] of mods){
-            const found=files.filter(n=>fs.readFileSync(path.join(live,n),'utf8').includes(marker));
-            if(found.length!==1)throw new Error('Modulo '+marker+' nao localizado exatamente uma vez.');
-            fs.writeFileSync(path.join(live,found[0]),fs.readFileSync(sourcePath,'utf8'),'utf8');
-            console.log('Modulo substituido:',found[0]);
+          for(const [liveName,sourcePath] of mods){
+            const target=path.join(live,liveName);
+            if(!fs.existsSync(target))throw new Error('Arquivo do Apps Script nao localizado: '+liveName);
+            fs.writeFileSync(target,fs.readFileSync(sourcePath,'utf8'),'utf8');
+            console.log('Modulo substituido:',liveName);
           }
           NODE
 
@@ -155,4 +154,4 @@ jobs:
           rm -f "$HOME/.clasprc.json"
           rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
 
-# retry-v4
+# retry-v5-exact-live-filenames
