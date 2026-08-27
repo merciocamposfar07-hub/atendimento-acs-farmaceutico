@@ -1,9 +1,9 @@
 exit_code=1
-head_sha=870295cf9b01ad6138940aa03c8c6ad570f86331
---- diagnostico MutationObserver ---
+head_sha=97c8234b0091530de14941e09eb930c854416dc8
+--- gate completo ---
 npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
-added 47 packages, and audited 48 packages in 880ms
+added 47 packages, and audited 48 packages in 603ms
 
 8 packages are looking for funding
   run `npm fund` for details
@@ -16,99 +16,105 @@ found 0 vulnerabilities
 LOCAL_RESOURCES_OK: scripts/test_admin_transport.js, scripts/test_dynamic_professionals_dom.js
 Teste odontológico atualizado para confirmação real do servidor antes do envio.
 Dois testes territoriais PIN-only validados/atualizados com idempotência.
-AssertionError [ERR_ASSERTION]: Erros no DOM: MO_CALLBACK: function () {
-      if (ensureBox()) scheduleRender(80);
-    }
-TypeError: Cannot read properties of undefined (reading 'getElementById')
-    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)
-    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11
-    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)
-    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)
-    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)
-    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5; Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]
-    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
-    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)
-    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5; MO_CALLBACK: function () {
-      if (ensureBox()) scheduleRender(80);
-    }
-TypeError: Cannot read properties of undefined (reading 'getElementById')
-    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)
-    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11
-    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)
-    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)
-    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)
-    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5; Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]
-    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
-    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)
-    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5; MO_CALLBACK: function () {
-      if (ensureBox()) scheduleRender(80);
-    }
-TypeError: Cannot read properties of undefined (reading 'getElementById')
-    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)
-    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11
-    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)
-    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)
-    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)
-    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5
-    at process.processTicksAndRejections (node:internal/process/task_queues:95:5); Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]
-    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
-    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)
-    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5
-    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
-+ actual - expected
 
-+ [
-+   'MO_CALLBACK: function () {\n' +
-+     '      if (ensureBox()) scheduleRender(80);\n' +
-+     '    }\n' +
-+     "TypeError: Cannot read properties of undefined (reading 'getElementById')\n" +
-+     '    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)\n' +
-+     '    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11\n' +
-+     '    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)\n' +
-+     '    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)\n' +
-+     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)\n' +
-+     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5',
-+   "Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]\n" +
-+     '    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)\n' +
-+     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)\n' +
-+     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5',
-+   'MO_CALLBACK: function () {\n' +
-+     '      if (ensureBox()) scheduleRender(80);\n' +
-+     '    }\n' +
-+     "TypeError: Cannot read properties of undefined (reading 'getElementById')\n" +
-+     '    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)\n' +
-+     '    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11\n' +
-+     '    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)\n' +
-+     '    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)\n' +
-+     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)\n' +
-+     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5',
-+   "Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]\n" +
-+     '    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)\n' +
-+     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)\n' +
-+     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5',
-+   'MO_CALLBACK: function () {\n' +
-+     '      if (ensureBox()) scheduleRender(80);\n' +
-+     '    }\n' +
-+     "TypeError: Cannot read properties of undefined (reading 'getElementById')\n" +
-+     '    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)\n' +
-+     '    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11\n' +
-+     '    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)\n' +
-+     '    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)\n' +
-+     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)\n' +
-+     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5\n' +
-+     '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)',
-+   "Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]\n" +
-+     '    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)\n' +
-+     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)\n' +
-+     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5\n' +
-+     '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)'
-+ ]
-- []
-    at main (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:978:10)
-    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
-  generatedMessage: false,
+> test
+> node scripts/test_agenda_apps_script.js && node scripts/test_public_agendas_apps_script.js && node scripts/test_public_content_multiarea.js && node scripts/test_dynamic_professionals_apps_script.js && node scripts/test_agendas_profissionais_territoriais.js && node scripts/test_apps_script_module_chain.js && node scripts/test_build_apps_script_release.js && node scripts/test_dom_flows.js && node scripts/test_dental_confirmation_gate_v103.js && node scripts/test_dental_reserva_territorial_v1.js && node scripts/test_admin_transport.js && node scripts/test_admin_fast_v102.js && node scripts/test_dynamic_professionals_dom.js && node scripts/test_public_data_transport.js && node scripts/test_moradores_v145.js && node scripts/test_birth_plus_one_fix.js && node scripts/test_portal_maintenance.js && node scripts/test_csv_esus_header.js && node scripts/test_territorio_csv_notifications.js && node scripts/test_public_area_identification.js && node scripts/test_public_area_resolver.js && node scripts/test_base_url_canonical_area.js && node scripts/test_publicacoes_territoriais.js && node scripts/test_territorio_dom.js && node scripts/test_notification_repair_button.js && node scripts/test_notification_repair_confirmation.js && node scripts/test_notification_health_registry.js && node scripts/test_notification_receipt_confirmation.js && node scripts/test_notification_auto_repair_feedback.js && node scripts/test_vinculo_familiar_notificacoes_v1.js && node scripts/test_push_comunitario_v1.js && node scripts/test_troca_aparelho_notificacoes_v1.js && node scripts/test_mensagem_individual_morador_v1.js && node scripts/test_comprovacao_ciencia_mensagens_v1.js && node scripts/test_identificacao_familiar_publica_v1.js && node scripts/test_aparelho_tacs_teste_v1.js && node scripts/test_saneamento_historico_aparelho_tacs_v1.js && node scripts/test_estabilizacao_notificacoes_v8.js && node scripts/test_estabilizacao_reparos_v9.js && node scripts/test_central_admin_territorial.js && node scripts/test_portal_territory_branding.js && node scripts/test_territorial_stabilization_v1.js && node scripts/test_multiagent_quick_login.js && node scripts/test_tacs_admin_visibility.js && node scripts/test_multiagent_isolation_50.js && node scripts/test_multimunicipio_layer.js && node scripts/test_multimunicipio_admin_api.js && node scripts/test_campanhas_periodo_v1.js && node scripts/test_campanhas_automaticas_v1.js && node scripts/test_ui_contract_v1.js && node scripts/test_admin_ui_standard_v1.js && node scripts/test_promocao_institucional_v1.js && node scripts/test_autofill_adaptativo_v1.js && node scripts/test_suporte_moradores_v1.js && node scripts/test_central_admin_performance_v1.js && node scripts/test_safari_bfcache_central_v1.js && node scripts/test_onesignal_health_autorecovery_v1.js && node scripts/test_conecta_footer_safari_v1.js && node scripts/test_admin_local_first_v1.js && node scripts/test_admin_request_dedup_v1.js && node scripts/test_push_onboarding_v1.js && node scripts/test_onesignal_service_worker_isolation_v1.js && node scripts/test_familia_aparelho_beneficiario_v1.js && node scripts/test_matriz_identificacao_morador_v1.js && node scripts/test_interface_action_gate_v1.js && node scripts/test_regressao_integral_v1.js && node scripts/test_performance_v101.js && node scripts/test_portal_release_integrity_v1.js && node scripts/test_quality_gate_v101.js
+
+Agenda: reservas, fontes oficiais e rotas antigas validadas.
+Apps Script público: agendas preservadas e recados ativos publicados por área.
+Conteúdo público multiárea: legado permanece Japaranduba e AREA_ID isola a nova área.
+{"ok":true,"versao":"1.0.0","somenteLeitura":true,"profissionaisAtivos":["medica","enfermeira","nutricionista","odontologia","psicologo","fisioterapeuta"],"agendasPorProfissional":{"medica":5,"nutricionista":5,"enfermeira":5,"odontologia":5,"fisioterapeuta":5,"psicologo":5}}
+Apps Script dinâmico: psicólogo adotado sem duplicação, fisioterapeuta criado com 5 agendas e módulos legados preservados.
+AGENDAS_PROFISSIONAIS_TERRITORIAIS_TESTS_OK
+Encadeamento Apps Script: 120 ordens dos módulos 15–19 e rotas antigas validadas.
+Montagem Apps Script: .js/.gs, projeto real preservado, módulos únicos, clasp 3.3.0 e falhas seguras validados.
+DOM: abas, sincronização pública, profissionais dinâmicos, médica, enfermeira, nutricionista, campanhas, recados, odontologia, abatimento único e WhatsApp validados sem gravação real.
+DENTAL_SERVER_CONFIRMATION_V1_OK
+DENTAL_RESERVA_TERRITORIAL_V1_OK: lock, abatimento único, idempotência por requestId e isolamento de área validados.
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /v=202608/. Input:
+
+'<!doctype html>\n' +
+  '<html lang="pt-BR">\n' +
+  '<head>\n' +
+  '<meta charset="utf-8">\n' +
+  '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' +
+  '<meta name="color-scheme" content="light">\n' +
+  '<meta name="robots" content="noindex,nofollow,noarchive">\n' +
+  '<link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/painel-recados.svg?v=43a5c181d2c9">\n' +
+  '<link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-recados.webmanifest?v=43a5c181d2c9">\n' +
+  '<title>Painel oficial de recados e campanhas • Portal TACS</title>\n' +
+  '<style>\n' +
+  ':root{--p:#073a55;--p2:#0b5878;--v:#148a46;--vb:#e8f7ee;--f:#eaf2f6;--t:#102d40;--m:#536b78;--b:#a9c0ca;--r:#a52d2d;--rb:#fff0f0;--a:#805300;--ab:#fff6dd;--w:#fff}\n' +
+  '*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--f);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}button,input,textarea,select{font:inherit}button{cursor:pointer}\n' +
+  'header{background:linear-gradient(145deg,var(--p),var(--p2));color:#fff;padding:calc(22px + env(safe-area-inset-top)) 20px 25px;border-bottom:4px solid #67c7a0}.selo{display:inline-block;padding:8px 12px;border:2px solid #73c7e7;border-radius:999px;color:#8df0b4;font-weight:900;letter-spacing:.04em}h1{margin:17px 0 8px;font-size:clamp(2rem,8vw,3rem);line-height:1.05}header p{margin:0;font-size:1.08rem}\n' +
+  'main{width:min(860px,100%);margin:auto;padding:18px 14px 70px}.card{background:#fff;border:2px solid var(--b);border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 10px 25px rgba(7,58,85,.08)}.nota{background:var(--ab);border:2px solid #dfaa43;color:#704900;border-radius:20px;padding:15px;margin-bottom:16px;font-weight:850}h2{margin:0 0 13px;font-size:1.75rem}h3{margin:0;font-size:1.28rem}.muted{color:var(--m)}\n' +
+  '.preferenciaVisual{display:flex;justify-content:flex-end;margin-bottom:14px}.contrasteBotao{width:auto;min-height:48px;border:2px solid var(--p2);border-radius:15px;padding:10px 14px;background:#fff;color:var(--p);font-weight:900;box-shadow:0 6px 15px rgba(7,58,85,.09)}\n' +
+  'label{display:block;font-weight:850;margin:12px 0 6px}.campo{display:block;width:100%;min-width:0;max-width:100%;min-height:56px;border:2px solid var(--b);border-radius:15px;padding:12px 13px;background:#fff;color:var(--t);font-size:1.05rem}input[type="date"].campo{width:100%;min-width:0;max-width:100%;inline-size:100%;min-inline-size:0;max-inline-size:100%}.validadeCampo{display:block;width:100%;min-width:0;max-width:100%;min-height:56px;overflow:hidden;contain:inline-size;border:2px solid var(--b);border-radius:15px;background:#fff}.validadeControle{display:block;width:100%;min-width:0;max-width:100%;min-height:52px;border:0;border-radius:0;padding:10px 13px;background:#fff;color:var(--t);font-size:1.05rem}.validadeControle:focus{outline:0}.validadeCampo:focus-within{outline:3px solid rgba(11,88,120,.17);border-color:var(--p2)}textarea.campo{min-height:120px;resize:vertical}.campo[readonly]{background:#edf3f6;color:#4e6470}.campo:focus{outline:3px solid rgba(11,88,120,.17);border-color:var(--p2)}\n' +
+  '.acoes{display:grid;gap:10px;margin-top:14px}.botao{width:100%;min-height:58px;border:0;border-radius:16px;padding:13px 16px;background:var(--p);color:#fff;font-weight:900}.botao.verde{background:var(--v)}.botao.cinza{background:#607985}.botao.vermelho{background:#972f2f}.botao:disabled{opacity:.45;cursor:not-allowed}\n' +
+  '.status{padding:14px;border:2px solid #cad9df;border-radius:16px;background:#f5f8fa;font-weight:850;overflow-wrap:anywhere}.status.ok{border-color:#9ed6b2;background:var(--vb);color:#08723a}.status.erro{border-color:#d88a8a;background:var(--rb);color:var(--r)}.status.aviso{border-color:#e1aa3f;background:var(--ab);color:var(--a)}\n' +
+  '.resumo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.numero{background:#eef7fb;border:2px solid #c2d6df;border-radius:18px;padding:14px}.numero strong{display:block;font-size:2rem;line-height:1}.numero span{display:block;margin-top:6px;color:var(--m);font-weight:850}\n' +
+  '.manutencao{margin-top:16px;border:2px solid #d88a8a;border-radius:19px;padding:16px;background:#fff5f4}.manutencao.ativa{border-color:#a52d2d;background:#fff0f0}.manutencao h3{color:#7e2525}.manutencao p{margin:8px 0 13px;color:#5f3b3b;font-weight:750}.manutencao .estado{display:inline-block;margin-bottom:8px;padding:6px 10px;border-radius:999px;background:#e8f7ee;color:#08723a;font-size:.85rem;font-weight:950}.manutencao.ativa .estado{background:#a52d2d;color:#fff}.botao.manutencaoBotao{background:#a52d2d}.manutencao.ativa .manutencaoBotao{background:#148a46}\n' +
+  '.areaEnvio{margin-top:16px;border:2px solid #6f9bab;border-radius:19px;padding:15px;background:#edf6f9}.areaEnvio label{margin-top:0}.areaEnvio p{margin:8px 0 0;color:var(--m);font-weight:750}\n' +
+  '.abas{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}.aba{background:#fff;color:var(--t);border:2px solid var(--b)}.aba.ativa{background:var(--p);color:#fff;border-color:var(--p)}.lista{display:grid;gap:12px}.item{min-width:0;border:2px solid #c4d4db;border-radius:19px;background:#fbfdfe;overflow:hidden}.item summary{min-width:0;list-style:none;padding:15px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.item summary>div{min-width:0}.item summary::-webkit-details-marker{display:none}.corpo{min-width:0;overflow:hidden;padding:0 15px 16px;border-top:1px solid #d9e3e7}.sinal{border-radius:999px;padding:5px 9px;font-size:.82rem;font-weight:900;white-space:nowrap}.sinal.ativo{background:var(--vb);color:#08723a}.sinal.inativo{background:var(--rb);color:var(--r)}.sub{color:var(--m);font-size:.92rem;font-weight:750}.dataResumo{white-space:nowrap}.check{display:flex;align-items:center;gap:10px;border:2px solid #cbd9df;border-radius:14px;padding:12px;background:#fff;color:var(--t);font-weight:850;margin-top:12px}.check input{width:24px;height:24px;margin:0}.vazio{padding:20px;border:2px dashed #b8cbd4;border-radius:17px;text-align:center;color:var(--m);font-weight:850}.oculto{display:none!important}.ponte{position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none}.barra{position:sticky;bottom:10px;z-index:5;margin-top:14px}.novo{margin-bottom:14px}footer{background:var(--p);color:#fff;padding:24px 18px calc(24px + env(safe-area-inset-bottom));text-align:center}\n' +
+  '.tema-petroleo .numero,.tema-petroleo .areaEnvio,.tema-petroleo .item{background:linear-gradient(145deg,var(--p),var(--p2));border-color:#69c7e7;color:#fff;box-shadow:0 8px 18px rgba(7,58,85,.18)}.tema-petroleo .numero span,.tema-petroleo .areaEnvio p,.tema-petroleo .sub{color:#d8eef7}.tema-petroleo .item .corpo{border-top-color:rgba(216,238,247,.35)}.tema-petroleo .contrasteBotao{background:var(--p);border-color:#69c7e7;color:#fff}\n' +
+  '@media(max-width:649px){.contrasteBotao{width:100%}}@media(min-width:650px){.acoes.duas{grid-template-columns:1fr 1fr}.resumo{grid-template-columns:repeat(4,1fr)}}\n' +
+  '</style>\n' +
+  '\n' +
+  '<style id="saudeNotificacoesEstilo">\n' +
+  '.saude-notificacoes .cabecalho-saude{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}\n' +
+  '.saude-notificacoes .cabecalho-saude h2{margin:0 0 5px}\n' +
+  '.saude-resumo{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:14px 0}\n' +
+  '.saude-resumo .saude-numero{background:#f2f8fb;border:2px solid #bad0da;border-radius:15px;padding:12px;text-align:center}\n' +
+  '.saude-resumo strong{display:block;font-size:1.65rem;color:#073a55}.saude-resumo span{font-size:.82rem;font-weight:850}\n' +
+  '.saude-acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}\n' +
+  '.saude-lista{display:grid;gap:10px;margin-top:14px}.saude-aparelho{border:2px solid #bfd1da;border-radius:16px;padding:13px;background:#fff}\n' +
+  '.saude-aparelho-topo{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.saude-aparelho h3{margin:0;font-size:1.05rem}.saude-meta{margin-top:5px;color:#526d7b;font-size:.9rem;line-height:1.4}\n' +
+  '.saude-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 9px;font-size:.78rem;font-weight:950;white-space:nowrap}.saude-status.ATIVO{background:#d9f4e2;color:#17602e}.saude-status.INATIVO{background:#fde1e1;color:#9b2828}.saude-status.REPARO{background:#fff0c7;color:#805b00}.saude-status.SEM_CONFIRMACAO{background:#e5eef4;color:#36586a}\n' +
+  '.saude-vazio{border:2px dashed #b9cbd4;border-radius:16px;padding:18px;text-align:center;color:#526d7b}\n' +
+  'body.tema-petroleo .saude-resumo .saude-numero,body.tema-petroleo .saude-aparelho,body.tema-petroleo .saude-vazio{background:#073a55;border-color:#0b5878;color:#fff}body.tema-petroleo .saude-resumo strong{color:#9de8ff}body.tema-petroleo .saude-meta{color:#d8edf5}\n' +
+  '@media(max-width:650px){.saude-resumo{grid-template-columns:1fr 1fr}.saude-acoes{grid-template-columns:1fr}.saude-aparelho-topo{display:block}.saude-status{margin-top:8px}}\n' +
+  '\n' +
+  '/* SAUDE_NOTIFICACOES_FILTROS_V8 */\n' +
+  '.saude-resumo button.saude-numero{\n' +
+  '  -webkit-appearance:none;appearance:none;width:100%;min-width:0;margin:0;\n' +
+  '  font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;\n' +
+  '}\n' +
+  '.saude-resumo button.saude-numero:focus-visible{outline:4px solid #ffd54f;outline-offset:2px}\n' +
+  '.saude-resumo button.saude-numero[aria-pressed="true"]{\n' +
+  '  border-color:#9de8ff!important;\n' +
+  '  box-shadow:0 0 0 3px rgba(157,232,255,.35),0 10px 20px rgba(7,58,85,.2)!important;\n' +
+  '  transform:translateY(-1px);\n' +
+  '}\n' +
+  '.saude-lista-controle{display:flex;justify-content:flex-end;margin-top:10px}\n' +
+  '.saude-fechar-lista{width:100%;min-height:50px;border:2px solid #69c7e7;border-radius:15px;background:#fff;color:#073a55;font-weight:900}\n' +
+  '\n' +
+  '/* SAUDE_NOTIFICACOES_CORES_CATEGORIAS_V1 */\n' +
+  '.saude-resumo button.saude-numero[data-saude-filtro="ATIVO"],body.tema-petroleo .saude-resumo button.saude-numero[data-saude-filtro="ATIVO"]{background:linear-gradient(145deg,#064f49,#087064)!important;border-color:#36a99a!important;color:#fff!important}\n' +
+  '.saude-resumo button.saude-numero[data-saude-filtro="REPARO"],body.tema-petroleo .s'... 64050 more characters
+
+    at verifyStaticSource (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_admin_transport.js:189:10)
+    at Array.forEach (<anonymous>)
+    at main (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_admin_transport.js:690:9)
+    at Object.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_admin_transport.js:701:1)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+    at node:internal/main/run_main_module:28:49 {
+  generatedMessage: true,
   code: 'ERR_ASSERTION',
-  actual: [Array],
-  expected: [],
-  operator: 'deepStrictEqual'
+  actual: '<!doctype html>\n' +
+    '<html lang="pt-BR">\n' +
+    '<head>\n' +
+    '<meta charset="utf-8">\n' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' +
+    '<meta name="color-scheme" content="light">\n' +
+    '<meta name="robots" content="noindex,nofollow,noarchive">\n' +
+    '<link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/painel-recados.svg?v=43a5c181d2c9">\n' +
+    '<link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-recados.webmanifest?v=43a5c181d2c9">\n' +
+    '<title>Painel oficial de recados e campanhas • Portal TACS</title>\n' +
+    '...',
+  expected: /v=202608/,
+  operator: 'match'
 }
