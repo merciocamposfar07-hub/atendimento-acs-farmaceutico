@@ -1,5 +1,5 @@
 /**
- * Portal TACS — Mensagens individuais para moradores V1.0.1
+ * Portal TACS — Mensagens individuais para moradores V1.0.2
  *
  * Camada isolada. Não altera o emissor geral de recados/campanhas.
  * Fluxo: morador selecionado -> família do cadastro -> aparelhos Push ativos
@@ -7,7 +7,7 @@
  * exibição, abertura e confirmação.
  */
 var TACS_MENSAGEM_INDIVIDUAL_V1=Object.freeze({
-  VERSAO:'1.0.1',
+  VERSAO:'1.0.2',
   RESULT_PREFIX:'tacs_msg_individual_v1_result_',
   RESULT_SECONDS:300,
   TIPOS:Object.freeze(['CONFIRMAR_ATENDIMENTO','ALTERAR_DATA','LEMBRETE','CANCELAMENTO','OUTRA_MENSAGEM'])
@@ -214,21 +214,34 @@ function mensagemIndividualV1Enviar_(p,contexto,acesso,requestId){
   return {ok:true,enviado:true,eventoId:requestId,referencia:morador.referencia,morador:{nome:morador.item.nome,familiaId:morador.familiaId},aparelhos:alvos.length,encaminhadas:resumo.encaminhados,falhas:resumo.falhas||0,message:'Mensagem encaminhada para '+resumo.encaminhados+' aparelho(s). Acompanhe abaixo a exibição, abertura e confirmação.'};
 }
 
+function mensagemIndividualV1HorarioRecife_(valor){
+  if(valor===null||typeof valor==='undefined'||valor==='')return '';
+  if(Object.prototype.toString.call(valor)==='[object Date]'&&!isNaN(valor.getTime())){
+    return Utilities.formatDate(valor,'America/Recife','dd/MM/yyyy HH:mm:ss');
+  }
+  var texto=mensagemIndividualV1Texto_(valor),data=new Date(texto);
+  if(!texto||isNaN(data.getTime()))return texto;
+  return Utilities.formatDate(data,'America/Recife','dd/MM/yyyy HH:mm:ss');
+}
+
 function mensagemIndividualV1Status_(p,contexto){
   var evento=mensagemIndividualV1Texto_(p.eventoId||p.evento),morador=mensagemIndividualV1ResolverMorador_(p,contexto);
   if(!/^[A-Za-z0-9_-]{8,160}$/.test(evento))throw new Error('O envio individual não pôde ser identificado.');
   var ss=tacsTerritorioV1Planilha_(),rec=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.RECEIPT_SHEET),open=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.OPEN_SHEET);
   var total=0,encaminhadas=0,exibidas=0,confirmadas=0,abertas=0,ultimoEnc='',ultimoExib='',ultimoConf='',ultimoAberto='';
   if(rec&&rec.getLastRow()>1){
-    rec.getRange(2,1,rec.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).getDisplayValues().forEach(function(row){
+    rec.getRange(2,1,rec.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).getValues().forEach(function(row){
       if(mensagemIndividualV1Texto_(row[0])!==evento||mensagemIndividualV1Texto_(row[1]).toUpperCase()!==contexto.areaId||mensagemIndividualV1Texto_(row[3])!==morador.referencia)return;
-      total++;if(row[13]){encaminhadas++;ultimoEnc=row[13];}if(row[14]){exibidas++;ultimoExib=row[14];}if(row[15]){confirmadas++;ultimoConf=row[15];}
+      total++;
+      if(row[13]){encaminhadas++;ultimoEnc=mensagemIndividualV1HorarioRecife_(row[13]);}
+      if(row[14]){exibidas++;ultimoExib=mensagemIndividualV1HorarioRecife_(row[14]);}
+      if(row[15]){confirmadas++;ultimoConf=mensagemIndividualV1HorarioRecife_(row[15]);}
     });
   }
   if(open&&open.getLastRow()>1){
-    open.getRange(2,1,open.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.OPEN_HEADERS.length).getDisplayValues().forEach(function(row){
+    open.getRange(2,1,open.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.OPEN_HEADERS.length).getValues().forEach(function(row){
       if(mensagemIndividualV1Texto_(row[0])!==evento||mensagemIndividualV1Texto_(row[1]).toUpperCase()!==contexto.areaId||mensagemIndividualV1Texto_(row[3])!==morador.referencia)return;
-      abertas++;ultimoAberto=row[7]||ultimoAberto;
+      abertas++;ultimoAberto=mensagemIndividualV1HorarioRecife_(row[7])||ultimoAberto;
     });
   }
   var estado=confirmadas?'CONFIRMADA':(abertas?'ABERTA':(exibidas?'EXIBIDA':(encaminhadas?'ENCAMINHADA':'AGUARDANDO')));
