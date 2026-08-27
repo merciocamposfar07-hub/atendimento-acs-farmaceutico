@@ -1,9 +1,9 @@
 exit_code=1
-head_sha=bee5850ada72ff678ec8d31992816052127baf24
---- diagnostico DOM detalhado ---
+head_sha=870295cf9b01ad6138940aa03c8c6ad570f86331
+--- diagnostico MutationObserver ---
 npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
-added 47 packages, and audited 48 packages in 795ms
+added 47 packages, and audited 48 packages in 880ms
 
 8 packages are looking for funding
   run `npm fund` for details
@@ -16,13 +16,41 @@ found 0 vulnerabilities
 LOCAL_RESOURCES_OK: scripts/test_admin_transport.js, scripts/test_dynamic_professionals_dom.js
 Teste odontológico atualizado para confirmação real do servidor antes do envio.
 Dois testes territoriais PIN-only validados/atualizados com idempotência.
-AssertionError [ERR_ASSERTION]: Erros no DOM: Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]
-    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
-    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)
+AssertionError [ERR_ASSERTION]: Erros no DOM: MO_CALLBACK: function () {
+      if (ensureBox()) scheduleRender(80);
+    }
+TypeError: Cannot read properties of undefined (reading 'getElementById')
+    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)
+    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11
+    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)
+    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)
+    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)
     at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5; Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]
     at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
     at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)
+    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5; MO_CALLBACK: function () {
+      if (ensureBox()) scheduleRender(80);
+    }
+TypeError: Cannot read properties of undefined (reading 'getElementById')
+    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)
+    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11
+    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)
+    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)
+    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)
     at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5; Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]
+    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)
+    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5; MO_CALLBACK: function () {
+      if (ensureBox()) scheduleRender(80);
+    }
+TypeError: Cannot read properties of undefined (reading 'getElementById')
+    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)
+    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11
+    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)
+    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)
+    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)
+    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5); Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]
     at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
     at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)
     at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5
@@ -30,14 +58,45 @@ AssertionError [ERR_ASSERTION]: Erros no DOM: Error: Uncaught [TypeError: Cannot
 + actual - expected
 
 + [
-+   "Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]\n" +
-+     '    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)\n' +
-+     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)\n' +
++   'MO_CALLBACK: function () {\n' +
++     '      if (ensureBox()) scheduleRender(80);\n' +
++     '    }\n' +
++     "TypeError: Cannot read properties of undefined (reading 'getElementById')\n" +
++     '    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)\n' +
++     '    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11\n' +
++     '    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)\n' +
++     '    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)\n' +
++     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)\n' +
 +     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5',
 +   "Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]\n" +
 +     '    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)\n' +
 +     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)\n' +
 +     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5',
++   'MO_CALLBACK: function () {\n' +
++     '      if (ensureBox()) scheduleRender(80);\n' +
++     '    }\n' +
++     "TypeError: Cannot read properties of undefined (reading 'getElementById')\n" +
++     '    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)\n' +
++     '    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11\n' +
++     '    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)\n' +
++     '    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)\n' +
++     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)\n' +
++     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5',
++   "Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]\n" +
++     '    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)\n' +
++     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)\n' +
++     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5',
++   'MO_CALLBACK: function () {\n' +
++     '      if (ensureBox()) scheduleRender(80);\n' +
++     '    }\n' +
++     "TypeError: Cannot read properties of undefined (reading 'getElementById')\n" +
++     '    at ensureBox (http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:76:29)\n' +
++     '    at http://portal.test/portal-notification-readiness-v1.js?v=20260826-readiness-v1:271:11\n' +
++     '    at MutationObserver.<anonymous> (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:325:129)\n' +
++     '    at MutationObserver.invokeTheCallbackFunction (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/generated/MutationCallback.js:19:26)\n' +
++     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:160:22)\n' +
++     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5\n' +
++     '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)',
 +   "Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]\n" +
 +     '    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)\n' +
 +     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)\n' +
@@ -45,7 +104,7 @@ AssertionError [ERR_ASSERTION]: Erros no DOM: Error: Uncaught [TypeError: Cannot
 +     '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)'
 + ]
 - []
-    at main (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:975:10)
+    at main (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:978:10)
     at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
   generatedMessage: false,
   code: 'ERR_ASSERTION',
