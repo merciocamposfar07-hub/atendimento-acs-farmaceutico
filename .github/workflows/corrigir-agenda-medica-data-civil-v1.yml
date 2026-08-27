@@ -151,3 +151,5 @@ console.log('AGENDA_DATA_CIVIL_V1_OK');
           git commit -m 'Corrigir data civil e liberação da agenda médica'
           git pull --rebase origin main
           git push origin HEAD:main
+
+# trigger-v1
