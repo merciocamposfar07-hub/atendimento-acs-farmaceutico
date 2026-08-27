@@ -217,6 +217,8 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
 
   eventos.forEach(function(ev){
     var vistos={},aparelhos=[],cont={destinados:0,encaminhados:0,exibidos:0,abertos:0,cientes:0,falhas:0};
+    var auditoriaEnvio=typeof notificacoesAreaV1AuditoriaPorEvento_==='function'?notificacoesAreaV1AuditoriaPorEvento_(contexto.areaId,ev.eventoId):null;
+    var encaminhadoAuditoria=comprovacaoMensagensV1Texto_(auditoriaEnvio&&auditoriaEnvio.registradoEm)||comprovacaoMensagensV1Texto_(ev.registradoEm);
     recRows.forEach(function(row){
       if(comprovacaoMensagensV1Texto_(row[0])!==ev.eventoId||comprovacaoMensagensV1Texto_(row[1]).toUpperCase()!==contexto.areaId||comprovacaoMensagensV1Texto_(row[2]).toUpperCase()!==tipo||comprovacaoMensagensV1Texto_(row[3])!==referencia)return;
       var sub=comprovacaoMensagensV1Texto_(row[5]).toLowerCase();if(!sub||vistos[sub])return;vistos[sub]=true;
@@ -226,7 +228,7 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
       aparelhos.push({
         referenciaTecnica:sub.slice(-8),tipoAparelho:comprovacaoMensagensV1Texto_(row[8])||'Aparelho',
         navegador:comprovacaoMensagensV1Texto_(row[9]),sistema:comprovacaoMensagensV1Texto_(row[10]),estado:estado,
-        encaminhadoEm:enc,exibidoEm:exib,abertoEm:abr,cienteEm:cie,
+        encaminhadoEm:enc?(encaminhadoAuditoria||enc):'',exibidoEm:exib,abertoEm:abr,cienteEm:cie,
         origem:comprovacaoMensagensV1Texto_(row[16]),detalhe:comprovacaoMensagensV1Texto_(row[17])
       });
     });

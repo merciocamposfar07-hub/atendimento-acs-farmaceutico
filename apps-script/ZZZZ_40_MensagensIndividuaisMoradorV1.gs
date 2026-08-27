@@ -238,6 +238,12 @@ function mensagemIndividualV1Status_(p,contexto){
       if(row[15]){confirmadas++;ultimoConf=mensagemIndividualV1HorarioRecife_(row[15]);}
     });
   }
+  if(encaminhadas&&typeof notificacoesAreaV1AuditoriaPorEvento_==='function'){
+    try{
+      var auditoriaEnvio=notificacoesAreaV1AuditoriaPorEvento_(contexto.areaId,evento);
+      if(auditoriaEnvio&&auditoriaEnvio.registradoEm)ultimoEnc=mensagemIndividualV1Texto_(auditoriaEnvio.registradoEm);
+    }catch(erroAuditoriaEnvio){}
+  }
   if(open&&open.getLastRow()>1){
     open.getRange(2,1,open.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.OPEN_HEADERS.length).getValues().forEach(function(row){
       if(mensagemIndividualV1Texto_(row[0])!==evento||mensagemIndividualV1Texto_(row[1]).toUpperCase()!==contexto.areaId||mensagemIndividualV1Texto_(row[3])!==morador.referencia)return;

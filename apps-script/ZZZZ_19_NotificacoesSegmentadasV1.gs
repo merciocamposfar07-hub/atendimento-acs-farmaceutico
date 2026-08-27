@@ -291,7 +291,19 @@ function notificacoesAreaV1RegistrarComprovacao_(token,notificationId,estado,ori
           row[17]='O navegador confirmou que a notificação foi exibida no aparelho.';
         }
       }
-      sheet.getRange(i+2,1,1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).setValues([row]);
+      if(notificationId&&!idRegistrado)sheet.getRange(i+2,5).setValues([[row[4]]]);
+      sheet.getRange(i+2,12).setValues([[row[11]]]);
+      if(estado==='CONFIRMADO'){
+        if(!duplicada)sheet.getRange(i+2,16).setValues([[row[15]]]).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+        sheet.getRange(i+2,17).setValues([[row[16]||'']]);
+        sheet.getRange(i+2,18).setValues([[row[17]||'']]);
+      }else if(!duplicada){
+        sheet.getRange(i+2,15).setValues([[row[14]]]).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+        if(row[11]!=='CONFIRMADO'){
+          sheet.getRange(i+2,17).setValues([[row[16]||'']]);
+          sheet.getRange(i+2,18).setValues([[row[17]||'']]);
+        }
+      }
       return {
         ok:true,registrada:true,duplicada:duplicada,estado:row[11],eventoId:notificacoesAreaV1Texto_(row[0]),
         confirmadoEm:row[15]?notificacoesAreaV1DataPainel_(row[15]):'',
@@ -529,7 +541,10 @@ function notificacoesAreaV1AplicarRespostasEnvio_(preparados,respostas){
         }
         resumo.falhas++;
       }
-      sheet.getRange(item.row,1,1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).setValues([linha]);
+      if(linha[4])sheet.getRange(item.row,5).setValues([[linha[4]]]);
+      sheet.getRange(item.row,12).setValues([[linha[11]]]);
+      if(linha[13]&&!sheet.getRange(item.row,14).getValues()[0][0])sheet.getRange(item.row,14).setValues([[linha[13]]]).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+      sheet.getRange(item.row,18).setValues([[linha[17]||'']]);
     });
     return resumo;
   }finally{lock.releaseLock();}
@@ -544,7 +559,8 @@ function notificacoesAreaV1MarcarFalhaLote_(preparados,erro){
       if(['EXIBIDO_TECNICO','CONFIRMADO'].indexOf(linha[11])!==-1)return;
       linha[11]='FALHA_ENVIO';
       linha[17]=('Falha de conexão com o serviço Push: '+notificacoesAreaV1Erro_(erro)).slice(0,500);
-      sheet.getRange(item.row,1,1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).setValues([linha]);
+      sheet.getRange(item.row,12).setValues([[linha[11]]]);
+      sheet.getRange(item.row,18).setValues([[linha[17]||'']]);
     });
   }finally{lock.releaseLock();}
 }
