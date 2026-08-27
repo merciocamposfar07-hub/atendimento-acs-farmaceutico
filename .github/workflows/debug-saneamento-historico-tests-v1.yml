@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Ajustar teste, cache e validar tudo
+      - name: Ajustar testes, cache e validar tudo
         shell: bash
         run: |
           set -euo pipefail
@@ -34,6 +34,15 @@ jobs:
           if old not in s:
               raise SystemExit('assert antigo de cache-bust não localizado')
           test.write_text(s.replace(old, new, 1))
+          Path('/tmp/test_admin_transport.intended.js').write_text(test.read_text())
+
+          health = Path('scripts/test_notification_health_registry.js')
+          h = health.read_text()
+          old_health = 'assert(front.includes("if(validDocument(doc))payload.documento=doc"));'
+          new_health = '''assert(front.includes("TEST_DEVICE_KEY='portalTacsDispositivoV1'"));\nassert(front.includes("payload.dispositivo=testDevice"));\nassert(front.includes("payload.chaveTacsTeste=testToken"));\nassert(front.includes("if(!testMode&&validDocument(doc))payload.documento=doc"));'''
+          if old_health not in h:
+              raise SystemExit('assert antigo do check-in do morador não localizado')
+          health.write_text(h.replace(old_health, new_health, 1))
 
           runtime = Path('recados-campanhas-whatsapp-mensal-v12.js')
           r = runtime.read_text()
@@ -42,8 +51,6 @@ jobs:
           if old_runtime not in r:
               raise SystemExit('cache-bust antigo do aparelho TACS não localizado')
           runtime.write_text(r.replace(old_runtime, new_runtime, 1))
-
-          Path('/tmp/test_admin_transport.intended.js').write_text(test.read_text())
           PY
 
           npm ci
@@ -60,9 +67,9 @@ jobs:
 
           git config user.name 'Portal TACS Release'
           git config user.email 'actions@users.noreply.github.com'
-          git add scripts/test_admin_transport.js recados-campanhas-whatsapp-mensal-v12.js .github/apps-script-release-request
+          git add scripts/test_admin_transport.js scripts/test_notification_health_registry.js recados-campanhas-whatsapp-mensal-v12.js .github/apps-script-release-request
           git add -u .github/debug-saneamento-test-log.txt .github/workflows/debug-saneamento-historico-tests-v1.yml || true
           git commit -m 'Finalizar saneamento histórico do aparelho TACS'
           git pull --rebase origin main
           git push origin HEAD:main
-# finalizacao 20260826-v7
+# finalizacao 20260826-v8
