@@ -72,7 +72,7 @@ assert.match(familyClient,/chaveTacsTeste:technicalToken\(\)/);
 assert.match(familyClient,/dispositivo:deviceId\(false\)/);
 assert.match(familyClient,/nome, nascimento e localidade/);
 assert.match(familyClient,/aguardarSubscription\(1800\)/);
-assert.match(loader,/admin-aparelho-tacs-teste-v1\.js\?v=20260821-tacs-device-v7/);
+assert.match(loader,/admin-aparelho-tacs-teste-v1\.js\?v=20260827-botoes-safe-v1/);
 
 // Handoff V7: testa criação, resgate, uso único e isolamento por área.
 const handoffCache=new Map();
@@ -88,7 +88,7 @@ assert.equal(resgate.ok,true);assert.equal(resgate.transferidoParaPortal,true);a
 assert.throws(()=>sandbox.aparelhoTacsTesteV1HandoffResgatar_({codigo,dispositivo:DEVICE_TEST,areaId:'JAPARANDUBA'}),/expirou|utilizada/,'Código TACS deve ser de uso único.');
 const codigoOutra=sandbox.aparelhoTacsTesteV1HandoffCriar_({areaId:'JAPARANDUBA'},{operadorId:'TACS_TESTE'});
 assert.throws(()=>sandbox.aparelhoTacsTesteV1HandoffResgatar_({codigo:codigoOutra,dispositivo:DEVICE_TEST,areaId:'MATIAS'}),/outra área/,'Handoff não pode atravessar área.');
-assert.match(backend,/publico_aparelho_tacs_resgatar/);assert.match(backend,/codigoTransferencia/);assert.match(admin,/Abrir Portal TACS em modo teste/);assert.match(admin,/TRANSFERIR/);assert.match(familyClient,/q\.get\('tacsTeste'\)/);assert.match(familyClient,/resgatarModoTacsTeste/);assert.match(familyClient,/publico_aparelho_tacs_resgatar/);assert.match(familyClient,/history\.replaceState/);assert.match(loader,/admin-aparelho-tacs-teste-v1\.js\?v=20260821-tacs-device-v7/);
+assert.match(backend,/publico_aparelho_tacs_resgatar/);assert.match(backend,/codigoTransferencia/);assert.match(admin,/Abrir Portal TACS em modo teste/);assert.match(admin,/TRANSFERIR/);assert.match(familyClient,/q\.get\('tacsTeste'\)/);assert.match(familyClient,/resgatarModoTacsTeste/);assert.match(familyClient,/publico_aparelho_tacs_resgatar/);assert.match(familyClient,/history\.replaceState/);assert.match(loader,/admin-aparelho-tacs-teste-v1\.js\?v=20260827-botoes-safe-v1/);
 console.log('Handoff TACS V7 validado: código único, área isolada, Portal recebe autorização no próprio contexto do iPhone.');
 
 console.log('Modo TACS/teste V1.2 validado: autorização por dispositivo, sem dependência do Push, com fluxo comum protegido.');
