@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/diagnostico-agenda-medica-v1.yml'
+      - '.github/agenda-medica-run-trigger'
 
 permissions:
   contents: write
