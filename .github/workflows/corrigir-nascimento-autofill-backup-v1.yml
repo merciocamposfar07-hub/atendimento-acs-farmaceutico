@@ -1,0 +1,86 @@
+name: Corrigir nascimento civil do autofill V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-nascimento-autofill-backup-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nascimento-civil-autofill-v1
+  cancel-in-progress: false
+
+jobs:
+  corrigir-testar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar correcao cirurgica
+        run: |
+          set -euo pipefail
+          python3 scripts/aplicar_nascimento_civil_backup_guard_v1.py
+
+      - name: Testar nascimento e autofill
+        run: |
+          set -euo pipefail
+          npm ci
+          git diff --check
+          node --check --input-type=commonjs < apps-script/ZZZZ_23_CorrecaoNascimentoMaisUmDiaV1.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_50_NascimentoCivilBackupGuardV1.gs
+          node scripts/test_nascimento_civil_backup_guard_v1.js
+          node scripts/test_birth_plus_one_fix.js
+          node scripts/test_moradores_v145.js
+          node scripts/test_autofill_adaptativo_v1.js
+          node scripts/test_apps_script_module_chain.js
+          node scripts/test_build_apps_script_release.js
+
+      - name: Confirmar escopo e bloqueios
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          plus=Path('apps-script/ZZZZ_23_CorrecaoNascimentoMaisUmDiaV1.gs').read_text()
+          guard=Path('apps-script/ZZZZ_50_NascimentoCivilBackupGuardV1.gs').read_text()
+          build=Path('scripts/build_apps_script_release.js').read_text()
+          pkg=Path('package.json').read_text()
+          assert 'DESATIVADA: true' in plus
+          assert 'podeAplicar:false' in plus
+          assert 'correção histórica de +1 dia foi desativada' in plus
+          assert 'TACS_NASCIMENTO_CIVIL_BACKUP_GUARD_V1' in build
+          assert 'test_nascimento_civil_backup_guard_v1.js' in pkg
+          for proibido in ['.setValues(', '.setValue(', 'appendRow(', 'deleteRow(']:
+              assert proibido not in guard
+          print('ESCOPO_NASCIMENTO_CIVIL_OK')
+          PY
+
+      - name: Registrar somente a correcao validada
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS Release'
+          git config user.email 'actions@users.noreply.github.com'
+          git add \
+            apps-script/ZZZZ_23_CorrecaoNascimentoMaisUmDiaV1.gs \
+            scripts/build_apps_script_release.js \
+            package.json \
+            .github/apps-script-release-request
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteracao pendente.'
+            exit 0
+          fi
+          git commit -m 'Impedir avanço de um dia no nascimento e proteger autofill'
+          git pull --rebase origin main
+          git push origin HEAD:main
