@@ -1,9 +1,9 @@
 exit_code=1
-head_sha=8f1d44ba5be0a552a52d2da084c6f0457271bb6c
+head_sha=51ea1d29387b8c3f4cb9913c6386d3d0fa7709b9
 --- ultimas linhas ---
 npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
-added 47 packages, and audited 48 packages in 684ms
+added 47 packages, and audited 48 packages in 885ms
 
 8 packages are looking for funding
   run `npm fund` for details
