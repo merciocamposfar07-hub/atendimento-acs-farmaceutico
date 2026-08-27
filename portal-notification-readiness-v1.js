@@ -11,6 +11,14 @@
   var oneSignalRef = null;
   var renderTimer = null;
 
+  function pageActive() {
+    try {
+      return typeof window !== 'undefined' && typeof document !== 'undefined' && document && document.documentElement;
+    } catch (error) {
+      return false;
+    }
+  }
+
   function text(value) {
     return String(value == null ? '' : value).trim();
   }
@@ -52,7 +60,7 @@
   }
 
   function addStyle() {
-    if (document.getElementById(STYLE_ID)) return;
+    if (!pageActive() || document.getElementById(STYLE_ID)) return;
     var style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = [
@@ -73,11 +81,13 @@
   }
 
   function ensureBox() {
+    if (!pageActive()) return null;
     var existing = document.getElementById(BOX_ID);
     if (existing) return existing;
     var offer = document.getElementById('notificationOffer');
     if (!offer) return null;
     addStyle();
+    if (!pageActive()) return null;
     var box = document.createElement('div');
     box.id = BOX_ID;
     box.setAttribute('aria-live', 'polite');
@@ -156,6 +166,7 @@
   }
 
   function render() {
+    if (!pageActive()) return;
     var box = ensureBox();
     if (!box) return;
     if (!oneSignalRef) {
@@ -208,10 +219,14 @@
 
   function scheduleRender(delay) {
     clearTimeout(renderTimer);
-    renderTimer = setTimeout(render, Number(delay || 120));
+    if (!pageActive()) return;
+    renderTimer = setTimeout(function () {
+      if (pageActive()) render();
+    }, Number(delay || 120));
   }
 
   async function verifyNow() {
+    if (!pageActive()) return;
     var button = document.getElementById(VERIFY_ID);
     if (button) {
       button.disabled = true;
@@ -227,6 +242,7 @@
       scheduleRender(80);
     } finally {
       setTimeout(function () {
+        if (!pageActive()) return;
         var current = document.getElementById(VERIFY_ID);
         if (current) {
           current.disabled = false;
@@ -238,40 +254,48 @@
   }
 
   function attachOneSignal(OneSignal) {
+    if (!pageActive()) return;
     oneSignalRef = OneSignal;
     var push = null;
     try { push = OneSignal && OneSignal.User && OneSignal.User.PushSubscription; } catch (error) {}
     if (push && typeof push.addEventListener === 'function') {
-      push.addEventListener('change', function () { scheduleRender(120); });
+      push.addEventListener('change', function () { if (pageActive()) scheduleRender(120); });
     }
     try {
       if (OneSignal.Notifications && typeof OneSignal.Notifications.addEventListener === 'function') {
-        OneSignal.Notifications.addEventListener('permissionChange', function () { scheduleRender(120); });
+        OneSignal.Notifications.addEventListener('permissionChange', function () { if (pageActive()) scheduleRender(120); });
       }
     } catch (error2) {}
     scheduleRender(250);
   }
 
   function install() {
+    if (!pageActive()) return;
     ensureBox();
     var status = document.getElementById('notificationStatus');
     if (status && status.dataset.notificationReadinessObserver !== '1') {
       status.dataset.notificationReadinessObserver = '1';
-      new MutationObserver(function () { scheduleRender(100); }).observe(status, { childList: true, characterData: true, subtree: true });
+      new MutationObserver(function () { if (pageActive()) scheduleRender(100); }).observe(status, { childList: true, characterData: true, subtree: true });
     }
-    document.addEventListener('tacs:morador', function () { scheduleRender(150); });
-    document.addEventListener('tacs:notificacao-reparo-concluido', function () { scheduleRender(180); });
+    document.addEventListener('tacs:morador', function () { if (pageActive()) scheduleRender(150); });
+    document.addEventListener('tacs:notificacao-reparo-concluido', function () { if (pageActive()) scheduleRender(180); });
 
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(function (OneSignal) {
-      setTimeout(function () { attachOneSignal(OneSignal); }, 350);
+      setTimeout(function () { if (pageActive()) attachOneSignal(OneSignal); }, 350);
     });
 
     var observer = new MutationObserver(function () {
+      if (!pageActive()) return;
       if (ensureBox()) scheduleRender(80);
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
-    setTimeout(function () { observer.disconnect(); ensureBox(); scheduleRender(100); }, 12000);
+    setTimeout(function () {
+      observer.disconnect();
+      if (!pageActive()) return;
+      ensureBox();
+      scheduleRender(100);
+    }, 12000);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true });
