@@ -655,7 +655,7 @@ function notificacoesAreaV1UltimoEnvio_(areaId,tipo,referencia){
   var sheet=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.AUDIT_SHEET);
   if(!sheet||sheet.getLastRow()<=1)return null;
   notificacoesAreaV1ValidarAuditoria_(sheet);
-  var rows=sheet.getRange(2,1,sheet.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.AUDIT_HEADERS.length).getDisplayValues();
+  var rows=sheet.getRange(2,1,sheet.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.AUDIT_HEADERS.length).getValues();
   for(var i=rows.length-1;i>=0;i--){
     var row=rows[i];
     if(notificacoesAreaV1Texto_(row[1]).toUpperCase()!==notificacoesAreaV1Texto_(areaId).toUpperCase())continue;
@@ -663,7 +663,7 @@ function notificacoesAreaV1UltimoEnvio_(areaId,tipo,referencia){
     if(notificacoesAreaV1Texto_(row[3])!==referencia)continue;
     var onesignalId=notificacoesAreaV1Texto_(row[6]);
     if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(onesignalId))continue;
-    return {eventoId:notificacoesAreaV1Texto_(row[0]),areaId:row[1],tipo:notificacoesAreaV1Texto_(row[2]).toUpperCase(),referenciaId:row[3],titulo:row[4],onesignalId:onesignalId,destinatarios:row[7]===''?null:Number(row[7]),resultado:row[8],registradoEm:row[9]};
+    return {eventoId:notificacoesAreaV1Texto_(row[0]),areaId:row[1],tipo:notificacoesAreaV1Texto_(row[2]).toUpperCase(),referenciaId:row[3],titulo:row[4],onesignalId:onesignalId,destinatarios:row[7]===''?null:Number(row[7]),resultado:row[8],registradoEm:notificacoesAreaV1DataPainel_(row[9])};
   }
   return null;
 }
@@ -673,13 +673,13 @@ function notificacoesAreaV1AuditoriaPorEvento_(areaId,evento){
   var sheet=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.AUDIT_SHEET);
   if(!sheet||sheet.getLastRow()<=1)return null;
   notificacoesAreaV1ValidarAuditoria_(sheet);
-  var rows=sheet.getRange(2,1,sheet.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.AUDIT_HEADERS.length).getDisplayValues();
+  var rows=sheet.getRange(2,1,sheet.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.AUDIT_HEADERS.length).getValues();
   for(var i=rows.length-1;i>=0;i--){
     var row=rows[i];
     if(notificacoesAreaV1Texto_(row[0])!==evento||notificacoesAreaV1Texto_(row[1]).toUpperCase()!==notificacoesAreaV1Texto_(areaId).toUpperCase())continue;
     var onesignalId=notificacoesAreaV1Texto_(row[6]);
     if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(onesignalId))return null;
-    return {eventoId:evento,areaId:row[1],tipo:notificacoesAreaV1Texto_(row[2]).toUpperCase(),referenciaId:notificacoesAreaV1Texto_(row[3]),titulo:row[4],onesignalId:onesignalId,destinatarios:row[7]===''?null:Number(row[7]),resultado:row[8],registradoEm:row[9]};
+    return {eventoId:evento,areaId:row[1],tipo:notificacoesAreaV1Texto_(row[2]).toUpperCase(),referenciaId:notificacoesAreaV1Texto_(row[3]),titulo:row[4],onesignalId:onesignalId,destinatarios:row[7]===''?null:Number(row[7]),resultado:row[8],registradoEm:notificacoesAreaV1DataPainel_(row[9])};
   }
   return null;
 }
