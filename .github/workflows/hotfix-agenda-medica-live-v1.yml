@@ -1,0 +1,157 @@
+name: Hotfix agenda medica em producao
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/hotfix-agenda-medica-live-trigger'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  hotfix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar e testar correcao cirurgica
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          python3 scripts/corrigir_agenda_medica_data_civil_v1.py
+          git diff --check
+          node scripts/test_agenda_data_civil_v1.js
+          node scripts/test_public_agendas_apps_script.js
+          node scripts/test_agendas_profissionais_territoriais.js
+          node scripts/test_build_apps_script_release.js
+
+      - name: Validar credenciais
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar Apps Script real
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs');
+          const path=require('path');
+          const config=JSON.parse(process.env.CLASP_JSON);
+          if(!config.scriptId) throw new Error('scriptId ausente');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Montar modulos autorizados
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          node scripts/build_apps_script_release.js "$LIVE_DIR"
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$LIVE_DIR" -type f \( -name '*.js' -o -name '*.gs' \) -print0)
+
+      - name: Implantar e validar sexta-feira medica
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Hotfix agenda medica data civil - ${GITHUB_SHA::7}")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+          DEPLOYED=0
+          rollback() {
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback hotfix agenda medica" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Hotfix agenda medica data civil" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          ok=0
+          for tentativa in 1 2 3 4; do
+            resposta=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$BASE?action=painel_publico&areaId=JAPARANDUBA") || true
+            if RESPOSTA="$resposta" node - <<'NODE'
+          const r=JSON.parse(process.env.RESPOSTA||'{}');
+          const sexta=((r.modules||{}).medica||[]).find(x=>String(x.day||'').toUpperCase()==='SEXTA');
+          if(!r.ok||!sexta) process.exit(1);
+          console.log(JSON.stringify({day:sexta.day,active:sexta.active,date:sexta.date,status:sexta.status,closedNow:sexta.closedNow,time:sexta.time}));
+          if(sexta.active!==true||sexta.date!=='2026-08-28'||sexta.closedNow===true) process.exit(2);
+          NODE
+            then
+              ok=1
+              break
+            fi
+            sleep 7
+          done
+          test "$ok" = '1'
+          trap - ERR
+          echo "HOTFIX_AGENDA_MEDICA_PRODUCAO_OK versao=$NEW_VERSION"
+
+      - name: Registrar fonte corrigida no repositorio
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -- .github/apps-script-release-request
+          git config user.name 'Portal TACS Release'
+          git config user.email 'actions@users.noreply.github.com'
+          git add apps-script/ZZ_12_PublicoAgendasPortalV1.gs
+          git add apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs
+          git add scripts/test_agenda_data_civil_v1.js
+          git add package.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Corrigir data civil e liberar agenda médica'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Limpar credenciais temporarias
+        if: always()
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
