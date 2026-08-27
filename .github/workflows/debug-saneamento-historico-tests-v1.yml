@@ -44,6 +44,14 @@ jobs:
               raise SystemExit('assert antigo do check-in do morador não localizado')
           health.write_text(h.replace(old_health, new_health, 1))
 
+          aparelho = Path('scripts/test_aparelho_tacs_teste_v1.js')
+          a = aparelho.read_text()
+          old_loader = r'admin-aparelho-tacs-teste-v1\.js\?v=20260821-tacs-device-v7'
+          new_loader = r'admin-aparelho-tacs-teste-v1\.js\?v=20260826-saneamento-historico-v1'
+          if a.count(old_loader) != 2:
+              raise SystemExit('referências antigas do loader TACS não foram localizadas exatamente duas vezes')
+          aparelho.write_text(a.replace(old_loader, new_loader))
+
           runtime = Path('recados-campanhas-whatsapp-mensal-v12.js')
           r = runtime.read_text()
           old_runtime = "admin-aparelho-tacs-teste-v1.js?v=20260821-tacs-device-v7"
@@ -67,9 +75,9 @@ jobs:
 
           git config user.name 'Portal TACS Release'
           git config user.email 'actions@users.noreply.github.com'
-          git add scripts/test_admin_transport.js scripts/test_notification_health_registry.js recados-campanhas-whatsapp-mensal-v12.js .github/apps-script-release-request
+          git add scripts/test_admin_transport.js scripts/test_notification_health_registry.js scripts/test_aparelho_tacs_teste_v1.js recados-campanhas-whatsapp-mensal-v12.js .github/apps-script-release-request
           git add -u .github/debug-saneamento-test-log.txt .github/workflows/debug-saneamento-historico-tests-v1.yml || true
           git commit -m 'Finalizar saneamento histórico do aparelho TACS'
           git pull --rebase origin main
           git push origin HEAD:main
-# finalizacao 20260826-v8
+# finalizacao 20260826-v9
