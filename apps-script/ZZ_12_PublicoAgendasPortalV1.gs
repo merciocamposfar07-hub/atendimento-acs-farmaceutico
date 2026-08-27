@@ -546,11 +546,11 @@ function publicoAgendasV1DataIso_(valor) {
   if (!valor) return '';
   if (Object.prototype.toString.call(valor) === '[object Date]') {
     if (isNaN(valor.getTime())) return '';
-    return Utilities.formatDate(
-      valor,
-      PUBLICO_AGENDAS_PORTAL_V1.FUSO,
-      'yyyy-MM-dd'
-    );
+    // DATA da agenda é uma data civil. Não converter meia-noite UTC para Recife,
+    // pois isso faz 28/08 virar 27/08 e fecha indevidamente a vaga do dia seguinte.
+    return String(valor.getUTCFullYear()).padStart(4, '0') + '-' +
+      String(valor.getUTCMonth() + 1).padStart(2, '0') + '-' +
+      String(valor.getUTCDate()).padStart(2, '0');
   }
   var texto = String(valor).trim();
   var iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
