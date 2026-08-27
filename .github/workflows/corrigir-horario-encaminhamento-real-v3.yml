@@ -1,4 +1,4 @@
-name: Corrigir horário real do encaminhamento V3
+name: Corrigir horario real do encaminhamento V3
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
     env:
       NO_COLOR: '1'
     steps:
-      - name: Baixar repositório
+      - name: Baixar repositorio
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -31,109 +31,13 @@ jobs:
           node-version: '20'
           cache: npm
 
-      - name: Corrigir persistência e leitura do horário de encaminhamento
+      - name: Aplicar correcao cirurgica
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
+          python3 scripts/corrigir_horario_encaminhamento_real_v3.py
 
-          notif_path=Path('apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs')
-          msg_path=Path('apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs')
-          report_path=Path('apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs')
-
-          def bloco_funcao(texto,nome):
-              inicio=texto.index('function '+nome+'(')
-              fim=texto.find('\nfunction ',inicio+1)
-              if fim<0: fim=len(texto)
-              return inicio,fim,texto[inicio:fim]
-
-          def substituir_no_bloco(texto,nome,antigo,novo):
-              inicio,fim,bloco=bloco_funcao(texto,nome)
-              if novo in bloco:
-                  return texto
-              if antigo not in bloco:
-                  raise SystemExit('Ponto cirúrgico não localizado em '+nome)
-              bloco=bloco.replace(antigo,novo,1)
-              return texto[:inicio]+bloco+texto[fim:]
-
-          n=notif_path.read_text()
-
-          full_row_item="      sheet.getRange(item.row,1,1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).setValues([linha]);"
-          apply_cells="""      if(linha[4])sheet.getRange(item.row,5).setValue(linha[4]);
-      sheet.getRange(item.row,12).setValue(linha[11]);
-      if(linha[13]&&!sheet.getRange(item.row,14).getValue())sheet.getRange(item.row,14).setValue(linha[13]).setNumberFormat('dd/MM/yyyy HH:mm:ss');
-      sheet.getRange(item.row,18).setValue(linha[17]||'');"""
-          n=substituir_no_bloco(n,'notificacoesAreaV1AplicarRespostasEnvio_',full_row_item,apply_cells)
-
-          fail_cells="""      sheet.getRange(item.row,12).setValue(linha[11]);
-      sheet.getRange(item.row,18).setValue(linha[17]||'');"""
-          n=substituir_no_bloco(n,'notificacoesAreaV1MarcarFalhaLote_',full_row_item,fail_cells)
-
-          full_row_confirm="      sheet.getRange(i+2,1,1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).setValues([row]);"
-          confirm_cells="""      if(notificationId&&!idRegistrado)sheet.getRange(i+2,5).setValue(row[4]);
-      sheet.getRange(i+2,12).setValue(row[11]);
-      if(estado==='CONFIRMADO'){
-        if(!duplicada)sheet.getRange(i+2,16).setValue(row[15]).setNumberFormat('dd/MM/yyyy HH:mm:ss');
-        sheet.getRange(i+2,17).setValue(row[16]||'');
-        sheet.getRange(i+2,18).setValue(row[17]||'');
-      }else if(!duplicada){
-        sheet.getRange(i+2,15).setValue(row[14]).setNumberFormat('dd/MM/yyyy HH:mm:ss');
-        if(row[11]!=='CONFIRMADO'){
-          sheet.getRange(i+2,17).setValue(row[16]||'');
-          sheet.getRange(i+2,18).setValue(row[17]||'');
-        }
-      }"""
-          n=substituir_no_bloco(n,'notificacoesAreaV1RegistrarComprovacao_',full_row_confirm,confirm_cells)
-          notif_path.write_text(n)
-
-          m=msg_path.read_text()
-          audit_status="""  if(encaminhadas&&typeof notificacoesAreaV1AuditoriaPorEvento_==='function'){
-    try{
-      var auditoriaEnvio=notificacoesAreaV1AuditoriaPorEvento_(contexto.areaId,evento);
-      if(auditoriaEnvio&&auditoriaEnvio.registradoEm)ultimoEnc=mensagemIndividualV1Texto_(auditoriaEnvio.registradoEm);
-    }catch(erroAuditoriaEnvio){}
-  }
-"""
-          if 'var auditoriaEnvio=notificacoesAreaV1AuditoriaPorEvento_' not in m:
-              anchor="""  if(open&&open.getLastRow()>1){"""
-              if anchor not in m: raise SystemExit('Âncora do status individual não localizada')
-              m=m.replace(anchor,audit_status+anchor,1)
-          msg_path.write_text(m)
-
-          r=report_path.read_text()
-          audit_report="""    var auditoriaEnvio=typeof notificacoesAreaV1AuditoriaPorEvento_==='function'?notificacoesAreaV1AuditoriaPorEvento_(contexto.areaId,ev.eventoId):null;
-    var encaminhadoAuditoria=comprovacaoMensagensV1Texto_(auditoriaEnvio&&auditoriaEnvio.registradoEm)||comprovacaoMensagensV1Texto_(ev.registradoEm);
-"""
-          if 'var encaminhadoAuditoria=' not in r:
-              anchor="""    var vistos={},aparelhos=[],cont={destinados:0,encaminhados:0,exibidos:0,abertos:0,cientes:0,falhas:0};
-"""
-              if anchor not in r: raise SystemExit('Âncora do relatório persistente não localizada')
-              r=r.replace(anchor,anchor+audit_report,1)
-          old="encaminhadoEm:enc,exibidoEm:exib,abertoEm:abr,cienteEm:cie,"
-          new="encaminhadoEm:enc?(encaminhadoAuditoria||enc):'',exibidoEm:exib,abertoEm:abr,cienteEm:cie,"
-          if new not in r:
-              if old not in r: raise SystemExit('Campo de horário do relatório não localizado')
-              r=r.replace(old,new,1)
-          report_path.write_text(r)
-
-          # Garantias da correção: callbacks futuros não podem regravar a linha inteira
-          # e as duas telas administrativas usam a auditoria append-only do envio.
-          n=notif_path.read_text(); m=msg_path.read_text(); r=report_path.read_text()
-          for fn in ['notificacoesAreaV1AplicarRespostasEnvio_','notificacoesAreaV1MarcarFalhaLote_']:
-              _,_,b=bloco_funcao(n,fn)
-              if 'RECEIPT_HEADERS.length).setValues([linha])' in b:
-                  raise SystemExit(fn+' ainda regrava a linha inteira')
-          _,_,b=bloco_funcao(n,'notificacoesAreaV1RegistrarComprovacao_')
-          if 'RECEIPT_HEADERS.length).setValues([row])' in b:
-              raise SystemExit('RegistrarComprovacao ainda regrava a linha inteira')
-          if "notificacoesAreaV1AuditoriaPorEvento_(contexto.areaId,evento)" not in m:
-              raise SystemExit('Status individual sem horário auditado')
-          if "encaminhadoEm:enc?(encaminhadoAuditoria||enc):''" not in r:
-              raise SystemExit('Relatório persistente sem fallback auditado')
-          PY
-
-      - name: Testar regressões antes de publicar
+      - name: Testar antes de publicar
         shell: bash
         run: |
           set -euo pipefail
@@ -146,7 +50,7 @@ jobs:
           grep -q "notificacoesAreaV1AuditoriaPorEvento_(contexto.areaId,evento)" apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
           grep -q "encaminhadoAuditoria" apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs
 
-      - name: Validar credenciais sem exibi-las
+      - name: Validar credenciais sem exibir
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
           CLASP_JSON: ${{ secrets.CLASP_JSON }}
@@ -169,9 +73,9 @@ jobs:
           printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
           chmod 600 "$HOME/.clasprc.json"
           CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
-          const fs=require('fs'),path=require('path');
+          const fs=require('fs');const path=require('path');
           const config=JSON.parse(process.env.CLASP_JSON);
-          if(!config.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId))throw new Error('scriptId inválido');
+          if(!config.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId))throw new Error('scriptId invalido');
           config.rootDir='.';
           fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
           NODE
@@ -179,13 +83,13 @@ jobs:
           npx --yes @google/clasp@3.3.0 pull
           test -f appsscript.json
 
-      - name: Substituir somente os três módulos de comprovação
+      - name: Substituir somente os tres modulos
         shell: bash
         run: |
           set -euo pipefail
           LIVE_DIR="$RUNNER_TEMP/apps-script-live"
           LIVE_DIR="$LIVE_DIR" node - <<'NODE'
-          const fs=require('fs'),path=require('path');
+          const fs=require('fs');const path=require('path');
           const live=process.env.LIVE_DIR;
           const files=fs.readdirSync(live).filter(n=>/\.(?:gs|js)$/.test(n));
           const mods=[
@@ -195,15 +99,13 @@ jobs:
           ];
           for(const [marker,sourcePath] of mods){
             const found=files.filter(n=>fs.readFileSync(path.join(live,n),'utf8').includes(marker));
-            if(found.length!==1)throw new Error('Módulo '+marker+' não localizado exatamente uma vez no Apps Script atual.');
-            const source=fs.readFileSync(sourcePath,'utf8');
-            fs.writeFileSync(path.join(live,found[0]),source,'utf8');
-            console.log('Módulo substituído:',found[0]);
+            if(found.length!==1)throw new Error('Modulo '+marker+' nao localizado exatamente uma vez.');
+            fs.writeFileSync(path.join(live,found[0]),fs.readFileSync(sourcePath,'utf8'),'utf8');
+            console.log('Modulo substituido:',found[0]);
           }
           NODE
-          rm -f "$LIVE_DIR/.clasp.json".tmp 2>/dev/null || true
 
-      - name: Publicar na mesma implantação e validar
+      - name: Publicar mesma implantacao e validar
         shell: bash
         env:
           DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
@@ -211,21 +113,18 @@ jobs:
           set -euo pipefail
           LIVE_DIR="$RUNNER_TEMP/apps-script-live"
           cd "$LIVE_DIR"
-          node --check --input-type=commonjs < ZZZZ_19_NotificacoesSegmentadasV1.js
-          node --check --input-type=commonjs < ZZZZ_40_MensagensIndividuaisMoradorV1.js
-          node --check --input-type=commonjs < ZZZZ_42_ComprovacaoMensagensV1.js
           DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
           PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
           test -n "$PREVIOUS_VERSION"
-          npx --yes @google/clasp@3.3.0 version "Backup antes de corrigir horário real de encaminhamento - ${GITHUB_SHA::7}"
+          npx --yes @google/clasp@3.3.0 version "Backup antes do horario real de encaminhamento - ${GITHUB_SHA::7}"
           npx --yes @google/clasp@3.3.0 push --force
-          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Horário real de encaminhamento V3 - ${GITHUB_SHA::7}")
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Horario real de encaminhamento V3 - ${GITHUB_SHA::7}")
           NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
           test -n "$NEW_VERSION"
           DEPLOYED=0
-          rollback(){ code=$?; trap - ERR; if [ "$DEPLOYED" = '1' ]; then npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático do horário de encaminhamento" "$DEPLOYMENT_ID" || true; fi; exit "$code"; }
+          rollback(){ code=$?; trap - ERR; if [ "$DEPLOYED" = '1' ]; then npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automatico horario encaminhamento" "$DEPLOYMENT_ID" || true; fi; exit "$code"; }
           trap rollback ERR
-          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Correção do horário real de encaminhamento das notificações" "$DEPLOYMENT_ID"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Correcao do horario real de encaminhamento" "$DEPLOYMENT_ID"
           DEPLOYED=1
           BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
           ok=0
@@ -236,21 +135,20 @@ jobs:
           done
           test "$ok" = '1'
           trap - ERR
-          printf 'Implantação validada na versão %s\n' "$NEW_VERSION"
+          printf 'Implantacao validada na versao %s\n' "$NEW_VERSION"
 
-      - name: Registrar código corrigido no repositório
+      - name: Registrar fontes corrigidas
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'Portal TACS Release'
           git config user.email 'actions@users.noreply.github.com'
-          git rm -f .github/workflows/corrigir-horario-encaminhamento-real-v3.yml
           git add apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs
-          git commit -m 'Corrigir horário real do encaminhamento [skip ci]'
+          git commit -m 'Corrigir horario real do encaminhamento [skip ci]'
           git pull --rebase origin main
           git push origin HEAD:main
 
-      - name: Remover credenciais temporárias
+      - name: Remover credenciais temporarias
         if: always()
         shell: bash
         run: |
