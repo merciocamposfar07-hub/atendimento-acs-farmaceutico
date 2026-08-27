@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Executar teste DOM com pilha detalhada
+      - name: Executar teste DOM e identificar MutationObserver
         shell: bash
         run: |
           set +e
@@ -28,7 +28,7 @@ jobs:
             npm run pretest >> /tmp/tacs-test.log 2>&1
             pre_code=$?
             if [ "$pre_code" -eq 0 ]; then
-              python3 -c "from pathlib import Path; p=Path('scripts/test_dom_flows.js'); s=p.read_text(); old='this.errors.push(error.message);'; new='this.errors.push((error && error.stack) ? error.stack : error.message);'; assert old in s, 'gancho jsdomError não localizado'; p.write_text(s.replace(old,new,1))"
+              python3 -c "from pathlib import Path; p=Path('scripts/test_dom_flows.js'); s=p.read_text(); a='this.errors.push(error.message);'; b='this.errors.push((error && error.stack) ? error.stack : error.message);'; assert a in s; s=s.replace(a,b,1); a2='beforeParse(window) {\n        window.scrollTo = function () {};'; b2=\"beforeParse(window) {\\n        const NativeMutationObserver = window.MutationObserver;\\n        window.MutationObserver = function(callback){ return new NativeMutationObserver(function(records, observer){ try{return callback(records, observer)}catch(error){harness.errors.push('MO_CALLBACK: '+String(callback).slice(0,1800)+'\\\\n'+String(error&&error.stack||error));throw error} }); };\\n        window.MutationObserver.prototype = NativeMutationObserver.prototype;\\n        window.scrollTo = function () {};\"; assert a2 in s; p.write_text(s.replace(a2,b2,1))"
               node scripts/test_dom_flows.js >> /tmp/tacs-test.log 2>&1
               code=$?
             else
@@ -41,13 +41,13 @@ jobs:
           {
             echo "exit_code=$code"
             echo "head_sha=$GITHUB_SHA"
-            echo "--- diagnostico DOM detalhado ---"
-            tail -n 320 /tmp/tacs-test.log
+            echo "--- diagnostico MutationObserver ---"
+            tail -n 420 /tmp/tacs-test.log
           } > .github/debug-saneamento-test-log.txt
           git checkout -- scripts/test_dom_flows.js
           git config user.name 'Portal TACS Tests'
           git config user.email 'actions@users.noreply.github.com'
           git add .github/debug-saneamento-test-log.txt
-          git commit -m 'Registrar diagnóstico detalhado do DOM' || exit 0
+          git commit -m 'Registrar origem do MutationObserver' || exit 0
           git push
-# rerun 20260826-stack-v4
+# rerun 20260826-observer-source-v5
