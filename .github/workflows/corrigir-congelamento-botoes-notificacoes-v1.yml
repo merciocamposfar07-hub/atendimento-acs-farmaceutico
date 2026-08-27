@@ -80,4 +80,4 @@ jobs:
           git pull --rebase origin main
           git push origin HEAD:main
 
-# retry-v2-validacao-funcao-alternar
+# retry-v3-patch-idempotente
