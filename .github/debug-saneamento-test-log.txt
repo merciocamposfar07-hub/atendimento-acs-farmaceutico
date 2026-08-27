@@ -1,15 +1,55 @@
 exit_code=1
-head_sha=069ee145d79e1ec719dde2fc01bd896be35a8e48
+head_sha=bee5850ada72ff678ec8d31992816052127baf24
 --- diagnostico DOM detalhado ---
 npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
-added 47 packages, and audited 48 packages in 766ms
+added 47 packages, and audited 48 packages in 795ms
 
 8 packages are looking for funding
   run `npm fund` for details
 
 found 0 vulnerabilities
-Error: A vaga emergencial única não apareceu para o teste não bloqueante
-    at waitFor (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:34:9)
-    at async testNonBlockingDentalCard (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:414:5)
-    at async main (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:941:3)
+
+> pretest
+> python3 scripts/patch_admin_transport_local_resources.py && python3 scripts/atualizar_teste_odontologia_servico_unico_v3.py && python3 scripts/atualizar_teste_territorio_pin_only_v1.py
+
+LOCAL_RESOURCES_OK: scripts/test_admin_transport.js, scripts/test_dynamic_professionals_dom.js
+Teste odontológico atualizado para confirmação real do servidor antes do envio.
+Dois testes territoriais PIN-only validados/atualizados com idempotência.
+AssertionError [ERR_ASSERTION]: Erros no DOM: Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]
+    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)
+    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5; Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]
+    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)
+    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5; Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]
+    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)
+    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
++ actual - expected
+
++ [
++   "Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]\n" +
++     '    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)\n' +
++     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)\n' +
++     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5',
++   "Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]\n" +
++     '    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)\n' +
++     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)\n' +
++     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5',
++   "Error: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]\n" +
++     '    at reportException (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)\n' +
++     '    at notifyMutationObservers (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:169:9)\n' +
++     '    at /home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/node_modules/jsdom/lib/jsdom/living/helpers/mutation-observers.js:133:5\n' +
++     '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)'
++ ]
+- []
+    at main (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:975:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [Array],
+  expected: [],
+  operator: 'deepStrictEqual'
+}
