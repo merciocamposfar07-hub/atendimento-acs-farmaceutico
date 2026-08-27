@@ -152,6 +152,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_49_SaneamentoHistoricoAparelhoTacsV1.gs',
     marker: 'TACS_SANEAMENTO_HISTORICO_APARELHO_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_50_NascimentoCivilBackupGuardV1.gs',
+    marker: 'TACS_NASCIMENTO_CIVIL_BACKUP_GUARD_V1'
   }
 ];
 

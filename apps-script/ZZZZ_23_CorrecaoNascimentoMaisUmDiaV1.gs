@@ -14,6 +14,7 @@
  */
 var TACS_CORRECAO_NASCIMENTO_V1 = Object.freeze({
   VERSAO: '1.0.0',
+  DESATIVADA: true,
   AREA_ID: 'JAPARANDUBA',
   TIMEZONE: 'America/Recife',
   DONE_PROPERTY: 'TACS_FIX_NASCIMENTO_JAPARANDUBA_PLUS1_V1_DONE',
@@ -196,7 +197,7 @@ function correcaoNascimentoV1Preview_(contexto){
     datasInvalidas:plano.invalidas.length,
     formulas:plano.formulas.length,
     jaAplicada:plano.jaAplicada,
-    podeAplicar:!plano.jaAplicada&&plano.validas>0&&plano.invalidas.length===0&&plano.formulas.length===0,
+    podeAplicar:false,
     amostra:plano.alteracoes.slice(0,TACS_CORRECAO_NASCIMENTO_V1.MAX_SAMPLE).map(function(item){
       return {linha:item.linha,idPortal:item.idPortal,nome:item.nome,antes:item.antes,depois:item.depois};
     }),
@@ -229,6 +230,9 @@ function correcaoNascimentoV1GarantirBackup_(fonte,alteracoes){
 }
 
 function correcaoNascimentoV1Aplicar_(p,contexto){
+  if(TACS_CORRECAO_NASCIMENTO_V1.DESATIVADA){
+    throw new Error('A correção histórica de +1 dia foi desativada permanentemente. A data de nascimento deve ser tratada como data civil e somente um backup comprovado pode restaurar valor anterior.');
+  }
   if(String(p.confirmacao||'').trim()!==TACS_CORRECAO_NASCIMENTO_V1.CONFIRMATION){
     throw new Error('A confirmação da correção em lote está ausente.');
   }
