@@ -1,0 +1,132 @@
+name: Implantar fuso Recife nas mensagens individuais v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-fuso-mensagem-individual-recife-v2.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  testar-e-implantar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NO_COLOR: '1'
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Validar somente mensagens individuais
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          node --check --input-type=commonjs < apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
+          node scripts/test_mensagem_individual_morador_v1.js
+          grep -q "Utilities.formatDate(valor,'America/Recife','dd/MM/yyyy HH:mm:ss')" apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
+
+      - name: Validar credenciais sem exibi-las
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar projeto Apps Script atual
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs');const path=require('path');
+          const config=JSON.parse(process.env.CLASP_JSON);
+          if(!config.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId)) throw new Error('scriptId inválido');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Substituir somente o módulo de mensagens individuais
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs');const path=require('path');
+          const live=process.env.LIVE_DIR;
+          const marker='TACS_MENSAGEM_INDIVIDUAL_V1';
+          const source=fs.readFileSync('apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs','utf8');
+          const files=fs.readdirSync(live).filter(n=>/\.(?:gs|js)$/.test(n));
+          const found=files.filter(n=>fs.readFileSync(path.join(live,n),'utf8').includes(marker));
+          if(found.length!==1)throw new Error('O módulo de mensagens individuais não foi localizado exatamente uma vez no Apps Script atual.');
+          fs.writeFileSync(path.join(live,found[0]),source,'utf8');
+          console.log('Módulo substituído:',found[0]);
+          NODE
+          TARGET=$(grep -l "TACS_MENSAGEM_INDIVIDUAL_V1" "$LIVE_DIR"/*.gs "$LIVE_DIR"/*.js 2>/dev/null | head -n 1)
+          test -n "$TARGET"
+          node --check --input-type=commonjs < "$TARGET"
+          grep -q "America/Recife" "$TARGET"
+
+      - name: Publicar mesma implantação e validar
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          npx --yes @google/clasp@3.3.0 version "Backup antes da correção de fuso das mensagens individuais - ${GITHUB_SHA::7}"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Mensagens individuais America Recife 1.0.2 - ${GITHUB_SHA::7}")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+          DEPLOYED=0
+          rollback(){ code=$?; trap - ERR; if [ "$DEPLOYED" = '1' ]; then npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático após falha do fuso Recife" "$DEPLOYMENT_ID" || true; fi; exit "$code"; }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Mensagens individuais com horário America/Recife" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          ok=0
+          for tentativa in 1 2 3; do
+            resposta=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=portal_manutencao_status&areaId=JAPARANDUBA") || true
+            if printf '%s' "$resposta" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then ok=1; break; fi
+            sleep 8
+          done
+          test "$ok" = '1'
+          trap - ERR
+          printf 'Fuso America/Recife implantado e endpoint público validado: versão %s\n' "$NEW_VERSION"
+
+      - name: Remover credenciais temporárias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
