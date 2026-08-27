@@ -55,6 +55,16 @@ def replace_once(text, old, new, label):
     return text.replace(old, new, 1)
 
 
+def function_slice(text, name, next_name):
+    start = text.find('function ' + name + '(')
+    if start < 0:
+        raise SystemExit('Função não localizada: ' + name)
+    end = text.find('function ' + next_name + '(', start)
+    if end < 0:
+        raise SystemExit('Limite da função não localizado: ' + next_name)
+    return text[start:end]
+
+
 def main():
     admin = ADMIN.read_text()
     admin = replace_once(admin, ADMIN_OLD, ADMIN_NEW, 'auto atualização OneSignal após alternar modo TACS')
@@ -77,8 +87,11 @@ def main():
     panel = PANEL.read_text()
     loader = LOADER.read_text()
 
-    if "atualizar.click()" in admin or "setTimeout(function(){if(paginaAtiva())atualizar.click()}" in admin:
-        raise SystemExit('O modo TACS/teste ainda dispara atualização remota automática.')
+    alternar = function_slice(admin, 'alternar', 'iniciarOneSignalOpcional')
+    if 'atualizarSaudeNotificacoes' in alternar or '.click(' in alternar:
+        raise SystemExit('A função alternar ainda dispara atualização remota automática.')
+    if 'executar(modo)' not in alternar or 'render(r)' not in alternar:
+        raise SystemExit('A função alternar perdeu o fluxo técnico principal.')
     if HEALTH_OLD in panel:
         raise SystemExit('A atualização remota antiga ainda está presente.')
     if "function postSaudeNotificacoesIsolado" not in panel:
