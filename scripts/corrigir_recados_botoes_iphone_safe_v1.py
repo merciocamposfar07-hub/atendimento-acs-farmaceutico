@@ -4,6 +4,7 @@ PANEL = Path('painel-oficial-recados-campanhas.html')
 DEVICE = Path('admin-aparelho-tacs-teste-v1.js')
 LOADER = Path('recados-campanhas-whatsapp-mensal-v12.js')
 TEST_RENDER = Path('scripts/test_recados_safari_render_v1.js')
+TEST_TRANSPORT = Path('scripts/test_admin_transport.js')
 
 
 def replace_once(text, old, new, label):
@@ -103,6 +104,13 @@ def main():
     )
     TEST_RENDER.write_text(test)
 
+    transport_test = TEST_TRANSPORT.read_text()
+    transport_test = transport_test.replace(
+        "    assert.match(official, /ponteConteudoV102_/);",
+        "    assert.doesNotMatch(official, /ponteConteudoV102_/);\n    assert.match(official, /mode:'no-cors'/);\n    assert.match(official, /agendarConsulta\\(\\)/);"
+    )
+    TEST_TRANSPORT.write_text(transport_test)
+
     # Validação estrutural antes de o workflow sequer executar os testes Node.
     panel = PANEL.read_text()
     start = panel.index('function post(action,payload,cb,resultAction)')
@@ -116,6 +124,8 @@ def main():
         raise SystemExit('O HTML raiz não ficou como scroller no Safari.')
     if 'atualizar.click()' in DEVICE.read_text():
         raise SystemExit('O modo TACS ainda dispara atualização remota automática.')
+    if 'assert.match(official, /ponteConteudoV102_/);' in TEST_TRANSPORT.read_text():
+        raise SystemExit('O teste legado ainda exige iframe/form no painel Recados.')
 
     print('RECADO_BOTOES_IPHONE_SAFE_V1_APLICADO')
 
