@@ -22,19 +22,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Preparar Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
-
       - name: Aplicar somente a correcao dos botoes
         run: python3 scripts/corrigir_congelamento_botoes_notificacoes_v1.py
-
       - name: Instalar dependencias de teste
         run: npm ci
-
       - name: Testar o caso fotografado antes de publicar
         run: |
           set -euo pipefail
@@ -45,31 +41,22 @@ jobs:
           node scripts/test_saneamento_historico_aparelho_tacs_v1.js
           node scripts/test_notification_health_registry.js
           node scripts/test_recados_safari_render_v1.js
-
       - name: Confirmar escopo cirurgico
         run: |
           set -euo pipefail
-          git diff --exit-code -- apps-script || true
           test -z "$(git status --short apps-script)"
           git diff --name-only | sort > /tmp/arquivos.txt
           cat /tmp/arquivos.txt
           python3 - <<'PY'
           from pathlib import Path
-          permitidos={
-            'admin-aparelho-tacs-teste-v1.js',
-            'painel-oficial-recados-campanhas.html',
-            'recados-campanhas-whatsapp-mensal-v12.js',
-            'scripts/test_aparelho_tacs_teste_v1.js'
-          }
+          permitidos={'admin-aparelho-tacs-teste-v1.js','painel-oficial-recados-campanhas.html','recados-campanhas-whatsapp-mensal-v12.js','scripts/test_aparelho_tacs_teste_v1.js'}
           alterados={x.strip() for x in Path('/tmp/arquivos.txt').read_text().splitlines() if x.strip()}
           extras=alterados-permitidos
-          if extras:
-              raise SystemExit('Arquivos fora do escopo: '+', '.join(sorted(extras)))
-          if not {'admin-aparelho-tacs-teste-v1.js','painel-oficial-recados-campanhas.html','recados-campanhas-whatsapp-mensal-v12.js'} <= alterados:
-              raise SystemExit('A correção não atingiu todos os três arquivos de runtime previstos.')
+          if extras: raise SystemExit('Arquivos fora do escopo: '+', '.join(sorted(extras)))
+          essenciais={'admin-aparelho-tacs-teste-v1.js','painel-oficial-recados-campanhas.html','recados-campanhas-whatsapp-mensal-v12.js'}
+          if not essenciais <= alterados: raise SystemExit('A correção não atingiu todos os três arquivos de runtime previstos.')
           print('Escopo cirúrgico confirmado:', ', '.join(sorted(alterados)))
           PY
-
       - name: Registrar correcao validada
         run: |
           set -euo pipefail
@@ -80,4 +67,4 @@ jobs:
           git pull --rebase origin main
           git push origin HEAD:main
 
-# retry-v3-patch-idempotente
+# retry-v4
