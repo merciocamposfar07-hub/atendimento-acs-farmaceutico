@@ -48,11 +48,11 @@ PANEL_LOADER_NEW = "recados-campanhas-whatsapp-mensal-v12.js?v=20260827-botoes-s
 
 
 def replace_once(text, old, new, label):
+    if old in text:
+        return text.replace(old, new, 1)
     if new in text:
         return text
-    if old not in text:
-        raise SystemExit(f'Ponto cirúrgico não localizado: {label}')
-    return text.replace(old, new, 1)
+    raise SystemExit(f'Ponto cirúrgico não localizado: {label}')
 
 
 def function_slice(text, name, next_name):
