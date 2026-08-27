@@ -85,12 +85,14 @@ jobs:
           const found=files.filter(n=>fs.readFileSync(path.join(live,n),'utf8').includes(marker));
           if(found.length!==1)throw new Error('O módulo de mensagens individuais não foi localizado exatamente uma vez no Apps Script atual.');
           fs.writeFileSync(path.join(live,found[0]),source,'utf8');
+          fs.writeFileSync(path.join(live,'.fuso-target'),found[0],'utf8');
           console.log('Módulo substituído:',found[0]);
           NODE
-          TARGET=$(grep -l "TACS_MENSAGEM_INDIVIDUAL_V1" "$LIVE_DIR"/*.gs "$LIVE_DIR"/*.js 2>/dev/null | head -n 1)
-          test -n "$TARGET"
+          TARGET="$LIVE_DIR/$(cat "$LIVE_DIR/.fuso-target")"
+          test -f "$TARGET"
           node --check --input-type=commonjs < "$TARGET"
           grep -q "America/Recife" "$TARGET"
+          rm -f "$LIVE_DIR/.fuso-target"
 
       - name: Publicar mesma implantação e validar
         shell: bash
