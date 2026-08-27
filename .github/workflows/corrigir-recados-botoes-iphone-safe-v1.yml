@@ -40,6 +40,9 @@ jobs:
         run: |
           set -euo pipefail
           npm ci
+          # O teste administrativo usa portal.test no JSDOM. Carregamos os JS
+          # locais exatamente como o pretest oficial do projeto já faz.
+          python3 scripts/patch_admin_transport_local_resources.py
           git diff --check
           node --check admin-aparelho-tacs-teste-v1.js
           node --check recados-campanhas-whatsapp-mensal-v12.js
@@ -68,6 +71,18 @@ jobs:
           assert 'agendarConsulta()' in b
           print('POST_SEM_IFRAME_FORM_OK')
           PY
+
+      - name: Preparar somente o diff aprovado
+        run: |
+          set -euo pipefail
+          # O carregador local do JSDOM altera arquivos de teste apenas durante
+          # a execução. Retiramos essas alterações auxiliares e reaplicamos
+          # somente a correção cirúrgica que foi testada acima.
+          git restore scripts
+          python3 scripts/corrigir_recados_botoes_iphone_safe_v1.py
+          git diff --check
+          node scripts/test_recados_botoes_iphone_safe_v1.js
+          node scripts/test_recados_safari_render_v1.js
 
       - name: Registrar correcao validada
         run: |
