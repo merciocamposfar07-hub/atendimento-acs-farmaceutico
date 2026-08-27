@@ -47,6 +47,7 @@ jobs:
           node --check --input-type=commonjs < apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs
           node scripts/test_mensagem_individual_morador_v1.js
           node scripts/test_notification_receipt_confirmation.js
+          node scripts/test_horario_notificacao_recife_v1.js
           grep -q "notificacoesAreaV1AuditoriaPorEvento_(contexto.areaId,evento)" apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
           grep -q "encaminhadoAuditoria" apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs
           grep -q "registradoEm:notificacoesAreaV1DataPainel_(row\[9\])" apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs
@@ -144,7 +145,7 @@ jobs:
           git config user.name 'Portal TACS Release'
           git config user.email 'actions@users.noreply.github.com'
           git add apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs
-          git commit -m 'Corrigir fuso do horario auditado de encaminhamento [skip ci]'
+          git diff --cached --quiet || git commit -m 'Corrigir fuso do horario auditado de encaminhamento [skip ci]'
           git pull --rebase origin main
           git push origin HEAD:main
 
@@ -155,4 +156,4 @@ jobs:
           rm -f "$HOME/.clasprc.json"
           rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
 
-# retry-v6-auditoria-recife
+# retry-v7-behavioral-test
