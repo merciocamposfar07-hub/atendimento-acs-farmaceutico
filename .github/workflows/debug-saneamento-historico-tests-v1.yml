@@ -37,3 +37,4 @@ jobs:
           git add .github/debug-saneamento-test-log.txt
           git commit -m 'Registrar diagnóstico dos testes do saneamento histórico' || exit 0
           git push
+# rerun 20260826-guard-document-v1
