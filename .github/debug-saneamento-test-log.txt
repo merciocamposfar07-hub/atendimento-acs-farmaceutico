@@ -1,47 +1,15 @@
 exit_code=1
-head_sha=51ea1d29387b8c3f4cb9913c6386d3d0fa7709b9
---- ultimas linhas ---
+head_sha=ac99696e7af6bac3c7b2592417434f09e004947e
+--- diagnostico DOM detalhado ---
 npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
-added 47 packages, and audited 48 packages in 885ms
+added 47 packages, and audited 48 packages in 814ms
 
 8 packages are looking for funding
   run `npm fund` for details
 
 found 0 vulnerabilities
-
-> pretest
-> python3 scripts/patch_admin_transport_local_resources.py && python3 scripts/atualizar_teste_odontologia_servico_unico_v3.py && python3 scripts/atualizar_teste_territorio_pin_only_v1.py
-
-LOCAL_RESOURCES_OK: scripts/test_admin_transport.js, scripts/test_dynamic_professionals_dom.js
-Teste odontológico atualizado para confirmação real do servidor antes do envio.
-Dois testes territoriais PIN-only validados/atualizados com idempotência.
-
-> test
-> node scripts/test_agenda_apps_script.js && node scripts/test_public_agendas_apps_script.js && node scripts/test_public_content_multiarea.js && node scripts/test_dynamic_professionals_apps_script.js && node scripts/test_agendas_profissionais_territoriais.js && node scripts/test_apps_script_module_chain.js && node scripts/test_build_apps_script_release.js && node scripts/test_dom_flows.js && node scripts/test_dental_confirmation_gate_v103.js && node scripts/test_dental_reserva_territorial_v1.js && node scripts/test_admin_transport.js && node scripts/test_admin_fast_v102.js && node scripts/test_dynamic_professionals_dom.js && node scripts/test_public_data_transport.js && node scripts/test_moradores_v145.js && node scripts/test_birth_plus_one_fix.js && node scripts/test_portal_maintenance.js && node scripts/test_csv_esus_header.js && node scripts/test_territorio_csv_notifications.js && node scripts/test_public_area_identification.js && node scripts/test_public_area_resolver.js && node scripts/test_base_url_canonical_area.js && node scripts/test_publicacoes_territoriais.js && node scripts/test_territorio_dom.js && node scripts/test_notification_repair_button.js && node scripts/test_notification_repair_confirmation.js && node scripts/test_notification_health_registry.js && node scripts/test_notification_receipt_confirmation.js && node scripts/test_notification_auto_repair_feedback.js && node scripts/test_vinculo_familiar_notificacoes_v1.js && node scripts/test_push_comunitario_v1.js && node scripts/test_troca_aparelho_notificacoes_v1.js && node scripts/test_mensagem_individual_morador_v1.js && node scripts/test_comprovacao_ciencia_mensagens_v1.js && node scripts/test_identificacao_familiar_publica_v1.js && node scripts/test_aparelho_tacs_teste_v1.js && node scripts/test_saneamento_historico_aparelho_tacs_v1.js && node scripts/test_estabilizacao_notificacoes_v8.js && node scripts/test_estabilizacao_reparos_v9.js && node scripts/test_central_admin_territorial.js && node scripts/test_portal_territory_branding.js && node scripts/test_territorial_stabilization_v1.js && node scripts/test_multiagent_quick_login.js && node scripts/test_tacs_admin_visibility.js && node scripts/test_multiagent_isolation_50.js && node scripts/test_multimunicipio_layer.js && node scripts/test_multimunicipio_admin_api.js && node scripts/test_campanhas_periodo_v1.js && node scripts/test_campanhas_automaticas_v1.js && node scripts/test_ui_contract_v1.js && node scripts/test_admin_ui_standard_v1.js && node scripts/test_promocao_institucional_v1.js && node scripts/test_autofill_adaptativo_v1.js && node scripts/test_suporte_moradores_v1.js && node scripts/test_central_admin_performance_v1.js && node scripts/test_safari_bfcache_central_v1.js && node scripts/test_onesignal_health_autorecovery_v1.js && node scripts/test_conecta_footer_safari_v1.js && node scripts/test_admin_local_first_v1.js && node scripts/test_admin_request_dedup_v1.js && node scripts/test_push_onboarding_v1.js && node scripts/test_onesignal_service_worker_isolation_v1.js && node scripts/test_familia_aparelho_beneficiario_v1.js && node scripts/test_matriz_identificacao_morador_v1.js && node scripts/test_interface_action_gate_v1.js && node scripts/test_regressao_integral_v1.js && node scripts/test_performance_v101.js && node scripts/test_portal_release_integrity_v1.js && node scripts/test_quality_gate_v101.js
-
-Agenda: reservas, fontes oficiais e rotas antigas validadas.
-Apps Script público: agendas preservadas e recados ativos publicados por área.
-Conteúdo público multiárea: legado permanece Japaranduba e AREA_ID isola a nova área.
-{"ok":true,"versao":"1.0.0","somenteLeitura":true,"profissionaisAtivos":["medica","enfermeira","nutricionista","odontologia","psicologo","fisioterapeuta"],"agendasPorProfissional":{"medica":5,"nutricionista":5,"enfermeira":5,"odontologia":5,"fisioterapeuta":5,"psicologo":5}}
-Apps Script dinâmico: psicólogo adotado sem duplicação, fisioterapeuta criado com 5 agendas e módulos legados preservados.
-AGENDAS_PROFISSIONAIS_TERRITORIAIS_TESTS_OK
-Encadeamento Apps Script: 120 ordens dos módulos 15–19 e rotas antigas validadas.
-Montagem Apps Script: .js/.gs, projeto real preservado, módulos únicos, clasp 3.3.0 e falhas seguras validados.
-AssertionError [ERR_ASSERTION]: Erros no DOM: Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]; Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]; Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]
-+ actual - expected
-
-+ [
-+   "Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]",
-+   "Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]",
-+   "Uncaught [TypeError: Cannot read properties of undefined (reading 'getElementById')]"
-+ ]
-- []
-    at main (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:975:10)
-    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
-  generatedMessage: false,
-  code: 'ERR_ASSERTION',
-  actual: [Array],
-  expected: [],
-  operator: 'deepStrictEqual'
-}
+Error: A vaga emergencial única não apareceu para o teste não bloqueante
+    at waitFor (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:34:9)
+    at async testNonBlockingDentalCard (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:414:5)
+    at async main (/home/runner/work/atendimento-acs-farmaceutico/atendimento-acs-farmaceutico/scripts/test_dom_flows.js:941:3)
