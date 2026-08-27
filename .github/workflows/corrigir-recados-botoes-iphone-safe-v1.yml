@@ -45,8 +45,12 @@ jobs:
           node --check recados-campanhas-whatsapp-mensal-v12.js
           node scripts/test_recados_botoes_iphone_safe_v1.js
           node scripts/test_recados_safari_render_v1.js
-          node scripts/test_recados_runtime_actions_v1.js
-          node scripts/test_recados_runtime_v1.js
+          node scripts/test_admin_transport.js
+          node scripts/test_admin_local_first_v1.js
+          node scripts/test_admin_request_dedup_v1.js
+          node scripts/test_notification_repair_button.js
+          node scripts/test_aparelho_tacs_teste_v1.js
+          node scripts/test_saneamento_historico_aparelho_tacs_v1.js
 
       - name: Confirmar que nenhum iframe de POST restou
         run: |
