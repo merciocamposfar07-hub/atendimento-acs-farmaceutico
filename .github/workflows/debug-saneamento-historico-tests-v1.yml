@@ -1,0 +1,39 @@
+name: Debug saneamento histórico tests V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/debug-saneamento-historico-tests-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  diagnosticar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Executar testes e registrar diagnóstico
+        shell: bash
+        run: |
+          set +e
+          npm ci > /tmp/tacs-test.log 2>&1
+          ci_code=$?
+          if [ "$ci_code" -eq 0 ]; then npm test >> /tmp/tacs-test.log 2>&1; code=$?; else code=$ci_code; fi
+          set -e
+          {
+            echo "exit_code=$code"
+            echo "head_sha=$GITHUB_SHA"
+            echo "--- ultimas linhas ---"
+            tail -n 180 /tmp/tacs-test.log
+          } > .github/debug-saneamento-test-log.txt
+          git config user.name 'Portal TACS Tests'
+          git config user.email 'actions@users.noreply.github.com'
+          git add .github/debug-saneamento-test-log.txt
+          git commit -m 'Registrar diagnóstico dos testes do saneamento histórico' || exit 0
+          git push
