@@ -1,0 +1,171 @@
+name: Corrigir fuso das mensagens individuais para Recife V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-fuso-mensagem-individual-recife-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  corrigir-e-implantar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Corrigir somente o horário das mensagens individuais
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs')
+          s=p.read_text()
+          s=s.replace("VERSAO:'1.0.1'","VERSAO:'1.0.2'",1)
+
+          novo=r'''function mensagemIndividualV1HorarioRecife_(valor){
+  if(valor===null||typeof valor==='undefined'||valor==='')return '';
+  if(Object.prototype.toString.call(valor)==='[object Date]'&&!isNaN(valor.getTime())){
+    return Utilities.formatDate(valor,'America/Recife','dd/MM/yyyy HH:mm:ss');
+  }
+  var texto=mensagemIndividualV1Texto_(valor),data=new Date(texto);
+  if(!texto||isNaN(data.getTime()))return texto;
+  return Utilities.formatDate(data,'America/Recife','dd/MM/yyyy HH:mm:ss');
+}
+
+function mensagemIndividualV1Status_(p,contexto){
+  var evento=mensagemIndividualV1Texto_(p.eventoId||p.evento),morador=mensagemIndividualV1ResolverMorador_(p,contexto);
+  if(!/^[A-Za-z0-9_-]{8,160}$/.test(evento))throw new Error('O envio individual não pôde ser identificado.');
+  var ss=tacsTerritorioV1Planilha_(),rec=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.RECEIPT_SHEET),open=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.OPEN_SHEET);
+  var total=0,encaminhadas=0,exibidas=0,confirmadas=0,abertas=0,ultimoEnc='',ultimoExib='',ultimoConf='',ultimoAberto='';
+  if(rec&&rec.getLastRow()>1){
+    rec.getRange(2,1,rec.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).getValues().forEach(function(row){
+      if(mensagemIndividualV1Texto_(row[0])!==evento||mensagemIndividualV1Texto_(row[1]).toUpperCase()!==contexto.areaId||mensagemIndividualV1Texto_(row[3])!==morador.referencia)return;
+      total++;
+      if(row[13]){encaminhadas++;ultimoEnc=mensagemIndividualV1HorarioRecife_(row[13]);}
+      if(row[14]){exibidas++;ultimoExib=mensagemIndividualV1HorarioRecife_(row[14]);}
+      if(row[15]){confirmadas++;ultimoConf=mensagemIndividualV1HorarioRecife_(row[15]);}
+    });
+  }
+  if(open&&open.getLastRow()>1){
+    open.getRange(2,1,open.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.OPEN_HEADERS.length).getValues().forEach(function(row){
+      if(mensagemIndividualV1Texto_(row[0])!==evento||mensagemIndividualV1Texto_(row[1]).toUpperCase()!==contexto.areaId||mensagemIndividualV1Texto_(row[3])!==morador.referencia)return;
+      abertas++;ultimoAberto=mensagemIndividualV1HorarioRecife_(row[7])||ultimoAberto;
+    });
+  }
+  var estado=confirmadas?'CONFIRMADA':(abertas?'ABERTA':(exibidas?'EXIBIDA':(encaminhadas?'ENCAMINHADA':'AGUARDANDO')));
+  return {ok:true,eventoId:evento,morador:{nome:morador.item.nome,familiaId:morador.familiaId},aparelhos:total,encaminhadas:encaminhadas,exibidas:exibidas,abertas:abertas,confirmadas:confirmadas,estado:estado,horarios:{encaminhada:ultimoEnc,exibida:ultimoExib,aberta:ultimoAberto,confirmada:ultimoConf}};
+}'''
+
+          padrao=r"function mensagemIndividualV1Status_\(p,contexto\)\{.*?\n\}\n\nfunction mensagemIndividualV1ValidarRequestId_"
+          s2,n=re.subn(padrao,novo+"\n\nfunction mensagemIndividualV1ValidarRequestId_",s,count=1,flags=re.S)
+          if n!=1:
+              raise SystemExit('Bloco de status individual não localizado de forma única')
+          p.write_text(s2)
+          PY
+
+          node --check --input-type=commonjs < apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
+          node scripts/test_mensagem_individual_morador_v1.js
+          grep -q "Utilities.formatDate(valor,'America/Recife','dd/MM/yyyy HH:mm:ss')" apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
+          grep -q "RECEIPT_HEADERS.length).getValues()" apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
+          grep -q "OPEN_HEADERS.length).getValues()" apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
+
+          git config user.name 'Portal TACS Release'
+          git config user.email 'actions@users.noreply.github.com'
+          git add apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
+          git commit -m 'Fixar horários das mensagens individuais em America Recife'
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Preparar credenciais do Apps Script
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const config=JSON.parse(process.env.CLASP_JSON);
+          if(!config.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId))throw new Error('scriptId inválido');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Implantar correção no Apps Script e validar
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          node scripts/build_apps_script_release.js "$LIVE_DIR"
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$LIVE_DIR" -type f \( -name '*.js' -o -name '*.gs' \) -print0)
+
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          npx --yes @google/clasp@3.3.0 version "Backup antes da correção de fuso das mensagens individuais - ${GITHUB_SHA::7}"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Mensagens individuais fuso America Recife V1 - ${GITHUB_SHA::7}")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+
+          DEPLOYED=0
+          rollback(){
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático após falha de validação do fuso" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Mensagens individuais - horário America/Recife" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          manutencao=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=portal_manutencao_status&areaId=JAPARANDUBA")
+          publico=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=painel_publico&areaId=JAPARANDUBA")
+          printf '%s' "$manutencao" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'
+          printf '%s' "$publico" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'
+          trap - ERR
+          printf 'Fuso das mensagens individuais implantado e endpoints públicos validados na versão %s.\n' "$NEW_VERSION"
+
+      - name: Limpar credenciais temporárias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
