@@ -1,4 +1,4 @@
-name: Diagnosticar agenda medica publicada
+name: Corrigir e diagnosticar agenda medica
 
 on:
   push:
@@ -7,24 +7,100 @@ on:
       - '.github/workflows/diagnostico-agenda-medica-v1.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  diagnosticar:
+  corrigir:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
-      - name: Consultar agenda publica de Japaranduba
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Aplicar correção de data civil
         shell: bash
         run: |
           set -euo pipefail
-          URL='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec?action=painel_publico&areaId=JAPARANDUBA'
-          curl -L --fail --silent --show-error --connect-timeout 5 --max-time 30 "$URL" > "$RUNNER_TEMP/publico.json"
-          node - "$RUNNER_TEMP/publico.json" <<'NODE'
-          const fs=require('fs');
-          const p=process.argv[2];
-          const data=JSON.parse(fs.readFileSync(p,'utf8'));
-          if(!data||data.ok!==true) throw new Error('Resposta publica invalida: '+JSON.stringify(data));
-          const medica=(data.modules&&data.modules.medica)||[];
-          console.log(JSON.stringify({areaId:data.areaId,atualizadoEm:data.atualizadoEm,origem:data.origem,medica:medica.map(x=>({day:x.day,active:x.active,date:x.date,time:x.time,status:x.status,service:x.service,closeAt:x.closeAt,closedNow:x.closedNow}))},null,2));
-          NODE
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p=Path('apps-script/ZZ_12_PublicoAgendasPortalV1.gs')
+          s=p.read_text()
+          old="""  if (Object.prototype.toString.call(valor) === '[object Date]') {
+    if (isNaN(valor.getTime())) return '';
+    return Utilities.formatDate(
+      valor,
+      PUBLICO_AGENDAS_PORTAL_V1.FUSO,
+      'yyyy-MM-dd'
+    );
+  }"""
+          new="""  if (Object.prototype.toString.call(valor) === '[object Date]') {
+    if (isNaN(valor.getTime())) return '';
+    // DATA da agenda é civil; não pode retroceder um dia por fuso horário.
+    return String(valor.getUTCFullYear()).padStart(4, '0') + '-' +
+      String(valor.getUTCMonth() + 1).padStart(2, '0') + '-' +
+      String(valor.getUTCDate()).padStart(2, '0');
+  }"""
+          if old not in s:
+              raise SystemExit('Trecho publico de data não encontrado.')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs')
+          s=p.read_text()
+          old="function agendasProfissionaisTerritoriaisV1Data_(v){if(!v)return'';if(Object.prototype.toString.call(v)==='[object Date]'){if(isNaN(v.getTime()))return'';return Utilities.formatDate(v,'America/Recife','yyyy-MM-dd');}var s=agendasProfissionaisTerritoriaisV1Texto_(v),m=s.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];m=s.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})/);return m?m[3]+'-'+m[2]+'-'+m[1]:'';}"
+          new="function agendasProfissionaisTerritoriaisV1Data_(v){if(!v)return'';if(Object.prototype.toString.call(v)==='[object Date]'){if(isNaN(v.getTime()))return'';return String(v.getUTCFullYear()).padStart(4,'0')+'-'+String(v.getUTCMonth()+1).padStart(2,'0')+'-'+String(v.getUTCDate()).padStart(2,'0');}var s=agendasProfissionaisTerritoriaisV1Texto_(v),m=s.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];m=s.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})/);return m?m[3]+'-'+m[2]+'-'+m[1]:'';}"
+          if old not in s:
+              raise SystemExit('Trecho territorial de data não encontrado.')
+          p.write_text(s.replace(old,new,1))
+
+          t=Path('scripts/test_agenda_data_civil_v1.js')
+          t.write_text("""'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+function load(file){const c={console,Date,Object,String,Number,Boolean,Math,JSON,RegExp,Error};vm.createContext(c);vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),c,{filename:file});return c;}
+const a=load('apps-script/ZZ_12_PublicoAgendasPortalV1.gs');
+const b=load('apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs');
+const d=new Date('2026-08-28T00:00:00.000Z');
+assert.equal(a.publicoAgendasV1DataIso_(d),'2026-08-28');
+assert.equal(b.agendasProfissionaisTerritoriaisV1Data_(d),'2026-08-28');
+assert.equal(a.publicoAgendasV1DataIso_('28/08/2026'),'2026-08-28');
+console.log('AGENDA_DATA_CIVIL_V1_OK');
+""")
+
+          pkg=Path('package.json')
+          s=pkg.read_text()
+          if 'node scripts/test_agenda_data_civil_v1.js' not in s:
+              anchor='node scripts/test_public_agendas_apps_script.js && '
+              if anchor not in s:
+                  raise SystemExit('Anchor do package.json não encontrado.')
+              pkg.write_text(s.replace(anchor,anchor+'node scripts/test_agenda_data_civil_v1.js && ',1))
+
+          Path('.github/apps-script-release-request').write_text('AGENDA_MEDICA_DATA_CIVIL_V1_20260827_DEPLOY1\n')
+          PY
+      - name: Testar
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          git diff --check
+          node scripts/test_agenda_data_civil_v1.js
+          node scripts/test_public_agendas_apps_script.js
+          node scripts/test_agendas_profissionais_territoriais.js
+          node scripts/test_build_apps_script_release.js
+      - name: Commitar correção
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS Release'
+          git config user.email 'actions@users.noreply.github.com'
+          git add apps-script/ZZ_12_PublicoAgendasPortalV1.gs apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs scripts/test_agenda_data_civil_v1.js package.json .github/apps-script-release-request
+          git commit -m 'Corrigir data civil e liberar agenda médica'
+          git pull --rebase origin main
+          git push origin HEAD:main
