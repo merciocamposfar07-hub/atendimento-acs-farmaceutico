@@ -192,7 +192,9 @@ function verifyStaticSource(config) {
   } else if (config.official === 'painel-oficial-recados-campanhas.html') {
     // Recados e campanhas é standalone e não depende mais do carregador HTML legado.
     assert.match(official, /admin_publicacoes_dados/);
-    assert.match(official, /ponteConteudoV102_/);
+    assert.doesNotMatch(official, /ponteConteudoV102_/);
+    assert.match(official, /mode:'no-cors'/);
+    assert.match(official, /agendarConsulta\(\)/);
     assert.doesNotMatch(official, /document\.write/);
   } else {
     assert.match(official, /painel\.then\(function\(html\)/);

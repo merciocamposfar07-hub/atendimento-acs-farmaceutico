@@ -12,7 +12,7 @@ const standardEnd = panel.indexOf('PORTAL_TACS_ADMIN_UI_STANDARD_END');
 const safariFix = panel.indexOf('id="recadosSafariRenderV1"');
 assert.ok(standardEnd >= 0 && safariFix > standardEnd,
   'A correção do Safari precisa prevalecer sobre o padrão visual injetado.');
-assert.match(panel.slice(safariFix), /html,body\{overflow-x:visible!important;overflow-y:visible!important\}/);
+assert.match(panel.slice(safariFix), /html\{overflow-x:hidden!important;overflow-y:auto!important\}body\{overflow-x:hidden!important;overflow-y:visible!important\}/);
 
 assert.match(panel, /\.ponte\{position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none\}/);
 assert.doesNotMatch(panel, /\.ponte\{position:fixed;left:-10000px/);

@@ -261,7 +261,7 @@ footer,.footer{
 <!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->
 <style id="recadosSafariRenderV1">
 /* Evita que o Safari transforme esta página longa em uma camada recortada. */
-html,body{overflow-x:visible!important;overflow-y:visible!important}
+html{overflow-x:hidden!important;overflow-y:auto!important}body{overflow-x:hidden!important;overflow-y:visible!important}
 </style>
 </head>
 <body>
@@ -353,29 +353,21 @@ function post(action,payload,cb,resultAction){
   var duracao=acesso?30000:60000;
   ativa={id:id,action:action,cb:cb,resultAction:resultAction||resultadoPadrao(action),frame:null,form:null,submitTimer:null,pollTimer:null,proximaEspera:450,limite:Date.now()+duracao,timeout:setTimeout(function(){finalizar({ok:false,temporario:true,message:acesso?'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.':'O servidor ainda está confirmando a alteração. Aguarde antes de tentar outra vez.'})},duracao+500)};
   entrar.disabled=true;if(entrarTacs)entrarTacs.disabled=true;sair.disabled=true;atualizarBloqueioMutacoes();
-  var frame=document.createElement('iframe'),f=document.createElement('form'),frameName='ponteConteudoV102_'+Date.now()+'_'+Math.floor(Math.random()*1000);
-  frame.name=frameName;frame.setAttribute('name',frameName);frame.className='ponte';frame.setAttribute('aria-hidden','true');frame.src='about:blank';
-  f.method='POST';f.action=API+'?_='+Date.now();f.target=frameName;f.setAttribute('target',frameName);f.className='ponte';
-  Object.keys(campos).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=txt(campos[k]);f.appendChild(i)});
-  ativa.frame=frame;ativa.form=f;document.body.appendChild(frame);document.body.appendChild(f);
-  var enviado=false;
-  function enviarUmaVez(){
-    if(enviado||!ativa||ativa.id!==id)return;
-    enviado=true;
-    clearTimeout(ativa.submitTimer);ativa.submitTimer=null;
-    try{f.submit()}catch(erro){finalizar({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});return}
+  var body=new URLSearchParams();
+  Object.keys(campos).forEach(function(k){body.set(k,txt(campos[k]))});
+  ativa.frame=null;ativa.form=null;
+  fetch(API+'?_='+Date.now(),{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+    body:body.toString(),
+    cache:'no-store'
+  }).catch(function(){
+    /* A resposta CORS não é lida aqui. O resultado real é obtido pelo requestId. */
+  }).then(function(){
+    if(!ativa||ativa.id!==id)return;
     agendarConsulta();
-  }
-  function enviarDepoisDoRegistro(){
-    if(typeof window.requestAnimationFrame==='function'){
-      window.requestAnimationFrame(function(){window.requestAnimationFrame(enviarUmaVez)});
-      return;
-    }
-    setTimeout(enviarUmaVez,60);
-  }
-  frame.addEventListener('load',enviarDepoisDoRegistro,{once:true});
-  enviarDepoisDoRegistro();
-  ativa.submitTimer=setTimeout(enviarUmaVez,180);
+  });
 }
 function sessao(){var s={dispositivo:dispositivo,areaId:areaId};if(accessMode==='tacs'&&territorioToken)s.territorioToken=territorioToken;else s.token=token;return s}
 function setUndo(o){sessionStorage.setItem(UNDO_KEY,JSON.stringify(o));atualizarUndo()}
@@ -538,7 +530,7 @@ var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!teste
   if(aba)aba.addEventListener('click',carregar,{once:true});
 }());
 </script>
-<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=43a5c181d2c9"></script>
+<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260827-recados-buttons-safe-v1"></script>
 <script src="/atendimento-acs-farmaceutico/recados-campanhas-whatsapp-card-v9.js?v=43a5c181d2c9"></script>
 <script src="/atendimento-acs-farmaceutico/recados-campanhas-whatsapp-mensal-v12.js?v=20260827-botoes-safe-v1"></script>
 </body>
