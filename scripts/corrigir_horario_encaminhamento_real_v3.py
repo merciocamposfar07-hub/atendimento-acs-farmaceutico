@@ -52,6 +52,17 @@ def main():
         }
       }"""
     n = substituir_no_bloco(n, 'notificacoesAreaV1RegistrarComprovacao_', full_row_confirm, confirm_cells)
+
+    # A auditoria armazenava Date real, mas a leitura por getDisplayValues aplicava
+    # o fuso da planilha/projeto antes de o painel receber o valor. Isso gerava
+    # horários como 07:10 para um envio feito às 11:10 em Pernambuco. Ler o Date
+    # bruto e formatar explicitamente em America/Recife elimina essa dependência.
+    for fn in ['notificacoesAreaV1UltimoEnvio_', 'notificacoesAreaV1AuditoriaPorEvento_']:
+        inicio, fim, bloco = bloco_funcao(n, fn)
+        bloco = bloco.replace('.getDisplayValues();', '.getValues();', 1)
+        bloco = bloco.replace('registradoEm:row[9]', 'registradoEm:notificacoesAreaV1DataPainel_(row[9])', 1)
+        n = n[:inicio] + bloco + n[fim:]
+
     NOTIF.write_text(n)
 
     m = MSG.read_text()
@@ -96,6 +107,12 @@ def main():
     _, _, b = bloco_funcao(n, 'notificacoesAreaV1RegistrarComprovacao_')
     if 'RECEIPT_HEADERS.length).setValues([row])' in b:
         raise SystemExit('RegistrarComprovacao ainda regrava a linha inteira')
+    for fn in ['notificacoesAreaV1UltimoEnvio_', 'notificacoesAreaV1AuditoriaPorEvento_']:
+        _, _, b = bloco_funcao(n, fn)
+        if '.getDisplayValues()' in b:
+            raise SystemExit(fn + ' ainda converte a auditoria pelo fuso da planilha')
+        if 'registradoEm:notificacoesAreaV1DataPainel_(row[9])' not in b:
+            raise SystemExit(fn + ' não formata REGISTRADO_EM em America/Recife')
     if "notificacoesAreaV1AuditoriaPorEvento_(contexto.areaId,evento)" not in m:
         raise SystemExit('Status individual sem horário auditado')
     if "encaminhadoEm:enc?(encaminhadoAuditoria||enc):''" not in r:
