@@ -132,3 +132,5 @@ jobs:
         run: |
           rm -f "$HOME/.clasprc.json"
           rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
+
+# reexecucao 20260826-v3: alvo salvo explicitamente, sem glob .gs inexistente
