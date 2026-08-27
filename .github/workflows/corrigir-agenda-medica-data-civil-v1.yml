@@ -1,0 +1,153 @@
+name: Corrigir agenda medica data civil V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-agenda-medica-data-civil-v1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: corrigir-agenda-medica-data-civil-v1
+  cancel-in-progress: false
+
+jobs:
+  corrigir-testar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Corrigir leitura de data civil da agenda
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          public=Path('apps-script/ZZ_12_PublicoAgendasPortalV1.gs')
+          text=public.read_text()
+          old="""  if (Object.prototype.toString.call(valor) === '[object Date]') {
+    if (isNaN(valor.getTime())) return '';
+    return Utilities.formatDate(
+      valor,
+      PUBLICO_AGENDAS_PORTAL_V1.FUSO,
+      'yyyy-MM-dd'
+    );
+  }"""
+          new="""  if (Object.prototype.toString.call(valor) === '[object Date]') {
+    if (isNaN(valor.getTime())) return '';
+    // DATA é uma data civil da agenda, não um instante. Usar componentes UTC
+    // impede que 28/08 vire 27/08 ao formatar meia-noite em America/Recife.
+    return String(valor.getUTCFullYear()).padStart(4, '0') + '-' +
+      String(valor.getUTCMonth() + 1).padStart(2, '0') + '-' +
+      String(valor.getUTCDate()).padStart(2, '0');
+  }"""
+          if old not in text:
+              raise SystemExit('Trecho publico de data civil não localizado exatamente uma vez.')
+          text=text.replace(old,new,1)
+          public.write_text(text)
+
+          territorial=Path('apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs')
+          text=territorial.read_text()
+          old="function agendasProfissionaisTerritoriaisV1Data_(v){if(!v)return'';if(Object.prototype.toString.call(v)==='[object Date]'){if(isNaN(v.getTime()))return'';return Utilities.formatDate(v,'America/Recife','yyyy-MM-dd');}var s=agendasProfissionaisTerritoriaisV1Texto_(v),m=s.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];m=s.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})/);return m?m[3]+'-'+m[2]+'-'+m[1]:'';}"
+          new="function agendasProfissionaisTerritoriaisV1Data_(v){if(!v)return'';if(Object.prototype.toString.call(v)==='[object Date]'){if(isNaN(v.getTime()))return'';return String(v.getUTCFullYear()).padStart(4,'0')+'-'+String(v.getUTCMonth()+1).padStart(2,'0')+'-'+String(v.getUTCDate()).padStart(2,'0');}var s=agendasProfissionaisTerritoriaisV1Texto_(v),m=s.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];m=s.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})/);return m?m[3]+'-'+m[2]+'-'+m[1]:'';}"
+          if old not in text:
+              raise SystemExit('Trecho territorial de data civil não localizado exatamente uma vez.')
+          text=text.replace(old,new,1)
+          territorial.write_text(text)
+
+          test=Path('scripts/test_agenda_data_civil_v1.js')
+          test.write_text("""'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+function load(file){
+  const context={console,Date,Object,String,Number,Boolean,Math,JSON,RegExp,Error};
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
+  return context;
+}
+const publicCtx=load('apps-script/ZZ_12_PublicoAgendasPortalV1.gs');
+const territorialCtx=load('apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs');
+const midnightUtc=new Date('2026-08-28T00:00:00.000Z');
+assert.equal(publicCtx.publicoAgendasV1DataIso_(midnightUtc),'2026-08-28');
+assert.equal(territorialCtx.agendasProfissionaisTerritoriaisV1Data_(midnightUtc),'2026-08-28');
+assert.equal(publicCtx.publicoAgendasV1DataIso_('28/08/2026'),'2026-08-28');
+assert.equal(territorialCtx.agendasProfissionaisTerritoriaisV1Data_('28/08/2026'),'2026-08-28');
+console.log('AGENDA_DATA_CIVIL_V1_OK');
+""")
+
+          pkg=Path('package.json')
+          text=pkg.read_text()
+          if 'node scripts/test_agenda_data_civil_v1.js' not in text:
+              anchor='node scripts/test_public_agendas_apps_script.js && '
+              if anchor not in text:
+                  raise SystemExit('Ponto de inclusão do teste não localizado.')
+              text=text.replace(anchor,anchor+'node scripts/test_agenda_data_civil_v1.js && ',1)
+              pkg.write_text(text)
+
+          Path('.github/apps-script-release-request').write_text('AGENDA_MEDICA_DATA_CIVIL_V1_20260827_DEPLOY1\n')
+          PY
+
+      - name: Testar correção e regressões de agenda
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          git diff --check
+          node --check --input-type=commonjs < apps-script/ZZ_12_PublicoAgendasPortalV1.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs
+          node scripts/test_agenda_data_civil_v1.js
+          node scripts/test_public_agendas_apps_script.js
+          node scripts/test_agendas_profissionais_territoriais.js
+          node scripts/test_build_apps_script_release.js
+
+      - name: Confirmar escopo cirúrgico
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only
+          python3 - <<'PY'
+          import subprocess
+          permitidos={
+            'apps-script/ZZ_12_PublicoAgendasPortalV1.gs',
+            'apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs',
+            'scripts/test_agenda_data_civil_v1.js',
+            'package.json',
+            '.github/apps-script-release-request'
+          }
+          alterados=set(subprocess.check_output(['git','diff','--name-only'],text=True).split())
+          extras=alterados-permitidos
+          if extras: raise SystemExit('Arquivos fora do escopo: '+', '.join(sorted(extras)))
+          print('ESCOPO_AGENDA_MEDICA_OK')
+          PY
+
+      - name: Registrar correção validada
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS Release'
+          git config user.email 'actions@users.noreply.github.com'
+          git add \
+            apps-script/ZZ_12_PublicoAgendasPortalV1.gs \
+            apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs \
+            scripts/test_agenda_data_civil_v1.js \
+            package.json \
+            .github/apps-script-release-request
+          git commit -m 'Corrigir data civil e liberação da agenda médica'
+          git pull --rebase origin main
+          git push origin HEAD:main
