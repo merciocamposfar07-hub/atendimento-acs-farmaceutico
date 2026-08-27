@@ -1,0 +1,30 @@
+name: Diagnosticar agenda medica publicada
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnostico-agenda-medica-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnosticar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Consultar agenda publica de Japaranduba
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec?action=painel_publico&areaId=JAPARANDUBA'
+          curl -L --fail --silent --show-error --connect-timeout 5 --max-time 30 "$URL" > "$RUNNER_TEMP/publico.json"
+          node - "$RUNNER_TEMP/publico.json" <<'NODE'
+          const fs=require('fs');
+          const p=process.argv[2];
+          const data=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(!data||data.ok!==true) throw new Error('Resposta publica invalida: '+JSON.stringify(data));
+          const medica=(data.modules&&data.modules.medica)||[];
+          console.log(JSON.stringify({areaId:data.areaId,atualizadoEm:data.atualizadoEm,origem:data.origem,medica:medica.map(x=>({day:x.day,active:x.active,date:x.date,time:x.time,status:x.status,service:x.service,closeAt:x.closeAt,closedNow:x.closedNow}))},null,2));
+          NODE
