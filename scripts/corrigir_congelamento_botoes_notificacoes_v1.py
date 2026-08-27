@@ -45,6 +45,8 @@ LOADER_OLD = "admin-aparelho-tacs-teste-v1.js?v=20260821-tacs-device-v7"
 LOADER_NEW = "admin-aparelho-tacs-teste-v1.js?v=20260827-botoes-safe-v1"
 PANEL_LOADER_OLD = "recados-campanhas-whatsapp-mensal-v12.js?v=43a5c181d2c9"
 PANEL_LOADER_NEW = "recados-campanhas-whatsapp-mensal-v12.js?v=20260827-botoes-safe-v1"
+OLD_STAMP = "20260821-tacs-device-v7"
+NEW_STAMP = "20260827-botoes-safe-v1"
 
 
 def replace_once(text, old, new, label):
@@ -80,12 +82,14 @@ def main():
     LOADER.write_text(loader)
 
     test_tacs = TEST_TACS.read_text()
-    test_tacs = test_tacs.replace(LOADER_OLD, LOADER_NEW)
+    if OLD_STAMP in test_tacs:
+        test_tacs = test_tacs.replace(OLD_STAMP, NEW_STAMP)
     TEST_TACS.write_text(test_tacs)
 
     admin = ADMIN.read_text()
     panel = PANEL.read_text()
     loader = LOADER.read_text()
+    test_tacs = TEST_TACS.read_text()
 
     alternar = function_slice(admin, 'alternar', 'iniciarOneSignalOpcional')
     if 'atualizarSaudeNotificacoes' in alternar or '.click(' in alternar:
@@ -100,6 +104,8 @@ def main():
         raise SystemExit('Botão Atualizar situação não usa transporte isolado.')
     if LOADER_NEW not in loader or PANEL_LOADER_NEW not in panel:
         raise SystemExit('Cache-bust seguro não foi aplicado.')
+    if OLD_STAMP in test_tacs or NEW_STAMP not in test_tacs:
+        raise SystemExit('Teste do aparelho TACS ainda espera a versão antiga do carregador.')
 
     print('Correção cirúrgica aplicada: sem auto-refresh pesado e com consulta OneSignal isolada.')
 
