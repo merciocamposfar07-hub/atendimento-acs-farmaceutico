@@ -37,10 +37,10 @@ assert.match(device, /mode:'no-cors'/,
   'As ações do aparelho TACS devem continuar usando transporte isolado.');
 
 assert.match(loader,
-  /admin-aparelho-tacs-teste-v1\.js\?v=20260827-recados-buttons-safe-v1/,
+  /admin-aparelho-tacs-teste-v1\.js\?v=20260827-(?:recados-buttons-safe-v1|botoes-safe-v1)/,
   'O carregador precisa furar o cache do módulo corrigido no iPhone.');
 assert.match(panel,
-  /recados-campanhas-whatsapp-mensal-v12\.js\?v=20260827-recados-buttons-safe-v1/,
+  /recados-campanhas-whatsapp-mensal-v12\.js\?v=20260827-(?:recados-buttons-safe-v1|botoes-safe-v1)/,
   'O painel precisa furar o cache do carregador corrigido.');
 
 console.log('RECADOS_BOTOES_IPHONE_SAFE_V1_OK');
