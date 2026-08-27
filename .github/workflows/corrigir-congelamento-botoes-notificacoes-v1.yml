@@ -79,3 +79,5 @@ jobs:
           git commit -m 'Impedir congelamento dos botoes de notificacoes no iPhone [skip ci]'
           git pull --rebase origin main
           git push origin HEAD:main
+
+# retry-v2-validacao-funcao-alternar
