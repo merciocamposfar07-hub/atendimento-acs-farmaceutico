@@ -25,16 +25,7 @@ jobs:
           npm ci > /tmp/tacs-test.log 2>&1
           ci_code=$?
           if [ "$ci_code" -eq 0 ]; then
-            python3 - <<'PY'
-          from pathlib import Path
-          p=Path('scripts/test_dom_flows.js')
-          s=p.read_text()
-          old="this.errors.push(error.message);"
-          new="this.errors.push((error && error.stack) ? error.stack : error.message);"
-          if old not in s:
-              raise SystemExit('gancho jsdomError não localizado')
-          p.write_text(s.replace(old,new,1))
-          PY
+            python3 -c "from pathlib import Path; p=Path('scripts/test_dom_flows.js'); s=p.read_text(); old='this.errors.push(error.message);'; new='this.errors.push((error && error.stack) ? error.stack : error.message);'; assert old in s, 'gancho jsdomError não localizado'; p.write_text(s.replace(old,new,1))"
             node scripts/test_dom_flows.js >> /tmp/tacs-test.log 2>&1
             code=$?
           else
@@ -53,4 +44,4 @@ jobs:
           git add .github/debug-saneamento-test-log.txt
           git commit -m 'Registrar diagnóstico detalhado do DOM' || exit 0
           git push
-# rerun 20260826-stack-v2
+# rerun 20260826-stack-v3
