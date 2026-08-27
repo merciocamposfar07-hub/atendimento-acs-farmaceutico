@@ -1,0 +1,80 @@
+name: Corrigir congelamento dos botoes de Recados no iPhone V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-recados-botoes-iphone-safe-v1.yml'
+      - 'scripts/corrigir_recados_botoes_iphone_safe_v1.py'
+      - 'scripts/test_recados_botoes_iphone_safe_v1.js'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: recados-botoes-iphone-safe-v1
+  cancel-in-progress: false
+
+jobs:
+  corrigir-testar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar correcao cirurgica
+        run: |
+          set -euo pipefail
+          python3 scripts/corrigir_recados_botoes_iphone_safe_v1.py
+
+      - name: Testar antes de publicar
+        run: |
+          set -euo pipefail
+          npm ci
+          git diff --check
+          node --check admin-aparelho-tacs-teste-v1.js
+          node --check recados-campanhas-whatsapp-mensal-v12.js
+          node scripts/test_recados_botoes_iphone_safe_v1.js
+          node scripts/test_recados_safari_render_v1.js
+          node scripts/test_recados_runtime_actions_v1.js
+          node scripts/test_recados_runtime_v1.js
+
+      - name: Confirmar que nenhum iframe de POST restou
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('painel-oficial-recados-campanhas.html').read_text()
+          ini=p.index('function post(action,payload,cb,resultAction)')
+          fim=p.index('function sessao()',ini)
+          b=p[ini:fim]
+          assert "createElement('iframe')" not in b
+          assert "createElement('form')" not in b
+          assert '.submit()' not in b
+          assert "mode:'no-cors'" in b
+          assert 'agendarConsulta()' in b
+          print('POST_SEM_IFRAME_FORM_OK')
+          PY
+
+      - name: Registrar correcao validada
+        run: |
+          set -euo pipefail
+          git config user.name 'Portal TACS Release'
+          git config user.email 'actions@users.noreply.github.com'
+          git add painel-oficial-recados-campanhas.html admin-aparelho-tacs-teste-v1.js recados-campanhas-whatsapp-mensal-v12.js scripts/test_recados_safari_render_v1.js
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteracao pendente.'
+            exit 0
+          fi
+          git commit -m 'Impedir congelamento dos botoes de Recados no iPhone [skip ci]'
+          git pull --rebase origin main
+          git push origin HEAD:main
