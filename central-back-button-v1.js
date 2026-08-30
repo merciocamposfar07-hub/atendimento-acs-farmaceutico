@@ -52,6 +52,102 @@ function installRecadosRenderSafe(){
 }
 installRecadosRenderSafe();
 
+
+/*
+ * Safari/iPhone — estabilização isolada do visor da Central para Recados.
+ * Corrige o recorte vertical sem mudar rotas, dados, Push ou outros painéis.
+ */
+function installRecadosViewerSafeV4(){
+  if(!isRecados)return;
+  try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}
+
+  var parentWindow=null,parentDocument=null,viewer=null,frame=null,visual=null,raf=0;
+  try{
+    if(window.parent!==window){
+      parentWindow=window.parent;
+      parentDocument=parentWindow.document;
+      viewer=parentDocument.getElementById('viewer');
+      frame=parentDocument.getElementById('viewerFrame');
+      if(!viewer||!frame||frame.contentWindow!==window){viewer=null;frame=null;parentWindow=null;parentDocument=null;}
+    }
+  }catch(e){viewer=null;frame=null;parentWindow=null;parentDocument=null;}
+
+  if(viewer&&frame){
+    var style=parentDocument.getElementById('portalTacsRecadosViewerSafeV4');
+    if(!style){
+      style=parentDocument.createElement('style');
+      style.id='portalTacsRecadosViewerSafeV4';
+      style.textContent=[
+        '#viewer.portal-tacs-recados-viewer-safe-v4{position:fixed!important;top:0!important;right:0!important;bottom:auto!important;left:0!important;width:100%!important;height:100vh!important;height:100dvh!important;min-height:100vh!important;min-height:100dvh!important;max-height:100dvh!important;display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;grid-template-columns:minmax(0,1fr)!important;align-items:stretch!important;overflow:hidden!important;transform:none!important;will-change:auto!important;}',
+        '#viewer.portal-tacs-recados-viewer-safe-v4>.viewer-bar{grid-row:1!important;grid-column:1!important;min-width:0!important;position:relative!important;inset:auto!important;}',
+        '#viewer.portal-tacs-recados-viewer-safe-v4>#viewerFrame{grid-row:2!important;grid-column:1!important;display:block!important;position:relative!important;inset:auto!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important;flex:none!important;align-self:stretch!important;border:0!important;transform:none!important;will-change:auto!important;}',
+        'body.viewer-open #viewer.portal-tacs-recados-viewer-safe-v4{margin:0!important;}'
+      ].join('\n');
+      (parentDocument.head||parentDocument.documentElement).appendChild(style);
+    }
+    viewer.classList.add('portal-tacs-recados-viewer-safe-v4');
+    try{visual=parentWindow.visualViewport||null}catch(e){visual=null}
+  }
+
+  function syncViewer(){
+    if(!viewer||!frame)return;
+    try{
+      if(viewer.hidden||frame.contentWindow!==window)return;
+      viewer.style.setProperty('top','0px','important');
+      viewer.style.setProperty('left','0px','important');
+      viewer.style.setProperty('right','0px','important');
+      viewer.style.setProperty('bottom','auto','important');
+      viewer.style.setProperty('width','100%','important');
+      viewer.style.setProperty('height','100dvh','important');
+      frame.style.setProperty('width','100%','important');
+      frame.style.setProperty('height','100%','important');
+      frame.style.setProperty('min-height','0','important');
+      frame.style.setProperty('max-height','100%','important');
+      void viewer.offsetHeight;
+    }catch(e){}
+  }
+
+  function scheduleSync(){
+    if(!viewer||!parentWindow)return;
+    try{
+      if(raf&&typeof parentWindow.cancelAnimationFrame==='function')parentWindow.cancelAnimationFrame(raf);
+      if(typeof parentWindow.requestAnimationFrame==='function')raf=parentWindow.requestAnimationFrame(function(){raf=0;syncViewer()});
+      else setTimeout(syncViewer,0);
+    }catch(e){setTimeout(syncViewer,0)}
+  }
+
+  function resetInitialPosition(){
+    try{window.scrollTo(0,0)}catch(e){}
+    scheduleSync();
+  }
+
+  window.PortalTacsRecadosViewportSafeV4={resetInitial:resetInitialPosition,sync:scheduleSync};
+  resetInitialPosition();
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(resetInitialPosition);
+  setTimeout(resetInitialPosition,80);
+  setTimeout(scheduleSync,320);
+
+  window.addEventListener('pageshow',function(e){if(e&&e.persisted)resetInitialPosition()});
+  if(visual){visual.addEventListener('resize',scheduleSync);visual.addEventListener('scroll',scheduleSync)}
+  if(parentWindow){
+    parentWindow.addEventListener('resize',scheduleSync);
+    parentWindow.addEventListener('orientationchange',scheduleSync);
+  }
+
+  window.addEventListener('pagehide',function cleanup(){
+    try{
+      if(visual){visual.removeEventListener('resize',scheduleSync);visual.removeEventListener('scroll',scheduleSync)}
+      if(parentWindow){parentWindow.removeEventListener('resize',scheduleSync);parentWindow.removeEventListener('orientationchange',scheduleSync)}
+      if(viewer&&frame&&frame.contentWindow===window){
+        viewer.classList.remove('portal-tacs-recados-viewer-safe-v4');
+        ['top','left','right','bottom','width','height'].forEach(function(p){viewer.style.removeProperty(p)});
+        ['width','height','min-height','max-height'].forEach(function(p){frame.style.removeProperty(p)});
+      }
+    }catch(e){}
+  },{once:true});
+}
+installRecadosViewerSafeV4();
+
 /*
  * Reduz o DOM simultâneo apenas da lista de Recados.
  * A lista de Campanhas é controlada pelo módulo mensal (ano/mês e campanhas autorizadas)
@@ -61,6 +157,7 @@ function installRecadosDomWindow(){
   if(!isRecados)return;
   var PAGE=6;
   var states={};
+  var recadosFirstContentResetDone=false;
 
   function labelFor(id,remaining){
     return 'Mostrar mais recados ('+remaining+')';
@@ -96,6 +193,16 @@ function installRecadosDomWindow(){
     items.slice(initial).forEach(function(el){state.rest.push(el);el.remove()});
     var control=makeControl(id,state);if(control)list.appendChild(control);
     reconnect(state);
+    if(items.length&&!recadosFirstContentResetDone){
+      recadosFirstContentResetDone=true;
+      setTimeout(function(){
+        try{
+          var safe=window.PortalTacsRecadosViewportSafeV4;
+          if(safe&&typeof safe.resetInitial==='function')safe.resetInitial();
+          else window.scrollTo(0,0);
+        }catch(e){}
+      },0);
+    }
   }
 
   function ensureFirstPage(id){

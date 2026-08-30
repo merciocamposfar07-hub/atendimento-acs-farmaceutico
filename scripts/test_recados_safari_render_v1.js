@@ -26,4 +26,25 @@ assert.doesNotMatch(centralHtml, /\.viewer\{[^}]*height:100(?:d?vh|%)/);
 assert.match(centralHtml, /central-administrativa-tacs\.js\?v=[^"']+/,
   'A Central deve carregar o controlador com o carimbo integral da publicação.');
 
+
+const backButton = fs.readFileSync('central-back-button-v1.js', 'utf8');
+assert.match(backButton, /portalTacsRecadosViewerSafeV4/,
+  'Recados deve instalar a estabilização isolada do visor da Central.');
+assert.match(backButton, /portal-tacs-recados-viewer-safe-v4/);
+assert.match(backButton, /height:100dvh!important/,
+  'O visor de Recados deve ocupar o viewport dinâmico inteiro no iPhone.');
+assert.match(backButton, /grid-template-rows:auto minmax\(0,1fr\)/,
+  'O visor de Recados deve evitar o colapso flex do iframe no Safari.');
+assert.match(backButton, /history\.scrollRestoration='manual'/,
+  'Recados não deve restaurar uma posição antiga que deixe a página aparente cortada.');
+assert.match(backButton, /window\.scrollTo\(0,0\)/,
+  'A primeira abertura de Recados deve começar no topo real do painel.');
+assert.match(backButton, /recadosFirstContentResetDone/,
+  'A primeira compactação da lista deve neutralizar a posição antiga do Safari.');
+assert.doesNotMatch(backButton, /html\{[^}]*overflow-y:visible!important/,
+  'A correção não pode reintroduzir overflow-y visible no elemento html.');
+assert.match(panel, /central-back-button-v1\.js\?v=20260830-recados-viewport-safe-v4/,
+  'O painel deve invalidar o cache do estabilizador corrigido.');
+console.log('RECADOS_VIEWER_SAFE_V4_OK');
+
 console.log('RECADOS_SAFARI_RENDER_V1_OK');
