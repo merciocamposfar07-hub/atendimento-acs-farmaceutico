@@ -1,0 +1,174 @@
+name: Auditoria arquitetura e compatibilidade V1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/audit_architecture_v1.js'
+      - 'scripts/audit_browser_matrix_v1.js'
+      - '.github/workflows/auditoria-arquitetura-compatibilidade-v1.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'index.html'
+      - 'central-administrativa-tacs.html'
+      - 'painel-oficial-*.html'
+      - '*.js'
+      - 'apps-script/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auditoria-arquitetura-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  auditoria-somente-leitura:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Baixar candidato sem credenciais de escrita
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependências reproduzíveis
+        run: npm ci
+
+      - name: Confirmar modo estritamente não implantável
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event_name }}" = "pull_request"
+          test "${{ github.ref }}" != "refs/heads/main"
+          echo 'AUDITORIA_READ_ONLY=SIM'
+          echo 'SEM_CLASP_PUSH=SIM'
+          echo 'SEM_REDEPLOY=SIM'
+          echo 'SEM_POST_DE_PRODUCAO=SIM'
+
+      - name: Regressão completa atual
+        id: regressao
+        continue-on-error: true
+        run: npm test
+
+      - name: Sintaxe JavaScript e Apps Script
+        id: sintaxe
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p audit-artifacts
+          : > audit-artifacts/syntax-check.txt
+          fail=0
+          while IFS= read -r -d '' file; do
+            case "$file" in
+              ./node_modules/*) continue ;;
+            esac
+            if [[ "$file" == *.gs ]]; then
+              if ! node --check --input-type=commonjs < "$file" >> audit-artifacts/syntax-check.txt 2>&1; then
+                echo "FALHA $file" | tee -a audit-artifacts/syntax-check.txt
+                fail=1
+              fi
+            else
+              if ! node --check "$file" >> audit-artifacts/syntax-check.txt 2>&1; then
+                echo "FALHA $file" | tee -a audit-artifacts/syntax-check.txt
+                fail=1
+              fi
+            fi
+          done < <(find . -type f \( -name '*.js' -o -name '*.gs' \) -print0)
+          if [ "$fail" -ne 0 ]; then exit 1; fi
+          echo 'SYNTAX_ALL_OK' | tee -a audit-artifacts/syntax-check.txt
+
+      - name: Auditoria arquitetural estática
+        id: arquitetura
+        continue-on-error: true
+        run: node scripts/audit_architecture_v1.js
+
+      - name: Benchmark live somente GET — 40 leituras
+        id: benchmark
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -u
+          mkdir -p audit-artifacts
+          BASE='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+          REPORT='audit-artifacts/live-get-benchmark.csv'
+          echo 'rota,tentativa,http,segundos,valida' > "$REPORT"
+          measure() {
+            rota="$1"; url="$2"
+            for i in $(seq 1 10); do
+              out="$RUNNER_TEMP/audit-${rota}-${i}.out"
+              metrics=$(curl -L -sS --connect-timeout 5 --max-time 15 -o "$out" -w '%{http_code},%{time_total}' "$url" || printf '000,15.000')
+              code=${metrics%,*}; tempo=${metrics#*,}; valida=0
+              if [ "$code" = '200' ] && grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' "$out"; then valida=1; fi
+              echo "$rota,$i,$code,$tempo,$valida" | tee -a "$REPORT"
+            done
+          }
+          measure agenda "$BASE?action=agenda&areaId=JAPARANDUBA"
+          measure painel_publico "$BASE?action=painel_publico&areaId=JAPARANDUBA"
+          measure publico_conteudo "$BASE?action=publico_conteudo&areaId=JAPARANDUBA"
+          measure admin_status "$BASE?action=admin_status"
+          python3 - <<'PY'
+          import csv, statistics, pathlib
+          p=pathlib.Path('audit-artifacts/live-get-benchmark.csv')
+          rows=list(csv.DictReader(p.open()))
+          lines=['# Benchmark live GET-only V1','', 'Nenhuma rota de escrita foi chamada.','','| Rota | Válidas | Mediana | P95 aprox. | Máximo |','|---|---:|---:|---:|---:|']
+          for rota in sorted({r['rota'] for r in rows}):
+              rr=[r for r in rows if r['rota']==rota]
+              ts=sorted(float(r['segundos']) for r in rr)
+              valid=sum(int(r['valida']) for r in rr)
+              med=statistics.median(ts)
+              p95=ts[min(len(ts)-1, int((len(ts)-1)*.95))]
+              lines.append(f'| {rota} | {valid}/{len(rr)} | {med:.3f}s | {p95:.3f}s | {max(ts):.3f}s |')
+          pathlib.Path('audit-artifacts/live-get-benchmark.md').write_text('\n'.join(lines)+'\n')
+          print('\n'.join(lines))
+          PY
+
+      - name: Instalar motores Chromium Firefox WebKit
+        id: playwright_install
+        continue-on-error: true
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium firefox webkit
+
+      - name: Matriz 135 cenários — browsers telas e redes
+        id: browsers
+        if: steps.playwright_install.outcome == 'success'
+        continue-on-error: true
+        env:
+          AUDIT_BASE_URL: https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/
+        run: node scripts/audit_browser_matrix_v1.js
+
+      - name: Registrar outcomes do gate
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p audit-artifacts
+          cat > audit-artifacts/gate-outcomes.txt <<EOF
+          REGRESSAO=${{ steps.regressao.outcome }}
+          SINTAXE=${{ steps.sintaxe.outcome }}
+          ARQUITETURA=${{ steps.arquitetura.outcome }}
+          BENCHMARK_GET=${{ steps.benchmark.outcome }}
+          PLAYWRIGHT_INSTALL=${{ steps.playwright_install.outcome }}
+          BROWSERS=${{ steps.browsers.outcome }}
+          PRODUCAO_ALTERADA=NAO
+          DEPLOY_EXECUTADO=NAO
+          ESCRITA_APPS_SCRIPT=NAO
+          EOF
+          cat audit-artifacts/gate-outcomes.txt
+
+      - name: Publicar relatórios da auditoria como artefato
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-arquitetura-compatibilidade-v1
+          path: audit-artifacts/
+          if-no-files-found: warn
+          retention-days: 14
