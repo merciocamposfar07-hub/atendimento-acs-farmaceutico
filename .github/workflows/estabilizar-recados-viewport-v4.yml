@@ -2,9 +2,10 @@ name: Estabilizar Recados no iPhone V4
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
-      - '.github/recados-viewport-v4-trigger'
+      - .github/recados-viewport-v4-trigger
 
 permissions:
   contents: write
@@ -14,165 +15,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - name: Baixar repositório
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Aplicar correção isolada do viewport de Recados
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
 
-          js_path = Path('central-back-button-v1.js')
-          js = js_path.read_text()
-          marker = 'portalTacsRecadosViewerSafeV4'
-          if marker not in js:
-              anchor = 'installRecadosRenderSafe();\n'
-              block = r'''
+      - name: Aplicar correção isolada
+        run: python3 scripts/patch_recados_viewport_safe_v4.py
 
-/*
- * Safari/iPhone — estabiliza SOMENTE o visor da Central que contém Recados.
- * Não muda a navegação dos demais painéis, não usa iframe oculto e não altera
- * o overflow-y do elemento html para visible.
- */
-function installRecadosViewerSafeV4(){
-  if(!isRecados)return;
-  try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}
-
-  var parentWindow,parentDocument,viewer,frame;
-  try{
-    if(window.parent===window)return;
-    parentWindow=window.parent;
-    parentDocument=parentWindow.document;
-    viewer=parentDocument.getElementById('viewer');
-    frame=parentDocument.getElementById('viewerFrame');
-    if(!viewer||!frame||frame.contentWindow!==window)return;
-  }catch(e){return;}
-
-  var style=parentDocument.getElementById('portalTacsRecadosViewerSafeV4');
-  if(!style){
-    style=parentDocument.createElement('style');
-    style.id='portalTacsRecadosViewerSafeV4';
-    style.textContent=[
-      '#viewer.portal-tacs-recados-viewer-safe-v4{position:fixed!important;top:0!important;right:0!important;bottom:auto!important;left:0!important;width:100%!important;height:100vh!important;height:100dvh!important;min-height:100vh!important;min-height:100dvh!important;max-height:100dvh!important;display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;align-items:stretch!important;overflow:hidden!important;}',
-      '#viewer.portal-tacs-recados-viewer-safe-v4>.viewer-bar{grid-row:1!important;min-width:0!important;position:relative!important;inset:auto!important;}',
-      '#viewer.portal-tacs-recados-viewer-safe-v4>#viewerFrame{grid-row:2!important;display:block!important;position:relative!important;inset:auto!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important;flex:none!important;align-self:stretch!important;border:0!important;}',
-      'body.viewer-open #viewer.portal-tacs-recados-viewer-safe-v4{margin:0!important;transform:none!important;will-change:auto!important;}'
-    ].join('\n');
-    (parentDocument.head||parentDocument.documentElement).appendChild(style);
-  }
-
-  viewer.classList.add('portal-tacs-recados-viewer-safe-v4');
-
-  function sync(){
-    try{
-      if(viewer.hidden||frame.contentWindow!==window)return;
-      viewer.style.top='0px';
-      viewer.style.left='0px';
-      viewer.style.right='0px';
-      viewer.style.bottom='auto';
-      viewer.style.width='100%';
-      viewer.style.height='100dvh';
-      frame.style.width='100%';
-      frame.style.height='100%';
-      frame.style.minHeight='0';
-      frame.style.maxHeight='100%';
-      void viewer.offsetHeight;
-    }catch(e){}
-  }
-
-  function initialTop(){
-    try{window.scrollTo(0,0)}catch(e){}
-    sync();
-  }
-
-  initialTop();
-  if(typeof requestAnimationFrame==='function')requestAnimationFrame(initialTop);
-  setTimeout(initialTop,80);
-  setTimeout(sync,320);
-
-  var vv=null;
-  try{vv=parentWindow.visualViewport||null}catch(e){}
-  if(vv){vv.addEventListener('resize',sync);vv.addEventListener('scroll',sync)}
-  parentWindow.addEventListener('resize',sync);
-  parentWindow.addEventListener('orientationchange',function(){setTimeout(sync,120)});
-
-  window.addEventListener('pagehide',function cleanup(){
-    try{
-      if(vv){vv.removeEventListener('resize',sync);vv.removeEventListener('scroll',sync)}
-      parentWindow.removeEventListener('resize',sync);
-      if(frame.contentWindow!==window)return;
-      viewer.classList.remove('portal-tacs-recados-viewer-safe-v4');
-      viewer.style.removeProperty('top');
-      viewer.style.removeProperty('left');
-      viewer.style.removeProperty('right');
-      viewer.style.removeProperty('bottom');
-      viewer.style.removeProperty('width');
-      viewer.style.removeProperty('height');
-      frame.style.removeProperty('width');
-      frame.style.removeProperty('height');
-      frame.style.removeProperty('min-height');
-      frame.style.removeProperty('max-height');
-    }catch(e){}
-  },{once:true});
-}
-installRecadosViewerSafeV4();
-'''
-              if anchor not in js:
-                  raise SystemExit('Âncora installRecadosRenderSafe não encontrada')
-              js = js.replace(anchor, anchor + block, 1)
-              js_path.write_text(js)
-
-          panel_path = Path('painel-oficial-recados-campanhas.html')
-          panel = panel_path.read_text()
-          old = 'central-back-button-v1.js?v=20260827-recados-buttons-safe-v1'
-          new = 'central-back-button-v1.js?v=20260830-recados-viewport-safe-v4'
-          if old in panel:
-              panel = panel.replace(old, new, 1)
-          elif new not in panel:
-              raise SystemExit('Carimbo do central-back-button não encontrado no painel')
-          panel_path.write_text(panel)
-
-          test_path = Path('scripts/test_recados_safari_render_v1.js')
-          test = test_path.read_text()
-          if 'RECADOS_VIEWER_SAFE_V4' not in test:
-              anchor = "console.log('RECADOS_SAFARI_RENDER_V1_OK');"
-              checks = r'''
-const backButton = fs.readFileSync('central-back-button-v1.js', 'utf8');
-assert.match(backButton, /portalTacsRecadosViewerSafeV4/,
-  'Recados deve instalar a estabilização isolada do visor da Central.');
-assert.match(backButton, /portal-tacs-recados-viewer-safe-v4/);
-assert.match(backButton, /height:100dvh!important/,
-  'O visor de Recados deve ocupar o viewport dinâmico inteiro no iPhone.');
-assert.match(backButton, /grid-template-rows:auto minmax\(0,1fr\)/,
-  'O visor de Recados deve evitar o colapso flex do iframe no Safari.');
-assert.match(backButton, /history\.scrollRestoration='manual'/,
-  'Recados não deve restaurar uma posição antiga que deixe a página aparente cortada.');
-assert.match(backButton, /window\.scrollTo\(0,0\)/,
-  'A primeira abertura de Recados deve começar no topo real do painel.');
-assert.doesNotMatch(backButton, /html\{[^}]*overflow-y:visible!important/,
-  'A correção não pode reintroduzir overflow-y visible no elemento html.');
-assert.match(panel, /central-back-button-v1\.js\?v=20260830-recados-viewport-safe-v4/,
-  'O painel deve invalidar o cache do estabilizador corrigido.');
-console.log('RECADOS_VIEWER_SAFE_V4_OK');
-'''
-              if anchor not in test:
-                  raise SystemExit('Âncora do teste de Safari não encontrada')
-              test = test.replace(anchor, checks + '\n' + anchor, 1)
-              test_path.write_text(test)
-          PY
-      - name: Validar somente a estabilização de Recados
+      - name: Validar estabilização de Recados
         run: node scripts/test_recados_safari_render_v1.js
-      - name: Garantir escopo cirúrgico
+
+      - name: Conferir escopo
+        shell: bash
         run: |
           git diff --check
           changed="$(git diff --name-only | sort)"
           printf '%s\n' "$changed"
-          test "$changed" = $'central-back-button-v1.js\npainel-oficial-recados-campanhas.html\nscripts/test_recados_safari_render_v1.js'
+          expected="$(printf '%s\n' central-back-button-v1.js painel-oficial-recados-campanhas.html scripts/test_recados_safari_render_v1.js | sort)"
+          test "$changed" = "$expected"
+
       - name: Publicar correção
+        shell: bash
         run: |
-          if git diff --quiet; then exit 0; fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git diff --quiet; then
+            echo "Nenhuma alteração pendente."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add central-back-button-v1.js painel-oficial-recados-campanhas.html scripts/test_recados_safari_render_v1.js
-          git commit -m 'Estabilizar viewport de Recados no iPhone'
+          git commit -m "Estabilizar viewport de Recados no iPhone"
           git push origin HEAD:main
