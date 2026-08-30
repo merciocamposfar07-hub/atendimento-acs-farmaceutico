@@ -62,6 +62,11 @@ test('Central preserva a mesma instância e o viewport interno após retorno/pag
   expect(firstState.rectHeight).toBeGreaterThan(0);
   expect(firstState.innerHeight).toBeGreaterThan(0);
 
+  await page.waitForTimeout(350);
+  await page.evaluate(() => {
+    window.__bloco13LoadBaseline = Number(window.__bloco13LoadCount || 0);
+  });
+
   await page.locator('#viewerBack').click();
   await expect(page.locator('#viewer')).toBeHidden();
   await expect(page.locator('#portalTacsAdminPreloadPoolV1 iframe[data-module="suporte"]')).toHaveCount(1);
@@ -72,19 +77,32 @@ test('Central preserva a mesma instância e o viewport interno após retorno/pag
     const frame = document.querySelector('iframe[data-module="suporte"]');
     const frameStyle = frame ? getComputedStyle(frame) : null;
     const viewerStyle = viewer ? getComputedStyle(viewer) : null;
+    const viewerRect = viewer ? viewer.getBoundingClientRect() : null;
+    const modulePanel = document.getElementById('modulesPanel');
+    const centralProbe = document.elementFromPoint(Math.floor(window.innerWidth / 2), Math.min(window.innerHeight - 40, 700));
+    const loadCount = Number(window.__bloco13LoadCount || 0);
+    const loadBaseline = Number(window.__bloco13LoadBaseline || 0);
     return {
       count: document.querySelectorAll('iframe[data-module="suporte"]').length,
       sameNode: Boolean(frame && frame === window.__bloco13FrameRef),
       identity: frame ? frame.dataset.bloco13Identity || '' : '',
       marker: frame && frame.contentDocument ? frame.contentDocument.getElementById('bloco13StateMarker')?.value || '' : '',
-      loadCount: Number(window.__bloco13LoadCount || 0),
+      loadCount,
+      loadBaseline,
+      loadDelta: loadCount - loadBaseline,
       viewerHiddenAttribute: Boolean(viewer && viewer.hidden),
       viewerDisplay: viewerStyle ? viewerStyle.display : '',
       viewerVisibility: viewerStyle ? viewerStyle.visibility : '',
+      viewerLeft: viewerRect ? viewerRect.left : 0,
+      viewerRight: viewerRect ? viewerRect.right : 0,
+      viewportWidth: window.innerWidth,
+      viewerIntersectsViewport: Boolean(viewerRect && viewerRect.right > 0 && viewerRect.left < window.innerWidth),
       frameDisplay: frameStyle ? frameStyle.display : '',
       frameVisibility: frameStyle ? frameStyle.visibility : '',
       rectHeight: frame ? frame.getBoundingClientRect().height : 0,
-      innerHeight: frame && frame.contentWindow ? frame.contentWindow.innerHeight : 0
+      innerHeight: frame && frame.contentWindow ? frame.contentWindow.innerHeight : 0,
+      modulesVisible: Boolean(modulePanel && !modulePanel.hidden),
+      centralProbeInsideViewer: Boolean(centralProbe && centralProbe.closest && centralProbe.closest('#viewer'))
     };
   });
 
@@ -92,15 +110,19 @@ test('Central preserva a mesma instância e o viewport interno após retorno/pag
   expect(afterClose.count).toBe(1);
   expect(afterClose.sameNode).toBe(true);
   expect(afterClose.identity).toBe('mesmo-iframe');
-  expect(afterClose.loadCount, 'Voltar à Central não pode disparar novo load').toBe(0);
+  expect(afterClose.loadDelta, 'Voltar à Central não pode disparar novo load após o painel estabilizar').toBe(0);
   expect(afterClose.marker, 'O DOM interno do painel deve sobreviver ao retorno').toBe('estado-preservado');
-  expect(afterClose.viewerHiddenAttribute, 'O viewer estacionado não pode voltar a usar hidden/display:none no Safari').toBe(false);
+  expect(afterClose.viewerHiddenAttribute, 'O viewer estacionado deve continuar vivo sem hidden/display:none').toBe(false);
   expect(afterClose.viewerDisplay, 'O viewer estacionado precisa continuar dimensionado').not.toBe('none');
-  expect(afterClose.viewerVisibility, 'O viewer deve ficar invisível sem colapsar o layout interno').toBe('hidden');
+  expect(afterClose.viewerVisibility, 'O viewer deve ficar invisível enquanto está estacionado').toBe('hidden');
+  expect(afterClose.viewerIntersectsViewport, 'O viewer fixed estacionado não pode permanecer sobre a superfície visível da Central').toBe(false);
+  expect(afterClose.viewerRight, 'O viewer estacionado deve ficar totalmente à esquerda do viewport').toBeLessThanOrEqual(0);
   expect(afterClose.frameDisplay, 'Iframe estacionado não pode usar display:none').not.toBe('none');
   expect(afterClose.frameVisibility).toBe('hidden');
   expect(afterClose.rectHeight, 'Iframe estacionado deve manter altura real para o compositor do iOS').toBeGreaterThan(0);
   expect(afterClose.innerHeight, 'Viewport interno do iframe não pode zerar ao voltar à Central').toBeGreaterThan(0);
+  expect(afterClose.modulesVisible, 'A Central precisa continuar visível após fechar o painel').toBe(true);
+  expect(afterClose.centralProbeInsideViewer, 'A camada estacionada não pode continuar cobrindo a área tocável da Central').toBe(false);
 
   await page.evaluate(() => {
     let event;
@@ -112,48 +134,64 @@ test('Central preserva a mesma instância e o viewport interno após retorno/pag
 
   const afterPageShow = await page.evaluate(() => {
     const frame = document.querySelector('iframe[data-module="suporte"]');
+    const viewer = document.getElementById('viewer');
+    const viewerRect = viewer ? viewer.getBoundingClientRect() : null;
+    const loadCount = Number(window.__bloco13LoadCount || 0);
+    const loadBaseline = Number(window.__bloco13LoadBaseline || 0);
     return {
       count: document.querySelectorAll('iframe[data-module="suporte"]').length,
       sameNode: Boolean(frame && frame === window.__bloco13FrameRef),
       marker: frame && frame.contentDocument ? frame.contentDocument.getElementById('bloco13StateMarker')?.value || '' : '',
-      loadCount: Number(window.__bloco13LoadCount || 0),
+      loadCount,
+      loadDelta: loadCount - loadBaseline,
       rectHeight: frame ? frame.getBoundingClientRect().height : 0,
-      innerHeight: frame && frame.contentWindow ? frame.contentWindow.innerHeight : 0
+      innerHeight: frame && frame.contentWindow ? frame.contentWindow.innerHeight : 0,
+      viewerIntersectsViewport: Boolean(viewerRect && viewerRect.right > 0 && viewerRect.left < window.innerWidth)
     };
   });
   expect(afterPageShow.count).toBe(1);
   expect(afterPageShow.sameNode).toBe(true);
-  expect(afterPageShow.loadCount).toBe(0);
+  expect(afterPageShow.loadDelta, 'pageshow/BFCache não pode recarregar o painel').toBe(0);
   expect(afterPageShow.marker).toBe('estado-preservado');
   expect(afterPageShow.rectHeight).toBeGreaterThan(0);
   expect(afterPageShow.innerHeight).toBeGreaterThan(0);
+  expect(afterPageShow.viewerIntersectsViewport, 'pageshow/BFCache não pode trazer a camada estacionada de volta sobre a Central').toBe(false);
 
-  const reopen = await page.evaluate(() => {
+  const reopen = await page.evaluate(async () => {
     const button = document.querySelector('#moduleGrid .module[data-module="suporte"]');
     const started = performance.now();
     button.click();
+    await new Promise(resolve => requestAnimationFrame(() => resolve()));
     const frame = document.querySelector('#viewer iframe[data-module="suporte"]');
     const viewer = document.getElementById('viewer');
+    const viewerRect = viewer ? viewer.getBoundingClientRect() : null;
+    const loadCount = Number(window.__bloco13LoadCount || 0);
+    const loadBaseline = Number(window.__bloco13LoadBaseline || 0);
     return {
       elapsedMs: performance.now() - started,
       visible: Boolean(viewer && !viewer.hidden && getComputedStyle(viewer).visibility === 'visible'),
       sameNode: Boolean(frame && frame === window.__bloco13FrameRef),
       marker: frame && frame.contentDocument ? frame.contentDocument.getElementById('bloco13StateMarker')?.value || '' : '',
-      loadCount: Number(window.__bloco13LoadCount || 0),
+      loadCount,
+      loadDelta: loadCount - loadBaseline,
       count: document.querySelectorAll('iframe[data-module="suporte"]').length,
       rectHeight: frame ? frame.getBoundingClientRect().height : 0,
-      innerHeight: frame && frame.contentWindow ? frame.contentWindow.innerHeight : 0
+      innerHeight: frame && frame.contentWindow ? frame.contentWindow.innerHeight : 0,
+      viewerLeft: viewerRect ? viewerRect.left : -1,
+      viewerIntersectsViewport: Boolean(viewerRect && viewerRect.right > 0 && viewerRect.left < window.innerWidth)
     };
   });
 
   expect(reopen.visible).toBe(true);
   expect(reopen.elapsedMs).toBeLessThan(100);
   expect(reopen.sameNode).toBe(true);
-  expect(reopen.loadCount).toBe(0);
+  expect(reopen.loadDelta, 'Reabrir o painel não pode gerar novo load').toBe(0);
   expect(reopen.marker).toBe('estado-preservado');
   expect(reopen.count).toBe(1);
   expect(reopen.rectHeight).toBeGreaterThan(0);
   expect(reopen.innerHeight).toBeGreaterThan(0);
+  expect(reopen.viewerIntersectsViewport).toBe(true);
+  expect(Math.abs(reopen.viewerLeft)).toBeLessThanOrEqual(1);
 
-  console.log(JSON.stringify({ kind: 'safari-bfcache-panel-reuse', browserName, touchElapsedMs: Math.round(reopen.elapsedMs * 100) / 100, sameNode: true, preservedState: true, loadCount: reopen.loadCount, persistentViewport: true }));
+  console.log(JSON.stringify({ kind: 'safari-bfcache-panel-reuse', browserName, touchElapsedMs: Math.round(reopen.elapsedMs * 100) / 100, sameNode: true, preservedState: true, loadDelta: reopen.loadDelta, persistentViewport: true, parkedOffscreen: true }));
 });

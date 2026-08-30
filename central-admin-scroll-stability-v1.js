@@ -19,6 +19,36 @@ function stabilizeViewer(){
   v.style.setProperty('overflow','hidden');
   v.style.setProperty('overscroll-behavior','none');
   v.style.setProperty('touch-action','auto');
+
+  /*
+   * CENTRAL_VIEWER_PARKED_OFFSCREEN_V1
+   * O viewer precisa continuar dimensionado para preservar o viewport interno
+   * dos iframes no iOS/BFCache, mas não pode permanecer como uma camada fixed
+   * invisível sobre a Central. Quando estacionado, mantemos 100vw x 100dvh e
+   * deslocamos a camada inteira para fora do viewport. Ao reabrir um painel,
+   * ela volta para inset:0 sem reparenting nem novo load do iframe.
+   */
+  var parked=v.getAttribute('aria-hidden')==='true'||!document.body.classList.contains('viewer-open');
+  if(parked){
+    v.style.setProperty('left','-200vw');
+    v.style.setProperty('right','auto');
+    v.style.setProperty('top','0');
+    v.style.setProperty('bottom','auto');
+    v.style.setProperty('width','100vw');
+    v.style.setProperty('visibility','hidden');
+    v.style.setProperty('opacity','0');
+    v.style.setProperty('pointer-events','none');
+  }else{
+    v.style.setProperty('left','0');
+    v.style.setProperty('right','0');
+    v.style.setProperty('top','0');
+    v.style.setProperty('bottom','0');
+    v.style.removeProperty('width');
+    v.style.setProperty('visibility','visible');
+    v.style.setProperty('opacity','1');
+    v.style.setProperty('pointer-events','auto');
+  }
+
   var bar=v.querySelector('.viewer-bar');
   if(bar){
     bar.style.setProperty('position','relative');
@@ -116,9 +146,10 @@ function installObserver(){
     var needs=false;
     mutations.forEach(function(m){
       if(m.type==='childList')needs=true;
-      if(m.type==='attributes'&&(m.target&&m.target.tagName==='IFRAME'||m.target===pool()))needs=true;
+      if(m.type==='attributes'&&(m.target&&m.target.tagName==='IFRAME'||m.target===pool()||m.target===v))needs=true;
     });
-    if(needs)setTimeout(stabilizeAll,0);
+    /* MutationObserver roda antes da próxima pintura; não introduzir setTimeout aqui. */
+    if(needs)stabilizeAll();
   });
   observer.observe(v,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-hidden']});
 }
@@ -150,7 +181,10 @@ function handleBackTouch(event){
   if(closed===false){
     back.disabled=true;
     setTimeout(function(){back.disabled=false},450);
+    return;
   }
+  /* Fecha e retira a camada da superfície visível no mesmo gesto. */
+  stabilizeAll();
 }
 
 function install(){
