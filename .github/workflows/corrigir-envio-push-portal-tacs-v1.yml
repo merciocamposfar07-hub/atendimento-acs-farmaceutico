@@ -1,0 +1,261 @@
+name: Corrigir envio Push do Portal TACS V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/corrigir-envio-push-portal-tacs-v1-trigger'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: corrigir-envio-push-portal-tacs-v1
+  cancel-in-progress: false
+
+jobs:
+  corrigir-testar-implantar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar correção somente no emissor Push do Portal TACS
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path=Path('apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs')
+          src=path.read_text()
+
+          start=src.index('function notificacoesAreaV1AlvosAtivos_(')
+          end=src.index('function notificacoesAreaV1PrepararComprovantes_', start)
+
+          novo=r'''function notificacoesAreaV1AlvosAtivos_(appId,apiKey,contexto,quantidadeAreas){
+  var ss=tacsTerritorioV1Planilha_(),registros=notificacoesAreaV1RegistrosDispositivos_(ss,contexto.areaId);
+  var vistos={},alvos=[];
+
+  function adicionar(id,reg,remoto){
+    id=notificacoesAreaV1Texto_(id).toLowerCase();
+    if(!id||vistos[id])return;
+    vistos[id]=true;
+    reg=reg||{};remoto=remoto||{};
+    alvos.push({
+      subscriptionId:id,
+      idPortal:notificacoesAreaV1Texto_(reg.idPortal),
+      tipoAparelho:notificacoesAreaV1Texto_(reg.tipoAparelho||remoto.dispositivo||'Aparelho Push'),
+      navegador:notificacoesAreaV1Texto_(reg.navegador||remoto.navegador),
+      sistema:notificacoesAreaV1Texto_(reg.sistema)
+    });
+  }
+
+  /*
+   * O registro técnico do próprio Portal é territorial e validado pelo servidor.
+   * Ele não pode deixar de receber só porque a tag remota area_tacs ainda não
+   * sincronizou no OneSignal. Permissão, opt-in e token continuam obrigatórios.
+   */
+  Object.keys(registros).forEach(function(id){
+    var reg=registros[id]||{};
+    if(!notificacoesAreaV1Booleano_(reg.permission))return;
+    if(!notificacoesAreaV1Booleano_(reg.optedIn))return;
+    if(!notificacoesAreaV1Booleano_(reg.tokenAtivo))return;
+    adicionar(id,reg,null);
+  });
+
+  /*
+   * A exportação remota continua sendo usada para acrescentar inscrições ativas
+   * já corretamente segmentadas. Se a exportação estiver temporariamente
+   * indisponível, ela não derruba os aparelhos que o Portal já confirmou na área.
+   */
+  var erroRemoto=null;
+  if(
+    typeof saudeNotificacoesV1ExportarSubscriptions_==='function'&&
+    typeof saudeNotificacoesV1EhPush_==='function'&&
+    typeof saudeNotificacoesV1PertenceArea_==='function'&&
+    typeof saudeNotificacoesV1ClassificarExport_==='function'
+  ){
+    try{
+      var exportados=saudeNotificacoesV1ExportarSubscriptions_(appId,apiKey);
+      exportados.forEach(function(sub){
+        var id=notificacoesAreaV1Texto_(sub&&(sub.id||sub.subscription_id)).toLowerCase();
+        if(!id||vistos[id]||!saudeNotificacoesV1EhPush_(sub&&sub.device_type))return;
+        if(!saudeNotificacoesV1PertenceArea_(sub,contexto.areaId,quantidadeAreas))return;
+        if(saudeNotificacoesV1ClassificarExport_(sub,false).status!=='ATIVO')return;
+        var reg=registros[id]||{},remoto=typeof saudeNotificacoesV1TipoRemoto_==='function'
+          ?saudeNotificacoesV1TipoRemoto_(sub.device_type):{};
+        adicionar(id,reg,remoto);
+      });
+    }catch(erroExportacao){erroRemoto=erroExportacao;}
+  }
+
+  if(alvos.length)return alvos;
+  if(erroRemoto)throw erroRemoto;
+  if(
+    typeof saudeNotificacoesV1ExportarSubscriptions_!=='function'||
+    typeof saudeNotificacoesV1EhPush_!=='function'||
+    typeof saudeNotificacoesV1PertenceArea_!=='function'||
+    typeof saudeNotificacoesV1ClassificarExport_!=='function'
+  )throw new Error('O cadastro técnico dos aparelhos ainda não está disponível para o envio individual.');
+  return alvos;
+}
+
+function notificacoesAreaV1RegistrosDispositivos_(ss,areaId){
+  var mapa={},sheet=ss.getSheetByName('TACS_NOTIFICACOES_DISPOSITIVOS');
+  if(!sheet||sheet.getLastRow()<=1)return mapa;
+  var total=Math.min(sheet.getLastColumn(),16);
+  sheet.getRange(2,1,sheet.getLastRow()-1,total).getDisplayValues().forEach(function(row){
+    var id=notificacoesAreaV1Texto_(row[0]).toLowerCase();
+    if(!id||notificacoesAreaV1Texto_(row[1]).toUpperCase()!==notificacoesAreaV1Texto_(areaId).toUpperCase())return;
+    mapa[id]={
+      idPortal:row[2],tipoAparelho:row[4],navegador:row[5],sistema:row[6],
+      permission:row[7],optedIn:row[8],tokenAtivo:row[9],areaConfirmada:row[10],
+      estadoLocal:row[11],ultimoCheckin:row[12]
+    };
+  });
+  return mapa;
+}
+
+'''
+
+          atual=src[start:end]
+          if 'permission:row[7],optedIn:row[8],tokenAtivo:row[9]' in atual and 'if(alvos.length)return alvos;' in atual:
+              print('Correção já presente; nenhuma nova alteração necessária.')
+          else:
+              src=src[:start]+novo+src[end:]
+              path.write_text(src)
+              print('Emissor Push do Portal TACS corrigido.')
+          PY
+
+      - name: Validar sintaxe e regressão existente do Push comunitário
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs
+          node scripts/test_push_comunitario_v1.js
+
+      - name: Testar fallback territorial sem depender da tag remota
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const assert=require('node:assert/strict');
+          const fs=require('node:fs');
+          const vm=require('node:vm');
+          const src=fs.readFileSync('apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs','utf8');
+          const ctx=vm.createContext({console,Date,JSON,Math,Object,Array,String,Number,RegExp,isFinite});
+          vm.runInContext(src,ctx);
+          const A='11111111-1111-1111-1111-111111111111';
+          const B='22222222-2222-2222-2222-222222222222';
+          const C='33333333-3333-3333-3333-333333333333';
+          ctx.tacsTerritorioV1Planilha_=()=>({});
+          ctx.notificacoesAreaV1RegistrosDispositivos_=()=>({
+            [A]:{idPortal:'72',tipoAparelho:'Android',navegador:'Chrome',sistema:'Android',permission:'SIM',optedIn:'SIM',tokenAtivo:'SIM',areaConfirmada:'NAO'},
+            [B]:{idPortal:'73',tipoAparelho:'Android',navegador:'Chrome',sistema:'Android',permission:'SIM',optedIn:'NAO',tokenAtivo:'SIM',areaConfirmada:'SIM'}
+          });
+          ctx.saudeNotificacoesV1ExportarSubscriptions_=()=>{throw new Error('exportação ocupada');};
+          ctx.saudeNotificacoesV1EhPush_=()=>true;
+          ctx.saudeNotificacoesV1PertenceArea_=()=>false;
+          ctx.saudeNotificacoesV1ClassificarExport_=()=>({status:'ATIVO'});
+          const alvos=ctx.notificacoesAreaV1AlvosAtivos_('app','key',{areaId:'JAPARANDUBA'},2);
+          assert.deepEqual(JSON.parse(JSON.stringify(alvos.map(x=>x.subscriptionId))),[A]);
+          assert.equal(alvos[0].idPortal,'72');
+          assert.equal(alvos.some(x=>x.subscriptionId===B),false);
+          console.log('PUSH_PORTAL_TACS_FALLBACK_TERRITORIAL_OK');
+          NODE
+
+      - name: Garantir escopo cirúrgico do código
+        run: |
+          set -euo pipefail
+          git diff --check -- apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs
+          changed="$(git diff --name-only | sort)"
+          printf '%s\n' "$changed"
+          test "$changed" = 'apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs'
+          ! grep -R "Conecta Saúde Comunitária\|conecta-saude\|portal-conecta" apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs
+
+      - name: Preparar credenciais do Apps Script
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          mkdir -p "$RUNNER_TEMP/apps-script-live"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$RUNNER_TEMP/apps-script-live" node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const c=JSON.parse(process.env.CLASP_JSON);
+          if(!c.scriptId)throw new Error('scriptId ausente');
+          c.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(c,null,2)+'\n');
+          NODE
+
+      - name: Alterar somente o módulo de notificações no Apps Script real
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE"
+          npx --yes @google/clasp@3.3.0 pull
+          target=''
+          for candidate in "$LIVE/ZZZZ_19_NotificacoesSegmentadasV1.gs" "$LIVE/ZZZZ_19_NotificacoesSegmentadasV1.js"; do
+            if [ -f "$candidate" ]; then target="$candidate"; break; fi
+          done
+          test -n "$target"
+          cp "$GITHUB_WORKSPACE/apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs" "$target"
+          node --check --input-type=commonjs < "$target"
+          echo "$target" > "$RUNNER_TEMP/push-target-file"
+
+      - name: Implantar somente a correção Push com rollback automático
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE"
+          deployments="$(npx --yes @google/clasp@3.3.0 deployments)"
+          previous="$(printf '%s\n' "$deployments" | awk -v id="$DEPLOYMENT_ID" 'index($0,id){for(i=1;i<=NF;i++)if($i~/^@[0-9]+$/){gsub(/^@/,"",$i);print $i;exit}}')"
+          test -n "$previous"
+          npx --yes @google/clasp@3.3.0 version "Backup antes da correção Push Portal TACS ${GITHUB_SHA::7}" >/dev/null
+          npx --yes @google/clasp@3.3.0 push --force
+          out="$(npx --yes @google/clasp@3.3.0 version "Corrigir envio Push Portal TACS ${GITHUB_SHA::7}")"
+          new="$(printf '%s\n' "$out" | grep -Eo '[0-9]+' | tail -n1)"
+          test -n "$new"
+          deployed=0
+          rollback(){ code=$?; trap - ERR; if [ "$deployed" = 1 ]; then npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$previous" --description "Rollback correção Push Portal TACS" "$DEPLOYMENT_ID" || true; fi; exit "$code"; }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$new" --description "Correção isolada do envio Push do Portal TACS" "$DEPLOYMENT_ID"
+          deployed=1
+          base="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          ok=0
+          for n in 1 2 3; do
+            body="$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$base?action=portal_manutencao_status&areaId=JAPARANDUBA" || true)"
+            if printf '%s' "$body" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then ok=1; break; fi
+            sleep 5
+          done
+          test "$ok" = 1
+          trap - ERR
+          printf '%s\n' "$new" > "$RUNNER_TEMP/new-version"
+
+      - name: Registrar código corrigido no repositório
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs
+          git commit -m 'Corrigir envio Push do Portal TACS sem depender da tag remota'
+          git push origin HEAD:main
+
+      - name: Remover credenciais temporárias
+        if: always()
+        run: rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/apps-script-live/.clasp.json"
