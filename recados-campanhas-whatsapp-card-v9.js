@@ -15,7 +15,7 @@ function territory(){
 function read(card,type){
   var t=territory();
   return{
-    type:type,title:field(card,'titulo')||(type==='recado'?'Recado da Unidade':'Campanha de Saúde'),
+    type:type,title:field(card,'titulo')||(type==='recado'?'Recado do TACS':'Campanha de Saúde'),
     message:field(card,'mensagem'),priority:field(card,'prioridade'),validity:field(card,'validade'),
     start:field(card,'inicio'),days:field(card,'dias'),time:field(card,'horario'),
     areaName:t.areaName,unitName:t.unitName,tacsName:t.tacsName,
@@ -31,24 +31,44 @@ function wrap(ctx,text,x,y,maxWidth,lineHeight,maxLines){
   lines.forEach(function(value,index){ctx.fillText(value,x,y+index*lineHeight)});
   return y+lines.length*lineHeight;
 }
+var PORTAL_TACS_STATUS_ICON='/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-card.jpg?v=20260903-recado-tacs-premium-v1';
+var portalTacsStatusIconPromise=null;
+function loadPortalTacsStatusIcon(){
+  if(portalTacsStatusIconPromise)return portalTacsStatusIconPromise;
+  portalTacsStatusIconPromise=new Promise(function(resolve){
+    var img=new Image();img.decoding='async';img.onload=function(){resolve(img)};img.onerror=function(){resolve(null)};img.src=PORTAL_TACS_STATUS_ICON;
+  });
+  return portalTacsStatusIconPromise;
+}
 function draw(data){
-  var c=document.createElement('canvas');c.width=1080;c.height=1920;var ctx=c.getContext('2d');
-  var g=ctx.createLinearGradient(0,0,1080,1920);g.addColorStop(0,'#041f34');g.addColorStop(.52,'#073a55');g.addColorStop(1,'#0b5878');ctx.fillStyle=g;ctx.fillRect(0,0,1080,1920);
-  ctx.globalAlpha=.11;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(930,250,280,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(140,1710,350,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-  ctx.fillStyle='#78e5a6';roundRect(ctx,72,90,560,86,43);ctx.fill();ctx.fillStyle='#073a55';ctx.font='900 35px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.type==='recado'?'RECADO DA UNIDADE':'CAMPANHA DE SAÚDE',112,146);
-  ctx.fillStyle='#fff';ctx.font='900 69px -apple-system,BlinkMacSystemFont,Arial';var y=285;y=wrap(ctx,data.title,78,y,924,82,4)+28;
-  ctx.fillStyle='rgba(255,255,255,.97)';var boxY=y;roundRect(ctx,70,boxY,940,920,45);ctx.fill();
-  y=boxY+80;ctx.fillStyle='#102d40';ctx.font='800 40px -apple-system,BlinkMacSystemFont,Arial';
-  if(data.priority){ctx.fillStyle='#08723a';ctx.font='900 38px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('PRIORIDADE: '+data.priority.toUpperCase(),125,y);y+=72}
-  if(data.start){ctx.fillStyle='#102d40';ctx.font='800 40px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('Início: '+dateBr(data.start),125,y);y+=68}
-  if(data.validity){ctx.fillText('Validade: '+dateBr(data.validity),125,y);y+=68}
-  if(data.days){y=wrap(ctx,'Dias: '+data.days,125,y,820,55,3)+14}
-  if(data.time){ctx.fillStyle='#0b5878';ctx.font='900 42px -apple-system,BlinkMacSystemFont,Arial';y=wrap(ctx,'Horário: '+data.time,125,y,820,58,3)+18}
-  ctx.fillStyle='#102d40';ctx.font='900 42px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('INFORMAÇÃO',125,y);y+=64;
-  ctx.fillStyle='#415b69';ctx.font='700 39px -apple-system,BlinkMacSystemFont,Arial';wrap(ctx,data.message,125,y,820,54,11);
-  ctx.fillStyle='#78e5a6';ctx.font='900 39px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('PORTAL TACS',78,1734);
-  ctx.fillStyle='#fff';ctx.font='700 34px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.unitName,78,1792);ctx.fillText(data.areaName,78,1840);
-  return c;
+  return loadPortalTacsStatusIcon().then(function(portalIcon){
+    var c=document.createElement('canvas');c.width=1080;c.height=1920;var ctx=c.getContext('2d');
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    var g=ctx.createLinearGradient(0,0,1080,1920);g.addColorStop(0,'#031b2f');g.addColorStop(.50,'#073850');g.addColorStop(1,'#0b5a7a');ctx.fillStyle=g;ctx.fillRect(0,0,1080,1920);
+    ctx.globalAlpha=.10;ctx.fillStyle='#79c8e5';ctx.beginPath();ctx.arc(1010,245,300,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(100,1760,360,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    ctx.fillStyle='#72e3a0';roundRect(ctx,70,76,600,98,49);ctx.fill();
+    ctx.fillStyle='#062c45';ctx.font='900 39px -apple-system,BlinkMacSystemFont,Arial';ctx.textBaseline='alphabetic';ctx.fillText('RECADO DO TACS',116,140);
+    ctx.strokeStyle='#72e3a0';ctx.lineWidth=5;ctx.beginPath();ctx.arc(104,238,39,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(104,225,12,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(82,268,22,0,Math.PI);ctx.arc(126,268,22,Math.PI,0);ctx.closePath();ctx.fill();
+    var autor=txt(data.tacsName)||'Mércio José Campos dos Santos';
+    ctx.fillStyle='#fff';ctx.font='800 35px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(autor,166,250);
+    ctx.fillStyle='#fff';ctx.font='900 70px -apple-system,BlinkMacSystemFont,Arial';var y=365;y=wrap(ctx,data.title,72,y,936,80,4)+24;
+    var boxY=y,boxBottom=1570,boxH=Math.max(700,boxBottom-boxY);if(boxY+boxH>1570)boxH=1570-boxY;
+    ctx.fillStyle='#ffffff';ctx.shadowColor='rgba(0,0,0,.14)';ctx.shadowBlur=20;ctx.shadowOffsetY=8;roundRect(ctx,64,boxY,952,boxH,50);ctx.fill();ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    y=boxY+82;
+    if(data.priority){ctx.fillStyle='#08783f';ctx.font='900 39px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('PRIORIDADE: '+data.priority.toUpperCase(),120,y);y+=70}
+    if(data.validity){ctx.fillStyle='#08783f';ctx.font='900 39px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('Validade: '+dateBr(data.validity),120,y);y+=68}
+    if(data.start){ctx.fillStyle='#0f3046';ctx.font='800 34px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('Início: '+dateBr(data.start),120,y);y+=54}
+    if(data.days){ctx.fillStyle='#0f3046';ctx.font='800 34px -apple-system,BlinkMacSystemFont,Arial';y=wrap(ctx,'Dias: '+data.days,120,y,840,46,2)+4}
+    if(data.time){ctx.fillStyle='#0f3046';ctx.font='800 34px -apple-system,BlinkMacSystemFont,Arial';y=wrap(ctx,'Horário: '+data.time,120,y,840,46,2)+8}
+    ctx.fillStyle='#d3dadd';ctx.fillRect(120,y,840,3);y+=66;
+    ctx.fillStyle='#0a3150';ctx.font='900 43px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('INFORMAÇÃO',120,y);y+=54;ctx.fillStyle='#d3dadd';ctx.fillRect(120,y,840,3);y+=62;
+    ctx.fillStyle='#0f3046';ctx.font='800 39px -apple-system,BlinkMacSystemFont,Arial';wrap(ctx,data.message,120,y,840,55,11);
+    var footerY=1690;
+    if(portalIcon){ctx.save();roundRect(ctx,70,footerY,158,145,28);ctx.clip();ctx.drawImage(portalIcon,70,footerY,158,145);ctx.restore()}
+    ctx.fillStyle='#67e09b';ctx.font='900 48px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('PORTAL TACS',260,1750);
+    ctx.fillStyle='#fff';ctx.font='700 32px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.unitName,260,1800);ctx.fillText(data.areaName,260,1844);
+    return c;
+  });
 }
 function normalizeTheme(v){var n=txt(v).toLowerCase();return n.normalize?n.normalize('NFD').replace(/[\u0300-\u036f]/g,''):n}
 function themeFromCard(card,title){var cls=card&&String(card.className||''),m=cls.match(/camp-theme-([a-z0-9-]+)/);if(m)return m[1];var n=normalizeTheme(title),list=['lilas','dourado','azul-marinho','laranja','amarelo','vermelho','verde','roxo','rosa','azul'];for(var i=0;i<list.length;i++)if(n.indexOf(list[i])!==-1)return list[i];return'azul'}
