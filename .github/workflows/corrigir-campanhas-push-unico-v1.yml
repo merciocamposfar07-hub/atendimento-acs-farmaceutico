@@ -1,0 +1,125 @@
+name: Corrigir Push único das campanhas automáticas V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-campanhas-push-unico-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  testar-e-implantar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Testar somente campanhas automáticas
+        run: node scripts/test_campanhas_automaticas_v1.js
+
+      - name: Validar credenciais sem exibi-las
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar projeto Apps Script real
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs');
+          const path=require('path');
+          const config=JSON.parse(process.env.CLASP_JSON);
+          if(!config.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId)) throw new Error('scriptId inválido');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Substituir somente o módulo de campanhas automáticas
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mapfile -t alvos < <(grep -rl --include='*.js' --include='*.gs' 'var TACS_CAMPANHAS_AUTOMATICAS_V1=Object.freeze' "$LIVE_DIR")
+          if [ "${#alvos[@]}" -ne 1 ]; then
+            printf 'Esperado exatamente 1 módulo vivo de campanhas automáticas; encontrados: %s\n' "${#alvos[@]}" >&2
+            exit 1
+          fi
+          alvo="${alvos[0]}"
+          cp apps-script/ZZZZ_35_CampanhasAutomaticasV1.gs "$alvo"
+          node --check --input-type=commonjs < "$alvo" >/dev/null
+          printf 'Somente módulo substituído: %s\n' "$(basename "$alvo")"
+
+      - name: Publicar e validar sem disparar campanhas
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          npx --yes @google/clasp@3.3.0 version "Backup antes do Push único de campanhas - ${GITHUB_SHA::7}"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Push único de campanhas automáticas V1 - ${GITHUB_SHA::7}")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+          DEPLOYED=0
+          rollback(){
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático Push campanhas" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Push único de campanhas automáticas V1" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          status=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 30 "$BASE?action=campanhas_automaticas_status&_=$(date +%s)")
+          STATUS="$status" node - <<'NODE'
+          const s=JSON.parse(process.env.STATUS||'{}');
+          if(s.ok!==true||s.templates!==18||s.versao!=='1.1.0') throw new Error('Status de campanhas inválido: '+JSON.stringify(s));
+          console.log('CAMPANHAS_PUSH_UNICO_DEPLOY_OK',JSON.stringify({versao:s.versao,templates:s.templates}));
+          NODE
+          trap - ERR
+          printf 'Implantação validada sem executar campanhas: versão %s\n' "$NEW_VERSION"
+
+      - name: Remover credenciais temporárias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
