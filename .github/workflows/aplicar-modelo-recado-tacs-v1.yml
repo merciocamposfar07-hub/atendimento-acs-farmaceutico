@@ -1,0 +1,38 @@
+name: Aplicar modelo Recado TACS V1
+on:
+  push:
+    paths:
+      - '.github/workflows/aplicar-modelo-recado-tacs-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Aplicar alteração isolada
+        run: python3 scripts/aplicar_modelo_recado_tacs_v1.py
+      - name: Validar JavaScript e modelo
+        run: |
+          node --check recados-campanhas-whatsapp-card-v9.js
+          node scripts/test_whatsapp_recado_visual_tacs_v1.js
+          if [ -f scripts/test_recados_safari_render_v1.js ]; then node scripts/test_recados_safari_render_v1.js; fi
+      - name: Validar escopo
+        run: |
+          changed=$(git diff --name-only)
+          printf '%s\n' "$changed"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l)" -eq 2
+          printf '%s\n' "$changed" | grep -qx 'recados-campanhas-whatsapp-card-v9.js'
+          printf '%s\n' "$changed" | grep -qx 'painel-oficial-recados-campanhas.html'
+          ! git diff | grep -qi 'conecta-saude-comunitaria'
+      - name: Publicar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add recados-campanhas-whatsapp-card-v9.js painel-oficial-recados-campanhas.html
+          git commit -m 'Aplicar modelo premium aos Recados do TACS no WhatsApp'
+          git push
