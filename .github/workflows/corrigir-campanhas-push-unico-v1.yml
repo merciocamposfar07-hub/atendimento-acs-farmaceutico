@@ -123,3 +123,5 @@ jobs:
         run: |
           rm -f "$HOME/.clasprc.json"
           rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
+
+# Implantação cirúrgica: não chama campanhas_automaticas_executar e não dispara Push durante a validação.
