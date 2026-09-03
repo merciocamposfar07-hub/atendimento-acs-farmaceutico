@@ -189,20 +189,21 @@ function campanhasAutomaticasV1NotificarArea_(areaId){
   try{if(typeof tacsTerritorioV1EncontrarArea_==='function')areaInfo=tacsTerritorioV1EncontrarArea_(areaId);}catch(erroArea){}
   var contexto={areaId:areaId,areaNome:campanhasAutomaticasV1Texto_(areaInfo&&areaInfo.areaNome)||areaId};
   var acesso={perfil:'SISTEMA',operadorId:'SISTEMA_CAMPANHAS'};
-  var hoje=Utilities.formatDate(new Date(),TACS_CAMPANHAS_AUTOMATICAS_V1.FUSO,'yyyyMMdd');
   var resumo={enviadas:0,pendentes:0,erros:0,detalhes:[]};
   campanhasAutomaticasV1AtivasAgora_(areaId).forEach(function(item){
     var id=campanhasAutomaticasV1Texto_(item.ID),notificado=campanhasAutomaticasV1Texto_(item.NOTIFICADO_EM);
-    var reKey=TACS_CAMPANHAS_AUTOMATICAS_V1.RENOTIF_PREFIX+TACS_CAMPANHAS_AUTOMATICAS_V1.RENOTIF_REVISAO+'_'+id;
-    var reenviar=Boolean(notificado)&&!props.getProperty(reKey);
-    if(notificado&&!reenviar)return;
+    var sentKey='TACS_CAMP_AUTO_ENVIADA_UNICA_V1_'+id;
+    if(notificado||props.getProperty(sentKey))return;
     try{
-      if(!reenviar){
-        var anterior=typeof notificacoesAreaV1UltimoEnvio_==='function'?notificacoesAreaV1UltimoEnvio_(areaId,'CAMPANHA',id):null;
-        if(anterior&&anterior.onesignalId){campanhasAutomaticasV1MarcarNotificada_(areaId,id,'AUDITADO '+anterior.registradoEm);return;}
+      var anterior=typeof notificacoesAreaV1UltimoEnvio_==='function'?notificacoesAreaV1UltimoEnvio_(areaId,'CAMPANHA',id):null;
+      if(anterior&&anterior.onesignalId){
+        var auditado='AUDITADO '+campanhasAutomaticasV1Texto_(anterior.registradoEm);
+        campanhasAutomaticasV1MarcarNotificada_(areaId,id,auditado);
+        props.setProperty(sentKey,auditado||new Date().toISOString());
+        return;
       }
       var subtitulo=campanhasAutomaticasV1Texto_(item.SUBTITULO),mensagem=campanhasAutomaticasV1Texto_(item.MENSAGEM);
-      var evento=((reenviar?'REVISAO_':'AUTO_')+id+'_'+hoje+(reenviar?'_'+TACS_CAMPANHAS_AUTOMATICAS_V1.RENOTIF_REVISAO:'')).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,160);
+      var evento=('AUTO_'+id).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,160);
       var resultado=notificacoesAreaV1Enviar_(appId,apiKey,contexto,acesso,{
         evento:evento,tipo:'CAMPANHA',referencia:id,titulo:campanhasAutomaticasV1Texto_(item.TITULO).slice(0,120),
         mensagem:(subtitulo+(subtitulo&&mensagem?' — ':'')+mensagem).slice(0,1000),
@@ -211,7 +212,8 @@ function campanhasAutomaticasV1NotificarArea_(areaId){
       });
       if(resultado&&resultado.ok===true&&resultado.push===true){
         var carimbo=Utilities.formatDate(new Date(),TACS_CAMPANHAS_AUTOMATICAS_V1.FUSO,'dd/MM/yyyy HH:mm:ss');
-        if(reenviar)props.setProperty(reKey,carimbo);else campanhasAutomaticasV1MarcarNotificada_(areaId,id,carimbo);
+        campanhasAutomaticasV1MarcarNotificada_(areaId,id,carimbo);
+        props.setProperty(sentKey,carimbo);
         resumo.enviadas++;
       }else{
         resumo.pendentes++;
