@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#081829">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<title>Painel administrativo • Homologação V3.4</title>
+<title>Painel administrativo • Homologação V3.5</title>
 <style>
 html,body{margin:0;width:100%;min-height:100%;background:#081829;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
 body{background:radial-gradient(800px 420px at 50% -8%,rgba(46,111,159,.28),transparent 65%),linear-gradient(180deg,#0b2238,#061421)}
@@ -15,12 +15,12 @@ body{background:radial-gradient(800px 420px at 50% -8%,rgba(46,111,159,.28),tran
 </style>
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
-<link rel="preload" as="style" href="/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3.css?v=20260909-2">
-<link rel="preload" as="style" href="/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-3-patch.css?v=20260909-3">
-<link rel="preload" as="style" href="/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-4-patch.css?v=20260909-4">
+<link rel="preload" as="style" href="/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3.css?v=20260909-5">
+<link rel="preload" as="style" href="/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-3-patch.css?v=20260909-5">
+<link rel="preload" as="style" href="/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-4-patch.css?v=20260909-5">
 </head>
 <body>
-<div id="fallback"><div><strong>Não foi possível abrir este painel.</strong><p>A Central em produção não foi alterada.</p><button type="button" onclick="location.href='/atendimento-acs-farmaceutico/homologacao-ui-v3/central-administrativa.html?v=20260909-4'">Voltar</button></div></div>
+<div id="fallback"><div><strong>Não foi possível abrir este painel.</strong><p>A Central em produção não foi alterada.</p><button type="button" onclick="location.href='/atendimento-acs-farmaceutico/homologacao-ui-v3/central-administrativa.html?v=20260909-5'">Voltar</button></div></div>
 <script>
 (function(){
 'use strict';
@@ -39,13 +39,14 @@ var map={
 };
 var base=map[target];
 if(!base){document.getElementById('fallback').style.display='grid';return}
-var source=base+'?area='+encodeURIComponent(area)+'&from=central'+(tacs?'&acesso=tacs':'')+'&v=20260909-warm-v34';
-var baseCss='/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3.css?v=20260909-2';
-var patchCss='/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-3-patch.css?v=20260909-3';
-var patch34='/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-4-patch.css?v=20260909-4';
-var sessionJs='/atendimento-acs-farmaceutico/homologacao-ui-v3/session-v3-3.js?v=20260909-3';
-var runtimeJs='/atendimento-acs-farmaceutico/homologacao-ui-v3/panel-runtime-v3-3.js?v=20260909-3';
-var fix34='/atendimento-acs-farmaceutico/homologacao-ui-v3/panel-fix-v3-4.js?v=20260909-4';
+var source=base+'?area='+encodeURIComponent(area)+'&from=central'+(tacs?'&acesso=tacs':'')+'&v=20260909-warm-v35';
+var sourceDir=base.slice(0,base.lastIndexOf('/')+1);
+var baseCss='/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3.css?v=20260909-5';
+var patchCss='/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-3-patch.css?v=20260909-5';
+var patch34='/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-4-patch.css?v=20260909-5';
+var sessionJs='/atendimento-acs-farmaceutico/homologacao-ui-v3/session-v3-3.js?v=20260909-5';
+var runtimeJs='/atendimento-acs-farmaceutico/homologacao-ui-v3/panel-runtime-v3-3.js?v=20260909-5';
+var fix34='/atendimento-acs-farmaceutico/homologacao-ui-v3/panel-fix-v3-4.js?v=20260909-5';
 function ensure(doc,tag,id,url){
   if(!doc||!doc.head||doc.getElementById(id))return;
   var n=doc.createElement(tag);n.id=id;
@@ -67,10 +68,16 @@ if(target==='profissionais'){
   return;
 }
 function inject(html){
-  var pre='\n<script>(function(){try{if(sessionStorage.getItem("portalTacsAdminTokenV1")||sessionStorage.getItem("portalTacsTerritorioTokenV1"))document.documentElement.classList.add("v3-session-reused")}catch(e){}})();<\/script>\n';
-  var head=pre+'<link rel="stylesheet" href="'+baseCss+'">\n<link rel="stylesheet" href="'+patchCss+'">\n<link rel="stylesheet" href="'+patch34+'">\n<script src="'+sessionJs+'"><\/script>\n';
+  var sessionMark='\n<script>(function(){try{if(sessionStorage.getItem("portalTacsAdminTokenV1")||sessionStorage.getItem("portalTacsTerritorioTokenV1"))document.documentElement.classList.add("v3-session-reused")}catch(e){}})();<\/script>\n';
+  var injectedHead=sessionMark+'<link rel="stylesheet" href="'+baseCss+'">\n<link rel="stylesheet" href="'+patchCss+'">\n<link rel="stylesheet" href="'+patch34+'">\n<script src="'+sessionJs+'"><\/script>\n';
   var tail='\n<script src="'+runtimeJs+'"><\/script>\n<script src="'+fix34+'"><\/script>\n';
-  if(/<\/head>/i.test(html))html=html.replace(/<\/head>/i,head+'</head>');else html=head+html;
+
+  /* CRÍTICO: o HTML original usa scripts/ícones relativos ao próprio diretório.
+     Como a homologação reescreve o documento dentro desta rota, inserimos BASE no
+     início do HEAD para que os arquivos funcionais continuem vindo do local original. */
+  var baseTag='<base href="'+sourceDir+'">\n';
+  if(/<head[^>]*>/i.test(html))html=html.replace(/<head([^>]*)>/i,'<head$1>'+baseTag+injectedHead);
+  else html=baseTag+injectedHead+html;
   if(/<\/body>/i.test(html))html=html.replace(/<\/body>/i,tail+'</body>');else html+=tail;
   document.open();document.write(html);document.close();
 }
