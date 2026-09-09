@@ -8,7 +8,7 @@ var TERR='portalTacsTerritorioTokenV1';
 var LAST='portalTacsUltimaInteracaoHumanaV3';
 var EXCLUSIVE='portalTacsModoExclusivoV2';
 var IDLE_MS=60*60*1000;
-var CHECK_MS=15000;
+var CHECK_MS=10000;
 var lastWrite=0;
 var expiring=false;
 
@@ -31,7 +31,6 @@ function clearSession(){
     sessionStorage.removeItem(TERR);
     sessionStorage.removeItem(LAST);
     sessionStorage.removeItem(EXCLUSIVE);
-    sessionStorage.removeItem('portalTacsTerritorioTokenV1');
     sessionStorage.removeItem('portalTacsCentralReturnUrlV1');
     sessionStorage.removeItem('portalTacsRetornoCentralV1');
   }catch(e){}
@@ -53,20 +52,20 @@ function check(){
   if(!last){writeLast(true);return}
   if(Date.now()-last>=IDLE_MS)expire();
 }
-function human(){writeLast(false)}
+function human(e){
+  if(e&&e.isTrusted===false)return;
+  writeLast(false);
+}
 
 ['pointerdown','touchstart','keydown','input','change'].forEach(function(type){
   window.addEventListener(type,human,{capture:true,passive:type!=='keydown'&&type!=='input'&&type!=='change'});
 });
 window.addEventListener('scroll',human,{capture:true,passive:true});
-window.addEventListener('focus',function(){check();writeLast(false)});
-window.addEventListener('pageshow',function(){check();writeLast(false)});
-document.addEventListener('visibilitychange',function(){if(!document.hidden){check();writeLast(false)}});
+window.addEventListener('focus',check);
+window.addEventListener('pageshow',check);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)check()});
 
-if(hasSession()){
-  check();
-  writeLast(false);
-}
+if(hasSession())check();
 setInterval(check,CHECK_MS);
 
 window.PortalTacsSessionV3Api={
