@@ -34,10 +34,10 @@ var map={
 };
 var base=map[target];
 if(!base){document.getElementById('fallback').style.display='grid';return}
-var source=base+'?area='+encodeURIComponent(area)+'&from=central'+(tacs?'&acesso=tacs':'')+'&v=20260909-v3-shell';
+var source=base+'?area='+encodeURIComponent(area)+'&from=central'+(tacs?'&acesso=tacs':'')+'&v=20260909-v3-shell-2';
 function inject(html){
-  var head='\n<link rel="stylesheet" href="/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3.css?v=20260909-1">\n<script src="/atendimento-acs-farmaceutico/homologacao-ui-v3/session-v3.js?v=20260909-1"><\/script>\n';
-  var tail='\n<script src="/atendimento-acs-farmaceutico/homologacao-ui-v3/panel-runtime-v3.js?v=20260909-1"><\/script>\n';
+  var head='\n<link rel="stylesheet" href="/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3.css?v=20260909-2">\n<script src="/atendimento-acs-farmaceutico/homologacao-ui-v3/session-v3.js?v=20260909-2"><\/script>\n';
+  var tail='\n<script src="/atendimento-acs-farmaceutico/homologacao-ui-v3/panel-runtime-v3.js?v=20260909-2"><\/script>\n';
   if(/<\/head>/i.test(html))html=html.replace(/<\/head>/i,head+'</head>');else html=head+html;
   if(/<\/body>/i.test(html))html=html.replace(/<\/body>/i,tail+'</body>');else html+=tail;
   document.open();document.write(html);document.close();
