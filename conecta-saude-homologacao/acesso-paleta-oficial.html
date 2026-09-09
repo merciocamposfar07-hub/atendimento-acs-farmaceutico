@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0B1E32">
+<title>Conecta Saúde Comunitária — Paleta Oficial</title>
+<style>
+:root{
+  --background:#0B1E32;
+  --background-deep:#081829;
+  --surface:#102A42;
+  --surface-elevated:#163651;
+  --brand-blue:#214667;
+  --brand-green:#85DC9F;
+  --brand-green-pressed:#74C991;
+  --text-primary:#FFFFFF;
+  --text-secondary:#C7D0D8;
+  --text-muted:#8FA1B0;
+  --border:#47799B;
+  --divider:#203D56;
+  --success:#62D695;
+  --warning:#F0B44D;
+  --error:#E05B6F;
+  --shadow:0 20px 48px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--background);color:var(--text-primary);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100svh;background:linear-gradient(180deg,var(--background) 0%,var(--background-deep) 100%);-webkit-font-smoothing:antialiased}
+button,input{font:inherit}
+.screen{display:none;min-height:100svh;padding:max(18px,env(safe-area-inset-top)) 20px max(26px,env(safe-area-inset-bottom))}
+.screen.active{display:block}
+.shell{width:min(100%,560px);margin:0 auto}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;margin-bottom:28px}
+.brand{font-size:18px;font-weight:850;letter-spacing:-.02em}.badge{border:1px solid var(--border);color:var(--text-secondary);padding:7px 11px;border-radius:999px;font-size:13px}
+.hero{padding-top:7svh}.eyebrow{color:var(--brand-green);font-size:13px;font-weight:800;letter-spacing:.18em;margin-bottom:14px}.title{font-size:clamp(38px,10vw,56px);line-height:1.02;letter-spacing:-.055em;margin:0 0 18px}.lead{font-size:clamp(18px,4.6vw,21px);line-height:1.5;color:var(--text-secondary);margin:0 0 28px}.palette{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:28px 0}.swatch{height:58px;border-radius:16px;border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.primary,.secondary{width:100%;min-height:58px;border-radius:16px;font-size:18px;font-weight:850;cursor:pointer}.primary{border:1px solid #315F86;background:linear-gradient(180deg,#2A567D 0%,var(--brand-blue) 100%);color:#fff;box-shadow:0 14px 28px rgba(0,0,0,.2)}.primary:active{transform:translateY(1px)}.secondary{margin-top:10px;border:1px solid var(--border);background:var(--surface);color:#fff}.primary:disabled{opacity:.45;cursor:not-allowed}
+.card{background:linear-gradient(180deg,var(--surface-elevated),var(--surface));border:1px solid var(--border);border-radius:24px;padding:20px;box-shadow:var(--shadow)}.step{color:var(--brand-green);font-size:14px;font-weight:800;margin-bottom:10px}.field{margin:20px 0}.field label{display:block;font-size:17px;font-weight:800;margin-bottom:9px}.input{width:100%;min-height:60px;border:1.5px solid var(--border);border-radius:16px;background:var(--background-deep);color:#fff;padding:0 16px;font-size:23px;outline:none}.input:focus{border-color:var(--brand-green);box-shadow:0 0 0 4px rgba(133,220,159,.12)}.hint{font-size:14px;line-height:1.45;color:var(--text-muted);margin-top:10px}.error{min-height:21px;color:var(--error);font-size:14px;font-weight:750;margin:10px 0 0}.progress{display:flex;gap:7px;margin-bottom:22px}.progress span{height:6px;flex:1;border-radius:999px;background:var(--divider)}.progress span.on{background:var(--brand-blue);box-shadow:0 0 0 1px #315F86}.family-list{display:grid;gap:12px}.person{width:100%;text-align:left;border:1px solid var(--border);border-radius:18px;background:var(--surface);color:#fff;padding:16px}.person b{display:block;font-size:18px;margin-bottom:4px}.person small{color:var(--text-secondary);font-size:15px}.notice{border:1px solid var(--border);border-left:4px solid var(--brand-green);background:var(--surface);border-radius:18px;padding:16px 17px;color:var(--text-secondary);line-height:1.45;margin:18px 0}.status{display:none;border:1px solid var(--success);background:rgba(98,214,149,.08);border-radius:16px;padding:14px 16px;color:#DFF7E8;margin:14px 0}.status.show{display:block}.footer{color:var(--text-muted);text-align:center;font-size:12px;line-height:1.45;margin:24px 0 0}.back{appearance:none;border:0;background:transparent;color:var(--text-secondary);padding:8px 0;font-size:16px}
+@media(max-width:380px){.screen{padding-left:16px;padding-right:16px}.card{padding:17px}.title{font-size:38px}}
+</style>
+</head>
+<body>
+<main id="intro" class="screen active"><div class="shell hero">
+  <div class="top"><div class="brand">Conecta Saúde Comunitária</div><div class="badge">Homologação visual</div></div>
+  <div class="eyebrow">PALETA OFICIAL DO PROJETO</div>
+  <h1 class="title">Azul-petróleo como base. Verde como acento.</h1>
+  <p class="lead">Aplicação da paleta catalogada ao fluxo de acesso, sem alterar a abertura aprovada nem outros módulos.</p>
+  <div class="palette" aria-label="Paleta oficial"><span class="swatch" style="background:#0B1E32"></span><span class="swatch" style="background:#081829"></span><span class="swatch" style="background:#102A42"></span><span class="swatch" style="background:#163651"></span><span class="swatch" style="background:#214667"></span></div>
+  <button class="primary" id="begin">Começar teste</button>
+  <p class="footer">Teste isolado. Não grava CPF, PIN ou família e não envia Push real.</p>
+</div></main>
+
+<main id="cpf" class="screen"><div class="shell">
+  <div class="top"><button class="back" data-go="intro">‹ Voltar</button><div class="badge">Morador</div></div>
+  <div class="card"><div class="progress"><span class="on"></span><span></span><span></span><span></span></div><div class="step">1 DE 4</div>
+  <h2 class="title">Informe seu CPF</h2><p class="lead">A conferência só acontece depois que você tocar em continuar.</p>
+  <div class="field"><label for="cpfInput">CPF</label><input class="input" id="cpfInput" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000.000.000-00"><div class="hint">Máximo de 11 números.</div></div>
+  <button class="primary" id="cpfNext">Continuar</button><div class="error" id="cpfError"></div></div>
+  <p class="footer">Homologação visual com dados fictícios.</p>
+</div></main>
+
+<main id="pin" class="screen"><div class="shell">
+  <div class="top"><button class="back" data-go="cpf">‹ Voltar</button><div class="badge">Morador</div></div>
+  <div class="card"><div class="progress"><span class="on"></span><span class="on"></span><span></span><span></span></div><div class="step">2 DE 4</div>
+  <h2 class="title">Crie seu PIN</h2><p class="lead">Escolha 4 números e confirme o mesmo PIN.</p>
+  <div class="field"><label for="pin1">PIN</label><input class="input" id="pin1" type="password" inputmode="numeric" maxlength="4"></div>
+  <div class="field"><label for="pin2">Confirmar PIN</label><input class="input" id="pin2" type="password" inputmode="numeric" maxlength="4"></div>
+  <button class="primary" id="pinNext">Criar PIN</button><div class="error" id="pinError"></div></div>
+  <p class="footer">O PIN digitado neste teste não é salvo.</p>
+</div></main>
+
+<main id="notifications" class="screen"><div class="shell">
+  <div class="top"><button class="back" data-go="pin">‹ Voltar</button><div class="badge">Morador</div></div>
+  <div class="card"><div class="progress"><span class="on"></span><span class="on"></span><span class="on"></span><span></span></div><div class="step">3 DE 4</div>
+  <h2 class="title">Ative as notificações</h2><p class="lead">Elas serão usadas para recados, campanhas, mudanças de agenda e avisos da Unidade.</p>
+  <div class="notice">Nesta homologação o botão é obrigatório e não existe opção de pular esta etapa.</div>
+  <div class="status" id="notifStatus">Notificações marcadas como ativadas para este teste visual.</div>
+  <button class="primary" id="notifButton">Ativar notificações</button></div>
+  <p class="footer">A permissão real de Push será validada no ambiente próprio de notificação.</p>
+</div></main>
+
+<main id="family" class="screen"><div class="shell">
+  <div class="top"><button class="back" data-go="notifications">‹ Voltar</button><div class="badge">Morador</div></div>
+  <div class="card"><div class="progress"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span></div><div class="step">4 DE 4</div>
+  <h2 class="title">Escolha o integrante</h2><p class="lead">O aparelho continua sendo do responsável; o pedido usa o integrante selecionado.</p>
+  <div class="family-list"><button class="person"><b>João de Souza</b><small>Responsável • 28/12/1984</small></button><button class="person"><b>Maria de Souza</b><small>Integrante • 12/05/1988</small></button><button class="person"><b>Ana de Souza</b><small>Integrante • 14/09/2014</small></button></div></div>
+  <p class="footer">Família fictícia apenas para homologação visual.</p>
+</div></main>
+<script>
+const screens=[...document.querySelectorAll('.screen')];
+function show(id){screens.forEach(s=>s.classList.toggle('active',s.id===id));window.scrollTo(0,0)}
+document.getElementById('begin').onclick=()=>show('cpf');
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));
+const cpfInput=document.getElementById('cpfInput');
+cpfInput.oninput=()=>{let d=cpfInput.value.replace(/\D/g,'').slice(0,11);cpfInput.value=d.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2')};
+document.getElementById('cpfNext').onclick=()=>{const d=cpfInput.value.replace(/\D/g,'');const e=document.getElementById('cpfError');if(d.length!==11){e.textContent='Digite os 11 números do CPF.';return}e.textContent='';show('pin')};
+document.getElementById('pinNext').onclick=()=>{const a=document.getElementById('pin1').value.replace(/\D/g,''),b=document.getElementById('pin2').value.replace(/\D/g,''),e=document.getElementById('pinError');if(a.length!==4){e.textContent='O PIN precisa ter 4 números.';return}if(a!==b){e.textContent='Os PINs não conferem.';return}e.textContent='';show('notifications')};
+document.getElementById('notifButton').onclick=()=>{const s=document.getElementById('notifStatus'),b=document.getElementById('notifButton');s.classList.add('show');b.textContent='Continuar';b.onclick=()=>show('family')};
+</script>
+</body></html>
