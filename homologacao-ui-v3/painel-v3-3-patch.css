@@ -1,0 +1,88 @@
+/* Homologação V3.3 — complemento visual/estrutural dos painéis.
+   Não altera backend, planilhas, Apps Script, IDs funcionais ou permissões. */
+
+/* Página contínua: nenhum corte branco entre cabeçalho, conteúdo e rodapé. */
+html,body{background:#061421!important;min-height:100%!important}
+header,main,footer{border:0!important;background:transparent!important;box-shadow:none!important}
+header{padding-bottom:14px!important}
+footer{padding-top:18px!important}
+hr,.divider,.divisor{border-color:rgba(105,199,231,.15)!important}
+
+/* A sessão já autenticada na Central não apresenta outra porta de entrada. */
+html.v3-session-reused #loginPanel,
+html.v3-session-reused #adminLogin,
+html.v3-session-reused #tacsLogin,
+html.v3-session-reused #loginAdminTab,
+html.v3-session-reused #loginTacsTab,
+html.v3-session-reused #adminPin,
+html.v3-session-reused #tacsPinLogin,
+html.v3-session-reused #adminLoginButton,
+html.v3-session-reused #tacsLoginButton,
+html.v3-session-reused #logoutButton,
+html.v3-session-reused #loginStatus,
+html.v3-session-reused .login-panel,
+html.v3-session-reused .painel-login,
+html.v3-session-reused [data-v3-redundant-login="1"]{display:none!important}
+html.v3-session-reused #dashboard.hidden{display:block!important}
+
+/* Não mostrar mensagens transitórias como etapa da navegação. */
+.v3-loading-hidden{display:none!important}
+
+/* Texto interno sempre em blocos independentes: nada de MoradoresBase acessível. */
+.module>div,.health-card,.metric,.numero,.number,.stat,.summary-card{min-width:0!important}
+.module strong,.module>div>span,
+.health-card strong,.health-card span,
+.metric strong,.metric span,
+.numero strong,.numero span,
+.number strong,.number span,
+.stat strong,.stat span,.summary-card strong,.summary-card span{
+  display:block!important;width:100%!important;max-width:100%!important;
+  white-space:normal!important;word-break:normal!important;overflow-wrap:normal!important;
+  line-height:1.22!important;
+}
+.module>div>span,.health-card span,.metric span,.numero span,.number span,.stat span,.summary-card span{margin-top:6px!important}
+
+/* Controles mantêm proporção e não acionam zoom automático do Safari. */
+input,select,textarea,.field,.campo,.search{font-size:16px!important;max-width:100%!important}
+
+/* 3D consistente também nos elementos que os painéis antigos chamam por outros nomes. */
+.device,.ticket,.area-row,.maprow,.newbox,.grupoProfissional,.cartao,.item,.check,.tablewrap,details{
+  min-width:0!important;max-width:100%!important;
+  border:1px solid rgba(105,199,231,.30)!important;
+  border-radius:24px!important;
+  background:linear-gradient(145deg,rgba(24,62,92,.96),rgba(7,29,46,.98))!important;
+  color:#fff!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.11),inset 0 -12px 22px rgba(0,0,0,.18),0 16px 30px rgba(0,0,0,.23)!important;
+}
+.device,.ticket,.area-row,.maprow,.newbox,.item{padding:15px!important}
+.device h2,.ticket h2,.area-row strong,.maprow strong,.newbox h2,.item strong,.grupoProfissional strong,.cartao strong{color:#fff!important}
+.device .meta,.device .reason,.ticket .meta,.ticket .diag,.area-row .sub,.maprow .sub,.cartao .sub,.grupoProfissional .sub{color:#c4d8e4!important}
+.reason,.msg{
+  border:1px solid rgba(105,199,231,.18)!important;border-radius:16px!important;
+  background:rgba(4,21,35,.62)!important;color:#d6e9f3!important;
+}
+
+/* Tabelas permanecem legíveis sem voltar para uma página branca. */
+.tablewrap{overflow:auto!important;padding:0!important}
+table{background:transparent!important;color:#eaf7fb!important}
+th{background:rgba(33,70,103,.86)!important;color:#fff!important}
+td,th{border-color:rgba(216,238,247,.16)!important}
+
+/* Abas e ações seguem o mesmo relevo 3D. */
+.tabs{gap:10px!important}
+.tab,.aba,.refresh,.top-refresh,.clear,.repair,.save,.btn,.botao{
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.22),inset 0 -8px 15px rgba(0,0,0,.18),0 13px 25px rgba(0,0,0,.27),0 3px 0 rgba(2,15,25,.72)!important;
+}
+
+/* Estados de reparo já solicitado não permanecem visualmente como erro pendente. */
+.v33-repair-requested{border-color:rgba(133,220,159,.48)!important;color:#b8f3c9!important;background:rgba(25,92,66,.38)!important}
+
+/* Iframes de diagnóstico ocupam a largura integral do painel. */
+iframe,.diag-frame{max-width:100%!important;border-radius:22px!important;border:0!important;background:#081829!important}
+
+@media(max-width:430px){
+  main{padding-left:14px!important;padding-right:14px!important}
+  .device,.ticket,.area-row,.maprow,.newbox,.item{padding:13px!important;border-radius:21px!important}
+  .module strong{font-size:1.06rem!important}
+  .module>div>span{font-size:.9rem!important}
+}
