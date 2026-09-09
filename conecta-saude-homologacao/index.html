@@ -14,17 +14,33 @@ html,body{margin:0;min-height:100%;background:var(--bg);color:#fff;font-family:-
 body{overflow-x:hidden}
 .page{min-height:100svh;background:radial-gradient(circle at 50% 23%,rgba(0,110,255,.20),transparent 35%),linear-gradient(#020812,#020916 54%,#020812);display:flex;justify-content:center}
 .poster{position:relative;width:min(100vw,540px);aspect-ratio:864/1402;overflow:hidden;background:radial-gradient(circle at 50% 27%,rgba(6,78,156,.25),transparent 31%)}
-.tracks{position:absolute;inset:0;z-index:1;width:100%;height:61.5%;filter:drop-shadow(0 0 8px rgba(0,128,255,.35))}
-.tracks path{fill:none;vector-effect:non-scaling-stroke}.hex1{stroke:#0e64da;stroke-width:1.25}.hex2{stroke:#0c56c0;stroke-width:1;opacity:.62}.hex3{stroke:#0a4ca6;stroke-width:1;opacity:.45}.arc{stroke:#1598ff;stroke-width:1.3;opacity:.7}.flow{stroke:#41c8ff;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:4 25;animation:flow 2.2s linear infinite;filter:drop-shadow(0 0 5px #1fa7ff)}
-@keyframes flow{to{stroke-dashoffset:-116}}
-.logo{position:absolute;left:49.65%;top:29.03%;width:34.72%;aspect-ratio:1;transform:translate(-50%,-50%);z-index:4;object-fit:cover;border-radius:50%;clip-path:circle(49% at 50% 50%);background:#031431;filter:drop-shadow(0 0 14px rgba(0,123,255,.55)) drop-shadow(0 14px 15px rgba(0,0,0,.38))}
-.logoHalo{position:absolute;left:49.65%;top:29.03%;width:41%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);z-index:3;background:radial-gradient(circle,rgba(18,134,255,.18),rgba(7,73,154,.08) 55%,transparent 72%);filter:blur(2px);animation:pulse 3s ease-in-out infinite}
-@keyframes pulse{50%{transform:translate(-50%,-50%) scale(1.04);opacity:.78}}
-.orbitGroup{position:absolute;inset:0;z-index:5;transform-origin:49.65% 29.03%;will-change:transform,opacity;animation:orbitGroup 12s cubic-bezier(.4,0,.2,1) infinite}
-.pic{position:absolute;width:15.05%;aspect-ratio:1;transform:translate(-50%,-50%);will-change:transform;border-radius:50%;overflow:hidden;clip-path:circle(49% at 50% 50%);filter:drop-shadow(0 8px 11px rgba(0,0,0,.38))}.pic img{position:absolute;left:-4%;top:-4%;width:108%;height:108%;display:block;object-fit:cover;border-radius:50%;will-change:transform;animation:counter 12s cubic-bezier(.4,0,.2,1) infinite}
-.p1{left:33.6806%;top:7.7033%}.p2{left:13.0787%;top:22.3966%}.p3{left:66.7824%;top:8.8445%}.p4{left:14.5833%;top:37.3752%}.p5{left:87.7315%;top:22.3252%}.p6{left:34.8380%;top:47.1469%}.p7{left:84.8380%;top:37.1612%}.p8{left:64.9306%;top:49.5720%}
-@keyframes orbitGroup{0%,4%{transform:scale(.035) rotate(-18deg);opacity:0}14%{transform:scale(1) rotate(0);opacity:1}27%{transform:scale(1) rotate(0);opacity:1}69%{transform:scale(1) rotate(360deg);opacity:1}78%{transform:scale(1) rotate(360deg);opacity:1}93%{transform:scale(.035) rotate(390deg);opacity:0}100%{transform:scale(.035) rotate(390deg);opacity:0}}
-@keyframes counter{0%,27%{transform:rotate(0deg)}69%,78%{transform:rotate(-360deg)}93%,100%{transform:rotate(-390deg)}}
+/* ABERTURA — comportamento canônico: referência Mercado Bitcoin.
+   A tela nasce vazia, o C+ entra, os pictogramas saem do centro, percorrem a órbita,
+   retornam ao C+ e repetem. O conteúdo inferior entra depois, em sequência. */
+.tracks{position:absolute;inset:0;z-index:1;width:100%;height:61.5%;filter:drop-shadow(0 0 8px rgba(0,128,255,.35));opacity:0;transform:scale(.94);transform-origin:50% 47%;animation:tracksIntro .72s .72s cubic-bezier(.22,.8,.25,1) forwards}
+.tracks path{fill:none;vector-effect:non-scaling-stroke}.hex1{stroke:#0e64da;stroke-width:1.25}.hex2{stroke:#0c56c0;stroke-width:1;opacity:.62}.hex3{stroke:#0a4ca6;stroke-width:1;opacity:.45}.arc{stroke:#1598ff;stroke-width:1.3;opacity:.72}.flow{stroke:#65eaff;stroke-width:2.1;stroke-linecap:round;stroke-dasharray:3 31;stroke-dashoffset:0;opacity:.8;filter:drop-shadow(0 0 6px rgba(45,213,255,.95));animation:flow 3.1s 1.05s linear infinite}
+@keyframes tracksIntro{to{opacity:1;transform:scale(1)}}
+@keyframes flow{to{stroke-dashoffset:-145}}
+.logo{position:absolute;left:49.65%;top:29.03%;width:34.72%;aspect-ratio:1;transform:translate(-50%,-50%) scale(.76);z-index:6;object-fit:cover;border-radius:50%;clip-path:circle(49% at 50% 50%);background:#031431;opacity:0;filter:drop-shadow(0 0 14px rgba(0,123,255,.55)) drop-shadow(0 14px 15px rgba(0,0,0,.38));animation:markIntro .86s .12s cubic-bezier(.2,.82,.2,1) forwards}
+.logoHalo{position:absolute;left:49.65%;top:29.03%;width:41%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%) scale(.72);z-index:3;background:radial-gradient(circle,rgba(18,134,255,.26),rgba(7,73,154,.11) 55%,transparent 72%);filter:blur(3px);opacity:0;animation:haloIntro .78s .18s ease-out forwards,pulse 3.2s 1.1s ease-in-out infinite}
+@keyframes markIntro{0%{opacity:0;transform:translate(-50%,-50%) scale(.76)}62%{opacity:1;transform:translate(-50%,-50%) scale(1.045)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes haloIntro{to{opacity:.94;transform:translate(-50%,-50%) scale(1)}}
+@keyframes pulse{0%,100%{opacity:.72;transform:translate(-50%,-50%) scale(.985)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.045)}}
+/* Cada pictograma é um elemento próprio. Não existe mais cartaz orbitando: todos nascem exatamente no centro do C+. */
+.orbitGroup{position:absolute;inset:0;z-index:5;pointer-events:none}
+.pic{position:absolute;left:49.65%;top:29.03%;width:13.05%;aspect-ratio:1;transform-origin:0 0;opacity:0;will-change:transform,opacity;border-radius:50%;overflow:hidden;clip-path:circle(49% at 50% 50%);filter:drop-shadow(0 8px 11px rgba(0,0,0,.38));animation:orbitCycle 9.8s cubic-bezier(.42,0,.22,1) infinite;animation-delay:calc(.78s + var(--delay))}
+.pic img{position:absolute;left:-4%;top:-4%;width:108%;height:108%;display:block;object-fit:cover;border-radius:50%;will-change:transform}
+.p1{--base:-112deg;--delay:0s}.p2{--base:-158deg;--delay:.06s}.p3{--base:-68deg;--delay:.12s}.p4{--base:158deg;--delay:.18s}.p5{--base:-22deg;--delay:.24s}.p6{--base:112deg;--delay:.30s}.p7{--base:24deg;--delay:.36s}.p8{--base:68deg;--delay:.42s}
+@keyframes orbitCycle{
+  0%,8%{opacity:0;transform:translate(-50%,-50%) rotate(var(--base)) translateX(0) rotate(calc(-1 * var(--base))) scale(.22)}
+  15%{opacity:1;transform:translate(-50%,-50%) rotate(var(--base)) translateX(clamp(128px,33.7vw,182px)) rotate(calc(-1 * var(--base))) scale(.92)}
+  23%{opacity:1;transform:translate(-50%,-50%) rotate(calc(var(--base) + 20deg)) translateX(clamp(128px,33.7vw,182px)) rotate(calc(-1 * (var(--base) + 20deg))) scale(1)}
+  58%{opacity:1;transform:translate(-50%,-50%) rotate(calc(var(--base) + 122deg)) translateX(clamp(128px,33.7vw,182px)) rotate(calc(-1 * (var(--base) + 122deg))) scale(1)}
+  69%{opacity:.98;transform:translate(-50%,-50%) rotate(calc(var(--base) + 154deg)) translateX(clamp(128px,33.7vw,182px)) rotate(calc(-1 * (var(--base) + 154deg))) scale(.96)}
+  80%{opacity:0;transform:translate(-50%,-50%) rotate(calc(var(--base) + 184deg)) translateX(0) rotate(calc(-1 * (var(--base) + 184deg))) scale(.22)}
+  100%{opacity:0;transform:translate(-50%,-50%) rotate(calc(var(--base) + 184deg)) translateX(0) rotate(calc(-1 * (var(--base) + 184deg))) scale(.22)}
+}
+.lower{position:absolute;inset:0;z-index:8;pointer-events:none}.lower>*{opacity:0;transform:translateY(12px);animation:lowerIn .62s cubic-bezier(.22,.8,.25,1) forwards}.lower .kicker{animation-delay:1.55s}.lower .title{animation-delay:1.72s}.lower .divider{animation-delay:1.90s}.lower .concepts{animation-delay:2.05s}.lower .network{animation-delay:2.20s}.lower .cta{animation-delay:2.38s;pointer-events:auto}@keyframes lowerIn{to{opacity:1;transform:translateY(0)}}
 .kicker{position:absolute;left:7%;right:7%;top:60.2%;text-align:center;color:#28e4cc;font-weight:820;letter-spacing:.285em;font-size:clamp(12px,3.15vw,19px);white-space:nowrap;text-shadow:0 0 10px rgba(40,228,204,.32);z-index:8}
 .title{position:absolute;left:9.8%;right:8%;top:64.0%;font-size:clamp(34px,7.35vw,48px);line-height:1.06;letter-spacing:-.052em;font-weight:900;text-align:left;z-index:8;text-shadow:0 4px 10px rgba(0,0,0,.52)}
 .divider{position:absolute;left:5.5%;right:5.5%;top:75.45%;height:1.5px;background:linear-gradient(90deg,transparent,#126ede 18%,#70f4ff 50%,#126ede 82%,transparent);box-shadow:0 0 10px rgba(40,188,255,.5);z-index:8}.divider:after{content:"";position:absolute;left:50%;top:50%;width:13px;height:13px;border-radius:50%;background:#d7ffff;transform:translate(-50%,-50%);box-shadow:0 0 5px #fff,0 0 15px #34dfff,0 0 24px #168cff}
@@ -56,16 +72,18 @@ body{overflow-x:hidden}
     <div class="pic p7"><img id="p7" alt="Cuidado"></div>
     <div class="pic p8"><img id="p8" alt="Saúde bucal"></div>
   </div>
-  <div class="kicker">CONECTA SAÚDE COMUNITÁRIA</div>
-  <div class="title">Saúde, comunidade e<br>cuidado conectados.</div>
-  <div class="divider"></div>
-  <div class="concepts">
-    <div class="concept"><svg viewBox="0 0 64 64" fill="#24e1c1"><circle cx="21" cy="23" r="9"/><circle cx="43" cy="23" r="9"/><circle cx="32" cy="16" r="9"/><path d="M5 54c1-12 7-18 16-18s15 6 16 18zm22 0c1-12 7-18 16-18s15 6 16 18z"/></svg><span>CONECTA<br>PESSOAS</span></div>
-    <div class="concept"><svg viewBox="0 0 64 64"><path d="M32 55C16 43 8 34 8 22c0-9 7-15 15-15 5 0 9 2 13 7 4-5 8-7 13-7 8 0 15 6 15 15 0 12-8 21-32 33z" fill="#159cff"/><path d="M13 31h12l4-10 7 20 5-10h12" fill="none" stroke="#061526" stroke-width="4"/></svg><span>PROMOVE<br>SAÚDE</span></div>
-    <div class="concept"><svg viewBox="0 0 64 64" fill="#f5aa15"><path d="M6 31 32 9l26 22-5 6-4-4v22H15V33l-4 4z"/><path d="M32 31v16M24 39h16" fill="none" stroke="#08121d" stroke-width="5" stroke-linecap="round"/></svg><span>FORTALECE<br>A COMUNIDADE</span></div>
+  <div class="lower">
+    <div class="kicker">CONECTA SAÚDE COMUNITÁRIA</div>
+    <div class="title">Saúde, comunidade e<br>cuidado conectados.</div>
+    <div class="divider"></div>
+    <div class="concepts">
+      <div class="concept"><svg viewBox="0 0 64 64" fill="#24e1c1"><circle cx="21" cy="23" r="9"/><circle cx="43" cy="23" r="9"/><circle cx="32" cy="16" r="9"/><path d="M5 54c1-12 7-18 16-18s15 6 16 18zm22 0c1-12 7-18 16-18s15 6 16 18z"/></svg><span>CONECTA<br>PESSOAS</span></div>
+      <div class="concept"><svg viewBox="0 0 64 64"><path d="M32 55C16 43 8 34 8 22c0-9 7-15 15-15 5 0 9 2 13 7 4-5 8-7 13-7 8 0 15 6 15 15 0 12-8 21-32 33z" fill="#159cff"/><path d="M13 31h12l4-10 7 20 5-10h12" fill="none" stroke="#061526" stroke-width="4"/></svg><span>PROMOVE<br>SAÚDE</span></div>
+      <div class="concept"><svg viewBox="0 0 64 64" fill="#f5aa15"><path d="M6 31 32 9l26 22-5 6-4-4v22H15V33l-4 4z"/><path d="M32 31v16M24 39h16" fill="none" stroke="#08121d" stroke-width="5" stroke-linecap="round"/></svg><span>FORTALECE<br>A COMUNIDADE</span></div>
+    </div>
+    <div class="network"><span>TACS</span><b>+</b><span>COMUNIDADE</span><b>+</b><span>UNIDADE</span></div>
+    <button class="cta" id="cta">Acessar conta <span>›</span></button>
   </div>
-  <div class="network"><span>TACS</span><b>+</b><span>COMUNIDADE</span><b>+</b><span>UNIDADE</span></div>
-  <button class="cta" id="cta">Acessar conta <span>›</span></button>
   <section class="access" id="access"><h2>Acessar conta</h2><p>Entrada única do Conecta Saúde Comunitária. O perfil e os módulos são definidos pelas permissões do cadastro.</p><button class="back" id="back">‹ Voltar</button></section>
 </section></main>
 <script src="v15/assets/central.js"></script>
