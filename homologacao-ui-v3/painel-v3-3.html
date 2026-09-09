@@ -41,7 +41,7 @@ if(!base){document.getElementById('fallback').style.display='grid';return}
 var source=base+'?area='+encodeURIComponent(area)+'&from=central'+(tacs?'&acesso=tacs':'')+'&v=20260909-warm-v33';
 var baseCss='/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3.css?v=20260909-2';
 var patchCss='/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-3-patch.css?v=20260909-3';
-var sessionJs='/atendimento-acs-farmaceutico/homologacao-ui-v3/session-v3.js?v=20260909-2';
+var sessionJs='/atendimento-acs-farmaceutico/homologacao-ui-v3/session-v3-3.js?v=20260909-3';
 var runtimeJs='/atendimento-acs-farmaceutico/homologacao-ui-v3/panel-runtime-v3-3.js?v=20260909-3';
 function ensure(doc,tag,id,url){
   if(!doc||!doc.head||doc.getElementById(id))return;
@@ -56,8 +56,6 @@ function themeFrame(fr){
     fr.style.visibility='visible';return true;
   }catch(e){return false}
 }
-/* Profissionais usa um wrapper oficial que faz document.write e adiciona proteções funcionais.
-   Mantemos o wrapper intacto e aplicamos a camada V3.3 no documento final. */
 if(target==='profissionais'){
   var fr=document.createElement('iframe');fr.id='v33Frame';fr.title='Profissionais e serviços';fr.src=source;document.body.appendChild(fr);
   fr.addEventListener('load',function(){themeFrame(fr);setTimeout(function(){themeFrame(fr)},80);setTimeout(function(){themeFrame(fr)},350)});
