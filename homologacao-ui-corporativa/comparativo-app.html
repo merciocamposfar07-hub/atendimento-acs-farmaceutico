@@ -29,4 +29,36 @@
 <nav class="dock" aria-label="Navegação do aplicativo"><button class="navitem active"><i>⌂</i>Início</button><button class="navitem"><i>▦</i>Painéis</button><button class="navitem"><i>🔔</i>Avisos</button><button class="navitem"><i>●</i>Perfil</button></nav>
 <script src="../conecta-saude-homologacao/v15/assets/central.js"></script>
 <script>document.getElementById('conectaOfficialIcon').src=(window.CS_ASSETS&&window.CS_ASSETS.central)||'';document.querySelectorAll('.switch').forEach(function(b){b.addEventListener('click',function(){document.body.className=b.dataset.theme;document.querySelectorAll('.switch').forEach(function(x){x.classList.toggle('active',x===b)});window.scrollTo({top:0,behavior:'smooth'})})});document.querySelectorAll('.module,.quick-card,.navitem').forEach(function(b){b.addEventListener('click',function(){if(navigator.vibrate)navigator.vibrate(8)})});</script>
+<style>
+/* Demonstração: distinguir ações de informação sem mudar os painéis reais. */
+.official,.app-5 .official{background:transparent;border:0;box-shadow:none;border-radius:0}
+.official img{object-fit:contain;aspect-ratio:1;filter:none;transform:none;max-width:100%}
+button{cursor:pointer;touch-action:manipulation;transition:transform 100ms ease,background-color 100ms ease,box-shadow 100ms ease}
+button:focus-visible,select:focus-visible{outline:3px solid #1684ba;outline-offset:4px}
+.module{background:linear-gradient(145deg,#174765,#0c3049);color:#fff;border:2px solid #69b8c0;box-shadow:0 4px 0 #062334,0 9px 18px #001b3026}
+.module small{color:#dcebf3;font-size:.875rem}
+.module .chev{background:#b4eee0;color:#123b4a;border-radius:50%;width:26px;height:26px;display:grid;place-items:center}
+.section-title button,.bell{background:#135272;color:white;border:2px solid #69b8c0;border-radius:14px;min-height:48px;padding:10px 14px;box-shadow:0 3px 0 #062334}
+.quick-card{box-shadow:none;cursor:default;background:var(--card);border:1px solid var(--line)}
+.navitem{border:1px solid var(--line);font-size:.875rem}
+.navitem.active{background:#145574;color:#fff;border-color:#72d6bd}
+button:active,button.is-pressed{transform:translateY(2px) scale(.98);box-shadow:inset 0 3px 8px #0005;background:#236581;color:#fff}
+.switch:active{background:#236581;color:#fff}
+.demo-feedback{position:fixed;bottom:calc(100px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(90%,540px);padding:16px;border-radius:16px;background:#12394f;color:white;border:2px solid #83d8bd;z-index:60;box-shadow:0 8px 24px #0004;font-size:1rem}
+.demo-feedback:empty{display:none}
+@media(prefers-reduced-motion:reduce){button:active,button.is-pressed{transform:none}}
+</style>
+<div class="demo-feedback" role="status" aria-live="polite"></div>
+<script>
+// Resumos são informação fictícia, não botões nem resultados de produção.
+document.querySelectorAll('.quick-card').forEach(function(old){var box=document.createElement('div');box.className=old.className;box.innerHTML=old.innerHTML;old.replaceWith(box)});
+var demoNote=document.createElement('p');demoNote.textContent='Demonstração visual • indicadores ilustrativos, sem conexão com dados reais.';demoNote.style.cssText='font-size:14px;color:var(--muted);line-height:1.4';document.querySelector('.quick').after(demoNote);
+var feedback=document.querySelector('.demo-feedback'),feedbackTimer;
+function inform(text){feedback.textContent=text;clearTimeout(feedbackTimer);feedbackTimer=setTimeout(function(){feedback.textContent=''},3500)}
+document.querySelectorAll('button').forEach(function(button){button.addEventListener('pointerdown',function(){button.classList.add('is-pressed')});['pointerup','pointercancel','pointerleave','blur'].forEach(function(event){button.addEventListener(event,function(){button.classList.remove('is-pressed')})})});
+document.querySelectorAll('.module').forEach(function(button){button.addEventListener('click',function(){inform(button.querySelector('strong').textContent+' — demonstração visual; nenhum painel real foi aberto.')})});
+document.querySelector('.bell').onclick=function(){inform('Avisos ilustrativos. Nenhuma notificação real foi consultada.')};
+document.querySelector('.section-title button').onclick=function(){inform('Prévia visual. Não foi realizada atualização de dados reais.')};
+document.querySelectorAll('.navitem').forEach(function(button,index){button.onclick=function(){if(index<2){document.querySelectorAll('.navitem').forEach(function(item){item.classList.toggle('active',item===button)});(index===0?document.querySelector('.appbar'):document.querySelector('.section-title')).scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}else inform((index===2?'Avisos':'Perfil')+' — apenas demonstração visual.')}});
+</script>
 </body></html>
