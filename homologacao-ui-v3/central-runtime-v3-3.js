@@ -23,8 +23,6 @@ function area(){
 function shell(name){return '/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-3.html?target='+encodeURIComponent(name)+'&area='+encodeURIComponent(area())+'&from=central'+(tacsOnly()?'&acesso=tacs':'')+'&v=20260909-3'}
 function publicPortal(){return '/atendimento-acs-farmaceutico/?area='+encodeURIComponent(area())+'&from=central'}
 
-/* A navegação entre módulos reutiliza a sessão existente. O próprio toque humano é
-   registrado por session-v3.js; este runtime não renova o relógio artificialmente. */
 document.addEventListener('click',function(e){
   var b=e.target&&e.target.closest?e.target.closest('.module[data-module]'):null;
   if(!b||b.hidden||b.disabled)return;
@@ -48,38 +46,36 @@ body.v33-tacs .login-tabs,body.v33-tacs #adminLogin{display:none!important}\
 .module>div{min-width:0!important}.module strong,.module>div>span{display:block!important;width:100%!important;white-space:normal!important;word-break:normal!important;overflow-wrap:normal!important}\
 ';(document.head||document.documentElement).appendChild(s);
 }
+function setHidden(n,v){if(n&&n.hidden!==v)n.hidden=v}
 function modeUi(){
   if(!document.body)return;
   document.body.classList.toggle('v33-tacs',tacsOnly());
   document.body.classList.toggle('v33-admin',!tacsOnly());
   var tabA=document.getElementById('tabAdmin'),tabT=document.getElementById('tabTacs'),adminLogin=document.getElementById('adminLogin'),tacsLogin=document.getElementById('tacsLogin');
   if(tacsOnly()){
-    if(tabA)tabA.hidden=true;if(tabT)tabT.hidden=true;if(adminLogin)adminLogin.hidden=true;if(tacsLogin)tacsLogin.hidden=false;
+    setHidden(tabA,true);setHidden(tabT,true);setHidden(adminLogin,true);setHidden(tacsLogin,false);
   }else{
-    if(tabA)tabA.hidden=true;if(tabT)tabT.hidden=true;if(tacsLogin)tacsLogin.hidden=true;if(adminLogin)adminLogin.hidden=false;
+    setHidden(tabA,true);setHidden(tabT,true);setHidden(tacsLogin,true);setHidden(adminLogin,false);
   }
   var status=document.getElementById('loginStatus');
-  if(status&&hasSession()&&!/erro|err|falha|expirad/i.test(status.className+' '+status.textContent))status.classList.add('v33-passive');
+  if(status&&hasSession()&&!/erro|err|falha|expirad/i.test(status.className+' '+status.textContent)&&!status.classList.contains('v33-passive'))status.classList.add('v33-passive');
 }
 function fixAdminIdentity(){
   if(!admin()||tacs())return;
-  var label=document.getElementById('profileLabel'),name=document.getElementById('professionalName'),areaName=document.getElementById('areaName'),unitName=document.getElementById('unitName');
-  if(label)label.textContent='ADMINISTRADOR GERAL';
+  var label=document.getElementById('profileLabel'),name=document.getElementById('professionalName');
+  if(label&&text(label.textContent)!=='ADMINISTRADOR GERAL')label.textContent='ADMINISTRADOR GERAL';
   if(!name)return;
   var cached='';try{cached=text(sessionStorage.getItem(ADMIN_NAME)||'')}catch(e){}
   var current=text(name.textContent);
-  /* O código antigo usa o TACS responsável pela área como nome do administrador.
-     Só aproveitamos um nome real quando ele foi observado no contexto-base Japaranduba;
-     em qualquer outra área, nunca promovemos o TACS local a administrador. */
   if(!cached&&area()==='JAPARANDUBA'&&current&&current!=='—'&&!/administra/i.test(current)){
     cached=current;try{sessionStorage.setItem(ADMIN_NAME,cached)}catch(e){}
   }
-  name.textContent=cached||'Administrador autenticado';
+  var desired=cached||'Administrador autenticado';
+  if(text(name.textContent)!==desired)name.textContent=desired;
   var host=name.parentElement;
   if(host&&!host.querySelector('.v33-context-label')){
     var n=document.createElement('span');n.className='v33-context-label';n.textContent='A área abaixo é apenas o contexto de trabalho selecionado.';host.insertBefore(n,name.nextSibling);
   }
-  if(areaName&&unitName){/* Mantém área/unidade como contexto; não altera identidade. */}
 }
 function expiredMessage(){
   if(String(q().get('sessao')||'').toLowerCase()!=='expirada')return;
@@ -102,16 +98,11 @@ function warmAll(){
   var key=(tacsOnly()?'tacs:':'admin:')+area();if(key===warmKey)return;warmKey=key;
   var common='?area='+encodeURIComponent(area())+'&from=central'+(tacsOnly()?'&acesso=tacs':'')+'&v=20260909-warm-v33';
   try{fetch('/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-3.html',{cache:'force-cache',credentials:'same-origin'}).catch(function(){})}catch(e){}
-  Object.keys(sources).forEach(function(name){
-    try{fetch(sources[name]+common,{cache:'force-cache',credentials:'same-origin'}).catch(function(){})}catch(e){}
-  });
+  Object.keys(sources).forEach(function(name){try{fetch(sources[name]+common,{cache:'force-cache',credentials:'same-origin'}).catch(function(){})}catch(e){}});
   ['/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3.css?v=20260909-2','/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-3-patch.css?v=20260909-3','/atendimento-acs-farmaceutico/homologacao-ui-v3/panel-runtime-v3-3.js?v=20260909-3'].forEach(function(u){try{fetch(u,{cache:'force-cache'}).catch(function(){})}catch(e){}});
 }
 function sweep(){installStyle();modeUi();expiredMessage();fixAdminIdentity();if(hasSession())warmAll()}
-function observe(){
-  var obs=new MutationObserver(function(){sweep()});
-  obs.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['hidden','class']});
-}
+function observe(){var obs=new MutationObserver(function(){sweep()});obs.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['hidden','class']})}
 function boot(){
   sweep();observe();
   var select=document.getElementById('adminArea');if(select)select.addEventListener('change',function(){warmKey='';setTimeout(sweep,0);setTimeout(sweep,80)});
