@@ -9,7 +9,7 @@ var AREA='portalTacsCentralAreaV1';
 var ADMIN_NAME='portalTacsAdminNomeV33';
 var DEFAULT_MARK='portalTacsV34DefaultAdminToken';
 var DEFAULT_AREA='JAPARANDUBA';
-var DEFAULT_NAME='Mércio Campos';
+var DEFAULT_NAME='Mércio José Campos dos Santos';
 var warmed='';
 
 function text(v){return String(v==null?'':v).trim()}
@@ -20,7 +20,7 @@ function hasSession(){return !!(admin()||tacs())}
 
 function installVisual(){
   if(document.getElementById('centralHighlightV34'))return;
-  var l=document.createElement('link');l.id='centralHighlightV34';l.rel='stylesheet';l.href='/atendimento-acs-farmaceutico/homologacao-ui-v3/central-highlight-v3-4.css?v=20260909-4';
+  var l=document.createElement('link');l.id='centralHighlightV34';l.rel='stylesheet';l.href='/atendimento-acs-farmaceutico/homologacao-ui-v3/central-highlight-v3-4.css?v=20260909-5';
   (document.head||document.documentElement).appendChild(l);
 }
 
@@ -54,10 +54,10 @@ function warmV34(){
   var key=(tacs()?'tacs:':'admin:')+(function(){try{return text(localStorage.getItem(AREA)||DEFAULT_AREA)}catch(e){return DEFAULT_AREA}})();
   if(key===warmed)return;warmed=key;
   [
-    '/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-3.html?v=20260909-4',
-    '/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-4-patch.css?v=20260909-4',
-    '/atendimento-acs-farmaceutico/homologacao-ui-v3/panel-fix-v3-4.js?v=20260909-4',
-    '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?v=20260909-warm-v34'
+    '/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-3.html?v=20260909-5',
+    '/atendimento-acs-farmaceutico/homologacao-ui-v3/painel-v3-4-patch.css?v=20260909-5',
+    '/atendimento-acs-farmaceutico/homologacao-ui-v3/panel-fix-v3-4.js?v=20260909-5',
+    '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?v=20260909-warm-v35'
   ].forEach(function(u){try{fetch(u,{cache:'force-cache',credentials:'same-origin'}).catch(function(){})}catch(e){}});
 }
 
