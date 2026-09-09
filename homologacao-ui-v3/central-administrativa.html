@@ -12,14 +12,16 @@
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="stylesheet" href="/atendimento-acs-farmaceutico/homologacao-ui-v3/central-theme-v3.css?v=20260909-1">
 <link rel="stylesheet" href="/atendimento-acs-farmaceutico/homologacao-ui-v3/central-proporcao-v3-1.css?v=20260909-2">
-<title>Central Administrativa TACS — Homologação V3.1</title>
+<script src="/atendimento-acs-farmaceutico/homologacao-ui-v3/session-v3.js?v=20260909-1"></script>
+<script src="/atendimento-acs-farmaceutico/homologacao-ui-v3/central-runtime-v3-2.js?v=20260909-1"></script>
+<title>Central Administrativa TACS — Homologação V3.2</title>
 </head>
 <body>
 <header>
   <div class="hero-mark"><img src="/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2" alt=""></div>
-  <span class="badge">Homologação V3 • Central Administrativa TACS</span>
+  <span class="badge">Homologação V3.2 • Central Administrativa TACS</span>
   <h1>Seus painéis em um só lugar</h1>
-  <p>Um único acesso para administrar a área, sem misturar a lógica interna dos módulos.</p>
+  <p>Um único acesso para administrar a área, sem repetir autenticação nos módulos.</p>
 </header>
 <main>
 <section id="loginPanel" class="panel">
@@ -38,7 +40,7 @@
     <input id="tacsPin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off">
     <div class="actions"><button id="loginTacs" class="btn" type="button">Entrar na minha área</button></div>
   </div>
-  <div id="loginStatus" class="status">Entre como administrador ou TACS da sua área.</div>
+  <div id="loginStatus" class="status">Digite seu PIN para iniciar a sessão.</div>
 </section>
 
 <section id="identityPanel" class="panel identity" hidden>
@@ -72,7 +74,7 @@
 
 <section id="modulesPanel" class="panel" hidden>
   <h2>Painéis administrativos</h2>
-  <p class="muted">Os botões aparecem conforme o perfil e as permissões confirmadas pelo servidor.</p>
+  <p class="muted">A sessão validada nesta Central é reutilizada automaticamente nos módulos permitidos.</p>
   <div id="moduleGrid" class="module-grid">
     <button class="module available" data-module="moradores" data-permission="MORADORES_LER" type="button"><span class="icon">👥</span><div><strong>Moradores</strong><span>Buscar, cadastrar e atualizar moradores da área.</span></div></button>
     <button class="module available" data-module="suporte" data-permission="MORADORES_LER" type="button"><span class="icon">🛟</span><div><strong>Suporte aos moradores</strong><span>Diagnosticar aparelhos e orientar reparos sem alterar os vínculos existentes.</span></div></button>
@@ -87,7 +89,7 @@
 </section>
 </main>
 
-<footer>Portal TACS • Central Administrativa • Homologação visual V3.1</footer>
+<footer>Portal TACS • Central Administrativa • Homologação visual V3.2</footer>
 
 <div id="viewer" class="viewer" hidden>
   <div class="viewer-bar">
