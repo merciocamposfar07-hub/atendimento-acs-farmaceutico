@@ -16,8 +16,7 @@ function showExistingSession(root){
   if(!hasSession())return;root=root||document;
   var html=root.documentElement||document.documentElement;if(html){html.classList.add('v3-session-reused');html.dataset.v3Session=tacs()?'tacs':'admin'}
   ['loginPanel','adminLogin','tacsLogin','loginAdminTab','loginTacsTab','adminPin','tacsPinLogin','adminLoginButton','tacsLoginButton','logoutButton','loginStatus'].forEach(function(id){var n=root.getElementById&&root.getElementById(id);if(n)n.style.setProperty('display','none','important')});
-  var dash=root.getElementById&&root.getElementById('dashboard');
-  if(dash){dash.hidden=false;dash.classList.remove('hidden','oculto')}
+  var dash=root.getElementById&&root.getElementById('dashboard');if(dash){dash.hidden=false;dash.classList.remove('hidden','oculto')}
   var genericPin=root.getElementById&&root.getElementById('pin');if(genericPin)genericPin.hidden=true;
   var genericEnter=root.getElementById&&root.getElementById('entrar');if(genericEnter)genericEnter.hidden=true;
   var accessTitle=root.getElementById&&root.getElementById('accessTitle');if(accessTitle)accessTitle.hidden=true;
@@ -49,7 +48,7 @@ function normalizeRepair(root){
 function addBack(){
   if(document.getElementById('v3BackCentral'))return;
   if(String(params().get('from')||'').toLowerCase()!=='central')return;
-  var b=document.createElement('button');b.id='v3BackCentral';b.type='button';b.setAttribute('aria-label','Voltar à Central');b.textContent='‹';b.addEventListener('click',function(){location.href=centralUrl()});document.body.appendChild(b);
+  var b=document.createElement('button');b.id='v3BackCentral';b.type='button';b.setAttribute('aria-label','Voltar à Central');b.textContent='‹';b.addEventListener('click',function(){try{window.top.location.href=centralUrl()}catch(e){location.href=centralUrl()}});document.body.appendChild(b);
 }
 function injectTheme(doc){
   if(!doc||!doc.head||!doc.documentElement)return;
@@ -70,10 +69,7 @@ function themeFrames(){
   });
 }
 function sweep(){showExistingSession(document);hideTransientWaits(document);normalizeRepair(document);themeFrames()}
-function observe(){
-  var obs=new MutationObserver(function(){sweep()});
-  obs.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['hidden','class']});
-}
+function observe(){var obs=new MutationObserver(function(){sweep()});obs.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['hidden','class']})}
 function boot(){sweep();addBack();observe();var ticks=0,t=setInterval(function(){ticks++;sweep();if(ticks>=24)clearInterval(t)},250)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 window.addEventListener('pageshow',sweep);
