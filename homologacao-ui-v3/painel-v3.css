@@ -1,0 +1,105 @@
+/* Homologação Visual V3.2 — tema geral dos painéis administrativos.
+   Escopo visual apenas: não renomeia IDs, data-*, inputs, rotas ou funções. */
+:root{
+  --v3-bg0:#061421;--v3-bg1:#081829;--v3-bg2:#0b2238;--v3-bg3:#0f3150;
+  --v3-blue:#214667;--v3-blue2:#2e6f9f;--v3-cyan:#69c7e7;--v3-green:#85dc9f;
+  --v3-text:#f5fbff;--v3-muted:#b8cbd8;--v3-warn:#ffd08a;--v3-err:#ffaaa5;
+}
+*{box-sizing:border-box}
+html{background:var(--v3-bg0)!important;-webkit-text-size-adjust:100%!important;overflow-x:hidden!important}
+body{
+  margin:0!important;max-width:100%!important;overflow-x:hidden!important;color:var(--v3-text)!important;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Arial,sans-serif!important;
+  background:
+    radial-gradient(850px 470px at 50% -8%,rgba(46,111,159,.32),transparent 64%),
+    radial-gradient(650px 520px at 105% 35%,rgba(33,70,103,.28),transparent 67%),
+    linear-gradient(180deg,var(--v3-bg2),var(--v3-bg1) 48%,var(--v3-bg0))!important;
+  min-height:100svh!important;
+}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:linear-gradient(118deg,rgba(255,255,255,.045),transparent 28%),radial-gradient(circle at 20% 20%,rgba(133,220,159,.055),transparent 18%)}
+header,main,footer,.head,.panel,.painel,.card,.cartao,.item,.ticket,.numero,.metric,.module,.box,details{position:relative;z-index:1}
+header{
+  background:transparent!important;border:0!important;color:#fff!important;
+  padding:calc(18px + env(safe-area-inset-top)) 20px 20px!important;
+}
+header .head{width:min(920px,100%)!important;margin:auto!important}
+h1{color:#fff!important;font-size:clamp(2rem,8vw,3rem)!important;line-height:1!important;letter-spacing:-.045em!important;margin:10px 0 8px!important;text-shadow:0 9px 24px rgba(0,0,0,.28)}
+h2,h3{color:#fff!important;overflow-wrap:normal!important;word-break:normal!important}
+p,.muted,.sub,.meta,small{color:var(--v3-muted)!important;overflow-wrap:normal!important;word-break:normal!important}
+main{width:min(920px,100%)!important;margin:auto!important;padding:10px 16px calc(76px + env(safe-area-inset-bottom))!important}
+
+/* Tela integral: remove grandes blocos brancos externos. */
+.panel,.painel,.card,.box{
+  background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;
+  padding:0!important;margin-bottom:28px!important;min-width:0!important;max-width:100%!important;
+}
+.nota,.protect{
+  border:1px solid rgba(105,199,231,.25)!important;background:rgba(8,35,55,.58)!important;color:#d8edf7!important;
+  border-radius:18px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 12px 24px rgba(0,0,0,.16)!important;
+}
+
+/* Elementos operacionais 3D. */
+button,.btn,.botao,.refresh,.tab,.aba,.save,.grupoAcao{
+  font:inherit!important;min-height:52px!important;border-radius:18px!important;color:#fff!important;
+  border:1px solid rgba(132,216,255,.48)!important;
+  background:linear-gradient(145deg,#3b7fab 0%,#285f8b 44%,#173a59 100%)!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.22),inset 0 -8px 15px rgba(0,0,0,.18),0 13px 25px rgba(0,0,0,.27),0 3px 0 rgba(2,15,25,.72)!important;
+  font-weight:850!important;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+button:active,.btn:active,.botao:active,.refresh:active,.tab:active,.aba:active,.save:active{transform:translateY(2px)!important}
+button:disabled,.btn:disabled,.botao:disabled{opacity:.48!important}
+.botao.perigo,.btn.red,.danger,.vermelho{background:linear-gradient(145deg,#c35b57,#903b39 58%,#612624)!important;border-color:#da8884!important}
+.tab.active,.aba.ativa,.aba.active{background:linear-gradient(145deg,#4a8db9,#285f8b 52%,#163651)!important;border-color:#8edaff!important}
+
+input,select,textarea,.field,.campo{
+  width:100%!important;max-width:100%!important;min-width:0!important;min-height:54px!important;
+  border:1px solid rgba(105,199,231,.48)!important;border-radius:18px!important;padding:12px 15px!important;
+  color:#fff!important;background:linear-gradient(180deg,rgba(4,20,34,.98),rgba(7,31,49,.98))!important;
+  box-shadow:inset 0 8px 18px rgba(0,0,0,.32),inset 0 -1px 0 rgba(255,255,255,.05),0 7px 17px rgba(0,0,0,.14)!important;
+  font-size:16px!important; /* impede zoom automático do Safari ao focar */
+}
+select option{color:#102d40;background:#fff}
+input:focus,select:focus,textarea:focus,.field:focus,.campo:focus{outline:none!important;border-color:#8cddff!important;box-shadow:inset 0 8px 18px rgba(0,0,0,.3),0 0 0 3px rgba(105,199,231,.13),0 10px 22px rgba(0,0,0,.2)!important}
+label{color:#e9f6fc!important;font-weight:800!important}
+
+/* Cards de dados: conteúdo organizado, sem palavras coladas ou rasuradas. */
+.health-grid,.metrics,.resumo,.stats,.summary{gap:12px!important}
+.health-card,.metric,.numero,.ticket,.cartao,.item,.grupoProfissional,.module,.saude-numero,.saude-aparelho{
+  min-width:0!important;max-width:100%!important;overflow:hidden!important;
+  border:1px solid rgba(105,199,231,.32)!important;border-radius:24px!important;
+  background:linear-gradient(145deg,rgba(24,62,92,.96),rgba(7,29,46,.98))!important;color:#fff!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.11),inset 0 -11px 21px rgba(0,0,0,.18),0 16px 31px rgba(0,0,0,.24)!important;
+}
+.health-card,.metric,.numero{padding:15px!important}
+.health-card strong,.health-card span,.metric strong,.metric span,.numero strong,.numero span{
+  display:block!important;width:100%!important;max-width:100%!important;margin:0!important;
+  overflow-wrap:normal!important;word-break:normal!important;white-space:normal!important;line-height:1.16!important;
+}
+.health-card strong,.metric strong,.numero strong{color:#fff!important;font-weight:900!important}
+.health-card span,.metric span,.numero span{margin-top:7px!important;color:#c7dce8!important}
+.status{max-width:100%!important;overflow-wrap:normal!important;word-break:normal!important;white-space:normal!important}
+
+/* Sessão já validada: nada de pedir PIN de novo nem exibir etapas de espera. */
+html.v3-session-reused #pin,html.v3-session-reused #pinLabel,html.v3-session-reused #pinHelp,
+html.v3-session-reused #accessTitle,html.v3-session-reused #entrar,
+html.v3-session-reused #accessActions button[id="entrar"],html.v3-session-reused .login-pin,
+html.v3-session-reused [data-v3-redundant-login="1"]{display:none!important}
+html.v3-session-reused #loginStatus:not(.erro):not(.err),
+html.v3-session-reused .status.v3-loading-hidden{display:none!important}
+
+/* Navegação V3 */
+#v3BackCentral{
+  position:fixed!important;left:14px!important;bottom:calc(14px + env(safe-area-inset-bottom))!important;z-index:2147483000!important;
+  width:54px!important;height:54px!important;min-height:54px!important;padding:0!important;border-radius:50%!important;
+  display:grid!important;place-items:center!important;font-size:28px!important;background:linear-gradient(145deg,#3b7fab,#173a59)!important;
+}
+
+footer{background:transparent!important;border:0!important;color:#7896a8!important}
+
+@media(max-width:430px){
+  main{padding-left:14px!important;padding-right:14px!important}
+  .metrics,.resumo,.health-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+  .health-card,.metric,.numero{padding:13px!important;border-radius:21px!important}
+  h1{font-size:clamp(1.95rem,9vw,2.55rem)!important}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
