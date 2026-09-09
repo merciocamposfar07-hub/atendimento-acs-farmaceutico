@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#081829">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Central Administrativa TACS — Homologação Visual V2</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#081829;overflow:hidden}#pilot{display:block;width:100%;height:100svh;border:0;background:#081829}
+#fail{position:fixed;inset:0;display:none;place-items:center;padding:24px;background:#081829;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;text-align:center}#fail strong{display:block;font-size:22px;margin-bottom:8px}#fail p{margin:0;color:#c7d0d8;line-height:1.45}
+</style>
+</head>
+<body>
+<iframe id="pilot" title="Central Administrativa TACS — homologação visual" src="/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=homologacao-ui-v2-1"></iframe>
+<div id="fail"><div><strong>Não foi possível aplicar o tema de homologação.</strong><p>A Central de produção não foi alterada. Recarregue esta página para tentar novamente.</p></div></div>
+<script>
+(function(){
+  const frame=document.getElementById('pilot');
+  const fail=document.getElementById('fail');
+  function applyTheme(){
+    try{
+      const d=frame.contentDocument;
+      if(!d||!d.head) throw new Error('documento indisponível');
+      if(!d.getElementById('centralHomologacaoThemeV2')){
+        const link=d.createElement('link');
+        link.id='centralHomologacaoThemeV2';
+        link.rel='stylesheet';
+        link.href='/atendimento-acs-farmaceutico/homologacao-ui-v2/central-theme-v2.css?v=20260909-1';
+        d.head.appendChild(link);
+      }
+      d.documentElement.setAttribute('data-homologacao-visual','v2');
+      fail.style.display='none';
+      frame.style.display='block';
+    }catch(e){
+      frame.style.display='none';
+      fail.style.display='grid';
+    }
+  }
+  frame.addEventListener('load',applyTheme);
+  setTimeout(applyTheme,1200);
+})();
+</script>
+</body>
+</html>
