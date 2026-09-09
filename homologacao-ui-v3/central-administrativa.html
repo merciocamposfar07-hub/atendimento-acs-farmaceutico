@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#081829">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/central-admin-saude.svg?v=43a5c181d2c9">
+<link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=43a5c181d2c9">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<link rel="dns-prefetch" href="//script.google.com">
+<link rel="stylesheet" href="/atendimento-acs-farmaceutico/homologacao-ui-v3/central-theme-v3.css?v=20260909-1">
+<title>Central Administrativa TACS — Homologação V3</title>
+</head>
+<body>
+<header>
+  <div class="hero-mark"><img src="/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2" alt=""></div>
+  <span class="badge">Homologação V3 • Central Administrativa TACS</span>
+  <h1>Seus painéis em um só lugar</h1>
+  <p>Um único acesso para administrar a área, sem misturar a lógica interna dos módulos.</p>
+</header>
+<main>
+<section id="loginPanel" class="panel">
+  <h2>Acesso</h2>
+  <div class="login-tabs">
+    <button id="tabAdmin" class="tab active" type="button">Administrador geral</button>
+    <button id="tabTacs" class="tab" type="button">TACS da área</button>
+  </div>
+  <div id="adminLogin">
+    <label for="adminPin">PIN administrativo</label>
+    <input id="adminPin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off">
+    <div class="actions"><button id="loginAdmin" class="btn" type="button">Entrar na Central</button></div>
+  </div>
+  <div id="tacsLogin" hidden>
+    <label for="tacsPin">PIN individual</label>
+    <input id="tacsPin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off">
+    <div class="actions"><button id="loginTacs" class="btn" type="button">Entrar na minha área</button></div>
+  </div>
+  <div id="loginStatus" class="status">Entre como administrador ou TACS da sua área.</div>
+</section>
+
+<section id="identityPanel" class="panel identity" hidden>
+  <div class="avatar"><img id="profileIcon" src="/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=43a5c181d2c9" alt=""></div>
+  <div>
+    <small id="profileLabel">TACS</small>
+    <strong id="professionalName">—</strong>
+    <p><span id="areaName">—</span> • <span id="unitName">—</span></p>
+    <div id="adminAreaBox" class="area-admin" hidden>
+      <label for="adminArea">Área de trabalho</label>
+      <select id="adminArea" class="field"></select>
+    </div>
+  </div>
+</section>
+
+<section id="healthPanel" class="panel" hidden>
+  <div class="health-head">
+    <div><h2>Saúde geral</h2><div class="muted">Leitura rápida dos serviços da área selecionada.</div></div>
+    <button id="refreshHealth" class="btn gray" type="button">↻ Atualizar</button>
+  </div>
+  <div class="health-grid">
+    <div id="healthPortal" class="health-card"><strong>Portal do Morador</strong><span>Verificando…</span></div>
+    <div id="healthResidents" class="health-card"><strong>Moradores</strong><span>Verificando…</span></div>
+    <div id="healthAgenda" class="health-card"><strong>Agendas</strong><span>Verificando…</span></div>
+    <div id="healthContent" class="health-card"><strong>Recados e campanhas</strong><span>Verificando…</span></div>
+    <div id="healthNotifications" class="health-card"><strong>Notificações</strong><span>Verificando…</span></div>
+    <div id="healthArea" class="health-card ok"><strong>Área e unidade</strong><span>Escopo confirmado</span></div>
+  </div>
+  <p id="healthUpdated" class="health-time">Ainda não verificado.</p>
+</section>
+
+<section id="modulesPanel" class="panel" hidden>
+  <h2>Painéis administrativos</h2>
+  <p class="muted">Os botões aparecem conforme o perfil e as permissões confirmadas pelo servidor.</p>
+  <div id="moduleGrid" class="module-grid">
+    <button class="module available" data-module="moradores" data-permission="MORADORES_LER" type="button"><span class="icon">👥</span><div><strong>Moradores</strong><span>Buscar, cadastrar e atualizar moradores da área.</span></div></button>
+    <button class="module available" data-module="suporte" data-permission="MORADORES_LER" type="button"><span class="icon">🛟</span><div><strong>Suporte aos moradores</strong><span>Diagnosticar aparelhos e orientar reparos sem alterar os vínculos existentes.</span></div></button>
+    <button class="module available" data-module="recados" data-permission="PUBLICACOES_GERENCIAR" type="button"><span class="icon">📢</span><div><strong>Recados e campanhas</strong><span>Publicar informações e acompanhar os avisos da área.</span></div></button>
+    <button class="module available" data-module="agendas" data-permission="AGENDAS_GERENCIAR" type="button"><span class="icon">📅</span><div><strong>Agendas e vagas</strong><span>Dias, horários, vagas e situação dos atendimentos.</span></div></button>
+    <button class="module available" data-module="profissionais" data-permission="PROFISSIONAIS_GERENCIAR" type="button"><span class="icon">🩺</span><div><strong>Profissionais e serviços</strong><span>Cadastro e disponibilidade dos profissionais da unidade.</span></div></button>
+    <button class="module available admin-only" data-module="territorio" data-admin-only="true" type="button"><span class="icon">🗺️</span><div><strong>TACS e áreas</strong><span>Cadastro territorial, agentes e novas áreas.</span></div></button>
+    <button class="module available admin-only" data-module="municipios" data-admin-only="true" type="button"><span class="icon">🌐</span><div><strong>Municípios e organizações</strong><span>Estrutura global, municípios e vínculo das áreas.</span></div></button>
+    <button class="module available external" data-module="portal" type="button"><span class="icon">🏥</span><div><strong>Portal do Morador</strong><span>Abrir o portal público da área selecionada.</span></div></button>
+  </div>
+  <div class="actions"><button id="logout" class="btn red" type="button">Encerrar sessão</button></div>
+</section>
+</main>
+
+<footer>Portal TACS • Central Administrativa • Homologação visual V3</footer>
+
+<div id="viewer" class="viewer" hidden>
+  <div class="viewer-bar">
+    <button id="viewerBack" class="viewer-back" type="button">← Central</button>
+    <div id="viewerTitle" class="viewer-title">Painel</div>
+  </div>
+  <iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe>
+</div>
+
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=43a5c181d2c9"></script>
+<script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=43a5c181d2c9"></script>
+<script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=43a5c181d2c9"></script>
+</body>
+</html>
