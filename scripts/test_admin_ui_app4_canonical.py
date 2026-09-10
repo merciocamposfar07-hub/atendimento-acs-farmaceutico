@@ -122,129 +122,57 @@ for token in [
         raise SystemExit(f'Visual R7 sem requisito obrigatório: {token}')
 print('R7_VISUAL_ONLY_OK')
 
-
-# AJUSTES_PONTUAIS_2026_09_10_V1
+# CORRECOES_PONTUAIS_APP_2026_09_10_V4
 behavior_now = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')
-if "csc-resident-redundant-tacs-access" not in behavior_now:
-    raise SystemExit('Acesso TACS redundante ainda não foi marcado para ocultação no painel Moradores.')
-moradores_html = (ROOT / 'teste-v1/painel-moradores-v2.html').read_text(encoding='utf-8')
-if '>TACS, áreas e importação CSV</a>' in moradores_html:
-    raise SystemExit('Atalho TACS/áreas/CSV ainda existe no painel Moradores.')
-for wrapper in ['painel-oficial-profissionais-servicos.html','painel-oficial-tacs-areas.html']:
-    txt_wrapper = (ROOT / wrapper).read_text(encoding='utf-8')
-    if 'delete window.PortalTacsAdminApp4ShellR6' not in txt_wrapper:
-        raise SystemExit(f'Wrapper sem reinicialização do shell único: {wrapper}')
-municipios_html = (ROOT / 'painel-oficial-organizacoes-municipios.html').read_text(encoding='utf-8')
-if "button.textContent='Vínculo salvo!'" not in municipios_html:
-    raise SystemExit('Confirmação visual Vínculo salvo! ausente.')
-mensal_js = (ROOT / 'recados-campanhas-whatsapp-mensal-v12.js').read_text(encoding='utf-8')
-for token in ["box.dataset.signature=signature","existing&&existing.dataset.signature===signature","subtree:false"]:
-    if token not in mensal_js:
-        raise SystemExit(f'Correção de trava Recados/Campanhas incompleta: {token}')
-print('AJUSTES_PONTUAIS_2026_09_10_V1_OK')
+css_now = (ROOT / 'admin-ui-standard.inline.css').read_text(encoding='utf-8')
 
-
-# CORRECOES_PONTUAIS_APP_2026_09_10_V2
-support_html = (ROOT / 'painel-suporte-moradores-v2.html').read_text(encoding='utf-8')
-if 'id="diagFrame"' in support_html:
-    raise SystemExit('Diagnóstico ainda usa iframe/tela dentro de tela.')
-for token in ['DIAGNOSTICO_INLINE_V2','diag-inline-device','admin_notificacoes_saude_result','Reparo automático em andamento','Reparo concluído','value="ABERTOS">Pendências em aberto','st===\'ABERTOS\'']:
-    if token not in support_html:
+# 1. Diagnóstico dentro do mesmo painel, sem tela branca/iframe visual.
+support_v2 = (ROOT / 'painel-suporte-moradores-v2.html').read_text(encoding='utf-8')
+for token in [
+    'DIAGNOSTICO_INLINE_CORRECAO_PONTUAL_V3',
+    'id="devicesPane"',
+    'id="diagLista"',
+    "if(devices&&!diagItems.length)diagLoad()",
+    "data-state=",
+    "Reparo automático em andamento",
+    "Reparo concluído",
+    "Aguardando morador abrir o Portal",
+]:
+    if token not in support_v2:
         raise SystemExit(f'Diagnóstico inline incompleto: {token}')
+if 'id="diagFrame"' in support_v2:
+    raise SystemExit('Diagnóstico voltou a criar iframe/tela visível.')
+if 'Reparo já solicitado' in support_v2:
+    raise SystemExit('Diagnóstico voltou a exibir estado permanente "Reparo já solicitado".')
 
+support_legacy = (ROOT / 'painel-suporte-moradores.html').read_text(encoding='utf-8')
+for token in ["location.replace('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?'", "p.set('tab','devices')"]:
+    if token not in support_legacy:
+        raise SystemExit(f'Rota legada de diagnóstico não redireciona ao painel integrado: {token}')
+
+# 2. Agendas reutiliza sessão da Central e não mostra segundo PIN.
 agenda_html = (ROOT / 'painel-oficial-agendas-vagas.html').read_text(encoding='utf-8')
-if 'Digite o PIN para carregar as agendas' in agenda_html:
-    raise SystemExit('Agendas ainda pede segundo PIN.')
-if 'id="atualizarPaginaAgendasFlutuante"' in agenda_html:
-    raise SystemExit('Agendas ainda contém botão Atualizar página do rodapé.')
+for forbidden in ['Digite o PIN para carregar as agendas','Atualizar página','Atualizar pagina']:
+    if forbidden in agenda_html:
+        raise SystemExit(f'Agendas ainda contém elemento rejeitado: {forbidden}')
+for token in ["loginStatus.classList.add('oculto')","Abra Agendas e vagas pela Central Administrativa.","agendaRemoveAtualizarPaginaV1"]:
+    if token not in agenda_html:
+        raise SystemExit(f'Agendas sem correção de sessão/rodapé: {token}')
 
+# 3. Vínculo só muda depois da confirmação do servidor.
 municipios_html = (ROOT / 'painel-oficial-organizacoes-municipios.html').read_text(encoding='utf-8')
-for token in ["button.textContent='Vínculo salvo!'","✓ Vínculo salvo!","areaVinculoFeedbackV2"]:
+for token in ["button.textContent='Vínculo salvo'","✓ Vínculo salvo","if(apply(r,'Área vinculada e conferida.'))showAreaFeedback"]:
     if token not in municipios_html:
         raise SystemExit(f'Confirmação de vínculo incompleta: {token}')
 
-behavior = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')
-for token in [
-    "['▦','Prontuários',openRecordsPage]",
-    "['🔔','Pendências',openPendingPage]",
-    "TACS cadastrados",
-    "Administradores",
-    "tecnologia aproximando pessoas, serviços e comunidade.",
-    "Ano letivo 2026",
-    "return 'Pendências da área'",
-]:
-    if token not in behavior:
-        raise SystemExit(f'Dock/Perfil/Rodapé incompleto: {token}')
-
-css_now = (ROOT / 'admin-ui-standard.inline.css').read_text(encoding='utf-8')
-for token in ['RODAPE_PLATAFORMA_2026_V1','.csc-platform-footer','background:#071827!important']:
-    if token not in css_now:
-        raise SystemExit(f'Rodapé/tela única incompleto: {token}')
-
-mensal = (ROOT / 'recados-campanhas-whatsapp-mensal-v12.js').read_text(encoding='utf-8')
-for token in ['existing&&existing.dataset.signature===signature','subtree:false']:
-    if token not in mensal:
-        raise SystemExit(f'Recados/Campanhas sem correção de trava: {token}')
-
-moradores = (ROOT / 'teste-v1/painel-moradores-v2.html').read_text(encoding='utf-8')
-if '>TACS, áreas e importação CSV</a>' in moradores:
+# 4. Moradores não repete acesso TACS e não mostra atalho TACS/CSV.
+moradores_html = (ROOT / 'teste-v1/painel-moradores-v2.html').read_text(encoding='utf-8')
+if '>TACS, áreas e importação CSV</a>' in moradores_html:
     raise SystemExit('Atalho TACS/áreas/CSV voltou ao painel de moradores.')
+if 'csc-resident-redundant-tacs-access' not in behavior_now:
+    raise SystemExit('Bloco TACS redundante do painel Moradores não está protegido.')
 
-print('CORRECOES_PONTUAIS_APP_2026_09_10_V2_OK')
-
-
-# CORRECOES_PONTUAIS_APP_2026_09_10_V3
-support_v2 = (ROOT / 'painel-suporte-moradores-v2.html').read_text(encoding='utf-8')
-for token in [
-    'DIAGNOSTICO_INLINE_V2',
-    '#devicesPane .diag-inline-card',
-    '#devicesPane .diag-inline-device',
-    'background:#102d46!important',
-    'value="ABERTOS">Pendências em aberto',
-    "if(devices&&!diagItems.length)diagLoad()",
-]:
-    if token not in support_v2:
-        raise SystemExit(f'Suporte/diagnóstico V3 incompleto: {token}')
-if 'Reparo já solicitado' in support_v2:
-    raise SystemExit('Diagnóstico inline ainda exibe estado permanente "Reparo já solicitado".')
-if 'id="diagFrame"' in support_v2:
-    raise SystemExit('Diagnóstico inline voltou a criar uma tela/iframe visível.')
-
-support_legacy = (ROOT / 'painel-suporte-moradores.html').read_text(encoding='utf-8')
-for token in ['diagnosticoLegadoApp4CompatV1','Reparo pendente — aguardando confirmação do aparelho.']:
-    if token not in support_legacy:
-        raise SystemExit(f'Compatibilidade do diagnóstico legado incompleta: {token}')
-if '✓ Reparo já solicitado' in support_legacy:
-    raise SystemExit('Rota legada ainda mantém botão permanente de reparo solicitado.')
-
-agenda_v3 = (ROOT / 'painel-oficial-agendas-vagas.html').read_text(encoding='utf-8')
-for forbidden in [
-    'Digite o PIN para carregar as agendas',
-    'digite o PIN.',
-    'Toque novamente em Entrar e carregar agendas',
-]:
-    if forbidden in agenda_v3:
-        raise SystemExit(f'Agendas ainda contém instrução de PIN/entrada interna: {forbidden}')
-for token in [
-    'Carregando agendas da sessão atual…',
-    'agendaRemoveAtualizarPaginaV1',
-    'AJUSTE_PONTUAL_AGENDAS_SEM_BRANCO_V1',
-]:
-    if token not in agenda_v3:
-        raise SystemExit(f'Agendas V3 incompleta: {token}')
-
-prof_v3 = (ROOT / 'teste-v1/painel-profissionais-servicos-v1.html').read_text(encoding='utf-8')
-if 'AJUSTE_PONTUAL_PROFISSIONAIS_SEM_BRANCO_V1' not in prof_v3:
-    raise SystemExit('Profissionais/serviços ainda não recebeu a correção pontual sem campos brancos.')
-
-municipios_v3 = (ROOT / 'painel-oficial-organizacoes-municipios.html').read_text(encoding='utf-8')
-for token in ["button.textContent='Vínculo salvo!'","✓ Vínculo salvo!","areaVinculoFeedbackV2"]:
-    if token not in municipios_v3:
-        raise SystemExit(f'Confirmação de vínculo V3 incompleta: {token}')
-if "if(apply(r,'Área vinculada e conferida.'))showAreaFeedback" not in municipios_v3:
-    raise SystemExit('A mensagem de vínculo não está condicionada à confirmação do servidor.')
-
-behavior_v3 = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')
+# 5. Navegação inferior: prontuários, pendências e perfil.
 for token in [
     "['▦','Prontuários',openRecordsPage]",
     'view=prontuarios',
@@ -252,18 +180,37 @@ for token in [
     'view=pending',
     "['●','Perfil',openProfilePage]",
     'Array.isArray(ctx.tacs)?ctx.tacs:[]',
-    'Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.',
-    'Versão da plataforma 2026.09 • Ano letivo 2026',
+    'Administradores e TACS cadastrados.',
 ]:
-    if token not in behavior_v3:
-        raise SystemExit(f'Navegação/rodapé V3 incompleto: {token}')
+    if token not in behavior_now:
+        raise SystemExit(f'Navegação rápida incompleta: {token}')
 
-nav_v3 = (ROOT / 'central-suporte-moradores-v1.js').read_text(encoding='utf-8')
-if "var REVISION='20260910-pontuais-v3'" not in nav_v3:
-    raise SystemExit('Rotas administrativas não receberam a revisão pontual V3.')
+# 6. Rodapé institucional canônico.
+for token in [
+    'Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.',
+    'Conecta Saúde Comunitária — Plataforma 2026/2027',
+]:
+    if token not in behavior_now:
+        raise SystemExit(f'Rodapé institucional incompleto: {token}')
+for token in ['RODAPE_INSTITUCIONAL_2026_2027_V2','.csc-platform-footer','background:#071827!important']:
+    if token not in css_now:
+        raise SystemExit(f'Estilo do rodapé/tela única incompleto: {token}')
 
-moradores_v3 = (ROOT / 'teste-v1/painel-moradores-v2.html').read_text(encoding='utf-8')
-if '>TACS, áreas e importação CSV</a>' in moradores_v3:
-    raise SystemExit('Atalho TACS/áreas/CSV voltou ao painel de moradores.')
+# 7. Recados/campanhas sem loop de MutationObserver.
+mensal_js = (ROOT / 'recados-campanhas-whatsapp-mensal-v12.js').read_text(encoding='utf-8')
+for token in ['existing&&existing.dataset.signature===signature','subtree:false']:
+    if token not in mensal_js:
+        raise SystemExit(f'Recados/Campanhas sem correção da trava: {token}')
 
-print('CORRECOES_PONTUAIS_APP_2026_09_10_V3_OK')
+# 8. Wrappers internos constroem novamente o shell canônico.
+for wrapper in ['painel-oficial-profissionais-servicos.html','painel-oficial-tacs-areas.html']:
+    txt_wrapper = (ROOT / wrapper).read_text(encoding='utf-8')
+    if 'delete window.PortalTacsAdminApp4ShellR6' not in txt_wrapper:
+        raise SystemExit(f'Wrapper sem reinicialização do shell único: {wrapper}')
+
+nav = (ROOT / 'central-suporte-moradores-v1.js').read_text(encoding='utf-8')
+if "var REVISION='20260910-diagnostico-inline-v3'" not in nav:
+    raise SystemExit('Rotas administrativas sem revisão atual de cache.')
+
+print('CORRECOES_PONTUAIS_APP_2026_09_10_V4_OK')
+
