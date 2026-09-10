@@ -109,23 +109,15 @@ print('TITULOS_ESPECIFICOS_SUPORTE_OK')
 print(f'PAINEIS_VALIDADOS={len(TARGETS)}')
 
 
-# CENTRAL_LOGIN_TRANSPORT_R7 — transporte Safari/iPhone da porta principal.
-central_js = (ROOT / 'central-administrativa-tacs.js').read_text(encoding='utf-8')
-required_central_transport = [
-    "frame.setAttribute('name',frameName)",
-    "form.setAttribute('target',frameName)",
-    "nextWait:450",
-    "deadline:Date.now()+duration",
-    "window.requestAnimationFrame(function(){window.requestAnimationFrame(sendOnce)})",
-    "active.submitTimer=setTimeout(sendOnce,180)",
-    "jsonp('admin_status',{},function(){})",
-    "event.source!==active.frame.contentWindow",
-]
-for token in required_central_transport:
-    if token not in central_js:
-        raise SystemExit(f'Transporte da Central sem proteção Safari R7: {token}')
-if "O servidor demorou para confirmar a operação." in central_js:
-    raise SystemExit('A Central ainda contém o timeout legado de 45 segundos.')
-if central_js.count('form.submit()') != 1:
-    raise SystemExit('A Central deve enviar cada POST exatamente uma vez.')
-print('CENTRAL_LOGIN_TRANSPORT_R7_OK')
+# R7 VISUAL ONLY — nenhuma regra de autenticação faz parte desta revisão.
+for token in [
+    'R7 VISUAL ONLY — UNIFICAÇÃO CROMÁTICA + MARCA/LEITURA',
+    'width:104px!important',
+    'font-size:1.08rem!important',
+    'color:#d8e6ee!important',
+    'width:80px!important',
+    'background:#071827!important',
+]:
+    if token not in css:
+        raise SystemExit(f'Visual R7 sem requisito obrigatório: {token}')
+print('R7_VISUAL_ONLY_OK')

@@ -1,3 +1,7 @@
+# REVERTIDO — alteração de login não solicitada
+
+> Este registro foi tornado histórico em 10/09/2026. A alteração de transporte R7 foi revertida porque o pedido do usuário era exclusivamente visual. O login deve permanecer no estado anterior enquanto não houver nova autorização específica.
+
 # Registro de correção — Login da Central / Transporte R7
 
 Data: 10/09/2026
