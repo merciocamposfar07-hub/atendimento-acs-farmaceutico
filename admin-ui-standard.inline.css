@@ -1667,3 +1667,42 @@ body:not(.csc-central) .csc-platform-footer{padding-bottom:calc(28px + env(safe-
 .csc-central .csc-platform-footer{
   padding-bottom:calc(102px + env(safe-area-inset-bottom))!important;
 }
+
+
+/* CAMPOS_SEM_BALOES_BRANCOS_2026_09_10_V1 */
+/* Campos internos permanecem na mesma família azul do aplicativo.
+   Especificidade maior que estilos legados como ".cartao .campo{background:#fff!important}". */
+html body .cartao .campo,
+html body .cartao input:not([type="checkbox"]):not([type="radio"]),
+html body .cartao select,
+html body .cartao textarea,
+html body .corpo .campo,
+html body .corpo input:not([type="checkbox"]):not([type="radio"]),
+html body .corpo select,
+html body .corpo textarea,
+html body .actions select,
+html body .actions textarea,
+html body .toolbar input,
+html body .toolbar select,
+html body .area-control input,
+html body .area-control select{
+  background:#071827!important;
+  background-image:none!important;
+  color:#f7fcff!important;
+  border-color:#416f89!important;
+  opacity:1!important;
+}
+html body .cartao .campo[readonly],
+html body .corpo .campo[readonly],
+html body input[readonly],
+html body textarea[readonly]{
+  background:#0b263d!important;
+  color:#d8e6ee!important;
+}
+html body .cartao .check,
+html body .corpo .check{
+  background:#153b58!important;
+  background-image:none!important;
+  color:#f7fcff!important;
+  border-color:#416f89!important;
+}
