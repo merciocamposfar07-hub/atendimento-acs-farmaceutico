@@ -45,6 +45,7 @@ function panelTitle(){
   if(CENTRAL)return 'Central Administrativa';
   if(/\/painel-suporte-moradores\.html$/i.test(PATH))return 'Diagnóstico dos aparelhos';
   if(/\/painel-suporte-moradores-v2\.html$/i.test(PATH)){try{if(String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='pending')return 'Pendências da área'}catch(e){}return 'Suporte aos moradores'};
+  if(/\/teste-v1\/painel-moradores-v2\.html$/i.test(PATH)){try{if(String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='prontuarios')return 'Prontuários'}catch(e){}}
   var h=document.querySelector('header h1');
   if(h&&text(h.textContent))return text(h.textContent);
   var t=text(document.title).split('|')[0].split('•')[0];
@@ -157,11 +158,11 @@ function showCentralHome(){
 }
 function openRecordsPage(){
   var area=encodeURIComponent(centralAreaId());
-  location.assign('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&view=prontuarios&from=central&v=20260910-prontuarios-v2');
+  location.assign('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&view=prontuarios&from=central&v=20260910-prontuarios-v3');
 }
 function openPendingPage(){
   var area=encodeURIComponent(centralAreaId());
-  location.assign('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+'&view=pending&from=central&v=20260910-pendencias-v1');
+  location.assign('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+'&view=pending&from=central&v=20260910-pendencias-v2');
 }
 function openProfilePage(){
   var main=document.querySelector('main');if(!main)return;
@@ -171,7 +172,7 @@ function openProfilePage(){
   var ctx=centralContextFromCache()||{},areas=Array.isArray(ctx.areas)?ctx.areas:[],tacs=Array.isArray(ctx.tacs)?ctx.tacs:[],admins=Array.isArray(ctx.administradores)?ctx.administradores:[];
   if(!admins.length)admins=[{nomeCompleto:'Administrador geral',perfil:'ADMINISTRADOR GERAL',ativo:true}];
   function areaName(id){for(var i=0;i<areas.length;i++)if(text(areas[i].areaId)===text(id))return text(areas[i].areaNome||areas[i].areaId);return text(id)||'Área não vinculada'}
-  var html='<h2>Administradores e TACS</h2><p class="csc-profile-intro">Acesso rápido aos responsáveis cadastrados e às áreas disponíveis.</p><h3>Administradores</h3><div class="csc-profile-list">';
+  var html='<h2>Administradores e TACS</h2><p class="csc-profile-intro">Administradores e TACS cadastrados. Toque em um TACS para mudar rapidamente para a área vinculada.</p><h3>Administradores</h3><div class="csc-profile-list">';
   admins.forEach(function(a){html+='<article class="csc-profile-card"><strong>'+escapeProfile(a.nomeCompleto||a.nome||'Administrador geral')+'</strong><span>'+escapeProfile(a.perfil||'ADMINISTRADOR GERAL')+'</span></article>'});
   html+='</div><h3>TACS cadastrados</h3><div class="csc-profile-list">';
   if(!tacs.length)html+='<div class="csc-profile-empty">Nenhum TACS disponível no contexto atual.</div>';
