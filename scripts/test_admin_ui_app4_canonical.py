@@ -59,6 +59,10 @@ required_behavior = [
     "strong.textContent=panelTitle()",
     "ROOT.classList.toggle('csc-session-active',active)",
     'painel-suporte-moradores(?:-v2)?',
+    "return 'Diagnóstico dos aparelhos'",
+    "return 'Suporte aos moradores'",
+    '.csc-session-missing .csc-dock{display:none!important}',
+    '.csc-session-active .csc-dock{display:grid!important}',
     "back.addEventListener('click'",
     "navigator.vibrate(8)",
 ]
@@ -88,4 +92,6 @@ for forbidden in ["'index.html'", 'portal-morador.html', 'abrir.html']:
 
 print('ADMIN_UI_APP4_CANONICAL_R2_OK')
 print('SESSAO_UNICA_VISUAL_OK')
+print('PIN_REPETIDO_OCULTO_COM_SESSAO_OK')
+print('TITULOS_ESPECIFICOS_SUPORTE_OK')
 print(f'PAINEIS_VALIDADOS={len(TARGETS)}')
