@@ -50,7 +50,7 @@ async function testResidentPanel() {
   assert.match(html, /rel="icon"[^>]+painel-moradores\.svg/);
   assert.match(html, /rel="apple-touch-icon"[^>]+painel-moradores-180\.png/);
   assert.match(html, /id="loginTacs"/);
-  assert.match(html, /TACS, áreas e importação CSV/);
+  assert.doesNotMatch(html, /TACS, áreas e importação CSV/);
   assert.match(html, /white-space:nowrap;overflow-wrap:normal;word-break:normal;hyphens:none/);
 
   const dom = new JSDOM(html, {
