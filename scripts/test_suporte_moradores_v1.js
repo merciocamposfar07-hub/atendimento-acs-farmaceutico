@@ -16,8 +16,8 @@ const builder=read('scripts/build_apps_script_release.js');
 assert.strictEqual((central.match(/data-module="suporte"/g)||[]).length,1,'Central deve ter exatamente um módulo Suporte aos moradores');
 assert(central.includes('<strong>Suporte aos moradores</strong>'),'Rótulo do módulo de suporte ausente');
 assert(central.includes('central-suporte-moradores-v1.js'),'Central não carrega o bootstrap de suporte/desempenho');
-assert(bootstrap.includes('BLOCO_1_CONTROLE_UNICO_V1'),'Bootstrap do suporte deve respeitar o controlador único da Central');
-assert(!bootstrap.includes('painel-suporte-moradores-v2.html'),'Bootstrap do suporte não pode navegar diretamente para painéis');
+assert(bootstrap.includes('CENTRAL_IOS_PAINT_GUARD_V3'),'Bootstrap do suporte deve manter a proteção de pintura/navegação da Central no iPhone');
+assert(bootstrap.includes("if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html"),'Bootstrap do suporte deve abrir a interface V2 por navegação direta, sem iframe');
 assert(performance.includes("if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html"),'Controlador oficial não aponta Suporte para a interface dedicada V2');
 assert(performance.includes("name==='suporte'"),'Controlador oficial deve tratar Suporte como módulo próprio');
 
@@ -32,7 +32,7 @@ assert(panelV2.includes('Chamados dos moradores'),'Painel V2 deve ter a caixa de
 assert(panelV2.includes('Diagnóstico dos aparelhos'),'Painel V2 deve manter o diagnóstico técnico separado');
 assert(panelV2.includes('NOVO')&&panelV2.includes('EM_ANALISE')&&panelV2.includes('RESPONDIDO')&&panelV2.includes('RESOLVIDO'),'Estados do chamado incompletos');
 assert(panelV2.includes('admin_suporte_chamados_listar')&&panelV2.includes('admin_suporte_chamado_atualizar'),'Painel V2 não está conectado aos chamados administrativos');
-assert(panelV2.includes('painel-suporte-moradores.html'),'Painel V2 deve reutilizar o diagnóstico existente sem duplicá-lo');
+assert(panelV2.includes('diag-inline-summary')&&panelV2.includes('admin_notificacoes_saude'),'Painel V2 deve manter o diagnóstico integrado na própria tela');
 
 assert(portal.includes('Conecta Saúde Comunitária'),'Assinatura institucional Conecta Saúde ausente no Portal');
 ['Privacidade','Acessibilidade','Sobre','Suporte'].forEach((label)=>assert(portal.includes(label),'Link institucional ausente: '+label));
