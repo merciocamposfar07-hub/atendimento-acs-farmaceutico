@@ -2025,7 +2025,7 @@ html body .cartao input[readonly]{background:#0b263d!important;color:#d8e6ee!imp
 </style>
 
 
-<footer><p>Portal TACS • Painel administrativo oficial</p><p>Alterações confirmadas são aplicadas ao Portal do Morador</p></footer>
+
 <iframe name="ponteAgendaV1" class="ponte" src="about:blank" title="Envio seguro ao servidor"></iframe>
 <script>
 (function(){
@@ -2223,7 +2223,24 @@ sair.addEventListener('click',function(){if(!token)return;cancelarReconexao();po
 document.getElementById('listaAgendas').addEventListener('click',function(e){var b=e.target.closest('.salvarAgenda');if(b)salvarAgenda(b.closest('details'))});
 ['input','change'].forEach(function(tipo){document.getElementById('listaAgendas').addEventListener(tipo,function(e){var alvo=e.target;if(alvo&&alvo.matches&&alvo.matches('input,select,textarea')&&!alvo.readOnly)edicaoPendente=true})});
 document.getElementById('filtroProf').addEventListener('change',render);document.getElementById('filtroDia').addEventListener('change',render);desfazer.addEventListener('click',restaurar);
-function iniciarPainel(){entrar.disabled=true;document.getElementById('accessTitle').classList.add('oculto');document.getElementById('pinLabel').classList.add('oculto');document.getElementById('pin').classList.add('oculto');document.getElementById('accessActions').classList.add('oculto');document.getElementById('pinHelp').classList.add('oculto');if(tacsMode){status('loginStatus','Carregando agendas da sessão atual…','aviso');aplicarSnapshotSeDisponivel();carregarDados('Sessão de TACS validada. Agendas da própria área carregadas.',null,true);return}if(token){status('loginStatus','Carregando agendas da sessão atual…','aviso');aplicarSnapshotSeDisponivel();carregarDados('Sessão existente validada e agendas desta área carregadas.',null,true);return}status('loginStatus','Abra Agendas e vagas pela Central Administrativa com sua sessão ativa.','aviso')}
+function iniciarPainel(){
+  entrar.disabled=true;
+  ['accessTitle','pinLabel','pin','accessActions','pinHelp'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('oculto')});
+  var loginStatus=document.getElementById('loginStatus');
+  if(tacsMode){
+    if(loginStatus)loginStatus.classList.add('oculto');
+    aplicarSnapshotSeDisponivel();
+    carregarDados('Sessão de TACS validada. Agendas da própria área carregadas.',null,true);
+    return;
+  }
+  if(token){
+    if(loginStatus)loginStatus.classList.add('oculto');
+    aplicarSnapshotSeDisponivel();
+    carregarDados('Sessão existente validada e agendas desta área carregadas.',null,true);
+    return;
+  }
+  if(loginStatus){loginStatus.textContent='Abra Agendas e vagas pela Central Administrativa.';loginStatus.className='status aviso'}
+}
 if(!/jsdom/i.test(navigator.userAgent||''))setInterval(sincronizarVagasOdontologia,5000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(sincronizarVagasOdontologia,250)});
 iniciarPainel();
