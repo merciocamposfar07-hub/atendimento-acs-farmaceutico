@@ -8,6 +8,8 @@ on:
       - '.github/workflows/aplicar-admin-ui-app4-main.yml'
       - 'admin-ui-standard.inline.css'
       - 'admin-ui-behavior.inline.js'
+      - 'central-administrativa-tacs.js'
+      - 'central-administrativa-tacs.html'
       - 'scripts/injetar_admin_ui_standard_v1.py'
       - 'scripts/test_admin_ui_app4_canonical.py'
 

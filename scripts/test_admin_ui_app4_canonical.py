@@ -107,3 +107,25 @@ print('SESSAO_UNICA_VISUAL_OK')
 print('PIN_REPETIDO_OCULTO_COM_SESSAO_OK')
 print('TITULOS_ESPECIFICOS_SUPORTE_OK')
 print(f'PAINEIS_VALIDADOS={len(TARGETS)}')
+
+
+# CENTRAL_LOGIN_TRANSPORT_R7 — transporte Safari/iPhone da porta principal.
+central_js = (ROOT / 'central-administrativa-tacs.js').read_text(encoding='utf-8')
+required_central_transport = [
+    "frame.setAttribute('name',frameName)",
+    "form.setAttribute('target',frameName)",
+    "nextWait:450",
+    "deadline:Date.now()+duration",
+    "window.requestAnimationFrame(function(){window.requestAnimationFrame(sendOnce)})",
+    "active.submitTimer=setTimeout(sendOnce,180)",
+    "jsonp('admin_status',{},function(){})",
+    "event.source!==active.frame.contentWindow",
+]
+for token in required_central_transport:
+    if token not in central_js:
+        raise SystemExit(f'Transporte da Central sem proteção Safari R7: {token}')
+if "O servidor demorou para confirmar a operação." in central_js:
+    raise SystemExit('A Central ainda contém o timeout legado de 45 segundos.')
+if central_js.count('form.submit()') != 1:
+    raise SystemExit('A Central deve enviar cada POST exatamente uma vez.')
+print('CENTRAL_LOGIN_TRANSPORT_R7_OK')
