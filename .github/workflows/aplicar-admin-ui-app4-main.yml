@@ -16,6 +16,9 @@ on:
       - 'painel-oficial-organizacoes-municipios.html'
       - 'painel-oficial-tacs-areas.html'
       - 'painel-oficial-profissionais-servicos.html'
+      - 'painel-suporte-moradores.html'
+      - 'painel-suporte-moradores-v2.html'
+      - 'painel-oficial-agendas-vagas.html'
 
 permissions:
   contents: write

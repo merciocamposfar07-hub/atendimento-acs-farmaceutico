@@ -142,3 +142,52 @@ for token in ["box.dataset.signature=signature","existing&&existing.dataset.sign
     if token not in mensal_js:
         raise SystemExit(f'Correção de trava Recados/Campanhas incompleta: {token}')
 print('AJUSTES_PONTUAIS_2026_09_10_V1_OK')
+
+
+# CORRECOES_PONTUAIS_APP_2026_09_10_V2
+support_html = (ROOT / 'painel-suporte-moradores-v2.html').read_text(encoding='utf-8')
+if 'id="diagFrame"' in support_html:
+    raise SystemExit('Diagnóstico ainda usa iframe/tela dentro de tela.')
+for token in ['DIAGNOSTICO_INLINE_V1','diag-inline-device','admin_notificacoes_saude_result','Reparo automático em andamento','Reparo concluído']:
+    if token not in support_html:
+        raise SystemExit(f'Diagnóstico inline incompleto: {token}')
+
+agenda_html = (ROOT / 'painel-oficial-agendas-vagas.html').read_text(encoding='utf-8')
+if 'Digite o PIN para carregar as agendas' in agenda_html:
+    raise SystemExit('Agendas ainda pede segundo PIN.')
+if 'id="atualizarPaginaAgendasFlutuante"' in agenda_html:
+    raise SystemExit('Agendas ainda contém botão Atualizar página do rodapé.')
+
+municipios_html = (ROOT / 'painel-oficial-organizacoes-municipios.html').read_text(encoding='utf-8')
+for token in ["button.textContent='Vínculo salvo!'","box.textContent='Vínculo salvo!'"]:
+    if token not in municipios_html:
+        raise SystemExit(f'Confirmação de vínculo incompleta: {token}')
+
+behavior = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')
+for token in [
+    "['▦','Prontuários',openRecordsPage]",
+    "['🔔','Pendências',openPendingPage]",
+    "'TACS cadastrados'",
+    "'Administradores'",
+    "tecnologia aproximando pessoas, serviços e comunidade.",
+    "Ano letivo 2026",
+    "return 'Pendências da área'",
+]:
+    if token not in behavior:
+        raise SystemExit(f'Dock/Perfil/Rodapé incompleto: {token}')
+
+css_now = (ROOT / 'admin-ui-standard.inline.css').read_text(encoding='utf-8')
+for token in ['RODAPE_PLATAFORMA_2026_V1','.csc-platform-footer','background:#071827!important']:
+    if token not in css_now:
+        raise SystemExit(f'Rodapé/tela única incompleto: {token}')
+
+mensal = (ROOT / 'recados-campanhas-whatsapp-mensal-v12.js').read_text(encoding='utf-8')
+for token in ['existing&&existing.dataset.signature===signature','subtree:false']:
+    if token not in mensal:
+        raise SystemExit(f'Recados/Campanhas sem correção de trava: {token}')
+
+moradores = (ROOT / 'teste-v1/painel-moradores-v2.html').read_text(encoding='utf-8')
+if '>TACS, áreas e importação CSV</a>' in moradores:
+    raise SystemExit('Atalho TACS/áreas/CSV voltou ao painel de moradores.')
+
+print('CORRECOES_PONTUAIS_APP_2026_09_10_V2_OK')
