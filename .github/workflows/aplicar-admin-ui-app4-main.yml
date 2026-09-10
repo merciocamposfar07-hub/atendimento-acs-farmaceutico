@@ -13,6 +13,7 @@ on:
       - 'recados-campanhas-whatsapp-mensal-v12.js'
       - 'painel-oficial-recados-campanhas.html'
       - 'teste-v1/painel-moradores-v2.html'
+      - 'teste-v1/painel-moradores-transport-v2.js'
       - 'painel-oficial-organizacoes-municipios.html'
       - 'painel-oficial-tacs-areas.html'
       - 'painel-oficial-profissionais-servicos.html'

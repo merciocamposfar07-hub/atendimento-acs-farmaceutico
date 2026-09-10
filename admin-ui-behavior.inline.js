@@ -158,7 +158,7 @@ function showCentralHome(){
 }
 function openRecordsPage(){
   var area=encodeURIComponent(centralAreaId());
-  location.assign('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&view=prontuarios&from=central&v=20260910-prontuarios-v3');
+  location.assign('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&view=prontuarios&all=1&from=central&v=20260910-prontuarios-todas-areas-v1');
 }
 function openPendingPage(){
   var area=encodeURIComponent(centralAreaId());

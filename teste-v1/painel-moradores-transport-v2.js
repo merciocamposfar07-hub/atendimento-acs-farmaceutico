@@ -22,6 +22,7 @@ var selectedAreaId='';
 var availableAreas=[];
 var statusActivationAttempted=false;
 var backendVersion='';
+var PRONTUARIOS_VIEW=(function(){try{return String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='prontuarios'}catch(e){return false}})();
 
 var COMPARISON_FIELDS=[
   ['idPortal','ID Portal'],['id','ID original'],['cpf','CPF'],['cns','CNS'],
@@ -141,7 +142,7 @@ function normalize(v){
 function escapeHtml(v){
   return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]});
 }
-function itemKey(item){return text(item.idPortal)+'|'+text(item.origemAba)+'|'+text(item.origemLinha)}
+function itemKey(item){return text(item._areaId)+'|'+text(item.idPortal)+'|'+text(item.origemAba)+'|'+text(item.origemLinha)}
 function itemLabel(item){return text(item.idPortal||item.moradorId||item.nome||'Cadastro sem ID')}
 
 function jsonp(action,extra,cb){
@@ -345,7 +346,7 @@ function setBaseLoading(loading){
   var searchButton=el('search');
   if(searchButton){
     searchButton.disabled=baseCheckPending;
-    searchButton.textContent=baseCheckPending?'Conferindo base…':'Buscar na base real';
+    searchButton.textContent=baseCheckPending?'Conferindo base…':(PRONTUARIOS_VIEW&&accessMode==='admin'?'Buscar em todas as áreas':'Buscar na base real');
   }
   var areaSelect=el('areaSelect');
   if(areaSelect)areaSelect.disabled=baseCheckPending||availableAreas.length<2;
@@ -476,6 +477,11 @@ function renderBase(r,message){
   ){
     setStatus('operationStatus','Base conferida. O painel está pronto para uso.','ok');
   }
+  if(PRONTUARIOS_VIEW&&accessMode==='admin'){
+    var searchHelp=document.querySelector('#searchArea .muted');
+    if(searchHelp)searchHelp.textContent='Busque por nome, CPF, CNS ou cadastro familiar. A consulta percorre todas as áreas cadastradas.';
+    var searchButton=el('search');if(searchButton)searchButton.textContent='Buscar em todas as áreas';
+  }
   setTimeout(function(){maybeActivateSituation(r)},0);
   return true;
 }
@@ -546,6 +552,7 @@ function logoutCurrent(){
 }
 
 function confirmedDuplicatePair(a,b){
+  if(text(a&&a._areaId)&&text(b&&b._areaId)&&text(a._areaId)!==text(b._areaId))return false;
   var cpfA=digits(a.cpf),cpfB=digits(b.cpf),cnsA=digits(a.cns),cnsB=digits(b.cns);
   var cpfLegado=legacyCpfZeroInitial(cpfA,cpfB);
   if((cpfA&&cpfB&&cpfA!==cpfB&&!cpfLegado)||(cnsA&&cnsB&&cnsA!==cnsB))return false;
@@ -591,7 +598,7 @@ function classifyDuplicates(list){
   var byNameBirth={};
   list.forEach(function(item){
     if(flags[itemKey(item)])return;
-    var key=normalize(item.nome)+'|'+text(item.nascimento);
+    var key=text(item._areaId)+'|'+normalize(item.nome)+'|'+text(item.nascimento);
     (byNameBirth[key]||(byNameBirth[key]=[])).push(item);
   });
   Object.keys(byNameBirth).forEach(function(k){
@@ -602,12 +609,23 @@ function classifyDuplicates(list){
 }
 
 function residentSummary(item){
+  var area=text(item&&item._areaNome||item&&item._areaId);
   return '<strong>'+escapeHtml(item.nome)+'</strong>'+
     '<div class="sub">'+escapeHtml(itemLabel(item))+' • CPF '+escapeHtml(item.cpf||'—')+' • CNS '+escapeHtml(item.cns||'—')+' • '+escapeHtml(item.nascimento||'—')+'</div>'+
+    (area?'<div class="prontuario-area">Área: '+escapeHtml(area)+'</div>':'')+
     '<span class="pill">'+escapeHtml(item.status||item.situacao||'ATIVO')+'</span>';
 }
 
 function loadResident(item,flag){
+  var targetArea=text(item&&item._areaId);
+  if(targetArea&&accessMode==='admin'&&targetArea!==selectedAreaId){
+    selectedAreaId=targetArea;
+    var areaSelect=el('areaSelect');if(areaSelect)areaSelect.value=targetArea;
+    writesEnabled=false;situationEnabled=false;consolidationEnabled=false;
+    setBaseLoading(true);syncControls();
+    setStatus('operationStatus','Abrindo prontuário da área '+text(item._areaNome||targetArea)+' e conferindo a fonte antes de permitir alterações…','warn');
+    loadBase('Área do prontuário confirmada. Alterações liberadas conforme as permissões do servidor.');
+  }
   if(el('residentId'))el('residentId').value=text(item.moradorId);
   if(el('originSheet'))el('originSheet').value=text(item.origemAba);
   if(el('originRow'))el('originRow').value=text(item.origemLinha);
@@ -868,6 +886,32 @@ function renderSearchResults(list){
   else setStatus('operationStatus',list.length+' resultado(s) encontrado(s). Toque em um cadastro para conferir.','ok');
 }
 
+function searchProntuariosTodasAreas(q,options){
+  var areas=availableAreas.slice();
+  if(!areas.length&&selectedAreaId)areas=[{areaId:selectedAreaId,areaNome:selectedAreaId}];
+  var resultados=[],falhas=[],index=0;
+  function next(){
+    if(index>=areas.length){
+      renderSearchResults(resultados);
+      var base=resultados.length+' prontuário(s) encontrado(s) em '+areas.length+' área(s) consultada(s).';
+      if(falhas.length)base+=' '+falhas.length+' área(s) não puderam ser consultadas agora.';
+      setStatus('operationStatus',options&&options.successMessage?options.successMessage:base,falhas.length&&resultados.length===0?'err':'ok');
+      return;
+    }
+    var area=areas[index++],areaId=text(area.areaId),areaNome=text(area.areaNome||areaId);
+    setStatus('operationStatus','Buscando prontuários em '+areaNome+'… ('+index+'/'+areas.length+')','warn');
+    post('admin_moradores_buscar',cloneSession({q:q,areaId:areaId}),'admin_moradores_result',function(r){
+      if(r&&r.ok===true){
+        (Array.isArray(r.resultados)?r.resultados:[]).forEach(function(item){
+          item._areaId=areaId;item._areaNome=areaNome;resultados.push(item);
+        });
+      }else falhas.push(areaNome);
+      next();
+    });
+  }
+  next();
+}
+
 function doSearch(query,options){
   options=options&&typeof options==='object'?options:{};
   var q=text(query!=null?query:(el('query')&&el('query').value));
@@ -882,10 +926,16 @@ function doSearch(query,options){
   lastSearchQuery=q;
   duplicateLock=false;
   syncControls();
+  if(PRONTUARIOS_VIEW&&accessMode==='admin'){
+    searchProntuariosTodasAreas(q,options);
+    return;
+  }
   setStatus('operationStatus','Buscando na base real…','warn');
   post('admin_moradores_buscar',cloneSession({q:q}),'admin_moradores_result',function(r){
     if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'Busca recusada.'),'err');return}
-    renderSearchResults(Array.isArray(r.resultados)?r.resultados:[]);
+    var lista=Array.isArray(r.resultados)?r.resultados:[];
+    lista.forEach(function(item){item._areaId=selectedAreaId;var a=availableAreas.filter(function(x){return text(x.areaId)===selectedAreaId})[0];item._areaNome=text(a&&a.areaNome||selectedAreaId)});
+    renderSearchResults(lista);
     if(options.successMessage)setStatus('operationStatus',options.successMessage,'ok');
   });
 }
