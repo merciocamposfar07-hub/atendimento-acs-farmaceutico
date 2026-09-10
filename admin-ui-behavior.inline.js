@@ -14,7 +14,7 @@ var PATH=String(location.pathname||'');
 var CENTRAL=/\/central-administrativa-tacs\.html$/i.test(PATH);
 var ADMIN_PANEL=CENTRAL||(
   /\/teste-v1\/painel-moradores-v2\.html$/i.test(PATH)||
-  /\/painel-suporte-moradores-v2\.html$/i.test(PATH)||
+  /\/painel-suporte-moradores(?:-v2)?\.html$/i.test(PATH)||
   /\/painel-oficial-(?:recados-campanhas|agendas-vagas|profissionais-servicos|tacs-areas|organizacoes-municipios)\.html$/i.test(PATH)||
   /\/teste-v1\/painel-(?:profissionais-servicos|tacs-areas)-v1\.html$/i.test(PATH)
 );
@@ -99,11 +99,7 @@ function markAuthControls(){
   var passwords=document.querySelectorAll('input[type="password"]');
   passwords.forEach(function(input){
     input.classList.add('csc-auth-control');
-    var id=input.id;
-    if(id){
-      var label=document.querySelector('label[for="'+CSS.escape(id)+'"]');
-      if(label)label.classList.add('csc-auth-control');
-    }
+    if(input.labels){Array.prototype.forEach.call(input.labels,function(label){label.classList.add('csc-auth-control')})}
     var wrap=input.closest('#adminLogin,#tacsLogin');
     if(wrap)wrap.classList.add('csc-auth-control');
     var section=input.closest('section');
