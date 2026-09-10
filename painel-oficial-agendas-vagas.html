@@ -74,13 +74,11 @@ input[type="date"].campo,input[type="time"].campo{display:block;width:100%!impor
 <!-- PORTAL_TACS_ADMIN_UI_STANDARD_START -->
 <style id="portalTacsAdminUiStandardV1">
 /*
- * Conecta Saúde Comunitária — UI administrativa canônica
+ * Conecta Saúde Comunitária — UI administrativa canônica R2
  * Contrato: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10
- * Referência: 4 • App institucional
- * Fonte única de verdade visual para os painéis administrativos.
- * Este CSS é injetado inline para evitar requisição adicional em runtime.
- * PROTEÇÃO: não renomear/remover IDs, classes funcionais, data-*, campos ou seletores usados pelo JavaScript.
- * Portal do Morador / Portal TACS público permanece fora deste escopo.
+ * Revisão: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R2
+ * Referência visual: 4 • App institucional aprovada em 10/09/2026.
+ * A camada abaixo muda somente apresentação. IDs, campos, data-* e lógica permanecem intactos.
  */
 :root{
   color-scheme:dark;
@@ -100,12 +98,10 @@ input[type="date"].campo,input[type="time"].campo{display:block;width:100%!impor
   --tacs-app-danger:#972f3d;
   --tacs-app-warning:#8a661c;
   --tacs-app-success:#176a48;
-
-  /* aliases legados: mantêm componentes antigos coerentes sem tocar na lógica */
   --tacs-petroleo:var(--tacs-app-top);
   --tacs-petroleo-2:var(--tacs-app-primary);
   --tacs-petroleo-3:#2084ac;
-  --tacs-borda:var(--tacs-app-accent2);
+  --tacs-borda:var(--tacs-app-line);
   --tacs-fundo:var(--tacs-app-bg);
   --tacs-superficie:var(--tacs-app-card);
   --tacs-texto:var(--tacs-app-text);
@@ -132,156 +128,290 @@ body{
   min-height:100svh;
   overflow-x:hidden;
   color:var(--tacs-app-text)!important;
-  background:
-    radial-gradient(circle at 92% 3%,rgba(98,200,232,.10),transparent 25%),
-    radial-gradient(circle at 8% 92%,rgba(131,239,169,.06),transparent 28%),
-    linear-gradient(180deg,var(--tacs-app-top),var(--tacs-app-bg))!important;
+  background:linear-gradient(180deg,var(--tacs-app-top) 0,var(--tacs-app-bg) 360px,var(--tacs-app-bg) 100%)!important;
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Arial,sans-serif!important;
   font-weight:400;
   line-height:1.45;
+  -webkit-tap-highlight-color:transparent;
 }
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:-1;
-  background:linear-gradient(180deg,rgba(255,255,255,.015),transparent 28%);
-}
+body::before{display:none!important}
 
-/* Cabeçalho institucional único */
-header{
-  position:relative!important;
-  min-height:150px;
-  padding:calc(22px + env(safe-area-inset-top)) 18px 26px 92px!important;
-  overflow:hidden;
-  color:var(--tacs-app-text)!important;
-  background:linear-gradient(145deg,#0b263d 0%,#102d46 58%,#153b58 100%)!important;
+/* Shell institucional real. Sem moldura externa e sem linhas laterais. */
+.csc-appbar{
+  position:sticky;
+  top:0;
+  z-index:200;
+  width:min(720px,100%);
+  min-height:96px;
+  margin:0 auto;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+  display:flex;
+  align-items:center;
+  gap:13px;
+  background:rgba(7,24,39,.94);
+  -webkit-backdrop-filter:blur(18px);
+  backdrop-filter:blur(18px);
   border:0!important;
-  border-bottom:1px solid var(--tacs-app-line)!important;
-  box-shadow:0 12px 30px rgba(0,0,0,.22)!important;
+  box-shadow:none!important;
 }
-header::before{
-  content:"";
-  position:absolute;
-  left:18px;
-  bottom:18px;
-  width:58px;
-  height:58px;
-  border-radius:50%;
-  background:url('/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3') center/contain no-repeat;
-  filter:none;
+.csc-appbar-icon{
+  width:72px;
+  height:72px;
+  flex:0 0 72px;
+  display:block;
+  object-fit:contain;
+  filter:none!important;
 }
-header::after{
-  content:"CONECTA SAÚDE COMUNITÁRIA";
-  position:absolute;
-  left:88px;
-  right:16px;
-  bottom:36px;
+.csc-appbar-title{min-width:0;flex:1 1 auto}
+.csc-appbar-title small{
+  display:block;
   color:var(--tacs-app-accent)!important;
-  font-size:.72rem;
-  line-height:1.1;
+  font-size:.76rem;
+  line-height:1.14;
   font-weight:900;
-  letter-spacing:.10em;
+  letter-spacing:.115em;
   text-transform:uppercase;
 }
-header h1{
-  margin:14px 0 7px!important;
-  max-width:760px;
+.csc-appbar-title strong{
+  display:block;
+  margin-top:5px;
   color:#fff!important;
-  font-size:clamp(1.95rem,8vw,2.85rem)!important;
-  line-height:1.03!important;
-  letter-spacing:-.04em!important;
-  overflow-wrap:break-word;
+  font-size:1.14rem;
+  line-height:1.14;
+  font-weight:850;
+  letter-spacing:-.02em;
+  overflow-wrap:anywhere;
 }
-header p{margin:0!important;max-width:760px;color:var(--tacs-app-muted)!important;font-size:1rem!important}
-header .badge,header .seal,header .selo{
-  display:inline-flex!important;
-  align-items:center;
-  max-width:100%;
-  padding:7px 10px!important;
-  border:1px solid rgba(131,239,169,.55)!important;
-  border-radius:999px!important;
-  background:rgba(131,239,169,.07)!important;
-  color:var(--tacs-app-accent)!important;
+.csc-appbar-back{
+  width:48px!important;
+  min-width:48px!important;
+  height:48px!important;
+  min-height:48px!important;
+  flex:0 0 48px;
+  padding:0!important;
+  display:grid!important;
+  place-items:center;
+  border:1px solid var(--tacs-app-line)!important;
+  border-radius:17px!important;
+  background:var(--tacs-app-card)!important;
+  color:var(--tacs-app-accent2)!important;
+  box-shadow:var(--tacs-app-shadow-soft)!important;
+  font-size:2rem!important;
+  line-height:1!important;
+}
+
+/* O cabeçalho legado vira apenas a introdução textual do módulo. */
+body.csc-brand-enhanced>header,
+body.csc-brand-enhanced>header .head{
+  width:min(720px,100%)!important;
+  min-height:0!important;
+  margin:0 auto!important;
+  padding:2px 16px 13px!important;
+  display:block!important;
+  color:var(--tacs-app-text)!important;
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
   box-shadow:none!important;
-  font-size:.72rem!important;
-  font-weight:900!important;
-  letter-spacing:.06em!important;
+  overflow:visible!important;
 }
+body.csc-brand-enhanced>header::before,body.csc-brand-enhanced>header::after{display:none!important}
+body.csc-brand-enhanced>header h1{display:none!important}
+body.csc-brand-enhanced>header>.badge,
+body.csc-brand-enhanced>header>.selo,
+body.csc-brand-enhanced>header .badge,
+body.csc-brand-enhanced>header .selo,
+body.csc-brand-enhanced>header .seal{display:none!important}
+body.csc-brand-enhanced>header p{
+  margin:0!important;
+  color:var(--tacs-app-muted)!important;
+  font-size:.93rem!important;
+  line-height:1.42!important;
+}
+body.csc-brand-enhanced>header .head>.refresh{margin-top:12px!important;width:100%!important}
+body.csc-central>header{display:none!important}
 
 main{
-  width:min(920px,100%)!important;
+  width:min(720px,100%)!important;
   margin:0 auto!important;
-  padding:16px 13px calc(76px + env(safe-area-inset-bottom))!important;
+  padding:8px 16px calc(40px + env(safe-area-inset-bottom))!important;
 }
+body.csc-central main{padding-bottom:calc(104px + env(safe-area-inset-bottom))!important}
 
-h1,h2,h3,.title,.section-title{
-  color:var(--tacs-app-text)!important;
-  font-weight:800!important;
-  letter-spacing:-.02em;
-  line-height:1.13;
-  overflow-wrap:break-word;
-}
-h2{font-size:clamp(1.3rem,5.5vw,1.7rem)!important}
-h3{font-size:1.12rem!important}
+h1,h2,h3,.title,.section-title{color:#fff!important;font-weight:850!important;letter-spacing:-.025em;line-height:1.13;overflow-wrap:break-word}
+h2{font-size:clamp(1.25rem,5.4vw,1.62rem)!important}
+h3{font-size:1.1rem!important}
 p,label,.sub,.muted,.meta,small{line-height:1.42;overflow-wrap:break-word}
 .muted,.sub,.meta,small{color:var(--tacs-app-muted)!important}
 label{color:var(--tacs-app-text)!important;font-weight:800!important}
 
-/* Superfícies e cards — mesma profundidade do App institucional */
-.panel,.painel,.card,.box,.caixa,.area-row,.maprow,.health-card,.summary-card,.stat,.metric,.item,.cartao,.newbox,.areaEnvio,.area-control,.lock,.grupoProfissional,.saude-aparelho,.saude-vazio{
+/* Superfícies: borda fina e discreta, como no protótipo. */
+.panel,.painel,.card,.box,.caixa,.newbox,.protect,.manutencao,.areaEnvio,.saude-notificacoes{
   min-width:0;
   max-width:100%;
-  color:var(--tacs-app-text)!important;
-  background:linear-gradient(145deg,#174765,#0c3049)!important;
-  border:2px solid #69b8c0!important;
-  border-radius:24px!important;
-  box-shadow:0 4px 0 #062334,0 9px 18px rgba(0,27,48,.35)!important;
-}
-.panel,.painel,.card,.box,.caixa,.newbox{padding:17px!important;margin-bottom:15px}
-.card h2,.card h3,.panel h2,.panel h3,.painel h2,.painel h3,.box h2,.caixa h1,.newbox h2,
-.cartao h3,.item h3,.area-row strong,.grupoProfissionalNome strong{color:#fff!important}
-.card summary>div,details summary>div:first-child,.row>*,.grid>*,.stats>*,.summary>*,.metrics>*{min-width:0}
-
-/* Resumos e indicadores */
-.resumo,.summary,.stats,.metrics,.saude-resumo{gap:10px!important}
-.numero,.number,.stat,.metric,.saude-numero,.quick-card{
-  min-width:0;
+  margin-bottom:15px!important;
+  padding:16px!important;
   color:var(--tacs-app-text)!important;
   background:linear-gradient(145deg,var(--tacs-app-card2),var(--tacs-app-card))!important;
   border:1px solid var(--tacs-app-line)!important;
-  border-radius:19px!important;
+  border-radius:24px!important;
   box-shadow:var(--tacs-app-shadow-soft)!important;
 }
-.numero strong,.number strong,.stat strong,.metric strong,.saude-numero strong{color:var(--tacs-app-accent)!important}
-.numero span,.number span,.stat span,.metric span,.saude-numero span{color:var(--tacs-app-muted)!important}
+.card h2,.card h3,.panel h2,.panel h3,.painel h2,.painel h3,.box h2,.caixa h1,.newbox h2{color:#fff!important}
 
-/* Campos: claros por legibilidade, integrados ao tema escuro */
+/* Central: welcome, saúde e módulos sem grandes quadros externos. */
+.csc-central #identityPanel{
+  position:relative!important;
+  display:block!important;
+  overflow:hidden!important;
+  padding:21px!important;
+  background:linear-gradient(145deg,var(--tacs-app-card2),var(--tacs-app-card))!important;
+  border:1px solid var(--tacs-app-line)!important;
+  border-radius:27px!important;
+  box-shadow:var(--tacs-app-shadow)!important;
+}
+.csc-central #identityPanel[hidden]{display:none!important}
+.csc-central #identityPanel::after{
+  content:"";
+  position:absolute;
+  width:150px;
+  height:150px;
+  right:-72px;
+  top:-76px;
+  border-radius:50%;
+  background:rgba(98,200,232,.12);
+  pointer-events:none;
+}
+.csc-welcome-copy{position:relative;z-index:1}
+.csc-welcome-copy small{display:block;color:var(--tacs-app-muted)!important}
+.csc-welcome-copy h1{margin:6px 0 8px!important;font-size:1.78rem!important;line-height:1.06!important;letter-spacing:-.04em!important}
+.csc-welcome-copy p{margin:0 0 14px!important;color:var(--tacs-app-muted)!important;font-size:.92rem!important}
+.csc-central #identityPanel>.avatar,
+.csc-central #identityPanel>div>#profileLabel,
+.csc-central #identityPanel>div>#professionalName,
+.csc-central #identityPanel>div>p{display:none!important}
+.csc-central #adminAreaBox{
+  position:relative;
+  z-index:2;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+}
+.csc-central #adminAreaBox label{margin:0 0 7px!important;font-size:.8rem!important;color:var(--tacs-app-muted)!important}
+.csc-central #healthPanel,
+.csc-central #modulesPanel{
+  padding:0!important;
+  margin-top:22px!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.csc-central #modulesPanel>h2{margin:0 2px 5px!important}
+.csc-central #modulesPanel>p{margin:0 2px 13px!important}
+
+/* Indicadores e cards internos. */
+.resumo,.summary,.stats,.metrics,.health-grid,.saude-resumo{gap:10px!important}
+.numero,.number,.stat,.metric,.health-card,.saude-numero,.quick-card{
+  min-width:0;
+  color:var(--tacs-app-text)!important;
+  background:var(--tacs-app-card)!important;
+  border:1px solid var(--tacs-app-line)!important;
+  border-radius:21px!important;
+  box-shadow:var(--tacs-app-shadow-soft)!important;
+}
+.numero,.number,.stat,.metric,.saude-numero{padding:13px!important}
+.health-card{min-height:108px!important;padding:13px!important}
+.numero strong,.number strong,.stat strong,.metric strong,.saude-numero strong{color:var(--tacs-app-accent)!important}
+.numero span,.number span,.stat span,.metric span,.saude-numero span,.health-card span{color:var(--tacs-app-muted)!important}
+.health-card.ok span{color:var(--tacs-app-accent)!important}
+.health-card.warn span{color:#f0d391!important}
+.health-card.err span{color:#ffaaa5!important}
+
+/* Módulos da Central no mesmo desenho do protótipo App 4. */
+.module-grid,.modules{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+.module{
+  position:relative!important;
+  min-width:0!important;
+  min-height:154px!important;
+  padding:15px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  gap:10px!important;
+  overflow:hidden!important;
+  text-align:left!important;
+  color:#fff!important;
+  background:linear-gradient(145deg,var(--tacs-app-card2),var(--tacs-app-card))!important;
+  border:1px solid var(--tacs-app-line)!important;
+  border-radius:25px!important;
+  box-shadow:var(--tacs-app-shadow)!important;
+}
+.module::before{
+  content:"›"!important;
+  position:absolute!important;
+  top:13px!important;
+  right:13px!important;
+  width:38px!important;
+  height:38px!important;
+  display:grid!important;
+  place-items:center!important;
+  border-radius:50%!important;
+  background:#b4eee0!important;
+  color:#123246!important;
+  font-size:1.55rem!important;
+  font-weight:900!important;
+}
+.module.admin-only::after,.module.external::after{display:none!important}
+.module .icon,.module-icon{
+  width:62px!important;
+  height:62px!important;
+  flex:0 0 62px!important;
+  margin:0 0 3px!important;
+  display:grid!important;
+  place-items:center!important;
+  border:1px solid #467c9a!important;
+  border-radius:20px!important;
+  background:linear-gradient(145deg,var(--tacs-app-primary),var(--tacs-app-top))!important;
+  color:#fff!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.20),0 9px 19px rgba(0,0,0,.20)!important;
+  font-size:1.85rem!important;
+}
+.module .icon img,.module-icon img{width:43px!important;height:43px!important;object-fit:contain!important}
+.module>div{min-width:0!important;padding-right:3px!important}
+.module strong{display:block!important;color:#fff!important;font-size:.98rem!important;line-height:1.16!important}
+.module span:not(.icon){display:block;color:var(--tacs-app-muted)!important;font-size:.76rem!important;line-height:1.31!important;margin-top:5px!important}
+.module.locked{opacity:.48!important}
+
+/* Campos integrados ao tema; nada de grandes caixas brancas desconectadas. */
 input,select,textarea,button,.btn,.botao{max-width:100%;font:inherit}
 input:not([type="checkbox"]):not([type="radio"]),select,textarea,.field,.campo,.validadeCampo,.validadeControle{
   width:100%;
   min-width:0;
-  min-height:54px;
-  border:1px solid #577f98!important;
+  min-height:52px;
+  padding:11px 13px!important;
+  border:1px solid #416985!important;
   border-radius:16px!important;
-  background:#f7fbfd!important;
-  color:#102d40!important;
-  box-shadow:inset 0 1px 2px rgba(0,0,0,.05)!important;
+  background:#091e30!important;
+  color:#f7fcff!important;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.025)!important;
 }
-input:not([type="checkbox"]):not([type="radio"]),select,textarea,.field,.campo,.validadeControle{padding:11px 13px!important}
-input[readonly],textarea[readonly],.field[readonly],.campo[readonly]{background:#dfeaf0!important;color:#445e6d!important}
+.validadeCampo{padding:0!important;overflow:hidden!important}
+.validadeCampo .validadeControle{border:0!important;border-radius:0!important}
+input::placeholder,textarea::placeholder{color:#7f9aaa!important;opacity:1}
+input[readonly],textarea[readonly],.field[readonly],.campo[readonly]{background:#102d46!important;color:#adc4d2!important}
 textarea{min-height:110px;resize:vertical}
 input[type="checkbox"],input[type="radio"]{accent-color:#62c8e8}
 input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-visible,.campo:focus-visible{
-  outline:3px solid rgba(98,200,232,.30)!important;
+  outline:3px solid rgba(98,200,232,.24)!important;
   outline-offset:1px!important;
   border-color:var(--tacs-app-accent2)!important;
 }
 
-/* Botões e ações */
+/* Botões: reação tátil/visual imediata. */
 button,.btn,.botao{
-  min-height:54px;
+  min-height:52px;
   border-radius:17px!important;
   font-weight:850!important;
   line-height:1.18;
@@ -289,31 +419,23 @@ button,.btn,.botao{
   overflow-wrap:break-word;
   touch-action:manipulation;
   -webkit-tap-highlight-color:transparent;
-  transition:transform .10s ease,filter .10s ease,box-shadow .10s ease!important;
+  transition:transform .11s ease,filter .11s ease,background-color .11s ease,box-shadow .11s ease!important;
 }
 .btn,.botao,button[type="submit"],.primary-action,.action-primary,
-button[id*="salvar"],button[id*="save"],button[class*="salvar"],button[class*="save"]{
-  background:linear-gradient(180deg,#1d759b,#145574)!important;
+button[id*="salvar"],button[id*="save"],button[class*="salvar"],button[class*="save"],.refresh{
+  background:linear-gradient(180deg,#1a6c91,#145574)!important;
   color:#fff!important;
-  border:2px solid #69b8c0!important;
-  box-shadow:0 3px 0 #062334,0 7px 15px rgba(0,0,0,.18)!important;
+  border:1px solid #4d8ca8!important;
+  box-shadow:0 6px 14px rgba(0,0,0,.16)!important;
 }
-.btn.green,.botao.verde,.action-primary{
-  background:linear-gradient(180deg,#1d759b,#145574)!important;
-  color:#fff!important;
-  border-color:#72d6bd!important;
-}
-.btn.gray,.botao.cinza,.botao.secundario{background:#29475a!important;border-color:#58798c!important;color:#fff!important}
-.btn.red,.btn-danger,.botao.perigo,.botao.vermelho,.danger,.dangerous,.delete,.remove,.red-action{
-  background:linear-gradient(180deg,#a33b48,#7e2e38)!important;
-  color:#fff!important;
-  border-color:#d47d86!important;
-}
-button:active:not(:disabled),.btn:active:not(:disabled),.botao:active:not(:disabled){transform:translateY(2px) scale(.985)!important;filter:brightness(1.08)}
-button:disabled,.btn:disabled,.botao:disabled{opacity:.46!important;cursor:not-allowed!important;filter:saturate(.65)}
-button:focus-visible,.btn:focus-visible,.botao:focus-visible,a:focus-visible{outline:3px solid #ffd54f!important;outline-offset:3px!important}
+.btn.green,.botao.verde,.action-primary{border-color:#5cb89d!important}
+.btn.gray,.botao.cinza,.botao.secundario{background:#29475a!important;border-color:#416985!important;color:#fff!important}
+.btn.red,.btn-danger,.botao.perigo,.botao.vermelho,.danger,.dangerous,.delete,.remove,.red-action{background:#7e2e38!important;color:#fff!important;border-color:#9f5360!important}
+button:active:not(:disabled),.btn:active:not(:disabled),.botao:active:not(:disabled),.module:active:not(:disabled){transform:scale(.965)!important;filter:brightness(1.08)!important}
+button:disabled,.btn:disabled,.botao:disabled{opacity:.45!important;cursor:not-allowed!important}
+button:focus-visible,.btn:focus-visible,.botao:focus-visible,a:focus-visible{outline:3px solid var(--tacs-app-accent2)!important;outline-offset:3px!important}
 
-/* Abas */
+/* Abas e listas. */
 .tabs,.abas,.login-tabs{gap:8px!important}
 .tab,.aba{
   min-width:0;
@@ -322,155 +444,342 @@ button:focus-visible,.btn:focus-visible,.botao:focus-visible,a:focus-visible{out
   border:1px solid var(--tacs-app-line)!important;
   box-shadow:none!important;
 }
-.tab.active,.aba.ativa,.tabs button.active,[role="tab"][aria-selected="true"]{
-  background:#145574!important;
-  color:#fff!important;
-  border-color:#72d6bd!important;
-  box-shadow:0 0 0 2px rgba(131,239,169,.10)!important;
+.tab.active,.aba.ativa,.tabs button.active,[role="tab"][aria-selected="true"]{background:#145574!important;color:#fff!important;border-color:#5cb89d!important}
+details,.cartao,.item,.ticket,.grupoProfissional,.area-row,.maprow,.saude-aparelho,.saude-vazio{
+  min-width:0;
+  color:var(--tacs-app-text)!important;
+  background:linear-gradient(145deg,var(--tacs-app-card2),var(--tacs-app-card))!important;
+  border:1px solid var(--tacs-app-line)!important;
+  border-radius:20px!important;
+  box-shadow:var(--tacs-app-shadow-soft)!important;
+  overflow:hidden;
 }
-
-/* Details/listas */
-details,.cartao,.item{overflow:hidden}
 details>summary,.cartao summary,.item summary,.grupoProfissional>summary{
   list-style:none;
   color:#fff!important;
-  background:linear-gradient(145deg,#174765,#0c3049)!important;
+  background:transparent!important;
   border:0!important;
 }
 details>summary::-webkit-details-marker,.cartao summary::-webkit-details-marker,.item summary::-webkit-details-marker{display:none}
-.corpo,.body,.agendaProfissionalCorpo{
-  min-width:0;
-  color:var(--tacs-app-text)!important;
-  background:#0b263d!important;
-  border-top:1px solid var(--tacs-app-line)!important;
-}
-.check,.maprow{
-  color:var(--tacs-app-text)!important;
-  background:#102d46!important;
-  border:1px solid #416985!important;
-  box-shadow:none!important;
-}
+.corpo,.body,.agendaProfissionalCorpo{min-width:0;color:var(--tacs-app-text)!important;background:#0b263d!important;border-top:1px solid var(--tacs-app-line)!important}
+.check,.maprow{color:var(--tacs-app-text)!important;background:#102d46!important;border:1px solid #345b74!important;box-shadow:none!important}
 
-/* Status e avisos */
-.status{
+/* Avisos e status sem contornos agressivos. */
+.status,.nota,.note{
   color:var(--tacs-app-muted)!important;
   background:#0b263d!important;
   border:1px solid var(--tacs-app-line)!important;
   border-radius:16px!important;
   box-shadow:none!important;
 }
-.status.ok{color:#bff4d0!important;background:rgba(23,106,72,.30)!important;border-color:#458c68!important}
-.status.warn,.status.aviso{color:#f4d99c!important;background:rgba(138,102,28,.28)!important;border-color:#9c7a32!important}
-.status.err,.status.erro{color:#ffc1c9!important;background:rgba(151,47,61,.28)!important;border-color:#aa5966!important}
-.nota,.note{
-  color:#d8ebf4!important;
-  background:#102d46!important;
-  border:1px solid #416985!important;
-  border-radius:18px!important;
-  box-shadow:none!important;
-}
-
-/* Selos */
+.status{padding:12px 13px!important}
+.nota,.note{padding:13px 14px!important}
+.status.ok{color:#bff4d0!important;background:rgba(23,106,72,.23)!important;border-color:#356f56!important}
+.status.warn,.status.aviso{color:#f4d99c!important;background:rgba(138,102,28,.20)!important;border-color:#7e672f!important}
+.status.err,.status.erro{color:#ffc1c9!important;background:rgba(151,47,61,.22)!important;border-color:#824550!important}
 .signal,.sinal,.badge,.seal,.selo,.status-badge,.pill,.chip,.tag,.estado,.state-pill{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  flex:0 0 auto;
-  max-width:100%;
-  border-radius:999px!important;
-  padding:.45em .8em!important;
-  line-height:1.05;
-  font-weight:850!important;
+  display:inline-flex;align-items:center;justify-content:center;max-width:100%;border-radius:999px!important;padding:.43em .76em!important;line-height:1.05;font-weight:850!important
 }
 .signal,.sinal,.pill,.chip,.tag{background:#0b263d!important;color:#dcebf3!important;border:1px solid #416985!important}
 .signal.off,.sinal.inativo,.pill.off{background:#57313a!important;color:#ffd0d5!important;border-color:#85515b!important}
 .sinal.ativo,.pill:not(.off){color:#c7f7d6!important}
 
-/* Agendas: preservar controles e diferenças funcionais */
+/* Sessão única: esconde o formulário de PIN enquanto existir token da sessão.
+   Se o servidor invalidar e o módulo apagar o token, o formulário reaparece automaticamente. */
+.csc-session-active .csc-auth-control,
+.csc-session-active .csc-auth-title{display:none!important}
+.csc-has-auth{transition:none!important}
+
+/* Agendas, notificações e tabelas mantêm a lógica, no mesmo sistema visual. */
 .grupoProfissional{padding:0!important}
 .grupoProfissional>summary{padding:14px 15px!important}
 .grupoProfissionalMeta{color:var(--tacs-app-muted)!important}
-.grupoAcao{background:#0b263d!important;color:#fff!important;border:1px solid var(--tacs-app-accent2)!important}
+.grupoAcao{background:#0b263d!important;color:#fff!important;border:1px solid #416985!important}
 .agendaProfissionalCorpo{padding:11px!important}
-.cartao .corpo{background:#0b263d!important}
 .cartao[data-chave^="NUTRICIONISTA|"] label:has(+ input[name="vagasEmergenciais"]),
 .cartao[data-chave^="NUTRICIONISTA|"] input[name="vagasEmergenciais"]{display:none!important}
-
-/* Saúde das notificações / suporte */
 .saude-notificacoes,.saude-lista{color:var(--tacs-app-text)!important}
-.saude-resumo .saude-numero{box-shadow:var(--tacs-app-shadow-soft)!important}
-.saude-resumo button.saude-numero[data-saude-filtro="ATIVO"]{background:linear-gradient(145deg,#145d50,#0b453e)!important;border-color:#48aa91!important}
-.saude-resumo button.saude-numero[data-saude-filtro="REPARO"]{background:linear-gradient(145deg,#70591d,#4d3c13)!important;border-color:#b6963b!important}
-.saude-resumo button.saude-numero[data-saude-filtro="INATIVO"]{background:linear-gradient(145deg,#723640,#51262e)!important;border-color:#a65a65!important}
-.saude-resumo button.saude-numero[data-saude-filtro="SEM_CONFIRMACAO"]{background:linear-gradient(145deg,#8a531e,#603912)!important;border-color:#c27a31!important}
+.saude-resumo button.saude-numero[data-saude-filtro="ATIVO"]{background:#145d50!important;border-color:#377b6c!important}
+.saude-resumo button.saude-numero[data-saude-filtro="REPARO"]{background:#70591d!important;border-color:#8d7332!important}
+.saude-resumo button.saude-numero[data-saude-filtro="INATIVO"]{background:#723640!important;border-color:#8c4d57!important}
+.saude-resumo button.saude-numero[data-saude-filtro="SEM_CONFIRMACAO"]{background:#8a531e!important;border-color:#a06932!important}
 .saude-resumo button.saude-numero[data-saude-filtro] strong,.saude-resumo button.saude-numero[data-saude-filtro] span{color:#fff!important}
 .saude-meta{color:var(--tacs-app-muted)!important}
-
-/* Tabelas */
 .tablewrap{overflow:auto;border:1px solid var(--tacs-app-line)!important;border-radius:17px!important;background:#0b263d!important}
 table{color:var(--tacs-app-text)!important;background:#0b263d!important}
 th{background:#153b58!important;color:#fff!important}
 td,th{border-color:#294b63!important}
 td{color:#dcebf3!important}
 
-/* Carregamentos de wrappers oficiais */
-.carga,.loading{min-height:100svh!important;background:var(--tacs-app-bg)!important;color:#fff!important}
-.carga .caixa,.loading .box{width:min(620px,calc(100% - 28px));margin:auto!important}
-.erro,.error{color:#ffc1c9!important}
-
-/* Viewer da Central: mantém o app shell sem aparência de página antiga */
-.viewer{background:var(--tacs-app-bg)!important}
-.viewer-bar{
-  background:linear-gradient(180deg,#102d46,#0b263d)!important;
-  color:#fff!important;
-  border-bottom:1px solid var(--tacs-app-line)!important;
-  box-shadow:0 8px 22px rgba(0,0,0,.22)!important;
-}
-.viewer-back{background:#145574!important;color:#fff!important;border:1px solid #69b8c0!important;border-radius:14px!important}
-.viewer iframe{background:var(--tacs-app-bg)!important}
-
-/* Componentes antigos de contraste deixam de fazer sentido no padrão canônico */
+/* Componentes técnicos/legados que não pertencem ao App institucional. */
 #portalTacsContrastToggleV1,#contrastToggle,#alternarContraste,.contrasteBotao,.preferenciaVisual{display:none!important}
-
-/* Não interferir em pontes técnicas ocultas */
+#portalTacsBackCentralV1{display:none!important}
+.viewer{display:none!important}
+body.viewer-open{overflow:auto!important}
 [hidden],.hidden,.oculto{display:none!important}
 .ponte,.bridge{pointer-events:none!important}
-
 footer,.footer{
-  max-width:100%;
-  padding-bottom:calc(22px + env(safe-area-inset-bottom))!important;
-  color:var(--tacs-app-muted)!important;
-  background:#071827!important;
-  border-top:1px solid var(--tacs-app-line)!important;
-  line-height:1.35;
+  margin:0!important;
+  padding:18px 16px calc(22px + env(safe-area-inset-bottom))!important;
+  color:#7894a5!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  text-align:center;
 }
+.csc-central footer{display:none!important}
+
+/* Dock da Central no padrão de aplicativo. */
+.csc-dock{
+  position:fixed;
+  z-index:190;
+  left:50%;
+  bottom:0;
+  transform:translateX(-50%);
+  width:min(720px,100%);
+  padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:5px;
+  background:rgba(9,30,48,.96);
+  -webkit-backdrop-filter:blur(20px);
+  backdrop-filter:blur(20px);
+  border:0!important;
+  box-shadow:0 -10px 24px rgba(0,0,0,.16);
+}
+.csc-navitem{
+  min-width:0!important;
+  min-height:58px!important;
+  padding:5px 3px!important;
+  display:grid!important;
+  place-items:center!important;
+  gap:2px!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:17px!important;
+  color:var(--tacs-app-muted)!important;
+  box-shadow:none!important;
+  font-size:.69rem!important;
+  font-weight:850!important;
+}
+.csc-navitem i{font-style:normal;font-size:1.3rem;line-height:1}
+.csc-navitem.active{color:var(--tacs-app-accent)!important;background:rgba(131,239,169,.09)!important}
 
 @media(max-width:430px){
-  header{padding-left:15px!important;padding-right:15px!important;padding-bottom:88px!important}
-  header::before{left:15px;width:54px;height:54px}
-  header::after{left:80px;bottom:34px;font-size:.66rem}
-  main{padding-left:11px!important;padding-right:11px!important}
-  .panel,.painel,.card,.box,.caixa,.newbox{padding:14px!important;border-radius:21px!important}
-  button,.btn,.botao{min-height:56px}
-  .card summary,.cartao summary,.item summary{align-items:flex-start!important}
+  .csc-appbar{min-height:91px;padding-left:13px;padding-right:13px;gap:10px}
+  .csc-appbar-icon{width:68px;height:68px;flex-basis:68px}
+  .csc-appbar-title small{font-size:.69rem;letter-spacing:.095em}
+  .csc-appbar-title strong{font-size:1.04rem}
+  .csc-appbar-back{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;flex-basis:44px}
+  body.csc-brand-enhanced>header,body.csc-brand-enhanced>header .head{padding-left:13px!important;padding-right:13px!important}
+  main{padding-left:13px!important;padding-right:13px!important}
+  .panel,.painel,.card,.box,.caixa,.newbox,.protect,.manutencao,.areaEnvio,.saude-notificacoes{padding:14px!important;border-radius:21px!important}
+  .module-grid,.modules{gap:10px!important}
+  .module{min-height:150px!important;padding:13px!important;border-radius:22px!important}
+  .module .icon,.module-icon{width:58px!important;height:58px!important;flex-basis:58px!important;border-radius:18px!important}
+  .module strong{font-size:.94rem!important}
+  .module span:not(.icon){font-size:.73rem!important}
+  .health-grid,.resumo,.saude-resumo{gap:8px!important}
   .signal,.sinal,.badge,.seal,.selo,.status-badge,.pill,.chip,.tag{white-space:normal!important;text-align:center}
-  .module-grid,.health-grid{gap:9px!important}
-  .module{border-radius:19px!important}
 }
+@media(max-width:350px){.module-grid,.modules{grid-template-columns:1fr!important}.module{min-height:132px!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+</style>
+<script id="portalTacsAdminUiBehaviorR2">
+/*
+ * Conecta Saúde Comunitária — comportamento do shell App institucional
+ * Contrato: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R2
+ * Regra: identidade institucional única, reação ao toque e reaproveitamento visual da sessão.
+ * Este script NÃO autentica nem cria sessão: apenas reutiliza os tokens já validados pelos módulos.
+ */
+(function(){
+'use strict';
+if(window.PortalTacsAdminApp4ShellR2)return;
+window.PortalTacsAdminApp4ShellR2=true;
 
-@media(min-width:700px){
-  main{padding-top:20px!important}
+var ROOT=document.documentElement;
+var PATH=String(location.pathname||'');
+var CENTRAL=/\/central-administrativa-tacs\.html$/i.test(PATH);
+var ADMIN_PANEL=CENTRAL||(
+  /\/teste-v1\/painel-moradores-v2\.html$/i.test(PATH)||
+  /\/painel-suporte-moradores(?:-v2)?\.html$/i.test(PATH)||
+  /\/painel-oficial-(?:recados-campanhas|agendas-vagas|profissionais-servicos|tacs-areas|organizacoes-municipios)\.html$/i.test(PATH)||
+  /\/teste-v1\/painel-(?:profissionais-servicos|tacs-areas)-v1\.html$/i.test(PATH)
+);
+if(!ADMIN_PANEL)return;
+
+var ADMIN_TOKEN='portalTacsAdminTokenV1';
+var TERRITORY_TOKEN='portalTacsTerritorioTokenV1';
+var RETURN_FLAG='portalTacsRetornoCentralV1';
+var ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3';
+var sessionTimer=0;
+
+function text(v){return String(v==null?'':v).trim()}
+function hasSession(){
+  try{return Boolean(text(sessionStorage.getItem(ADMIN_TOKEN)||'')||text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}
 }
-
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{
-    scroll-behavior:auto!important;
-    animation-duration:.001ms!important;
-    animation-iteration-count:1!important;
-    transition-duration:.001ms!important;
+function isTerritory(){try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}}
+function syncSessionClass(){
+  var active=hasSession();
+  ROOT.classList.toggle('csc-session-active',active);
+  ROOT.classList.toggle('csc-session-missing',!active);
+  if(document.body){
+    document.body.classList.toggle('csc-session-active',active);
+    document.body.classList.toggle('csc-session-missing',!active);
   }
 }
-</style>
+function panelTitle(){
+  if(CENTRAL)return 'Central Administrativa';
+  var h=document.querySelector('header h1');
+  if(h&&text(h.textContent))return text(h.textContent);
+  var t=text(document.title).split('|')[0].split('•')[0];
+  return t||'Painel administrativo';
+}
+function centralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html'+(isTerritory()?'?acesso=tacs':'')}
+function backToCentral(){
+  try{sessionStorage.setItem(RETURN_FLAG,'1')}catch(e){}
+  var params=null,from=false;
+  try{params=new URLSearchParams(location.search||'');from=String(params.get('from')||'').toLowerCase()==='central'}catch(e){}
+  if(from&&history.length>1){history.back();return}
+  location.assign(centralUrl());
+}
+function vibrate(){try{if(navigator.vibrate)navigator.vibrate(8)}catch(e){}}
+
+function buildAppbar(){
+  if(document.getElementById('cscInstitutionalAppbar'))return;
+  var bar=document.createElement('div');
+  bar.id='cscInstitutionalAppbar';
+  bar.className='csc-appbar';
+  bar.setAttribute('role','banner');
+
+  var icon=document.createElement('img');
+  icon.className='csc-appbar-icon';
+  icon.src=ICON;
+  icon.alt='Ícone oficial do Conecta Saúde Comunitária';
+  icon.decoding='async';
+
+  var title=document.createElement('div');
+  title.className='csc-appbar-title';
+  var brand=document.createElement('small');
+  brand.textContent='CONECTA SAÚDE COMUNITÁRIA';
+  var strong=document.createElement('strong');
+  strong.textContent=panelTitle();
+  title.appendChild(brand);title.appendChild(strong);
+
+  bar.appendChild(icon);bar.appendChild(title);
+  if(!CENTRAL){
+    var back=document.createElement('button');
+    back.type='button';
+    back.className='csc-appbar-back';
+    back.setAttribute('aria-label','Voltar à Central');
+    back.textContent='‹';
+    back.addEventListener('click',function(){vibrate();backToCentral()});
+    bar.appendChild(back);
+  }
+  document.body.insertBefore(bar,document.body.firstChild);
+  document.body.classList.add('csc-brand-enhanced');
+  document.body.classList.toggle('csc-central',CENTRAL);
+  var meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute('content','#071827');
+}
+
+function markAuthControls(){
+  var passwords=document.querySelectorAll('input[type="password"]');
+  passwords.forEach(function(input){
+    input.classList.add('csc-auth-control');
+    if(input.labels){Array.prototype.forEach.call(input.labels,function(label){label.classList.add('csc-auth-control')})}
+    var wrap=input.closest('#adminLogin,#tacsLogin');
+    if(wrap)wrap.classList.add('csc-auth-control');
+    var section=input.closest('section');
+    if(section){
+      section.classList.add('csc-has-auth');
+      var heading=section.querySelector('h2');
+      if(heading)heading.classList.add('csc-auth-title');
+    }
+  });
+  ['accessActions','pinHelp','loginAdminTab','loginTacsTab'].forEach(function(id){
+    var n=document.getElementById(id);if(n)n.classList.add('csc-auth-control');
+  });
+  ['loginAdminTab','loginTacsTab'].forEach(function(id){
+    var n=document.getElementById(id),parent=n&&n.parentElement;
+    if(parent&&parent.querySelectorAll('#loginAdminTab,#loginTacsTab').length===2)parent.classList.add('csc-auth-control');
+  });
+  if(!CENTRAL){
+    var sair=document.getElementById('sair');
+    if(sair)sair.classList.add('csc-auth-control');
+  }
+}
+
+function buildCentralWelcome(){
+  if(!CENTRAL)return;
+  var identity=document.getElementById('identityPanel');
+  if(identity&&!document.getElementById('cscCentralWelcomeCopy')){
+    var copy=document.createElement('div');
+    copy.id='cscCentralWelcomeCopy';
+    copy.className='csc-welcome-copy';
+    copy.innerHTML='<small>Olá, administrador</small><h1>Gestão da área</h1><p>Acesse os serviços, acompanhe a situação e administre sua unidade.</p>';
+    identity.insertBefore(copy,identity.firstChild);
+  }
+  if(document.getElementById('cscInstitutionalDock'))return;
+  var dock=document.createElement('nav');
+  dock.id='cscInstitutionalDock';
+  dock.className='csc-dock';
+  dock.setAttribute('aria-label','Navegação da Central');
+  var items=[
+    ['⌂','Início',function(){window.scrollTo({top:0,behavior:'smooth'})}],
+    ['▦','Painéis',function(){var n=document.getElementById('modulesPanel');if(n)n.scrollIntoView({behavior:'smooth',block:'start'})}],
+    ['🔔','Avisos',function(){var n=document.getElementById('healthPanel');if(n)n.scrollIntoView({behavior:'smooth',block:'start'})}],
+    ['●','Perfil',function(){var n=document.getElementById('identityPanel');if(n)n.scrollIntoView({behavior:'smooth',block:'start'})}]
+  ];
+  items.forEach(function(item,i){
+    var b=document.createElement('button');b.type='button';b.className='csc-navitem'+(i===0?' active':'');
+    b.innerHTML='<i>'+item[0]+'</i><span>'+item[1]+'</span>';
+    b.addEventListener('click',function(){vibrate();dock.querySelectorAll('.csc-navitem').forEach(function(x){x.classList.toggle('active',x===b)});item[2]()});
+    dock.appendChild(b);
+  });
+  document.body.appendChild(dock);
+}
+
+function installTouchFeedback(){
+  document.addEventListener('click',function(e){
+    var b=e.target&&e.target.closest?e.target.closest('button,.botao,.btn,.module,[role="button"]'):null;
+    if(b&&!b.disabled)vibrate();
+  },{passive:true});
+}
+
+function installFinalSkin(){
+  if(document.getElementById('cscApp4FinalSkinR2'))return;
+  var style=document.createElement('style');
+  style.id='cscApp4FinalSkinR2';
+  style.textContent='\
+/* A última camada vence estilos visuais legados adicionados por scripts antigos, sem tocar na lógica. */\
+html,body{background:#071827!important;color:#f7fcff!important}\
+body{background:linear-gradient(180deg,#0b263d 0,#071827 360px,#071827 100%)!important}\
+header{background:transparent!important;background-image:none!important;border:0!important;box-shadow:none!important;filter:none!important}\
+.panel,.painel,.card,.box,.caixa,.newbox{border-color:#2b5a76!important;box-shadow:0 12px 26px rgba(0,0,0,.20)!important}\
+.module,.health-card,.numero,.number,.stat,.metric,.saude-numero,.item,.cartao,.ticket,.grupoProfissional,.area-row,.maprow{border-color:#2b5a76!important}\
+button,.btn,.botao,.module,.tab,.aba{transition:transform .11s ease,filter .11s ease,background-color .11s ease,box-shadow .11s ease!important}\
+button:active:not(:disabled),.btn:active:not(:disabled),.botao:active:not(:disabled),.module:active:not(:disabled),.tab:active:not(:disabled),.aba:active:not(:disabled){transform:scale(.965)!important;filter:brightness(1.08)!important}\
+#portalTacsBackCentralV1{display:none!important}\
+footer,.footer{border:0!important;box-shadow:none!important}\
+';
+  (document.head||document.documentElement).appendChild(style);
+}
+
+function boot(){
+  buildAppbar();
+  markAuthControls();
+  buildCentralWelcome();
+  syncSessionClass();
+  installTouchFeedback();
+  installFinalSkin();
+  sessionTimer=setInterval(syncSessionClass,700);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+window.addEventListener('pageshow',function(){syncSessionClass();installFinalSkin()});
+window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sessionTimer)},{once:true});
+}());
+</script>
 <!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->
 </head>
 <body>
