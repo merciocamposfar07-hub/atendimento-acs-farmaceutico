@@ -1684,7 +1684,7 @@ body.csc-brand-enhanced .loading{
 body:not(.csc-central) .csc-platform-footer{padding-bottom:calc(28px + env(safe-area-inset-bottom))!important}
 .csc-central footer.csc-platform-footer{display:grid!important}
 
-/* RODAPE_INSTITUCIONAL_2026_2027_V2 */
+/* RODAPE_INSTITUCIONAL_V3 */
 .csc-platform-footer{
   width:min(720px,100%)!important;
   margin:34px auto 0!important;
@@ -1762,6 +1762,34 @@ html body .prontuario-area{
   font-weight:850!important;
   opacity:1!important;
 }
+
+
+/* AREA_CONTROL_SEM_BRANCO_2026_09_10_V2 */
+html body .area-control,
+html body #areaControl.area-control{
+  background:#102d46!important;
+  background-image:none!important;
+  color:#f7fcff!important;
+  border-color:#416f89!important;
+  box-shadow:none!important;
+}
+html body .area-control label,
+html body .area-control strong{
+  color:#f7fcff!important;
+  opacity:1!important;
+}
+
+/* PERFIL_ADMIN_EXPANSIVEL_2026_09_10_V1 */
+html body .csc-profile-admin-toggle{
+  width:100%!important;
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  text-align:left!important;
+  font:inherit!important;
+  cursor:pointer!important;
+}
+html body .csc-profile-admin-toggle[aria-expanded="true"]{border-color:#83efa9!important}
+html body .csc-profile-admin-names[hidden]{display:none!important}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
@@ -1936,10 +1964,12 @@ function openProfilePage(){
   var page=document.getElementById('cscProfilePage');
   if(!page){page=document.createElement('section');page.id='cscProfilePage';page.className='csc-profile-page';main.appendChild(page)}
   var ctx=centralContextFromCache()||{},areas=Array.isArray(ctx.areas)?ctx.areas:[],tacs=Array.isArray(ctx.tacs)?ctx.tacs:[],admins=Array.isArray(ctx.administradores)?ctx.administradores:[];
-  if(!admins.length)admins=[{nomeCompleto:'Administrador geral',perfil:'ADMINISTRADOR GERAL',ativo:true}];
   function areaName(id){for(var i=0;i<areas.length;i++)if(text(areas[i].areaId)===text(id))return text(areas[i].areaNome||areas[i].areaId);return text(id)||'Área não vinculada'}
-  var html='<h2>Administradores e TACS</h2><p class="csc-profile-intro">Acesso rápido aos perfis cadastrados e às áreas administradas.</p><h3>Administradores</h3><div class="csc-profile-list">';
-  admins.forEach(function(a){html+='<article class="csc-profile-card"><strong>'+escapeProfile(a.nomeCompleto||a.nome||'Administrador geral')+'</strong><span>'+escapeProfile(a.perfil||'ADMINISTRADOR GERAL')+(a.ativo===false?' • Inativo':' • Ativo')+'</span></article>'});
+  var html='<h2>Administradores e TACS</h2><p class="csc-profile-intro">Acesso rápido aos perfis cadastrados e às áreas administradas.</p><h3>Administradores</h3><div class="csc-profile-list">'+
+    '<button type="button" class="csc-profile-card csc-profile-admin-toggle" aria-expanded="false" aria-controls="cscProfileAdminNames"><strong>Administrador geral</strong><span>Toque para ver os administradores cadastrados</span></button></div>'+
+    '<div id="cscProfileAdminNames" class="csc-profile-list csc-profile-admin-names" hidden>';
+  if(!admins.length)html+='<div class="csc-profile-empty">Nenhum nome de administrador foi encontrado na base administrativa.</div>';
+  admins.forEach(function(a){html+='<article class="csc-profile-card"><strong>'+escapeProfile(a.nomeCompleto||a.nome||'Administrador')+'</strong><span>'+escapeProfile(a.perfil||'ADMINISTRADOR GERAL')+(a.ativo===false?' • Inativo':' • Ativo')+'</span></article>'});
   html+='</div><h3>TACS cadastrados</h3><div class="csc-profile-list">';
   if(!tacs.length)html+='<div class="csc-profile-empty">Nenhum TACS cadastrado foi devolvido pelo servidor.</div>';
   tacs.forEach(function(t){html+='<button type="button" class="csc-profile-card csc-profile-area-jump" data-area="'+escapeProfile(t.areaId||'')+'"><strong>'+escapeProfile(t.nomeCompleto||t.nome||t.tacsId||'TACS')+'</strong><span>'+escapeProfile(areaName(t.areaId))+(t.ativo===false?' • Inativo':' • Ativo')+'</span></button>'});
@@ -1948,6 +1978,8 @@ function openProfilePage(){
   areas.forEach(function(a){html+='<button type="button" class="csc-profile-card csc-profile-area-jump" data-area="'+escapeProfile(a.areaId||'')+'"><strong>'+escapeProfile(a.areaNome||a.areaId||'Área')+'</strong><span>'+escapeProfile(a.unidadeNome||a.unidadeId||'Unidade não informada')+'</span></button>'});
   html+='</div>';
   page.innerHTML=html;page.hidden=false;
+  var adminToggle=page.querySelector('.csc-profile-admin-toggle'),adminNames=page.querySelector('.csc-profile-admin-names');
+  if(adminToggle&&adminNames)adminToggle.addEventListener('click',function(){var open=adminToggle.getAttribute('aria-expanded')==='true';adminToggle.setAttribute('aria-expanded',open?'false':'true');adminNames.hidden=open;adminToggle.querySelector('span').textContent=open?'Toque para ver os administradores cadastrados':'Toque para ocultar os administradores cadastrados'});
   page.querySelectorAll('.csc-profile-area-jump').forEach(function(btn){btn.addEventListener('click',function(){var area=text(btn.dataset.area);if(area){try{localStorage.setItem('portalTacsCentralAreaV1',area)}catch(e){}var select=document.getElementById('adminArea');if(select&&Array.prototype.some.call(select.options,function(o){return o.value===area})){select.value=area;select.dispatchEvent(new Event('change',{bubbles:true}))}}showCentralHome()})});
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1987,7 +2019,7 @@ function buildPlatformFooter(){
   var footer=document.createElement('footer');
   footer.id='cscPlatformFooter';
   footer.className='csc-platform-footer';
-  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong><small>Conecta Saúde Comunitária — Plataforma 2026/2027</small>';
+  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong><small>Conecta Saúde Comunitária — Plataforma</small>';
   var old=document.querySelector('body>footer:not(#cscPlatformFooter)');
   if(old)old.hidden=true;
   document.body.appendChild(footer);
