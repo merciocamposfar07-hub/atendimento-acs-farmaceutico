@@ -18,5 +18,16 @@
     "iframeAsFinalArchitecture": false
   },
   "firstPanelRecommended": "Agendas e vagas",
-  "supersededOnlyByExplicitUserApproval": true
+  "supersededOnlyByExplicitUserApproval": true,
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R3",
+  "lastCorrectionRecord": "REGISTRO_CORRECAO_UI_ADMIN_APP4_R3_2026_09_10.md",
+  "lastCorrectionDate": "2026-09-10",
+  "visualValidation": "pending-user-iphone",
+  "notes": [
+    "Ícone oficial canônico preservado; apenas exposição/tamanho aumentado.",
+    "Sessão administrativa global reutilizada nos painéis.",
+    "PIN individual do TACS no painel de moradores permanece visível e funcional.",
+    "Páginas internas brancas neutralizadas pela camada App institucional.",
+    "Botões e cards acionáveis recebem reação visual explícita ao toque."
+  ]
 }
