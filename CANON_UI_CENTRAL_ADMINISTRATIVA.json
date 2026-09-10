@@ -1,0 +1,22 @@
+{
+  "id": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10",
+  "status": "canonical-approved",
+  "approvedOn": "2026-09-10",
+  "canonicalVariant": "app-4",
+  "canonicalName": "4 • App institucional",
+  "sourceFile": "homologacao-ui-corporativa/comparativo-app.html",
+  "referenceCommit": "2ad1d133d19cf8484f3d0f7204889e98eed574f4",
+  "iconContract": "CSC-CENTRAL-ICON-2026-09-09",
+  "evolutionMode": "panel-by-panel-functional-migration",
+  "performanceContract": {
+    "persistentAppShell": true,
+    "fullPageReloadBetweenPanels": false,
+    "staleWhileRevalidate": true,
+    "requestDeduplication": true,
+    "areaScopedCache": true,
+    "writeRequiresBackendConfirmation": true,
+    "iframeAsFinalArchitecture": false
+  },
+  "firstPanelRecommended": "Agendas e vagas",
+  "supersededOnlyByExplicitUserApproval": true
+}
