@@ -21,7 +21,7 @@ assert(bootstrap.includes("if(name==='suporte')return '/atendimento-acs-farmaceu
 assert(performance.includes("if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html"),'Controlador oficial não aponta Suporte para a interface dedicada V2');
 assert(performance.includes("name==='suporte'"),'Controlador oficial deve tratar Suporte como módulo próprio');
 
-assert(panelV1.includes('Vínculos protegidos'),'Diagnóstico deve explicar a preservação dos vínculos');
+assert(backend.includes('vinculosPreservados:true'),'Backend do diagnóstico deve declarar explicitamente a preservação dos vínculos');
 assert(panelV1.includes('admin_suporte_moradores_diagnostico'),'Interface de diagnóstico não usa o endpoint dedicado');
 assert(panelV1.includes('admin_notificacoes_solicitar_reparo_aparelho'),'Reparo individual seguro ausente');
 assert(!panelV1.includes('admin_notificacoes_solicitar_reparo_area'),'Diagnóstico dedicado não deve disparar reparo coletivo');
