@@ -2014,6 +2014,36 @@ html body #devicesPane .diag-inline-state{
 html body #devicesPane .diag-inline-state[data-state="CONCLUIDO"]{color:#83efa9!important}
 html body #devicesPane .diag-inline-state[data-state="ACAO_MORADOR"]{color:#f4d99c!important}
 html body #devicesPane .diag-inline-state[data-state^="TRAVADO"]{color:#f4d99c!important}
+
+/* DIAGNOSTICO_INLINE_CORRECAO_PONTUAL_V4
+   Mesma tela do Suporte: o botão alterna a seção inline; não existe iframe ou segunda página interna. */
+html body #devicesPane,
+html body #devicesPane .diag-inline-card,
+html body #devicesPane .diag-inline-list{
+  background:transparent!important;background-image:none!important;border:0!important;box-shadow:none!important;
+}
+html body #devicesPane iframe{display:none!important}
+html body #devicesPane .diag-inline-device,
+html body #devicesPane .empty,
+html body #devicesPane .diag-inline-summary .metric{
+  background:#102d46!important;background-image:none!important;
+  color:#f7fcff!important;border:1px solid #365f78!important;box-shadow:none!important;
+}
+html body #devicesPane .diag-inline-device .diag-reason{
+  background:#0b263d!important;background-image:none!important;
+  color:#f7fcff!important;border:1px solid #365f78!important;
+}
+html body #devicesPane .diag-inline-device .diag-meta,
+html body #devicesPane .diag-inline-device .diag-meta span{
+  color:#d8e6ee!important;opacity:1!important;
+}
+html body #devicesPane .diag-inline-state{
+  background:#0b263d!important;color:#83efa9!important;border:1px solid #416985!important;
+}
+html body #devicesPane .diag-repair,
+html body #devicesPane .diag-inline-refresh{
+  background:#145574!important;background-image:none!important;color:#fff!important;border-color:#62c8e8!important;
+}
 </style>
 </head><body><header><div class="head"><div><strong>Central Administrativa TACS</strong><h1>Suporte aos moradores</h1><p>Chamados enviados pelo Portal e diagnóstico técnico dos aparelhos, em módulo próprio.</p></div><button id="refresh" class="refresh" type="button">↻ Atualizar</button></div></header><main><section class="card protect"><strong>Vínculos protegidos.</strong> Chamados e respostas ficam em uma camada separada. Este módulo não apaga nem recria inscrições Push ou vínculos familiares.</section><div class="tabs"><button class="tab active" data-tab="tickets" type="button">🛟 Chamados dos moradores</button><button class="tab" data-tab="devices" type="button">🔔 Diagnóstico dos aparelhos</button></div><section id="ticketsPane"><section class="card"><div id="status">Carregando chamados…</div><div class="metrics"><div class="metric"><strong id="cNovo">—</strong><span>Novos</span></div><div class="metric"><strong id="cAnalise">—</strong><span>Em análise</span></div><div class="metric"><strong id="cResp">—</strong><span>Respondidos</span></div><div class="metric"><strong id="cResolvido">—</strong><span>Resolvidos</span></div></div></section><section class="card"><div class="toolbar"><input id="search" type="search" placeholder="Buscar morador, protocolo, família ou assunto"><select id="filter"><option value="">Todos</option><option value="ABERTOS">Pendências em aberto</option><option value="NOVO">Novos</option><option value="EM_ANALISE">Em análise</option><option value="RESPONDIDO">Respondidos</option><option value="RESOLVIDO">Resolvidos</option></select></div><div id="list" class="list"><div class="empty">Aguardando consulta.</div></div></section></section><section id="devicesPane" class="hidden">
   <section class="diag-inline-card">
@@ -2035,8 +2065,11 @@ html body #devicesPane .diag-inline-state[data-state^="TRAVADO"]{color:#f4d99c!i
 </section></main><script>(function(){'use strict';var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec',ADMIN='portalTacsAdminTokenV1',TERR='portalTacsTerritorioTokenV1',DEVICE='portalTacsDispositivoV1',busy=false,items=[];var $=function(id){return document.getElementById(id)},txt=function(v){return String(v==null?'':v).trim()},esc=function(v){return txt(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};var PENDING_VIEW=(function(){try{return String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='pending'}catch(e){return false}})(),DEVICES_VIEW=(function(){try{return String(new URLSearchParams(location.search||'').get('tab')||'').toLowerCase()==='devices'}catch(e){return false}})();function area(){try{return txt(new URLSearchParams(location.search).get('area')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA'}catch(e){return'JAPARANDUBA'}}function session(extra){var p={areaId:area(),dispositivo:txt(localStorage.getItem(DEVICE)||'')},t=txt(sessionStorage.getItem(TERR)||''),a=txt(sessionStorage.getItem(ADMIN)||'');if(t)p.territorioToken=t;else if(a)p.token=a;Object.keys(extra||{}).forEach(function(k){p[k]=extra[k]});return p}function rid(){return'supadmin_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}function jsonp(action,p,cb){var n='__sap_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false,t=setTimeout(function(){finish(null)},7000);function finish(r){if(done)return;done=true;clearTimeout(t);try{delete window[n]}catch(e){}if(s.parentNode)s.remove();cb(r)}window[n]=finish;s.onerror=function(){finish(null)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(n),'_='+Date.now()];Object.keys(p||{}).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(p[k]))});s.src=API+'?'+q.join('&');document.head.appendChild(s)}function post(action,p,cb){if(busy){cb({ok:false,message:'Aguarde a operação anterior.'});return}busy=true;var id=rid(),f=document.createElement('form'),fr=document.createElement('iframe'),name='sapfr'+Date.now(),start=Date.now();fr.name=name;fr.style.display='none';f.method='POST';f.action=API+'?_='+Date.now();f.target=name;f.style.display='none';var data=session(p);data.action=action;data.requestId=id;Object.keys(data).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=String(data[k]||'');f.appendChild(i)});document.body.appendChild(fr);document.body.appendChild(f);f.submit();(function poll(){jsonp('admin_suporte_moradores_result',{requestId:id},function(r){if(r&&r.ok&&r.pendente===false){busy=false;f.remove();fr.remove();cb(r.result);return}if(Date.now()-start>26000){busy=false;f.remove();fr.remove();cb({ok:false,message:'O servidor demorou para responder.'});return}setTimeout(poll,800)})}())}function counts(c){$('cNovo').textContent=c.NOVO||0;$('cAnalise').textContent=c.EM_ANALISE||0;$('cResp').textContent=c.RESPONDIDO||0;$('cResolvido').textContent=c.RESOLVIDO||0}function render(){var q=txt($('search').value).toLowerCase(),st=txt($('filter').value),rows=items.filter(function(x){if(st==='ABERTOS'){if(x.status==='RESOLVIDO')return false}else if(st&&x.status!==st)return false;if(!q)return true;return [x.protocolo,x.morador,x.familiaId,x.categoria,x.mensagem].join(' ').toLowerCase().indexOf(q)>=0});if(!rows.length){$('list').innerHTML='<div class="empty">Nenhum chamado nesta seleção.</div>';return}$('list').innerHTML=rows.map(function(x){return'<article class="ticket" data-protocol="'+esc(x.protocolo)+'"><h2>'+esc(x.morador||'Morador')+' <span class="pill">'+esc(x.statusTexto)+'</span></h2><div class="meta"><span>'+esc(x.protocolo)+'</span><span>'+esc(x.categoria)+'</span>'+(x.familiaId?'<span>Família '+esc(x.familiaId)+'</span>':'')+'<span>'+esc(x.criadoEm)+'</span></div><div class="msg">'+esc(x.mensagem)+'</div>'+(x.diagnostico?'<div class="diag"><strong>Diagnóstico:</strong> '+esc(x.diagnostico)+'</div>':'')+'<div class="actions"><select class="ticket-status"><option value="NOVO"'+(x.status==='NOVO'?' selected':'')+'>Novo</option><option value="EM_ANALISE"'+(x.status==='EM_ANALISE'?' selected':'')+'>Em análise</option><option value="RESPONDIDO"'+(x.status==='RESPONDIDO'?' selected':'')+'>Respondido</option><option value="RESOLVIDO"'+(x.status==='RESOLVIDO'?' selected':'')+'>Resolvido</option></select><textarea class="ticket-response" placeholder="Resposta ao morador">'+esc(x.resposta||'')+'</textarea><button class="save" type="button">Salvar resposta / situação</button></div>'+(x.pushDetalhe?'<div class="diag">Aviso Push: '+esc(x.pushDetalhe)+'</div>':'')+'</article>'}).join('')}var diagItems=[],diagBusy=false;
 function diagPhase(a){
   var fase=txt(a&&a.reparoEstadoV9).toUpperCase();
-  if(fase)return fase;
   var f=a&&a.reparoFeedback||{};
+  /* A saúde atual do aparelho prevalece sobre um marcador antigo de reparo.
+     Se o aparelho voltou a ATIVO, o painel não mantém "reparo solicitado" indefinidamente. */
+  if(txt(a&&a.status).toUpperCase()==='ATIVO'&&(fase||f.concluidoEm||a&&a.reparoPendente))return 'CONCLUIDO';
+  if(fase)return fase;
   if(f.concluidoEm)return 'CONCLUIDO';
   if(f.acaoMoradorEm||f.autoFalhouEm)return 'ACAO_MORADOR';
   if(f.autoIniciadoEm)return 'AUTO_EM_ANDAMENTO';

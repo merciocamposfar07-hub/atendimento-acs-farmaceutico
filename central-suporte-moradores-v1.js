@@ -10,7 +10,7 @@ var RETURN_KEY='portalTacsCentralReturnUrlV1';
 var RETURN_FLAG_KEY='portalTacsRetornoCentralV1';
 var PAINT_STYLE_ID='portalTacsCentralIosPaintGuardV3';
 var SAFE_NAV_FLAG='portalTacsSafeNavigationV1';
-var REVISION='20260910-diagnostico-inline-v3';
+var REVISION='20260910-pontuais-v5';
 
 function text(v){return String(v==null?'':v).trim()}
 function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
