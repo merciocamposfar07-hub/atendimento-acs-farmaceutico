@@ -2,9 +2,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT / 'admin-ui-standard.inline.css').read_text(encoding='utf-8').strip()
+BEHAVIOR = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8').strip()
 START = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_START -->'
 END = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->'
 CANON = 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10'
+REVISION = 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R2'
 
 # Somente área administrativa. Portal do Morador / Portal TACS público não entra aqui.
 TARGETS = [
@@ -14,15 +16,24 @@ TARGETS = [
     'painel-oficial-profissionais-servicos.html',
     'painel-oficial-recados-campanhas.html',
     'painel-oficial-tacs-areas.html',
+    'painel-suporte-moradores-v2.html',
+    'painel-suporte-moradores.html',
     'teste-v1/painel-moradores-v2.html',
     'teste-v1/painel-profissionais-servicos-v1.html',
     'teste-v1/painel-tacs-areas-v1.html',
 ]
 
-if CANON not in SOURCE:
-    raise SystemExit(f'CSS administrativo não contém o contrato canônico {CANON}')
+if CANON not in SOURCE or REVISION not in SOURCE:
+    raise SystemExit(f'CSS administrativo não contém os contratos canônicos {CANON} / {REVISION}')
+if REVISION not in BEHAVIOR:
+    raise SystemExit(f'Comportamento administrativo não contém a revisão {REVISION}')
 
-block = f'{START}\n<style id="portalTacsAdminUiStandardV1">\n{SOURCE}\n</style>\n{END}'
+block = (
+    f'{START}\n'
+    f'<style id="portalTacsAdminUiStandardV1">\n{SOURCE}\n</style>\n'
+    f'<script id="portalTacsAdminUiBehaviorR2">\n{BEHAVIOR}\n</script>\n'
+    f'{END}'
+)
 changed = []
 
 for rel in TARGETS:
@@ -44,6 +55,7 @@ for rel in TARGETS:
         changed.append(rel)
 
 print(f'ADMIN_UI_APP4_CANON={CANON}')
+print(f'ADMIN_UI_APP4_REVISION={REVISION}')
 print(f'ADMIN_UI_STANDARD_INJETADO={len(changed)}')
 for rel in changed:
     print(rel)
