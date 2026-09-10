@@ -44,7 +44,7 @@ function syncSessionClass(){
 function panelTitle(){
   if(CENTRAL)return 'Central Administrativa';
   if(/\/painel-suporte-moradores\.html$/i.test(PATH))return 'Diagnóstico dos aparelhos';
-  if(/\/painel-suporte-moradores-v2\.html$/i.test(PATH))return 'Suporte aos moradores';
+  if(/\/painel-suporte-moradores-v2\.html$/i.test(PATH)){try{if(String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='pending')return 'Pendências da área'}catch(e){}return 'Suporte aos moradores'};
   var h=document.querySelector('header h1');
   if(h&&text(h.textContent))return text(h.textContent);
   var t=text(document.title).split('|')[0].split('•')[0];
