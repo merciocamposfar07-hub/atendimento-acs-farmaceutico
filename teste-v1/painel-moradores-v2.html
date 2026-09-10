@@ -1746,6 +1746,17 @@ html body .corpo .check{
 }
 
 
+/* AREA_MORADORES_SEM_BALAO_BRANCO_R7 */
+html body .area-control{
+  background:linear-gradient(145deg,#153b58,#102d46)!important;
+  background-image:linear-gradient(145deg,#153b58,#102d46)!important;
+  border:1px solid #365f78!important;
+  color:#f7fcff!important;
+  box-shadow:none!important;
+}
+html body .area-control label,
+html body .area-control strong{color:#f7fcff!important}
+
 /* PRONTUARIO_AREA_IDENTIFICACAO_V1 */
 html body .prontuario-area{
   margin-top:6px!important;
@@ -1980,7 +1991,7 @@ function buildPlatformFooter(){
   var footer=document.createElement('footer');
   footer.id='cscPlatformFooter';
   footer.className='csc-platform-footer';
-  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong><small>Conecta Saúde Comunitária — Plataforma 2026/2027</small>';
+  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong>';
   var old=document.querySelector('body>footer:not(#cscPlatformFooter)');
   if(old)old.hidden=true;
   document.body.appendChild(footer);
