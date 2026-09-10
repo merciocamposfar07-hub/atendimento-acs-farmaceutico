@@ -1,9 +1,9 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#073a55"><meta name="robots" content="noindex,nofollow"><title>Suporte aos moradores | Portal TACS</title><style>:root{--p:#073a55;--p2:#0b5878;--bg:#e7f1f5;--card:#fff;--text:#102d40;--muted:#536b78;--line:#9ab8c5;--blue:#69c7e7;--ok:#08723a;--warn:#885500;--err:#9a3030}*{box-sizing:border-box}html,body{margin:0;max-width:100%;overflow-x:hidden}body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}button,input,textarea,select{font:inherit}header{padding:calc(20px + env(safe-area-inset-top)) 16px 22px;background:linear-gradient(145deg,var(--p),var(--p2));color:#fff;border-bottom:4px solid #64ca98}.head{width:min(1050px,100%);margin:auto;display:flex;justify-content:space-between;gap:14px;align-items:flex-start}h1{margin:7px 0 4px;font-size:clamp(2rem,7vw,3rem)}header p{margin:0;color:#dcebf2}.refresh{min-height:48px;border:2px solid #8bd9f3;border-radius:15px;background:#fff;color:var(--p);padding:10px 13px;font-weight:900}main{width:min(1050px,100%);margin:auto;padding:15px 12px 42px}.tabs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}.tab{min-height:54px;border:2px solid var(--blue);border-radius:16px;background:#fff;color:var(--p);font-weight:950}.tab.active{background:var(--p);color:#fff}.card{margin-bottom:13px;padding:16px;border:2px solid var(--line);border-radius:22px;background:#fff}.protect{border-color:#80c89e;background:#effaf3}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.metric{padding:12px;border-radius:16px;background:var(--p);color:#fff;text-align:center}.metric strong{display:block;font-size:1.55rem}.metric span{font-size:.78rem;color:#d9edf5}.toolbar{display:grid;grid-template-columns:1fr auto;gap:9px}.toolbar input,.toolbar select{min-height:50px;border:2px solid #8ba9b6;border-radius:14px;padding:10px 12px;background:#fff}.list{display:grid;gap:11px;margin-top:13px}.ticket{padding:15px;border:2px solid #b4c9d2;border-radius:19px;background:#fff}.ticket h2{margin:0;color:var(--p);font-size:1.1rem}.meta{display:flex;flex-wrap:wrap;gap:6px 13px;margin:7px 0;color:#4b6572;font-size:.86rem}.msg{margin:10px 0;padding:11px;border-radius:13px;background:#f0f6f8;white-space:pre-wrap}.diag{font-size:.8rem;color:#56707d;overflow-wrap:anywhere}.actions{display:grid;grid-template-columns:160px 1fr;gap:8px;margin-top:11px}.actions select,.actions textarea{width:100%;border:2px solid #8faab6;border-radius:13px;padding:10px}.actions textarea{min-height:88px;resize:vertical}.save{grid-column:1/-1;min-height:50px;border:0;border-radius:14px;background:#078940;color:#fff;font-weight:950}.pill{display:inline-block;padding:5px 8px;border-radius:999px;background:#eaf3f7;color:#073a55;font-weight:900;font-size:.76rem}.empty{text-align:center;padding:20px;color:var(--muted);font-weight:800}.diag-frame{width:100%;height:72vh;border:0;border-radius:18px;background:#fff}.hidden{display:none!important}@media(max-width:680px){.head{display:grid}.refresh{width:100%}.metrics{grid-template-columns:repeat(2,1fr)}.toolbar,.actions{grid-template-columns:1fr}.save{grid-column:auto}.tabs{grid-template-columns:1fr}.diag-frame{height:78vh}}</style><!-- PORTAL_TACS_ADMIN_UI_STANDARD_START -->
 <style id="portalTacsAdminUiStandardV1">
 /*
- * Conecta Saúde Comunitária — UI administrativa canônica R5
+ * Conecta Saúde Comunitária — UI administrativa canônica R6
  * Contrato: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10
- * Revisão: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R5
+ * Revisão: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6
  * Referência visual: 4 • App institucional aprovada em 10/09/2026.
  * A camada abaixo muda somente apresentação. IDs, campos, data-* e lógica permanecem intactos.
  */
@@ -1024,18 +1024,303 @@ body.csc-brand-enhanced main>.nota{
   body.csc-brand-enhanced>header,body.csc-brand-enhanced>header .head{padding-left:13px!important;padding-right:13px!important}
   body.csc-brand-enhanced>header p{font-size:.80rem!important}
 }
+
+/* R6 FINAL — tela única App institucional.
+   Corrige retorno azul/vazio, faixas de cor, legibilidade e exposição dos ícones.
+   A paleta-base é contínua: #071827 em toda a tela. */
+:root{
+  --tacs-app-bg:#071827!important;
+  --tacs-app-top:#071827!important;
+  --tacs-app-card:#102d46!important;
+  --tacs-app-card2:#153b58!important;
+  --tacs-app-line:#2b5a76!important;
+  --tacs-app-text:#f7fcff!important;
+  --tacs-app-muted:#c0d3df!important;
+  --tacs-app-accent:#83efa9!important;
+  --tacs-app-accent2:#62c8e8!important;
+  --tacs-app-primary:#176c94!important;
+  --tacs-app-nav:#071827!important;
+}
+html,body{
+  min-height:100%!important;
+  background:#071827!important;
+  background-image:none!important;
+  color:#f7fcff!important;
+}
+body,
+body::before,
+body::after{
+  background:#071827!important;
+  background-image:none!important;
+}
+.csc-appbar{
+  background:#071827!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+body.csc-brand-enhanced>header,
+body.csc-brand-enhanced>header .head,
+main,
+body>main,
+body>footer,
+footer,
+.footer,
+.csc-dock{
+  background:#071827!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+body.csc-brand-enhanced>header p,
+p,
+label,
+small,
+.muted,
+.sub,
+.meta,
+.health-time,
+.saude-meta,
+footer,
+footer p,
+.footer{
+  opacity:1!important;
+  text-shadow:none!important;
+}
+body.csc-brand-enhanced>header p,
+.muted,
+.sub,
+.meta,
+.health-time,
+.saude-meta,
+footer,
+footer p,
+.footer{
+  color:#c0d3df!important;
+}
+body.csc-brand-enhanced>header p{
+  font-size:.86rem!important;
+  line-height:1.36!important;
+  -webkit-line-clamp:2!important;
+}
+html body #manutencaoTexto,
+html body .manutencao p,
+html body .areaEnvio p,
+html body .protect p,
+html body .status,
+html body .nota,
+html body .note{
+  color:#dcebf3!important;
+  opacity:1!important;
+}
+html body .status.ok{color:#c7f7d6!important}
+html body .status.warn,
+html body .status.aviso{color:#f5e1b7!important}
+html body .status.err,
+html body .status.erro{color:#ffd0d5!important}
+
+/* Grandes seções não recebem uma segunda cor de fundo. */
+body.csc-brand-enhanced main>section.panel,
+body.csc-brand-enhanced main>section.painel,
+body.csc-brand-enhanced main>section.card,
+body.csc-brand-enhanced main>div.panel,
+body.csc-brand-enhanced main>div.painel,
+body.csc-brand-enhanced main>div.card,
+body.csc-brand-enhanced main>.box,
+body.csc-brand-enhanced main>.caixa,
+body.csc-brand-enhanced main>.newbox,
+html body #conteudo.card,
+html body #content.panel,
+html body #ticketsPane,
+html body #devicesPane,
+html body #secaoRecados,
+html body #secaoCampanhas,
+html body .lista,
+html body .list,
+html body #results{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+
+/* Cards funcionais mantêm a mesma família azul-petróleo do protótipo. */
+html body .panel .card,
+html body .painel .card,
+html body .card .card,
+html body .item,
+html body .cartao,
+html body .ticket,
+html body .grupoProfissional,
+html body .area-row,
+html body .maprow,
+html body .health-card,
+html body .saude-numero,
+html body .numero,
+html body .number,
+html body .stat,
+html body .metric,
+html body .quick-card,
+html body .saude-aparelho,
+html body #results .card,
+html body #listaRecados .item,
+html body #listaCampanhas .item,
+html body .msg-familia-acao,
+html body .msg-ind-form-action,
+html body .msg-rel-box,
+html body .msg-rel-status,
+html body .msg-rel-event,
+html body .msg-rel-message,
+html body .msg-rel-device,
+html body .msg-rel-grid div{
+  background:linear-gradient(145deg,#153b58,#102d46)!important;
+  color:#f7fcff!important;
+  border:1px solid #2b5a76!important;
+  box-shadow:0 9px 20px rgba(0,0,0,.20)!important;
+}
+
+/* Nenhum estado cria bloco vermelho, verde ou dourado. Só o texto sinaliza o estado. */
+html body .health-card.ok,
+html body .health-card.warn,
+html body .health-card.err,
+html body .manutencao.ativa,
+html body .saude-aparelho-ATIVO,
+html body .saude-aparelho-INATIVO,
+html body .saude-aparelho-REPARO,
+html body .saude-aparelho-SEM_CONFIRMACAO{
+  background:linear-gradient(145deg,#153b58,#102d46)!important;
+  border-color:#2b5a76!important;
+}
+html body .signal,
+html body .sinal,
+html body .pill,
+html body .chip,
+html body .tag,
+html body .estado,
+html body .state-pill,
+html body .badge,
+html body .status-badge{
+  background:#0b263d!important;
+  border:1px solid #2b5a76!important;
+}
+html body .sinal.ativo,
+html body .pill:not(.off),
+html body .health-card.ok>span{color:#83efa9!important}
+html body .sinal.inativo,
+html body .pill.off,
+html body .health-card.warn>span,
+html body .health-card.err>span{color:#c0d3df!important}
+
+/* Ícones dos módulos — maiores, nítidos e com contraste consistente. */
+.csc-central .module .icon,
+.csc-central .module-icon,
+html body .module .icon,
+html body .module-icon{
+  width:70px!important;
+  height:70px!important;
+  min-width:70px!important;
+  flex:0 0 70px!important;
+  display:grid!important;
+  place-items:center!important;
+  border-radius:20px!important;
+  background:linear-gradient(145deg,#176c94,#0b263d)!important;
+  color:#fff!important;
+  border:2px solid #69b8c0!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.18),0 8px 18px rgba(0,0,0,.22)!important;
+  font-size:2.25rem!important;
+  line-height:1!important;
+  opacity:1!important;
+}
+html body .module .icon img,
+html body .module-icon img{
+  width:48px!important;
+  height:48px!important;
+  object-fit:contain!important;
+  opacity:1!important;
+  filter:none!important;
+}
+html body .module strong{
+  color:#fff!important;
+  font-size:1rem!important;
+  line-height:1.18!important;
+}
+html body .module>div>span,
+html body .module small{
+  color:#dcebf3!important;
+  font-size:.80rem!important;
+  line-height:1.35!important;
+  opacity:1!important;
+}
+
+/* Botões continuam no mesmo tom e têm reação visível ao toque. */
+html body button,
+html body .btn,
+html body .botao,
+html body .grupoAcao,
+html body .msg-ind-card-button,
+html body .msg-ind-form-button,
+html body .msg-familia-acao button,
+html body .msg-rel-button,
+html body .msg-rel-family{
+  background:#135272!important;
+  color:#fff!important;
+  border:2px solid #69b8c0!important;
+  opacity:1!important;
+}
+button:active:not(:disabled),
+.btn:active:not(:disabled),
+.botao:active:not(:disabled),
+.module:active:not(:disabled),
+.tab:active:not(:disabled),
+.aba:active:not(:disabled),
+.csc-pressed{
+  transform:translateY(2px) scale(.98)!important;
+  filter:brightness(1.10)!important;
+  background:#236581!important;
+  color:#fff!important;
+  box-shadow:inset 0 3px 8px rgba(0,0,0,.38)!important;
+}
+.csc-dock{
+  border-top:0!important;
+  box-shadow:none!important;
+}
+.csc-navitem{
+  color:#c0d3df!important;
+  border:1px solid #2b5a76!important;
+}
+.csc-navitem.active{
+  background:#145574!important;
+  color:#fff!important;
+  border-color:#72d6bd!important;
+}
+footer,footer p,.footer{
+  color:#a9c0cf!important;
+}
+@media(max-width:430px){
+  .csc-appbar-icon{width:78px!important;height:78px!important;flex-basis:78px!important}
+  .csc-appbar-title small{font-size:.80rem!important;letter-spacing:.075em!important}
+  .csc-appbar-title strong{font-size:1.13rem!important}
+  .csc-central .module .icon,
+  .csc-central .module-icon,
+  html body .module .icon,
+  html body .module-icon{
+    width:66px!important;height:66px!important;min-width:66px!important;flex-basis:66px!important;font-size:2.12rem!important;
+  }
+}
 </style>
-<script id="portalTacsAdminUiBehaviorR5">
+<script id="portalTacsAdminUiBehaviorR6">
 /*
- * Conecta Saúde Comunitária — comportamento do shell App institucional R5
- * Contrato: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R5
+ * Conecta Saúde Comunitária — comportamento do shell App institucional R6
+ * Contrato: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6
  * Regra: identidade institucional única, reação ao toque e reaproveitamento visual da sessão.
  * Este script NÃO autentica nem cria sessão: apenas reutiliza os tokens já validados pelos módulos.
  */
 (function(){
 'use strict';
-if(window.PortalTacsAdminApp4ShellR5)return;
-window.PortalTacsAdminApp4ShellR5=true;
+if(window.PortalTacsAdminApp4ShellR6)return;
+window.PortalTacsAdminApp4ShellR6=true;
 
 var ROOT=document.documentElement;
 var PATH=String(location.pathname||'');
@@ -1078,7 +1363,7 @@ function panelTitle(){
   var t=text(document.title).split('|')[0].split('•')[0];
   return t||'Painel administrativo';
 }
-function centralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html'+(isTerritory()?'?acesso=tacs':'')}
+function centralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260910-app4-r6'+(isTerritory()?'&acesso=tacs':'')}
 function backToCentral(){
   try{sessionStorage.setItem(RETURN_FLAG,'1')}catch(e){}
   var params=null,from=false;
@@ -1196,8 +1481,8 @@ function buildCentralWelcome(){
 }
 
 function installTouchFeedback(){
-  if(ROOT.dataset.cscTouchR5==='1')return;
-  ROOT.dataset.cscTouchR5='1';
+  if(ROOT.dataset.cscTouchR6==='1')return;
+  ROOT.dataset.cscTouchR6='1';
   var selector='button,.botao,.btn,.module,.tab,.aba,[role="button"],a.btn,a.botao';
   function target(e){return e.target&&e.target.closest?e.target.closest(selector):null}
   function release(){document.querySelectorAll('.csc-pressed').forEach(function(n){n.classList.remove('csc-pressed')})}
@@ -1214,10 +1499,10 @@ function installTouchFeedback(){
 }
 
 function installFinalSkin(){
-  var old=document.getElementById('cscApp4FinalSkinR5');if(old)old.remove();
+  var old=document.getElementById('cscApp4FinalSkinR6');if(old)old.remove();
   var style=document.createElement('style');
-  style.id='cscApp4FinalSkinR5';
-  style.textContent='html,body{background:#071827!important;color:#f7fcff!important}body{background:linear-gradient(180deg,#0b263d 0,#071827 360px,#071827 100%)!important}header,footer,.footer{border:0!important;box-shadow:none!important}.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
+  style.id='cscApp4FinalSkinR6';
+  style.textContent='html,body{background:#071827!important;background-image:none!important;color:#f7fcff!important}body{background:#071827!important;background-image:none!important}header,footer,.footer{border:0!important;box-shadow:none!important}.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
   (document.head||document.documentElement).appendChild(style);
 }
 
