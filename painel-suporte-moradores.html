@@ -1814,7 +1814,7 @@ function showCentralHome(){
 }
 function openRecordsPage(){
   var area=encodeURIComponent(centralAreaId());
-  location.assign('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&from=central&v=20260910-prontuarios-v1');
+  location.assign('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&view=prontuarios&from=central&v=20260910-prontuarios-v2');
 }
 function openPendingPage(){
   var area=encodeURIComponent(centralAreaId());
@@ -1874,7 +1874,7 @@ function buildPlatformFooter(){
   var footer=document.createElement('footer');
   footer.id='cscPlatformFooter';
   footer.className='csc-platform-footer';
-  footer.innerHTML='<strong>Conecta Saúde Comunitária</strong><span>tecnologia aproximando pessoas, serviços e comunidade.</span><small>Versão da plataforma 2026.09 • Ano letivo 2026</small>';
+  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong><small>Versão da plataforma 2026.09 • Ano letivo 2026</small>';
   var old=document.querySelector('body>footer:not(#cscPlatformFooter)');
   if(old)old.hidden=true;
   document.body.appendChild(footer);
