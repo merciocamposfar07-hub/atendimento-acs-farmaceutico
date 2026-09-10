@@ -167,8 +167,8 @@ behavior = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')
 for token in [
     "['▦','Prontuários',openRecordsPage]",
     "['🔔','Pendências',openPendingPage]",
-    "'TACS cadastrados'",
-    "'Administradores'",
+    "TACS cadastrados",
+    "Administradores",
     "tecnologia aproximando pessoas, serviços e comunidade.",
     "Ano letivo 2026",
     "return 'Pendências da área'",
