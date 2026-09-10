@@ -1322,6 +1322,280 @@ footer,footer p,.footer{
     width:66px!important;height:66px!important;min-width:66px!important;flex-basis:66px!important;font-size:2.12rem!important;
   }
 }
+
+
+/* R7 VISUAL ONLY — UNIFICAÇÃO CROMÁTICA + MARCA/LEITURA */
+   Pedido do usuário: tela única, sem faixas de cor; ícone oficial maior;
+   CONECTA SAÚDE COMUNITÁRIA maior/destacado; textos e ícones mais nítidos.
+   Esta seção é SOMENTE visual. */
+html,
+body{
+  min-height:100%!important;
+  background:#071827!important;
+  background-image:none!important;
+  color:#fff!important;
+}
+body{
+  font-weight:500!important;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:auto;
+}
+body::before,
+body::after,
+.csc-appbar,
+body.csc-brand-enhanced>header,
+body.csc-brand-enhanced>header .head,
+body>main,
+main,
+body>footer,
+footer,
+.footer,
+.csc-dock,
+.carga,
+.loading{
+  background:#071827!important;
+  background-image:none!important;
+  border-color:transparent!important;
+  box-shadow:none!important;
+}
+body.csc-brand-enhanced>.wrap,
+body.csc-brand-enhanced>.container,
+body.csc-brand-enhanced>.shell,
+body.csc-brand-enhanced>.page,
+body.csc-brand-enhanced>.app,
+body.csc-brand-enhanced>.content{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.carga .caixa,
+.loading .box{
+  background:#071827!important;
+  background-image:none!important;
+  color:#fff!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.csc-appbar{
+  min-height:132px!important;
+  padding:calc(12px + env(safe-area-inset-top)) 16px 12px!important;
+  gap:16px!important;
+}
+.csc-appbar-icon{
+  width:104px!important;
+  height:104px!important;
+  min-width:104px!important;
+  flex:0 0 104px!important;
+  object-fit:contain!important;
+  opacity:1!important;
+  filter:none!important;
+}
+.csc-appbar-title small{
+  color:#8ff0ae!important;
+  font-size:1.08rem!important;
+  line-height:1.16!important;
+  font-weight:950!important;
+  letter-spacing:.045em!important;
+  text-transform:uppercase!important;
+  opacity:1!important;
+  text-shadow:0 0 0 currentColor!important;
+}
+.csc-appbar-title strong{
+  margin-top:5px!important;
+  color:#fff!important;
+  font-size:1.36rem!important;
+  line-height:1.12!important;
+  font-weight:900!important;
+  letter-spacing:-.025em!important;
+  opacity:1!important;
+}
+h1,h2,h3,h4,
+.title,.section-title,
+strong,label,
+button,.btn,.botao{
+  opacity:1!important;
+  text-shadow:none!important;
+}
+h1,h2,h3,h4,.title,.section-title,strong,label{
+  color:#fff!important;
+}
+p,li,dd,dt,
+body.csc-brand-enhanced>header p,
+.muted,.sub,.meta,small,
+.health-time,.saude-meta,
+footer,footer p,.footer{
+  color:#d8e6ee!important;
+  opacity:1!important;
+}
+p,li,dd,dt{
+  font-weight:500!important;
+}
+.muted,.sub,.meta,small,.health-time,.saude-meta{
+  font-weight:550!important;
+}
+.status,.nota,.note,.protect,.manutencao,.areaEnvio{
+  color:#e7f0f5!important;
+  opacity:1!important;
+}
+
+/* As grandes áreas estruturais não ganham uma segunda faixa/cor. */
+body.csc-brand-enhanced main>section.panel,
+body.csc-brand-enhanced main>section.painel,
+body.csc-brand-enhanced main>section.card,
+body.csc-brand-enhanced main>div.panel,
+body.csc-brand-enhanced main>div.painel,
+body.csc-brand-enhanced main>div.card,
+body.csc-brand-enhanced main>.box,
+body.csc-brand-enhanced main>.caixa,
+body.csc-brand-enhanced main>.newbox,
+html body #conteudo.card,
+html body #content.panel,
+html body #ticketsPane,
+html body #devicesPane,
+html body #secaoRecados,
+html body #secaoCampanhas,
+html body .lista,
+html body .list,
+html body #results{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+
+/* Cards funcionais permanecem na mesma família azul-petróleo, sem faixas externas. */
+html body .panel .card,
+html body .painel .card,
+html body .card .card,
+html body .item,
+html body .cartao,
+html body .ticket,
+html body .grupoProfissional,
+html body .area-row,
+html body .maprow,
+html body .health-card,
+html body .saude-numero,
+html body .numero,
+html body .number,
+html body .stat,
+html body .metric,
+html body .quick-card,
+html body .saude-aparelho,
+html body #results .card,
+html body #listaRecados .item,
+html body #listaCampanhas .item{
+  background:linear-gradient(145deg,#153b58,#102d46)!important;
+  background-image:linear-gradient(145deg,#153b58,#102d46)!important;
+  color:#fff!important;
+  border:1px solid #365f78!important;
+  box-shadow:0 8px 18px rgba(0,0,0,.20)!important;
+}
+
+/* Ícones dos painéis mais expostos e fáceis de reconhecer. */
+.csc-central .module .icon,
+.csc-central .module-icon,
+html body .module .icon,
+html body .module-icon{
+  width:80px!important;
+  height:80px!important;
+  min-width:80px!important;
+  flex:0 0 80px!important;
+  border-radius:22px!important;
+  background:linear-gradient(145deg,#1b779f,#0b263d)!important;
+  border:2px solid #78cbd3!important;
+  color:#fff!important;
+  font-size:2.55rem!important;
+  line-height:1!important;
+  opacity:1!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.22),0 9px 20px rgba(0,0,0,.24)!important;
+}
+html body .module .icon img,
+html body .module-icon img{
+  width:56px!important;
+  height:56px!important;
+  object-fit:contain!important;
+  opacity:1!important;
+  filter:none!important;
+}
+html body .module strong{
+  color:#fff!important;
+  font-size:1.05rem!important;
+  line-height:1.18!important;
+  font-weight:900!important;
+}
+html body .module>div>span,
+html body .module small{
+  color:#d8e6ee!important;
+  font-size:.84rem!important;
+  line-height:1.38!important;
+  font-weight:550!important;
+  opacity:1!important;
+}
+
+/* Campos e botões com texto branco/nítido, sem criar outra faixa de fundo. */
+html body input:not([type="checkbox"]):not([type="radio"]),
+html body select,
+html body textarea{
+  background:#071827!important;
+  color:#fff!important;
+  border-color:#416f89!important;
+  opacity:1!important;
+}
+html body input::placeholder,
+html body textarea::placeholder{color:#aec4d1!important;opacity:1!important}
+html body button,
+html body .btn,
+html body .botao{
+  color:#fff!important;
+  opacity:1!important;
+}
+
+/* Dock no mesmo fundo da tela; só os botões indicam seleção. */
+.csc-dock{
+  background:#071827!important;
+  background-image:none!important;
+  border-top:0!important;
+  box-shadow:none!important;
+}
+
+@media(max-width:430px){
+  .csc-appbar{
+    min-height:124px!important;
+    padding-left:13px!important;
+    padding-right:13px!important;
+    gap:13px!important;
+  }
+  .csc-appbar-icon{
+    width:94px!important;
+    height:94px!important;
+    min-width:94px!important;
+    flex-basis:94px!important;
+  }
+  .csc-appbar-title small{
+    font-size:1.00rem!important;
+    line-height:1.15!important;
+    letter-spacing:.035em!important;
+  }
+  .csc-appbar-title strong{
+    font-size:1.25rem!important;
+  }
+  .csc-central .module .icon,
+  .csc-central .module-icon,
+  html body .module .icon,
+  html body .module-icon{
+    width:74px!important;
+    height:74px!important;
+    min-width:74px!important;
+    flex-basis:74px!important;
+    font-size:2.35rem!important;
+  }
+  html body .module .icon img,
+  html body .module-icon img{
+    width:52px!important;
+    height:52px!important;
+  }
+}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
