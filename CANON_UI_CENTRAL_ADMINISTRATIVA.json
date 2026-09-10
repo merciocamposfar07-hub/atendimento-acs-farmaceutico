@@ -20,7 +20,7 @@
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6",
-  "lastCorrectionRecord": "REGISTRO_CORRECAO_UI_ADMIN_APP4_R6_2026_09_10.md",
+  "lastCorrectionRecord": "REGISTRO_CORRECOES_PONTUAIS_NAVEGACAO_SUPORTE_2026_09_10.md",
   "lastCorrectionDate": "2026-09-10",
   "visualValidation": "pending-user-iphone",
   "notes": [
@@ -57,5 +57,19 @@
     "clearText": true,
     "moduleIconsProminent": true,
     "returnRestoresVisibleContext": true
+  },
+  "punctualCorrections": {
+    "diagnosticInline": true,
+    "legacyDiagnosticRedirected": true,
+    "diagnosticWhiteCardsRemoved": true,
+    "diagnosticRepairStateDynamic": true,
+    "agendaSecondPinMessageRemoved": true,
+    "agendaFooterRefreshRemoved": true,
+    "savedLinkConfirmation": "Vínculo salvo",
+    "dockRecordsLabel": "Prontuários",
+    "dockPendingLabel": "Pendências",
+    "profileListsTacsAndCurrentAdminContext": true,
+    "institutionalFooter": "Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.",
+    "platformCycle": "Conecta Saúde Comunitária — Plataforma 2026/2027"
   }
 }
