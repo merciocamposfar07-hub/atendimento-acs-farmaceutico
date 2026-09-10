@@ -6,7 +6,7 @@ BEHAVIOR = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8').st
 START = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_START -->'
 END = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->'
 CANON = 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10'
-REVISION = 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R5'
+REVISION = 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6'
 
 # Somente área administrativa. Portal do Morador / Portal TACS público não entra aqui.
 TARGETS = [
@@ -31,7 +31,7 @@ if REVISION not in BEHAVIOR:
 block = (
     f'{START}\n'
     f'<style id="portalTacsAdminUiStandardV1">\n{SOURCE}\n</style>\n'
-    f'<script id="portalTacsAdminUiBehaviorR5">\n{BEHAVIOR}\n</script>\n'
+    f'<script id="portalTacsAdminUiBehaviorR6">\n{BEHAVIOR}\n</script>\n'
     f'{END}'
 )
 changed = []

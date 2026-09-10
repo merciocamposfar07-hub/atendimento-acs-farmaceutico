@@ -2,7 +2,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CANON = 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10'
-REVISION = 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R5'
+REVISION = 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6'
 START = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_START -->'
 END = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->'
 TARGETS = [
@@ -22,7 +22,11 @@ TARGETS = [
 css = (ROOT / 'admin-ui-standard.inline.css').read_text(encoding='utf-8')
 behavior = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')
 required_css = [
-    'R5 FINAL',
+    'background:#071827!important',
+    'background-image:none!important',
+    'width:70px!important',
+    'font-size:2.25rem!important',
+    'R6 FINAL',
     'background:linear-gradient(145deg,#174765,#0c3049)',
     'border:2px solid #69b8c0',
     'background:#135272',
@@ -45,7 +49,7 @@ required_css = [
 ]
 for token in required_css:
     if token not in css:
-        raise SystemExit(f'CSS canônico R5 sem token obrigatório: {token}')
+        raise SystemExit(f'CSS canônico R6 sem token obrigatório: {token}')
 
 # A revisão rejeita a antiga moldura grossa azul-clara aplicada a todos os cards.
 for forbidden in [
@@ -54,7 +58,7 @@ for forbidden in [
     'border-right:1px solid var(--tacs-app-line)',
 ]:
     if forbidden in css:
-        raise SystemExit('CSS R5 ainda contém moldura estrutural rejeitada')
+        raise SystemExit('CSS R6 ainda contém moldura estrutural rejeitada')
 
 required_behavior = [
     'tacsPinAccess',
@@ -76,7 +80,7 @@ required_behavior = [
 ]
 for token in required_behavior:
     if token not in behavior:
-        raise SystemExit(f'Comportamento App4 R5 sem token obrigatório: {token}')
+        raise SystemExit(f'Comportamento App4 R6 sem token obrigatório: {token}')
 
 for rel in TARGETS:
     path = ROOT / rel
@@ -86,9 +90,9 @@ for rel in TARGETS:
     if text.count(START) != 1 or text.count(END) != 1:
         raise SystemExit(f'Marcador visual inválido em {rel}')
     if CANON not in text or REVISION not in text:
-        raise SystemExit(f'App4 R5 não injetado em {rel}')
-    if 'portalTacsAdminUiBehaviorR5' not in text:
-        raise SystemExit(f'Comportamento R5 não injetado em {rel}')
+        raise SystemExit(f'App4 R6 não injetado em {rel}')
+    if 'portalTacsAdminUiBehaviorR6' not in text:
+        raise SystemExit(f'Comportamento R6 não injetado em {rel}')
 
 injector = (ROOT / 'scripts/injetar_admin_ui_standard_v1.py').read_text(encoding='utf-8')
 for target in TARGETS:
@@ -98,7 +102,7 @@ for forbidden in ["'index.html'", 'portal-morador.html', 'abrir.html']:
     if forbidden in injector:
         raise SystemExit(f'Fonte pública não pode entrar no injetor administrativo: {forbidden}')
 
-print('ADMIN_UI_APP4_CANONICAL_R5_OK')
+print('ADMIN_UI_APP4_CANONICAL_R6_OK')
 print('SESSAO_UNICA_VISUAL_OK')
 print('PIN_REPETIDO_OCULTO_COM_SESSAO_OK')
 print('TITULOS_ESPECIFICOS_SUPORTE_OK')

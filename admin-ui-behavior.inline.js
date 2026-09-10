@@ -1,13 +1,13 @@
 /*
- * Conecta Saúde Comunitária — comportamento do shell App institucional R5
- * Contrato: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R5
+ * Conecta Saúde Comunitária — comportamento do shell App institucional R6
+ * Contrato: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6
  * Regra: identidade institucional única, reação ao toque e reaproveitamento visual da sessão.
  * Este script NÃO autentica nem cria sessão: apenas reutiliza os tokens já validados pelos módulos.
  */
 (function(){
 'use strict';
-if(window.PortalTacsAdminApp4ShellR5)return;
-window.PortalTacsAdminApp4ShellR5=true;
+if(window.PortalTacsAdminApp4ShellR6)return;
+window.PortalTacsAdminApp4ShellR6=true;
 
 var ROOT=document.documentElement;
 var PATH=String(location.pathname||'');
@@ -50,7 +50,7 @@ function panelTitle(){
   var t=text(document.title).split('|')[0].split('•')[0];
   return t||'Painel administrativo';
 }
-function centralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html'+(isTerritory()?'?acesso=tacs':'')}
+function centralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260910-app4-r6'+(isTerritory()?'&acesso=tacs':'')}
 function backToCentral(){
   try{sessionStorage.setItem(RETURN_FLAG,'1')}catch(e){}
   var params=null,from=false;
@@ -168,8 +168,8 @@ function buildCentralWelcome(){
 }
 
 function installTouchFeedback(){
-  if(ROOT.dataset.cscTouchR5==='1')return;
-  ROOT.dataset.cscTouchR5='1';
+  if(ROOT.dataset.cscTouchR6==='1')return;
+  ROOT.dataset.cscTouchR6='1';
   var selector='button,.botao,.btn,.module,.tab,.aba,[role="button"],a.btn,a.botao';
   function target(e){return e.target&&e.target.closest?e.target.closest(selector):null}
   function release(){document.querySelectorAll('.csc-pressed').forEach(function(n){n.classList.remove('csc-pressed')})}
@@ -186,10 +186,10 @@ function installTouchFeedback(){
 }
 
 function installFinalSkin(){
-  var old=document.getElementById('cscApp4FinalSkinR5');if(old)old.remove();
+  var old=document.getElementById('cscApp4FinalSkinR6');if(old)old.remove();
   var style=document.createElement('style');
-  style.id='cscApp4FinalSkinR5';
-  style.textContent='html,body{background:#071827!important;color:#f7fcff!important}body{background:linear-gradient(180deg,#0b263d 0,#071827 360px,#071827 100%)!important}header,footer,.footer{border:0!important;box-shadow:none!important}.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
+  style.id='cscApp4FinalSkinR6';
+  style.textContent='html,body{background:#071827!important;background-image:none!important;color:#f7fcff!important}body{background:#071827!important;background-image:none!important}header,footer,.footer{border:0!important;box-shadow:none!important}.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
   (document.head||document.documentElement).appendChild(style);
 }
 
