@@ -162,7 +162,7 @@ function openRecordsPage(){
 }
 function openPendingPage(){
   var area=encodeURIComponent(centralAreaId());
-  location.assign('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+'&view=pending&from=central&v=20260910-pendencias-v2');
+  location.assign('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+'&view=pending&from=central&v=20260910-pendencias-v5');
 }
 function openProfilePage(){
   var main=document.querySelector('main');if(!main)return;

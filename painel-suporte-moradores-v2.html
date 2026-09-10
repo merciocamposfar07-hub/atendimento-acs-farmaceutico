@@ -2015,6 +2015,15 @@ html body #devicesPane .diag-inline-state[data-state="CONCLUIDO"]{color:#83efa9!
 html body #devicesPane .diag-inline-state[data-state="ACAO_MORADOR"]{color:#f4d99c!important}
 html body #devicesPane .diag-inline-state[data-state^="TRAVADO"]{color:#f4d99c!important}
 
+/* PENDENCIAS_RAPIDAS_AREA_V1 */
+html body .pending-section-title{display:none!important}
+html body.pending-view .pending-section-title{
+  display:block!important;margin:20px 0 10px!important;color:#fff!important;font-size:1.28rem!important;font-weight:900!important;
+}
+html body.pending-view .tabs{display:none!important}
+html body.pending-view #ticketsPane,
+html body.pending-view #devicesPane{display:block!important;background:transparent!important;border:0!important;box-shadow:none!important}
+html body.pending-view #devicesPane .diag-inline-summary{display:none!important}
 /* DIAGNOSTICO_INLINE_CORRECAO_PONTUAL_V4
    Mesma tela do Suporte: o botão alterna a seção inline; não existe iframe ou segunda página interna. */
 html body #devicesPane,
@@ -2045,7 +2054,7 @@ html body #devicesPane .diag-inline-refresh{
   background:#145574!important;background-image:none!important;color:#fff!important;border-color:#62c8e8!important;
 }
 </style>
-</head><body><header><div class="head"><div><strong>Central Administrativa TACS</strong><h1>Suporte aos moradores</h1><p>Chamados enviados pelo Portal e diagnóstico técnico dos aparelhos, em módulo próprio.</p></div><button id="refresh" class="refresh" type="button">↻ Atualizar</button></div></header><main><section class="card protect"><strong>Vínculos protegidos.</strong> Chamados e respostas ficam em uma camada separada. Este módulo não apaga nem recria inscrições Push ou vínculos familiares.</section><div class="tabs"><button class="tab active" data-tab="tickets" type="button">🛟 Chamados dos moradores</button><button class="tab" data-tab="devices" type="button">🔔 Diagnóstico dos aparelhos</button></div><section id="ticketsPane"><section class="card"><div id="status">Carregando chamados…</div><div class="metrics"><div class="metric"><strong id="cNovo">—</strong><span>Novos</span></div><div class="metric"><strong id="cAnalise">—</strong><span>Em análise</span></div><div class="metric"><strong id="cResp">—</strong><span>Respondidos</span></div><div class="metric"><strong id="cResolvido">—</strong><span>Resolvidos</span></div></div></section><section class="card"><div class="toolbar"><input id="search" type="search" placeholder="Buscar morador, protocolo, família ou assunto"><select id="filter"><option value="">Todos</option><option value="ABERTOS">Pendências em aberto</option><option value="NOVO">Novos</option><option value="EM_ANALISE">Em análise</option><option value="RESPONDIDO">Respondidos</option><option value="RESOLVIDO">Resolvidos</option></select></div><div id="list" class="list"><div class="empty">Aguardando consulta.</div></div></section></section><section id="devicesPane" class="hidden">
+</head><body><header><div class="head"><div><strong>Central Administrativa TACS</strong><h1>Suporte aos moradores</h1><p>Chamados enviados pelo Portal e diagnóstico técnico dos aparelhos, em módulo próprio.</p></div><button id="refresh" class="refresh" type="button">↻ Atualizar</button></div></header><main><section class="card protect"><strong>Vínculos protegidos.</strong> Chamados e respostas ficam em uma camada separada. Este módulo não apaga nem recria inscrições Push ou vínculos familiares.</section><div class="tabs"><button class="tab active" data-tab="tickets" type="button">🛟 Chamados dos moradores</button><button class="tab" data-tab="devices" type="button">🔔 Diagnóstico dos aparelhos</button></div><section id="ticketsPane"><h2 id="pendingResidentsTitle" class="pending-section-title">Pendências dos moradores</h2><section class="card"><div id="status">Carregando chamados…</div><div class="metrics"><div class="metric"><strong id="cNovo">—</strong><span>Novos</span></div><div class="metric"><strong id="cAnalise">—</strong><span>Em análise</span></div><div class="metric"><strong id="cResp">—</strong><span>Respondidos</span></div><div class="metric"><strong id="cResolvido">—</strong><span>Resolvidos</span></div></div></section><section class="card"><div class="toolbar"><input id="search" type="search" placeholder="Buscar morador, protocolo, família ou assunto"><select id="filter"><option value="">Todos</option><option value="ABERTOS">Pendências em aberto</option><option value="NOVO">Novos</option><option value="EM_ANALISE">Em análise</option><option value="RESPONDIDO">Respondidos</option><option value="RESOLVIDO">Resolvidos</option></select></div><div id="list" class="list"><div class="empty">Aguardando consulta.</div></div></section></section><section id="devicesPane" class="hidden"><h2 id="pendingSystemTitle" class="pending-section-title">Pendências do sistema</h2>
   <section class="diag-inline-card">
     <div id="diagInlineStatus" class="status">Toque em “Diagnóstico dos aparelhos” para consultar.</div>
     <div class="diag-inline-summary">
@@ -2087,10 +2096,20 @@ function diagState(a){
   if(fase==='AGUARDANDO_PORTAL')return 'Aguardando morador abrir o Portal';
   return txt(a&&a.statusTexto||a&&a.status||'Situação atual');
 }
+function diagIsPending(a){
+  var phase=diagPhase(a),status=txt(a&&a.status).toUpperCase();
+  if(phase==='CONCLUIDO'&&status==='ATIVO')return false;
+  if(status!=='ATIVO')return true;
+  return Boolean(phase&&phase!=='CONCLUIDO');
+}
 function diagRender(){
   var q=txt($('diagBusca')&&$('diagBusca').value).toLowerCase();
-  var rows=diagItems.filter(function(a){if(!q)return true;return [a.nome,a.telefone,a.dispositivo,a.navegador,a.sistema,a.subscriptionRef,a.statusTexto,diagState(a)].join(' ').toLowerCase().indexOf(q)>=0});
-  if(!rows.length){$('diagLista').innerHTML='<div class="empty">Nenhum aparelho nesta seleção.</div>';return}
+  var rows=diagItems.filter(function(a){
+    if(PENDING_VIEW&&!diagIsPending(a))return false;
+    if(!q)return true;
+    return [a.nome,a.telefone,a.dispositivo,a.navegador,a.sistema,a.subscriptionRef,a.statusTexto,diagState(a)].join(' ').toLowerCase().indexOf(q)>=0;
+  });
+  if(!rows.length){$('diagLista').innerHTML='<div class="empty">'+(PENDING_VIEW?'Nenhuma avaria ou pendência técnica nesta área.':'Nenhum aparelho nesta seleção.')+'</div>';return}
   $('diagLista').innerHTML=rows.map(function(a){
     var state=diagState(a),phase=diagPhase(a),ref=txt(a.subscriptionRef);
     var canRepair=a.status!=='ATIVO'&&!a.reparoPendente;
@@ -2128,5 +2147,21 @@ function diagRepair(ref,nome,button){
     $('diagInlineStatus').textContent=txt(r.message)||'Reparo solicitado.';setTimeout(diagLoad,350);
   });
 }
-function load(){ $('status').textContent='Atualizando chamados…';post('admin_suporte_chamados_listar',{},function(r){if(!r||r.ok!==true){$('status').textContent=txt(r&&r.message)||'Não foi possível carregar os chamados.';return}items=Array.isArray(r.tickets)?r.tickets:[];counts(r.contagens||{});$('status').textContent='Chamados de '+(r.areaNome||area())+' atualizados.';render()})}document.addEventListener('click',function(e){var save=e.target.closest&&e.target.closest('.save');if(save){var card=save.closest('.ticket'),protocol=card.getAttribute('data-protocol'),st=card.querySelector('.ticket-status').value,response=card.querySelector('.ticket-response').value;save.disabled=true;save.textContent='Salvando…';post('admin_suporte_chamado_atualizar',{protocolo:protocol,status:st,resposta:response},function(r){save.disabled=false;save.textContent='Salvar resposta / situação';if(!r||r.ok!==true){alert(txt(r&&r.message)||'Não foi possível salvar.');return}load()});return}var tab=e.target.closest&&e.target.closest('.tab');if(tab){document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b===tab)});var devices=tab.getAttribute('data-tab')==='devices';$('ticketsPane').classList.toggle('hidden',devices);$('devicesPane').classList.toggle('hidden',!devices);if(devices&&!diagItems.length)diagLoad();}});$('search').addEventListener('input',render);$('filter').addEventListener('change',render);$('refresh').addEventListener('click',load);$('diagBusca').addEventListener('input',diagRender);$('diagAtualizar').addEventListener('click',diagLoad);$('diagLista').addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-diag-repair]');if(b)diagRepair(txt(b.dataset.diagRepair),txt(b.dataset.diagName),b)});if(PENDING_VIEW){$('filter').value='ABERTOS';var ticketTab=document.querySelector('.tab[data-tab="tickets"]');if(ticketTab)ticketTab.textContent='🛟 Pendências dos moradores';$('status').textContent='Carregando pendências da área…'}if(DEVICES_VIEW){var deviceTab=document.querySelector('.tab[data-tab="devices"]');document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b===deviceTab)});$('ticketsPane').classList.add('hidden');$('devicesPane').classList.remove('hidden');setTimeout(diagLoad,0)}load()}());</script><script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260825-v6"></script>
+function load(){ $('status').textContent='Atualizando chamados…';post('admin_suporte_chamados_listar',{},function(r){if(!r||r.ok!==true){$('status').textContent=txt(r&&r.message)||'Não foi possível carregar os chamados.';return}items=Array.isArray(r.tickets)?r.tickets:[];counts(r.contagens||{});$('status').textContent='Chamados de '+(r.areaNome||area())+' atualizados.';render()})}document.addEventListener('click',function(e){var save=e.target.closest&&e.target.closest('.save');if(save){var card=save.closest('.ticket'),protocol=card.getAttribute('data-protocol'),st=card.querySelector('.ticket-status').value,response=card.querySelector('.ticket-response').value;save.disabled=true;save.textContent='Salvando…';post('admin_suporte_chamado_atualizar',{protocolo:protocol,status:st,resposta:response},function(r){save.disabled=false;save.textContent='Salvar resposta / situação';if(!r||r.ok!==true){alert(txt(r&&r.message)||'Não foi possível salvar.');return}load()});return}var tab=e.target.closest&&e.target.closest('.tab');if(tab){document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b===tab)});var devices=tab.getAttribute('data-tab')==='devices';$('ticketsPane').classList.toggle('hidden',devices);$('devicesPane').classList.toggle('hidden',!devices);if(devices&&!diagItems.length)diagLoad();}});$('search').addEventListener('input',render);$('filter').addEventListener('change',render);$('refresh').addEventListener('click',load);$('diagBusca').addEventListener('input',diagRender);$('diagAtualizar').addEventListener('click',diagLoad);$('diagLista').addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-diag-repair]');if(b)diagRepair(txt(b.dataset.diagRepair),txt(b.dataset.diagName),b)});if(PENDING_VIEW){
+  document.body.classList.add('pending-view');
+  $('filter').value='ABERTOS';
+  var tabs=document.querySelector('.tabs');if(tabs)tabs.hidden=true;
+  $('ticketsPane').classList.remove('hidden');
+  $('devicesPane').classList.remove('hidden');
+  $('status').textContent='Carregando pendências dos moradores…';
+  $('diagInlineStatus').textContent='Carregando avarias e pendências técnicas…';
+  setTimeout(diagLoad,0);
+}else if(DEVICES_VIEW){
+  var deviceTab=document.querySelector('.tab[data-tab="devices"]');
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b===deviceTab)});
+  $('ticketsPane').classList.add('hidden');
+  $('devicesPane').classList.remove('hidden');
+  setTimeout(diagLoad,0);
+}
+load()}());</script><script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260825-v6"></script>
 </body></html>
