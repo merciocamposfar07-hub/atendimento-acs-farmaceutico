@@ -23,7 +23,7 @@ assert.match(source, /--tacs-app-bg:#071827/i);
 assert.match(source, /--tacs-petroleo:var\(--tacs-app-top\)/i);
 assert.match(source, /--tacs-raio-botao:17px/i);
 assert.match(source, /button\[id\*="salvar"\]/i);
-assert.match(source, /button\.danger/);
+assert.match(source, /\.danger[,\s{]/);
 assert.match(source, /#portalTacsContrastToggleV1/);
 
 for (const file of targets) {
