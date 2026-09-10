@@ -1706,3 +1706,14 @@ html body .corpo .check{
   color:#f7fcff!important;
   border-color:#416f89!important;
 }
+
+
+/* PRONTUARIO_AREA_IDENTIFICACAO_V1 */
+html body .prontuario-area{
+  margin-top:6px!important;
+  color:#83efa9!important;
+  font-size:.82rem!important;
+  line-height:1.25!important;
+  font-weight:850!important;
+  opacity:1!important;
+}

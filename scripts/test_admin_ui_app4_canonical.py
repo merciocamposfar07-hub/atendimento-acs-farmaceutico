@@ -122,95 +122,142 @@ for token in [
         raise SystemExit(f'Visual R7 sem requisito obrigatório: {token}')
 print('R7_VISUAL_ONLY_OK')
 
-# CORRECOES_PONTUAIS_APP_2026_09_10_V4
+# CORRECOES_PONTUAIS_APP_2026_09_10_V5
 behavior_now = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')
 css_now = (ROOT / 'admin-ui-standard.inline.css').read_text(encoding='utf-8')
 
-# 1. Diagnóstico dentro do mesmo painel, sem tela branca/iframe visual.
+# 1. Diagnóstico: mesma página, sem iframe visual, sem cartões brancos e com ciclo de reparo.
 support_v2 = (ROOT / 'painel-suporte-moradores-v2.html').read_text(encoding='utf-8')
 for token in [
-    'DIAGNOSTICO_INLINE_CORRECAO_PONTUAL_V3',
+    'DIAGNOSTICO_INLINE_CORRECAO_PONTUAL_V4',
     'id="devicesPane"',
     'id="diagLista"',
-    "if(devices&&!diagItems.length)diagLoad()",
-    "data-state=",
-    "Reparo automático em andamento",
+    'function diagPhase(a)',
+    "txt(a&&a.status).toUpperCase()==='ATIVO'",
     "Reparo concluído",
     "Aguardando morador abrir o Portal",
+    '#devicesPane iframe{display:none!important}',
 ]:
     if token not in support_v2:
-        raise SystemExit(f'Diagnóstico inline incompleto: {token}')
+        raise SystemExit(f'Diagnóstico inline V4 incompleto: {token}')
 if 'id="diagFrame"' in support_v2:
-    raise SystemExit('Diagnóstico voltou a criar iframe/tela visível.')
+    raise SystemExit('Diagnóstico voltou a criar iframe/tela interna visível.')
 if 'Reparo já solicitado' in support_v2:
-    raise SystemExit('Diagnóstico voltou a exibir estado permanente "Reparo já solicitado".')
+    raise SystemExit('Diagnóstico voltou ao estado permanente "Reparo já solicitado".')
 
 support_legacy = (ROOT / 'painel-suporte-moradores.html').read_text(encoding='utf-8')
-for token in ["location.replace('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?'", "p.set('tab','devices')"]:
+for token in [
+    "location.replace('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?'",
+    "p.set('tab','devices')",
+    "p.set('v','20260910-diagnostico-inline-v4')",
+]:
     if token not in support_legacy:
-        raise SystemExit(f'Rota legada de diagnóstico não redireciona ao painel integrado: {token}')
+        raise SystemExit(f'Rota legada do diagnóstico incompleta: {token}')
 
-# 2. Agendas reutiliza sessão da Central e não mostra segundo PIN.
+# 2. Agendas: a autenticação é da Central; o módulo não mostra PIN nem botão Atualizar página.
 agenda_html = (ROOT / 'painel-oficial-agendas-vagas.html').read_text(encoding='utf-8')
-for forbidden in ['Digite o PIN para carregar as agendas','Atualizar página','Atualizar pagina']:
+for forbidden in [
+    'Digite o PIN para carregar as agendas',
+    'Abra Agendas e vagas pela Central Administrativa.',
+    'Atualizar página',
+    'Atualizar pagina',
+]:
     if forbidden in agenda_html:
         raise SystemExit(f'Agendas ainda contém elemento rejeitado: {forbidden}')
-for token in ["loginStatus.classList.add('oculto')","Abra Agendas e vagas pela Central Administrativa.","agendaRemoveAtualizarPaginaV1"]:
+for token in [
+    "if(loginStatus)loginStatus.classList.add('oculto')",
+    'agendaRemoveAtualizarPaginaV1',
+]:
     if token not in agenda_html:
-        raise SystemExit(f'Agendas sem correção de sessão/rodapé: {token}')
+        raise SystemExit(f'Agendas sem proteção solicitada: {token}')
 
-# 3. Vínculo só muda depois da confirmação do servidor.
+# 3. Vínculo: só confirma depois da resposta do servidor.
 municipios_html = (ROOT / 'painel-oficial-organizacoes-municipios.html').read_text(encoding='utf-8')
-for token in ["button.textContent='Vínculo salvo'","✓ Vínculo salvo","if(apply(r,'Área vinculada e conferida.'))showAreaFeedback"]:
+for token in [
+    "button.textContent='Vínculo salvo'",
+    '✓ Vínculo salvo',
+    "if(apply(r,'Área vinculada e conferida.'))showAreaFeedback",
+]:
     if token not in municipios_html:
         raise SystemExit(f'Confirmação de vínculo incompleta: {token}')
 
-# 4. Moradores não repete acesso TACS e não mostra atalho TACS/CSV.
+# 4. Prontuários: botão inferior e busca integrada em todas as áreas do administrador.
 moradores_html = (ROOT / 'teste-v1/painel-moradores-v2.html').read_text(encoding='utf-8')
+moradores_transport = (ROOT / 'teste-v1/painel-moradores-transport-v2.js').read_text(encoding='utf-8')
 if '>TACS, áreas e importação CSV</a>' in moradores_html:
     raise SystemExit('Atalho TACS/áreas/CSV voltou ao painel de moradores.')
+for token in [
+    'var PRONTUARIOS_VIEW=',
+    'function searchProntuariosTodasAreas(',
+    "cloneSession({q:q,areaId:areaId})",
+    "item._areaId=areaId",
+    'prontuario-area',
+    'Abrindo prontuário da área ',
+]:
+    if token not in moradores_transport:
+        raise SystemExit(f'Prontuários multiárea incompleto: {token}')
 if 'csc-resident-redundant-tacs-access' not in behavior_now:
-    raise SystemExit('Bloco TACS redundante do painel Moradores não está protegido.')
+    raise SystemExit('Bloco de segundo acesso TACS voltou ao painel Moradores.')
 
-# 5. Navegação inferior: prontuários, pendências e perfil.
+# 5. Sino: tela própria de pendências reúne chamados de morador e avarias do sistema.
+for token in [
+    'PENDENCIAS_RAPIDAS_AREA_V1',
+    'Pendências dos moradores',
+    'Pendências do sistema',
+    'function diagIsPending(a)',
+    "$('ticketsPane').classList.remove('hidden');",
+    "$('devicesPane').classList.remove('hidden');",
+]:
+    if token not in support_v2:
+        raise SystemExit(f'Central rápida de pendências incompleta: {token}')
+
+# 6. Navegação inferior e Perfil.
 for token in [
     "['▦','Prontuários',openRecordsPage]",
-    'view=prontuarios',
+    'view=prontuarios&all=1',
     "['🔔','Pendências',openPendingPage]",
     'view=pending',
     "['●','Perfil',openProfilePage]",
     'Array.isArray(ctx.tacs)?ctx.tacs:[]',
-    'Administradores e TACS cadastrados.',
+    '<h3>Administradores</h3>',
+    '<h3>TACS cadastrados</h3>',
+    '<h3>Áreas</h3>',
+    'csc-profile-area-jump',
 ]:
     if token not in behavior_now:
-        raise SystemExit(f'Navegação rápida incompleta: {token}')
+        raise SystemExit(f'Navegação/Perfil incompletos: {token}')
 
-# 6. Rodapé institucional canônico.
+# 7. Rodapé institucional em todas as superfícies injetadas.
 for token in [
     'Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.',
     'Conecta Saúde Comunitária — Plataforma 2026/2027',
 ]:
     if token not in behavior_now:
         raise SystemExit(f'Rodapé institucional incompleto: {token}')
-for token in ['RODAPE_INSTITUCIONAL_2026_2027_V2','.csc-platform-footer','background:#071827!important']:
+for token in [
+    'RODAPE_INSTITUCIONAL_2026_2027_V2',
+    '.csc-platform-footer',
+    'background:#071827!important',
+    'CAMPOS_SEM_BALOES_BRANCOS_2026_09_10_V1',
+    'PRONTUARIO_AREA_IDENTIFICACAO_V1',
+]:
     if token not in css_now:
-        raise SystemExit(f'Estilo do rodapé/tela única incompleto: {token}')
+        raise SystemExit(f'Estilo tela única/rodapé/campos incompleto: {token}')
 
-# 7. Recados/campanhas sem loop de MutationObserver.
+# 8. Recados/Campanhas segue sem loop de MutationObserver.
 mensal_js = (ROOT / 'recados-campanhas-whatsapp-mensal-v12.js').read_text(encoding='utf-8')
 for token in ['existing&&existing.dataset.signature===signature','subtree:false']:
     if token not in mensal_js:
         raise SystemExit(f'Recados/Campanhas sem correção da trava: {token}')
 
-# 8. Wrappers internos constroem novamente o shell canônico.
+# 9. Wrappers internos constroem novamente o shell canônico.
 for wrapper in ['painel-oficial-profissionais-servicos.html','painel-oficial-tacs-areas.html']:
     txt_wrapper = (ROOT / wrapper).read_text(encoding='utf-8')
     if 'delete window.PortalTacsAdminApp4ShellR6' not in txt_wrapper:
         raise SystemExit(f'Wrapper sem reinicialização do shell único: {wrapper}')
 
 nav = (ROOT / 'central-suporte-moradores-v1.js').read_text(encoding='utf-8')
-if "var REVISION='20260910-diagnostico-inline-v3'" not in nav:
-    raise SystemExit('Rotas administrativas sem revisão atual de cache.')
+if "var REVISION='20260910-pontuais-v5'" not in nav:
+    raise SystemExit('Rotas administrativas sem a revisão pontual V5 de cache.')
 
-print('CORRECOES_PONTUAIS_APP_2026_09_10_V4_OK')
-
+print('CORRECOES_PONTUAIS_APP_2026_09_10_V5_OK')
