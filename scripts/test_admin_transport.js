@@ -171,7 +171,7 @@ function verifyStaticSource(config) {
   assert.doesNotMatch(base, /jsonp\('admin_status',\{\},pronto\)/);
   assert.doesNotMatch(base, /Preparando a conexão com o Google Apps Script/);
   assert.match(base, /A sessão anterior não pôde ser reutilizada/);
-  assert.match(official, /[?&]v=(?:202608[\\w-]*|[0-9a-f]{7,40})/i);
+  assert.match(official, /[?&]v=(?:20260(?:8|9)[\\w-]*|[0-9a-f]{7,40})/i);
   if (config.official !== 'painel-oficial-recados-campanhas.html') {
     assert.match(
       official,
