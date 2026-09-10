@@ -2340,7 +2340,10 @@ function limpar(){
   });
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',limpar,{once:true});else limpar();
-if(window.MutationObserver&&document.body)new MutationObserver(limpar).observe(document.body,{childList:true,subtree:true});
+/* AGENDA_CLEANUP_LIMITADO_V2: limpeza pontual; sem MutationObserver percorrendo a página a cada alteração. */
+setTimeout(limpar,180);
+setTimeout(limpar,900);
+window.addEventListener('pageshow',limpar);
 }());
 </script>
 <script src="/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260823-card-institucional-v1"></script>

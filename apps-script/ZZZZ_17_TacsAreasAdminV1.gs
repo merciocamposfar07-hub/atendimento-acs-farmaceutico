@@ -374,9 +374,55 @@ function tacsTerritorioV1EncerrarSessao_(p){
   return {ok:true,message:'Sessão individual encerrada.'};
 }
 
+function tacsTerritorioV1AdministradoresContexto_(acesso,todos){
+  var out=[],vistos={};
+  function add(item,perfilPadrao){
+    if(!item)return;
+    var nome=tacsTerritorioV1Texto_(item.nomeCompleto||item.nome||item.operadorNome||item.usuarioNome||item.displayName);
+    var perfil=tacsTerritorioV1Texto_(item.perfil||item.tipo||perfilPadrao||'ADMINISTRADOR GERAL').toUpperCase();
+    if(!nome||/^(ADMIN_GERAL|ADMINISTRADOR GERAL|ADMINISTRAÇÃO GERAL|AG\d+)$/i.test(nome))return;
+    var key=(nome+'|'+perfil).toUpperCase();
+    if(vistos[key])return;vistos[key]=true;
+    out.push({nomeCompleto:nome,perfil:perfil||'ADMINISTRADOR GERAL',ativo:item.ativo!==false&&String(item.status||'').toUpperCase()!=='INATIVO'});
+  }
+  (todos||[]).forEach(function(item){
+    if(/^ADMIN(?:_|ISTRADOR)/i.test(tacsTerritorioV1Texto_(item&&item.perfil)))add(item,item.perfil);
+  });
+  var base=acesso&&acesso.base&&typeof acesso.base==='object'?acesso.base:{};
+  ['administradores','admins','operadores','usuariosAdministradores'].forEach(function(k){
+    var lista=Array.isArray(base[k])?base[k]:[];lista.forEach(function(item){add(item,'ADMINISTRADOR GERAL');});
+  });
+  add({nomeCompleto:base.operadorNome||base.usuarioNome||base.nomeCompleto||base.nome,perfil:base.perfil||'ADMINISTRADOR GERAL',ativo:true},'ADMINISTRADOR GERAL');
+
+  /* Leitura não destrutiva de cadastros administrativos preexistentes.
+     Só examina abas cujo próprio nome indica administração/usuário/operador/acesso. */
+  try{
+    var ss=tacsTerritorioV1Planilha_();
+    ss.getSheets().forEach(function(sh){
+      if(!/(ADMIN|USUAR|OPERADOR|ACESSO)/i.test(sh.getName())||sh.getLastRow()<2||sh.getLastColumn()<1)return;
+      var cols=Math.min(sh.getLastColumn(),40);
+      var headers=sh.getRange(1,1,1,cols).getDisplayValues()[0].map(function(v){return tacsTerritorioV1Id_(v);});
+      function idx(opcoes){for(var i=0;i<opcoes.length;i++){var n=headers.indexOf(opcoes[i]);if(n!==-1)return n}return-1}
+      var ni=idx(['NOME_COMPLETO','NOME','ADMINISTRADOR','USUARIO_NOME','OPERADOR_NOME']);
+      if(ni<0)return;
+      var pi=idx(['PERFIL','TIPO','PAPEL','ROLE']),ai=idx(['ATIVO','STATUS','SITUACAO']);
+      var rows=sh.getRange(2,1,Math.min(sh.getLastRow()-1,500),cols).getDisplayValues();
+      rows.forEach(function(row){
+        var perfil=pi>=0?tacsTerritorioV1Texto_(row[pi]):'ADMINISTRADOR GERAL';
+        if(pi>=0&&!/ADMIN/i.test(perfil))return;
+        var status=ai>=0?tacsTerritorioV1Texto_(row[ai]).toUpperCase():'';
+        add({nomeCompleto:row[ni],perfil:perfil||'ADMINISTRADOR GERAL',ativo:!/(INATIV|BLOQUEAD|FALSE|NÃO|NAO|0)/.test(status)},'ADMINISTRADOR GERAL');
+      });
+    });
+  }catch(ignorarLeituraAdministradores){}
+  return out.sort(function(a,b){return a.nomeCompleto.localeCompare?a.nomeCompleto.localeCompare(b.nomeCompleto,'pt-BR'):(a.nomeCompleto>b.nomeCompleto?1:-1);});
+}
+
 function tacsTerritorioV1Dados_(acesso){
   var admin=['ADMIN_GERAL','ADMIN_MUNICIPAL'].indexOf(acesso.perfil)!==-1;
-  var tacs=tacsTerritorioV1LerTacs_();
+  var todos=tacsTerritorioV1LerTacs_();
+  var administradores=admin?tacsTerritorioV1AdministradoresContexto_(acesso,todos):[];
+  var tacs=todos.filter(function(item){return !/^ADMIN(?:_|ISTRADOR)/i.test(tacsTerritorioV1Texto_(item&&item.perfil));});
   var areas=tacsTerritorioV1LerAreas_();
   if(!admin){
     tacs=tacs.filter(function(item){return item.tacsId===acesso.tacsId;});
@@ -385,6 +431,7 @@ function tacsTerritorioV1Dados_(acesso){
   return {
     ok:true,versao:TACS_TERRITORIO_V1.VERSAO,perfil:acesso.perfil,
     podeAdministrar:admin,tacs:tacs.map(tacsTerritorioV1PublicarTacs_),
+    administradores:administradores,
     areas:areas,isolamento:'UMA_PLANILHA_DE_MORADORES_POR_AREA',
     idsTecnicosImutaveis:true,camposCadastraisReeditaveis:true
   };

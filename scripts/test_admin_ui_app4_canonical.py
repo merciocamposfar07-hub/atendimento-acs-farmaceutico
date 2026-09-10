@@ -137,6 +137,12 @@ for token in [
     "Reparo concluído",
     "Aguardando morador abrir o Portal",
     '#devicesPane iframe{display:none!important}',
+    'data-diag-filter="ATIVO"',
+    'data-diag-filter="INATIVO"',
+    'data-diag-filter="REPARO"',
+    'data-diag-filter="SEM_CONFIRMACAO"',
+    'id="diagDetails"',
+    "diagFilter=PENDING_VIEW?'PENDENTES':''",
 ]:
     if token not in support_v2:
         raise SystemExit(f'Diagnóstico inline V4 incompleto: {token}')
@@ -167,9 +173,12 @@ for forbidden in [
 for token in [
     "if(loginStatus)loginStatus.classList.add('oculto')",
     'agendaRemoveAtualizarPaginaV1',
+    'AGENDA_CLEANUP_LIMITADO_V2',
 ]:
     if token not in agenda_html:
         raise SystemExit(f'Agendas sem proteção solicitada: {token}')
+if 'new MutationObserver(limpar).observe' in agenda_html:
+    raise SystemExit('Agendas voltou a usar MutationObserver contínuo que pode travar o iPhone.')
 
 # 3. Vínculo: só confirma depois da resposta do servidor.
 municipios_html = (ROOT / 'painel-oficial-organizacoes-municipios.html').read_text(encoding='utf-8')
@@ -223,6 +232,8 @@ for token in [
     '<h3>TACS cadastrados</h3>',
     '<h3>Áreas</h3>',
     'csc-profile-area-jump',
+    'csc-profile-admin-toggle',
+    'csc-profile-admin-names',
 ]:
     if token not in behavior_now:
         raise SystemExit(f'Navegação/Perfil incompletos: {token}')
@@ -230,15 +241,16 @@ for token in [
 # 7. Rodapé institucional em todas as superfícies injetadas.
 for token in [
     'Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.',
-    'Conecta Saúde Comunitária — Plataforma 2026/2027',
+    'Conecta Saúde Comunitária — Plataforma',
 ]:
     if token not in behavior_now:
         raise SystemExit(f'Rodapé institucional incompleto: {token}')
 for token in [
-    'RODAPE_INSTITUCIONAL_2026_2027_V2',
+    'RODAPE_INSTITUCIONAL_V3',
     '.csc-platform-footer',
     'background:#071827!important',
     'CAMPOS_SEM_BALOES_BRANCOS_2026_09_10_V1',
+    'AREA_CONTROL_SEM_BRANCO_2026_09_10_V2',
     'PRONTUARIO_AREA_IDENTIFICACAO_V1',
 ]:
     if token not in css_now:
@@ -255,6 +267,18 @@ for wrapper in ['painel-oficial-profissionais-servicos.html','painel-oficial-tac
     txt_wrapper = (ROOT / wrapper).read_text(encoding='utf-8')
     if 'delete window.PortalTacsAdminApp4ShellR6' not in txt_wrapper:
         raise SystemExit(f'Wrapper sem reinicialização do shell único: {wrapper}')
+
+central_js = (ROOT / 'central-administrativa-tacs.js').read_text(encoding='utf-8')
+if 'AGENDA_DIRECT_NAV_V1' not in central_js or "if(name==='agendas'){location.assign" not in central_js:
+    raise SystemExit('Agendas não está usando a rota direta anti-travamento.')
+
+territorio_gs = (ROOT / 'apps-script/ZZZZ_17_TacsAreasAdminV1.gs').read_text(encoding='utf-8')
+for token in ['tacsTerritorioV1AdministradoresContexto_', 'administradores:administradores']:
+    if token not in territorio_gs:
+        raise SystemExit(f'Perfil sem leitura nominal de administradores: {token}')
+
+if '2026/2027' in behavior_now:
+    raise SystemExit('Rodapé voltou a exibir ciclo 2026/2027 sem necessidade funcional.')
 
 nav = (ROOT / 'central-suporte-moradores-v1.js').read_text(encoding='utf-8')
 if "var REVISION='20260910-pontuais-v5'" not in nav:
