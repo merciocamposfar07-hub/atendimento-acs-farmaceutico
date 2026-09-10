@@ -1,13 +1,13 @@
 /*
- * Conecta Saúde Comunitária — comportamento do shell App institucional
- * Contrato: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R2
+ * Conecta Saúde Comunitária — comportamento do shell App institucional R3
+ * Contrato: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R3
  * Regra: identidade institucional única, reação ao toque e reaproveitamento visual da sessão.
  * Este script NÃO autentica nem cria sessão: apenas reutiliza os tokens já validados pelos módulos.
  */
 (function(){
 'use strict';
-if(window.PortalTacsAdminApp4ShellR2)return;
-window.PortalTacsAdminApp4ShellR2=true;
+if(window.PortalTacsAdminApp4ShellR3)return;
+window.PortalTacsAdminApp4ShellR3=true;
 
 var ROOT=document.documentElement;
 var PATH=String(location.pathname||'');
@@ -39,6 +39,7 @@ function syncSessionClass(){
     document.body.classList.toggle('csc-session-active',active);
     document.body.classList.toggle('csc-session-missing',!active);
   }
+  enhanceSessionUi();
 }
 function panelTitle(){
   if(CENTRAL)return 'Central Administrativa';
@@ -98,29 +99,41 @@ function buildAppbar(){
 }
 
 function markAuthControls(){
-  var passwords=document.querySelectorAll('input[type="password"]');
-  passwords.forEach(function(input){
-    input.classList.add('csc-auth-control');
-    if(input.labels){Array.prototype.forEach.call(input.labels,function(label){label.classList.add('csc-auth-control')})}
+  var loginPasswordIds=['pin','adminPin','tacsPinLogin'];
+  loginPasswordIds.forEach(function(id){
+    var input=document.getElementById(id);
+    if(!input||input.id==='tacsPinAccess'||input.id==='tacsPin')return;
+    input.classList.add('csc-auth-control','csc-admin-only-auth');
+    if(input.labels){Array.prototype.forEach.call(input.labels,function(label){label.classList.add('csc-auth-control','csc-admin-only-auth')})}
     var wrap=input.closest('#adminLogin,#tacsLogin');
-    if(wrap)wrap.classList.add('csc-auth-control');
-    var section=input.closest('section');
-    if(section){
-      section.classList.add('csc-has-auth');
-      var heading=section.querySelector('h2');
-      if(heading)heading.classList.add('csc-auth-title');
-    }
+    if(wrap)wrap.classList.add('csc-auth-control','csc-admin-only-auth');
   });
-  ['accessActions','pinHelp','loginAdminTab','loginTacsTab'].forEach(function(id){
-    var n=document.getElementById(id);if(n)n.classList.add('csc-auth-control');
-  });
-  ['loginAdminTab','loginTacsTab'].forEach(function(id){
-    var n=document.getElementById(id),parent=n&&n.parentElement;
-    if(parent&&parent.querySelectorAll('#loginAdminTab,#loginTacsTab').length===2)parent.classList.add('csc-auth-control');
-  });
-  if(!CENTRAL){
-    var sair=document.getElementById('sair');
-    if(sair)sair.classList.add('csc-auth-control');
+  ['accessActions','pinHelp','loginAdminTab','loginTacsTab','adminLogin','tacsLogin'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-auth-control','csc-admin-only-auth')});
+  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-admin-only-auth')});
+  var accessTitle=document.getElementById('accessTitle');if(accessTitle)accessTitle.classList.add('csc-admin-only-auth');
+  var tacsPin=document.getElementById('tacsPinAccess');
+  if(tacsPin){
+    tacsPin.classList.remove('csc-auth-control','csc-admin-only-auth');
+    if(tacsPin.labels){Array.prototype.forEach.call(tacsPin.labels,function(label){label.classList.remove('csc-auth-control','csc-admin-only-auth')})}
+    var areaBox=tacsPin.closest('.area-control');if(areaBox)areaBox.classList.add('csc-tacs-access');
+    var section=tacsPin.closest('section');if(section)section.classList.add('csc-moradores-access');
+    var loginTacs=document.getElementById('loginTacs');if(loginTacs)loginTacs.classList.remove('csc-auth-control','csc-admin-only-auth');
+  }
+  var editorPin=document.getElementById('tacsPin');
+  if(editorPin){
+    editorPin.classList.remove('csc-auth-control','csc-admin-only-auth');
+    if(editorPin.labels){Array.prototype.forEach.call(editorPin.labels,function(label){label.classList.remove('csc-auth-control','csc-admin-only-auth')})}
+  }
+}
+
+function enhanceSessionUi(){
+  if(!document.body)return;
+  var active=hasSession(),tacsPin=document.getElementById('tacsPinAccess');
+  if(tacsPin){
+    var section=tacsPin.closest('section');if(section)section.classList.add('csc-moradores-access');
+    var heading=section&&section.querySelector('h2');if(active&&heading)heading.textContent='Acesso individual do TACS';
+    var status=document.getElementById('loginStatus');
+    if(active&&status&&/aguardando acesso|sess[aã]o administrativa existente|digite o pin/i.test(text(status.textContent))){status.textContent='Sessão administrativa ativa.';status.classList.add('ok')}
   }
 }
 
@@ -155,10 +168,16 @@ function buildCentralWelcome(){
 }
 
 function installTouchFeedback(){
-  document.addEventListener('click',function(e){
-    var b=e.target&&e.target.closest?e.target.closest('button,.botao,.btn,.module,[role="button"]'):null;
-    if(b&&!b.disabled)vibrate();
-  },{passive:true});
+  if(ROOT.dataset.cscTouchR3==='1')return;
+  ROOT.dataset.cscTouchR3='1';
+  var selector='button,.botao,.btn,.module,.tab,.aba,[role="button"],a.btn,a.botao';
+  function target(e){return e.target&&e.target.closest?e.target.closest(selector):null}
+  function release(){document.querySelectorAll('.csc-pressed').forEach(function(n){n.classList.remove('csc-pressed')})}
+  document.addEventListener('pointerdown',function(e){var b=target(e);if(!b||b.disabled)return;release();b.classList.add('csc-pressed')},{passive:true});
+  document.addEventListener('pointerup',release,{passive:true});
+  document.addEventListener('pointercancel',release,{passive:true});
+  window.addEventListener('blur',release);
+  document.addEventListener('click',function(e){var b=target(e);if(b&&!b.disabled)vibrate();if(b)setTimeout(function(){b.classList.remove('csc-pressed')},70)},{passive:true});
 }
 
 function installFinalSkin(){
