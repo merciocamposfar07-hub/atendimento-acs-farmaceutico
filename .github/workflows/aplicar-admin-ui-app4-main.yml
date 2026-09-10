@@ -30,10 +30,10 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Injetar skin e comportamento App4 R2 somente nos painéis administrativos
+      - name: Injetar skin e comportamento App4 R5 somente nos painéis administrativos
         run: python3 scripts/injetar_admin_ui_standard_v1.py
 
-      - name: Validar contrato App4 R2, sessão única e isolamento do Portal público
+      - name: Validar contrato App4 R5, sessão única e isolamento do Portal público
         run: python3 scripts/test_admin_ui_app4_canonical.py
 
       - name: Validar integridade textual
@@ -53,8 +53,8 @@ jobs:
             teste-v1/painel-moradores-v2.html \
             teste-v1/painel-profissionais-servicos-v1.html \
             teste-v1/painel-tacs-areas-v1.html; do
-              grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R2' "$f"
-              grep -q 'portalTacsAdminUiBehaviorR2' "$f"
+              grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R5' "$f"
+              grep -q 'portalTacsAdminUiBehaviorR5' "$f"
           done
 
       - name: Registrar HTMLs normalizados se houver diferença
@@ -62,7 +62,7 @@ jobs:
         run: |
           set -euo pipefail
           if git diff --quiet; then
-            echo 'Todos os painéis já estão no padrão App4 R2.'
+            echo 'Todos os painéis já estão no padrão App4 R5.'
             exit 0
           fi
           git config user.name 'Conecta Saúde UI Release'
@@ -79,5 +79,5 @@ jobs:
             teste-v1/painel-moradores-v2.html \
             teste-v1/painel-profissionais-servicos-v1.html \
             teste-v1/painel-tacs-areas-v1.html
-          git commit -m 'UI: aplicar App institucional canônico R2 aos painéis administrativos [skip ci]'
+          git commit -m 'UI: aplicar App institucional canônico R5 aos painéis administrativos [skip ci]'
           git push origin HEAD:main
