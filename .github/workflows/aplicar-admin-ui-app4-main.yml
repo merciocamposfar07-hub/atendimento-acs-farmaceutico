@@ -19,6 +19,9 @@ on:
       - 'painel-suporte-moradores.html'
       - 'painel-suporte-moradores-v2.html'
       - 'painel-oficial-agendas-vagas.html'
+      - 'central-administrativa-tacs.html'
+      - 'central-suporte-moradores-v1.js'
+      - 'teste-v1/painel-profissionais-servicos-v1.html'
 
 permissions:
   contents: write
