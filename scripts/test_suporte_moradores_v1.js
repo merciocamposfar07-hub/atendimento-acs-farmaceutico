@@ -6,7 +6,6 @@ function read(p){return fs.readFileSync(p,'utf8')}
 const central=read('central-administrativa-tacs.html');
 const bootstrap=read('central-suporte-moradores-v1.js');
 const performance=read('central-admin-performance-v1.js');
-const panelV1=read('painel-suporte-moradores.html');
 const panelV2=read('painel-suporte-moradores-v2.html');
 const portal=read('portal-institucional-suporte-v1.js');
 const autoUpdate=read('portal-auto-update.js');
@@ -22,11 +21,11 @@ assert(performance.includes("if(name==='suporte')return '/atendimento-acs-farmac
 assert(performance.includes("name==='suporte'"),'Controlador oficial deve tratar Suporte como módulo próprio');
 
 assert(backend.includes('vinculosPreservados:true'),'Backend do diagnóstico deve declarar explicitamente a preservação dos vínculos');
-assert(panelV1.includes('admin_suporte_moradores_diagnostico'),'Interface de diagnóstico não usa o endpoint dedicado');
-assert(panelV1.includes('admin_notificacoes_solicitar_reparo_aparelho'),'Reparo individual seguro ausente');
-assert(!panelV1.includes('admin_notificacoes_solicitar_reparo_area'),'Diagnóstico dedicado não deve disparar reparo coletivo');
-assert(!/removeItem\s*\(\s*DEVICE_KEY/.test(panelV1),'Interface não pode apagar a identidade local do aparelho');
-assert(!/localStorage\.clear\s*\(/.test(panelV1),'Interface não pode limpar os vínculos locais');
+assert(panelV2.includes('admin_notificacoes_saude'),'Interface V2 do diagnóstico não usa a rota atual de saúde dos aparelhos');
+assert(panelV2.includes('admin_notificacoes_solicitar_reparo_aparelho'),'Reparo individual seguro ausente na interface V2');
+assert(!panelV2.includes('admin_notificacoes_solicitar_reparo_area'),'Diagnóstico V2 não deve disparar reparo coletivo');
+assert(!/removeItem\s*\(\s*DEVICE_KEY/.test(panelV2),'Interface V2 não pode apagar a identidade local do aparelho');
+assert(!/localStorage\.clear\s*\(/.test(panelV2),'Interface V2 não pode limpar os vínculos locais');
 
 assert(panelV2.includes('Chamados dos moradores'),'Painel V2 deve ter a caixa de chamados');
 assert(panelV2.includes('Diagnóstico dos aparelhos'),'Painel V2 deve manter o diagnóstico técnico separado');
@@ -65,4 +64,4 @@ assert(backend.includes("Resposta interna salva sem aviso Push."),'Resposta inte
 assert(builder.includes("source: 'apps-script/ZZZZ_48_SuporteMoradoresV1.gs'"),'Builder do Apps Script não inclui o módulo de suporte');
 assert(builder.includes("marker: 'TACS_SUPORTE_MORADORES_V1'"),'Builder não valida o marcador do suporte');
 
-console.log('Suporte aos moradores V2: módulo dedicado sob controlador único, rodapé institucional, chamados internos e preservação de vínculos validados.');
+console.log('Suporte aos moradores V2: navegação direta sem iframe, rodapé institucional, chamados internos e preservação de vínculos validados.');
