@@ -1,6 +1,6 @@
-run_id=34539729201
-head_sha=48f503c225642c054c2ade5d82f253bfa7f14a99
+run_id=34539872038
+head_sha=37ddb50789fad102911c7bf4dd338039242b95f8
 conclusion=failure
 jobs=testar-e-implantar:completed:failure
 failed_steps=Testar toda a integração
-recorded_at=2026-09-10T22:55:50Z
+recorded_at=2026-09-10T22:57:38Z
