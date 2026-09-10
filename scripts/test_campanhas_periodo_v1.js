@@ -50,7 +50,7 @@ assert(portal.includes("ctx.font = '800 ' + size"), 'Portal: tipografia legível
 
 const municipal = read('painel-oficial-organizacoes-municipios.html');
 assert(municipal.includes('area-feedback'), 'Municípios: feedback local do vínculo ausente');
-assert(municipal.includes('Vínculo salvo:'), 'Municípios: mensagem nominal de vínculo ausente');
+assert(municipal.includes("esc(areaName)+' → '+esc(municipio)"), 'Municípios: mensagem nominal de vínculo ausente');
 assert(/\.signal\{[^}]*background:var\(--p\)/.test(municipal), 'Municípios: balão de status não usa azul-petróleo');
 assert(!municipal.includes('<button id="portalTacsContrastToggleV1"'), 'Municípios: botão de contraste foi reintroduzido');
 
