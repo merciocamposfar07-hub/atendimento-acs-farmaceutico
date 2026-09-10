@@ -189,7 +189,7 @@ function installFinalSkin(){
   var old=document.getElementById('cscApp4FinalSkinR5');if(old)old.remove();
   var style=document.createElement('style');
   style.id='cscApp4FinalSkinR5';
-  style.textContent='html,body{background:#071827!important;color:#f7fcff!important}body{background:linear-gradient(180deg,#0b263d 0,#071827 360px,#071827 100%)!important}header,footer,.footer{border:0!important;box-shadow:none!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
+  style.textContent='html,body{background:#071827!important;color:#f7fcff!important}body{background:linear-gradient(180deg,#0b263d 0,#071827 360px,#071827 100%)!important}header,footer,.footer{border:0!important;box-shadow:none!important}.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
   (document.head||document.documentElement).appendChild(style);
 }
 
