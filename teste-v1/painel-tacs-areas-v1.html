@@ -1659,6 +1659,35 @@ body.csc-brand-enhanced .loading{
 .csc-platform-footer small{color:#9db6c5!important;font-size:.77rem!important;line-height:1.3!important}
 body:not(.csc-central) .csc-platform-footer{padding-bottom:calc(28px + env(safe-area-inset-bottom))!important}
 .csc-central footer.csc-platform-footer{display:grid!important}
+
+/* RODAPE_INSTITUCIONAL_2026_2027_V2 */
+.csc-platform-footer{
+  width:min(720px,100%)!important;
+  margin:34px auto 0!important;
+  padding:22px 16px calc(30px + env(safe-area-inset-bottom))!important;
+  display:grid!important;
+  gap:7px!important;
+  text-align:center!important;
+  background:#071827!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.csc-platform-footer strong{
+  color:#f7fcff!important;
+  font-size:.92rem!important;
+  line-height:1.35!important;
+  font-weight:850!important;
+}
+.csc-platform-footer small{
+  color:#adc4d2!important;
+  font-size:.78rem!important;
+  line-height:1.3!important;
+  font-weight:650!important;
+}
+.csc-central .csc-platform-footer{
+  padding-bottom:calc(102px + env(safe-area-inset-bottom))!important;
+}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
@@ -1708,6 +1737,7 @@ function panelTitle(){
   if(CENTRAL)return 'Central Administrativa';
   if(/\/painel-suporte-moradores\.html$/i.test(PATH))return 'Diagnóstico dos aparelhos';
   if(/\/painel-suporte-moradores-v2\.html$/i.test(PATH)){try{if(String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='pending')return 'Pendências da área'}catch(e){}return 'Suporte aos moradores'};
+  if(/\/teste-v1\/painel-moradores-v2\.html$/i.test(PATH)){try{if(String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='prontuarios')return 'Prontuários'}catch(e){}}
   var h=document.querySelector('header h1');
   if(h&&text(h.textContent))return text(h.textContent);
   var t=text(document.title).split('|')[0].split('•')[0];
@@ -1820,11 +1850,11 @@ function showCentralHome(){
 }
 function openRecordsPage(){
   var area=encodeURIComponent(centralAreaId());
-  location.assign('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&view=prontuarios&from=central&v=20260910-prontuarios-v2');
+  location.assign('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&view=prontuarios&from=central&v=20260910-prontuarios-v3');
 }
 function openPendingPage(){
   var area=encodeURIComponent(centralAreaId());
-  location.assign('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+'&view=pending&from=central&v=20260910-pendencias-v1');
+  location.assign('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+'&view=pending&from=central&v=20260910-pendencias-v2');
 }
 function openProfilePage(){
   var main=document.querySelector('main');if(!main)return;
@@ -1834,7 +1864,7 @@ function openProfilePage(){
   var ctx=centralContextFromCache()||{},areas=Array.isArray(ctx.areas)?ctx.areas:[],tacs=Array.isArray(ctx.tacs)?ctx.tacs:[],admins=Array.isArray(ctx.administradores)?ctx.administradores:[];
   if(!admins.length)admins=[{nomeCompleto:'Administrador geral',perfil:'ADMINISTRADOR GERAL',ativo:true}];
   function areaName(id){for(var i=0;i<areas.length;i++)if(text(areas[i].areaId)===text(id))return text(areas[i].areaNome||areas[i].areaId);return text(id)||'Área não vinculada'}
-  var html='<h2>Administradores e TACS</h2><p class="csc-profile-intro">Acesso rápido aos responsáveis cadastrados e às áreas disponíveis.</p><h3>Administradores</h3><div class="csc-profile-list">';
+  var html='<h2>Administradores e TACS</h2><p class="csc-profile-intro">Administradores e TACS cadastrados. Toque em um TACS para mudar rapidamente para a área vinculada.</p><h3>Administradores</h3><div class="csc-profile-list">';
   admins.forEach(function(a){html+='<article class="csc-profile-card"><strong>'+escapeProfile(a.nomeCompleto||a.nome||'Administrador geral')+'</strong><span>'+escapeProfile(a.perfil||'ADMINISTRADOR GERAL')+'</span></article>'});
   html+='</div><h3>TACS cadastrados</h3><div class="csc-profile-list">';
   if(!tacs.length)html+='<div class="csc-profile-empty">Nenhum TACS disponível no contexto atual.</div>';
@@ -1880,7 +1910,7 @@ function buildPlatformFooter(){
   var footer=document.createElement('footer');
   footer.id='cscPlatformFooter';
   footer.className='csc-platform-footer';
-  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong><small>Versão da plataforma 2026.09 • Ano letivo 2026</small>';
+  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong><small>Conecta Saúde Comunitária — Plataforma 2026/2027</small>';
   var old=document.querySelector('body>footer:not(#cscPlatformFooter)');
   if(old)old.hidden=true;
   document.body.appendChild(footer);
