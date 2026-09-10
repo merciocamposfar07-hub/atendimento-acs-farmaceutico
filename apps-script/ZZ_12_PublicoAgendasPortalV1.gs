@@ -10,7 +10,7 @@
  */
 
 var PUBLICO_AGENDAS_PORTAL_V1 = Object.freeze({
-  VERSAO: '1.3.0',
+  VERSAO: '1.3.1',
   ACAO: 'painel_publico',
   AREA_PADRAO: 'JAPARANDUBA',
   FUSO: 'America/Recife',
@@ -90,7 +90,9 @@ function publicoAgendasV1Montar_(areaId) {
     );
     if (!dia) continue;
 
-    var dataBruta = publicoAgendasV1Valor_(valores[linha], indices.data);
+    // DATA da agenda é civil: usar exatamente o valor exibido na planilha.
+    // Isso impede que 11/09/2026 seja publicado como 10/09/2026 por conversão de fuso.
+    var dataBruta = publicoAgendasV1Valor_(exibidos[linha], indices.data);
     var encerra12h = publicoAgendasV1Booleano_(
       publicoAgendasV1Valor_(valores[linha], indices.encerra12h)
     );
