@@ -1,0 +1,71 @@
+name: Aplicar UI App4 canônica aos painéis administrativos
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/aplicar-admin-ui-app4-main.yml'
+      - 'admin-ui-standard.inline.css'
+      - 'scripts/injetar_admin_ui_standard_v1.py'
+      - 'scripts/test_admin_ui_app4_canonical.py'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: admin-ui-app4-main
+  cancel-in-progress: false
+
+jobs:
+  aplicar-e-validar:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Baixar main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Injetar fonte visual canônica somente nos painéis administrativos
+        run: python3 scripts/injetar_admin_ui_standard_v1.py
+
+      - name: Validar contrato App4 e isolamento do Portal público
+        run: python3 scripts/test_admin_ui_app4_canonical.py
+
+      - name: Validar integridade textual
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' central-administrativa-tacs.html
+          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' painel-oficial-agendas-vagas.html
+          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' painel-oficial-recados-campanhas.html
+          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' painel-oficial-profissionais-servicos.html
+          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' teste-v1/painel-profissionais-servicos-v1.html
+          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' teste-v1/painel-moradores-v2.html
+
+      - name: Registrar HTMLs normalizados se houver diferença
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Todos os painéis já estão no padrão App4.'
+            exit 0
+          fi
+          git config user.name 'Conecta Saúde UI Release'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -- \
+            central-administrativa-tacs.html \
+            painel-oficial-organizacoes-municipios.html \
+            painel-oficial-agendas-vagas.html \
+            painel-oficial-profissionais-servicos.html \
+            painel-oficial-recados-campanhas.html \
+            painel-oficial-tacs-areas.html \
+            teste-v1/painel-moradores-v2.html \
+            teste-v1/painel-profissionais-servicos-v1.html \
+            teste-v1/painel-tacs-areas-v1.html
+          git commit -m 'UI: aplicar App institucional canônico aos painéis administrativos [skip ci]'
+          git push origin HEAD:main
