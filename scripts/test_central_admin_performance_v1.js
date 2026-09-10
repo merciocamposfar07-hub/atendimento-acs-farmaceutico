@@ -7,84 +7,73 @@ const central=read('central-administrativa-tacs.html');
 const base=read('central-administrativa-tacs.js');
 const quick=read('central-tacs-login-rapido-v1.js');
 const support=read('central-suporte-moradores-v1.js');
-const performance=read('central-admin-performance-v1.js');
-
-const directControllerMatch=central.match(/central-admin-performance-v1\.js\?v=([^"']+)/);
-assert(directControllerMatch,'Central deve carregar o controlador rápido com revisão explícita');
-const directController=directControllerMatch[0];
-assert(central.includes('rel="preload" as="script" href="/atendimento-acs-farmaceutico/'+directController+'"'),'Central deve iniciar o download do controlador rápido durante a leitura do HTML');
-assert(central.includes('<script src="/atendimento-acs-farmaceutico/'+directController+'"></script>'),'Controlador rápido deve ser carregado diretamente pela Central');
-assert(central.indexOf(directController)<central.indexOf('central-tacs-login-rapido-v1.js'),'Controlador rápido precisa carregar antes do login rápido instalar compatibilidades de navegação');
-assert(central.indexOf(directController)<central.indexOf('central-suporte-moradores-v1.js'),'Controlador rápido precisa estar pronto antes do bootstrap de suporte');
-assert(/central-suporte-moradores-v1\.js\?v=[^"']+/.test(central),'Central deve preservar o bootstrap de suporte e fallback com revisão explícita');
-assert(support.includes('central-admin-performance-v1.js?v=20260823-admin-performance-v1'),'Bootstrap deve preservar fallback do controlador oficial');
-assert(support.includes('BLOCO_1_CONTROLE_UNICO_V1'),'Contrato de controlador único do Bloco 1 ausente');
-assert(support.includes("document.addEventListener('click',navigationGate,true)"),'Gate de compatibilidade deve continuar seguro se o carregamento direto falhar');
-assert(support.includes('if(window.PortalTacsCentralPerformanceV1)return;'),'Fallback não pode instalar segunda instância quando o controlador direto já existe');
-assert(!support.includes('function openSupport('),'Suporte não pode manter um controlador próprio de navegação');
-assert(!support.includes('.module[data-module="suporte"]'),'Suporte não pode interceptar seu cartão separadamente');
-assert(!support.includes('frame.src=url'),'Bootstrap não pode abrir painel por conta própria');
-
-['moradores','suporte','recados','agendas','profissionais'].forEach((modulo)=>{
-  assert(performance.includes("'"+modulo+"'"),'Controlador oficial não cobre módulo obrigatório: '+modulo);
-});
-assert(performance.includes("event.target.closest('#moduleGrid .module[data-module]')"),'Controlador oficial precisa ser o dono da navegação dos cartões');
-assert(performance.includes("event.target.closest('#viewerBack')"),'Controlador oficial precisa ser o dono do retorno à Central');
-assert(performance.includes("name==='portal'"),'Portal público precisa permanecer fora do host administrativo');
-assert(performance.includes('portalTacsAdminPreloadPoolV1'),'Host de painéis pré-carregados ausente');
-assert(performance.includes('ensureFrame(name)'),'Reuso da instância carregada do painel ausente');
-assert(performance.includes("viewer.insertBefore(pool,original)")&&performance.includes('host.appendChild(frame);'),'Painel deve nascer uma única vez no host estável do visualizador');
-
-const showFrame=performance.match(/function showFrame\(name,title\)\{[\s\S]*?\n\}/)?.[0]||'';
-const closeViewer=performance.match(/function closeViewerFast\(options\)\{[\s\S]*?\n\}/)?.[0]||'';
-assert(showFrame&&closeViewer,'Rotinas de abrir/voltar da Central precisam permanecer disponíveis');
-assert(!showFrame.includes('appendChild(frame)')&&!showFrame.includes('appendChild(frames['),'Abrir/trocar painel não pode mover iframe já carregado');
-assert(!closeViewer.includes('appendChild(frame)')&&!closeViewer.includes('appendChild(frames['),'Voltar à Central não pode mover iframe já carregado');
-assert(showFrame.includes('frameHiddenStyle(frames[activeName])'),'Trocar painel deve apenas ocultar o anterior');
-assert(closeViewer.includes('frameHiddenStyle(frames[activeName])'),'Voltar à Central deve apenas ocultar o painel ativo');
-assert(!performance.includes('_cb=Date.now()'),'Controlador oficial não pode criar cache-buster novo a cada toque');
-assert(!/function closeViewerFast\([\s\S]*?src\s*=\s*['"]about:blank['"]/.test(performance),'Voltar à Central não pode descarregar o painel administrativo ativo');
-
-/* Safari/iOS: iframe carregado não pode ser colapsado por display:none/hidden. */
-assert(performance.includes("pool.style.cssText='display:block;flex:1 1 auto"),'Pool persistente deve manter viewport real');
-assert(performance.includes("frame.style.cssText='display:block;position:absolute;inset:0;width:100%;height:100%"),'Iframe estacionado deve continuar dimensionado');
-assert(!performance.includes("frame.style.cssText='display:none"),'Iframe carregado não pode voltar a usar display:none');
-assert(performance.includes("frame.style.cssText='display:block;position:absolute;inset:0;width:100%;height:100%;min-width:0;min-height:0;border:0;background:#dfeef3;visibility:hidden;opacity:0;pointer-events:none;z-index:0'"),'Estado estacionado deve usar visibility/opacity sem destruir viewport');
-assert(performance.includes('function viewerParkedStyle(viewer)'),'Viewer precisa de estado estacionado próprio para iOS');
-assert(performance.includes("viewer.style.visibility='hidden'"),'Viewer estacionado deve ficar invisível sem colapsar');
-assert(performance.includes("viewer.style.pointerEvents='none'"),'Viewer estacionado não pode capturar toque');
-assert(performance.includes('viewer.hidden=false;'),'Viewer estacionado deve permanecer dimensionado');
-assert(closeViewer.includes('viewerParkedStyle(viewer)'),'Voltar à Central deve estacionar o viewer sem hidden/display:none');
-assert(!closeViewer.includes('viewer.hidden=true'),'Voltar à Central não pode zerar o viewport do iframe no Safari');
-assert(showFrame.includes('viewerVisibleStyle(viewer)'),'Reabertura deve apenas tornar o viewer visível');
-
-assert(performance.includes("dataset.tacsDirtyTracking='1'"),'Controlador rápido precisa assumir rastreamento de alterações não salvas');
-assert(performance.includes("dataset.tacsDirty='1'"),'Edição real de campo deve marcar o painel como alterado');
-assert(performance.includes('activePanelIsDirty()'),'Retorno à Central precisa verificar alterações do painel ativo');
-assert(performance.includes('window.confirm(DIRTY_MESSAGE)'),'Retorno não pode descartar alterações sem confirmação do operador');
-assert(performance.includes("getElementById('portalTacsAdminRefreshV1')"),'Controlador rápido deve remover refresh interno redundante do painel carregado');
-assert(performance.includes("dataset.portalTacsPerformanceInstalled='1'"),'Controlador deve expor marcador de instalação para homologação do primeiro toque');
-assert(performance.includes("version:'1.2.0'"),'Versão persistente do controlador do Bloco 13 não foi preservada');
 
 /*
- * Listeners legados permanecem no código por compatibilidade e rollback, mas o
- * controlador oficial é carregado diretamente antes deles e intercepta a rota
- * efetiva. Este bloco não modifica autenticação, permissões ou login rápido.
+ * Contrato vigente no iPhone: navegação administrativa direta.
+ * O host persistente de iframes foi aposentado porque podia manter a Agenda
+ * carregando em um viewer invisível e aparentar travamento no Safari.
  */
-assert(base.includes("el('moduleGrid').addEventListener('click'"),'Compatibilidade da Central-base foi alterada fora do escopo');
-assert(quick.includes('function installInstitutionalNavigation()'),'Login rápido foi alterado fora do escopo do hotfix iOS');
+assert(!/central-admin-performance-v1\.js\?v=/.test(central),
+  'Central não deve reinstalar o antigo host persistente de iframes.');
+assert(/central-suporte-moradores-v1\.js\?v=[^"']+/.test(central),
+  'Central deve carregar a proteção de navegação direta com revisão explícita.');
+assert(support.includes('CENTRAL_IOS_PAINT_GUARD_V3'),
+  'Proteção de pintura/navegação do iPhone ausente.');
+assert(support.includes('function installSafeNavigation()'),
+  'Navegação direta segura dos cartões ausente.');
+assert(support.includes("document.addEventListener('click',function(event)"),
+  'Navegação segura precisa interceptar o toque antes do listener legado.');
+assert(support.includes('event.stopImmediatePropagation()'),
+  'Listener legado não pode abrir um segundo destino em paralelo.');
+assert(support.includes('location.assign(url)'),
+  'Painéis administrativos devem abrir por navegação direta.');
+assert(support.includes("document.addEventListener('click',function(event)")&&support.includes('},true);'),
+  'Interceptação de navegação precisa operar em fase de captura.');
 
-['pin','adminPin','tacsPin','tacsPinAccess','tacsPinPublicacoes','login','entrar','loginTacs','entrarTacs'].forEach((id)=>{
-  assert(performance.includes("'"+id+"'"),'Controle redundante não tratado na sessão da Central: '+id);
+['moradores','suporte','recados','agendas','profissionais','territorio','municipios','portal'].forEach((modulo)=>{
+  assert(support.includes("name==='"+modulo+"'"),
+    'Navegação direta não cobre módulo obrigatório: '+modulo);
 });
-assert(performance.includes('if(!getSession().ok)return'),'Supressão de PIN só pode ocorrer quando já existe sessão na Central');
-assert(performance.includes('isErrorMessage'),'Erros reais de sessão devem continuar visíveis');
+assert(support.includes("if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html"),
+  'Agendas e vagas não aponta para a página oficial por navegação direta.');
+assert(support.includes("from='&from=central'"),
+  'Painéis diretos precisam preservar o retorno à Central.');
 
-assert(!/localStorage\.clear\s*\(/.test(performance),'Otimização não pode limpar armazenamento local');
-assert(!/sessionStorage\.clear\s*\(/.test(performance),'Otimização não pode limpar a sessão administrativa');
-assert(!/removeItem\s*\(/.test(performance),'Otimização não pode apagar tokens ou identidade do aparelho');
+assert(support.includes('#viewer,#portalTacsCentralRefreshV1,#portalTacsAdminPreloadPoolV1{display:none!important}'),
+  'Viewer/host legado deve permanecer desativado no iPhone.');
+assert(support.includes("if(frame){try{frame.src='about:blank'}catch(e){}}"),
+  'Iframe legado deve ser descarregado no bootstrap.');
+assert(support.includes('function restoreModuleTouchState()'),
+  'Restauração do estado tátil após BFCache ausente.');
+assert(support.includes("button.style.removeProperty('pointer-events')"),
+  'Cartão não pode voltar do BFCache com toque bloqueado.');
+assert(support.includes("window.addEventListener('pageshow'"),
+  'Retorno pelo histórico do Safari precisa ser tratado.');
 
-assert(central.includes('<strong>Moradores</strong>')&&central.includes('<strong>Recados e campanhas</strong>')&&central.includes('<strong>Agendas e vagas</strong>')&&central.includes('<strong>Profissionais e serviços</strong>'),'Cartões administrativos principais precisam permanecer no layout atual');
-assert(central.includes('<strong>TACS e áreas</strong>')&&central.includes('<strong>Municípios e organizações</strong>')&&central.includes('<strong>Portal do Morador</strong>'),'Cartões administrativos restritos/públicos precisam permanecer no layout atual');
+assert(base.includes('AGENDA_DIRECT_NAV_V1'),
+  'Fallback da Central-base para Agendas sem iframe foi removido.');
+assert(/if\(name==='agendas'\)\{location\.assign\(/.test(base),
+  'Fallback da Agenda precisa navegar diretamente.');
+assert(base.includes("el('viewerFrame').src='about:blank'"),
+  'Retorno da Central-base deve descarregar viewer legado.');
+assert(quick.includes('function installInstitutionalNavigation()'),
+  'Compatibilidade do login rápido foi alterada fora do escopo.');
 
-console.log('Central Administrativa: host estável, viewport persistente no iOS, retorno instantâneo e proteção contra perda de edição validados.');
+assert(!/localStorage\.clear\s*\(/.test(support),
+  'Proteção de navegação não pode limpar identidade local.');
+assert(!/sessionStorage\.clear\s*\(/.test(support),
+  'Proteção de navegação não pode limpar a sessão administrativa.');
+assert(support.includes('portalTacsAdminTokenV1')&&support.includes('portalTacsTerritorioTokenV1'),
+  'Navegação direta deve preservar as chaves de sessão existentes.');
+
+assert(central.includes('<strong>Moradores</strong>')&&
+       central.includes('<strong>Recados e campanhas</strong>')&&
+       central.includes('<strong>Agendas e vagas</strong>')&&
+       central.includes('<strong>Profissionais e serviços</strong>'),
+  'Cartões administrativos principais precisam permanecer no layout atual');
+assert(central.includes('<strong>TACS e áreas</strong>')&&
+       central.includes('<strong>Municípios e organizações</strong>')&&
+       central.includes('<strong>Portal do Morador</strong>'),
+  'Cartões administrativos restritos/públicos precisam permanecer no layout atual');
+
+console.log('Central Administrativa: navegação direta sem iframe, retorno BFCache e Agenda no iPhone validados.');
