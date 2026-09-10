@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/aplicar-admin-ui-app4-main.yml'
       - 'admin-ui-standard.inline.css'
+      - 'admin-ui-behavior.inline.js'
       - 'scripts/injetar_admin_ui_standard_v1.py'
       - 'scripts/test_admin_ui_app4_canonical.py'
 
@@ -29,10 +30,10 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Injetar fonte visual canônica somente nos painéis administrativos
+      - name: Injetar skin e comportamento App4 R2 somente nos painéis administrativos
         run: python3 scripts/injetar_admin_ui_standard_v1.py
 
-      - name: Validar contrato App4 e isolamento do Portal público
+      - name: Validar contrato App4 R2, sessão única e isolamento do Portal público
         run: python3 scripts/test_admin_ui_app4_canonical.py
 
       - name: Validar integridade textual
@@ -40,19 +41,28 @@ jobs:
         run: |
           set -euo pipefail
           git diff --check
-          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' central-administrativa-tacs.html
-          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' painel-oficial-agendas-vagas.html
-          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' painel-oficial-recados-campanhas.html
-          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' painel-oficial-profissionais-servicos.html
-          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' teste-v1/painel-profissionais-servicos-v1.html
-          grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10' teste-v1/painel-moradores-v2.html
+          for f in \
+            central-administrativa-tacs.html \
+            painel-oficial-organizacoes-municipios.html \
+            painel-oficial-agendas-vagas.html \
+            painel-oficial-profissionais-servicos.html \
+            painel-oficial-recados-campanhas.html \
+            painel-oficial-tacs-areas.html \
+            painel-suporte-moradores-v2.html \
+            painel-suporte-moradores.html \
+            teste-v1/painel-moradores-v2.html \
+            teste-v1/painel-profissionais-servicos-v1.html \
+            teste-v1/painel-tacs-areas-v1.html; do
+              grep -q 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R2' "$f"
+              grep -q 'portalTacsAdminUiBehaviorR2' "$f"
+          done
 
       - name: Registrar HTMLs normalizados se houver diferença
         shell: bash
         run: |
           set -euo pipefail
           if git diff --quiet; then
-            echo 'Todos os painéis já estão no padrão App4.'
+            echo 'Todos os painéis já estão no padrão App4 R2.'
             exit 0
           fi
           git config user.name 'Conecta Saúde UI Release'
@@ -64,8 +74,10 @@ jobs:
             painel-oficial-profissionais-servicos.html \
             painel-oficial-recados-campanhas.html \
             painel-oficial-tacs-areas.html \
+            painel-suporte-moradores-v2.html \
+            painel-suporte-moradores.html \
             teste-v1/painel-moradores-v2.html \
             teste-v1/painel-profissionais-servicos-v1.html \
             teste-v1/painel-tacs-areas-v1.html
-          git commit -m 'UI: aplicar App institucional canônico aos painéis administrativos [skip ci]'
+          git commit -m 'UI: aplicar App institucional canônico R2 aos painéis administrativos [skip ci]'
           git push origin HEAD:main
