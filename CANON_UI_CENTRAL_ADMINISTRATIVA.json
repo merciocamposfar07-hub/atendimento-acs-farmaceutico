@@ -19,8 +19,8 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R3",
-  "lastCorrectionRecord": "REGISTRO_CORRECAO_UI_ADMIN_APP4_R3_2026_09_10.md",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R5",
+  "lastCorrectionRecord": "REGISTRO_CORRECAO_UI_ADMIN_APP4_R5_2026_09_10.md",
   "lastCorrectionDate": "2026-09-10",
   "visualValidation": "pending-user-iphone",
   "notes": [
@@ -29,5 +29,27 @@
     "PIN individual do TACS no painel de moradores permanece visível e funcional.",
     "Páginas internas brancas neutralizadas pela camada App institucional.",
     "Botões e cards acionáveis recebem reação visual explícita ao toque."
-  ]
+  ],
+  "presentationContract": {
+    "reference": "4 • App institucional",
+    "palette": {
+      "bg": "#071827",
+      "top": "#0b263d",
+      "card": "#102d46",
+      "card2": "#153b58",
+      "line": "#2b5a76",
+      "accent": "#83efa9",
+      "accent2": "#62c8e8",
+      "moduleFrom": "#174765",
+      "moduleTo": "#0c3049",
+      "button": "#135272",
+      "pressed": "#236581"
+    },
+    "singleChromaticLanguage": true,
+    "whiteInternalPages": false,
+    "coloredSectionBackgrounds": false,
+    "outerPageFrame": false,
+    "canonicalIconPreserved": true,
+    "touchFeedback": true
+  }
 }
