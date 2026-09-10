@@ -2011,6 +2011,18 @@ html,body,main,.painel,.lista,.grupoProfissional,.agendaProfissionalCorpo,.carta
   contain:none!important;
 }
 </style>
+<style id="agendaApp4NoWhiteV1">
+/* AJUSTE_PONTUAL_AGENDAS_SEM_BRANCO_V1 */
+html body .agendaProfissionalCorpo{background:transparent!important;background-image:none!important}
+html body .cartao .corpo{background:#102d46!important;background-image:none!important;border-top-color:#365f78!important}
+html body .cartao .corpo input.campo,
+html body .cartao .corpo select.campo,
+html body .cartao .corpo textarea.campo{
+  background:#071827!important;background-image:none!important;color:#fff!important;border-color:#416f89!important;
+}
+html body .cartao .check{background:#153b58!important;background-image:none!important;color:#fff!important;border-color:#416f89!important}
+html body .cartao input[readonly]{background:#0b263d!important;color:#d8e6ee!important}
+</style>
 
 
 <footer><p>Portal TACS • Painel administrativo oficial</p><p>Alterações confirmadas são aplicadas ao Portal do Morador</p></footer>
@@ -2057,7 +2069,7 @@ function finalizar(resultado){if(!ativa)return;var action=ativa.action;clearTime
 function resultadoDaMensagem(data){if(!ativa||!data||typeof data!=='object')return null;var id=txt(data.requestId||(data.result&&data.result.requestId)||'');if(id&&id!==ativa.id)return null;if(Object.prototype.hasOwnProperty.call(data,'result'))return data.result;if(Object.prototype.hasOwnProperty.call(data,'payload'))return data.payload;return Object.prototype.hasOwnProperty.call(data,'ok')?data:null}
 window.addEventListener('message',function(event){var frame=document.querySelector('iframe[name="ponteAgendaV1"]');if(!ativa||!frame||event.source!==frame.contentWindow)return;var data=event.data;if(typeof data==='string'){try{data=JSON.parse(data)}catch(e){return}}var resultado=resultadoDaMensagem(data);if(resultado)finalizar(resultado)});
 function agendarConsultaResultado(espera){if(!ativa)return;clearTimeout(ativa.pollTimer);ativa.pollTimer=setTimeout(consultarResultado,Number(espera||ativa.proximaEspera||700))}
-function consultarResultado(){if(!ativa)return;jsonp('admin_result',{requestId:ativa.id},function(r){if(!ativa)return;if(r&&r.ok===true&&r.pendente===false){finalizar(r.result);return}if(Date.now()>=ativa.limite){finalizar({ok:false,temporario:true,message:'A conexão demorou mais que o esperado. Toque novamente em Entrar e carregar agendas.'});return}if(r&&r.ok===true&&r.pendente===true){ativa.falhas=0;ativa.proximaEspera=Math.min(1600,Math.max(700,ativa.proximaEspera+150))}else{ativa.falhas=(ativa.falhas||0)+1;ativa.proximaEspera=Math.min(2200,900+ativa.falhas*250)}agendarConsultaResultado()})}
+function consultarResultado(){if(!ativa)return;jsonp('admin_result',{requestId:ativa.id},function(r){if(!ativa)return;if(r&&r.ok===true&&r.pendente===false){finalizar(r.result);return}if(Date.now()>=ativa.limite){finalizar({ok:false,temporario:true,message:'A conexão demorou mais que o esperado. Volte à Central Administrativa e abra Agendas e vagas novamente.'});return}if(r&&r.ok===true&&r.pendente===true){ativa.falhas=0;ativa.proximaEspera=Math.min(1600,Math.max(700,ativa.proximaEspera+150))}else{ativa.falhas=(ativa.falhas||0)+1;ativa.proximaEspera=Math.min(2200,900+ativa.falhas*250)}agendarConsultaResultado()})}
 function post(action,payload,receber){
   if(ativa){receber({ok:false,message:'Aguarde a operação anterior terminar.'});return}
   var id=requestId(action),campos={};Object.keys(payload||{}).forEach(function(k){campos[k]=payload[k]});campos.action=action;campos.requestId=id;
@@ -2102,7 +2114,7 @@ function sincronizarVagasOdontologia(){
   });
 }
 function agendarReconexao(mensagem,depois){cancelarReconexao();reconexaoTimer=setTimeout(function(){reconexaoTimer=null;if(!snapshotVisivel||(!token&&!territorioToken))return;carregarDados(mensagem,depois,true)},3000+reconexaoTentativas*2000)}
-function carregarDados(mensagem,depois,silencioso){var compartilhado=sharedAdminReadConsumido?null:lerSharedAdminDados();sharedAdminReadConsumido=true;if(compartilhado){aplicarDados(compartilhado,true);salvarSnapshot(compartilhado);status('loginStatus',mensagem||'Dados confirmados pela leitura compartilhada desta sessão.','ok');if(depois)depois(true,Object.assign({compartilhado:true},compartilhado));return}post('admin_dados',sessao(),function(r){if(!r||r.ok!==true){if(r&&r.temporario===true){if(snapshotVisivel){dadosConfirmados=false;bloquearEdicaoNaoConfirmada();if(reconexaoTentativas<RECONEXAO_MAX){reconexaoTentativas++;status('loginStatus','Dados exibidos da última leitura. Atualizando dados em segundo plano…','aviso');agendarReconexao(mensagem,depois);return}status('loginStatus','Não foi possível confirmar a conexão após novas tentativas. Os dados exibidos são da última leitura e permanecem somente para consulta.','erro');if(depois)depois(false,r);return}status('loginStatus',txt(r.message||'A conexão demorou mais que o esperado. Tente novamente.'),'erro');if(depois)depois(false,r);return}if(tacsMode){territorioToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY)}else{token='';sessionStorage.removeItem(TOKEN_KEY)}document.getElementById('conteudo').classList.add('oculto');document.getElementById('resumo').classList.add('oculto');sair.disabled=true;status('loginStatus',tacsMode?txt(r&&r.message||'Sessão territorial inválida. Volte à Central e entre novamente.'):(silencioso?'Conexão preparada. A sessão anterior não pôde ser reutilizada; digite o PIN.':txt(r&&r.message||'Sessão inválida.')),tacsMode||!silencioso?'erro':'ok');if(depois)depois(false,r);return}aplicarDados(r,true);salvarSnapshot(r);salvarSharedAdminDados(r);status('loginStatus',mensagem||'Sessão validada e agendas desta área carregadas.','ok');if(depois)depois(true,r)})}
+function carregarDados(mensagem,depois,silencioso){var compartilhado=sharedAdminReadConsumido?null:lerSharedAdminDados();sharedAdminReadConsumido=true;if(compartilhado){aplicarDados(compartilhado,true);salvarSnapshot(compartilhado);status('loginStatus',mensagem||'Dados confirmados pela leitura compartilhada desta sessão.','ok');if(depois)depois(true,Object.assign({compartilhado:true},compartilhado));return}post('admin_dados',sessao(),function(r){if(!r||r.ok!==true){if(r&&r.temporario===true){if(snapshotVisivel){dadosConfirmados=false;bloquearEdicaoNaoConfirmada();if(reconexaoTentativas<RECONEXAO_MAX){reconexaoTentativas++;status('loginStatus','Dados exibidos da última leitura. Atualizando dados em segundo plano…','aviso');agendarReconexao(mensagem,depois);return}status('loginStatus','Não foi possível confirmar a conexão após novas tentativas. Os dados exibidos são da última leitura e permanecem somente para consulta.','erro');if(depois)depois(false,r);return}status('loginStatus',txt(r.message||'A conexão demorou mais que o esperado. Tente novamente.'),'erro');if(depois)depois(false,r);return}if(tacsMode){territorioToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY)}else{token='';sessionStorage.removeItem(TOKEN_KEY)}document.getElementById('conteudo').classList.add('oculto');document.getElementById('resumo').classList.add('oculto');sair.disabled=true;status('loginStatus',tacsMode?txt(r&&r.message||'Sessão territorial inválida. Volte à Central e entre novamente.'):(silencioso?'A sessão da Central não pôde ser reutilizada. Volte à Central Administrativa e entre novamente.':txt(r&&r.message||'Sessão inválida.')),tacsMode||!silencioso?'erro':'ok');if(depois)depois(false,r);return}aplicarDados(r,true);salvarSnapshot(r);salvarSharedAdminDados(r);status('loginStatus',mensagem||'Sessão validada e agendas desta área carregadas.','ok');if(depois)depois(true,r)})}
 function preencherFiltros(){var f=document.getElementById('filtroProf'),atual=f.value;f.innerHTML='<option value="">Todos</option>'+dados.profissionais.slice().sort(function(a,b){return num(a.ORDEM,999)-num(b.ORDEM,999)}).map(function(p){return'<option value="'+esc(p.ID)+'">'+esc(p.TITULO_PUBLICO||p.NOME||p.ID)+'</option>'}).join('');f.value=atual}
 function agruparAgendasPorProfissional(alvo,lista){
   if(!alvo||!Array.isArray(lista)||!lista.length)return;
@@ -2211,10 +2223,25 @@ sair.addEventListener('click',function(){if(!token)return;cancelarReconexao();po
 document.getElementById('listaAgendas').addEventListener('click',function(e){var b=e.target.closest('.salvarAgenda');if(b)salvarAgenda(b.closest('details'))});
 ['input','change'].forEach(function(tipo){document.getElementById('listaAgendas').addEventListener(tipo,function(e){var alvo=e.target;if(alvo&&alvo.matches&&alvo.matches('input,select,textarea')&&!alvo.readOnly)edicaoPendente=true})});
 document.getElementById('filtroProf').addEventListener('change',render);document.getElementById('filtroDia').addEventListener('change',render);desfazer.addEventListener('click',restaurar);
-function iniciarPainel(){entrar.disabled=true;document.getElementById('accessTitle').classList.add('oculto');document.getElementById('pinLabel').classList.add('oculto');document.getElementById('pin').classList.add('oculto');document.getElementById('accessActions').classList.add('oculto');document.getElementById('pinHelp').classList.add('oculto');if(tacsMode){aplicarSnapshotSeDisponivel();carregarDados('Sessão de TACS validada. Agendas da própria área carregadas.',null,true);return}if(token){aplicarSnapshotSeDisponivel();carregarDados('Sessão existente validada e agendas desta área carregadas.',null,true);return}status('loginStatus','Abra Agendas e vagas pela Central Administrativa com sua sessão ativa.','aviso')}
+function iniciarPainel(){entrar.disabled=true;document.getElementById('accessTitle').classList.add('oculto');document.getElementById('pinLabel').classList.add('oculto');document.getElementById('pin').classList.add('oculto');document.getElementById('accessActions').classList.add('oculto');document.getElementById('pinHelp').classList.add('oculto');if(tacsMode){status('loginStatus','Carregando agendas da sessão atual…','aviso');aplicarSnapshotSeDisponivel();carregarDados('Sessão de TACS validada. Agendas da própria área carregadas.',null,true);return}if(token){status('loginStatus','Carregando agendas da sessão atual…','aviso');aplicarSnapshotSeDisponivel();carregarDados('Sessão existente validada e agendas desta área carregadas.',null,true);return}status('loginStatus','Abra Agendas e vagas pela Central Administrativa com sua sessão ativa.','aviso')}
 if(!/jsdom/i.test(navigator.userAgent||''))setInterval(sincronizarVagasOdontologia,5000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(sincronizarVagasOdontologia,250)});
 iniciarPainel();
+}());
+</script>
+<script id="agendaRemoveAtualizarPaginaV1">
+(function(){
+'use strict';
+function normal(v){return String(v==null?'':v).replace(/\s+/g,' ').trim().toLowerCase()}
+function limpar(){
+  ['portalTacsAtualizarPaginaV1','portalTacsAdminRefreshV1'].forEach(function(id){var n=document.getElementById(id);if(n)n.remove()});
+  document.querySelectorAll('button,a').forEach(function(n){
+    var t=normal(n.textContent).replace(/^[↻⟳⟲]\s*/,'');
+    if(t==='atualizar página'||t==='atualizar pagina')n.remove();
+  });
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',limpar,{once:true});else limpar();
+if(window.MutationObserver&&document.body)new MutationObserver(limpar).observe(document.body,{childList:true,subtree:true});
 }());
 </script>
 <script src="/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260823-card-institucional-v1"></script>
