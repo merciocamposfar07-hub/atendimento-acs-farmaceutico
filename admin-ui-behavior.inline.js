@@ -212,6 +212,16 @@ function buildCentralWelcome(){
   document.body.appendChild(dock);
 }
 
+function buildPlatformFooter(){
+  if(document.getElementById('cscPlatformFooter'))return;
+  var footer=document.createElement('footer');
+  footer.id='cscPlatformFooter';
+  footer.className='csc-platform-footer';
+  footer.innerHTML='<strong>Conecta Saúde Comunitária</strong><span>tecnologia aproximando pessoas, serviços e comunidade.</span><small>Versão da plataforma 2026.09 • Ano letivo 2026</small>';
+  var old=document.querySelector('body>footer:not(#cscPlatformFooter)');
+  if(old)old.hidden=true;
+  document.body.appendChild(footer);
+}
 function installTouchFeedback(){
   if(ROOT.dataset.cscTouchR6==='1')return;
   ROOT.dataset.cscTouchR6='1';
@@ -234,7 +244,7 @@ function installFinalSkin(){
   var old=document.getElementById('cscApp4FinalSkinR6');if(old)old.remove();
   var style=document.createElement('style');
   style.id='cscApp4FinalSkinR6';
-  style.textContent='html,body{background:#071827!important;background-image:none!important;color:#f7fcff!important}body{background:#071827!important;background-image:none!important}header,footer,.footer{border:0!important;box-shadow:none!important}.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
+  style.textContent='html,body{background:#071827!important;background-image:none!important;color:#f7fcff!important}body{background:#071827!important;background-image:none!important}header,footer,.footer{border:0!important;box-shadow:none!important}input:not([type=checkbox]):not([type=radio]),select,textarea,.campo,.field,.validadeCampo,.validadeControle{background:#071827!important;background-image:none!important;color:#fff!important;border-color:#416f89!important}input::placeholder,textarea::placeholder{color:#aec4d1!important;opacity:1!important}.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
   (document.head||document.documentElement).appendChild(style);
 }
 
@@ -242,6 +252,7 @@ function boot(){
   buildAppbar();
   markAuthControls();
   buildCentralWelcome();
+  buildPlatformFooter();
   syncSessionClass();
   installTouchFeedback();
   installFinalSkin();
