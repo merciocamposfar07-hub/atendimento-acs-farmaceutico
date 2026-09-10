@@ -1,13 +1,13 @@
 /*
- * Conecta Saúde Comunitária — comportamento do shell App institucional R3
- * Contrato: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R3
+ * Conecta Saúde Comunitária — comportamento do shell App institucional R5
+ * Contrato: CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R5
  * Regra: identidade institucional única, reação ao toque e reaproveitamento visual da sessão.
  * Este script NÃO autentica nem cria sessão: apenas reutiliza os tokens já validados pelos módulos.
  */
 (function(){
 'use strict';
-if(window.PortalTacsAdminApp4ShellR3)return;
-window.PortalTacsAdminApp4ShellR3=true;
+if(window.PortalTacsAdminApp4ShellR5)return;
+window.PortalTacsAdminApp4ShellR5=true;
 
 var ROOT=document.documentElement;
 var PATH=String(location.pathname||'');
@@ -168,36 +168,28 @@ function buildCentralWelcome(){
 }
 
 function installTouchFeedback(){
-  if(ROOT.dataset.cscTouchR3==='1')return;
-  ROOT.dataset.cscTouchR3='1';
+  if(ROOT.dataset.cscTouchR5==='1')return;
+  ROOT.dataset.cscTouchR5='1';
   var selector='button,.botao,.btn,.module,.tab,.aba,[role="button"],a.btn,a.botao';
   function target(e){return e.target&&e.target.closest?e.target.closest(selector):null}
   function release(){document.querySelectorAll('.csc-pressed').forEach(function(n){n.classList.remove('csc-pressed')})}
   document.addEventListener('pointerdown',function(e){var b=target(e);if(!b||b.disabled)return;release();b.classList.add('csc-pressed')},{passive:true});
   document.addEventListener('pointerup',release,{passive:true});
   document.addEventListener('pointercancel',release,{passive:true});
+  if(!window.PointerEvent){
+    document.addEventListener('touchstart',function(e){var b=target(e);if(!b||b.disabled)return;release();b.classList.add('csc-pressed')},{passive:true});
+    document.addEventListener('touchend',release,{passive:true});
+    document.addEventListener('touchcancel',release,{passive:true});
+  }
   window.addEventListener('blur',release);
   document.addEventListener('click',function(e){var b=target(e);if(b&&!b.disabled)vibrate();if(b)setTimeout(function(){b.classList.remove('csc-pressed')},70)},{passive:true});
 }
 
 function installFinalSkin(){
-  if(document.getElementById('cscApp4FinalSkinR2'))return;
+  var old=document.getElementById('cscApp4FinalSkinR5');if(old)old.remove();
   var style=document.createElement('style');
-  style.id='cscApp4FinalSkinR2';
-  style.textContent='\
-/* A última camada vence estilos visuais legados adicionados por scripts antigos, sem tocar na lógica. */\
-html,body{background:#071827!important;color:#f7fcff!important}\
-body{background:linear-gradient(180deg,#0b263d 0,#071827 360px,#071827 100%)!important}\
-header{background:transparent!important;background-image:none!important;border:0!important;box-shadow:none!important;filter:none!important}\
-.panel,.painel,.card,.box,.caixa,.newbox{border-color:#2b5a76!important;box-shadow:0 12px 26px rgba(0,0,0,.20)!important}\
-.module,.health-card,.numero,.number,.stat,.metric,.saude-numero,.item,.cartao,.ticket,.grupoProfissional,.area-row,.maprow{border-color:#2b5a76!important}\
-button,.btn,.botao,.module,.tab,.aba{transition:transform .11s ease,filter .11s ease,background-color .11s ease,box-shadow .11s ease!important}\
-button:active:not(:disabled),.btn:active:not(:disabled),.botao:active:not(:disabled),.module:active:not(:disabled),.tab:active:not(:disabled),.aba:active:not(:disabled){transform:scale(.965)!important;filter:brightness(1.08)!important}\
-.csc-session-missing .csc-dock{display:none!important}\
-.csc-session-active .csc-dock{display:grid!important}\
-#portalTacsBackCentralV1{display:none!important}\
-footer,.footer{border:0!important;box-shadow:none!important}\
-';
+  style.id='cscApp4FinalSkinR5';
+  style.textContent='html,body{background:#071827!important;color:#f7fcff!important}body{background:linear-gradient(180deg,#0b263d 0,#071827 360px,#071827 100%)!important}header,footer,.footer{border:0!important;box-shadow:none!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
   (document.head||document.documentElement).appendChild(style);
 }
 
