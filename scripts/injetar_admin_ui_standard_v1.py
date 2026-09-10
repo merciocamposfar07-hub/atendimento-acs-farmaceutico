@@ -4,6 +4,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT / 'admin-ui-standard.inline.css').read_text(encoding='utf-8').strip()
 START = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_START -->'
 END = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->'
+CANON = 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10'
+
+# Somente área administrativa. Portal do Morador / Portal TACS público não entra aqui.
 TARGETS = [
     'central-administrativa-tacs.html',
     'painel-oficial-organizacoes-municipios.html',
@@ -12,14 +15,20 @@ TARGETS = [
     'painel-oficial-recados-campanhas.html',
     'painel-oficial-tacs-areas.html',
     'teste-v1/painel-moradores-v2.html',
+    'teste-v1/painel-profissionais-servicos-v1.html',
     'teste-v1/painel-tacs-areas-v1.html',
 ]
+
+if CANON not in SOURCE:
+    raise SystemExit(f'CSS administrativo não contém o contrato canônico {CANON}')
 
 block = f'{START}\n<style id="portalTacsAdminUiStandardV1">\n{SOURCE}\n</style>\n{END}'
 changed = []
 
 for rel in TARGETS:
     path = ROOT / rel
+    if not path.is_file():
+        raise SystemExit(f'{rel}: arquivo administrativo não encontrado')
     text = path.read_text(encoding='utf-8')
     if START in text and END in text:
         before, rest = text.split(START, 1)
@@ -34,6 +43,7 @@ for rel in TARGETS:
         path.write_text(new, encoding='utf-8')
         changed.append(rel)
 
+print(f'ADMIN_UI_APP4_CANON={CANON}')
 print(f'ADMIN_UI_STANDARD_INJETADO={len(changed)}')
 for rel in changed:
     print(rel)
