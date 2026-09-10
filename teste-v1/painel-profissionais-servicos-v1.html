@@ -1664,6 +1664,25 @@ body.csc-brand-enhanced .loading{
 .csc-profile-empty{padding:15px;background:#102d46;border:1px solid #365f78;border-radius:18px;color:#d8e6ee}
 .csc-dock{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 .csc-navitem span{font-size:.68rem!important;white-space:normal!important;text-align:center!important;line-height:1.08!important}
+
+/* RODAPE_PLATAFORMA_2026_V1 */
+.csc-platform-footer{
+  width:min(720px,100%)!important;
+  margin:34px auto 0!important;
+  padding:22px 16px calc(104px + env(safe-area-inset-bottom))!important;
+  display:grid!important;
+  gap:5px!important;
+  text-align:center!important;
+  background:#071827!important;
+  border:0!important;
+  box-shadow:none!important;
+  color:#d8e6ee!important;
+}
+.csc-platform-footer strong{color:#fff!important;font-size:.96rem!important;font-weight:900!important}
+.csc-platform-footer span{color:#d8e6ee!important;font-size:.87rem!important;line-height:1.35!important}
+.csc-platform-footer small{color:#9db6c5!important;font-size:.77rem!important;line-height:1.3!important}
+body:not(.csc-central) .csc-platform-footer{padding-bottom:calc(28px + env(safe-area-inset-bottom))!important}
+.csc-central footer.csc-platform-footer{display:grid!important}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
@@ -1712,7 +1731,7 @@ function syncSessionClass(){
 function panelTitle(){
   if(CENTRAL)return 'Central Administrativa';
   if(/\/painel-suporte-moradores\.html$/i.test(PATH))return 'Diagnóstico dos aparelhos';
-  if(/\/painel-suporte-moradores-v2\.html$/i.test(PATH))return 'Suporte aos moradores';
+  if(/\/painel-suporte-moradores-v2\.html$/i.test(PATH)){try{if(String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='pending')return 'Pendências da área'}catch(e){}return 'Suporte aos moradores'};
   var h=document.querySelector('header h1');
   if(h&&text(h.textContent))return text(h.textContent);
   var t=text(document.title).split('|')[0].split('•')[0];
@@ -1880,6 +1899,16 @@ function buildCentralWelcome(){
   document.body.appendChild(dock);
 }
 
+function buildPlatformFooter(){
+  if(document.getElementById('cscPlatformFooter'))return;
+  var footer=document.createElement('footer');
+  footer.id='cscPlatformFooter';
+  footer.className='csc-platform-footer';
+  footer.innerHTML='<strong>Conecta Saúde Comunitária</strong><span>tecnologia aproximando pessoas, serviços e comunidade.</span><small>Versão da plataforma 2026.09 • Ano letivo 2026</small>';
+  var old=document.querySelector('body>footer:not(#cscPlatformFooter)');
+  if(old)old.hidden=true;
+  document.body.appendChild(footer);
+}
 function installTouchFeedback(){
   if(ROOT.dataset.cscTouchR6==='1')return;
   ROOT.dataset.cscTouchR6='1';
@@ -1902,7 +1931,7 @@ function installFinalSkin(){
   var old=document.getElementById('cscApp4FinalSkinR6');if(old)old.remove();
   var style=document.createElement('style');
   style.id='cscApp4FinalSkinR6';
-  style.textContent='html,body{background:#071827!important;background-image:none!important;color:#f7fcff!important}body{background:#071827!important;background-image:none!important}header,footer,.footer{border:0!important;box-shadow:none!important}.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
+  style.textContent='html,body{background:#071827!important;background-image:none!important;color:#f7fcff!important}body{background:#071827!important;background-image:none!important}header,footer,.footer{border:0!important;box-shadow:none!important}input:not([type=checkbox]):not([type=radio]),select,textarea,.campo,.field,.validadeCampo,.validadeControle{background:#071827!important;background-image:none!important;color:#fff!important;border-color:#416f89!important}input::placeholder,textarea::placeholder{color:#aec4d1!important;opacity:1!important}.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
   (document.head||document.documentElement).appendChild(style);
 }
 
@@ -1910,6 +1939,7 @@ function boot(){
   buildAppbar();
   markAuthControls();
   buildCentralWelcome();
+  buildPlatformFooter();
   syncSessionClass();
   installTouchFeedback();
   installFinalSkin();
