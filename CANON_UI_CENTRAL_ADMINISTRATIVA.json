@@ -19,22 +19,23 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R5",
-  "lastCorrectionRecord": "REGISTRO_CORRECAO_UI_ADMIN_APP4_R5_2026_09_10.md",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6",
+  "lastCorrectionRecord": "REGISTRO_CORRECAO_UI_ADMIN_APP4_R6_2026_09_10.md",
   "lastCorrectionDate": "2026-09-10",
   "visualValidation": "pending-user-iphone",
   "notes": [
-    "Ícone oficial canônico preservado; apenas exposição/tamanho aumentado.",
-    "Sessão administrativa global reutilizada nos painéis.",
-    "PIN individual do TACS no painel de moradores permanece visível e funcional.",
-    "Páginas internas brancas neutralizadas pela camada App institucional.",
-    "Botões e cards acionáveis recebem reação visual explícita ao toque."
+    "Tela administrativa usa uma única base #071827; cabeçalho, corpo, rodapé e dock não criam faixas cromáticas estruturais.",
+    "Ícone oficial canônico preservado.",
+    "Ícones dos módulos ampliados e com contraste institucional consistente.",
+    "Textos secundários usam contraste mínimo visual reforçado na camada R6.",
+    "Retorno pelo histórico/BFCache restaura o contexto visual imediatamente antes da releitura do servidor.",
+    "Sessão administrativa global e PIN individual do TACS permanecem preservados conforme regras anteriores."
   ],
   "presentationContract": {
     "reference": "4 • App institucional",
     "palette": {
       "bg": "#071827",
-      "top": "#0b263d",
+      "top": "#071827",
       "card": "#102d46",
       "card2": "#153b58",
       "line": "#2b5a76",
@@ -50,6 +51,11 @@
     "coloredSectionBackgrounds": false,
     "outerPageFrame": false,
     "canonicalIconPreserved": true,
-    "touchFeedback": true
+    "touchFeedback": true,
+    "singleContinuousCanvas": true,
+    "largeColorBands": false,
+    "clearText": true,
+    "moduleIconsProminent": true,
+    "returnRestoresVisibleContext": true
   }
 }
