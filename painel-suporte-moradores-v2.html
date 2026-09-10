@@ -1953,9 +1953,9 @@ function diagPost(action,p,resultAction,cb){
 }
 function diagLoad(){
   $('diagInlineStatus').textContent='Consultando os aparelhos da área…';
-  diagPost('admin_suporte_moradores_diagnostico',{},'admin_suporte_moradores_result',function(r){
+  diagPost('admin_notificacoes_saude',{},'admin_notificacoes_saude_result',function(r){
     if(!r||r.ok!==true){$('diagInlineStatus').textContent=txt(r&&r.message)||'Não foi possível carregar o diagnóstico.';return}
-    diagItems=Array.isArray(r.aparelhos)?r.aparelhos:[];diagCounts(r.contagens||{});$('diagInlineStatus').textContent='Diagnóstico atualizado.';diagRender();
+    diagItems=Array.isArray(r.aparelhos)?r.aparelhos:[];diagCounts(r.contagens||{});$('diagInlineStatus').textContent='Diagnóstico atualizado. O estado do reparo muda conforme o aparelho confirma cada etapa.';diagRender();
   });
 }
 function diagRepair(ref,nome,button){
