@@ -144,6 +144,44 @@ function enhanceSessionUi(){
      Não cria segundo fluxo de autenticação dentro dos módulos. */
 }
 
+function centralAreaId(){
+  try{return text(localStorage.getItem('portalTacsCentralAreaV1')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA'}catch(e){return'JAPARANDUBA'}
+}
+function centralContextFromCache(){
+  try{var raw=sessionStorage.getItem('portalTacsCentralContextCacheV2');if(!raw)return null;var saved=JSON.parse(raw);return saved&&saved.context?saved.context:null}catch(e){return null}
+}
+function showCentralHome(){
+  var page=document.getElementById('cscProfilePage');if(page)page.hidden=true;
+  ['identityPanel','healthPanel','modulesPanel'].forEach(function(id){var n=document.getElementById(id);if(n)n.hidden=false});
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function openRecordsPage(){
+  var area=encodeURIComponent(centralAreaId());
+  location.assign('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&from=central&v=20260910-prontuarios-v1');
+}
+function openPendingPage(){
+  var area=encodeURIComponent(centralAreaId());
+  location.assign('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+'&view=pending&from=central&v=20260910-pendencias-v1');
+}
+function openProfilePage(){
+  var main=document.querySelector('main');if(!main)return;
+  ['identityPanel','healthPanel','modulesPanel'].forEach(function(id){var n=document.getElementById(id);if(n)n.hidden=true});
+  var page=document.getElementById('cscProfilePage');
+  if(!page){page=document.createElement('section');page.id='cscProfilePage';page.className='csc-profile-page';main.appendChild(page)}
+  var ctx=centralContextFromCache()||{},areas=Array.isArray(ctx.areas)?ctx.areas:[],tacs=Array.isArray(ctx.tacs)?ctx.tacs:[],admins=Array.isArray(ctx.administradores)?ctx.administradores:[];
+  if(!admins.length)admins=[{nomeCompleto:'Administrador geral',perfil:'ADMINISTRADOR GERAL',ativo:true}];
+  function areaName(id){for(var i=0;i<areas.length;i++)if(text(areas[i].areaId)===text(id))return text(areas[i].areaNome||areas[i].areaId);return text(id)||'Área não vinculada'}
+  var html='<h2>Administradores e TACS</h2><p class="csc-profile-intro">Acesso rápido aos responsáveis cadastrados e às áreas disponíveis.</p><h3>Administradores</h3><div class="csc-profile-list">';
+  admins.forEach(function(a){html+='<article class="csc-profile-card"><strong>'+escapeProfile(a.nomeCompleto||a.nome||'Administrador geral')+'</strong><span>'+escapeProfile(a.perfil||'ADMINISTRADOR GERAL')+'</span></article>'});
+  html+='</div><h3>TACS cadastrados</h3><div class="csc-profile-list">';
+  if(!tacs.length)html+='<div class="csc-profile-empty">Nenhum TACS disponível no contexto atual.</div>';
+  tacs.forEach(function(t){html+='<button type="button" class="csc-profile-card csc-profile-tacs" data-area="'+escapeProfile(t.areaId||'')+'"><strong>'+escapeProfile(t.nomeCompleto||t.nome||t.tacsId||'TACS')+'</strong><span>'+escapeProfile(areaName(t.areaId))+(t.ativo===false?' • Inativo':' • Ativo')+'</span></button>'});
+  html+='</div>';
+  page.innerHTML=html;page.hidden=false;
+  page.querySelectorAll('.csc-profile-tacs').forEach(function(btn){btn.addEventListener('click',function(){var area=text(btn.dataset.area);if(area){try{localStorage.setItem('portalTacsCentralAreaV1',area)}catch(e){}var select=document.getElementById('adminArea');if(select&&Array.prototype.some.call(select.options,function(o){return o.value===area})){select.value=area;select.dispatchEvent(new Event('change',{bubbles:true}))}}showCentralHome()})});
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function escapeProfile(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function buildCentralWelcome(){
   if(!CENTRAL)return;
   var identity=document.getElementById('identityPanel');
@@ -160,10 +198,10 @@ function buildCentralWelcome(){
   dock.className='csc-dock';
   dock.setAttribute('aria-label','Navegação da Central');
   var items=[
-    ['⌂','Início',function(){window.scrollTo({top:0,behavior:'smooth'})}],
-    ['▦','Painéis',function(){var n=document.getElementById('modulesPanel');if(n)n.scrollIntoView({behavior:'smooth',block:'start'})}],
-    ['🔔','Avisos',function(){var n=document.getElementById('healthPanel');if(n)n.scrollIntoView({behavior:'smooth',block:'start'})}],
-    ['●','Perfil',function(){var n=document.getElementById('identityPanel');if(n)n.scrollIntoView({behavior:'smooth',block:'start'})}]
+    ['⌂','Início',showCentralHome],
+    ['▦','Prontuários',openRecordsPage],
+    ['🔔','Pendências',openPendingPage],
+    ['●','Perfil',openProfilePage]
   ];
   items.forEach(function(item,i){
     var b=document.createElement('button');b.type='button';b.className='csc-navitem'+(i===0?' active':'');

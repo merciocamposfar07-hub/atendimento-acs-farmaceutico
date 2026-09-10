@@ -1605,3 +1605,17 @@ body.csc-brand-enhanced .loading{
   border:0!important;
   box-shadow:none!important;
 }
+
+/* CENTRAL_DOCK_PONTUAL_V1 */
+.csc-profile-page{padding:8px 0 110px!important;background:transparent!important;border:0!important;box-shadow:none!important;color:#fff}
+.csc-profile-page h2{margin:0 0 8px!important;font-size:1.65rem!important}
+.csc-profile-page h3{margin:22px 0 10px!important;font-size:1.15rem!important}
+.csc-profile-intro{margin:0;color:#d8e6ee!important}
+.csc-profile-list{display:grid;gap:10px}
+.csc-profile-card{width:100%;display:grid!important;gap:5px!important;text-align:left!important;padding:15px!important;background:#102d46!important;color:#fff!important;border:1px solid #365f78!important;border-radius:18px!important;box-shadow:none!important}
+.csc-profile-card strong{color:#fff!important;font-size:1rem!important}
+.csc-profile-card span{color:#d8e6ee!important;font-size:.88rem!important}
+.csc-profile-tacs{min-height:72px!important}
+.csc-profile-empty{padding:15px;background:#102d46;border:1px solid #365f78;border-radius:18px;color:#d8e6ee}
+.csc-dock{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.csc-navitem span{font-size:.68rem!important;white-space:normal!important;text-align:center!important;line-height:1.08!important}
