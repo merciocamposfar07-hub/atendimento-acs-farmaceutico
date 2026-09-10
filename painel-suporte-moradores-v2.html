@@ -557,6 +557,8 @@ function syncSessionClass(){
 }
 function panelTitle(){
   if(CENTRAL)return 'Central Administrativa';
+  if(/\/painel-suporte-moradores\.html$/i.test(PATH))return 'Diagnóstico dos aparelhos';
+  if(/\/painel-suporte-moradores-v2\.html$/i.test(PATH))return 'Suporte aos moradores';
   var h=document.querySelector('header h1');
   if(h&&text(h.textContent))return text(h.textContent);
   var t=text(document.title).split('|')[0].split('•')[0];
@@ -687,6 +689,8 @@ header{background:transparent!important;background-image:none!important;border:0
 .module,.health-card,.numero,.number,.stat,.metric,.saude-numero,.item,.cartao,.ticket,.grupoProfissional,.area-row,.maprow{border-color:#2b5a76!important}\
 button,.btn,.botao,.module,.tab,.aba{transition:transform .11s ease,filter .11s ease,background-color .11s ease,box-shadow .11s ease!important}\
 button:active:not(:disabled),.btn:active:not(:disabled),.botao:active:not(:disabled),.module:active:not(:disabled),.tab:active:not(:disabled),.aba:active:not(:disabled){transform:scale(.965)!important;filter:brightness(1.08)!important}\
+.csc-session-missing .csc-dock{display:none!important}\
+.csc-session-active .csc-dock{display:grid!important}\
 #portalTacsBackCentralV1{display:none!important}\
 footer,.footer{border:0!important;box-shadow:none!important}\
 ';
