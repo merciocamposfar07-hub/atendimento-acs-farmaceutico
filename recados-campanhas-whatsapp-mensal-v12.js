@@ -80,9 +80,32 @@ function cleanupIndividual(){document.querySelectorAll('#listaCampanhas .publica
  * A visibilidade administrativa por ano/mês pertence exclusivamente a campanhas-periodo-v2.js.
  * Portanto NÃO altera mais card.hidden dos cartões de campanha.
  */
-function render(){if(rendering)return;rendering=true;try{var lista=document.getElementById('listaCampanhas');if(!lista)return;cleanupIndividual();lista.querySelectorAll('.campanha-mensal-whatsapp-v12').forEach(function(e){e.remove()});var vigente=currentMonthKey(),cards=[];lista.querySelectorAll('.item[data-id]').forEach(function(card){var mostrar=isActive(card)&&monthKey(card)===vigente;if(mostrar)cards.push(card)});if(!cards.length)return;var label=monthLabel(vigente),box=document.createElement('div');box.className='campanha-mensal-whatsapp-v12';box.innerHTML='<button type="button" class="botao campanha-mensal-botao"><span aria-hidden="true">◉</span> Postar campanhas de '+label+' no Status do WhatsApp</button><div class="campanha-mensal-status" aria-live="polite"></div>';lista.insertBefore(box,cards[0]);var b=box.querySelector('button'),st=box.querySelector('.campanha-mensal-status');b.addEventListener('click',function(){shareMonth(cards,label,b,st)})}finally{rendering=false}}
-function schedule(){clearTimeout(timer);timer=setTimeout(render,60)}
+function render(){
+  if(rendering)return;
+  rendering=true;
+  try{
+    var lista=document.getElementById('listaCampanhas');if(!lista)return;
+    cleanupIndividual();
+    var vigente=currentMonthKey(),cards=[];
+    lista.querySelectorAll('.item[data-id]').forEach(function(card){
+      if(isActive(card)&&monthKey(card)===vigente)cards.push(card);
+    });
+    var existing=lista.querySelector('.campanha-mensal-whatsapp-v12');
+    if(!cards.length){if(existing)existing.remove();return}
+    var signature=vigente+'|'+cards.map(function(card){return txt(card.dataset.id)+'|'+field(card,'titulo')+'|'+field(card,'inicio')}).join('||');
+    if(existing&&existing.dataset.signature===signature)return;
+    if(existing)existing.remove();
+    var label=monthLabel(vigente),box=document.createElement('div');
+    box.className='campanha-mensal-whatsapp-v12';
+    box.dataset.signature=signature;
+    box.innerHTML='<button type="button" class="botao campanha-mensal-botao"><span aria-hidden="true">◉</span> Postar campanhas de '+label+' no Status do WhatsApp</button><div class="campanha-mensal-status" aria-live="polite"></div>';
+    lista.insertBefore(box,cards[0]);
+    var b=box.querySelector('button'),st=box.querySelector('.campanha-mensal-status');
+    b.addEventListener('click',function(){shareMonth(cards,label,b,st)});
+  }finally{rendering=false}
+}
+function schedule(){clearTimeout(timer);timer=setTimeout(render,80)}
 function style(){if(document.getElementById('campanhaMensalWhatsappV12Style'))return;var s=document.createElement('style');s.id='campanhaMensalWhatsappV12Style';s.textContent='.campanha-mensal-whatsapp-v12{display:grid;gap:6px;margin:4px 0 14px;min-width:0}.campanha-mensal-botao{width:100%!important;min-height:62px!important;background:linear-gradient(145deg,#073a55,#0b5878)!important;border:3px solid #69c7e7!important;border-radius:22px!important;color:#fff!important;font-weight:900!important;box-shadow:0 7px 18px rgba(7,58,85,.20)!important}.campanha-mensal-status{color:#536b78;font-size:.84rem;font-weight:800}.campanha-mensal-status:empty{display:none}#listaCampanhas .camp-admin-symbol{align-self:center!important;justify-self:end!important;overflow:hidden!important;display:grid!important;place-items:center!important}#listaCampanhas .camp-admin-symbol img,#listaCampanhas .camp-admin-symbol svg{display:block!important;width:auto!important;height:auto!important;max-width:70%!important;max-height:70%!important;margin:auto!important;object-fit:contain!important;overflow:hidden!important;transform:none!important;animation:none!important;transition:none!important}@media(max-width:390px){#listaCampanhas .camp-admin-symbol img,#listaCampanhas .camp-admin-symbol svg{max-width:68%!important;max-height:68%!important}}';document.head.appendChild(s)}
-function init(){style();schedule();var lista=document.getElementById('listaCampanhas');if(lista)new MutationObserver(schedule).observe(lista,{childList:true,subtree:true})}
+function init(){style();schedule();var lista=document.getElementById('listaCampanhas');if(lista)new MutationObserver(function(mutations){for(var i=0;i<mutations.length;i++){if(mutations[i].type==='childList'&&mutations[i].target===lista){schedule();break}}}).observe(lista,{childList:true,subtree:false})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 }());

@@ -121,3 +121,24 @@ for token in [
     if token not in css:
         raise SystemExit(f'Visual R7 sem requisito obrigatório: {token}')
 print('R7_VISUAL_ONLY_OK')
+
+
+# AJUSTES_PONTUAIS_2026_09_10_V1
+behavior_now = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')
+if "csc-resident-redundant-tacs-access" not in behavior_now:
+    raise SystemExit('Acesso TACS redundante ainda não foi marcado para ocultação no painel Moradores.')
+moradores_html = (ROOT / 'teste-v1/painel-moradores-v2.html').read_text(encoding='utf-8')
+if '>TACS, áreas e importação CSV</a>' in moradores_html:
+    raise SystemExit('Atalho TACS/áreas/CSV ainda existe no painel Moradores.')
+for wrapper in ['painel-oficial-profissionais-servicos.html','painel-oficial-tacs-areas.html']:
+    txt_wrapper = (ROOT / wrapper).read_text(encoding='utf-8')
+    if 'delete window.PortalTacsAdminApp4ShellR6' not in txt_wrapper:
+        raise SystemExit(f'Wrapper sem reinicialização do shell único: {wrapper}')
+municipios_html = (ROOT / 'painel-oficial-organizacoes-municipios.html').read_text(encoding='utf-8')
+if "button.textContent='Vínculo salvo!'" not in municipios_html:
+    raise SystemExit('Confirmação visual Vínculo salvo! ausente.')
+mensal_js = (ROOT / 'recados-campanhas-whatsapp-mensal-v12.js').read_text(encoding='utf-8')
+for token in ["box.dataset.signature=signature","existing&&existing.dataset.signature===signature","subtree:false"]:
+    if token not in mensal_js:
+        raise SystemExit(f'Correção de trava Recados/Campanhas incompleta: {token}')
+print('AJUSTES_PONTUAIS_2026_09_10_V1_OK')

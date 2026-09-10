@@ -1823,7 +1823,7 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
   <script>
   (function(){
     'use strict';
-    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-profissionais-servicos-v1.html?v=20260816-profissionais-v3';
+    var origem='/atendimento-acs-farmaceutico/teste-v1/painel-profissionais-servicos-v1.html?v=20260910-shell-unico-v1';
     var trocas=[
       ['<title>Painel administrativo V1 • Portal TACS</title>','<title>Painel oficial de profissionais e serviços • Portal TACS</title>'],
       ['AMBIENTE ISOLADO • FASE 2','PAINEL ADMINISTRATIVO OFICIAL'],
@@ -1845,6 +1845,7 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
       var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt>'+protecaoDuplicidade+protecaoAutonomia;
       html=substituir(html,'<head>',bootstrap);
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
+      try{delete window.PortalTacsAdminApp4ShellR6}catch(e){window.PortalTacsAdminApp4ShellR6=false}
       document.open();document.write(html);document.close();
     }).catch(function(erro){
       var e=document.getElementById('mensagem');

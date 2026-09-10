@@ -102,23 +102,35 @@ function markAuthControls(){
   var loginPasswordIds=['pin','adminPin','tacsPinLogin'];
   loginPasswordIds.forEach(function(id){
     var input=document.getElementById(id);
-    if(!input||input.id==='tacsPinAccess'||input.id==='tacsPin')return;
+    if(!input||input.id==='tacsPin')return;
     input.classList.add('csc-auth-control','csc-admin-only-auth');
     if(input.labels){Array.prototype.forEach.call(input.labels,function(label){label.classList.add('csc-auth-control','csc-admin-only-auth')})}
     var wrap=input.closest('#adminLogin,#tacsLogin');
     if(wrap)wrap.classList.add('csc-auth-control','csc-admin-only-auth');
   });
   ['accessActions','pinHelp','loginAdminTab','loginTacsTab','adminLogin','tacsLogin'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-auth-control','csc-admin-only-auth')});
-  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-admin-only-auth')});
+  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-admin-only-auth')});
   var accessTitle=document.getElementById('accessTitle');if(accessTitle)accessTitle.classList.add('csc-admin-only-auth');
-  var tacsPin=document.getElementById('tacsPinAccess');
-  if(tacsPin){
-    tacsPin.classList.remove('csc-auth-control','csc-admin-only-auth');
-    if(tacsPin.labels){Array.prototype.forEach.call(tacsPin.labels,function(label){label.classList.remove('csc-auth-control','csc-admin-only-auth')})}
-    var areaBox=tacsPin.closest('.area-control');if(areaBox)areaBox.classList.add('csc-tacs-access');
-    var section=tacsPin.closest('section');if(section)section.classList.add('csc-moradores-access');
-    var loginTacs=document.getElementById('loginTacs');if(loginTacs)loginTacs.classList.remove('csc-auth-control','csc-admin-only-auth');
+
+  /* No painel de moradores, o perfil já foi definido pelo PIN da Central.
+     O segundo bloco "Acesso individual do TACS" é apenas legado e fica fora da interface. */
+  var residentTacsPin=document.getElementById('tacsPinAccess');
+  if(residentTacsPin){
+    residentTacsPin.classList.add('csc-auth-control','csc-admin-only-auth');
+    if(residentTacsPin.labels){Array.prototype.forEach.call(residentTacsPin.labels,function(label){label.classList.add('csc-auth-control','csc-admin-only-auth')})}
+    var residentTacsBox=residentTacsPin.closest('.area-control');
+    if(residentTacsBox)residentTacsBox.classList.add('csc-auth-control','csc-admin-only-auth','csc-resident-redundant-tacs-access');
+    var residentGate=residentTacsPin.closest('section');
+    if(residentGate){
+      residentGate.classList.add('csc-resident-entry-panel');
+      var heading=residentGate.querySelector('h2');if(heading)heading.classList.add('csc-auth-control','csc-admin-only-auth');
+      var muted=residentGate.querySelector('.muted');if(muted)muted.classList.add('csc-auth-control','csc-admin-only-auth');
+      var status=residentGate.querySelector('#loginStatus');if(status)status.classList.add('csc-auth-control','csc-admin-only-auth');
+      var logout=residentGate.querySelector('#logout');if(logout)logout.classList.add('csc-auth-control','csc-admin-only-auth');
+    }
   }
+
+  /* PIN do cadastro/edição do próprio TACS é dado funcional, não login. */
   var editorPin=document.getElementById('tacsPin');
   if(editorPin){
     editorPin.classList.remove('csc-auth-control','csc-admin-only-auth');
@@ -128,13 +140,8 @@ function markAuthControls(){
 
 function enhanceSessionUi(){
   if(!document.body)return;
-  var active=hasSession(),tacsPin=document.getElementById('tacsPinAccess');
-  if(tacsPin){
-    var section=tacsPin.closest('section');if(section)section.classList.add('csc-moradores-access');
-    var heading=section&&section.querySelector('h2');if(active&&heading)heading.textContent='Acesso individual do TACS';
-    var status=document.getElementById('loginStatus');
-    if(active&&status&&/aguardando acesso|sess[aã]o administrativa existente|digite o pin/i.test(text(status.textContent))){status.textContent='Sessão administrativa ativa.';status.classList.add('ok')}
-  }
+  /* A sessão global apenas controla a visibilidade dos controles legados.
+     Não cria segundo fluxo de autenticação dentro dos módulos. */
 }
 
 function buildCentralWelcome(){

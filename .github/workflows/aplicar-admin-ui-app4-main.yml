@@ -10,6 +10,12 @@ on:
       - 'admin-ui-behavior.inline.js'
       - 'scripts/injetar_admin_ui_standard_v1.py'
       - 'scripts/test_admin_ui_app4_canonical.py'
+      - 'recados-campanhas-whatsapp-mensal-v12.js'
+      - 'painel-oficial-recados-campanhas.html'
+      - 'teste-v1/painel-moradores-v2.html'
+      - 'painel-oficial-organizacoes-municipios.html'
+      - 'painel-oficial-tacs-areas.html'
+      - 'painel-oficial-profissionais-servicos.html'
 
 permissions:
   contents: write

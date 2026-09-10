@@ -1581,3 +1581,27 @@ html body .botao{
     height:52px!important;
   }
 }
+
+/* AJUSTES_PONTUAIS_2026_09_10_V1 */
+/* O PIN inicial da Central define Administrador ou TACS. */
+.csc-session-active .csc-resident-entry-panel>.csc-admin-only-auth,
+.csc-session-active .csc-resident-redundant-tacs-access{
+  display:none!important;
+}
+body.csc-brand-enhanced a[href*="painel-oficial-tacs-areas"]{
+  display:none!important;
+}
+.csc-session-active .csc-resident-entry-panel{
+  margin:0!important;
+  padding:0!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+/* Wrappers oficiais passam a exibir somente o shell interno canônico. */
+body.csc-brand-enhanced .carga,
+body.csc-brand-enhanced .loading{
+  background:#071827!important;
+  border:0!important;
+  box-shadow:none!important;
+}
