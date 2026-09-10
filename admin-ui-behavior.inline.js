@@ -172,14 +172,17 @@ function openProfilePage(){
   var ctx=centralContextFromCache()||{},areas=Array.isArray(ctx.areas)?ctx.areas:[],tacs=Array.isArray(ctx.tacs)?ctx.tacs:[],admins=Array.isArray(ctx.administradores)?ctx.administradores:[];
   if(!admins.length)admins=[{nomeCompleto:'Administrador geral',perfil:'ADMINISTRADOR GERAL',ativo:true}];
   function areaName(id){for(var i=0;i<areas.length;i++)if(text(areas[i].areaId)===text(id))return text(areas[i].areaNome||areas[i].areaId);return text(id)||'Área não vinculada'}
-  var html='<h2>Administradores e TACS</h2><p class="csc-profile-intro">Administradores e TACS cadastrados. Toque em um TACS para mudar rapidamente para a área vinculada.</p><h3>Administradores</h3><div class="csc-profile-list">';
-  admins.forEach(function(a){html+='<article class="csc-profile-card"><strong>'+escapeProfile(a.nomeCompleto||a.nome||'Administrador geral')+'</strong><span>'+escapeProfile(a.perfil||'ADMINISTRADOR GERAL')+'</span></article>'});
+  var html='<h2>Administradores e TACS</h2><p class="csc-profile-intro">Acesso rápido aos perfis cadastrados e às áreas administradas.</p><h3>Administradores</h3><div class="csc-profile-list">';
+  admins.forEach(function(a){html+='<article class="csc-profile-card"><strong>'+escapeProfile(a.nomeCompleto||a.nome||'Administrador geral')+'</strong><span>'+escapeProfile(a.perfil||'ADMINISTRADOR GERAL')+(a.ativo===false?' • Inativo':' • Ativo')+'</span></article>'});
   html+='</div><h3>TACS cadastrados</h3><div class="csc-profile-list">';
-  if(!tacs.length)html+='<div class="csc-profile-empty">Nenhum TACS disponível no contexto atual.</div>';
-  tacs.forEach(function(t){html+='<button type="button" class="csc-profile-card csc-profile-tacs" data-area="'+escapeProfile(t.areaId||'')+'"><strong>'+escapeProfile(t.nomeCompleto||t.nome||t.tacsId||'TACS')+'</strong><span>'+escapeProfile(areaName(t.areaId))+(t.ativo===false?' • Inativo':' • Ativo')+'</span></button>'});
+  if(!tacs.length)html+='<div class="csc-profile-empty">Nenhum TACS cadastrado foi devolvido pelo servidor.</div>';
+  tacs.forEach(function(t){html+='<button type="button" class="csc-profile-card csc-profile-area-jump" data-area="'+escapeProfile(t.areaId||'')+'"><strong>'+escapeProfile(t.nomeCompleto||t.nome||t.tacsId||'TACS')+'</strong><span>'+escapeProfile(areaName(t.areaId))+(t.ativo===false?' • Inativo':' • Ativo')+'</span></button>'});
+  html+='</div><h3>Áreas</h3><div class="csc-profile-list">';
+  if(!areas.length)html+='<div class="csc-profile-empty">Nenhuma área cadastrada foi devolvida pelo servidor.</div>';
+  areas.forEach(function(a){html+='<button type="button" class="csc-profile-card csc-profile-area-jump" data-area="'+escapeProfile(a.areaId||'')+'"><strong>'+escapeProfile(a.areaNome||a.areaId||'Área')+'</strong><span>'+escapeProfile(a.unidadeNome||a.unidadeId||'Unidade não informada')+'</span></button>'});
   html+='</div>';
   page.innerHTML=html;page.hidden=false;
-  page.querySelectorAll('.csc-profile-tacs').forEach(function(btn){btn.addEventListener('click',function(){var area=text(btn.dataset.area);if(area){try{localStorage.setItem('portalTacsCentralAreaV1',area)}catch(e){}var select=document.getElementById('adminArea');if(select&&Array.prototype.some.call(select.options,function(o){return o.value===area})){select.value=area;select.dispatchEvent(new Event('change',{bubbles:true}))}}showCentralHome()})});
+  page.querySelectorAll('.csc-profile-area-jump').forEach(function(btn){btn.addEventListener('click',function(){var area=text(btn.dataset.area);if(area){try{localStorage.setItem('portalTacsCentralAreaV1',area)}catch(e){}var select=document.getElementById('adminArea');if(select&&Array.prototype.some.call(select.options,function(o){return o.value===area})){select.value=area;select.dispatchEvent(new Event('change',{bubbles:true}))}}showCentralHome()})});
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function escapeProfile(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
