@@ -217,7 +217,7 @@ function buildPlatformFooter(){
   var footer=document.createElement('footer');
   footer.id='cscPlatformFooter';
   footer.className='csc-platform-footer';
-  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong><small>Versão da plataforma 2026.09 • Ano letivo 2026</small>';
+  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong><small>Conecta Saúde Comunitária — Plataforma 2026/2027</small>';
   var old=document.querySelector('body>footer:not(#cscPlatformFooter)');
   if(old)old.hidden=true;
   document.body.appendChild(footer);
