@@ -561,6 +561,146 @@ html body .saude-resumo button.saude-numero[data-saude-filtro="SEM_CONFIRMACAO"]
 .csc-moradores-access #tacsPinAccess,.csc-moradores-access label[for="tacsPinAccess"],.csc-moradores-access #loginTacs{display:block!important}
 .csc-pressed{transform:translateY(2px) scale(.965)!important;filter:brightness(1.12)!important;box-shadow:inset 0 4px 10px rgba(0,0,0,.34)!important}
 @media(max-width:430px){body.csc-brand-enhanced>header p{font-size:.82rem!important}}
+
+/* R4 — unificação cromática: sem divisão da interface em blocos de cores. */
+:root{
+  --tacs-app-bg:#071827;
+  --tacs-app-top:#0b263d;
+  --tacs-app-card:#102d46;
+  --tacs-app-card2:#102d46;
+  --tacs-app-line:#2b5a76;
+  --tacs-app-primary:#145574;
+}
+html body .panel,
+html body .painel,
+html body .card,
+html body .box,
+html body .caixa,
+html body .newbox,
+html body .item,
+html body .cartao,
+html body .ticket,
+html body .grupoProfissional,
+html body .area-row,
+html body .maprow,
+html body .health-card,
+html body .saude-numero,
+html body .numero,
+html body .number,
+html body .stat,
+html body .metric,
+html body .quick-card,
+html body .msg-familia-acao,
+html body .msg-ind-form-action,
+html body .msg-rel-box,
+html body .msg-rel-status,
+html body .msg-rel-event,
+html body .msg-rel-message,
+html body .msg-rel-device,
+html body .msg-rel-grid div,
+html body .saude-aparelho{
+  background:#102d46!important;
+  background-image:none!important;
+  border-color:#2b5a76!important;
+  color:#f7fcff!important;
+}
+html body #listaRecados .item,
+html body #listaCampanhas .item,
+html body #results .card,
+html body .ticket,
+html body .saude-aparelho{
+  background:#102d46!important;
+  background-image:none!important;
+}
+html body button,
+html body .btn,
+html body .botao,
+html body .module,
+html body .tab,
+html body .aba,
+html body .grupoAcao,
+html body .msg-ind-card-button,
+html body .msg-ind-form-button,
+html body .msg-familia-acao button,
+html body .msg-rel-button,
+html body .msg-rel-family{
+  background:#145574!important;
+  background-image:none!important;
+  color:#fff!important;
+  border-color:#2b5a76!important;
+}
+html body .module{background:#102d46!important}
+html body .module::before{background:#145574!important;color:#fff!important}
+html body .module .icon,
+html body .module-icon{background:#145574!important;background-image:none!important;border-color:#2b5a76!important}
+html body .btn.green,
+html body .botao.verde,
+html body .action-primary,
+html body .btn.red,
+html body .btn-danger,
+html body .botao.perigo,
+html body .botao.vermelho,
+html body .danger,
+html body .dangerous,
+html body .delete,
+html body .remove,
+html body .red-action,
+html body .btn.gray,
+html body .botao.cinza,
+html body .botao.secundario{
+  background:#145574!important;
+  background-image:none!important;
+  color:#fff!important;
+  border-color:#2b5a76!important;
+}
+html body .status,
+html body .status.ok,
+html body .status.warn,
+html body .status.aviso,
+html body .status.err,
+html body .status.erro,
+html body .nota,
+html body .note{
+  background:#0b263d!important;
+  color:#dcebf3!important;
+  border-color:#2b5a76!important;
+}
+html body .signal,
+html body .sinal,
+html body .signal.off,
+html body .sinal.inativo,
+html body .sinal.ativo,
+html body .pill,
+html body .pill.off,
+html body .chip,
+html body .tag,
+html body .estado,
+html body .state-pill,
+html body .badge,
+html body .seal,
+html body .selo,
+html body .status-badge{
+  background:#0b263d!important;
+  color:#dcebf3!important;
+  border-color:#2b5a76!important;
+}
+html body .saude-resumo button.saude-numero[data-saude-filtro],
+html body .saude-resumo button.saude-numero[data-saude-filtro="ATIVO"],
+html body .saude-resumo button.saude-numero[data-saude-filtro="REPARO"],
+html body .saude-resumo button.saude-numero[data-saude-filtro="INATIVO"],
+html body .saude-resumo button.saude-numero[data-saude-filtro="SEM_CONFIRMACAO"]{
+  background:#102d46!important;
+  background-image:none!important;
+  border-color:#2b5a76!important;
+}
+html body .saude-resumo button.saude-numero[data-saude-filtro] strong,
+html body .saude-resumo button.saude-numero[data-saude-filtro] span{
+  color:#dcebf3!important;
+}
+html body th{background:#102d46!important}
+html body td,
+html body table,
+html body .tablewrap{background:#0b263d!important}
 </style>
 <script id="portalTacsAdminUiBehaviorR3">
 /*
