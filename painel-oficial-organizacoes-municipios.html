@@ -1932,6 +1932,16 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 }());
 </script>
 <!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->
+<style id="areaVinculoFeedbackV2">
+/* AJUSTE_PONTUAL_VINCULO_SALVO_V2 */
+.area-feedback:not([hidden]){
+  display:grid!important;gap:3px!important;margin-top:10px!important;padding:12px 14px!important;
+  background:#102d46!important;color:#fff!important;border:1px solid #365f78!important;
+  border-radius:15px!important;box-shadow:none!important;
+}
+.area-feedback strong{color:#83efa9!important;font-size:1rem!important;font-weight:950!important}
+.area-feedback span{color:#d8e6ee!important;font-size:.88rem!important;line-height:1.35!important}
+</style>
 </head>
 <body>
 <header><span class="badge">ADMINISTRADOR GERAL</span><h1>Municípios e organizações</h1><p>Estrutura global do Portal TACS. TACS de área não têm acesso a estas alterações.</p></header>
@@ -1981,7 +1991,7 @@ function apply(r,message){if(!r||r.ok!==true){status(txt(r&&r.message)||'A opera
 function load(){if(territoryToken&&!token){status('Este painel é exclusivo do Administrador geral. Volte à Central.','err');return}if(!token){status('Sessão administrativa ausente. Volte à Central e entre como Administrador geral.','err');return}post('admin_multimunicipio_dados',{},function(r){apply(r,'Estrutura multi-município carregada e validada.')})}
 function saveOrg(box,isNew){var obj={organizacaoId:id(isNew?el('newOrgId').value:box.querySelector('[name="orgId"]').value),nome:txt(isNew?el('newOrgName').value:box.querySelector('[name="orgName"]').value),ativa:isNew?el('newOrgActive').checked:box.querySelector('[name="orgActive"]').checked};if(!obj.organizacaoId||!obj.nome){status('Informe identificador e nome da organização.','err');return}status('Salvando organização e conferindo vínculos…','warn');post('admin_multimunicipio_salvar_organizacao',payload(obj),function(r){if(apply(r,'Organização salva e vínculos conferidos.')&&isNew){el('newOrgId').value='';el('newOrgName').value='';el('newOrgActive').checked=true}})}
 function saveMun(box,isNew){var obj={municipioId:id(isNew?el('newMunId').value:box.querySelector('[name="munId"]').value),nome:txt(isNew?el('newMunName').value:box.querySelector('[name="munName"]').value),uf:id(isNew?el('newMunUf').value:box.querySelector('[name="munUf"]').value).slice(0,2),organizacaoId:id(isNew?el('newMunOrg').value:box.querySelector('[name="munOrg"]').value),ativo:isNew?el('newMunActive').checked:box.querySelector('[name="munActive"]').checked};if(!obj.municipioId||!obj.nome||!obj.organizacaoId){status('Informe identificador, município e organização.','err');return}status('Salvando município e validando as áreas…','warn');post('admin_multimunicipio_salvar_municipio',payload(obj),function(r){if(apply(r,'Município salvo e áreas conferidas.')&&isNew){el('newMunId').value='';el('newMunName').value='';el('newMunUf').value='';el('newMunActive').checked=true}})}
-function showAreaFeedback(areaId,areaName,municipio){var row=document.querySelector('[data-area="'+CSS.escape(areaId)+'"]');if(!row)return;var button=row.querySelector('.saveArea');if(button){button.textContent='Vínculo salvo!';button.setAttribute('aria-label','Vínculo salvo')}var box=row.querySelector('.area-feedback');if(!box)return;box.textContent='Vínculo salvo!';box.hidden=false;box.className='area-feedback status ok';box.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function showAreaFeedback(areaId,areaName,municipio){var row=document.querySelector('[data-area="'+CSS.escape(areaId)+'"]');if(!row)return;var button=row.querySelector('.saveArea');if(button){button.textContent='Vínculo salvo!';button.setAttribute('aria-label','Vínculo salvo')}var box=row.querySelector('.area-feedback');if(!box)return;box.innerHTML='<strong>✓ Vínculo salvo!</strong><span>'+esc(areaName)+' → '+esc(municipio)+'</span>';box.hidden=false;box.className='area-feedback status ok';box.scrollIntoView({behavior:'smooth',block:'nearest'})}
 el('addOrg').addEventListener('click',function(){saveOrg(null,true)});el('addMun').addEventListener('click',function(){saveMun(null,true)});
 el('orgList').addEventListener('click',function(e){var b=e.target.closest('.saveOrg');if(b)saveOrg(b.closest('[data-org]'),false)});
 el('munList').addEventListener('click',function(e){var b=e.target.closest('.saveMun');if(b)saveMun(b.closest('[data-mun]'),false)});
