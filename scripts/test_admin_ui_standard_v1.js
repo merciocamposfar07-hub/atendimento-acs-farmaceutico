@@ -19,8 +19,9 @@ const targets = [
 ];
 
 const source = read('admin-ui-standard.inline.css');
-assert.match(source, /--tacs-petroleo:#073a55/i);
-assert.match(source, /--tacs-raio-botao:22px/i);
+assert.match(source, /--tacs-app-bg:#071827/i);
+assert.match(source, /--tacs-petroleo:var\(--tacs-app-top\)/i);
+assert.match(source, /--tacs-raio-botao:17px/i);
 assert.match(source, /button\[id\*="salvar"\]/i);
 assert.match(source, /button\.danger/);
 assert.match(source, /#portalTacsContrastToggleV1/);
@@ -29,8 +30,9 @@ for (const file of targets) {
   const html = read(file);
   assert.match(html, /PORTAL_TACS_ADMIN_UI_STANDARD_START/, `${file}: padrão visual não foi injetado`);
   assert.match(html, /id="portalTacsAdminUiStandardV1"/, `${file}: style visual oficial ausente`);
-  assert.match(html, /--tacs-petroleo:#073a55/i, `${file}: azul-petróleo oficial ausente`);
-  assert.match(html, /--tacs-raio-card:28px/i, `${file}: raio oficial ausente`);
+  assert.match(html, /--tacs-app-bg:#071827/i, `${file}: fundo institucional R6 ausente`);
+  assert.match(html, /--tacs-petroleo:var\(--tacs-app-top\)/i, `${file}: azul-petróleo institucional R6 ausente`);
+  assert.match(html, /--tacs-raio-card:24px/i, `${file}: raio institucional R6 ausente`);
 }
 
 // Contratos funcionais críticos permanecem por nome; padronização não pode substituí-los por classes visuais.
