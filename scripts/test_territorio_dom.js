@@ -196,6 +196,9 @@ async function testTerritoryPanel() {
   assert.match(html, /<label for="tacsUnit">Unidade de saúde<\/label>/);
   assert.match(html, /<label for="tacsPin">PIN de acesso aos painéis<\/label>/);
   assert.match(html, /id="tacsProfile"/);
+  assert.match(html, /id="tacsActiveText"/);
+  assert.match(html, /id="accessStateControlV1"/);
+  assert.match(js, /function syncTacsActiveUi\(\)/);
   for (const perfil of ['ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_MORADOR','TACS','ADMIN']) {
     assert.match(html, new RegExp('value="'+perfil+'"'), 'Perfil ausente no formulário: '+perfil);
   }
@@ -247,6 +250,11 @@ async function testTerritoryPanel() {
   window.document.getElementById('newTacsButton').click();
   assert.equal(window.document.getElementById('tacsForm').classList.contains('hidden'), false);
   assert.equal(window.document.getElementById('tacsPin').required, true);
+  assert.equal(window.document.getElementById('tacsActiveText').textContent,'Inativo');
+  window.document.getElementById('tacsActive').checked=true;
+  window.document.getElementById('tacsActive').dispatchEvent(new window.Event('change',{bubbles:true}));
+  assert.equal(window.document.getElementById('tacsActiveText').textContent,'Ativo');
+  assert.equal(window.document.getElementById('tacsActive').closest('.access-switch').classList.contains('is-active'),true);
   for (const id of ['tacsName', 'tacsBirth', 'tacsCns', 'tacsCpf', 'tacsPhone', 'tacsEmail', 'tacsMicroarea', 'tacsUnit']) {
     assert.equal(window.document.getElementById(id).required, true, `Campo obrigatório ausente: ${id}`);
   }
