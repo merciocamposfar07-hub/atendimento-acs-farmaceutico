@@ -72,7 +72,7 @@ function conectaAcessoV1TratarPost_(e){
   var aceitas=[
     'conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_criar_pin',
     'conecta_morador_login_pin','conecta_morador_sessao','conecta_morador_notificacao_confirmar',
-    'conecta_morador_preferencia_notificacao','conecta_morador_encerrar',
+    'conecta_morador_preferencia_notificacao','conecta_morador_membro_salvar_cpf','conecta_morador_encerrar',
     'conecta_pin_recuperar_iniciar','conecta_pin_recuperar_salvar',
     'conecta_pendencias_contagem'
   ];
@@ -214,6 +214,39 @@ function conectaAcessoV1PreferenciaNotificacao_(p){
   var sessao=conectaAcessoV1ValidarSessao_(p),silencioso=conectaAcessoV1Bool_(p.silencioso);
   conectaAcessoV1AtualizarAcesso_(sessao.accessId,{12:silencioso});
   return {ok:true,silencioso:silencioso,message:silencioso?'Preferência silenciosa registrada.':'Avisos sonoros reativados na preferência do Conecta.'};
+}
+
+function conectaAcessoV1SalvarCpfMembro_(p){
+  var sessao=conectaAcessoV1ValidarSessao_(p),cpf=conectaAcessoV1Cpf_(p.cpf),tokenMembro=conectaAcessoV1Texto_(p.membroToken);
+  if(!/^fm_[A-Za-z0-9_]{20,160}$/.test(tokenMembro))throw new Error('Seleção do integrante inválida ou expirada.');
+  if(typeof TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1==='undefined')throw new Error('A seleção familiar ainda não está disponível.');
+  var bruto=CacheService.getScriptCache().get(TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1.TOKEN_PREFIX+tokenMembro);
+  if(!bruto)throw new Error('Esta seleção expirou. Abra novamente o vínculo familiar.');
+  var dados=JSON.parse(bruto),areaId=conectaAcessoV1Id_(sessao.areaId);
+  if(conectaAcessoV1Id_(dados.areaId)!==areaId)throw new Error('O integrante selecionado não pertence à área deste acesso.');
+  var titular=conectaAcessoV1BuscarCpf_(sessao.cpf);
+  if(titular.length!==1)throw new Error('Não foi possível confirmar o responsável deste acesso.');
+  var familiaTitular=typeof vinculoFamiliarNotifV1CodigoEndereco_==='function'?vinculoFamiliarNotifV1CodigoEndereco_(titular[0].morador.endereco):'';
+  if(!familiaTitular||identificacaoFamiliarPublicaV1NormalizarFamilia_(dados.familiaId)!==identificacaoFamiliarPublicaV1NormalizarFamilia_(familiaTitular))throw new Error('O integrante não pertence ao vínculo familiar deste acesso.');
+  var contexto={perfil:'PUBLICO',operadorId:'AUTO:FAMILIA_CONECTA',agenteId:titular[0].area.agenteId||'',areaId:areaId,areaNome:titular[0].area.areaNome||areaId,unidadeId:titular[0].area.unidadeId||'',planilhaId:titular[0].area.planilhaId,permissoes:[]};
+  var fonte=moradoresAdminV1LocalizarFonte_(contexto);
+  if(conectaAcessoV1Texto_(dados.origemAba)!==fonte.sheet.getName()||Number(dados.origemLinha||0)<2)throw new Error('O cadastro selecionado não pertence à fonte territorial atual.');
+  var reg=moradoresAdminV1LerPorOrigem_(fonte.ss,dados.origemAba,Number(dados.origemLinha||0));
+  if(!reg||!reg.morador||!reg.morador.nome)throw new Error('O integrante selecionado não foi localizado.');
+  if(identificacaoFamiliarPublicaV1CodigoMorador_(reg.morador)!==identificacaoFamiliarPublicaV1NormalizarFamilia_(familiaTitular))throw new Error('O vínculo familiar mudou. Abra novamente a família.');
+  var atual=moradoresAdminV1Digitos_(reg.morador.cpf);
+  if(atual&&atual!==cpf)throw new Error('Este integrante já possui outro CPF cadastrado. A alteração exige conferência do TACS.');
+  if(!atual&&conectaAcessoV1BuscarCpf_(cpf).length)throw new Error('Este CPF já está associado a outro cadastro.');
+  if(!atual){
+    var lock=LockService.getScriptLock();if(!lock.tryLock(10000))throw new Error('O cadastro está sendo atualizado. Tente novamente.');
+    try{
+      moradoresAdminV1SetCell_(fonte.sheet,Number(dados.origemLinha),fonte.map.cpf,cpf,'@');
+      moradoresAdminV1SetCell_(fonte.sheet,Number(dados.origemLinha),fonte.map.ultimaAtualizacao,new Date(),'dd/MM/yyyy HH:mm:ss');
+      moradoresAdminV1Auditar_(fonte.ss,{moradorId:reg.morador.idPortal||reg.morador.id||moradoresAdminV1ChaveRegistro_(reg.morador),acao:'VINCULAR_CPF_MEMBRO_FAMILIA_CONECTA',campos:'CPF_PREENCHIDO_EM_CAMPO_VAZIO'},contexto);
+      SpreadsheetApp.flush();if(typeof moradoresAdminV1InvalidarResumo_==='function')moradoresAdminV1InvalidarResumo_(contexto);
+    }finally{lock.releaseLock();}
+  }
+  return {ok:true,documentoAcesso:cpf,nome:reg.morador.nome,nascimento:reg.morador.nascimento||'',message:'CPF salvo no cadastro deste integrante.'};
 }
 
 function conectaAcessoV1EncerrarMorador_(p){
