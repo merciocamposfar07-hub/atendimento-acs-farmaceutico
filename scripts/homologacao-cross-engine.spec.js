@@ -37,8 +37,19 @@ async function metrics(page) {
   });
 }
 
+async function exposeModules(page, names) {
+  await page.evaluate(moduleNames => {
+    const modules = document.getElementById('modulesPanel');
+    if (modules) modules.hidden = false;
+    moduleNames.forEach(name => {
+      const button = document.querySelector('#moduleGrid .module[data-module="' + name + '"]');
+      if (button) { button.hidden = false; button.disabled = false; }
+    });
+  }, names);
+}
+
 for (const vp of portalViewports) {
-  test(`Portal responsivo ${vp.name}`, async ({ page, browserName }) => {
+  test('Portal responsivo ' + vp.name, async ({ page, browserName }) => {
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await blockExternal(page);
     const started = Date.now();
@@ -60,78 +71,121 @@ for (const vp of [
   { name: 'central-mobile-390', width: 390, height: 844 },
   { name: 'central-desktop-1024', width: 1024, height: 768 }
 ]) {
-  test(`Central responsiva ${vp.name}`, async ({ page, browserName }) => {
+  test('Central responsiva ' + vp.name, async ({ page, browserName }) => {
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await blockExternal(page);
     const started = Date.now();
     await page.goto('central-administrativa-tacs.html', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#tabAdmin')).toBeVisible();
     await expect(page.locator('#tabTacs')).toBeVisible();
-    await expect(page.locator('#portalTacsCentralRefreshV1')).toBeVisible();
+    await expect(page.locator('#loginPanel')).toBeVisible();
+    await expect(page.locator('#adminPin')).toBeVisible();
+    await expect(page.locator('#portalTacsAdminPreloadPoolV1')).toHaveCount(0);
     const m = await metrics(page);
     expect(m.overflowPx).toBeLessThanOrEqual(1);
     writeResult({ kind: 'central', browserName, viewport: vp.name, elapsedMs: Date.now() - started, ...m });
   });
 }
 
-test('Central abre no primeiro toque, preserva painel e protege edição', async ({ page, browserName }) => {
+test('PIN local V3 funciona nos navegadores reais sem persistir token remoto', async ({ page, browserName }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await blockExternal(page);
   await page.goto('central-administrativa-tacs.html', { waitUntil: 'domcontentloaded' });
-  await expect.poll(() => page.evaluate(() => Boolean(window.PortalTacsCentralPerformanceV1))).toBe(true);
-  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.portalTacsPerformanceInstalled || '')).toBe('1');
 
-  const controllerResources = await page.evaluate(() => performance.getEntriesByType('resource').filter(entry => entry.name.includes('central-admin-performance-v1.js')).length);
-  expect(controllerResources).toBe(1);
-
-  await page.evaluate(() => {
-    sessionStorage.setItem('portalTacsAdminTokenV1', 'sessao-homologacao-bloco2');
-    const modules = document.getElementById('modulesPanel');
-    if (modules) modules.hidden = false;
-    const support = document.querySelector('#moduleGrid .module[data-module="suporte"]');
-    if (support) { support.hidden = false; support.disabled = false; }
+  const rows = await page.evaluate(async () => {
+    const api = window.ConectaPinLocalV2;
+    if (!api) throw new Error('ConectaPinLocalV2 ausente');
+    const device = localStorage.getItem('portalTacsDispositivoV1') || 'device-homologacao-pin-v3';
+    const out = [];
+    for (const scope of ['admin', 'tacs', 'morador']) {
+      const context = { areas: [{ areaId: 'JAPARANDUBA', areaNome: 'Sítio Japaranduba', ativa: true }] };
+      const started = performance.now();
+      const saved = await api.guardar(scope, '2468', {
+        device,
+        token: 'TOKEN-NAO-DEVE-SOBREVIVER-' + scope,
+        context,
+        snapshot: { nome: 'Morador Teste', areaId: 'JAPARANDUBA' },
+        mode: scope
+      });
+      const opened = await api.abrir(scope, '2468');
+      const wrong = await api.abrir(scope, '1357');
+      out.push({
+        scope,
+        saved,
+        elapsedMs: performance.now() - started,
+        opened: Boolean(opened),
+        wrongBlocked: wrong === null,
+        hasToken: Boolean(opened && opened.token),
+        hasContext: Boolean(opened && (opened.context || opened.snapshot)),
+        storageV3: Boolean(localStorage.getItem('conectaPinLocalV3:' + scope))
+      });
+    }
+    return out;
   });
 
-  const support = page.locator('#moduleGrid .module[data-module="suporte"]');
-  await expect(support).toBeVisible();
+  for (const row of rows) {
+    expect(row.saved, row.scope + ': cofre deve ser gravado').toBe(true);
+    expect(row.opened, row.scope + ': PIN correto deve abrir o snapshot').toBe(true);
+    expect(row.wrongBlocked, row.scope + ': PIN incorreto deve bloquear').toBe(true);
+    expect(row.hasToken, row.scope + ': token remoto não pode ficar no cofre').toBe(false);
+    expect(row.hasContext, row.scope + ': contexto/snapshot confirmado deve existir').toBe(true);
+    expect(row.storageV3, row.scope + ': armazenamento deve usar o formato V3').toBe(true);
+    expect(row.elapsedMs, browserName + '/' + row.scope + ': desbloqueio local deve permanecer sub-segundo operacional').toBeLessThan(1500);
+  }
+
+  writeResult({ kind: 'pin-local-v3', browserName, rows: rows.map(row => ({ scope: row.scope, elapsedMs: Math.round(row.elapsedMs * 100) / 100 })) });
+});
+
+test('Central abre painel comum no mesmo toque sem arquitetura de iframe oculto', async ({ page, browserName }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await blockExternal(page);
+  await page.goto('central-administrativa-tacs.html', { waitUntil: 'domcontentloaded' });
+  await exposeModules(page, ['suporte']);
+
   const firstTouch = await page.evaluate(() => {
     const button = document.querySelector('#moduleGrid .module[data-module="suporte"]');
     const viewer = document.getElementById('viewer');
     const started = performance.now();
     button.click();
-    return { elapsedMs: performance.now() - started, visible: Boolean(viewer && !viewer.hidden) };
+    return {
+      elapsedMs: performance.now() - started,
+      visible: Boolean(viewer && !viewer.hidden),
+      src: document.getElementById('viewerFrame').getAttribute('src') || '',
+      hasPool: Boolean(document.getElementById('portalTacsAdminPreloadPoolV1'))
+    };
   });
+
   expect(firstTouch.visible).toBe(true);
-  expect(firstTouch.elapsedMs).toBeLessThan(100);
+  expect(firstTouch.elapsedMs, browserName + ': resposta visual ao toque deve ficar abaixo de 100 ms').toBeLessThan(100);
+  expect(firstTouch.src).toContain('painel-suporte-moradores-v2.html');
+  expect(firstTouch.hasPool).toBe(false);
 
-  await expect(page.locator('#viewer')).toBeVisible();
-  await expect(page.locator('#viewer iframe[data-module="suporte"]')).toHaveCount(1);
-  const src = await page.locator('#viewer iframe[data-module="suporte"]').getAttribute('src');
-  expect(src || '').toContain('painel-suporte-moradores-v2.html');
-  expect(src || '').not.toContain('_cb=');
-
-  await page.waitForFunction(() => {
-    const frame = document.querySelector('#viewer iframe[data-module="suporte"]');
-    try { return Boolean(frame && frame.contentWindow && frame.contentWindow.location.pathname.includes('painel-suporte-moradores-v2.html')); }
-    catch (error) { return false; }
-  });
-  await page.evaluate(() => {
-    const frame = document.querySelector('#viewer iframe[data-module="suporte"]');
-    frame.contentDocument.documentElement.dataset.tacsDirty = '1';
-  });
-
-  page.once('dialog', dialog => dialog.dismiss());
-  await page.locator('#viewerBack').click();
-  await expect(page.locator('#viewer')).toBeVisible();
-
-  page.once('dialog', dialog => dialog.accept());
   await page.locator('#viewerBack').click();
   await expect(page.locator('#viewer')).toBeHidden();
-  await expect(page.locator('#portalTacsAdminPreloadPoolV1 iframe[data-module="suporte"]')).toHaveCount(1);
-  const preservedSrc = await page.locator('#portalTacsAdminPreloadPoolV1 iframe[data-module="suporte"]').getAttribute('src');
-  expect(preservedSrc).toBe(src);
+  await expect(page.locator('#viewerFrame')).toHaveAttribute('src', 'about:blank');
 
-  writeResult({ kind: 'central-first-touch', browserName, viewport: 'central-mobile-390', controllerResources, touchElapsedMs: Math.round(firstTouch.elapsedMs * 100) / 100, preserved: true, dirtyGuard: true });
+  writeResult({ kind: 'central-first-touch-direct', browserName, viewport: 'central-mobile-390', touchElapsedMs: Math.round(firstTouch.elapsedMs * 100) / 100 });
+});
+
+test('Agendas usa navegação direta e não iframe oculto', async ({ page, browserName }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await blockExternal(page);
+  await page.goto('central-administrativa-tacs.html', { waitUntil: 'domcontentloaded' });
+  await exposeModules(page, ['agendas']);
+  await expect(page.locator('#portalTacsAdminPreloadPoolV1')).toHaveCount(0);
+
+  await Promise.all([
+    page.waitForURL(url => {
+      const u = new URL(url);
+      return u.pathname.endsWith('/painel-oficial-agendas-vagas.html') &&
+        u.searchParams.get('from') === 'central' &&
+        /^\d+$/.test(u.searchParams.get('_cb') || '');
+    }),
+    page.locator('#moduleGrid .module[data-module="agendas"]').click()
+  ]);
+
+  expect(page.url()).toContain('painel-oficial-agendas-vagas.html');
+  writeResult({ kind: 'agendas-direct-navigation', browserName, viewport: 'iphone-390', direct: true });
 });
 
 test('Portal vindo da Central mostra retorno sem credencial na URL', async ({ page, browserName }) => {

@@ -8,62 +8,64 @@ async function blockExternal(page) {
   await page.route('https://api.onesignal.com/**', route => route.abort());
 }
 
-test('orçamento de interação da Central: toque, retorno e reabertura', async ({ page, browserName }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+async function prepareCentral(page) {
   await blockExternal(page);
   await page.goto('central-administrativa-tacs.html', { waitUntil: 'domcontentloaded' });
-  await expect.poll(() => page.evaluate(() => Boolean(window.PortalTacsCentralPerformanceV1))).toBe(true);
   await page.evaluate(() => {
-    sessionStorage.setItem('portalTacsAdminTokenV1', 'sessao-homologacao-performance-budget');
     const modules=document.getElementById('modulesPanel');
     if(modules)modules.hidden=false;
     const support=document.querySelector('#moduleGrid .module[data-module="suporte"]');
-    if(support){support.hidden=false;support.disabled=false;}
+    if(support){support.hidden=false;support.disabled=false}
   });
+}
+
+test('orçamento de interação da Central: toque, retorno e reabertura sem pool oculto', async ({ page, browserName }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await prepareCentral(page);
+  await expect(page.locator('#portalTacsAdminPreloadPoolV1')).toHaveCount(0);
 
   const first=await page.evaluate(() => {
     const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');
     const viewer=document.getElementById('viewer');
     const t=performance.now(); b.click();
-    const style=getComputedStyle(viewer);
-    return {ms:performance.now()-t,visible:Boolean(viewer&&!viewer.hidden&&style.visibility==='visible'&&style.pointerEvents!=='none')};
+    return {
+      ms:performance.now()-t,
+      visible:Boolean(viewer&&!viewer.hidden),
+      src:document.getElementById('viewerFrame').getAttribute('src')||''
+    };
   });
   expect(first.visible).toBe(true);
-  expect(first.ms, `${browserName}: primeiro toque deve responder abaixo de 100 ms`).toBeLessThan(100);
-  await expect(page.locator('#viewer iframe[data-module="suporte"]')).toHaveCount(1);
+  expect(first.ms, browserName+': primeiro toque deve responder abaixo de 100 ms').toBeLessThan(100);
+  expect(first.src).toContain('painel-suporte-moradores-v2.html');
 
   const back=await page.evaluate(() => {
     const viewer=document.getElementById('viewer');
     const b=document.getElementById('viewerBack');
     const t=performance.now(); b.click();
-    const style=getComputedStyle(viewer);
-    const frame=document.querySelector('#viewer iframe[data-module="suporte"]');
     return {
       ms:performance.now()-t,
-      hiddenAttribute:Boolean(viewer&&viewer.hidden),
-      visibility:style.visibility,
-      pointerEvents:style.pointerEvents,
-      frameHeight:frame?frame.getBoundingClientRect().height:0,
-      frameInnerHeight:frame&&frame.contentWindow?frame.contentWindow.innerHeight:0
+      hidden:Boolean(viewer&&viewer.hidden),
+      src:document.getElementById('viewerFrame').getAttribute('src')||''
     };
   });
-  expect(back.hiddenAttribute, `${browserName}: retorno iOS-safe não pode colapsar o viewer`).toBe(false);
-  expect(back.visibility, `${browserName}: retorno deve esconder visualmente o viewer`).toBe('hidden');
-  expect(back.pointerEvents, `${browserName}: viewer estacionado não pode capturar toque`).toBe('none');
-  expect(back.frameHeight, `${browserName}: iframe estacionado deve manter altura real`).toBeGreaterThan(0);
-  expect(back.frameInnerHeight, `${browserName}: viewport interno não pode zerar no retorno`).toBeGreaterThan(0);
-  expect(back.ms, `${browserName}: retorno à Central deve responder abaixo de 150 ms`).toBeLessThan(150);
+  expect(back.hidden).toBe(true);
+  expect(back.src).toBe('about:blank');
+  expect(back.ms, browserName+': retorno à Central deve responder abaixo de 150 ms').toBeLessThan(150);
 
   const reopen=await page.evaluate(() => {
     const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');
     const viewer=document.getElementById('viewer');
     const t=performance.now(); b.click();
-    const style=getComputedStyle(viewer);
-    return {ms:performance.now()-t,visible:Boolean(viewer&&!viewer.hidden&&style.visibility==='visible'&&style.pointerEvents!=='none')};
+    return {
+      ms:performance.now()-t,
+      visible:Boolean(viewer&&!viewer.hidden),
+      src:document.getElementById('viewerFrame').getAttribute('src')||''
+    };
   });
   expect(reopen.visible).toBe(true);
-  expect(reopen.ms, `${browserName}: painel preservado deve reabrir abaixo de 300 ms`).toBeLessThan(300);
-  await expect(page.locator('#viewer iframe[data-module="suporte"]')).toHaveCount(1);
+  expect(reopen.ms, browserName+': reabertura do shell deve responder abaixo de 300 ms').toBeLessThan(300);
+  expect(reopen.src).toContain('painel-suporte-moradores-v2.html');
+  await expect(page.locator('#portalTacsAdminPreloadPoolV1')).toHaveCount(0);
 });
 
 test('snapshot de Agendas aparece sem esperar Apps Script', async ({ page, browserName }) => {
@@ -81,5 +83,5 @@ test('snapshot de Agendas aparece sem esperar Apps Script', async ({ page, brows
   const started=Date.now();
   await expect(page.locator('#loginStatus')).toContainText('Dados exibidos da última leitura');
   const elapsed=Date.now()-started;
-  expect(elapsed, `${browserName}: snapshot local deve aparecer em até 300 ms depois do shell`).toBeLessThanOrEqual(300);
+  expect(elapsed, browserName+': snapshot local deve aparecer em até 300 ms depois do shell').toBeLessThanOrEqual(300);
 });
