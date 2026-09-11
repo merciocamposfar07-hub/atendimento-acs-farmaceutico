@@ -14,6 +14,10 @@ const build=read('scripts/build_apps_script_release.js');
 
 assert.match(territory,/MAX_TACS:500/,'A base territorial deve comportar muito mais que os 50 TACS iniciais.');
 assert.match(territory,/MAX_AREAS:500/,'A base territorial deve comportar muito mais que as 50 áreas iniciais.');
+assert.match(territory,/function tacsTerritorioV1AdministradorAtual_\(/,
+  'Backend deve identificar o administrador atual depois da autenticação.');
+assert.match(territory,/administradorAtual:administradorAtual/,
+  'Contexto administrativo deve devolver o administrador autenticado à Central.');
 assert.match(territory,/ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_MORADOR','TACS','ADMIN'/,
   'O cadastro deve oferecer exatamente os seis perfis funcionais definidos.');
 assert.match(territory,/tacsTerritorioV1PerfilTem_\(tacs\.perfil,'TACS'\)/,
