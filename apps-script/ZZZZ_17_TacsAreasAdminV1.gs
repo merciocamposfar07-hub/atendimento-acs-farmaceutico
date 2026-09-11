@@ -486,7 +486,7 @@ function tacsTerritorioV1SalvarTacs_(p,acesso){
 
     if(temTacs){
       var repetido=tacsTerritorioV1LinhaPor_(tabela,'CNS_PROFISSIONAL',cns);
-      if(repetido&&repetido.row!==(existente&&existente.row))throw new Error('Este CNS profissional já pertence a outro cadastro.');
+      if(repetido&&repetido.row!==(existente&&existente.row))throw new Error('Este CNS profissional já pertence a outro TACS.');
     }
     var repetidoCpf=tacsTerritorioV1LinhaPor_(tabela,'CPF',cpf);
     if(repetidoCpf&&repetidoCpf.row!==(existente&&existente.row))throw new Error('Este CPF já pertence a outro cadastro de Administrador/TACS.');
