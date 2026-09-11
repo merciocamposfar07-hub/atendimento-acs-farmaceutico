@@ -39,6 +39,12 @@ assert.doesNotMatch(centralHtml,/id="tacsCns"|for="tacsCns"/,
   'A Central não deve exibir campo de CNS para o TACS.');
 assert.doesNotMatch(centralJs,/Informe o CNS profissional com 15 números|Validando CNS e PIN/,
   'O fluxo principal da Central não deve exigir CNS.');
+assert.doesNotMatch(quickFrontend,/nome:text\(r\.nome\)/,
+  'O acesso rápido TACS não deve persistir o nome profissional no aparelho.');
+assert.doesNotMatch(quickFrontend,/\(p\.nome\?'<span>'/,
+  'O acesso público TACS não pode exibir o nome do agente antes da autenticação.');
+assert.match(quickFrontend,/delete p\.nome/,
+  'Perfis antigos devem remover o nome TACS já salvo localmente.');
 const recados=read('painel-oficial-recados-campanhas.html');
 const moradoresHtml=read('teste-v1/painel-moradores-v2.html');
 const moradoresJs=read('teste-v1/painel-moradores-transport-v2.js');
