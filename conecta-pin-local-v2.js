@@ -2,13 +2,24 @@
 'use strict';
 if(window.ConectaPinLocalV2)return;
 
-var PREFIX='conectaPinLocalV2:';
+var PREFIX='conectaPinLocalV3:';
+var STORAGE_VERSION=3;
 var MAX_AGE=7*24*60*60*1000;
 var ITERATIONS=180000;
+var CREDENTIAL_FIELDS={token:1,admintoken:1,territoriotoken:1,sessiontoken:1,bearer:1,authorization:1,accesstoken:1,refreshtoken:1};
 
 function text(v){return String(v==null?'':v).trim()}
 function digits(v){return text(v).replace(/\D/g,'')}
 function keyName(scope){return PREFIX+text(scope).toLowerCase()}
+function safePayload(payload){
+  var out={};
+  Object.keys(payload||{}).forEach(function(k){
+    var normalized=String(k||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    if(CREDENTIAL_FIELDS[normalized])return;
+    out[k]=payload[k];
+  });
+  return out;
+}
 function b64(bytes){
   var s='',i;for(i=0;i<bytes.length;i++)s+=String.fromCharCode(bytes[i]);
   return btoa(s);
@@ -35,10 +46,10 @@ async function guardar(scope,pin,payload){
   var iv=crypto.getRandomValues(new Uint8Array(12));
   var key=await derive(pin,salt);
   var now=Date.now();
-  var body=Object.assign({},payload,{scope:scope,salvoEm:now,expiraLocalEm:now+MAX_AGE});
+  var body=Object.assign(safePayload(payload),{scope:scope,salvoEm:now,expiraLocalEm:now+MAX_AGE});
   var plain=new TextEncoder().encode(JSON.stringify(body));
   var cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,plain);
-  var record={v:2,s:b64(salt),i:b64(iv),c:b64(new Uint8Array(cipher)),salvoEm:now};
+  var record={v:STORAGE_VERSION,s:b64(salt),i:b64(iv),c:b64(new Uint8Array(cipher)),salvoEm:now};
   try{localStorage.setItem(keyName(scope),JSON.stringify(record));return true}catch(e){return false}
 }
 async function abrir(scope,pin){
@@ -48,7 +59,7 @@ async function abrir(scope,pin){
   if(!raw)return null;
   try{
     var record=JSON.parse(raw);
-    if(!record||record.v!==2||!record.s||!record.i||!record.c)return null;
+    if(!record||record.v!==STORAGE_VERSION||!record.s||!record.i||!record.c)return null;
     var key=await derive(pin,bytes(record.s));
     var plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes(record.i)},key,bytes(record.c));
     var body=JSON.parse(new TextDecoder().decode(plain));
