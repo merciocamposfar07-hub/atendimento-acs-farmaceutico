@@ -129,6 +129,12 @@ assert.doesNotMatch(js,/post\('admin_moradores_status'[\s\S]{0,1800}post\('admin
   'A saúde das notificações não pode ficar presa ao término da consulta de moradores.');
 assert.match(notificationHealthBackend,/contagens=\{ativos:0,inativos:0,reparo:0,semConfirmacao:0,total:0\}/,
   'O contrato do backend deve expor a quantidade apta em contagens.ativos.');
+assert.ok(notificationHealthBackend.includes('SAUDE_NOTIFICACOES_DEDUP_V2'),
+  'A saúde remota deve deduplicar aparelhos por Subscription ID.');
+assert.ok(notificationHealthBackend.includes('registros=Object.keys(registroPorId).map'),
+  'Linhas repetidas do registro não podem inflar aptos ou reparos.');
+assert.ok(notificationHealthBackend.includes('||remotoTodos[id])return'),
+  'A exportação OneSignal não pode contar a mesma Subscription ID duas vezes.');
 assert.match(js,/c\.ativos\+' aptos/,
   'A Central deve exibir somente contagens.ativos já normalizado e confirmado.');
 assert.match(js,/notificationCount\(c\.ativos\)/,
