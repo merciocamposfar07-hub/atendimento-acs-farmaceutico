@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const html = fs.readFileSync('central-administrativa-tacs.html', 'utf8');
 const central = fs.readFileSync('central-administrativa-tacs.js', 'utf8');
 const navigation = fs.readFileSync('central-suporte-moradores-v1.js', 'utf8');
+const back = fs.readFileSync('central-back-button-v1.js', 'utf8');
 
 assert.doesNotMatch(
   html,
@@ -22,6 +23,21 @@ assert.match(
   navigation,
   /location\.assign\(url\)/,
   'Os módulos da Central devem abrir por navegação direta'
+);
+assert.match(
+  navigation,
+  /if\(!hasAnySession\(\)\)return;/,
+  'A navegação direta não pode interromper a criação da sessão remota após o PIN local'
+);
+assert.match(
+  back,
+  /PIN_UNICO_CENTRAL_V1/,
+  'Painéis vindos da Central devem reutilizar a sessão autenticada'
+);
+assert.match(
+  back,
+  /#pin,label\[for="pin"\][\s\S]*#tacsPinPublicacoes/,
+  'Os formulários legados de autenticação devem permanecer ocultos dentro dos painéis'
 );
 assert.match(
   navigation,

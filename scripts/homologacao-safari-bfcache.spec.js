@@ -50,3 +50,17 @@ test('Central preserva sessão e cartões tocáveis ao restaurar BFCache/Safari'
 
   console.log(JSON.stringify({kind:'safari-bfcache-central-session',browserName,sessionPreserved:true,touchable:true}));
 });
+
+
+test('Painel aberto pela Central não solicita segundo PIN',async({page,browserName})=>{
+  await page.setViewportSize({width:390,height:844});
+  await blockExternal(page);
+  await seedCentralSession(page);
+  await page.goto('painel-oficial-agendas-vagas.html?area=JAPARANDUBA&from=central',{waitUntil:'domcontentloaded'});
+  await expect(page).toHaveURL(/painel-oficial-agendas-vagas\.html/);
+  await expect(page.locator('#pin')).toBeHidden();
+  await expect(page.locator('#entrar')).toBeHidden();
+  await expect(page.locator('#portalTacsSinglePinGateV1')).toHaveCount(1);
+  await expect(page.locator('#portalTacsBackCentralV1')).toHaveCount(1);
+  console.log(JSON.stringify({kind:'pin-unico-painel',browserName,segundoPin:false,gateAtivo:true}));
+});
