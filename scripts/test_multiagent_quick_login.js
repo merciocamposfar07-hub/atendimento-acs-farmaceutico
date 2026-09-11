@@ -14,6 +14,12 @@ const build=read('scripts/build_apps_script_release.js');
 
 assert.match(territory,/MAX_TACS:500/,'A base territorial deve comportar muito mais que os 50 TACS iniciais.');
 assert.match(territory,/MAX_AREAS:500/,'A base territorial deve comportar muito mais que as 50 áreas iniciais.');
+assert.match(territory,/ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_MORADOR','TACS','ADMIN'/,
+  'O cadastro deve oferecer exatamente os seis perfis funcionais definidos.');
+assert.match(territory,/tacsTerritorioV1PerfilTem_\(item\.perfil,'TACS'\)/,
+  'O login territorial deve aceitar somente cadastros que realmente possuam vínculo TACS.');
+assert.match(quickBackend,/tacsTerritorioV1PerfilTem_\(item\.perfil,'TACS'\)/,
+  'PIN-only do TACS não pode aceitar um Administrador neutro.');
 for(const permission of ['MORADORES_EDITAR','PUBLICACOES_GERENCIAR','AGENDAS_GERENCIAR','PROFISSIONAIS_GERENCIAR']){
   assert.match(territory,new RegExp(permission),`Permissão operacional ausente: ${permission}`);
 }
