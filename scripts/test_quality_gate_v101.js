@@ -57,7 +57,10 @@ registrar('dados', 'Proteção contra profissional duplicado permanece', contem(
 registrar('dados', 'Teste territorial e isolamento multiárea continuam obrigatórios', contem(comandoTestes, 'test_public_content_multiarea.js') && contem(comandoTestes, 'test_publicacoes_territoriais.js'));
 
 registrar('desempenho', 'Agenda odontológica abre por snapshot territorial completo', contem(dental, 'portalTacsDentalAgendaV103FullWeek:'));
-registrar('desempenho', 'Snapshot odontológico antigo não autoriza reserva', contem(perfTest, 'Cache acima de 90s não pode permitir reserva'));
+registrar('desempenho', 'Snapshot odontológico antigo mantém toque, mas o envio exige confirmação real do servidor',
+  contem(perfTest, 'Cache acima de 90s pode manter a vaga positiva tocável') &&
+  contem(dental, 'CACHE_ODONTO_SEM_BLOQUEIO_VISUAL_V1') &&
+  contem(dental, 'selection.confirmed &&'));
 registrar('desempenho', 'Painel de agendas abre última leitura imediatamente', contem(agenda, 'function aplicarSnapshotSeDisponivel()') && contem(agenda, 'aplicarDados(item.data,false)') && contem(agenda, 'Dados exibidos da última leitura. Atualizando dados em segundo plano…'));
 registrar('desempenho', 'Pré-aquecimento reaproveita conexão recente por 3 minutos', contem(warmup, 'var WARM_MS=3*60*1000;'));
 registrar('desempenho', 'Timeout de pré-aquecimento limitado a 6 segundos', contem(warmup, 'var TIMEOUT_MS=6000;'));
