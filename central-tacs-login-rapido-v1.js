@@ -333,6 +333,12 @@ function installInstitutionalNavigation(){
     grid.addEventListener('click',function(event){
       var btn=event.target&&event.target.closest?event.target.closest('.module'):null;
       if(!btn||btn.disabled||btn.hidden)return;
+      /* PIN_UNICO_CENTRAL_V1:
+         se o PIN local já abriu a Central mas a nova sessão remota ainda está
+         sendo criada, não navegue para um painel que poderia exibir seu login
+         legado. Deixe o controlador principal enfileirar este mesmo toque e
+         abrir o painel automaticamente assim que a sessão existir. */
+      if(!hasAnySession())return;
       var name=btn.dataset.module||'';
       var url=stableModuleUrl(name);if(!url)return;
       event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
