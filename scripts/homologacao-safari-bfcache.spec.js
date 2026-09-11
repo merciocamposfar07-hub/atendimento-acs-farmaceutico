@@ -1,6 +1,14 @@
 'use strict';
 const { test, expect } = require('@playwright/test');
 
+async function seedCentralSession(page){
+  await page.addInitScript(()=>{
+    sessionStorage.setItem('portalTacsAdminTokenV1','homologacao-admin-session');
+    sessionStorage.setItem('portalTacsCentralReturnUrlV1',location.origin+'/atendimento-acs-farmaceutico/central-administrativa-tacs.html');
+    localStorage.setItem('portalTacsCentralAreaV1','JAPARANDUBA');
+  });
+}
+
 async function blockExternal(page){
   await page.route('https://script.google.com/**',route=>route.abort());
   await page.route('https://script.googleusercontent.com/**',route=>route.abort());
@@ -9,7 +17,7 @@ async function blockExternal(page){
 }
 
 test('Central volta do painel com cartões tocáveis no BFCache/Safari',async({page,browserName})=>{
-  await page.setViewportSize({width:390,height:844});await blockExternal(page);
+  await page.setViewportSize({width:390,height:844});await blockExternal(page);await seedCentralSession(page);
   const pageErrors=[];page.on('pageerror',e=>pageErrors.push(String(e&&e.message||e)));
   await page.goto('central-administrativa-tacs.html',{waitUntil:'domcontentloaded'});
   await page.evaluate(()=>{const modules=document.getElementById('modulesPanel');if(modules)modules.hidden=false;const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');if(b){b.hidden=false;b.disabled=false}});
@@ -38,4 +46,14 @@ test('Central volta do painel com cartões tocáveis no BFCache/Safari',async({p
   await page.waitForURL(url=>new URL(url).pathname.endsWith('/painel-suporte-moradores-v2.html'),{waitUntil:'domcontentloaded'});
   expect(pageErrors).toEqual([]);
   console.log(JSON.stringify({kind:'safari-bfcache-direto',browserName,retouch:true,poolOculto:false}));
+});
+
+
+test('Painel aberto pela Central não solicita segundo PIN',async({page})=>{
+  await page.setViewportSize({width:390,height:844});await blockExternal(page);await seedCentralSession(page);
+  await page.goto('painel-oficial-agendas-vagas.html?area=JAPARANDUBA&from=central',{waitUntil:'domcontentloaded'});
+  await expect(page).toHaveURL(/painel-oficial-agendas-vagas\.html/);
+  await expect(page.locator('#pin')).toBeHidden();
+  await expect(page.locator('#entrar')).toBeHidden();
+  await expect(page.locator('#portalTacsBackCentralV1')).toBeVisible();
 });
