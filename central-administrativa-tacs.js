@@ -80,6 +80,13 @@ function responsible(area){var list=context&&Array.isArray(context.tacs)?context
 function renderContext(skipHealth){var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area);var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}el('profileLabel').textContent=mode==='tacs'?'TACS • acesso da própria área':'ADMINISTRADOR GERAL';el('professionalName').textContent=text(tacs&&tacs.nomeCompleto)||(mode==='admin'?'Administração geral':'TACS');el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';el('identityPanel').hidden=false;el('healthPanel').hidden=false;el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=mode!=='admin'||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;renderModules();if(!skipHealth)refreshHealth()}
 function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
 function markHealth(id,label,state){var n=el(id),s=n.querySelector('span');n.className='health-card'+(state?' '+state:'');s.textContent=label}
+function updatePendingBadge(result){
+  var badge=el('cscPendingBadge');if(!badge)return;
+  var p=result&&result.pendencias?result.pendencias:{},total=Math.max(0,Number(p.total||0));
+  badge.hidden=total<1;
+  badge.textContent=total>99?'99+':String(total);
+  badge.setAttribute('aria-label',total===1?'1 pendência':total+' pendências');
+}
 function refreshHealth(force){
   if(!context)return;
   var areaId=selectedAreaId,now=Date.now();
@@ -95,7 +102,7 @@ function refreshHealth(force){
     markHealth('healthResidents',r&&r.ok===true?'Base acessível':'Falha na leitura',r&&r.ok===true?'ok':'err');
     if(permission('PUBLICACOES_GERENCIAR')){
       post('admin_notificacoes_saude_rapida',session(),'admin_notificacoes_saude_result',function(nr){
-        if(nr&&nr.ok===true){var c=nr.contagens||{};var label=Number(c.ativos||0)+' aptos • '+Number(c.inativos||0)+' inativos • '+Number(c.reparo||c.precisamReparo||0)+' reparo';markHealth('healthNotifications',label,(Number(c.inativos||0)||Number(c.reparo||c.precisamReparo||0))?'warn':'ok')}else markHealth('healthNotifications','Sem confirmação','warn');
+        if(nr&&nr.ok===true){var c=nr.contagens||{};var label=Number(c.ativos||0)+' aptos • '+Number(c.inativos||0)+' inativos • '+Number(c.reparo||c.precisamReparo||0)+' reparo';markHealth('healthNotifications',label,(Number(c.inativos||0)||Number(c.reparo||c.precisamReparo||0))?'warn':'ok');updatePendingBadge(nr)}else markHealth('healthNotifications','Sem confirmação','warn');
         done();
       });
     }else{markHealth('healthNotifications','Sem permissão','warn');done()}
