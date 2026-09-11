@@ -281,7 +281,7 @@ function tacsTerritorioV1LoginTacs_(p){
   if(!dispositivo)throw new Error('Identificação do aparelho ausente.');
   tacsTerritorioV1VerificarTentativasLogin_(cns);
   var tacs=tacsTerritorioV1EncontrarTacsPorCns_(cns);
-  if(!tacs||!tacs.ativo){
+  if(!tacs||!tacs.ativo||!tacsTerritorioV1PerfilTem_(tacs.perfil,'TACS')){
     tacsTerritorioV1RegistrarFalhaLogin_(cns);
     throw new Error('CNS profissional ou PIN incorreto, ou acesso inativo.');
   }
