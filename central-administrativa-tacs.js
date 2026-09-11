@@ -7,7 +7,7 @@ var HEALTH_REFRESH_TTL=30000,healthRefreshInFlight=false,lastHealthRefreshAt=0,l
 var NOTIFICATION_CONFIRMED_CACHE_PREFIX='portalTacsNotificationConfirmedV1:',notificationRemoteSeq=0,notificationRemoteArea='',notificationLatestStarted={};
 var URL_PARAMS=new URLSearchParams(location.search),TACS_ONLY=String(URL_PARAMS.get('acesso')||'').toLowerCase()==='tacs';
 var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
-var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='';
+var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
@@ -152,11 +152,10 @@ function pinLocalApi(){
   return api&&typeof api.abrir==='function'&&typeof api.guardar==='function'?api:null;
 }
 function guardarAcessoLocal(scope,pin){
-  var api=pinLocalApi(),bearer=scope==='tacs'?territoryToken:token;
-  if(!api||!bearer||!context||!mode)return Promise.resolve(false);
+  var api=pinLocalApi();
+  if(!api||!context||!mode)return Promise.resolve(false);
   return Promise.resolve(api.guardar(scope,pin,{
     device:device,
-    token:bearer,
     context:context,
     selectedAreaId:selectedAreaId,
     mode:scope,
@@ -166,23 +165,22 @@ function guardarAcessoLocal(scope,pin){
 function abrirAcessoLocal(scope,pin){
   var api=pinLocalApi();if(!api)return Promise.resolve(null);
   return Promise.resolve(api.abrir(scope,pin)).then(function(saved){
-    if(!saved||text(saved.device)!==text(device)||!saved.token||!saved.context)return null;
+    if(!saved||text(saved.device)!==text(device)||!saved.context)return null;
     if(saved.mode&&text(saved.mode)!==scope)return null;
     return saved;
   }).catch(function(){return null});
 }
 function aplicarAcessoLocal(scope,saved){
   if(!saved||!saved.context)return false;
+  /* PIN_LOCAL_SEM_TOKEN_V3: o PIN libera somente o último contexto confirmado.
+     Credenciais do servidor nunca são restauradas do armazenamento persistente. */
+  token='';territoryToken='';
+  sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
   mode=scope;context=saved.context;selectedAreaId=normArea(saved.selectedAreaId||'');
-  if(scope==='tacs'){
-    token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=text(saved.token);sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);
-  }else{
-    territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=text(saved.token);sessionStorage.setItem(TOKEN_KEY,token);
-  }
   saveContextCache();
-  renderContext(true);
   acessoLocalAberto=scope;
-  setStatus('Acesso liberado. Sincronizando em segundo plano…','ok');
+  renderContext(true);
+  setStatus('Acesso liberado. Confirmando a sessão atual em segundo plano…','ok');
   return true;
 }
 function removerAcessoLocal(scope){
@@ -190,7 +188,7 @@ function removerAcessoLocal(scope){
 }
 function bloquearAcessoLocal(scope,message){
   removerAcessoLocal(scope);
-  token='';territoryToken='';mode='';context=null;acessoLocalAberto='';
+  token='';territoryToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
   sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
   el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;el('loginPanel').hidden=false;
   showLogin(scope==='tacs'?'tacs':'admin');
@@ -367,7 +365,20 @@ function refreshHealth(force){
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
 function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260823-recados-safari-render-v1';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?v='+revision;if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
-function openModule(name,title){var url=moduleUrl(name);if(!url)return;if(name==='portal'){window.open(url,'_blank','noopener');return}var sep=url.indexOf('?')===-1?'?':'&';/* AGENDA_DIRECT_NAV_V1: evita o iframe oculto e o travamento observado no iPhone; o retorno usa from=central. */if(name==='agendas'){location.assign(url+sep+'from=central&_cb='+Date.now());return}url=url+sep+'_cb='+Date.now();el('viewerTitle').textContent=title||'Painel';el('viewerFrame').src=url;el('viewer').hidden=false;document.body.classList.add('viewer-open')}
+function openModule(name,title){
+  var url=moduleUrl(name);if(!url)return;
+  if(name==='portal'){window.open(url,'_blank','noopener');return}
+  if(acessoLocalAberto&&!(token||territoryToken)){
+    moduloPendente={name:name,title:title||'Painel'};
+    setStatus('Central aberta. Confirmando a sessão atual para liberar este painel…','warn');
+    return;
+  }
+  moduloPendente=null;
+  var sep=url.indexOf('?')===-1?'?':'&';
+  /* AGENDA_DIRECT_NAV_V1: evita o iframe oculto e o travamento observado no iPhone; o retorno usa from=central. */
+  if(name==='agendas'){location.assign(url+sep+'from=central&_cb='+Date.now());return}
+  url=url+sep+'_cb='+Date.now();el('viewerTitle').textContent=title||'Painel';el('viewerFrame').src=url;el('viewer').hidden=false;document.body.classList.add('viewer-open')
+}
 function closeViewer(){el('viewer').hidden=true;el('viewerFrame').src='about:blank';document.body.classList.remove('viewer-open');refreshHealth()}
 function loadContext(message){
   post('admin_territorio_dados',session(),'admin_territorio_result',function(r){
@@ -383,6 +394,10 @@ function loadContext(message){
     pinLocalPendente='';pinLocalPerfil='';acessoLocalAberto='';
     if(pin)guardarAcessoLocal(scope,pin);
     setStatus(message||'Acesso validado.','ok');renderContext(false);
+    if(moduloPendente){
+      var proximo=moduloPendente;moduloPendente=null;
+      setTimeout(function(){openModule(proximo.name,proximo.title)},0);
+    }
   });
 }
 var logoutEmCurso=false;
@@ -427,7 +442,9 @@ function logout(){
   setStatus('Sessão encerrada. Seus dados locais foram preservados para o próximo acesso.','ok');
   window.scrollTo({top:0,behavior:'auto'});
 
-  /* LOGOFF_COMO_BLOQUEIO_LOCAL_V2: o token remoto fica cifrado no aparelho e inacessível até o PIN correto. Isso permite reentrada imediata; a revalidação remota ocorre após o desbloqueio. */
+  /* LOGOFF_SEGURO_PIN_LOCAL_V3: preserva somente contexto local cifrado.
+     A sessão remota anterior é invalidada sem bloquear a interface. */
+  if(hasSession&&payload)invalidarSessaoServidorEmSegundoPlano(action,payload);
   setTimeout(function(){logoutEmCurso=false},250);
 }
 /* LOGIN_PREFETCH_ESTATICO_V2: a tela termina de carregar primeiro. Depois, fetch assíncrono aquece o cache sem iframe oculto e sem bloquear o evento load do Safari. */
