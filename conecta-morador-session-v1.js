@@ -51,9 +51,31 @@ function renderFamily(r){
 function selectFamilyMember(button){
  var tok=text(button.getAttribute('data-csc-family-token')),name=text(button.getAttribute('data-csc-family-name')),birth=text(button.getAttribute('data-csc-family-birth')),has=button.getAttribute('data-csc-family-hasdoc')==='1';
  document.querySelectorAll('.csc-family-person').forEach(function(x){x.classList.toggle('active',x===button)});
- if(!has||!tok){setField('name',name);setField('birth',birth);showPortalToast('Este integrante ainda não possui CPF/CNS no cadastro. A solicitação pode continuar, mas ficará sinalizada para conferência cadastral.');return}
+ if(!has||!tok){
+  setField('name',name);setField('birth',birth);
+  if(tok){promptMemberCpf(button,tok,name,birth);return}
+  showPortalToast('Este integrante ainda não possui documento disponível. A solicitação permanece acessível e o cadastro poderá ser regularizado pelo TACS.');
+  return
+ }
  jsonp({action:'publico_familia_membro',areaId:resident.areaId||areaId(),token:tok}).then(function(r){if(!r||r.ok!==true||!r.documentoAcesso)throw new Error(r&&r.message||'Não foi possível carregar este integrante.');setField('cpf',r.documentoAcesso);setTimeout(function(){setField('name',r.nome||name);if(birth)setField('birth',birth)},80)}).catch(function(e){showPortalToast(e.message)});
 }
+function promptMemberCpf(button,tok,name,birth){
+ var box=el('cscFamilySession');if(!box)return;
+ var old=el('cscFamilyCpfPrompt');if(old)old.remove();
+ var p=document.createElement('div');p.id='cscFamilyCpfPrompt';p.style.cssText='margin-top:10px;padding:12px;border:1px solid #8eb0c1;border-radius:15px;background:#f5f9fb';
+ p.innerHTML='<strong>CPF de '+esc(name||'integrante')+'</strong><p style="margin:5px 0 9px;color:#536b78">Informe uma única vez. O CPF será salvo automaticamente no cadastro desta pessoa.</p><input id="cscFamilyCpfInput" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" style="width:100%;min-height:50px;border:1px solid #8eb0c1;border-radius:13px;padding:10px 12px"><button id="cscFamilyCpfSave" type="button" style="width:100%;min-height:50px;margin-top:8px;border:0;border-radius:13px;background:#176a48;color:#fff;font-weight:900">Salvar CPF e selecionar</button>';
+ box.appendChild(p);
+ el('cscFamilyCpfSave').onclick=function(){
+  var cpf=digits(el('cscFamilyCpfInput').value);if(cpf.length!==11){showPortalToast('Informe um CPF válido com 11 números.');return}
+  this.disabled=true;
+  post('conecta_morador_membro_salvar_cpf',{token:token,dispositivo:device(),membroToken:tok,cpf:cpf}).then(function(r){
+    setField('cpf',r.documentoAcesso||cpf);setField('name',r.nome||name);setField('birth',r.nascimento||birth);
+    button.setAttribute('data-csc-family-hasdoc','1');var span=button.querySelector('span');if(span)span.textContent=(r.nascimento||birth?'Nascimento: '+(r.nascimento||birth):'');
+    if(p.parentNode)p.remove();showPortalToast(r.message||'CPF salvo e integrante selecionado.');
+  }).catch(function(e){showPortalToast(e.message)}).finally(function(){var b=el('cscFamilyCpfSave');if(b)b.disabled=false});
+ };
+}
+
 function showPortalToast(message){
  var old=el('cscResidentToast');if(old)old.remove();var n=document.createElement('div');n.id='cscResidentToast';n.style.cssText='position:fixed;left:16px;right:16px;bottom:24px;z-index:72000;max-width:620px;margin:auto;padding:13px 15px;border-radius:16px;background:#082d46;color:#fff;font-weight:800;box-shadow:0 12px 35px rgba(0,0,0,.35)';n.textContent=message;document.body.appendChild(n);setTimeout(function(){if(n.parentNode)n.remove()},5000)
 }
