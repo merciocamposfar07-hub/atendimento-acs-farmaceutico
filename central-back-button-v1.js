@@ -296,6 +296,11 @@ function installSinglePinGate(){
      retorna à Central em vez de expor formulários legados de autenticação. */
   if(!hasCentralSession()){
     try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
+    try{
+      if(window.parent!==window&&window.parent.location&&window.parent.location.origin===location.origin){
+        window.parent.location.replace(centralUrl());return;
+      }
+    }catch(e){}
     location.replace(centralUrl());
     return;
   }
