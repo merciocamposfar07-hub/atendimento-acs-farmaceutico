@@ -60,6 +60,7 @@ test('Painel aberto pela Central não solicita segundo PIN',async({page,browserN
   await expect(page).toHaveURL(/painel-oficial-agendas-vagas\.html/);
   await expect(page.locator('#pin')).toBeHidden();
   await expect(page.locator('#entrar')).toBeHidden();
-  await expect(page.locator('#portalTacsBackCentralV1')).toBeVisible();
-  console.log(JSON.stringify({kind:'pin-unico-painel',browserName,segundoPin:false}));
+  await expect(page.locator('#portalTacsSinglePinGateV1')).toHaveCount(1);
+  await expect(page.locator('#portalTacsBackCentralV1')).toHaveCount(1);
+  console.log(JSON.stringify({kind:'pin-unico-painel',browserName,segundoPin:false,gateAtivo:true}));
 });
