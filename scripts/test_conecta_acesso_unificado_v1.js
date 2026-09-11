@@ -58,9 +58,9 @@ assert(health.includes('REPAIR_VALID_HOURS:24'),'Solicitação de reparo deve ex
 assert(health.includes('autoNoPrimeiroAcesso'), 'Reparo expirado com vínculo deve poder ser automático no primeiro acesso');
 assert(health.includes('if(expirado&&!vinculado)return null'),'Sem vínculo válido, reparo expirado deve liberar nova ação administrativa');
 
-assert(support.includes("var diagFilter=''"),'Diagnóstico não deve abrir mostrando automaticamente a lista de aptos');
+assert(support.includes("diagFilter=''"),'Diagnóstico não deve abrir mostrando automaticamente a lista de aptos');
 assert(support.includes("data-diag-filter"),'Indicadores do diagnóstico devem ser clicáveis');
-assert(support.includes("diagDetails.hidden=!diagFilter"),'Detalhes devem ficar ocultos até selecionar indicador');
+assert(support.includes("if(!diagFilter)")&&support.includes("details.classList.add('hidden')"),'Detalhes devem ficar ocultos até selecionar indicador');
 
 assert(areasHtml.includes('id="areaLinkState"'),'Formulário de área deve expor estado real do vínculo');
 assert(areasHtml.includes('id="saveAreaButton"'),'Botão de vínculo deve ter estado controlável');
