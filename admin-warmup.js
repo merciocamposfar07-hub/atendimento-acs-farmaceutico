@@ -24,7 +24,8 @@
     situacao:cacheInicial?'pronta':'aguardando',
     resultado:cacheInicial,
     ready:null,
-    iniciar:iniciar
+    iniciar:iniciar,
+    preaquecer:preaquecerNaoBloqueante
   };
 
   window.PortalTacsAdminWarmup=estado;
@@ -86,6 +87,16 @@
     timer=setTimeout(function(){finalizar(null)},TIMEOUT_MS);
   }
 
+  function preaquecerNaoBloqueante(){
+    if(servidorAquecido())return false;
+    try{
+      fetch(API+(API.indexOf('?')<0?'?':'&')+'action=admin_status&_='+Date.now(),{
+        method:'GET',mode:'no-cors',cache:'no-store',credentials:'omit'
+      }).catch(function(){});
+      return true;
+    }catch(e){return false}
+  }
+
   function iniciar(forcar){
     if(emCurso)return emCurso;
     var cache=lerCache();
@@ -129,8 +140,17 @@
   window.addEventListener('online',function(){ iniciar(true); });
   document.addEventListener('visibilitychange',reaquecerAoVoltar);
   window.addEventListener('pageshow',reaquecerAoVoltar);
-  /* LOGIN_PIN_LOAD_R8: não abrir Apps Script durante o carregamento inicial da tela. O aquecimento continua sendo disparado ao focar/digitar o PIN. */
+  /* PREPARACAO_CONTINUA_V1: a tela de PIN não espera o servidor.
+     Depois do primeiro paint, um fetch sem leitura de resposta aquece o Apps Script
+     enquanto o usuário escolhe o perfil/digita o PIN. */
   estado.ready=Promise.resolve(cacheInicial||{ok:true,aquecido:false,origem:'tela-pin'});
+  function agendarPreaquecimentoInicial(){
+    var start=function(){setTimeout(preaquecerNaoBloqueante,0)};
+    if(typeof requestAnimationFrame==='function')requestAnimationFrame(function(){requestAnimationFrame(start)});
+    else setTimeout(start,30);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',agendarPreaquecimentoInicial,{once:true});
+  else agendarPreaquecimentoInicial();
 }());
 
 (function(){
