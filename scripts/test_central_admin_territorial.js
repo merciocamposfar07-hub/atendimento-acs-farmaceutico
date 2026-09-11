@@ -41,8 +41,12 @@ assert.match(js,/admin_territorio_login_pin/,
 assert.doesNotMatch(js,/admin_territorio_login_tacs/,
   'A Central não deve voltar ao login antigo por CNS + PIN.');
 assert.match(js,/admin_territorio_dados/);
-assert.match(js,/post\('admin_notificacoes_saude_rapida'/,
-  'A Central deve manter a consulta autenticada de saúde das notificações usada pelo runtime atual.');
+assert.match(js,/notificationPostIsolated\('admin_notificacoes_saude_rapida'/,
+  'A Central pode aproveitar somente o snapshot rápido que já tenha confirmação remota.');
+assert.match(js,/notificationPostIsolated\('admin_notificacoes_saude_remota'/,
+  'A Central deve validar a saúde das notificações diretamente na fonte remota.');
+assert.match(js,/result\.oneSignalConsultado!==true/,
+  'A Central não pode aceitar contagens provisórias como verdade confirmada.');
 assert.match(js,/painel-oficial-recados-campanhas\.html\?area=/);
 assert.doesNotMatch(js,/moduleUrl\(name\)[\s\S]*name==='notificacoes'/,
   'A rota do painel redundante de Saúde das notificações deve ser removida.');
@@ -95,8 +99,10 @@ assert.match(publicPortal,/\.hero-actions\{grid-template-columns:1fr;margin:0;bo
   'O quadro inferior do Portal TACS deve alinhar com a largura do quadro superior no celular.');
 assert.match(js,/teste-v1\/painel-moradores-v2\.html/);
 assert.match(js,/filter\(function\(a\)\{return a&&a\.ativa!==false\}\)/);
-assert.match(js,/post\('admin_moradores_status'[\s\S]*post\('admin_notificacoes_saude_rapida'/,
-  'Saúde de moradores deve terminar antes da consulta autenticada das notificações.');
+assert.match(js,/refreshNotificationHealth\(areaId,Boolean\(force\)\)/,
+  'A saúde das notificações deve iniciar independentemente da leitura de moradores.');
+assert.doesNotMatch(js,/post\('admin_moradores_status'[\s\S]{0,1800}post\('admin_notificacoes_saude_rapida'/,
+  'A saúde das notificações não pode ficar presa ao término da consulta de moradores.');
 assert.match(notificationHealthBackend,/contagens=\{ativos:0,inativos:0,reparo:0,semConfirmacao:0,total:0\}/,
   'O contrato do backend deve expor a quantidade apta em contagens.ativos.');
 assert.match(js,/Number\(c\.ativos\|\|0\)\+' aptos/,
