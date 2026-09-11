@@ -16,12 +16,11 @@ if(!loginBtn||!pinInput||!tacsLogin)return;
 var busy=false,pinWarmup=false;
 function aquecerPinTacs(){
   if(pinWarmup)return;
-  pinWarmup=true;
-  try{
-    fetch(API+'?action=publico_areas_ativas&_='+Date.now(),{method:'GET',mode:'no-cors',cache:'no-store',credentials:'omit'})
-      .catch(function(){})
-      .finally(function(){pinWarmup=false});
-  }catch(e){pinWarmup=false}
+  var warm=window.PortalTacsAdminWarmup;
+  if(warm&&typeof warm.iniciar==='function'){
+    pinWarmup=true;
+    Promise.resolve(warm.iniciar()).catch(function(){}).finally(function(){pinWarmup=false});
+  }
 }
 function text(v){return String(v==null?'':v).trim()}
 function digits(v){return text(v).replace(/\D/g,'')}
@@ -133,7 +132,7 @@ function post(action,payload,cb){
   if(busy){cb({ok:false,message:'Aguarde a operação anterior.'});return}
   busy=true;
   var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form');
-  var frameName='quickFrame'+Date.now()+Math.floor(Math.random()*1000),finished=false,pollTimer=null,pollWait=140;
+  var frameName='quickFrame'+Date.now()+Math.floor(Math.random()*1000),finished=false,pollTimer=null,pollWait=450;
   frame.name=frameName;frame.src='about:blank';frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;visibility:hidden;pointer-events:none;z-index:-1';
   form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.style.display='none';
   var fields={};Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});fields.action=action;fields.requestId=rid;
@@ -153,7 +152,7 @@ function post(action,payload,cb){
     jsonp('admin_territorio_result',{requestId:rid},function(r){
       if(finished)return;
       if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}
-      pollWait=Math.min(420,pollWait+70);
+      pollWait=Math.min(700,pollWait+80);
       pollTimer=setTimeout(poll,pollWait);
     });
   }
