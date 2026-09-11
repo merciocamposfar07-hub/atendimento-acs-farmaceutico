@@ -95,7 +95,7 @@ function refreshHealth(force){
     markHealth('healthResidents',r&&r.ok===true?'Base acessível':'Falha na leitura',r&&r.ok===true?'ok':'err');
     if(permission('PUBLICACOES_GERENCIAR')){
       post('admin_notificacoes_saude_rapida',session(),'admin_notificacoes_saude_result',function(nr){
-        if(nr&&nr.ok===true){var cc=nr.contagens||{};var label=Number(cc.ativos||0)+' aptos • '+Number(cc.inativos||0)+' inativos • '+Number(cc.reparo||cc.precisamReparo||0)+' reparo';markHealth('healthNotifications',label,(Number(cc.inativos||0)||Number(cc.reparo||cc.precisamReparo||0))?'warn':'ok')}else markHealth('healthNotifications','Sem confirmação','warn');
+        if(nr&&nr.ok===true){var c=nr.contagens||{};var label=Number(c.ativos||0)+' aptos • '+Number(c.inativos||0)+' inativos • '+Number(c.reparo||c.precisamReparo||0)+' reparo';markHealth('healthNotifications',label,(Number(c.inativos||0)||Number(c.reparo||c.precisamReparo||0))?'warn':'ok')}else markHealth('healthNotifications','Sem confirmação','warn');
         done();
       });
     }else{markHealth('healthNotifications','Sem permissão','warn');done()}
