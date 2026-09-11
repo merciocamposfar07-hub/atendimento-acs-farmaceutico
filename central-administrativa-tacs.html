@@ -1779,7 +1779,7 @@ html body .csc-profile-admin-names[hidden]{display:none!important}
 /* LOGIN_PROPOSITO_INSTITUCIONAL_V1 */
 .csc-login-purpose{margin-top:16px;padding:15px 16px;background:#102d46;border:1px solid #365f78;border-radius:18px;color:#d8e6ee}
 .csc-login-purpose strong{display:block;margin-bottom:6px;color:#f7fcff;font-size:.92rem;font-weight:900}
-.csc-login-purpose p{margin:0;color:#c1d3de;font-size:.82rem;line-height:1.42;font-weight:620}
+.csc-login-purpose p{margin:0;color:#c1d3de;font-size:.82rem;line-height:1.42;font-weight:620}.csc-login-purpose small{display:block;margin-top:10px;padding-top:10px;border-top:1px solid #365f78;color:#83efa9!important;font-size:.78rem;line-height:1.4;font-weight:850}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
@@ -1933,7 +1933,12 @@ function centralAreaId(){
   try{return text(localStorage.getItem('portalTacsCentralAreaV1')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA'}catch(e){return'JAPARANDUBA'}
 }
 function centralContextFromCache(){
-  try{var raw=sessionStorage.getItem('portalTacsCentralContextCacheV2');if(!raw)return null;var saved=JSON.parse(raw);return saved&&saved.context?saved.context:null}catch(e){return null}
+  try{
+    var territorial=Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''));
+    var key='portalTacsCentralContextCacheV3:'+(territorial?'tacs':'admin');
+    var raw=sessionStorage.getItem(key)||sessionStorage.getItem('portalTacsCentralContextCacheV2');
+    if(!raw)return null;var saved=JSON.parse(raw);return saved&&saved.context?saved.context:null
+  }catch(e){return null}
 }
 function showCentralHome(){
   var page=document.getElementById('cscProfilePage');if(page)page.hidden=true;
@@ -2012,7 +2017,7 @@ function buildPlatformFooter(){
   var footer=document.createElement('footer');
   footer.id='cscPlatformFooter';
   footer.className='csc-platform-footer';
-  footer.innerHTML='<strong>Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</strong><small>Plataforma institucional de gestão e acesso à saúde comunitária.</small>';
+  footer.innerHTML='<strong>Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</strong><small>Plataforma institucional de saúde comunitária.</small>';
   var old=document.querySelector('body>footer:not(#cscPlatformFooter)');
   if(old)old.hidden=true;
   document.body.appendChild(footer);
@@ -2071,7 +2076,8 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 <div id="loginStatus" class="status">Entre como administrador ou TACS da sua área.</div>
 <div class="csc-login-purpose" aria-label="Propósito do Conecta Saúde Comunitária">
 <strong>Por que o Conecta Saúde Comunitária foi criado</strong>
-<p>Criado para transformar a forma como a população acessa os serviços de saúde da sua comunidade, o Conecta Saúde Comunitária reduz deslocamentos desnecessários, filas presenciais e incertezas no acesso, reunindo agendas, vagas, solicitações, serviços e informações em um único ambiente digital.</p>
+<p>O Conecta Saúde Comunitária é uma plataforma de gestão e acesso à saúde comunitária desenvolvida para aproximar a população dos serviços disponíveis em seu território. Criado para reduzir deslocamentos desnecessários, filas presenciais e incertezas no acesso, reúne agendas, vagas, solicitações, serviços e informações da comunidade em um único ambiente digital, acessível pelo celular.</p>
+<small>Tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</small>
 </div>
 </section>
 <section id="identityPanel" class="panel identity" hidden>
@@ -2109,5 +2115,6 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 <script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=331b2fc3a003"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=331b2fc3a003"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=331b2fc3a003"></script>
-<script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=331b2fc3a003"></script>\n</body>
+<script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=331b2fc3a003"></script>
+</body>
 </html>
