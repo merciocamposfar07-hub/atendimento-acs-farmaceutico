@@ -63,8 +63,10 @@ assert.match(js,/accessProfileLabel\(tacs&&tacs\.perfil\|\|'TACS'\)/,
   'A saudação deve refletir o perfil real do TACS, inclusive perfis combinados.');
 assert.match(js,/var adminPerfil=accessProfileLabel\(admin&&admin\.perfil\|\|context&&context\.perfil\|\|'ADMIN'\)/,
   'O administrador deve manter o próprio perfil, sem ser rotulado como TACS.');
-assert.match(js,/notificationPostIsolated\('admin_notificacoes_saude_rapida'/,
-  'A Central pode aproveitar somente o snapshot rápido que já tenha confirmação remota.');
+assert.match(js,/NOTIFICACOES_FONTE_UNICA_ATUAL_V2/,
+  'A Central deve usar uma única fonte atual para a Saúde das notificações.');
+assert.doesNotMatch(js,/function refreshNotificationHealth[\s\S]*admin_notificacoes_saude_rapida/,
+  'A Central não pode exibir snapshot rápido/cache como contagem atual.');
 assert.match(js,/notificationPostIsolated\('admin_notificacoes_saude_remota'/,
   'A Central deve validar a saúde das notificações diretamente na fonte remota.');
 assert.match(js,/result\.oneSignalConsultado!==true/,
