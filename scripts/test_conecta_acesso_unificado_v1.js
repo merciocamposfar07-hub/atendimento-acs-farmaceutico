@@ -51,7 +51,7 @@ assert(centralJs.includes('LOGIN_PREFETCH_ESTATICO_V2'),'Login deve aquecer recu
 assert(centralJs.includes("window.addEventListener('load'"),'Pré-carga deve começar depois do primeiro load ou por interação no PIN');
 assert(centralJs.includes("fetch(url+'?v=20260910-login-prefetch-v2'"),'Pré-carga deve usar fetch assíncrono/cache');
 assert(centralJs.includes("location.assign(url+sep+'from=central&_cb='+Date.now());"),'Agendas deve usar navegação direta quando exigido');
-assert(centralJs.includes("'painel-oficial-agendas-vagas.html'"),'Agendas e Vagas deve manter rota direta');
+assert(centralJs.includes("painel-oficial-agendas-vagas.html?area="),'Agendas e Vagas deve manter rota direta');
 assert(!centralJs.includes("link.rel='prefetch'"),'Não voltar ao prefetch que mantém o Safari carregando');
 
 assert(health.includes('REPAIR_VALID_HOURS:24'),'Solicitação de reparo deve expirar em 24 horas');
