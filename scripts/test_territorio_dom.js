@@ -240,8 +240,10 @@ async function testTerritoryPanel() {
   assert.equal(window.document.getElementById('adminLogin').classList.contains('hidden'), false);
   window.document.getElementById('loginTacsTab').click();
   assert.equal(window.document.getElementById('tacsLogin').classList.contains('hidden'), false);
-  assert.equal(window.document.getElementById('tacsCnsLogin'), null, 'O acesso TACS deve continuar somente por PIN.');
-  assert.ok(window.document.getElementById('tacsPinLogin'), 'O PIN individual deve permanecer no acesso TACS.');
+  assert.equal(window.document.getElementById('tacsCnsLogin'), null, 'O painel TACS e áreas não deve pedir CNS para login');
+  assert.ok(window.document.getElementById('tacsPinLogin'), 'O painel TACS e áreas deve manter o PIN individual');
+  assert.ok(window.document.getElementById('tacsLoginButton'), 'O botão de login TACS deve permanecer disponível');
+  assert.match(js, /admin_territorio_login_pin/, 'O painel TACS e áreas deve usar a rota de login somente por PIN');
   window.document.getElementById('newTacsButton').click();
   assert.equal(window.document.getElementById('tacsForm').classList.contains('hidden'), false);
   assert.equal(window.document.getElementById('tacsPin').required, true);
