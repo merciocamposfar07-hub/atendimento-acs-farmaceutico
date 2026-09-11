@@ -421,10 +421,54 @@ function tacsTerritorioV1AdministradoresContexto_(acesso,todos){
   return out.sort(function(a,b){return a.nomeCompleto.localeCompare?a.nomeCompleto.localeCompare(b.nomeCompleto,'pt-BR'):(a.nomeCompleto>b.nomeCompleto?1:-1);});
 }
 
+function tacsTerritorioV1AdministradorAtual_(acesso,todos,administradores){
+  if(!acesso)return null;
+  var base=acesso.base&&typeof acesso.base==='object'?acesso.base:{};
+  function publicar(item,perfilPadrao){
+    if(!item)return null;
+    var nome=tacsTerritorioV1Texto_(item.nomeCompleto||item.nome||item.operadorNome||item.usuarioNome||item.displayName);
+    if(!nome||/^(ADMIN_GERAL|ADMINISTRADOR GERAL|ADMINISTRAÇÃO GERAL|AG\d+)$/i.test(nome))return null;
+    var perfil=tacsTerritorioV1Texto_(item.perfil||item.tipo||perfilPadrao||'ADMIN').toUpperCase();
+    return {nomeCompleto:nome,perfil:perfil||'ADMIN',ativo:item.ativo!==false};
+  }
+
+  var direto=publicar({
+    nomeCompleto:base.operadorNome||base.usuarioNome||base.nomeCompleto||base.nome||base.displayName,
+    perfil:base.perfil||acesso.perfil,
+    ativo:true
+  },acesso.perfil);
+  if(direto)return direto;
+
+  var ids=[
+    acesso.operadorId,acesso.agenteId,
+    base.operadorId,base.usuarioId,base.adminId,base.agenteId,base.id,base.matricula
+  ].map(tacsTerritorioV1Texto_).filter(Boolean);
+  var candidatos=[];
+  ['administradores','admins','operadores','usuariosAdministradores'].forEach(function(k){
+    if(Array.isArray(base[k]))candidatos=candidatos.concat(base[k]);
+  });
+  candidatos=candidatos.concat(todos||[]);
+  for(var i=0;i<candidatos.length;i++){
+    var item=candidatos[i]||{};
+    var itemIds=[item.operadorId,item.usuarioId,item.adminId,item.agenteId,item.id,item.tacsId,item.matricula]
+      .map(tacsTerritorioV1Texto_).filter(Boolean);
+    if(ids.some(function(id){return itemIds.indexOf(id)!==-1;})){
+      var achado=publicar(item,acesso.perfil);if(achado)return achado;
+    }
+  }
+
+  /* Compatibilidade com bases administrativas antigas:
+     se existir exatamente um administrador ativo após autenticação, ele é o atual. */
+  var ativos=(administradores||[]).filter(function(item){return item&&item.ativo!==false;});
+  if(ativos.length===1)return publicar(ativos[0],acesso.perfil);
+  return null;
+}
+
 function tacsTerritorioV1Dados_(acesso){
   var admin=['ADMIN_GERAL','ADMIN_MUNICIPAL'].indexOf(acesso.perfil)!==-1;
   var todos=tacsTerritorioV1LerTacs_();
   var administradores=admin?tacsTerritorioV1AdministradoresContexto_(acesso,todos):[];
+  var administradorAtual=admin?tacsTerritorioV1AdministradorAtual_(acesso,todos,administradores):null;
   var tacs=admin?todos:todos.filter(function(item){return tacsTerritorioV1PerfilTem_(item&&item.perfil,'TACS');});
   var areas=tacsTerritorioV1LerAreas_();
   if(!admin){
@@ -434,7 +478,7 @@ function tacsTerritorioV1Dados_(acesso){
   return {
     ok:true,versao:TACS_TERRITORIO_V1.VERSAO,perfil:acesso.perfil,
     podeAdministrar:admin,tacs:tacs.map(tacsTerritorioV1PublicarTacs_),
-    administradores:administradores,
+    administradores:administradores,administradorAtual:administradorAtual,
     areas:areas,isolamento:'UMA_PLANILHA_DE_MORADORES_POR_AREA',
     idsTecnicosImutaveis:true,camposCadastraisReeditaveis:true
   };
