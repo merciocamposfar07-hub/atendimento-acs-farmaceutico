@@ -89,3 +89,22 @@ Os testes cobrem, sem gravar dados reais:
 O aplicativo web do Google Apps Script principal deve usar
 `apps-script-controle-integral.gs`. O aplicativo odontológico deve usar
 `google-apps-script/Code.gs`.
+
+## Regra mestre de acesso por PIN local
+
+Após o primeiro acesso válido, criação do PIN e reconhecimento do aparelho, a reentrada oficial é **PIN local primeiro**:
+
+`PIN → destrava a credencial local cifrada do perfil → mostra imediatamente o último estado válido → servidor revalida e sincroniza em segundo plano.`
+
+Regras obrigatórias:
+- aplica-se separadamente a **Administrador, TACS e Morador**;
+- o PIN não é salvo em texto; ele deriva a chave criptográfica que abre a credencial local;
+- os cofres são isolados por perfil e vinculados ao aparelho;
+- o TACS continua restrito à própria área e permissões confirmadas pelo servidor;
+- o Morador continua restrito ao próprio vínculo/área;
+- dados locais servem para abertura e leitura imediatas, nunca para autorizar uma gravação crítica;
+- vagas, reservas, alterações administrativas, permissões e demais operações críticas só são concluídas após confirmação atual do servidor;
+- falha transitória do Apps Script não deve fechar uma tela que possua último estado local válido;
+- recusa real, inativação ou revogação pelo servidor invalida o acesso local correspondente;
+- Logoff funciona como bloqueio local da interface: remove a sessão ativa da página, preserva aparelho/cache/credencial cifrada e exige novamente o PIN para desbloquear;
+- nenhuma correção de desempenho pode misturar cache entre áreas, perfis, municípios ou organizações.
