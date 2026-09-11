@@ -1,0 +1,40 @@
+name: TEMP - validar PIN local V2
+
+on:
+  push:
+    branches:
+      - fix/pin-login-safari-20260911
+
+permissions:
+  contents: read
+
+jobs:
+  pin-local:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Testes focais PIN local e regressão
+        run: |
+          node scripts/test_pin_local_v2.js
+          node scripts/test_multiagent_quick_login.js
+          node scripts/test_conecta_acesso_unificado_v1.js
+          node scripts/test_central_admin_territorial.js
+          node scripts/test_safari_bfcache_central_v1.js
+          node scripts/test_admin_request_dedup_v1.js
+
+  suite-integral:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Suíte integral
+        run: npm test
