@@ -80,7 +80,11 @@ function saveProfile(r){
   var p={quickKey:String(r.quickKey),tacsId:text(r.tacsId),areaId:text(r.areaId),areaNome:text(r.areaNome)};
   try{localStorage.setItem(PROFILE_KEY,JSON.stringify(p))}catch(e){}
 }
-function clearProfile(){try{localStorage.removeItem(PROFILE_KEY)}catch(e){}}
+function centralPinLocal(){var api=window.PortalTacsCentralPinLocalV2;return api&&typeof api.abrir==='function'?api:null}
+function clearProfile(){
+  try{localStorage.removeItem(PROFILE_KEY)}catch(e){}
+  try{var v=window.ConectaPinLocalV2;if(v&&typeof v.remover==='function')v.remover('tacs')}catch(e){}
+}
 
 var cnsLabel=document.querySelector('label[for="tacsCns"]');
 var remembered=document.createElement('div');
@@ -181,18 +185,28 @@ function post(action,payload,cb){
   sendAfterRegistration();submitTimer=setTimeout(sendOnce,180);
 }
 
-function abrirSessao(token){
-  try{sessionStorage.removeItem(ADMIN_TOKEN_KEY);sessionStorage.setItem(TERRITORY_TOKEN_KEY,token);sessionStorage.setItem(EXCLUSIVE_MODE_KEY,'tacs')}catch(e){}
+function abrirSessao(token,pin,meta){
+  try{
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    sessionStorage.setItem(TERRITORY_TOKEN_KEY,token);
+    sessionStorage.setItem(EXCLUSIVE_MODE_KEY,'tacs');
+    if(pin){sessionStorage.setItem('portalTacsPinLocalPendenteV2',pin);sessionStorage.setItem('portalTacsPinLocalPerfilV2','tacs')}
+  }catch(e){}
   enforceExclusiveTacsUi();
   setStatus('Acesso validado. Abrindo sua área…','ok');
+  var api=centralPinLocal();
+  if(api&&meta&&typeof api.sincronizar==='function'){
+    api.sincronizar('tacs',token,pin,text(meta.areaId),'Acesso TACS sincronizado.');
+    return;
+  }
   setTimeout(function(){location.reload()},0);
 }
-function concluirPrimeiroAcesso(r,device){
-  if(r.quickKey){saveProfile(r);abrirSessao(r.token);return}
+function concluirPrimeiroAcesso(r,device,pin){
+  if(r.quickKey){saveProfile(r);abrirSessao(r.token,pin,r);return}
   setStatus('Acesso validado. Ativando entrada rápida por PIN neste aparelho…','warn');
   post('admin_territorio_criar_chave_rapida',{territorioToken:r.token,dispositivo:device},function(q){
     if(q&&q.ok===true&&q.quickKey)saveProfile(q);
-    abrirSessao(r.token);
+    abrirSessao(r.token,pin,Object.assign({},r,q||{}));
   });
 }
 
@@ -202,18 +216,38 @@ pinInput.addEventListener('input',aquecerPinTacs,{once:true});
 loginBtn.addEventListener('click',function(event){
   event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
   if(busy){setStatus('Aguarde a validação em andamento.','warn');return}
-  var pin=digits(pinInput.value),device=getDevice(),profile=getProfile();
+  var pin=digits(pinInput.value),device=getDevice(),profile=getProfile(),api=centralPinLocal();
   if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN individual de 4 a 8 números.','err');return}
   if(!device){setStatus('Este aparelho ainda não foi identificado. Atualize a página e tente novamente.','err');return}
   var action='admin_territorio_login_pin';
   var payload=profile?{quickKey:profile.quickKey,pin:pin,dispositivo:device}:{pin:pin,dispositivo:device};
-  setStatus('Validando seu PIN…','warn');
-  post(action,payload,function(r){
-    pinInput.value='';
-    if(!r||r.ok!==true||!r.token){setStatus(text(r&&r.message)||'Acesso recusado.','err');return}
-    if(profile){if(r.quickKey)saveProfile(r);abrirSessao(r.token);return}
-    concluirPrimeiroAcesso(r,device);
-  });
+  function validarServidor(saved){
+    setStatus(saved?'Área liberada. Sincronizando em segundo plano…':'Validando seu PIN…',saved?'ok':'warn');
+    post(action,payload,function(r){
+      pinInput.value='';
+      if(!r||r.ok!==true||!r.token){
+        if(saved&&r&&r.temporario===true){setStatus('Área aberta com os dados locais. O servidor ainda está sincronizando.','warn');return}
+        if(saved&&api&&typeof api.bloquear==='function'){api.bloquear('tacs',text(r&&r.message)||'Acesso TACS recusado.');return}
+        setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
+      }
+      if(r.quickKey)saveProfile(r);
+      if(saved&&api&&typeof api.sincronizar==='function'){
+        api.sincronizar('tacs',r.token,pin,text(r.areaId),'Acesso TACS sincronizado.');
+        return;
+      }
+      if(profile||r.quickKey){abrirSessao(r.token,pin,r);return}
+      concluirPrimeiroAcesso(r,device,pin);
+    });
+  }
+  if(api&&typeof api.abrir==='function'){
+    setStatus('Liberando sua área…','warn');
+    Promise.resolve(api.abrir('tacs',pin)).then(function(saved){
+      if(saved&&typeof api.aplicar==='function')api.aplicar('tacs',saved);
+      validarServidor(saved);
+    }).catch(function(){validarServidor(null)});
+    return;
+  }
+  validarServidor(null);
 },true);
 
 /* HOMOLOGACAO_ARQUITETURAL_V1 — navegação única, sessão reaproveitada e recuperação visual. */
