@@ -77,7 +77,7 @@ function saudeNotificacoesV1TratarGet_(e){
 function saudeNotificacoesV1TratarPost_(e){
   var p=e&&e.parameter?e.parameter:{};
   var action=saudeNotificacoesV1Texto_(p.action).toLowerCase();
-  if(['publico_notificacao_checkin','admin_notificacoes_saude','admin_notificacoes_solicitar_reparo_area','admin_notificacoes_solicitar_reparo_aparelho'].indexOf(action)===-1)return null;
+  if(['publico_notificacao_checkin','admin_notificacoes_saude','admin_notificacoes_saude_rapida','admin_notificacoes_solicitar_reparo_area','admin_notificacoes_solicitar_reparo_aparelho'].indexOf(action)===-1)return null;
   var requestId=saudeNotificacoesV1Texto_(p.requestId),resultado;
   try{
     requestId=saudeNotificacoesV1ValidarRequestId_(requestId);
@@ -88,6 +88,7 @@ function saudeNotificacoesV1TratarPost_(e){
       saudeNotificacoesV1ExigirAcesso_(acesso);
       var contexto=moradoresAdminV1ResolverContexto_(acesso,p.areaId||p.area||'');
       if(action==='admin_notificacoes_saude')resultado=saudeNotificacoesV1SaudeAdmin_(contexto,acesso);
+      else if(action==='admin_notificacoes_saude_rapida')resultado=saudeNotificacoesV1SaudeAdminRapida_(contexto,acesso);
       else if(action==='admin_notificacoes_solicitar_reparo_aparelho')resultado=saudeNotificacoesV1SolicitarReparoAparelho_(contexto,acesso,p);
       else resultado=saudeNotificacoesV1SolicitarReparoArea_(contexto,acesso);
     }
@@ -186,6 +187,35 @@ function saudeNotificacoesV1UpsertRegistro_(input){
     else{sheet.appendRow(values);linha=sheet.getLastRow();}
     return {linha:linha,idPortal:idPortal,reparoAplicado:input.reparoAplicado||''};
   }finally{lock.releaseLock();}
+}
+
+function saudeNotificacoesV1SaudeAdminRapida_(contexto,acesso){
+  var ss=tacsTerritorioV1Planilha_();
+  var sheet=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_HEADERS);
+  var contagens={ativos:0,inativos:0,reparo:0,semConfirmacao:0,total:0};
+  var last=sheet.getLastRow(),vistos={};
+  if(last>1){
+    sheet.getRange(2,1,last-1,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_HEADERS.length).getDisplayValues().forEach(function(row){
+      if(moradoresAdminV1NormalizarAreaId_(row[1])!==contexto.areaId)return;
+      var reg=saudeNotificacoesV1RegistroDaLinha_(row);
+      var sub=saudeNotificacoesV1Texto_(reg.subscriptionId).toLowerCase();
+      if(!sub||vistos[sub])return;
+      vistos[sub]=true;
+      var reparo=saudeNotificacoesV1ReparoPendenteSubscription_(contexto.areaId,sub,reg.reparoAplicado);
+      var classificacao=saudeNotificacoesV1Classificar_(reg,null,Boolean(reparo&&reparo.reparoId));
+      if(classificacao.status==='ATIVO')contagens.ativos++;
+      else if(classificacao.status==='INATIVO')contagens.inativos++;
+      else if(classificacao.status==='REPARO')contagens.reparo++;
+      else contagens.semConfirmacao++;
+      contagens.total++;
+    });
+  }
+  var cadastro=typeof conectaAcessoV1ContarPendenciasArea_==='function'?conectaAcessoV1ContarPendenciasArea_(contexto.areaId):0;
+  return {
+    ok:true,areaId:contexto.areaId,contagens:contagens,
+    pendencias:{cadastro:cadastro,total:cadastro},
+    fonte:'REGISTRO_LOCAL_RAPIDO',somenteLeitura:true
+  };
 }
 
 function saudeNotificacoesV1SaudeAdmin_(contexto,acesso){
