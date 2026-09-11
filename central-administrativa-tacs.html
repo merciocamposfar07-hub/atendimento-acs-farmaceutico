@@ -2002,7 +2002,7 @@ function buildCentralWelcome(){
     var copy=document.createElement('div');
     copy.id='cscCentralWelcomeCopy';
     copy.className='csc-welcome-copy';
-    copy.innerHTML='<small>Olá, administrador</small><h1>Gestão da área</h1><p>Acesse os serviços, acompanhe a situação e administre sua unidade.</p>';
+    copy.innerHTML='<small>Perfil autenticado</small><h1>Gestão da área</h1><p>Carregando sua identificação…</p>';
     identity.insertBefore(copy,identity.firstChild);
   }
   if(document.getElementById('cscInstitutionalDock'))return;
@@ -2127,7 +2127,7 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 </main>
 <footer>Portal TACS • Central Administrativa</footer>
 <div id="viewer" class="viewer" hidden><div class="viewer-bar"><button id="viewerBack" class="viewer-back" type="button">← Central</button><div id="viewerTitle" class="viewer-title">Painel</div></div><iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe></div>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=edb3f6e0ddff"></script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260911-saudacao-perfil-v1"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=edb3f6e0ddff"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=edb3f6e0ddff"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=edb3f6e0ddff"></script>
