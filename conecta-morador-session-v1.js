@@ -20,6 +20,7 @@ function clearSession(){try{sessionStorage.removeItem(TOKEN_KEY)}catch(e){}token
 
 function readBootstrap(){try{var r=JSON.parse(sessionStorage.getItem(BOOTSTRAP_KEY)||'null');return r&&typeof r==='object'?r:null}catch(e){return null}}
 function clearBackgroundRequest(){try{sessionStorage.removeItem(BG_REQUEST_KEY)}catch(e){}}
+function hasBackgroundRequest(){try{return !!text(sessionStorage.getItem(BG_REQUEST_KEY)||'')}catch(e){return false}}
 function removeResidentVault(){try{var v=window.ConectaPinLocalV2;if(v&&typeof v.remover==='function')v.remover('morador')}catch(e){}}
 function waitBackgroundLogin(){
  var id='';try{id=text(sessionStorage.getItem(BG_REQUEST_KEY)||'')}catch(e){}
@@ -99,6 +100,7 @@ function promptMemberCpf(button,tok,name,birth){
  p.innerHTML='<strong>CPF de '+esc(name||'integrante')+'</strong><p style="margin:5px 0 9px;color:#536b78">Informe uma única vez. O CPF será salvo automaticamente no cadastro desta pessoa.</p><input id="cscFamilyCpfInput" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" style="width:100%;min-height:50px;border:1px solid #8eb0c1;border-radius:13px;padding:10px 12px"><button id="cscFamilyCpfSave" type="button" style="width:100%;min-height:50px;margin-top:8px;border:0;border-radius:13px;background:#176a48;color:#fff;font-weight:900">Salvar CPF e selecionar</button>';
  box.appendChild(p);
  el('cscFamilyCpfSave').onclick=function(){
+  if(!token){showPortalToast('Acesso aberto. Aguarde a confirmação segura do servidor para salvar alterações.');return}
   var cpf=digits(el('cscFamilyCpfInput').value);if(cpf.length!==11){showPortalToast('Informe um CPF válido com 11 números.');return}
   this.disabled=true;
   post('conecta_morador_membro_salvar_cpf',{token:token,dispositivo:device(),membroToken:tok,cpf:cpf}).then(function(r){
@@ -113,7 +115,9 @@ function showPortalToast(message){
  var old=el('cscResidentToast');if(old)old.remove();var n=document.createElement('div');n.id='cscResidentToast';n.style.cssText='position:fixed;left:16px;right:16px;bottom:24px;z-index:72000;max-width:620px;margin:auto;padding:13px 15px;border-radius:16px;background:#082d46;color:#fff;font-weight:800;box-shadow:0 12px 35px rgba(0,0,0,.35)';n.textContent=message;document.body.appendChild(n);setTimeout(function(){if(n.parentNode)n.remove()},5000)
 }
 function toggleMute(){
- if(!resident)return;var next=!Boolean(resident.silencioso),btn=el('cscMuteToggle');if(btn)btn.disabled=true;
+ if(!resident)return;
+ if(!token){showPortalToast('Acesso aberto. Aguarde a confirmação segura do servidor para alterar preferências.');return}
+ var next=!Boolean(resident.silencioso),btn=el('cscMuteToggle');if(btn)btn.disabled=true;
  post('conecta_morador_preferencia_notificacao',{token:token,dispositivo:device(),silencioso:next?'SIM':'NAO'}).then(function(r){resident.silencioso=Boolean(r.silencioso);if(btn)btn.textContent=resident.silencioso?'🔕 Silenciado':'🔔 Avisos';showPortalToast(resident.silencioso?'Preferência silenciosa ativada. As notificações continuam chegando.':'Preferência de avisos sonoros reativada.')}).catch(function(e){showPortalToast(e.message)}).finally(function(){if(btn)btn.disabled=false})
 }
 function logout(){
@@ -136,7 +140,9 @@ function osState(os){
  try{var p=os&&os.User&&os.User.PushSubscription,tags={};try{tags=os.User&&typeof os.User.getTags==='function'?(os.User.getTags()||{}):{}}catch(e){}return {permission:Boolean(os&&os.Notifications&&os.Notifications.permission===true),optedIn:Boolean(p&&p.optedIn===true),subscriptionId:text(p&&p.id).toLowerCase(),token:text(p&&p.token),areaConfirmed:text(tags.area_tacs).toUpperCase()===(resident.areaId||areaId()).toUpperCase()}}catch(e){return {permission:false,optedIn:false,subscriptionId:'',token:'',areaConfirmed:false}}
 }
 async function activateNotifications(){
- var btn=el('cscNotificationEnable');if(btn)btn.disabled=true;gateStatus('Solicitando permissão neste aparelho…','');
+ var btn=el('cscNotificationEnable');
+ if(!token){gateStatus('Acesso aberto. Aguarde a confirmação segura do servidor para concluir esta etapa.','');return}
+ if(btn)btn.disabled=true;gateStatus('Solicitando permissão neste aparelho…','');
  try{
   var os=await oneSignalReady();if(!os)throw new Error('O serviço de notificações ainda não terminou de carregar.');
   if(os.Notifications&&os.Notifications.permission!==true&&typeof os.Notifications.requestPermission==='function')await os.Notifications.requestPermission();
@@ -154,28 +160,30 @@ async function activateNotifications(){
 }
 
 function install(){
+ try{token=text(sessionStorage.getItem(TOKEN_KEY)||'')}catch(e){token=''}
+ var local=readBootstrap(),pending=hasBackgroundRequest();
  if(!queryFlag()){
-  try{token=text(sessionStorage.getItem(TOKEN_KEY)||'')}catch(e){}
   if(!token)return;
- }else{
-  try{token=text(sessionStorage.getItem(TOKEN_KEY)||'')}catch(e){}
-  if(!token){location.replace('/atendimento-acs-farmaceutico/central-administrativa-tacs.html');return}
+ }else if(!token&&!(local&&pending)){
+  location.replace('/atendimento-acs-farmaceutico/central-administrativa-tacs.html');return
  }
  ensureStyle();gateMarkup();
- var local=readBootstrap();
  if(local)applyResident(local,true);
  function fresh(){
+  if(!token)return Promise.reject(new Error('Sessão remota ainda não confirmada.'));
   return getSession().then(function(r){try{sessionStorage.setItem(BOOTSTRAP_KEY,JSON.stringify(r))}catch(e){}applyResident(r,false);return r});
  }
- fresh().catch(function(){
+ function confirmBackground(){
   return waitBackgroundLogin().then(function(login){
    token=text(login.token);try{sessionStorage.setItem(TOKEN_KEY,token)}catch(e){}
    return fresh();
-  }).catch(function(err){
-   if(err&&err.refused){removeResidentVault();clearSession();if(queryFlag())location.replace('/atendimento-acs-farmaceutico/central-administrativa-tacs.html');return}
-   if(!local){clearSession();if(queryFlag())location.replace('/atendimento-acs-farmaceutico/central-administrativa-tacs.html')}
-   else showPortalToast('Portal aberto com os dados locais. A sincronização continua pendente.');
   });
+ }
+ var sync=token?fresh().catch(function(){return pending?confirmBackground():Promise.reject(new Error('Sessão remota indisponível.'))}):confirmBackground();
+ sync.catch(function(err){
+  if(err&&err.refused){removeResidentVault();clearSession();clearBackgroundRequest();if(queryFlag())location.replace('/atendimento-acs-farmaceutico/central-administrativa-tacs.html');return}
+  if(!local){clearSession();if(queryFlag())location.replace('/atendimento-acs-farmaceutico/central-administrativa-tacs.html')}
+  else showPortalToast('Portal aberto com os dados locais. A confirmação do servidor continua em segundo plano.');
  });
 }
 window.OneSignalDeferred=window.OneSignalDeferred||[];
