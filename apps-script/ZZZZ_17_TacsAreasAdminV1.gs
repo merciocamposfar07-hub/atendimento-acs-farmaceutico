@@ -825,8 +825,16 @@ function tacsTerritorioV1Gravar_(tabela,row,dados,parcial){
     if(Object.prototype.hasOwnProperty.call(tabela.map,campo))values[tabela.map[campo]]=dados[campo];
   });
   var numero=row?row.row:tabela.sheet.getLastRow()+1;
-  var nascimento=tabela.map.DATA_NASCIMENTO;
-  if(nascimento!=null)tabela.sheet.getRange(numero,nascimento+1).setNumberFormat('@');
+  /* DOCUMENTOS_TEXTO_V1:
+     CPF, CNS, telefone, matrícula e data de nascimento são identificadores/textos.
+     Nunca podem ser convertidos para número pela planilha nem perder zero inicial. */
+  ['DATA_NASCIMENTO','CPF','CNS_PROFISSIONAL','TELEFONE','MATRICULA'].forEach(function(campo){
+    var indice=tabela.map[campo];
+    if(indice!=null){
+      tabela.sheet.getRange(numero,indice+1).setNumberFormat('@');
+      if(values[indice]!==''&&values[indice]!=null)values[indice]=String(values[indice]);
+    }
+  });
   tabela.sheet.getRange(numero,1,1,tabela.headers.length).setValues([values]);
   var criado=tabela.map.CRIADO_EM;
   var atualizado=tabela.map.ATUALIZADO_EM;
