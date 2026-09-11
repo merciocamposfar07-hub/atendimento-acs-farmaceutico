@@ -10,8 +10,8 @@ A Central deve funcionar como **um aplicativo persistente**, não como uma cole�
 ## Arquitetura de desempenho obrigatória
 1. **App shell persistente**: cabeçalho, navegação, sessão e contexto da área permanecem carregados.
 2. **Roteamento interno**: abrir painéis dentro da mesma aplicação, sem recarregar a página inteira.
-3. **Pré-carregamento inteligente**: após a Central estabilizar, preparar em segundo plano os módulos mais prováveis.
-4. **Cache local de leitura**: exibir imediatamente o último estado válido e atualizar silenciosamente em segundo plano.
+3. **Pré-carregamento inteligente**: assim que a tela de PIN estiver visível, preparar em segundo plano os módulos mais prováveis e aquecer o backend sem bloquear a interface.
+4. **Cache local de leitura**: exibir imediatamente o último estado válido — identidade, área e Saúde Geral incluídas — e atualizar silenciosamente em segundo plano.
 5. **Stale-while-revalidate**: dado conhecido aparece primeiro; atualização real ocorre sem bloquear a interface.
 6. **Deduplicação de requisições**: um toque não pode disparar várias chamadas iguais ao backend.
 7. **Cancelamento de chamadas antigas**: respostas atrasadas não podem sobrescrever estado mais novo.
@@ -70,6 +70,8 @@ A camada de desempenho dos painéis começa no próprio acesso. Depois da criaç
 Metas de homologação:
 - resposta visual ao toque: abaixo de 100 ms;
 - desbloqueio local do PIN: alvo de 100–300 ms no aparelho;
+- identificação e último estado de Saúde Geral: apresentados junto com a abertura local, sem nova espera remota;
+- nenhum cartão confirmado deve exigir toque manual em `Atualizar` para reaparecer;
 - retorno a painel já carregado: alvo de 100–200 ms;
 - latência remota não pode transformar a aplicação em tela parada.
 

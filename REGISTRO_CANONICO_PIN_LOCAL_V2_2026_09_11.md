@@ -28,14 +28,21 @@ A regra vale separadamente para:
 - PIN não é persistido em texto.
 - Cofres separados por perfil.
 - Contexto/snapshot local vinculado ao identificador do aparelho; nenhum token reutilizável é persistido no cofre.
-- Administrador restaura contexto administrativo local antes da chamada remota.
-- TACS restaura somente o contexto territorial correspondente ao perfil.
+- Administrador restaura contexto administrativo local, incluindo a identidade autenticada quando confirmada, antes da chamada remota.
+- TACS restaura somente o contexto territorial correspondente ao perfil, incluindo nome, área e unidade já confirmados.
 - Morador abre o portal com bootstrap local e a revalidação remota continua por requestId, sem transportar o PIN para a página seguinte.
 - Recusa real do servidor remove o cofre local do perfil.
 - Redefinição de PIN invalida o cofre anterior.
 - Logoff remove a sessão ativa da interface, invalida a sessão remota em segundo plano e preserva somente cache/snapshot cifrado e vínculo do aparelho.
-- Tela de PIN deixa de iniciar warmup remoto no carregamento inicial.
+- A tela de PIN continua sendo desenhada sem esperar o servidor; depois do primeiro paint inicia um aquecimento remoto assíncrono e não bloqueante, além do pré-carregamento de módulos e leituras públicas.
 - Safari/iPhone prioriza a resposta direta do POST; polling fica como contingência tardia e controlada.
+
+## Revisão de desempenho contínuo — 11/09/2026
+- Meta funcional: PIN em aparelho reconhecido não deve aguardar o Apps Script para desenhar o perfil.
+- Saúde Geral mostra imediatamente o último snapshot confirmado por área e revalida cada indicador em segundo plano.
+- Falhas temporárias de rede não apagam snapshots confirmados.
+- A identificação principal (Administrador, TACS, Morador/família) deve ser legível em alto contraste.
+- Pré-carregamento começa após o primeiro paint da tela de PIN, sem segurar o carregamento do Safari.
 
 ## Autoridade dos dados
 

@@ -102,9 +102,10 @@ Regras obrigatórias:
 - os cofres são isolados por perfil e vinculados ao aparelho;
 - o TACS continua restrito à própria área e permissões confirmadas pelo servidor;
 - o Morador continua restrito ao próprio vínculo/área;
-- dados locais servem para abertura e leitura imediatas, nunca carregam token de sessão reutilizável e nunca autorizam uma gravação crítica;
+- dados locais servem para abertura e leitura imediatas, incluindo identidade autenticada, área e último estado confirmado de Saúde Geral; nunca carregam token de sessão reutilizável e nunca autorizam uma gravação crítica;
 - vagas, reservas, alterações administrativas, permissões e demais operações críticas só são concluídas após confirmação atual do servidor;
-- falha transitória do Apps Script não deve fechar uma tela que possua último estado local válido;
+- falha transitória do Apps Script não deve fechar uma tela que possua último estado local válido nem substituir Saúde Geral confirmada por `Verificando`, `Falha na leitura` ou `Sem confirmação` quando houver snapshot válido;
 - recusa real, inativação ou revogação pelo servidor invalida o acesso local correspondente;
 - Logoff encerra/invalida a sessão remota sem bloquear a interface, preserva aparelho e cache/snapshot cifrado, e exige novamente o PIN;
+- assim que a tela de PIN estiver desenhada, o app inicia preparação assíncrona não bloqueante de backend, módulos e leituras públicas; isso nunca pode atrasar a exibição/teclado do PIN;
 - nenhuma correção de desempenho pode misturar cache entre áreas, perfis, municípios ou organizações.
