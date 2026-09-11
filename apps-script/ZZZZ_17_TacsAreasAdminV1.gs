@@ -443,6 +443,11 @@ function tacsTerritorioV1AdministradorAtual_(acesso,todos,administradores){
     acesso.operadorId,acesso.agenteId,
     base.operadorId,base.usuarioId,base.adminId,base.agenteId,base.id,base.matricula
   ].map(tacsTerritorioV1Texto_).filter(Boolean);
+  var chavesFortes=[
+    tacsTerritorioV1Digitos_(base.cpf||base.CPF),
+    tacsTerritorioV1Digitos_(base.cns||base.cnsProfissional||base.CNS),
+    tacsTerritorioV1Texto_(base.email||base.eMail).toLowerCase()
+  ].filter(Boolean);
   var candidatos=[];
   ['administradores','admins','operadores','usuariosAdministradores'].forEach(function(k){
     if(Array.isArray(base[k]))candidatos=candidatos.concat(base[k]);
@@ -452,8 +457,30 @@ function tacsTerritorioV1AdministradorAtual_(acesso,todos,administradores){
     var item=candidatos[i]||{};
     var itemIds=[item.operadorId,item.usuarioId,item.adminId,item.agenteId,item.id,item.tacsId,item.matricula]
       .map(tacsTerritorioV1Texto_).filter(Boolean);
-    if(ids.some(function(id){return itemIds.indexOf(id)!==-1;})){
+    var itemChaves=[
+      tacsTerritorioV1Digitos_(item.cpf||item.CPF),
+      tacsTerritorioV1Digitos_(item.cnsProfissional||item.cns||item.CNS),
+      tacsTerritorioV1Texto_(item.email||item.eMail).toLowerCase()
+    ].filter(Boolean);
+    if(ids.some(function(id){return itemIds.indexOf(id)!==-1;})||
+       chavesFortes.some(function(chave){return itemChaves.indexOf(chave)!==-1;})){
       var achado=publicar(item,acesso.perfil);if(achado)return achado;
+    }
+  }
+
+  /* Fallback determinístico por área: quando o administrador autenticado também
+     possui cadastro territorial e existe um único perfil ADMIN ativo na área
+     da sessão, esse registro identifica o operador atual sem adivinhar entre
+     administradores de outras áreas. */
+  var areaAtual=tacsTerritorioV1Id_(acesso.areaId||base.areaId);
+  if(areaAtual){
+    var adminsDaArea=(todos||[]).filter(function(item){
+      return item&&item.ativo!==false&&
+        tacsTerritorioV1Id_(item.areaId)===areaAtual&&
+        tacsTerritorioV1PerfilTem_(item.perfil,'ADMIN');
+    });
+    if(adminsDaArea.length===1){
+      var porArea=publicar(adminsDaArea[0],acesso.perfil);if(porArea)return porArea;
     }
   }
 
@@ -479,6 +506,7 @@ function tacsTerritorioV1Dados_(acesso){
     ok:true,versao:TACS_TERRITORIO_V1.VERSAO,perfil:acesso.perfil,
     podeAdministrar:admin,tacs:tacs.map(tacsTerritorioV1PublicarTacs_),
     administradores:administradores,administradorAtual:administradorAtual,
+    identidadeAutenticada:administradorAtual,
     areas:areas,isolamento:'UMA_PLANILHA_DE_MORADORES_POR_AREA',
     idsTecnicosImutaveis:true,camposCadastraisReeditaveis:true
   };
