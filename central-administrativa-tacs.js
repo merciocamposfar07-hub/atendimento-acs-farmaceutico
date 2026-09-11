@@ -209,24 +209,22 @@ function notificationPostIsolated(action,areaId,cb){
 function refreshNotificationHealth(areaId,force){
   areaId=normArea(areaId);
   if(!permission('PUBLICACOES_GERENCIAR')){markHealth('healthNotifications','Sem permissão','warn');return}
-  var cached=readConfirmedNotification(areaId);
-  if(cached)renderConfirmedNotification(cached,areaId);else markHealth('healthNotifications','Confirmando…','');
+
+  /* NOTIFICACOES_FONTE_UNICA_ATUAL_V2:
+     A Central não apresenta mais snapshot do navegador nem cache rápido como número atual.
+     Em cada entrada/atualização, mostra "Confirmando…" e só publica contagens após
+     uma consulta remota concluída ao OneSignal. Isso elimina a troca visual entre
+     "última confirmação" e "confirmação atual". */
   if(notificationRemoteArea===areaId&&!force)return;
   notificationRemoteArea=areaId;
-  if(!cached){
-    notificationPostIsolated('admin_notificacoes_saude_rapida',areaId,function(quick){
-      var confirmed=saveConfirmedNotification(quick,areaId);
-      if(confirmed)renderConfirmedNotification(confirmed,areaId);
-    });
-  }
+  markHealth('healthNotifications','Confirmando…','');
+
   notificationPostIsolated('admin_notificacoes_saude_remota',areaId,function(remote,seq){
     if(seq!==notificationLatestStarted[areaId])return;
     if(notificationRemoteArea===areaId)notificationRemoteArea='';
     var confirmed=saveConfirmedNotification(remote,areaId);
     if(confirmed){renderConfirmedNotification(confirmed,areaId);return}
     if(areaId!==selectedAreaId)return;
-    var fallback=readConfirmedNotification(areaId);
-    if(fallback){renderConfirmedNotification(fallback,areaId);return}
     markHealth('healthNotifications','Sem confirmação','warn');
   });
 }
