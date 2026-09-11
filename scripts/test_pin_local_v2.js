@@ -78,6 +78,9 @@ assert(indexHtml.indexOf('conecta-pin-local-v2.js')<indexHtml.indexOf('conecta-m
   for(const scope of ['admin','tacs','morador']){
     const t0=performance.now();
     assert.equal(await api.guardar(scope,'2468',{device:'iphone-teste',token:'token-'+scope,context:{areas:[{areaId:'JAPARANDUBA'}]}}),true);
+    const raw=store.get('conectaPinLocalV2:'+scope)||'';
+    assert(!raw.includes('2468'),'PIN não pode aparecer em texto no armazenamento local');
+    assert(!raw.includes('token-'+scope),'Credencial não pode aparecer em texto no armazenamento local');
     const ok=await api.abrir(scope,'2468');
     const elapsed=performance.now()-t0;
     assert.equal(ok.token,'token-'+scope);
