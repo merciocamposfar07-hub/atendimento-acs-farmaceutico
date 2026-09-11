@@ -184,6 +184,7 @@ function conectaAcessoV1LoginMorador_(p){
   if(!/^cmq1\./.test(quick)||!dispositivo)throw new Error('Este aparelho ainda não possui um acesso de morador reconhecido.');
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=conectaAcessoV1AcessoPorQuick_(sheet,quick);
   if(!registro||!conectaAcessoV1Bool_(registro.values[15]))throw new Error('Acesso não localizado ou inativo.');
+  if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo)))throw new Error('Este acesso rápido pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
   if(!conectaAcessoV1Seguro_(registro.values[7],conectaAcessoV1Hash_(registro.values[6]+'|'+pin)))throw new Error('PIN incorreto.');
   var session=conectaAcessoV1CriarSessao_(registro.values,dispositivo);
   return {ok:true,token:session.token,perfil:'MORADOR',areaId:registro.values[1],nome:registro.values[4],cpf:registro.values[3],notificacoesAtivas:conectaAcessoV1Bool_(registro.values[10]),silencioso:conectaAcessoV1Bool_(registro.values[12]),provisorio:conectaAcessoV1Bool_(registro.values[13]),pendenciaId:conectaAcessoV1Texto_(registro.values[14])};
@@ -329,7 +330,7 @@ function conectaAcessoV1Familia_(v){
     if(!familia)return [{nome:v[4],cpf:v[3],responsavel:true}];
     var contexto={perfil:'PUBLICO',operadorId:'PUBLICO',agenteId:achados[0].area.agenteId,areaId:areaId,areaNome:achados[0].area.areaNome,unidadeId:achados[0].area.unidadeId,planilhaId:achados[0].area.planilhaId,permissoes:[]};
     var membros=typeof identificacaoFamiliarPublicaV1Membros_==='function'?identificacaoFamiliarPublicaV1Membros_(familia,contexto):[];
-    return (membros||[]).map(function(m){return {idPortal:m.idPortal||m.id||'',nome:m.nome||'',nascimento:m.nascimento||'',responsavel:conectaAcessoV1Nome_(m.nome)===conectaAcessoV1Nome_(v[4])};});
+    return (membros||[]).map(function(m){return {token:m.token||'',nome:m.nome||'',nascimento:m.nascimento||'',temDocumento:Boolean(m.temDocumento),responsavel:conectaAcessoV1Nome_(m.nome)===conectaAcessoV1Nome_(v[4])};});
   }catch(e){return [{nome:v[4],cpf:v[3],responsavel:true}];}
 }
 
@@ -339,7 +340,7 @@ function conectaAcessoV1TacsPorCpf_(cpf){
 }
 function conectaAcessoV1CpfAdministrador_(cpf){
   var t=conectaAcessoV1TacsPorCpf_(cpf);
-  if(t&&/^ADMIN/i.test(conectaAcessoV1Texto_(t.perfil)))return true;
+  if(t&&(/^ADMIN/i.test(conectaAcessoV1Texto_(t.perfil))||conectaAcessoV1Id_(t.tacsId)==='AG001'))return true;
   try{
     var ss=tacsTerritorioV1Planilha_(),achou=false;
     ss.getSheets().forEach(function(sh){
