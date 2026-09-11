@@ -51,8 +51,11 @@ assert(resident.includes("portalConectaMoradorTokenV1"),'Próximos acessos devem
 assert(centralJs.includes('LOGOFF_PRESERVA_CACHE_V2'),'Logoff deve preservar cache e dados locais');
 assert(centralJs.includes('LOGOFF_IMEDIATO_V1'),'Logoff deve responder no primeiro toque sem esperar o servidor');
 assert(centralJs.includes('cancelarOperacaoAtivaSemCallback'),'Logoff deve cancelar transporte pendente para evitar disputa de interface');
-assert(centralJs.includes('invalidarSessaoServidorEmSegundoPlano'),'Invalidação remota deve ocorrer em segundo plano');
-assert(centralJs.indexOf("sessionStorage.removeItem(TOKEN_KEY)")<centralJs.indexOf("invalidarSessaoServidorEmSegundoPlano(action,payload)"),'A interface deve encerrar localmente antes da invalidação remota');
+assert(centralJs.includes('LOGOFF_COMO_BLOQUEIO_LOCAL_V2'),'Logoff deve bloquear o uso local sem destruir a credencial cifrada necessária à reentrada por PIN');
+assert(!centralJs.includes("if(hasSession)invalidarSessaoServidorEmSegundoPlano(action,payload);"),'Logoff não deve invalidar a credencial remota antes da reentrada local');
+assert(centralJs.includes("abrirAcessoLocal('admin',pin)")&&centralJs.includes("abrirAcessoLocal('tacs',pin)"),'Administrador e TACS devem tentar o PIN local antes do servidor');
+assert(central.includes('conecta-pin-local-v2.js'),'Central deve carregar o cofre local cifrado');
+assert(central.includes('conecta-morador-pin-local-v2.js'),'Central deve carregar o desbloqueio local do Morador');
 assert(central.includes('touch-action:manipulation!important'),'Botão Logoff deve usar toque direto no iPhone');
 assert(centralJs.includes("sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY)"),'Logoff deve remover somente tokens de autenticação');
 assert(!/sessionStorage\.clear\(|localStorage\.clear\(/.test(centralJs),'Logoff não pode apagar armazenamento inteiro');
