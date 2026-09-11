@@ -251,6 +251,17 @@ function conectaAcessoV1RecuperarSalvar_(p){
   return {ok:true,message:'Novo PIN salvo. Volte ao acesso e entre com os quatro números.'};
 }
 
+function conectaAcessoV1ContarPendenciasArea_(areaId){
+  var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.PENDING_SHEET,TACS_CONECTA_ACESSO_V1.PENDING_HEADERS),last=sh.getLastRow(),n=0,area=conectaAcessoV1Id_(areaId);
+  if(last<=1)return 0;
+  sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.PENDING_HEADERS.length).getDisplayValues().forEach(function(v){
+    if(conectaAcessoV1Texto_(v[7]).toUpperCase()!=='PENDENTE')return;
+    if(area&&conectaAcessoV1Id_(v[1])!==area)return;
+    n++;
+  });
+  return n;
+}
+
 function conectaAcessoV1PendenciasContagem_(p){
   var areaId='';
   if(p.territorioToken){
@@ -259,11 +270,7 @@ function conectaAcessoV1PendenciasContagem_(p){
     if(typeof profissionaisDinamicosV1ValidarSessao_!=='function')throw new Error('Validação administrativa indisponível.');
     profissionaisDinamicosV1ValidarSessao_(p);areaId=conectaAcessoV1Id_(p.areaId);
   }
-  var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.PENDING_SHEET,TACS_CONECTA_ACESSO_V1.PENDING_HEADERS),last=sh.getLastRow(),n=0;
-  if(last>1)sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.PENDING_HEADERS.length).getDisplayValues().forEach(function(v){
-    if(conectaAcessoV1Texto_(v[7]).toUpperCase()!=='PENDENTE')return;
-    if(areaId&&conectaAcessoV1Id_(v[1])!==areaId)return;n++;
-  });
+  var n=conectaAcessoV1ContarPendenciasArea_(areaId);
   return {ok:true,pendencias:n,areaId:areaId};
 }
 
