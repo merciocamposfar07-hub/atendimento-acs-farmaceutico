@@ -69,12 +69,14 @@ assert.match(js,/accessProfileLabel\(tacs&&tacs\.perfil\|\|'TACS'\)/,
   'A saudação deve refletir o perfil real do TACS, inclusive perfis combinados.');
 assert.match(js,/var adminPerfil=accessProfileLabel\(admin&&admin\.perfil\|\|context&&context\.perfil\|\|'ADMIN'\)/,
   'O administrador deve manter o próprio perfil, sem ser rotulado como TACS.');
-assert.match(js,/NOTIFICACOES_FONTE_UNICA_ATUAL_V2/,
-  'A Central deve usar uma única fonte atual para a Saúde das notificações.');
+assert.match(js,/NOTIFICATION_CONFIRMED_CACHE_PREFIX='portalTacsNotificationConfirmedV1:'/,
+  'A Central deve preservar somente a última Saúde de notificações confirmada pela fonte remota.');
+assert.match(js,/function readConfirmedNotification\(areaId\)/,
+  'A Saúde das notificações deve reaparecer imediatamente a partir do último estado confirmado.');
 assert.doesNotMatch(js,/function refreshNotificationHealth[\s\S]*admin_notificacoes_saude_rapida/,
-  'A Central não pode exibir snapshot rápido/cache como contagem atual.');
+  'A Central não pode tratar leitura rápida/provisória como contagem oficial.');
 assert.match(js,/notificationPostIsolated\('admin_notificacoes_saude_remota'/,
-  'A Central deve validar a saúde das notificações diretamente na fonte remota.');
+  'A Central deve continuar revalidando a Saúde diretamente na fonte remota.');
 assert.match(js,/result\.oneSignalConsultado!==true/,
   'A Central não pode aceitar contagens provisórias como verdade confirmada.');
 assert.match(js,/painel-oficial-recados-campanhas\.html\?area=/);
@@ -111,10 +113,10 @@ assert.match(professionalsPage,/portalTacsTerritorioTokenV1/,
   'Profissionais deve reutilizar a sessão territorial do TACS.');
 assert.match(professionalsPage,/escopo:'profissionais'/,
   'Profissionais deve solicitar somente dados da própria área.');
-const territorioVersionado=/painel-oficial-tacs-areas\.html\?v=[A-Za-z0-9._-]+/.test(js)||/painel-oficial-tacs-areas\.html\?v=['"]\+revision/.test(js);
+const territorioVersionado=/painel-oficial-tacs-areas\.html\?(?:from=central&)?v=[A-Za-z0-9._-]+/.test(js)||/painel-oficial-tacs-areas\.html\?(?:from=central&)?v=['"]\+revision/.test(js);
 assert.ok(territorioVersionado,
   'A Central deve carregar o painel de TACS com revisão explícita para invalidar cache.');
-assert.match(js,/painel-oficial-organizacoes-municipios\.html\?v=/,
+assert.match(js,/painel-oficial-organizacoes-municipios\.html\?(?:from=central&)?v=/,
   'A Central deve abrir o painel global de organizações e municípios.');
 assert.match(multiPage,/ADMINISTRADOR GERAL/);
 assert.match(multiPage,/admin_multimunicipio_dados/);

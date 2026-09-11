@@ -63,9 +63,10 @@ assert(central.includes('conecta-morador-pin-local-v2.js'),'Central deve carrega
 assert(central.includes('touch-action:manipulation!important'),'Botão Logoff deve usar toque direto no iPhone');
 assert(centralJs.includes("sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY)"),'Logoff deve remover somente tokens de autenticação');
 assert(!/sessionStorage\.clear\(|localStorage\.clear\(/.test(centralJs),'Logoff não pode apagar armazenamento inteiro');
-assert(centralJs.includes('LOGIN_PREFETCH_ESTATICO_V2'),'Login deve aquecer recursos sem bloquear o carregamento inicial');
-assert(centralJs.includes("window.addEventListener('load'"),'Pré-carga deve começar depois do primeiro load ou por interação no PIN');
-assert(centralJs.includes("fetch(url+'?v=20260910-login-prefetch-v2'"),'Pré-carga deve usar fetch assíncrono/cache');
+assert(centralJs.includes('PREPARACAO_CONTINUA_V1'),'Login deve preparar recursos sem bloquear a tela de PIN');
+assert(centralJs.includes('scheduleEarlyPreparation'),'Pré-carga deve começar após o primeiro paint da tela de PIN');
+assert(centralJs.includes("fetch(url+'?v=20260911-performance-continuo-v1'"),'Pré-carga deve usar fetch assíncrono/cache');
+assert(!centralJs.includes("window.addEventListener('load',function(){if('requestIdleCallback'"),'Pré-carga não deve voltar a depender do load completo do Safari');
 assert(centralJs.includes("location.assign(url+sep+'from=central&_cb='+Date.now());"),'Agendas deve usar navegação direta quando exigido');
 assert(centralJs.includes("painel-oficial-agendas-vagas.html?area="),'Agendas e Vagas deve manter rota direta');
 assert(!centralJs.includes("link.rel='prefetch'"),'Não voltar ao prefetch que mantém o Safari carregando');

@@ -263,14 +263,14 @@ function currentAreaId(){
 function stableModuleUrl(name){
   var area=encodeURIComponent(currentAreaId());
   var tacsOnly=hasTerritorySession()||queryTacsOnly();
-  var access=tacsOnly?'&acesso=tacs':'';
+  var access=tacsOnly?'&acesso=tacs':'',origin='&from=central';
   var revision='20260823-recados-safari-render-v1';
-  if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+'&v='+revision;
-  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v='+revision;
-  if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v=20260823-agendas-safari-paint-v1';
-  if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+'&v='+revision;
-  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?v='+revision;
-  if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?v='+revision;
+  if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+origin+'&v='+revision;
+  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+origin+'&v='+revision;
+  if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+origin+'&v=20260823-agendas-safari-paint-v1';
+  if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+origin+'&v='+revision;
+  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v='+revision;
+  if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;
   if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area+'&from=central';
   return '';
 }
@@ -333,6 +333,12 @@ function installInstitutionalNavigation(){
     grid.addEventListener('click',function(event){
       var btn=event.target&&event.target.closest?event.target.closest('.module'):null;
       if(!btn||btn.disabled||btn.hidden)return;
+      /* PIN_UNICO_CENTRAL_V1:
+         se o PIN local já abriu a Central mas a nova sessão remota ainda está
+         sendo criada, não navegue para um painel que poderia exibir seu login
+         legado. Deixe o controlador principal enfileirar este mesmo toque e
+         abrir o painel automaticamente assim que a sessão existir. */
+      if(!hasAnySession())return;
       var name=btn.dataset.module||'';
       var url=stableModuleUrl(name);if(!url)return;
       event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
