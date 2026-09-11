@@ -195,6 +195,10 @@ async function testTerritoryPanel() {
   assert.match(html, /<label for="tacsPhone">Celular<\/label>/);
   assert.match(html, /<label for="tacsUnit">Unidade de saúde<\/label>/);
   assert.match(html, /<label for="tacsPin">PIN de acesso aos painéis<\/label>/);
+  assert.match(html, /id="tacsProfile"/);
+  for (const perfil of ['ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_MORADOR','TACS','ADMIN']) {
+    assert.match(html, new RegExp('value="'+perfil+'"'), 'Perfil ausente no formulário: '+perfil);
+  }
   assert.doesNotMatch(html, /<label for="tacsRegistration">/);
   assert.doesNotMatch(html, /<label for="tacsArea">/);
   assert.match(html, /id="tacsRegistration" type="hidden"/);
@@ -236,10 +240,8 @@ async function testTerritoryPanel() {
   assert.equal(window.document.getElementById('adminLogin').classList.contains('hidden'), false);
   window.document.getElementById('loginTacsTab').click();
   assert.equal(window.document.getElementById('tacsLogin').classList.contains('hidden'), false);
-  window.document.getElementById('tacsCnsLogin').value = '123';
-  window.document.getElementById('tacsPinLogin').value = '1234';
-  window.document.getElementById('tacsLoginButton').click();
-  assert.match(window.document.getElementById('loginStatus').textContent, /CNS profissional com 15 números/);
+  assert.equal(window.document.getElementById('tacsCnsLogin'), null, 'O acesso TACS deve continuar somente por PIN.');
+  assert.ok(window.document.getElementById('tacsPinLogin'), 'O PIN individual deve permanecer no acesso TACS.');
   window.document.getElementById('newTacsButton').click();
   assert.equal(window.document.getElementById('tacsForm').classList.contains('hidden'), false);
   assert.equal(window.document.getElementById('tacsPin').required, true);
@@ -249,6 +251,13 @@ async function testTerritoryPanel() {
   for (const id of ['permRead', 'permEdit', 'permStatus', 'permCsv', 'permPublish']) {
     assert.equal(window.document.getElementById(id).checked, true, `Permissão inicial ausente: ${id}`);
   }
+  window.document.getElementById('tacsProfile').value='ADMIN';
+  window.document.getElementById('tacsProfile').dispatchEvent(new window.Event('change',{bubbles:true}));
+  for (const id of ['tacsCns','tacsMicroarea','tacsUnit']) {
+    assert.equal(window.document.getElementById(id).required,false,'Administrador neutro não deve exigir campo territorial TACS: '+id);
+  }
+  assert.equal(window.document.getElementById('tacsPermissionsBlock').classList.contains('hidden'),true,
+    'Administrador neutro não deve receber permissões territoriais de TACS.');
 
   const esusCsv = [
     'e-SUS - Atenção Primária',
