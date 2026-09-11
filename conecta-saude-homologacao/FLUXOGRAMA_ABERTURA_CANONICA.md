@@ -54,3 +54,23 @@ Os painéis administrativos do projeto anterior permanecem como base administrat
 ## Status
 
 Esta decisão está registrada como padrão canônico da abertura e não deve ser alterada por tentativa visual sem nova aprovação do usuário.
+
+## Fluxo canônico de acesso após a abertura
+
+Depois de `Acessar conta`, o app segue dois caminhos.
+
+### Primeiro acesso
+`Selecionar perfil → identificação necessária → servidor confirma vínculo → criar PIN → reconhecer aparelho → preparar credencial local cifrada → sincronizar dados iniciais → abrir área correspondente.`
+
+### Segundo acesso e seguintes
+`Selecionar perfil → digitar PIN → destravar credencial local do aparelho → abrir imediatamente a área correspondente → sincronizar servidor em segundo plano.`
+
+Por perfil:
+- **Administrador:** abre a Central e somente as estruturas administrativas autorizadas.
+- **TACS:** abre exclusivamente a própria área, unidade e permissões.
+- **Morador:** abre exclusivamente seu portal/vínculo familiar/área.
+
+### Operações críticas
+`Tela local → usuário solicita alteração/reserva → servidor valida estado atual + sessão + território/permissão → servidor confirma → interface marca como concluída.`
+
+O cache não substitui a autoridade do servidor. Ele elimina a espera desnecessária para desenhar e navegar pela interface.
