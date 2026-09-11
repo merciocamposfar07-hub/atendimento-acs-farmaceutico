@@ -91,7 +91,7 @@ document.addEventListener('click',function(event){
 window.ConectaMoradorPinLocalV2={
   registrar:registrar,
   remover:remover,
-  removerPerfil:function(role){if(String(role||'').toUpperCase()==='MORADOR')remover()},
+  removerPerfil:function(role){var r=String(role||'').toUpperCase(),v=vault(),scope=r==='TACS'?'tacs':r==='ADMIN'?'admin':'morador';if(v&&typeof v.remover==='function')v.remover(scope)},
   bootstrap:bootstrap
 };
 }());
