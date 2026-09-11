@@ -55,7 +55,7 @@ function registrar(pin,r,snapshot){
   if(!v||!r||!r.token)return Promise.resolve(false);
   bootstrap(snap);
   return Promise.resolve(v.guardar('morador',pin,{
-    device:device(),token:r.token,quickKey:text(r.quickKey)||text(p.quickKey),
+    device:device(),quickKey:text(r.quickKey)||text(p.quickKey),
     areaId:text(r.areaId)||text(p.areaId),areaNome:text(r.areaNome)||text(p.areaNome),
     snapshot:snap,salvoRemotoEm:Date.now()
   })).catch(function(){return false});
@@ -70,10 +70,11 @@ document.addEventListener('click',function(event){
   if(!v||!p||!/^\d{4}$/.test(pin))return;
   event.preventDefault();event.stopPropagation();if(event.stopImmediatePropagation)event.stopImmediatePropagation();
   Promise.resolve(v.abrir('morador',pin)).then(function(saved){
-    if(!saved||text(saved.device)!==device()||!saved.token||(saved.quickKey&&text(saved.quickKey)!==text(p.quickKey))){
+    if(!saved||text(saved.device)!==device()||(saved.quickKey&&text(saved.quickKey)!==text(p.quickKey))){
       target.dataset.pinLocalBypass='1';target.click();return;
     }
-    try{sessionStorage.setItem(TOKEN_KEY,saved.token);if(saved.areaId)localStorage.setItem(AREA_KEY,saved.areaId)}catch(e){}
+    /* PIN_LOCAL_SEM_TOKEN_V3: o estado local libera a tela; a sessão do servidor é sempre nova. */
+    try{sessionStorage.removeItem(TOKEN_KEY);if(saved.areaId)localStorage.setItem(AREA_KEY,saved.areaId)}catch(e){}
     bootstrap(saved.snapshot||snapshotFrom(saved));
     backgroundLogin(p,pin);
     if(input)input.value='';
