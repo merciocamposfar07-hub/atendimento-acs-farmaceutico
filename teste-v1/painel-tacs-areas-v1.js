@@ -64,6 +64,36 @@ function el(id){return document.getElementById(id);}
 function text(v){return String(v==null?'':v).trim();}
 function digits(v){return String(v==null?'':v).replace(/\D/g,'');}
 function birthText(v){var d=digits(v).slice(0,8);return d.slice(0,2)+(d.length>2?'/'+d.slice(2,4):'')+(d.length>4?'/'+d.slice(4,8):'');}
+function cpfText(v){
+  var d=digits(v).slice(0,11),out=d.slice(0,3);
+  if(d.length>3)out+='.'+d.slice(3,6);
+  if(d.length>6)out+='.'+d.slice(6,9);
+  if(d.length>9)out+='-'+d.slice(9,11);
+  return out;
+}
+function cnsText(v){
+  var d=digits(v).slice(0,15),parts=[];
+  if(d.length)parts.push(d.slice(0,3));
+  if(d.length>3)parts.push(d.slice(3,7));
+  if(d.length>7)parts.push(d.slice(7,11));
+  if(d.length>11)parts.push(d.slice(11,15));
+  return parts.join(' ');
+}
+function phoneText(v){
+  var d=digits(v).slice(0,11);
+  if(!d)return '';
+  if(d.length<3)return '('+d;
+  var ddd=d.slice(0,2),rest=d.slice(2),prefix='',suffix='';
+  if(rest.length<=4)return '('+ddd+') '+rest;
+  if(d.length<=10){prefix=rest.slice(0,4);suffix=rest.slice(4,8);}
+  else{prefix=rest.slice(0,5);suffix=rest.slice(5,9);}
+  return '('+ddd+') '+prefix+(suffix?'-'+suffix:'');
+}
+function bindMask(id,formatter){
+  var input=el(id);if(!input)return;
+  input.addEventListener('input',function(){this.value=formatter(this.value);});
+  input.addEventListener('blur',function(){this.value=formatter(this.value);});
+}
 function validBirth(v){var m=text(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!m)return false;var day=Number(m[1]),month=Number(m[2]),year=Number(m[3]),date=new Date(Date.UTC(year,month-1,day)),today=new Date(),todayUtc=Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate());return date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day&&date.getTime()<=todayUtc;}
 function bool(v){return v===true||v===1||['true','1','sim','yes','ativo','ativa'].indexOf(text(v).toLowerCase())!==-1;}
 function esc(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
@@ -152,7 +182,7 @@ function renderTacs(){
   var list=el('tacsList');if(!data.tacs.length){list.innerHTML='<div class="card">Nenhum Administrador/TACS cadastrado nesta visão.</div>';return;}
   list.innerHTML=data.tacs.map(function(t){
     var isTacs=profileHasTacs(t.perfil),meta='<div class="sub">Perfil: '+esc(profileLabel(t.perfil));
-    if(isTacs)meta+=' • CNS: '+esc(t.cnsProfissional||'não informado')+' • Área: '+esc(t.areaId||'não vinculada')+' • Unidade: '+esc(t.unidadeId||'não vinculada');
+    if(isTacs)meta+=' • CNS: '+esc(cnsText(t.cnsProfissional)||'não informado')+' • Área: '+esc(t.areaId||'não vinculada')+' • Unidade: '+esc(t.unidadeId||'não vinculada');
     meta+='</div>';
     return '<div class="card"><strong>'+esc(t.nomeCompleto||t.tacsId)+'</strong>'+meta+'<span class="pill '+(bool(t.ativo)?'':'off')+'">'+(bool(t.ativo)?'Ativo':'Inativo')+'</span>'+(data.podeAdministrar?'<div class="actions"><button class="btn editTacs" data-id="'+esc(t.tacsId)+'" type="button">Editar cadastro completo</button></div>':'')+'</div>';
   }).join('');
@@ -182,8 +212,8 @@ function renderTacsUnitOptions(current){
 }
 
 function openTacs(t){
-  el('tacsForm').reset();el('tacsId').value=t&&t.tacsId||'';el('tacsProfile').value=normalizeAccessProfile(t&&t.perfil||'TACS');el('tacsName').value=t&&t.nomeCompleto||'';el('tacsCns').value=t&&t.cnsProfissional||'';
-  el('tacsBirth').value=birthText(t&&t.dataNascimento||'');el('tacsCpf').value=t&&t.cpf||'';el('tacsRegistration').value=t&&t.matricula||'';el('tacsPhone').value=t&&t.telefone||'';el('tacsEmail').value=t&&t.email||'';
+  el('tacsForm').reset();el('tacsId').value=t&&t.tacsId||'';el('tacsProfile').value=normalizeAccessProfile(t&&t.perfil||'TACS');el('tacsName').value=t&&t.nomeCompleto||'';el('tacsCns').value=cnsText(t&&t.cnsProfissional||'');
+  el('tacsBirth').value=birthText(t&&t.dataNascimento||'');el('tacsCpf').value=cpfText(t&&t.cpf||'');el('tacsRegistration').value=t&&t.matricula||'';el('tacsPhone').value=phoneText(t&&t.telefone||'');el('tacsEmail').value=t&&t.email||'';
   el('tacsArea').value=t&&t.areaId||'';renderTacsUnitOptions(t&&t.unidadeId||'');el('tacsMicroarea').value=t&&t.microarea||'';el('tacsActive').checked=Boolean(t&&bool(t.ativo));
   el('tacsPin').required=!t;
   var selecionadas=t&&Array.isArray(t.permissoes)?t.permissoes:TACS_PERMISSIONS.map(function(item){return item[1];});
@@ -379,7 +409,10 @@ el('newAreaButton').addEventListener('click',function(){openArea(null);});el('ca
 el('tacsList').addEventListener('click',function(e){var b=e.target.closest('.editTacs');if(b)openTacs(data.tacs.find(function(t){return t.tacsId===b.dataset.id;})||null);});
 el('areasList').addEventListener('click',function(e){var edit=e.target.closest('.editArea'),validate=e.target.closest('.validateArea');if(edit)openArea(data.areas.find(function(a){return a.areaId===edit.dataset.id;})||null);if(validate)validateArea(validate.dataset.id);});
 el('csvFile').addEventListener('change',function(){prepareFile(this.files&&this.files[0]);});el('previewCsvButton').addEventListener('click',previewCsv);el('importCsvButton').addEventListener('click',importCsv);el('csvArea').addEventListener('change',loadBatches);el('batchList').addEventListener('click',function(e){var b=e.target.closest('.undoBatch');if(b)undoBatch(b.dataset.id);});
-el('tacsBirth').addEventListener('input',function(){this.value=birthText(this.value);});
+bindMask('tacsBirth',birthText);
+bindMask('tacsCpf',cpfText);
+bindMask('tacsCns',cnsText);
+bindMask('tacsPhone',phoneText);
 
 if(mode)loadData('Conferindo a sessão existente…');else{showLogin('admin');loginStatus('Escolha o tipo de acesso.','ok');}
 }());
