@@ -263,14 +263,14 @@ function currentAreaId(){
 function stableModuleUrl(name){
   var area=encodeURIComponent(currentAreaId());
   var tacsOnly=hasTerritorySession()||queryTacsOnly();
-  var access=tacsOnly?'&acesso=tacs':'';
+  var access=tacsOnly?'&acesso=tacs':'',origin='&from=central';
   var revision='20260823-recados-safari-render-v1';
-  if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+'&v='+revision;
-  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v='+revision;
-  if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v=20260823-agendas-safari-paint-v1';
-  if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+'&v='+revision;
-  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?v='+revision;
-  if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?v='+revision;
+  if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+origin+'&v='+revision;
+  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+origin+'&v='+revision;
+  if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+origin+'&v=20260823-agendas-safari-paint-v1';
+  if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+origin+'&v='+revision;
+  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v='+revision;
+  if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;
   if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area+'&from=central';
   return '';
 }
