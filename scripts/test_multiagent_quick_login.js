@@ -58,6 +58,12 @@ assert.doesNotMatch(quickFrontend,/\(p\.nome\?'<span>'/,
   'O acesso público TACS não pode exibir o nome do agente antes da autenticação.');
 assert.match(quickFrontend,/delete p\.nome/,
   'Perfis antigos devem remover o nome TACS já salvo localmente.');
+assert.match(quickFrontend,/pollWait=140/,
+  'Acesso rápido TACS deve iniciar a confirmação do PIN em até 140 ms.');
+assert.match(quickFrontend,/Math\.min\(420,pollWait\+70\)/,
+  'Acesso rápido TACS deve manter polling curto com backoff controlado.');
+assert.match(quickFrontend,/function aquecerPinTacs\(\)/,
+  'TACS deve aquecer o backend enquanto o PIN é digitado.');
 const recados=read('painel-oficial-recados-campanhas.html');
 const moradoresHtml=read('teste-v1/painel-moradores-v2.html');
 const moradoresJs=read('teste-v1/painel-moradores-transport-v2.js');
