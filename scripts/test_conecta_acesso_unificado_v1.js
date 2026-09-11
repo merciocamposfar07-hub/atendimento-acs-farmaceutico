@@ -23,7 +23,7 @@ assert(central.includes('conecta-acesso-unificado-v1.js'),'A Central deve carreg
 assert(unified.includes("b.id='tabMorador'"),'Entrada unificada deve oferecer perfil Morador');
 assert(unified.includes("p.textContent='Esqueci meu PIN'"),'Tela de acesso deve oferecer Esqueci meu PIN');
 assert(unified.includes("fastPin=/(?:login_pin|criar_pin)$/.test(action)"),'Morador deve usar confirmação rápida para login/criação de PIN');
-assert(unified.includes("wait=fastPin?140:650"),'Morador deve consultar o PIN em cadência curta sem saturar o servidor');
+assert(unified.includes("wait=fastPin?450:650"),'Fallback remoto do Morador deve consultar o PIN em cadência curta sem saturar o servidor');
 assert(unified.includes("function aquecerPinMorador()"),'Morador deve aquecer o backend ao digitar o PIN');
 assert(/conecta-acesso-unificado-v1\.js\?v=[A-Za-z0-9._-]+/.test(central),'Acesso unificado deve carregar com revisão explícita para invalidar cache');
 assert(unified.includes("currentRecoveryRole"),'Recuperação deve respeitar o perfil escolhido');
