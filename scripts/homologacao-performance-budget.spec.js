@@ -1,6 +1,14 @@
 'use strict';
 const { test, expect } = require('@playwright/test');
 
+async function seedCentralSession(page){
+  await page.addInitScript(()=>{
+    sessionStorage.setItem('portalTacsAdminTokenV1','homologacao-admin-session');
+    sessionStorage.setItem('portalTacsCentralReturnUrlV1',location.origin+'/atendimento-acs-farmaceutico/central-administrativa-tacs.html');
+    localStorage.setItem('portalTacsCentralAreaV1','JAPARANDUBA');
+  });
+}
+
 async function blockExternal(page){
   await page.route('https://script.google.com/**',route=>route.abort());
   await page.route('https://script.googleusercontent.com/**',route=>route.abort());
@@ -10,6 +18,7 @@ async function blockExternal(page){
 
 test('orçamento de interação da Central: despacho da navegação direta',async({page,browserName})=>{
   await page.setViewportSize({width:390,height:844});await blockExternal(page);
+  await seedCentralSession(page);
   await page.goto('central-administrativa-tacs.html',{waitUntil:'domcontentloaded'});
   await page.evaluate(()=>{const modules=document.getElementById('modulesPanel');if(modules)modules.hidden=false;const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');if(b){b.hidden=false;b.disabled=false}});
   await expect(page.locator('#portalTacsAdminPreloadPoolV1')).toHaveCount(0);
