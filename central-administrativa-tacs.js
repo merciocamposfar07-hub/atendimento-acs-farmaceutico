@@ -243,20 +243,50 @@ function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mo
 function openModule(name,title){var url=moduleUrl(name);if(!url)return;if(name==='portal'){window.open(url,'_blank','noopener');return}var sep=url.indexOf('?')===-1?'?':'&';/* AGENDA_DIRECT_NAV_V1: evita o iframe oculto e o travamento observado no iPhone; o retorno usa from=central. */if(name==='agendas'){location.assign(url+sep+'from=central&_cb='+Date.now());return}url=url+sep+'_cb='+Date.now();el('viewerTitle').textContent=title||'Painel';el('viewerFrame').src=url;el('viewer').hidden=false;document.body.classList.add('viewer-open')}
 function closeViewer(){el('viewer').hidden=true;el('viewerFrame').src='about:blank';document.body.classList.remove('viewer-open');refreshHealth()}
 function loadContext(message){post('admin_territorio_dados',session(),'admin_territorio_result',function(r){if(!r||r.ok!==true){token='';territoryToken='';mode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);el('loginPanel').hidden=false;el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;setStatus(text(r&&r.message)||'A sessão não pôde ser reutilizada. Entre novamente.','warn');return}context=r;mode=r.perfil==='TACS'?'tacs':'admin';saveContextCache();setStatus(message||'Acesso validado.','ok');renderContext(false)})}
+var logoutEmCurso=false;
+function cancelarOperacaoAtivaSemCallback(){
+  if(!active)return;
+  var op=active;active=null;
+  clearTimeout(op.timeout);clearTimeout(op.pollTimer);
+  if(op.form&&op.form.parentNode)op.form.remove();
+  if(op.frame&&op.frame.parentNode)op.frame.remove();
+}
+function invalidarSessaoServidorEmSegundoPlano(action,payload){
+  try{
+    var body=new URLSearchParams(),rid=requestId(action);
+    body.set('action',action);body.set('requestId',rid);
+    Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});
+    fetch(API+'?_='+Date.now(),{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+      body:body.toString(),
+      cache:'no-store',
+      keepalive:true
+    }).catch(function(){});
+  }catch(e){}
+}
 function logout(){
-  var lastMode=mode||'admin';
-  function finishLocalLogout(){
-    token='';territoryToken='';mode='';context=null;
-    sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
-    /* LOGOFF_PRESERVA_CACHE_V2: encerra somente a autenticação. Área, aparelho e caches por perfil permanecem intactos. */
-    el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;
-    el('loginPanel').hidden=false;showLogin(lastMode==='tacs'?'tacs':'admin');
-    setStatus('Sessão encerrada. Seus dados locais foram preservados para o próximo acesso.','ok');
-    window.scrollTo({top:0,behavior:'auto'});
-  }
-  if(!(token||territoryToken)){finishLocalLogout();return}
-  var action=mode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout';
-  post(action,session(),mode==='tacs'?'admin_territorio_result':'admin_result',function(){finishLocalLogout()})
+  if(logoutEmCurso)return;
+  logoutEmCurso=true;
+  var lastMode=mode||'admin',hasSession=Boolean(token||territoryToken);
+  var action=lastMode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout';
+  var payload=hasSession?session():null;
+
+  /* LOGOFF_IMEDIATO_V1:
+     o primeiro toque encerra a autenticação local imediatamente.
+     A confirmação remota não bloqueia a interface nem exige segundo toque. */
+  cancelarOperacaoAtivaSemCallback();
+  token='';territoryToken='';mode='';context=null;
+  sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
+  /* LOGOFF_PRESERVA_CACHE_V2: área, aparelho e caches por perfil permanecem intactos. */
+  el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;
+  el('loginPanel').hidden=false;showLogin(lastMode==='tacs'?'tacs':'admin');
+  setStatus('Sessão encerrada. Seus dados locais foram preservados para o próximo acesso.','ok');
+  window.scrollTo({top:0,behavior:'auto'});
+
+  if(hasSession)invalidarSessaoServidorEmSegundoPlano(action,payload);
+  setTimeout(function(){logoutEmCurso=false},250);
 }
 /* LOGIN_PREFETCH_ESTATICO_V2: a tela termina de carregar primeiro. Depois, fetch assíncrono aquece o cache sem iframe oculto e sem bloquear o evento load do Safari. */
 var staticPrefetchStarted=false;
