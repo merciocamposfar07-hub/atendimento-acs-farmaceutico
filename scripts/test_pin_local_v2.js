@@ -37,8 +37,8 @@ assert.match(central,/Acesso liberado\. Sincronizando em segundo plano/);
 assert.match(central,/PortalTacsCentralPinLocalV2/);
 
 const quickListener=quick.slice(quick.indexOf("loginBtn.addEventListener('click'"),quick.indexOf('HOMOLOGACAO_ARQUITETURAL_V1'));
-assert(quickListener.indexOf("api.abrir('tacs',pin)")<quickListener.indexOf("post(action,payload"),
-  'TACS deve tentar o desbloqueio local antes da validação remota');
+assert.match(quickListener,/if\(api&&typeof api\.abrir==='function'\)\{[\s\S]*Promise\.resolve\(api\.abrir\('tacs',pin\)\)\.then\(function\(saved\)\{[\s\S]*validarServidor\(saved\);[\s\S]*\}\)\.catch\(function\(\)\{validarServidor\(null\)\}\);[\s\S]*return;/,
+  'TACS deve concluir a tentativa de desbloqueio local antes de iniciar a validação remota');
 assert.match(quick,/quickKey:profile\.quickKey/);
 assert.match(quick,/api\.sincronizar\('tacs'/);
 
