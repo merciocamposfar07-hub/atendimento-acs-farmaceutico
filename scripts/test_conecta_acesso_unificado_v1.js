@@ -50,7 +50,7 @@ assert(!/sessionStorage\.clear\(|localStorage\.clear\(/.test(centralJs),'Logoff 
 assert(centralJs.includes('LOGIN_PREFETCH_ESTATICO_V2'),'Login deve aquecer recursos sem bloquear o carregamento inicial');
 assert(centralJs.includes("window.addEventListener('load'"),'Pré-carga deve começar depois do primeiro load ou por interação no PIN');
 assert(centralJs.includes("fetch(url+'?v=20260910-login-prefetch-v2'"),'Pré-carga deve usar fetch assíncrono/cache');
-assert(centralJs.includes("location.assign(url);"),'Painéis devem usar navegação direta quando exigido');
+assert(centralJs.includes("location.assign(url+sep+'from=central&_cb='+Date.now());"),'Agendas deve usar navegação direta quando exigido');
 assert(centralJs.includes("'painel-oficial-agendas-vagas.html'"),'Agendas e Vagas deve manter rota direta');
 assert(!centralJs.includes("link.rel='prefetch'"),'Não voltar ao prefetch que mantém o Safari carregando');
 
@@ -74,6 +74,7 @@ assert(central.includes('Plataforma institucional de saúde comunitária.'),'Rod
 assert(!/2026\/2027/.test(central),'Rodapé não pode ter 2026/2027');
 assert(central.includes('plataforma de gestão e acesso à saúde comunitária'),'Login deve explicar claramente o que é o Conecta');
 assert(central.includes('acessível pelo celular'),'Login deve explicitar o acesso pelo celular');
+assert(central.includes('Porque o Conecta Saúde Comunitária foi desenvolvido'),'Título institucional aprovado deve permanecer no acesso.');
 assert(central.includes('Porque o Conecta Saúde Comunitária foi desenvolvido'),'Título institucional do acesso deve usar a redação aprovada.');
 assert(central.includes('Tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.'),'Login deve fechar com a assinatura institucional');
 
