@@ -555,7 +555,8 @@ function tacsTerritorioV1SalvarArea_(p,acesso){
       throw new Error('Nome da área, unidade, TACS responsável e planilha de moradores são obrigatórios.');
     }
     var tacs=tacsTerritorioV1EncontrarTacs_(tacsId);
-    if(!tacs||!tacsTerritorioV1PerfilTem_(tacs.perfil,'TACS'))throw new Error('O responsável selecionado não possui perfil TACS.');
+    if(!tacs)throw new Error('O TACS responsável não foi encontrado. Cadastre-o primeiro.');
+    if(!tacsTerritorioV1PerfilTem_(tacs.perfil,'TACS'))throw new Error('O responsável selecionado não possui perfil TACS.');
     if(ativa&&!tacs.ativo)throw new Error('Ative o cadastro do TACS antes de ativar a área.');
     if(ativa&&!/^[0-9]{15}$/.test(tacs.cnsProfissional))throw new Error('O TACS responsável precisa ter CNS profissional válido.');
     var areas=tacsTerritorioV1LerAreas_();
