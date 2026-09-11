@@ -283,6 +283,7 @@ function renderContext(skipHealth){
   select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;
   renderModules();
   renderHealthSnapshot(selectedAreaId);
+  prefetchPublicHealth(selectedAreaId);
   if(!skipHealth)refreshHealth();
 }
 function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
@@ -547,7 +548,7 @@ function logout(){
 }
 /* PREPARACAO_CONTINUA_V1: a tela de PIN aparece primeiro; logo após o primeiro paint,
    o app aquece servidor, arquivos estáticos e leituras públicas sem bloquear Safari. */
-var staticPrefetchStarted=false,publicHealthPrefetchStarted=false;
+var staticPrefetchStarted=false,publicHealthPrefetched={};
 function prefetchStaticPanels(){
   if(staticPrefetchStarted)return;
   staticPrefetchStarted=true;
@@ -561,10 +562,9 @@ function prefetchStaticPanels(){
     try{fetch(url+'?v=20260911-performance-continuo-v1',{method:'GET',cache:'force-cache',credentials:'same-origin',priority:'low'}).catch(function(){})}catch(e){}
   });
 }
-function prefetchPublicHealth(){
-  if(publicHealthPrefetchStarted)return;publicHealthPrefetchStarted=true;
-  var areaId='';try{areaId=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}
-  if(!areaId)return;
+function prefetchPublicHealth(areaHint){
+  var areaId=normArea(areaHint||'');if(!areaId)try{areaId=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}
+  if(!areaId||publicHealthPrefetched[areaId])return;publicHealthPrefetched[areaId]=true;
   jsonp('portal_manutencao_status',{areaId:areaId},function(r){if(r&&r.ok===true){var label=r.ativa?'Em manutenção':'Disponível',state=r.ativa?'warn':'ok';saveHealthValue(areaId,'healthPortal',label,state)}});
   jsonp('painel_publico',{areaId:areaId},function(r){if(r&&r.ok===true)saveHealthValue(areaId,'healthAgenda','Agenda pública acessível','ok')});
   jsonp('publico_conteudo',{areaId:areaId},function(r){if(r&&r.ok===true)saveHealthValue(areaId,'healthContent','Conteúdo acessível','ok')});
