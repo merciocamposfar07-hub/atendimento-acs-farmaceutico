@@ -4,6 +4,7 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1',AREA_KEY='portalTacsCentralAreaV1',CONTEXT_CACHE_KEY='portalTacsCentralContextCacheV3';
 var SHARED_WARM_KEY='portalTacsAppsScriptWarmAtV1';
 var HEALTH_REFRESH_TTL=30000,healthRefreshInFlight=false,lastHealthRefreshAt=0,lastHealthRefreshArea='';
+var NOTIFICATION_CONFIRMED_CACHE_PREFIX='portalTacsNotificationConfirmedV1:',notificationRemoteSeq=0,notificationRemoteArea='',notificationLatestStarted={};
 var URL_PARAMS=new URLSearchParams(location.search),TACS_ONLY=String(URL_PARAMS.get('acesso')||'').toLowerCase()==='tacs';
 var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
 var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='';
@@ -87,29 +88,110 @@ function updatePendingBadge(result){
   badge.textContent=total>99?'99+':String(total);
   badge.setAttribute('aria-label',total===1?'1 pendência':total+' pendências');
 }
+
+/* NOTIFICACOES_VERDADE_CONFIRMADA_V1
+ * A Central nunca usa a leitura local/provisória como número oficial.
+ * Exibe imediatamente o último snapshot confirmado neste aparelho e,
+ * em paralelo, valida o estado atual no OneSignal.
+ */
+function notificationCacheKey(areaId){return NOTIFICATION_CONFIRMED_CACHE_PREFIX+normArea(areaId)}
+function notificationCount(value){var n=Number(value);return Number.isFinite(n)&&n>=0?Math.floor(n):null}
+function normalizeConfirmedNotification(result,areaId){
+  if(!result||result.ok!==true||result.oneSignalConsultado!==true)return null;
+  var c=result.contagens||{},ativos=notificationCount(c.ativos),inativos=notificationCount(c.inativos),reparo=notificationCount(c.reparo!=null?c.reparo:c.precisamReparo);
+  if(ativos===null||inativos===null||reparo===null)return null;
+  return {
+    ok:true,
+    areaId:normArea(result.areaId||areaId),
+    areaNome:text(result.areaNome),
+    oneSignalConsultado:true,
+    fonteSaude:'ONESIGNAL_ATUAL',
+    contagens:{ativos:ativos,inativos:inativos,reparo:reparo},
+    pendencias:result.pendencias||{},
+    confirmadoEm:Number(result.confirmadoEm||Date.now())
+  };
+}
+function readConfirmedNotification(areaId){
+  try{
+    var raw=localStorage.getItem(notificationCacheKey(areaId));if(!raw)return null;
+    var saved=JSON.parse(raw),confirmedAt=Number(saved&&saved.confirmadoEm||0),age=Date.now()-confirmedAt;
+    if(!saved||saved.oneSignalConsultado!==true||!confirmedAt||age<0||age>86400000)return null;
+    return normalizeConfirmedNotification(saved,areaId);
+  }catch(e){return null}
+}
+function saveConfirmedNotification(result,areaId){
+  var confirmed=normalizeConfirmedNotification(result,areaId);if(!confirmed)return null;
+  confirmed.confirmadoEm=Date.now();
+  try{localStorage.setItem(notificationCacheKey(areaId),JSON.stringify(confirmed))}catch(e){}
+  return confirmed;
+}
+function renderConfirmedNotification(result,areaId){
+  var confirmed=normalizeConfirmedNotification(result,areaId);if(!confirmed||normArea(areaId)!==selectedAreaId)return false;
+  var c=confirmed.contagens,label=c.ativos+' aptos • '+c.inativos+' inativos • '+c.reparo+' reparo';
+  markHealth('healthNotifications',label,(c.inativos||c.reparo)?'warn':'ok');
+  updatePendingBadge(confirmed);
+  return true;
+}
+function notificationPostIsolated(action,areaId,cb){
+  var seq=++notificationRemoteSeq,id=requestId(action),body=new URLSearchParams(),started=Date.now(),finished=false,payload=session({areaId:areaId});
+  if(action==='admin_notificacoes_saude_remota')notificationLatestStarted[normArea(areaId)]=seq;
+  Object.keys(payload).forEach(function(k){body.set(k,payload[k])});
+  body.set('action',action);body.set('requestId',id);
+  function finish(result){if(finished)return;finished=true;cb(result||{ok:false,message:'Resposta vazia.'},seq)}
+  function pollResult(){
+    if(finished)return;
+    jsonp('admin_notificacoes_saude_result',{requestId:id},function(r){
+      if(finished)return;
+      if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}
+      if(Date.now()-started>=22000){finish({ok:false,temporario:true,message:'A validação das notificações não terminou agora.'});return}
+      setTimeout(pollResult,650);
+    });
+  }
+  try{
+    fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});
+    setTimeout(pollResult,280);
+  }catch(e){finish({ok:false,message:'Não foi possível iniciar a validação das notificações.'})}
+}
+function refreshNotificationHealth(areaId,force){
+  areaId=normArea(areaId);
+  if(!permission('PUBLICACOES_GERENCIAR')){markHealth('healthNotifications','Sem permissão','warn');return}
+  var cached=readConfirmedNotification(areaId);
+  if(cached)renderConfirmedNotification(cached,areaId);else markHealth('healthNotifications','Confirmando…','');
+  if(notificationRemoteArea===areaId&&!force)return;
+  notificationRemoteArea=areaId;
+  if(!cached){
+    notificationPostIsolated('admin_notificacoes_saude_rapida',areaId,function(quick){
+      var confirmed=saveConfirmedNotification(quick,areaId);
+      if(confirmed)renderConfirmedNotification(confirmed,areaId);
+    });
+  }
+  notificationPostIsolated('admin_notificacoes_saude_remota',areaId,function(remote,seq){
+    if(seq!==notificationLatestStarted[areaId])return;
+    if(notificationRemoteArea===areaId)notificationRemoteArea='';
+    var confirmed=saveConfirmedNotification(remote,areaId);
+    if(confirmed){renderConfirmedNotification(confirmed,areaId);return}
+    if(areaId!==selectedAreaId)return;
+    var fallback=readConfirmedNotification(areaId);
+    if(fallback){renderConfirmedNotification(fallback,areaId);return}
+    markHealth('healthNotifications','Sem confirmação','warn');
+  });
+}
 function refreshHealth(force){
   if(!context)return;
   var areaId=selectedAreaId,now=Date.now();
-  if(healthRefreshInFlight)return;
-  if(!force&&lastHealthRefreshArea===areaId&&now-lastHealthRefreshAt<HEALTH_REFRESH_TTL)return;
+  if(healthRefreshInFlight&&!force)return;
+  if(!force&&lastHealthRefreshArea===areaId&&now-lastHealthRefreshAt<HEALTH_REFRESH_TTL){refreshNotificationHealth(areaId,false);return}
   healthRefreshInFlight=true;lastHealthRefreshArea=areaId;lastHealthRefreshAt=now;
-  ['healthPortal','healthResidents','healthAgenda','healthContent','healthNotifications'].forEach(function(id){markHealth(id,'Verificando…','')});
+  ['healthPortal','healthResidents','healthAgenda','healthContent'].forEach(function(id){markHealth(id,'Verificando…','')});
+  refreshNotificationHealth(areaId,Boolean(force));
   var area=selectedArea();markHealth('healthArea',(text(area&&area.areaNome)||areaId)+' • '+(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'unidade'),'ok');
   var pending=4;
   function done(){pending--;if(pending<=0)healthRefreshInFlight=false}
-  jsonp('portal_manutencao_status',{areaId:areaId},function(r){if(r&&r.ok===true)markHealth('healthPortal',r.ativa?'Em manutenção':'Disponível',r.ativa?'warn':'ok');else markHealth('healthPortal','Sem confirmação','warn');done()});
-  post('admin_moradores_status',session(),'admin_moradores_result',function(r){
-    markHealth('healthResidents',r&&r.ok===true?'Base acessível':'Falha na leitura',r&&r.ok===true?'ok':'err');
-    if(permission('PUBLICACOES_GERENCIAR')){
-      post('admin_notificacoes_saude_rapida',session(),'admin_notificacoes_saude_result',function(nr){
-        if(nr&&nr.ok===true){var c=nr.contagens||{};var label=Number(c.ativos||0)+' aptos • '+Number(c.inativos||0)+' inativos • '+Number(c.reparo||c.precisamReparo||0)+' reparo';markHealth('healthNotifications',label,(Number(c.inativos||0)||Number(c.reparo||c.precisamReparo||0))?'warn':'ok');updatePendingBadge(nr)}else markHealth('healthNotifications','Sem confirmação','warn');
-        done();
-      });
-    }else{markHealth('healthNotifications','Sem permissão','warn');done()}
-  });
-  jsonp('painel_publico',{areaId:areaId},function(r){markHealth('healthAgenda',r&&r.ok===true?'Agenda pública acessível':'Sem confirmação',r&&r.ok===true?'ok':'warn');done()});
-  jsonp('publico_conteudo',{areaId:areaId},function(r){markHealth('healthContent',r&&r.ok===true?'Conteúdo acessível':'Sem confirmação',r&&r.ok===true?'ok':'warn');done()});
-  el('healthUpdated').textContent='Atualização solicitada agora • área '+(text(area&&area.areaNome)||areaId);
+  jsonp('portal_manutencao_status',{areaId:areaId},function(r){if(normArea(areaId)!==selectedAreaId){done();return}if(r&&r.ok===true)markHealth('healthPortal',r.ativa?'Em manutenção':'Disponível',r.ativa?'warn':'ok');else markHealth('healthPortal','Sem confirmação','warn');done()});
+  post('admin_moradores_status',session({areaId:areaId}),'admin_moradores_result',function(r){if(normArea(areaId)===selectedAreaId)markHealth('healthResidents',r&&r.ok===true?'Base acessível':'Falha na leitura',r&&r.ok===true?'ok':'err');done()});
+  jsonp('painel_publico',{areaId:areaId},function(r){if(normArea(areaId)===selectedAreaId)markHealth('healthAgenda',r&&r.ok===true?'Agenda pública acessível':'Sem confirmação',r&&r.ok===true?'ok':'warn');done()});
+  jsonp('publico_conteudo',{areaId:areaId},function(r){if(normArea(areaId)===selectedAreaId)markHealth('healthContent',r&&r.ok===true?'Conteúdo acessível':'Sem confirmação',r&&r.ok===true?'ok':'warn');done()});
+  el('healthUpdated').textContent='Atualizando dados validados • área '+(text(area&&area.areaNome)||areaId);
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
 function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260823-recados-safari-render-v1';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?v='+revision;if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
