@@ -62,12 +62,16 @@ assert.doesNotMatch(quickFrontend,/\(p\.nome\?'<span>'/,
   'O acesso público TACS não pode exibir o nome do agente antes da autenticação.');
 assert.match(quickFrontend,/delete p\.nome/,
   'Perfis antigos devem remover o nome TACS já salvo localmente.');
-assert.match(quickFrontend,/pollWait=450/,
-  'Acesso rápido TACS deve iniciar a confirmação em cadência curta sem saturar o servidor.');
-assert.match(quickFrontend,/Math\.min\(700,pollWait\+80\)/,
-  'Acesso rápido TACS deve manter polling curto com backoff controlado.');
+assert.match(quickFrontend,/schedulePoll\(8000\)/,
+  'Acesso rápido TACS deve priorizar a resposta direta do POST e usar polling apenas como contingência tardia.');
+assert.match(quickFrontend,/frame\.setAttribute\('name',frameName\)/,
+  'TACS deve registrar o iframe de transporte antes do POST no Safari.');
+assert.match(quickFrontend,/form\.setAttribute\('target',frameName\)/,
+  'TACS deve registrar o target do formulário explicitamente no Safari.');
+assert.match(quickFrontend,/api\.abrir\('tacs',pin\)/,
+  'TACS deve tentar o desbloqueio local por PIN antes da validação remota.');
 assert.match(quickFrontend,/function aquecerPinTacs\(\)/,
-  'TACS deve aquecer o backend enquanto o PIN é digitado.');
+  'TACS deve manter aquecimento sob interação, sem bloquear a abertura inicial.');
 const recados=read('painel-oficial-recados-campanhas.html');
 const moradoresHtml=read('teste-v1/painel-moradores-v2.html');
 const moradoresJs=read('teste-v1/painel-moradores-transport-v2.js');
