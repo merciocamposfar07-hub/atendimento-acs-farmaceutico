@@ -54,10 +54,84 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   }catch(e){}
 }
 function jsonp(action,params,cb){var name='__central_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false,timer=setTimeout(function(){finish({ok:false,message:'Consulta indisponível no momento.'})},15000);function finish(r){if(done)return;done=true;clearTimeout(timer);try{delete window[name]}catch(e){window[name]=undefined}if(s.parentNode)s.remove();if(r&&r.ok===true)marcarConexaoRecente();cb(r)}window[name]=finish;s.onerror=function(){finish({ok:false,message:'Falha de rede.'})};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(name),'_='+Date.now()];Object.keys(params||{}).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(params[k]))});s.src=API+'?'+q.join('&');document.head.appendChild(s)}
-function finishPost(result){if(!active)return;var op=active;active=null;clearTimeout(op.timeout);clearTimeout(op.pollTimer);if(op.form&&op.form.parentNode)op.form.remove();if(op.frame&&op.frame.parentNode)setTimeout(function(){if(op.frame.parentNode)op.frame.remove()},150);var finalResult=result||{ok:false,message:'Resposta vazia.'};if(finalResult&&finalResult.ok===true)marcarConexaoRecente();op.cb(finalResult)}
-window.addEventListener('message',function(event){if(!active||!active.frame||event.source!==active.frame.contentWindow)return;var d=event.data;if(typeof d==='string'){try{d=JSON.parse(d)}catch(e){return}}if(!d||typeof d!=='object')return;var rid=text(d.requestId||(d.result&&d.result.requestId));if(rid&&rid!==active.id)return;var r=Object.prototype.hasOwnProperty.call(d,'result')?d.result:(Object.prototype.hasOwnProperty.call(d,'payload')?d.payload:(Object.prototype.hasOwnProperty.call(d,'ok')?d:null));if(r)finishPost(r)});
-function poll(){if(!active)return;var op=active;jsonp(op.resultAction,{requestId:op.id},function(r){if(!active||active.id!==op.id)return;if(r&&r.ok===true&&r.pendente===false){finishPost(r.result);return}op.pollWait=op.fastPin?Math.min(700,op.pollWait+80):900;op.pollTimer=setTimeout(poll,op.pollWait)})}
-function post(action,payload,resultAction,cb){if(active){cb({ok:false,message:'Aguarde a operação anterior.'});return}var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form'),frameName='centralFrame'+Date.now()+Math.floor(Math.random()*1000),fields={},fastPin=/^(?:admin_login|admin_territorio_login_pin)$/.test(action);Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});fields.action=action;fields.requestId=rid;frame.name=frameName;frame.src='about:blank';frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none';form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.style.display='none';Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=String(fields[k]==null?'':fields[k]);form.appendChild(i)});active={id:rid,frame:frame,form:form,resultAction:resultAction,cb:cb,fastPin:fastPin,pollWait:fastPin?450:650,pollTimer:null,timeout:setTimeout(function(){finishPost({ok:false,message:'O servidor demorou para confirmar a operação.'})},fastPin?15000:45000)};document.body.appendChild(frame);document.body.appendChild(form);var sent=false;function send(){if(sent||!active||active.id!==rid)return;sent=true;try{form.submit()}catch(e){finishPost({ok:false,message:'Não foi possível iniciar a comunicação.'});return}active.pollTimer=setTimeout(poll,active.pollWait)}frame.addEventListener('load',send,{once:true});setTimeout(send,60)}
+function finishPost(result){
+  if(!active)return;
+  var op=active;active=null;
+  clearTimeout(op.timeout);clearTimeout(op.pollTimer);clearTimeout(op.submitTimer);
+  if(op.form&&op.form.parentNode)op.form.remove();
+  if(op.frame&&op.frame.parentNode)setTimeout(function(){if(op.frame.parentNode)op.frame.remove()},180);
+  var finalResult=result||{ok:false,message:'Resposta vazia.'};
+  if(finalResult&&finalResult.ok===true)marcarConexaoRecente();
+  op.cb(finalResult);
+}
+window.addEventListener('message',function(event){
+  if(!active||!active.frame||event.source!==active.frame.contentWindow)return;
+  var d=event.data;if(typeof d==='string'){try{d=JSON.parse(d)}catch(e){return}}
+  if(!d||typeof d!=='object')return;
+  var rid=text(d.requestId||(d.result&&d.result.requestId));
+  if(rid&&rid!==active.id)return;
+  var r=Object.prototype.hasOwnProperty.call(d,'result')?d.result:(Object.prototype.hasOwnProperty.call(d,'payload')?d.payload:(Object.prototype.hasOwnProperty.call(d,'ok')?d:null));
+  if(r)finishPost(r);
+});
+function schedulePoll(delay){
+  if(!active)return;
+  clearTimeout(active.pollTimer);
+  active.pollTimer=setTimeout(poll,Math.max(0,Number(delay||active.nextWait||1600)));
+}
+function poll(){
+  if(!active)return;
+  var op=active;
+  jsonp(op.resultAction,{requestId:op.id},function(r){
+    if(!active||active.id!==op.id)return;
+    if(r&&r.ok===true&&r.pendente===false){finishPost(r.result);return}
+    if(Date.now()>=op.deadline){
+      finishPost({ok:false,temporario:true,message:'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'});
+      return;
+    }
+    op.nextWait=Math.min(2200,Math.max(1400,op.nextWait+200));
+    schedulePoll(op.nextWait);
+  });
+}
+function post(action,payload,resultAction,cb){
+  if(active){cb({ok:false,message:'Aguarde a operação anterior.'});return}
+  var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form');
+  var frameName='centralFrame'+Date.now()+'_'+Math.floor(Math.random()*1000),fields={};
+  Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});
+  fields.action=action;fields.requestId=rid;
+  var fastPin=/^(?:admin_login|admin_territorio_login_pin)$/.test(action);
+  var duration=fastPin?45000:60000;
+  frame.name=frameName;frame.setAttribute('name',frameName);frame.src='about:blank';frame.setAttribute('aria-hidden','true');
+  frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;visibility:hidden;pointer-events:none;z-index:-1';
+  form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.setAttribute('target',frameName);form.style.display='none';
+  Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=String(fields[k]==null?'':fields[k]);form.appendChild(i)});
+  active={
+    id:rid,action:action,frame:frame,form:form,resultAction:resultAction,cb:cb,
+    pollTimer:null,submitTimer:null,nextWait:1600,deadline:Date.now()+duration,
+    timeout:setTimeout(function(){
+      finishPost({ok:false,temporario:true,message:'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'});
+    },duration+500)
+  };
+  document.body.appendChild(frame);document.body.appendChild(form);
+  var sent=false;
+  function sendOnce(){
+    if(sent||!active||active.id!==rid)return;
+    sent=true;clearTimeout(active.submitTimer);active.submitTimer=null;
+    try{form.submit()}catch(e){finishPost({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});return}
+    /* LOGIN_TRANSPORTE_R8: a resposta direta por postMessage é a via principal.
+       O polling só entra como fallback tardio, evitando dezenas de chamadas paralelas ao Apps Script. */
+    schedulePoll(fastPin?8000:1800);
+  }
+  function sendAfterRegistration(){
+    if(typeof window.requestAnimationFrame==='function'){
+      window.requestAnimationFrame(function(){window.requestAnimationFrame(sendOnce)});
+      return;
+    }
+    setTimeout(sendOnce,60);
+  }
+  frame.addEventListener('load',sendAfterRegistration,{once:true});
+  sendAfterRegistration();
+  active.submitTimer=setTimeout(sendOnce,180);
+}
 function showLogin(kind){var admin=!TACS_ONLY&&kind==='admin';el('adminLogin').hidden=!admin;el('tacsLogin').hidden=admin;el('tabAdmin').hidden=TACS_ONLY;el('tabAdmin').classList.toggle('active',admin);el('tabTacs').classList.toggle('active',!admin);el('tabTacs').parentNode.style.gridTemplateColumns=TACS_ONLY?'1fr':'1fr 1fr';if(TACS_ONLY)setStatus('Entre como TACS da sua área.','')}
 function permission(name){if(mode==='admin')return true;var tacs=context&&Array.isArray(context.tacs)?context.tacs[0]:null;var list=tacs&&Array.isArray(tacs.permissoes)?tacs.permissoes:[];return list.indexOf(name)!==-1}
 function selectedArea(){var list=context&&Array.isArray(context.areas)?context.areas:[];for(var i=0;i<list.length;i++)if(normArea(list[i].areaId)===selectedAreaId)return list[i];return list[0]||null}
