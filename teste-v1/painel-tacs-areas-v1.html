@@ -2082,7 +2082,8 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
       <label class="check"><input id="areaCreateSource" type="checkbox"> Criar automaticamente uma nova planilha com schema 20/20</label>
       <label class="check"><input id="areaDocumentLookup" type="checkbox" checked> Permitir localização automática por CPF/CNS</label>
       <label class="check"><input id="areaActive" type="checkbox"> Ativar a área depois de validar TACS, CNS, unidade e fonte</label>
-      <div class="actions two"><button class="btn green" type="submit">Salvar e validar área</button><button id="cancelAreaButton" class="btn gray" type="button">Cancelar</button></div>
+      <div id="areaLinkState" class="status ok" role="status" hidden></div>
+      <div class="actions two"><button id="saveAreaButton" class="btn green" type="submit">Salvar e validar área</button><button id="cancelAreaButton" class="btn gray" type="button">Cancelar</button></div>
     </form>
     <div id="areasList" class="list"></div>
   </div>
