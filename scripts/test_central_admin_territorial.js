@@ -105,9 +105,11 @@ assert.doesNotMatch(js,/post\('admin_moradores_status'[\s\S]{0,1800}post\('admin
   'A saúde das notificações não pode ficar presa ao término da consulta de moradores.');
 assert.match(notificationHealthBackend,/contagens=\{ativos:0,inativos:0,reparo:0,semConfirmacao:0,total:0\}/,
   'O contrato do backend deve expor a quantidade apta em contagens.ativos.');
-assert.match(js,/Number\(c\.ativos\|\|0\)\+' aptos/,
-  'A Central deve ler os aptos do campo contagens.ativos retornado pelo backend.');
-assert.doesNotMatch(js,/Number\(c\.aptos\|\|0\)\+' aptos/,
+assert.match(js,/c\.ativos\+' aptos/,
+  'A Central deve exibir somente contagens.ativos já normalizado e confirmado.');
+assert.match(js,/notificationCount\(c\.ativos\)/,
+  'A Central deve validar numericamente contagens.ativos antes de exibir.');
+assert.doesNotMatch(js,/c\.aptos\+' aptos/,
   'A Central não pode usar contagens.aptos, pois esse campo não existe no backend.');
 assert.doesNotMatch(js,/subscriptionId\s*[:=]\s*['"][0-9a-f-]{20,}/i);
 console.log('Central Administrativa TACS: sessão territorial PIN-only, permissões, Saúde Geral e gestão multi-município ADMIN_GERAL validados.');
