@@ -228,14 +228,19 @@ function saudeNotificacoesV1SaudeAdmin_(contexto,acesso){
   var apiKey=saudeNotificacoesV1PrimeiraPropriedade_(props,TACS_SAUDE_NOTIFICACOES_V1.API_KEY_PROPERTIES);
   if(!apiKey)throw new Error('A consulta da audiência Push não está configurada no OneSignal.');
 
+  /* SAUDE_NOTIFICACOES_DEDUP_V2:
+     uma Subscription ID representa um único aparelho na contagem.
+     Linhas repetidas do registro técnico não podem inflar aptos/reparos. */
   var registros=[],registroPorId={},last=sheet.getLastRow();
   if(last>1){
     sheet.getRange(2,1,last-1,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_HEADERS.length).getDisplayValues().forEach(function(row){
       if(moradoresAdminV1NormalizarAreaId_(row[1])!==contexto.areaId)return;
       var reg=saudeNotificacoesV1RegistroDaLinha_(row);
-      registros.push(reg);
-      registroPorId[saudeNotificacoesV1Texto_(reg.subscriptionId).toLowerCase()]=reg;
+      var regId=saudeNotificacoesV1Texto_(reg.subscriptionId).toLowerCase();
+      if(!regId)return;
+      registroPorId[regId]=reg;
     });
+    registros=Object.keys(registroPorId).map(function(id){return registroPorId[id];});
   }
 
   var exportados=saudeNotificacoesV1ExportarSubscriptions_(appId,apiKey);
@@ -243,7 +248,7 @@ function saudeNotificacoesV1SaudeAdmin_(contexto,acesso){
   var remotoTodos={},remotoArea=[];
   exportados.forEach(function(sub){
     var id=saudeNotificacoesV1Texto_(sub.id).toLowerCase();
-    if(!id||!saudeNotificacoesV1EhPush_(sub.device_type))return;
+    if(!id||!saudeNotificacoesV1EhPush_(sub.device_type)||remotoTodos[id])return;
     remotoTodos[id]=true;
     if(saudeNotificacoesV1PertenceArea_(sub,contexto.areaId,quantidadeAreas))remotoArea.push(sub);
   });
@@ -305,6 +310,7 @@ function saudeNotificacoesV1SaudeAdmin_(contexto,acesso){
   return {
     ok:true,versao:TACS_SAUDE_NOTIFICACOES_V1.VERSAO,areaId:contexto.areaId,areaNome:contexto.areaNome,
     contagens:contagens,aparelhos:aparelhos,oneSignalConsultado:true,audienciaFonte:'ONESIGNAL_EXPORT',
+    confirmadoEmServidor:saudeNotificacoesV1Data_(new Date()),
     reparoArea:reparo||null,limitado:limitado,
     observacao:'Aptos e inativos são apurados na audiência atual do OneSignal. O nome aparece quando a inscrição já foi vinculada ao cadastro do morador. Reparos coletivos e individuais só marcam inscrições problemáticas; aparelhos saudáveis permanecem ativos.'
   };
