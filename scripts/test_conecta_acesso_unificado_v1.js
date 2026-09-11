@@ -74,6 +74,7 @@ assert(central.includes('Plataforma institucional de saúde comunitária.'),'Rod
 assert(!/2026\/2027/.test(central),'Rodapé não pode ter 2026/2027');
 assert(central.includes('plataforma de gestão e acesso à saúde comunitária'),'Login deve explicar claramente o que é o Conecta');
 assert(central.includes('acessível pelo celular'),'Login deve explicitar o acesso pelo celular');
+assert(central.includes('Porque o Conecta Saúde Comunitária foi desenvolvido'),'Título institucional do acesso deve usar a redação aprovada.');
 assert(central.includes('Tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.'),'Login deve fechar com a assinatura institucional');
 
 console.log('Conecta acesso unificado e correções pendentes: OK');
