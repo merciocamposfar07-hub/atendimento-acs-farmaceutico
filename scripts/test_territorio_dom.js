@@ -195,22 +195,6 @@ async function testTerritoryPanel() {
   assert.match(html, /<label for="tacsPhone">Celular<\/label>/);
   assert.match(html, /<label for="tacsUnit">Unidade de saúde<\/label>/);
   assert.match(html, /<label for="tacsPin">PIN de acesso aos painéis<\/label>/);
-  assert.match(html, /id="tacsProfile"/);
-  assert.match(html, /id="tacsActiveText"/);
-  assert.match(html, /id="accessStateControlV1"/);
-  assert.match(js, /function syncTacsActiveUi\(\)/);
-  assert.match(js, /function cpfText\(v\)/);
-  assert.match(js, /function cnsText\(v\)/);
-  assert.match(js, /function phoneText\(v\)/);
-  assert.match(js, /cpf=digits\(el\('tacsCpf'\)\.value\)/,
-    'A máscara do CPF não pode alterar os 11 dígitos enviados ao servidor.');
-  assert.match(js, /cns=digits\(el\('tacsCns'\)\.value\)/,
-    'A máscara do CNS não pode alterar os 15 dígitos enviados ao servidor.');
-  assert.match(js, /phone=digits\(el\('tacsPhone'\)\.value\)/,
-    'A máscara do celular não pode alterar os dígitos enviados ao servidor.');
-  for (const perfil of ['ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_MORADOR','TACS','ADMIN']) {
-    assert.match(html, new RegExp('value="'+perfil+'"'), 'Perfil ausente no formulário: '+perfil);
-  }
   assert.doesNotMatch(html, /<label for="tacsRegistration">/);
   assert.doesNotMatch(html, /<label for="tacsArea">/);
   assert.match(html, /id="tacsRegistration" type="hidden"/);
@@ -229,16 +213,8 @@ async function testTerritoryPanel() {
   assert.match(js, /dataNascimento:birth/);
   assert.match(js, /if\(operationMessage\)status\(operationMessage,'ok'\)/,
     'Uma gravação concluída deve substituir a mensagem de validação pela confirmação final.');
-  assert.match(html, /id="areaLinkState"/,
-    'O formulário deve reservar uma área de estado para o vínculo confirmado.');
-  assert.match(html, /id="saveAreaButton"/,
-    'O botão de área deve refletir o estado real do vínculo.');
-  assert.match(js, /✓ Área vinculada e ativa/,
-    'Área já confirmada deve abrir como vinculada e ativa, sem pedir novo salvamento.');
-  assert.match(js, /Salvar novo vínculo/,
-    'Alteração real de área, unidade, TACS ou fonte deve habilitar um novo vínculo.');
-  assert.match(js, /Vínculo confirmado:/,
-    'Salvar uma área deve exibir a confirmação real devolvida pelo servidor.');
+  assert.match(js, /loadData\('',text\(r\.message\|\|'Área salva e validada\.'\)\)/,
+    'Salvar uma área deve recarregar os dados e exibir a confirmação final.');
 
   const dom = new JSDOM(html, {
     url: 'https://portal.test/teste-v1/painel-tacs-areas-v1.html',
@@ -252,50 +228,19 @@ async function testTerritoryPanel() {
   assert.equal(window.document.getElementById('adminLogin').classList.contains('hidden'), false);
   window.document.getElementById('loginTacsTab').click();
   assert.equal(window.document.getElementById('tacsLogin').classList.contains('hidden'), false);
-  assert.equal(window.document.getElementById('tacsCnsLogin'), null, 'O painel TACS e áreas não deve pedir CNS para login');
-  assert.ok(window.document.getElementById('tacsPinLogin'), 'O painel TACS e áreas deve manter o PIN individual');
-  assert.ok(window.document.getElementById('tacsLoginButton'), 'O botão de login TACS deve permanecer disponível');
-  assert.match(js, /admin_territorio_login_pin/, 'O painel TACS e áreas deve usar a rota de login somente por PIN');
+  window.document.getElementById('tacsCnsLogin').value = '123';
+  window.document.getElementById('tacsPinLogin').value = '1234';
+  window.document.getElementById('tacsLoginButton').click();
+  assert.match(window.document.getElementById('loginStatus').textContent, /CNS profissional com 15 números/);
   window.document.getElementById('newTacsButton').click();
   assert.equal(window.document.getElementById('tacsForm').classList.contains('hidden'), false);
   assert.equal(window.document.getElementById('tacsPin').required, true);
-  const cpfInput=window.document.getElementById('tacsCpf');
-  cpfInput.value='06192630402';
-  cpfInput.dispatchEvent(new window.Event('input',{bubbles:true}));
-  assert.equal(cpfInput.value,'061.926.304-02');
-
-  const cnsInput=window.document.getElementById('tacsCns');
-  cnsInput.value='708209101334741';
-  cnsInput.dispatchEvent(new window.Event('input',{bubbles:true}));
-  assert.equal(cnsInput.value,'708 2091 0133 4741');
-
-  const phoneInput=window.document.getElementById('tacsPhone');
-  phoneInput.value='81989613130';
-  phoneInput.dispatchEvent(new window.Event('input',{bubbles:true}));
-  assert.equal(phoneInput.value,'(81) 98961-3130');
-
-  const birthInput=window.document.getElementById('tacsBirth');
-  birthInput.value='28121984';
-  birthInput.dispatchEvent(new window.Event('input',{bubbles:true}));
-  assert.equal(birthInput.value,'28/12/1984');
-  assert.equal(window.document.getElementById('tacsActiveText').textContent,'Inativo');
-  window.document.getElementById('tacsActive').checked=true;
-  window.document.getElementById('tacsActive').dispatchEvent(new window.Event('change',{bubbles:true}));
-  assert.equal(window.document.getElementById('tacsActiveText').textContent,'Ativo');
-  assert.equal(window.document.getElementById('tacsActive').closest('.access-switch').classList.contains('is-active'),true);
   for (const id of ['tacsName', 'tacsBirth', 'tacsCns', 'tacsCpf', 'tacsPhone', 'tacsEmail', 'tacsMicroarea', 'tacsUnit']) {
     assert.equal(window.document.getElementById(id).required, true, `Campo obrigatório ausente: ${id}`);
   }
   for (const id of ['permRead', 'permEdit', 'permStatus', 'permCsv', 'permPublish']) {
     assert.equal(window.document.getElementById(id).checked, true, `Permissão inicial ausente: ${id}`);
   }
-  window.document.getElementById('tacsProfile').value='ADMIN';
-  window.document.getElementById('tacsProfile').dispatchEvent(new window.Event('change',{bubbles:true}));
-  for (const id of ['tacsCns','tacsMicroarea','tacsUnit']) {
-    assert.equal(window.document.getElementById(id).required,false,'Administrador neutro não deve exigir campo territorial TACS: '+id);
-  }
-  assert.equal(window.document.getElementById('tacsPermissionsBlock').classList.contains('hidden'),true,
-    'Administrador neutro não deve receber permissões territoriais de TACS.');
 
   const esusCsv = [
     'e-SUS - Atenção Primária',

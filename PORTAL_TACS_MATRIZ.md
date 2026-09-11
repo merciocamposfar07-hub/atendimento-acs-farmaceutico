@@ -89,24 +89,3 @@ Os testes cobrem, sem gravar dados reais:
 O aplicativo web do Google Apps Script principal deve usar
 `apps-script-controle-integral.gs`. O aplicativo odontológico deve usar
 `google-apps-script/Code.gs`.
-
-## Regra mestre de acesso por PIN local
-
-Após o primeiro acesso válido, criação do PIN e reconhecimento do aparelho, a reentrada oficial é **PIN local primeiro**:
-
-`PIN → destrava o contexto/snapshot local cifrado do perfil → mostra imediatamente o último estado válido → servidor cria uma sessão nova e sincroniza em segundo plano.`
-
-Regras obrigatórias:
-- aplica-se separadamente a **Administrador, TACS e Morador**;
-- o PIN não é salvo em texto; ele deriva a chave criptográfica que abre somente o contexto/snapshot local;
-- os cofres são isolados por perfil e vinculados ao aparelho;
-- o TACS continua restrito à própria área e permissões confirmadas pelo servidor;
-- o Morador continua restrito ao próprio vínculo/área;
-- dados locais servem para abertura e leitura imediatas, incluindo identidade autenticada, área e último estado confirmado de Saúde Geral; nunca carregam token de sessão reutilizável e nunca autorizam uma gravação crítica;
-- vagas, reservas, alterações administrativas, permissões e demais operações críticas só são concluídas após confirmação atual do servidor;
-- falha transitória do Apps Script não deve fechar uma tela que possua último estado local válido nem substituir Saúde Geral confirmada por `Verificando`, `Falha na leitura` ou `Sem confirmação` quando houver snapshot válido;
-- recusa real, inativação ou revogação pelo servidor invalida o acesso local correspondente;
-- Logoff encerra/invalida a sessão remota sem bloquear a interface, preserva aparelho e cache/snapshot cifrado, e exige novamente o PIN;
-- assim que a tela de PIN estiver desenhada, o app inicia preparação assíncrona não bloqueante de backend, módulos e leituras públicas; isso nunca pode atrasar a exibição/teclado do PIN;
-- nenhuma correção de desempenho pode misturar cache entre áreas, perfis, municípios ou organizações;
-- o PIN é informado somente na porta de entrada da Central/TACS. Painéis administrativos internos reutilizam a sessão já criada e não podem solicitar novo PIN. Quando abertos a partir da Central sem sessão remota pronta, devem retornar/aguardar a Central em vez de mostrar login legado.

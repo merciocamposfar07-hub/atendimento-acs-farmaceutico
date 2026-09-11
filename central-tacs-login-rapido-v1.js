@@ -13,15 +13,7 @@ var tacsLogin=document.getElementById('tacsLogin');
 var status=document.getElementById('loginStatus');
 if(!loginBtn||!pinInput||!tacsLogin)return;
 
-var busy=false,pinWarmup=false;
-function aquecerPinTacs(){
-  if(pinWarmup)return;
-  var warm=window.PortalTacsAdminWarmup;
-  if(warm&&typeof warm.iniciar==='function'){
-    pinWarmup=true;
-    Promise.resolve(warm.iniciar()).catch(function(){}).finally(function(){pinWarmup=false});
-  }
-}
+var busy=false;
 function text(v){return String(v==null?'':v).trim()}
 function digits(v){return text(v).replace(/\D/g,'')}
 function setStatus(msg,type){if(!status)return;status.textContent=msg;status.className='status'+(type?' '+type:'')}
@@ -66,25 +58,15 @@ function getProfile(){
     if(!raw)return null;
     var p=JSON.parse(raw);
     if(!p||!/^qt1\.[A-Z0-9_-]{1,64}\.[a-f0-9]{64}$/.test(String(p.quickKey||'')))return null;
-    /* PRIVACIDADE_TACS_LOGIN_V1: nome profissional não permanece exposto no acesso público. */
-    if(Object.prototype.hasOwnProperty.call(p,'nome')){
-      delete p.nome;
-      try{localStorage.setItem(PROFILE_KEY,JSON.stringify(p))}catch(e){}
-    }
     return p;
   }catch(e){return null}
 }
 function saveProfile(r){
   if(!r||!r.quickKey)return;
-  /* PRIVACIDADE_TACS_LOGIN_V1: o acesso rápido guarda apenas o necessário para autenticação/território. */
-  var p={quickKey:String(r.quickKey),tacsId:text(r.tacsId),areaId:text(r.areaId),areaNome:text(r.areaNome)};
+  var p={quickKey:String(r.quickKey),tacsId:text(r.tacsId),nome:text(r.nome),areaId:text(r.areaId),areaNome:text(r.areaNome)};
   try{localStorage.setItem(PROFILE_KEY,JSON.stringify(p))}catch(e){}
 }
-function centralPinLocal(){var api=window.PortalTacsCentralPinLocalV2;return api&&typeof api.abrir==='function'?api:null}
-function clearProfile(){
-  try{localStorage.removeItem(PROFILE_KEY)}catch(e){}
-  try{var v=window.ConectaPinLocalV2;if(v&&typeof v.remover==='function')v.remover('tacs')}catch(e){}
-}
+function clearProfile(){try{localStorage.removeItem(PROFILE_KEY)}catch(e){}}
 
 var cnsLabel=document.querySelector('label[for="tacsCns"]');
 var remembered=document.createElement('div');
@@ -103,6 +85,7 @@ function renderLogin(){
     if(cnsInput)cnsInput.hidden=true;
     remembered.hidden=false;
     remembered.innerHTML='<strong>Acesso rápido neste aparelho</strong><br>'+
+      (p.nome?'<span>'+escapeHtml(p.nome)+'</span><br>':'')+
       (p.areaNome||p.areaId?'<span>'+escapeHtml(p.areaNome||p.areaId)+'</span><br>':'')+
       '<button id="tacsQuickForget" type="button" style="margin-top:10px;border:0;border-radius:12px;padding:9px 12px;background:#607985;color:#fff;font-weight:850">Usar outro TACS neste aparelho</button>';
     var forget=document.getElementById('tacsQuickForget');
@@ -136,18 +119,12 @@ function post(action,payload,cb){
   if(busy){cb({ok:false,message:'Aguarde a operação anterior.'});return}
   busy=true;
   var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form');
-  var frameName='quickFrame'+Date.now()+'_'+Math.floor(Math.random()*1000),finished=false,pollTimer=null,submitTimer=null,nextWait=1600,deadline=Date.now()+45000;
-  frame.name=frameName;frame.setAttribute('name',frameName);frame.src='about:blank';frame.setAttribute('aria-hidden','true');
-  frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;visibility:hidden;pointer-events:none;z-index:-1';
-  form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.setAttribute('target',frameName);form.style.display='none';
+  var frameName='quickFrame'+Date.now()+Math.floor(Math.random()*1000),finished=false,pollTimer=null;
+  frame.name=frameName;frame.src='about:blank';frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;visibility:hidden;pointer-events:none;z-index:-1';
+  form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.style.display='none';
   var fields={};Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});fields.action=action;fields.requestId=rid;
   Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=String(fields[k]==null?'':fields[k]);form.appendChild(i)});
-  function cleanup(){
-    window.removeEventListener('message',onMessage);
-    clearTimeout(timeout);clearTimeout(pollTimer);clearTimeout(submitTimer);
-    if(form.parentNode)form.remove();
-    if(frame.parentNode)setTimeout(function(){if(frame.parentNode)frame.remove()},180);
-  }
+  function cleanup(){window.removeEventListener('message',onMessage);clearTimeout(timeout);clearTimeout(pollTimer);if(form.parentNode)form.remove();if(frame.parentNode)setTimeout(function(){if(frame.parentNode)frame.remove()},120)}
   function finish(r){if(finished)return;finished=true;busy=false;cleanup();cb(r||{ok:false,message:'Resposta vazia.'})}
   function onMessage(event){
     if(event.source!==frame.contentWindow)return;
@@ -157,97 +134,51 @@ function post(action,payload,cb){
     var r=Object.prototype.hasOwnProperty.call(d,'result')?d.result:(Object.prototype.hasOwnProperty.call(d,'payload')?d.payload:(Object.prototype.hasOwnProperty.call(d,'ok')?d:null));
     if(r)finish(r);
   }
-  function schedulePoll(delay){clearTimeout(pollTimer);pollTimer=setTimeout(poll,Math.max(0,Number(delay||nextWait)))}
   function poll(){
     if(finished)return;
     jsonp('admin_territorio_result',{requestId:rid},function(r){
       if(finished)return;
       if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}
-      if(Date.now()>=deadline){finish({ok:false,temporario:true,message:'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'});return}
-      nextWait=Math.min(2200,Math.max(1400,nextWait+200));schedulePoll(nextWait);
+      pollTimer=setTimeout(poll,900);
     });
   }
   window.addEventListener('message',onMessage);
-  var timeout=setTimeout(function(){finish({ok:false,temporario:true,message:'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'})},45500);
+  var timeout=setTimeout(function(){finish({ok:false,message:'O servidor demorou para confirmar o acesso.'})},45000);
   document.body.appendChild(frame);document.body.appendChild(form);
-  var sent=false;
-  function sendOnce(){
-    if(sent||finished)return;sent=true;clearTimeout(submitTimer);
-    try{form.submit()}catch(e){finish({ok:false,message:'Não foi possível iniciar a comunicação.'});return}
-    /* PIN_TACS_TRANSPORTE_R8: postMessage primeiro; polling apenas após 8 s como contingência. */
-    schedulePoll(8000);
-  }
-  function sendAfterRegistration(){
-    if(typeof window.requestAnimationFrame==='function'){window.requestAnimationFrame(function(){window.requestAnimationFrame(sendOnce)});return}
-    setTimeout(sendOnce,60);
-  }
-  frame.addEventListener('load',sendAfterRegistration,{once:true});
-  sendAfterRegistration();submitTimer=setTimeout(sendOnce,180);
+  var sent=false;function send(){if(sent||finished)return;sent=true;try{form.submit()}catch(e){finish({ok:false,message:'Não foi possível iniciar a comunicação.'});return}pollTimer=setTimeout(poll,650)}
+  frame.addEventListener('load',send,{once:true});setTimeout(send,120);
 }
 
-function abrirSessao(token,pin,meta){
-  try{
-    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-    sessionStorage.setItem(TERRITORY_TOKEN_KEY,token);
-    sessionStorage.setItem(EXCLUSIVE_MODE_KEY,'tacs');
-    if(pin){sessionStorage.setItem('portalTacsPinLocalPendenteV2',pin);sessionStorage.setItem('portalTacsPinLocalPerfilV2','tacs')}
-  }catch(e){}
+function abrirSessao(token){
+  try{sessionStorage.removeItem(ADMIN_TOKEN_KEY);sessionStorage.setItem(TERRITORY_TOKEN_KEY,token);sessionStorage.setItem(EXCLUSIVE_MODE_KEY,'tacs')}catch(e){}
   enforceExclusiveTacsUi();
   setStatus('Acesso validado. Abrindo sua área…','ok');
-  var api=centralPinLocal();
-  if(api&&meta&&typeof api.sincronizar==='function'){
-    api.sincronizar('tacs',token,pin,text(meta.areaId),'Acesso TACS sincronizado.');
-    return;
-  }
-  setTimeout(function(){location.reload()},0);
+  setTimeout(function(){location.reload()},80);
 }
-function concluirPrimeiroAcesso(r,device,pin){
-  if(r.quickKey){saveProfile(r);abrirSessao(r.token,pin,r);return}
+function concluirPrimeiroAcesso(r,device){
+  if(r.quickKey){saveProfile(r);abrirSessao(r.token);return}
   setStatus('Acesso validado. Ativando entrada rápida por PIN neste aparelho…','warn');
   post('admin_territorio_criar_chave_rapida',{territorioToken:r.token,dispositivo:device},function(q){
     if(q&&q.ok===true&&q.quickKey)saveProfile(q);
-    abrirSessao(r.token,pin,Object.assign({},r,q||{}));
+    abrirSessao(r.token);
   });
 }
-
-pinInput.addEventListener('focus',aquecerPinTacs,{once:true});
-pinInput.addEventListener('input',aquecerPinTacs,{once:true});
 
 loginBtn.addEventListener('click',function(event){
   event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
   if(busy){setStatus('Aguarde a validação em andamento.','warn');return}
-  var pin=digits(pinInput.value),device=getDevice(),profile=getProfile(),api=centralPinLocal();
+  var pin=digits(pinInput.value),device=getDevice(),profile=getProfile();
   if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN individual de 4 a 8 números.','err');return}
   if(!device){setStatus('Este aparelho ainda não foi identificado. Atualize a página e tente novamente.','err');return}
   var action='admin_territorio_login_pin';
   var payload=profile?{quickKey:profile.quickKey,pin:pin,dispositivo:device}:{pin:pin,dispositivo:device};
-  function validarServidor(saved){
-    setStatus(saved?'Área liberada. Sincronizando em segundo plano…':'Validando seu PIN…',saved?'ok':'warn');
-    post(action,payload,function(r){
-      pinInput.value='';
-      if(!r||r.ok!==true||!r.token){
-        if(saved&&r&&r.temporario===true){setStatus('Área aberta com os dados locais. O servidor ainda está sincronizando.','warn');return}
-        if(saved&&api&&typeof api.bloquear==='function'){api.bloquear('tacs',text(r&&r.message)||'Acesso TACS recusado.');return}
-        setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
-      }
-      if(r.quickKey)saveProfile(r);
-      if(saved&&api&&typeof api.sincronizar==='function'){
-        api.sincronizar('tacs',r.token,pin,text(r.areaId),'Acesso TACS sincronizado.');
-        return;
-      }
-      if(profile||r.quickKey){abrirSessao(r.token,pin,r);return}
-      concluirPrimeiroAcesso(r,device,pin);
-    });
-  }
-  if(api&&typeof api.abrir==='function'){
-    setStatus('Liberando sua área…','warn');
-    Promise.resolve(api.abrir('tacs',pin)).then(function(saved){
-      if(saved&&typeof api.aplicar==='function')api.aplicar('tacs',saved);
-      validarServidor(saved);
-    }).catch(function(){validarServidor(null)});
-    return;
-  }
-  validarServidor(null);
+  setStatus('Validando seu PIN…','warn');
+  post(action,payload,function(r){
+    pinInput.value='';
+    if(!r||r.ok!==true||!r.token){setStatus(text(r&&r.message)||'Acesso recusado.','err');return}
+    if(profile){if(r.quickKey)saveProfile(r);abrirSessao(r.token);return}
+    concluirPrimeiroAcesso(r,device);
+  });
 },true);
 
 /* HOMOLOGACAO_ARQUITETURAL_V1 — navegação única, sessão reaproveitada e recuperação visual. */
@@ -263,14 +194,14 @@ function currentAreaId(){
 function stableModuleUrl(name){
   var area=encodeURIComponent(currentAreaId());
   var tacsOnly=hasTerritorySession()||queryTacsOnly();
-  var access=tacsOnly?'&acesso=tacs':'',origin='&from=central';
+  var access=tacsOnly?'&acesso=tacs':'';
   var revision='20260823-recados-safari-render-v1';
-  if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+origin+'&v='+revision;
-  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+origin+'&v='+revision;
-  if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+origin+'&v=20260823-agendas-safari-paint-v1';
-  if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+origin+'&v='+revision;
-  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v='+revision;
-  if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;
+  if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+'&v='+revision;
+  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v='+revision;
+  if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v=20260823-agendas-safari-paint-v1';
+  if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+'&v='+revision;
+  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?v='+revision;
+  if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?v='+revision;
   if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area+'&from=central';
   return '';
 }
@@ -333,12 +264,6 @@ function installInstitutionalNavigation(){
     grid.addEventListener('click',function(event){
       var btn=event.target&&event.target.closest?event.target.closest('.module'):null;
       if(!btn||btn.disabled||btn.hidden)return;
-      /* PIN_UNICO_CENTRAL_V1:
-         se o PIN local já abriu a Central mas a nova sessão remota ainda está
-         sendo criada, não navegue para um painel que poderia exibir seu login
-         legado. Deixe o controlador principal enfileirar este mesmo toque e
-         abrir o painel automaticamente assim que a sessão existir. */
-      if(!hasAnySession())return;
       var name=btn.dataset.module||'';
       var url=stableModuleUrl(name);if(!url)return;
       event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();

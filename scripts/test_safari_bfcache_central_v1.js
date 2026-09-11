@@ -3,87 +3,82 @@
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 
-const html = fs.readFileSync('central-administrativa-tacs.html', 'utf8');
-const central = fs.readFileSync('central-administrativa-tacs.js', 'utf8');
-const navigation = fs.readFileSync('central-suporte-moradores-v1.js', 'utf8');
-const back = fs.readFileSync('central-back-button-v1.js', 'utf8');
+const performance = fs.readFileSync('central-admin-performance-v1.js', 'utf8');
+const scrollStability = fs.readFileSync('central-admin-scroll-stability-v1.js', 'utf8');
 
-assert.doesNotMatch(
-  html,
-  /central-admin-performance-v1\.js/,
-  'A Central não deve reintroduzir o host antigo de iframes que travava o Safari/iPhone'
+assert.ok(
+  performance.includes("window.addEventListener('pageshow',beginPreload);"),
+  'A Central deve reagir ao pageshow para restauração/BFCache do Safari'
 );
-
-assert.match(
-  navigation,
-  /CENTRAL_IOS_PAINT_GUARD_V3/,
-  'A navegação direta protegida para iPhone/Safari deve permanecer ativa'
+assert.ok(
+  performance.includes("pool.id='portalTacsAdminPreloadPoolV1';") &&
+  performance.includes("viewer.insertBefore(pool,original)") &&
+  performance.includes("host.appendChild(frame);"),
+  'Os painéis devem ser criados uma vez em um host estável dentro do visualizador'
 );
-assert.match(
-  navigation,
-  /location\.assign\(url\)/,
-  'Os módulos da Central devem abrir por navegação direta'
+assert.ok(
+  performance.includes('var frame=frames[name];') &&
+  performance.includes('if(frame&&frame.dataset.tacsKey===sessionKey()&&frame.parentNode)return frame;'),
+  'ensureFrame deve reutilizar a instância da mesma sessão enquanto ela permanecer conectada'
 );
-assert.match(
-  navigation,
-  /if\(!hasAnySession\(\)\)return;/,
-  'A navegação direta não pode interromper a criação da sessão remota após o PIN local'
-);
-assert.match(
-  back,
-  /PIN_UNICO_CENTRAL_V1/,
-  'Painéis vindos da Central devem reutilizar a sessão autenticada'
-);
-assert.match(
-  back,
-  /#pin,label\[for="pin"\][\s\S]*#tacsPinPublicacoes/,
-  'Os formulários legados de autenticação devem permanecer ocultos dentro dos painéis'
-);
-assert.match(
-  navigation,
-  /addEventListener\('click',[\s\S]*?\},true\)/,
-  'A captura do toque deve impedir que o fluxo legado de iframe execute em paralelo'
-);
-assert.match(
-  navigation,
-  /#viewer,#portalTacsCentralRefreshV1,#portalTacsAdminPreloadPoolV1\{display:none!important\}/,
-  'Visualizador e preload legados devem permanecer fora da superfície de pintura'
-);
-assert.match(
-  navigation,
-  /frame\.src='about:blank'/,
-  'O iframe legado deve permanecer descarregado'
+assert.ok(
+  performance.includes('if(frame&&frame.parentNode)frame.remove();') && performance.includes('delete frames[name];'),
+  'Iframe só pode ser descartado quando deixa de pertencer à sessão atual'
 );
 
-assert.match(
-  central,
-  /AGENDA_DIRECT_NAV_V1/,
-  'Agendas e Vagas deve manter a correção de navegação direta'
+const showFrame = performance.match(/function showFrame\(name,title\)\{[\s\S]*?\n\}/)?.[0] || '';
+const closeViewer = performance.match(/function closeViewerFast\(options\)\{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(showFrame, 'showFrame deve continuar presente');
+assert.ok(closeViewer, 'closeViewerFast deve continuar presente');
+assert.ok(
+  !showFrame.includes('appendChild(frame)') && !showFrame.includes('appendChild(frames['),
+  'Abrir ou trocar painel não pode reparentear iframe já carregado'
 );
-assert.match(
-  central,
-  /if\(name==='agendas'\)\{location\.assign/,
-  'Agendas e Vagas não pode voltar a abrir pelo iframe oculto'
+assert.ok(
+  !closeViewer.includes('appendChild(frame)') && !closeViewer.includes('appendChild(frames['),
+  'Voltar à Central não pode reparentear iframe já carregado'
 );
-assert.match(
-  central,
-  /window\.addEventListener\('pageshow'/,
-  'A Central deve restaurar o estado ao voltar pelo BFCache do Safari'
+assert.ok(
+  showFrame.includes('frameHiddenStyle(frames[activeName])') && closeViewer.includes('frameHiddenStyle(frames[activeName])'),
+  'Troca e retorno devem apenas ocultar o iframe, preservando seu documento interno'
 );
-assert.match(
-  central,
-  /frame&&frame\.src!=='about:blank'\)frame\.src='about:blank'/,
-  'O retorno pelo BFCache deve manter o iframe legado descarregado'
+assert.ok(
+  !/function closeViewerFast[\s\S]*?src\s*=\s*['\"]about:blank['\"]/.test(performance),
+  'Voltar à Central não pode descarregar o iframe preservado'
 );
-assert.doesNotMatch(
-  central,
-  /window\.addEventListener\('pageshow'[\s\S]{0,500}location\.reload/,
+assert.ok(
+  !/window\.addEventListener\('pageshow'[\s\S]{0,220}location\.reload/.test(performance),
   'pageshow/BFCache não pode forçar reload da Central'
 );
-assert.doesNotMatch(
-  central,
-  /sessionStorage\.removeItem\(CONTEXT_CACHE_KEY\)/,
-  'Logoff não deve apagar o cache de contexto necessário ao retorno rápido'
+assert.ok(
+  performance.includes("if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();"),
+  'Instalação inicial deve continuar idempotente e separada da restauração por pageshow'
+);
+assert.ok(
+  performance.includes('function beginPreload()') && performance.includes('if(preloadStartedFor===currentKey)return;') && performance.includes('preloadStartedFor=currentKey;'),
+  'pageshow deve reutilizar a rotina de preload protegida pela chave da sessão'
 );
 
-console.log('Safari/iPhone: navegação direta, BFCache e preservação de cache validados.');
+assert.ok(
+  scrollStability.includes("frame.style.setProperty('left','-200vw');") &&
+  scrollStability.includes("frame.style.setProperty('visibility','hidden');") &&
+  scrollStability.includes("frame.style.setProperty('pointer-events','none');"),
+  'Iframe preservado e inativo deve ficar fisicamente fora do viewport e sem superfície de toque'
+);
+assert.ok(
+  scrollStability.includes("frame.style.setProperty('position','relative');") &&
+  scrollStability.includes("frame.style.setProperty('left','0');") &&
+  scrollStability.includes("frame.style.setProperty('visibility','visible');") &&
+  scrollStability.includes("frame.style.setProperty('pointer-events','auto');"),
+  'Somente o iframe ativo deve ocupar a superfície visível e tocável'
+);
+assert.ok(
+  scrollStability.includes("frame.style.setProperty('inset','auto');"),
+  'A estabilização deve neutralizar o inset:0 herdado do empilhamento absoluto antes de reposicionar as camadas'
+);
+assert.ok(
+  scrollStability.includes('HOTFIX_MORADORES_SAFARI_LAYER_V1'),
+  'A proteção específica contra recorte de compositor no Safari/iPhone deve permanecer identificável'
+);
+
+console.log('Safari/iPhone: BFCache preservado e iframes inativos isolados da superfície de pintura/toque.');

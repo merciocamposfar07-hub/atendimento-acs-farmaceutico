@@ -8,9 +8,8 @@
  * - enriquecer tanto a leitura rápida quanto a conferência remota da Saúde.
  */
 var TACS_ESTABILIZACAO_REPAROS_V9=Object.freeze({
-  VERSAO:'1.0.1',
-  TRAVADO_MINUTOS:3,
-  VALIDADE_HORAS:24
+  VERSAO:'1.0.0',
+  TRAVADO_MINUTOS:3
 });
 
 var reparosV9SaudeRapidaAnterior_=typeof notificacoesV8SaudeRapida_==='function'?notificacoesV8SaudeRapida_:null;
@@ -74,13 +73,8 @@ function reparosV9ClassificarCiclo_(aparelho,ciclo,agora){
     return {fase:'DETECTADO_RECENTE',travado:false,precisaMorador:false,reexecutavel:false,
       titulo:'Reparo detectado no aparelho',mensagem:'O aparelho acabou de detectar o reparo. Aguarde a tentativa automática.'};
   }
-  var idadeSolicitacao=reparosV9IdadeMinutos_(ciclo.solicitadoEm,agora);
-  if(idadeSolicitacao>=TACS_ESTABILIZACAO_REPAROS_V9.VALIDADE_HORAS*60){
-    return {fase:'AGUARDANDO_ACESSO_AUTO',travado:false,precisaMorador:false,reexecutavel:false,
-      titulo:'Aguardando primeiro acesso do aparelho',mensagem:'A janela de 24 horas terminou. Como existe vínculo com o aparelho, o reparo será executado automaticamente no primeiro acesso ao Portal.'};
-  }
   return {fase:'AGUARDANDO_PORTAL',travado:false,precisaMorador:true,reexecutavel:false,
-    titulo:'Aguardando acesso do morador',mensagem:'O reparo está disponível por até 24 horas. Ao abrir o Portal, o aparelho tenta concluir a atualização automaticamente.'};
+    titulo:'Aguardando morador abrir o Portal',mensagem:'Este reparo ainda não chegou ao aparelho. O servidor não consegue executar a permissão do navegador remotamente; assim que o aparelho abrir o Portal TACS, o reparo será iniciado automaticamente.'};
 }
 
 function reparosV9Feedback_(ciclo){

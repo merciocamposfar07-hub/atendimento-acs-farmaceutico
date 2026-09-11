@@ -71,8 +71,8 @@ async function testDentalCacheFirst() {
   assert.equal(document.querySelectorAll('.sheet-dental-card').length, 1, 'Cache antigo, porém válido para visualização, deve evitar tela vazia');
   const staleCommon = document.querySelector('.sheet-dental-choice.common');
   assert.ok(staleCommon, 'Cache antigo ainda deve mostrar a agenda');
-  assert.equal(staleCommon.disabled, false, 'Cache acima de 90s pode manter a vaga positiva tocável; a confirmação atual continua obrigatória no servidor antes do envio');
-  assert.match(document.getElementById('dentalStatus').textContent,/Última agenda|servidor confirma|Atualizando/);
+  assert.equal(staleCommon.disabled, true, 'Cache acima de 90s não pode permitir reserva até confirmação atual');
+  assert.match(document.getElementById('dentalStatus').textContent,/Última agenda|Atualizando/);
   dom.window.close();
 
   dom = await buildDentalDom(5 * 1000, 'SITIO_MATIAS');
@@ -113,9 +113,7 @@ function testStaticSafety() {
 
   const dental = read('portal-odontologia-segunda-sexta.js');
   assert.ok(dental.includes("CACHE_PREFIX = 'portalTacsDentalAgendaV103FullWeek:'"), 'Snapshot odontológico deve continuar disponível');
-  assert.ok(dental.includes('CACHE_FRESH_MS = 90 * 1000'), 'Snapshot acima de 90s deve continuar sendo revalidado em segundo plano sem contradizer a vaga positiva exibida');
-  assert.ok(dental.includes('CACHE_ODONTO_SEM_BLOQUEIO_VISUAL_V1'), 'Vaga positiva exibida em cache não pode ficar visualmente bloqueada');
-  assert.ok(dental.includes('selection.confirmed &&'), 'Mesmo com toque liberado, o envio deve continuar bloqueado até confirmação real do servidor');
+  assert.ok(dental.includes('CACHE_FRESH_MS = 90 * 1000'), 'Snapshot acima de 90s deve exigir revalidação antes da escolha');
   assert.ok(dental.includes('CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000'), 'Snapshot visual deve ter validade limitada');
   assert.ok(dental.includes("var REGULAR = 'Solicitar atendimento odontológico (dentista)'"));
   assert.ok(dental.includes("params.set('action', 'reservar_get')"), 'Reserva real deve permanecer via backend JSONP atual');

@@ -57,10 +57,7 @@ registrar('dados', 'Proteção contra profissional duplicado permanece', contem(
 registrar('dados', 'Teste territorial e isolamento multiárea continuam obrigatórios', contem(comandoTestes, 'test_public_content_multiarea.js') && contem(comandoTestes, 'test_publicacoes_territoriais.js'));
 
 registrar('desempenho', 'Agenda odontológica abre por snapshot territorial completo', contem(dental, 'portalTacsDentalAgendaV103FullWeek:'));
-registrar('desempenho', 'Snapshot odontológico antigo mantém toque, mas o envio exige confirmação real do servidor',
-  contem(perfTest, 'Cache acima de 90s pode manter a vaga positiva tocável') &&
-  contem(dental, 'CACHE_ODONTO_SEM_BLOQUEIO_VISUAL_V1') &&
-  contem(dental, 'selection.confirmed &&'));
+registrar('desempenho', 'Snapshot odontológico antigo não autoriza reserva', contem(perfTest, 'Cache acima de 90s não pode permitir reserva'));
 registrar('desempenho', 'Painel de agendas abre última leitura imediatamente', contem(agenda, 'function aplicarSnapshotSeDisponivel()') && contem(agenda, 'aplicarDados(item.data,false)') && contem(agenda, 'Dados exibidos da última leitura. Atualizando dados em segundo plano…'));
 registrar('desempenho', 'Pré-aquecimento reaproveita conexão recente por 3 minutos', contem(warmup, 'var WARM_MS=3*60*1000;'));
 registrar('desempenho', 'Timeout de pré-aquecimento limitado a 6 segundos', contem(warmup, 'var TIMEOUT_MS=6000;'));
@@ -86,7 +83,7 @@ registrar('usabilidade', 'Campo de validade possui correção de overflow Safari
 registrar('usabilidade', 'Controle de contraste do painel de recados permanece oculto', contem(recados, '.preferenciaVisual,#alternarContraste{display:none!important'));
 registrar('usabilidade', 'Padrão visual petróleo permanece definido no painel de recados', contem(recados, 'tema-petroleo') && contem(recados, 'linear-gradient(145deg,#073a55,#0b5878)'));
 registrar('usabilidade', 'Portal público mantém atualização sem recarga forçada', /portal-auto-update\.js\?v=[^\"']+/.test(index));
-registrar('usabilidade', 'Mensagens administrativas permanecem em português claro', contem(agenda, 'Conferindo a sessão da Central…') && contem(recados, 'A conexão já está sendo preparada em segundo plano.'));
+registrar('usabilidade', 'Mensagens administrativas permanecem em português claro', contem(agenda, 'Digite o PIN para carregar as agendas') && contem(recados, 'Digite o PIN administrativo ou entre como TACS da área.'));
 
 let geral = 0;
 let falhas = [];

@@ -10,7 +10,6 @@ const playwright=read('playwright.homologacao.config.js');
 const central=read('central-administrativa-tacs.html');
 const index=read('index.html');
 const autoUpdate=read('portal-auto-update.js');
-const dental=read('portal-odontologia-segunda-sexta.js');
 
 const requiredStatic=[
   'test_dom_flows.js',
@@ -50,8 +49,5 @@ assert.ok(index.includes('agenda-enfermeira.js'),'Bloco 15: controlador de ativa
 assert.ok(index.includes('portal-auto-update.js'),'Bloco 15: carregador complementar do Portal deve permanecer ativo');
 assert.ok(autoUpdate.includes('portal-identificacao-familia-v1.js'),'Bloco 15: seleção segura de integrante deve permanecer na cadeia real de carregamento');
 assert.ok(index.includes('portal-odontologia-segunda-sexta.js'),'Bloco 15: confirmação de vaga deve permanecer carregada');
-assert.ok(dental.includes('CACHE_ODONTO_SEM_BLOQUEIO_VISUAL_V1'),'Bloco 15: cache odontológico não pode exibir vaga disponível e bloquear o toque ao mesmo tempo');
-assert.ok(!dental.includes('staleCacheBlocked'),'Bloco 15: cache antigo não pode desabilitar vaga positiva antes da confirmação do servidor');
-assert.ok(dental.includes('persistInBackground(item)')&&dental.includes('selection.confirmed'),'Bloco 15: vaga tocada deve continuar dependendo da confirmação real do servidor antes do envio');
 
 console.log('INTERFACE_ACTION_GATE_V1_OK: cartões, retorno, envio, Push, família e reserva permanecem cobertos por testes funcionais e matriz real.');

@@ -10,8 +10,8 @@ A Central deve funcionar como **um aplicativo persistente**, não como uma cole�
 ## Arquitetura de desempenho obrigatória
 1. **App shell persistente**: cabeçalho, navegação, sessão e contexto da área permanecem carregados.
 2. **Roteamento interno**: abrir painéis dentro da mesma aplicação, sem recarregar a página inteira.
-3. **Pré-carregamento inteligente**: assim que a tela de PIN estiver visível, preparar em segundo plano os módulos mais prováveis e aquecer o backend sem bloquear a interface.
-4. **Cache local de leitura**: exibir imediatamente o último estado válido — identidade, área e Saúde Geral incluídas — e atualizar silenciosamente em segundo plano.
+3. **Pré-carregamento inteligente**: após a Central estabilizar, preparar em segundo plano os módulos mais prováveis.
+4. **Cache local de leitura**: exibir imediatamente o último estado válido e atualizar silenciosamente em segundo plano.
 5. **Stale-while-revalidate**: dado conhecido aparece primeiro; atualização real ocorre sem bloquear a interface.
 6. **Deduplicação de requisições**: um toque não pode disparar várias chamadas iguais ao backend.
 7. **Cancelamento de chamadas antigas**: respostas atrasadas não podem sobrescrever estado mais novo.
@@ -55,25 +55,3 @@ Um painel só substitui o antigo depois de passar por:
 
 ## Primeiro bloco autorizado para planejamento técnico
 Começar pelo módulo **Agendas e vagas**, sem alterar ainda os outros painéis. O primeiro objetivo funcional é garantir que uma edição administrativa apareça corretamente na Central e no Portal, sem depender de recarregamentos manuais ou cache antigo.
-
-## Acesso canônico antes dos painéis
-
-A camada de desempenho dos painéis começa no próprio acesso. Depois da criação do PIN e do reconhecimento do aparelho:
-
-1. o PIN destrava localmente o último contexto/snapshot cifrado e previamente confirmado do perfil;
-2. o shell e o último contexto válido aparecem sem esperar o Apps Script;
-3. módulos já visitados reutilizam memória/snapshot local;
-4. a sincronização remota ocorre em paralelo;
-5. dados alterados são substituídos somente quando a versão/consulta remota confirma mudança;
-6. operações críticas nunca são confirmadas somente por snapshot e aguardam uma sessão remota nova;
-7. o PIN é digitado uma única vez na entrada do perfil; os painéis administrativos reutilizam a sessão e jamais apresentam um segundo formulário de PIN dentro do fluxo vindo da Central.
-
-Metas de homologação:
-- resposta visual ao toque: abaixo de 100 ms;
-- desbloqueio local do PIN: alvo de 100–300 ms no aparelho;
-- identificação e último estado de Saúde Geral: apresentados junto com a abertura local, sem nova espera remota;
-- nenhum cartão confirmado deve exigir toque manual em `Atualizar` para reaparecer;
-- retorno a painel já carregado: alvo de 100–200 ms;
-- latência remota não pode transformar a aplicação em tela parada.
-
-Esses números são metas de teste, não podem ser declarados atingidos sem medição real.

@@ -257,14 +257,10 @@ async function testWarmupRoute() {
   context.dispatchEvent = () => true;
 
   vm.runInContext(source, context);
-  const initial = await context.PortalTacsAdminWarmup.ready;
+  const result = await context.PortalTacsAdminWarmup.ready;
 
-  assert.equal(initial.ok, true, 'A tela de PIN deve ficar pronta localmente sem esperar admin_status.');
-  assert.equal(requests.length, 0, 'A tela de PIN não pode consultar o Apps Script durante o carregamento inicial.');
-
-  const result = await context.PortalTacsAdminWarmup.iniciar(true);
-  assert.equal(result.ok, true, 'O aquecimento sob interação não reconheceu admin_status como disponível.');
-  assert.equal(requests.length, 1, 'O aquecimento sob interação deve fazer uma única consulta.');
+  assert.equal(result.ok, true, 'O pré-aquecimento não reconheceu admin_status como disponível.');
+  assert.equal(requests.length, 1, 'O pré-aquecimento duplicou a consulta após resposta válida.');
   assert.match(requests[0], /AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/);
   assert.match(requests[0], /[?&]action=admin_status(?:&|$)/);
   assert.doesNotMatch(requests[0], /painel_publico|admin_result/);

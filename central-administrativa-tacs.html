@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#073a55">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/central-admin-saude.svg?v=2b2fcd305812">
-<link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=2b2fcd305812">
-<link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-central-admin.webmanifest?v=2b2fcd305812">
+<link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/central-admin-saude.svg?v=3cc161456ca4">
+<link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=3cc161456ca4">
+<link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-central-admin.webmanifest?v=3cc161456ca4">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
-<title>Conecta Saúde Comunitária</title>
+<title>Central Administrativa TACS</title>
 <style>
 :root{--p:#073a55;--p2:#0b5878;--green:#148a46;--greenbg:#e8f7ee;--bg:#dfeef3;--text:#102d40;--muted:#536b78;--border:#8fb4c2;--white:#fff;--warn:#805300;--warnbg:#fff6dd;--err:#a52d2d;--errbg:#fff0f0;--blue:#69c7e7}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!important}
@@ -238,7 +238,7 @@ label{color:var(--tacs-app-text)!important;font-weight:800!important}
   pointer-events:none;
 }
 .csc-welcome-copy{position:relative;z-index:1}
-.csc-welcome-copy small{display:block;color:#f7fcff!important;font-size:1rem!important;font-weight:950!important;letter-spacing:.015em!important;opacity:1!important;text-shadow:0 1px 1px rgba(0,0,0,.18)}
+.csc-welcome-copy small{display:block;color:var(--tacs-app-muted)!important}
 .csc-welcome-copy h1{margin:6px 0 8px!important;font-size:1.78rem!important;line-height:1.06!important;letter-spacing:-.04em!important}
 .csc-welcome-copy p{margin:0 0 14px!important;color:var(--tacs-app-muted)!important;font-size:.92rem!important}
 .csc-central #identityPanel>.avatar,
@@ -264,26 +264,6 @@ label{color:var(--tacs-app-text)!important;font-weight:800!important}
 }
 .csc-central #modulesPanel>h2{margin:0 2px 5px!important}
 .csc-central #modulesPanel>p{margin:0 2px 13px!important}
-.csc-central #modulesPanel .csc-logout-actions{
-  display:grid!important;
-  margin-top:18px!important;
-}
-.csc-central #modulesPanel #logout.csc-logout-button{
-  display:block!important;
-  width:100%!important;
-  min-height:54px!important;
-  margin:0!important;
-  border:1px solid #9f5360!important;
-  border-radius:17px!important;
-  background:#7e2e38!important;
-  color:#fff!important;
-  font-weight:900!important;
-  box-shadow:var(--tacs-app-shadow-soft)!important;
-  touch-action:manipulation!important;
-  -webkit-tap-highlight-color:transparent!important;
-  user-select:none!important;
-  -webkit-user-select:none!important;
-}
 
 /* Indicadores e cards internos. */
 .resumo,.summary,.stats,.metrics,.health-grid,.saude-resumo{gap:10px!important}
@@ -1257,9 +1237,9 @@ html body .sinal.ativo,
 html body .pill:not(.off),
 html body .health-card.ok>span{color:#83efa9!important}
 html body .sinal.inativo,
-html body .pill.off{color:#c0d3df!important}
-html body .health-card.warn>span{color:#ffd27a!important}
-html body .health-card.err>span{color:#ffaaa5!important}
+html body .pill.off,
+html body .health-card.warn>span,
+html body .health-card.err>span{color:#c0d3df!important}
 
 /* Ícones dos módulos — maiores, nítidos e com contraste consistente. */
 .csc-central .module .icon,
@@ -1663,7 +1643,7 @@ body.csc-brand-enhanced .loading{
 .csc-profile-intro{margin:0;color:#d8e6ee!important}
 .csc-profile-list{display:grid;gap:10px}
 .csc-profile-card{width:100%;display:grid!important;gap:5px!important;text-align:left!important;padding:15px!important;background:#102d46!important;color:#fff!important;border:1px solid #365f78!important;border-radius:18px!important;box-shadow:none!important}
-.csc-profile-card strong{color:#fff!important;font-size:1.04rem!important;font-weight:950!important;opacity:1!important}
+.csc-profile-card strong{color:#fff!important;font-size:1rem!important}
 .csc-profile-card span{color:#d8e6ee!important;font-size:.88rem!important}
 .csc-profile-tacs{min-height:72px!important}
 .csc-profile-empty{padding:15px;background:#102d46;border:1px solid #365f78;border-radius:18px;color:#d8e6ee}
@@ -1795,11 +1775,6 @@ html body .csc-profile-admin-toggle{
 }
 html body .csc-profile-admin-toggle[aria-expanded="true"]{border-color:#83efa9!important}
 html body .csc-profile-admin-names[hidden]{display:none!important}
-
-/* LOGIN_PROPOSITO_INSTITUCIONAL_V1 */
-.csc-login-purpose{margin-top:16px;padding:15px 16px;background:#102d46;border:1px solid #365f78;border-radius:18px;color:#d8e6ee}
-.csc-login-purpose strong{display:block;margin-bottom:6px;color:#f7fcff;font-size:.92rem;font-weight:900}
-.csc-login-purpose p{margin:0;color:#c1d3de;font-size:.82rem;line-height:1.42;font-weight:620}.csc-login-purpose small{display:block;margin-top:10px;padding-top:10px;border-top:1px solid #365f78;color:#83efa9!important;font-size:.78rem;line-height:1.4;font-weight:850}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
@@ -1914,7 +1889,7 @@ function markAuthControls(){
     if(wrap)wrap.classList.add('csc-auth-control','csc-admin-only-auth');
   });
   ['accessActions','pinHelp','loginAdminTab','loginTacsTab','adminLogin','tacsLogin'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-auth-control','csc-admin-only-auth')});
-  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs'].forEach(function(id){var n=document.getElementById(id);if(!n)return;if(CENTRAL&&id==='logout'){n.classList.remove('csc-admin-only-auth','csc-auth-control');return}n.classList.add('csc-admin-only-auth')});
+  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-admin-only-auth')});
   var accessTitle=document.getElementById('accessTitle');if(accessTitle)accessTitle.classList.add('csc-admin-only-auth');
 
   /* No painel de moradores, o perfil já foi definido pelo PIN da Central.
@@ -1953,12 +1928,7 @@ function centralAreaId(){
   try{return text(localStorage.getItem('portalTacsCentralAreaV1')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA'}catch(e){return'JAPARANDUBA'}
 }
 function centralContextFromCache(){
-  try{
-    var territorial=Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''));
-    var key='portalTacsCentralContextCacheV3:'+(territorial?'tacs':'admin');
-    var raw=sessionStorage.getItem(key)||sessionStorage.getItem('portalTacsCentralContextCacheV2');
-    if(!raw)return null;var saved=JSON.parse(raw);return saved&&saved.context?saved.context:null
-  }catch(e){return null}
+  try{var raw=sessionStorage.getItem('portalTacsCentralContextCacheV2');if(!raw)return null;var saved=JSON.parse(raw);return saved&&saved.context?saved.context:null}catch(e){return null}
 }
 function showCentralHome(){
   var page=document.getElementById('cscProfilePage');if(page)page.hidden=true;
@@ -2006,7 +1976,7 @@ function buildCentralWelcome(){
     var copy=document.createElement('div');
     copy.id='cscCentralWelcomeCopy';
     copy.className='csc-welcome-copy';
-    copy.innerHTML='<small>Perfil autenticado</small><h1>Gestão da área</h1><p>Carregando sua identificação…</p>';
+    copy.innerHTML='<small>Olá, administrador</small><h1>Gestão da área</h1><p>Acesse os serviços, acompanhe a situação e administre sua unidade.</p>';
     identity.insertBefore(copy,identity.firstChild);
   }
   if(document.getElementById('cscInstitutionalDock'))return;
@@ -2022,10 +1992,7 @@ function buildCentralWelcome(){
   ];
   items.forEach(function(item,i){
     var b=document.createElement('button');b.type='button';b.className='csc-navitem'+(i===0?' active':'');
-    if(item[1]==='Pendências'){
-      b.id='cscPendingNav';b.style.position='relative';
-      b.innerHTML='<i>'+item[0]+'</i><span>'+item[1]+'</span><em id="cscPendingBadge" hidden aria-label="Nenhuma pendência" style="position:absolute;top:4px;left:calc(50% + 7px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#d62f2f;color:#fff;font:900 11px/18px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px #071827">0</em>';
-    }else b.innerHTML='<i>'+item[0]+'</i><span>'+item[1]+'</span>';
+    b.innerHTML='<i>'+item[0]+'</i><span>'+item[1]+'</span>';
     b.addEventListener('click',function(){vibrate();dock.querySelectorAll('.csc-navitem').forEach(function(x){x.classList.toggle('active',x===b)});item[2]()});
     dock.appendChild(b);
   });
@@ -2037,7 +2004,7 @@ function buildPlatformFooter(){
   var footer=document.createElement('footer');
   footer.id='cscPlatformFooter';
   footer.className='csc-platform-footer';
-  footer.innerHTML='<strong>Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</strong><small>Plataforma institucional de saúde comunitária.</small>';
+  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong><small>Conecta Saúde Comunitária — Plataforma</small>';
   var old=document.querySelector('body>footer:not(#cscPlatformFooter)');
   if(old)old.hidden=true;
   document.body.appendChild(footer);
@@ -2094,13 +2061,9 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 <div id="adminLogin"><label for="adminPin">PIN administrativo</label><input id="adminPin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="actions"><button id="loginAdmin" class="btn" type="button">Entrar na Central</button></div></div>
 <div id="tacsLogin" hidden><label for="tacsPin">PIN individual</label><input id="tacsPin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="actions"><button id="loginTacs" class="btn" type="button">Entrar na minha área</button></div></div>
 <div id="loginStatus" class="status">Entre como administrador ou TACS da sua área.</div>
-<div class="csc-login-purpose" aria-label="Propósito do Conecta Saúde Comunitária">
-<strong>Porque o Conecta Saúde Comunitária foi desenvolvido</strong>
-<p>O Conecta Saúde Comunitária é uma plataforma de gestão e acesso à saúde comunitária desenvolvida para aproximar a população dos serviços disponíveis em seu território. Criado para reduzir deslocamentos desnecessários, filas presenciais e incertezas no acesso, reúne agendas, vagas, solicitações, serviços e informações da comunidade em um único ambiente digital, acessível pelo celular.</p>
-</div>
 </section>
 <section id="identityPanel" class="panel identity" hidden>
-<div class="avatar"><img id="profileIcon" src="/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=2b2fcd305812" alt=""></div><div><small id="profileLabel">TACS</small><strong id="professionalName">—</strong><p><span id="areaName">—</span> • <span id="unitName">—</span></p><div id="adminAreaBox" class="area-admin" hidden><label for="adminArea">Área de trabalho</label><select id="adminArea" class="field"></select></div></div>
+<div class="avatar"><img id="profileIcon" src="/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=3cc161456ca4" alt=""></div><div><small id="profileLabel">TACS</small><strong id="professionalName">—</strong><p><span id="areaName">—</span> • <span id="unitName">—</span></p><div id="adminAreaBox" class="area-admin" hidden><label for="adminArea">Área de trabalho</label><select id="adminArea" class="field"></select></div></div>
 </section>
 <section id="healthPanel" class="panel" hidden>
 <div class="health-head"><div><h2>Saúde geral</h2><div class="muted">Leitura rápida dos serviços da área selecionada.</div></div><button id="refreshHealth" class="btn gray" type="button">↻ Atualizar</button></div>
@@ -2126,17 +2089,13 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 <button class="module available admin-only" data-module="municipios" data-admin-only="true" type="button"><span class="icon">🌐</span><div><strong>Municípios e organizações</strong><span>Estrutura global, municípios e vínculo das áreas.</span></div></button>
 <button class="module available external" data-module="portal" type="button"><span class="icon">🏥</span><div><strong>Portal do Morador</strong><span>Abrir o portal público da área selecionada.</span></div></button>
 </div>
-<div class="actions csc-logout-actions"><button id="logout" class="btn red csc-logout-button" type="button">Logoff / Encerrar sessão</button></div>
+<div class="actions"><button id="logout" class="btn red" type="button">Encerrar sessão</button></div>
 </section>
 </main>
 <footer>Portal TACS • Central Administrativa</footer>
 <div id="viewer" class="viewer" hidden><div class="viewer-bar"><button id="viewerBack" class="viewer-back" type="button">← Central</button><div id="viewerTitle" class="viewer-title">Painel</div></div><iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe></div>
-<script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=2b2fcd305812"></script>
-<script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=2b2fcd305812"></script>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=2b2fcd305812"></script>
-<script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=2b2fcd305812"></script>
-<script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=2b2fcd305812"></script>
-<script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=2b2fcd305812"></script>
-<script src="/atendimento-acs-farmaceutico/conecta-morador-pin-local-v2.js?v=2b2fcd305812"></script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=3cc161456ca4"></script>
+<script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=3cc161456ca4"></script>
+<script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=3cc161456ca4"></script>
 </body>
 </html>

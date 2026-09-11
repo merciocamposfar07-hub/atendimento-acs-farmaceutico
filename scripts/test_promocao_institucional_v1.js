@@ -11,15 +11,12 @@ const update = read('portal-auto-update.js');
 const centralQuick = read('central-tacs-login-rapido-v1.js');
 const centralCore = read('central-administrativa-tacs.js');
 
-// Identidade PWA única e estável do Conecta Saúde Comunitária.
-assert.equal(manifest.id, '/atendimento-acs-farmaceutico/conecta-saude-comunitaria');
-assert.equal(manifest.name, 'Conecta Saúde Comunitária');
-assert.equal(manifest.short_name, 'Conecta Saúde');
-assert.equal(manifest.start_url, '/atendimento-acs-farmaceutico/central-administrativa-tacs.html');
-assert.equal(manifest.scope, '/atendimento-acs-farmaceutico/');
-assert.equal(manifest.display, 'standalone');
-assert.ok(manifest.icons.length >= 1);
-manifest.icons.forEach(icon => assert.match(icon.src, /conecta-saude-central-canonico-2026-09-09\.png/));
+// Identidade PWA única e estável.
+assert.equal(manifest.id, '/atendimento-acs-farmaceutico/');
+assert.equal(manifest.short_name, 'Portal TACS');
+assert.equal(manifest.start_url, './index.html');
+assert.ok(manifest.icons.length >= 2);
+manifest.icons.forEach(icon => assert.match(icon.src, /portal-tacs-oficial-/));
 
 // O orientador do morador não pode reintroduzir ícones de outro painel.
 assert.doesNotMatch(guide, /painel-moradores(?:-180)?\.(?:svg|png)/);

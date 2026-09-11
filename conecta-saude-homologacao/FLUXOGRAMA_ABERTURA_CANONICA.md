@@ -54,35 +54,3 @@ Os painéis administrativos do projeto anterior permanecem como base administrat
 ## Status
 
 Esta decisão está registrada como padrão canônico da abertura e não deve ser alterada por tentativa visual sem nova aprovação do usuário.
-
-## Fluxo canônico de acesso após a abertura
-
-Depois de `Acessar conta`, o app segue dois caminhos.
-
-### Primeiro acesso
-`Selecionar perfil → identificação necessária → servidor confirma vínculo → criar PIN → reconhecer aparelho → preparar contexto/snapshot local cifrado → sincronizar dados iniciais → abrir área correspondente.`
-
-### Segundo acesso e seguintes
-`Selecionar perfil → digitar PIN → destravar contexto/snapshot local do aparelho → abrir imediatamente identidade + área + último estado confirmado → criar sessão remota nova e sincronizar em segundo plano.`
-
-Por perfil:
-- **Administrador:** abre a Central e somente as estruturas administrativas autorizadas.
-- **TACS:** abre exclusivamente a própria área, unidade e permissões.
-- **Morador:** abre exclusivamente seu portal/vínculo familiar/área.
-
-### Desempenho contínuo obrigatório
-`Ícone do Conecta → tela de PIN imediata → preparação assíncrona não bloqueante já iniciada → PIN local → perfil/área exibidos imediatamente → Saúde Geral mostra a última leitura confirmada → servidor atualiza somente o que mudou em segundo plano.`
-
-Regras:
-- a abertura da tela de PIN nunca espera Apps Script;
-- depois do primeiro paint, o app pode aquecer o backend e pré-carregar arquivos/leituras públicas sem bloquear Safari;
-- o nome real do Administrador, TACS ou Morador autenticado faz parte do contexto local confirmado e deve aparecer com alto contraste;
-- a Saúde Geral usa stale-while-revalidate: último valor confirmado primeiro, atualização remota depois;
-- falha transitória não apaga um valor confirmado nem obriga o usuário a tocar em `Atualizar`;
-- cache e pré-carregamento permanecem isolados por perfil e área;
-- **PIN único por entrada:** depois que o PIN válido abriu Administrador/TACS, nenhum painel administrativo interno pede PIN novamente; se a nova sessão remota ainda estiver sendo criada, o toque fica aguardando na Central e o painel abre automaticamente quando a sessão estiver pronta; um painel nunca deve exibir formulário legado de PIN como continuação do acesso.
-
-### Operações críticas
-`Tela local → usuário solicita alteração/reserva → servidor valida estado atual + sessão + território/permissão → servidor confirma → interface marca como concluída.`
-
-O cache não substitui a autoridade do servidor. Ele elimina a espera desnecessária para desenhar e navegar pela interface.

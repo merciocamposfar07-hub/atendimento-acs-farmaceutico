@@ -186,22 +186,6 @@ function notificacoesV8EnriquecerSaude_(resultado,contexto){
   return resultado;
 }
 
-function notificacoesV8PendenciasArea_(ss,contexto){
-  var area=notificacoesV8Area_(contexto&&contexto.areaId),chamados=0;
-  var nome=(typeof TACS_SUPORTE_MORADORES_V1!=='undefined'&&TACS_SUPORTE_MORADORES_V1.TICKET_SHEET)||'TACS_SUPORTE_CHAMADOS';
-  var sheet=ss.getSheetByName(nome);
-  if(sheet&&sheet.getLastRow()>1){
-    var rows=sheet.getRange(2,1,sheet.getLastRow()-1,Math.min(sheet.getLastColumn(),13)).getDisplayValues();
-    rows.forEach(function(row){
-      if(notificacoesV8Area_(row[1])!==area)return;
-      var status=notificacoesV8Texto_(row[12]).toUpperCase();
-      if(status&&status!=='RESOLVIDO')chamados++;
-    });
-  }
-  /* PENDENCIAS_IDENTIFICACAO_V1 pode somar aqui sem mudar o contrato do sino. */
-  return {chamados:chamados,identificacao:0,total:chamados};
-}
-
 function notificacoesV8SaudeRapidaLocal_(contexto){
   var ss=tacsTerritorioV1Planilha_(),nome=(typeof TACS_SAUDE_NOTIFICACOES_V1!=='undefined'&&TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_SHEET)||'TACS_NOTIFICACOES_DISPOSITIVOS',sheet=ss.getSheetByName(nome),mapa=notificacoesV8MapaVinculos_(ss,contexto),lista=[];
   if(sheet&&sheet.getLastRow()>1){
@@ -217,16 +201,16 @@ function notificacoesV8SaudeRapidaLocal_(contexto){
       lista.push({nome:v&&v.nome?v.nome:'Aparelho ainda não identificado',telefone:'',dispositivo:reg.tipoAparelho||'Aparelho',navegador:reg.navegador||'',sistema:reg.sistema||'',status:status,statusTexto:texto,motivo:motivo,ultimoCheckin:reg.ultimoCheckin,subscriptionRef:sub.slice(-8),reparoPendente:pending,familiaId:v&&v.familiaId?notificacoesV8Familia_(v.familiaId):'',vinculadoFamilia:Boolean(v&&v.familiaId),aptoMensagemIndividual:false});
     });
   }
-  return {ok:true,versao:TACS_ESTABILIZACAO_NOTIFICACOES_V8.VERSAO,areaId:contexto.areaId,areaNome:contexto.areaNome,contagens:notificacoesV8Recontar_(lista),pendencias:notificacoesV8PendenciasArea_(ss,contexto),aparelhos:lista,oneSignalConsultado:false,fonteSaude:'REGISTRO_LOCAL',atualizandoOneSignal:true,observacao:'Leitura local imediata. O OneSignal é conferido em seguida sem apagar estes dados.'};
+  return {ok:true,versao:TACS_ESTABILIZACAO_NOTIFICACOES_V8.VERSAO,areaId:contexto.areaId,areaNome:contexto.areaNome,contagens:notificacoesV8Recontar_(lista),aparelhos:lista,oneSignalConsultado:false,fonteSaude:'REGISTRO_LOCAL',atualizandoOneSignal:true,observacao:'Leitura local imediata. O OneSignal é conferido em seguida sem apagar estes dados.'};
 }
 
 function notificacoesV8SaudeRapida_(contexto,acesso){
-  var cache=notificacoesV8CacheLer_(contexto.areaId);if(cache&&cache.ok===true){cache.cacheSaude=true;cache.atualizandoOneSignal=true;if(!cache.pendencias)cache.pendencias=notificacoesV8PendenciasArea_(tacsTerritorioV1Planilha_(),contexto);return cache;}
+  var cache=notificacoesV8CacheLer_(contexto.areaId);if(cache&&cache.ok===true){cache.cacheSaude=true;cache.atualizandoOneSignal=true;return cache;}
   return notificacoesV8SaudeRapidaLocal_(contexto);
 }
 
 function notificacoesV8SaudeRemota_(contexto,acesso){
   if(typeof saudeNotificacoesV1SaudeAdmin_!=='function')throw new Error('A Saúde das notificações não está disponível.');
   var resultado=saudeNotificacoesV1SaudeAdmin_(contexto,acesso);
-  resultado=notificacoesV8EnriquecerSaude_(resultado,contexto);resultado.pendencias=notificacoesV8PendenciasArea_(tacsTerritorioV1Planilha_(),contexto);resultado.oneSignalConsultado=true;resultado.fonteSaude='ONESIGNAL_ATUAL';resultado.atualizandoOneSignal=false;notificacoesV8CacheSalvar_(contexto.areaId,resultado);return resultado;
+  resultado=notificacoesV8EnriquecerSaude_(resultado,contexto);resultado.oneSignalConsultado=true;resultado.fonteSaude='ONESIGNAL_ATUAL';resultado.atualizandoOneSignal=false;notificacoesV8CacheSalvar_(contexto.areaId,resultado);return resultado;
 }

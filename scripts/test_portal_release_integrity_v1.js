@@ -37,7 +37,7 @@ assert.match(auto,/scopePath\.indexOf\('\/push\/'\)===-1/,'Limpeza de versão n�
 assert.match(auto,/releaseMismatch&&forcedRelease!==remote/,'Versão da página deve ser comparada com a versão publicada');
 assert.match(abrir,/portal-version\.json\?t=/);
 assert.doesNotMatch(abrir,/index\.html\?v=20260805/);
-assert.doesNotMatch(central,/portal-auto-update\.js\?v=/,'A Central não deve executar o guardião público de versão no login; os ativos administrativos já usam revisão explícita e o fetch extra prolonga o carregamento no Safari.');
+assert.match(central,/portal-auto-update\.js\?v=/,'Central deve receber o mesmo guardião de versão');
 
 function tokens(html){
   return [...html.matchAll(/\b(?:src|href)=["'](?!https?:|\/\/|data:|#)[^"']+\?v=([^"']+)["']/gi)].map(match=>match[1]);

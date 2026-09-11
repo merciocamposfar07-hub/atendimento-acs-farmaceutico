@@ -156,10 +156,6 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_50_NascimentoCivilBackupGuardV1.gs',
     marker: 'TACS_NASCIMENTO_CIVIL_BACKUP_GUARD_V1'
-  },
-  {
-    source: 'apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs',
-    marker: 'TACS_CONECTA_ACESSO_V1'
   }
 ];
 
