@@ -1,6 +1,14 @@
 'use strict';
 const { test, expect } = require('@playwright/test');
 
+async function seedCentralSession(page){
+  await page.addInitScript(()=>{
+    sessionStorage.setItem('portalTacsAdminTokenV1','homologacao-admin-session');
+    sessionStorage.setItem('portalTacsCentralReturnUrlV1',location.origin+'/atendimento-acs-farmaceutico/central-administrativa-tacs.html');
+    localStorage.setItem('portalTacsCentralAreaV1','JAPARANDUBA');
+  });
+}
+
 async function blockExternal(page){
   await page.route('https://script.google.com/**',route=>route.abort());
   await page.route('https://script.googleusercontent.com/**',route=>route.abort());
