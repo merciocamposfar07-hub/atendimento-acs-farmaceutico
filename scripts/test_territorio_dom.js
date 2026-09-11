@@ -213,8 +213,16 @@ async function testTerritoryPanel() {
   assert.match(js, /dataNascimento:birth/);
   assert.match(js, /if\(operationMessage\)status\(operationMessage,'ok'\)/,
     'Uma gravação concluída deve substituir a mensagem de validação pela confirmação final.');
-  assert.match(js, /loadData\('',text\(r\.message\|\|'Área salva e validada\.'\)\)/,
-    'Salvar uma área deve recarregar os dados e exibir a confirmação final.');
+  assert.match(html, /id="areaLinkState"/,
+    'O formulário deve reservar uma área de estado para o vínculo confirmado.');
+  assert.match(html, /id="saveAreaButton"/,
+    'O botão de área deve refletir o estado real do vínculo.');
+  assert.match(js, /✓ Área vinculada e ativa/,
+    'Área já confirmada deve abrir como vinculada e ativa, sem pedir novo salvamento.');
+  assert.match(js, /Salvar novo vínculo/,
+    'Alteração real de área, unidade, TACS ou fonte deve habilitar um novo vínculo.');
+  assert.match(js, /Vínculo confirmado:/,
+    'Salvar uma área deve exibir a confirmação real devolvida pelo servidor.');
 
   const dom = new JSDOM(html, {
     url: 'https://portal.test/teste-v1/painel-tacs-areas-v1.html',
