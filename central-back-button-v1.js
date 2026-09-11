@@ -286,6 +286,31 @@ function centralUrl(){
   return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html'+(tacs?'?acesso=tacs':'');
 }
 
+function hasCentralSession(){
+  try{return Boolean(sessionStorage.getItem('portalTacsAdminTokenV1')||sessionStorage.getItem('portalTacsTerritorioTokenV1'))}catch(e){return false}
+}
+function installSinglePinGate(){
+  if(!fromCentral||!isAdminPanel)return;
+  /* PIN_UNICO_CENTRAL_V1: o PIN pertence à porta inicial da Central.
+     Painéis internos jamais pedem outro PIN. Se a sessão ainda não existe,
+     retorna à Central em vez de expor formulários legados de autenticação. */
+  if(!hasCentralSession()){
+    try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
+    location.replace(centralUrl());
+    return;
+  }
+  var style=document.getElementById('portalTacsSinglePinGateV1');
+  if(!style){
+    style=document.createElement('style');style.id='portalTacsSinglePinGateV1';
+    style.textContent=[
+      '#pin,label[for="pin"],#adminPin,label[for="adminPin"],#tacsPinLogin,label[for="tacsPinLogin"],#tacsPinAccess,label[for="tacsPinAccess"],#tacsPinPublicacoes,label[for="tacsPinPublicacoes"]{display:none!important}',
+      '#login,#entrar,#loginTacs,#entrarTacs,#adminLoginButton,#tacsLoginButton{display:none!important}',
+      '.csc-auth-control,.csc-auth-title{display:none!important}'
+    ].join('\n');
+    (document.head||document.documentElement).appendChild(style);
+  }
+}
+
 function install(){
   if(document.getElementById('portalTacsBackCentralV1'))return;
   if(!document.body){setTimeout(install,0);return;}
@@ -308,6 +333,11 @@ function install(){
   document.body.insertBefore(bar,document.body.firstChild);
 }
 
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
-else install();
+function bootCentralPanel(){
+  installSinglePinGate();
+  if(fromCentral&&!hasCentralSession())return;
+  install();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootCentralPanel,{once:true});
+else bootCentralPanel();
 }());
