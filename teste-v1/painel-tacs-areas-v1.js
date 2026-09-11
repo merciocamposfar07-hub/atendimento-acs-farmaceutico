@@ -9,6 +9,7 @@ var territorioToken=sessionStorage.getItem(TACS_TOKEN_KEY)||'';
 var device=localStorage.getItem(DEVICE_KEY)||'';
 var mode=territorioToken?'tacs':(token?'admin':'');
 var active=null,data={tacs:[],areas:[],podeAdministrar:false,perfil:''};
+var areaEditSnapshot=null;
 var csvState={file:null,base64:'',name:'',headers:[],delimiter:'',headerRow:-1,encoding:'',mapping:{},preview:null};
 var MAP_FIELDS=[
   ['idPortal','ID Portal'],['id','ID original'],['cpf','CPF'],['cns','CNS'],['nome','Nome completo'],
@@ -165,16 +166,64 @@ function saveTacs(event){
   status('Salvando e conferindo o cadastro do TACS…','warn');territoryPost('admin_territorio_salvar_tacs',{payload:JSON.stringify(body)},function(r){if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar.'),'err');return;}el('tacsForm').classList.add('hidden');loadData('',text(r.message||'Cadastro do TACS salvo e conferido.'));});
 }
 
+function areaFormBody(){
+  return {
+    areaId:text(el('areaId').value),areaNome:text(el('areaName').value),
+    unidadeId:text(el('areaUnitId').value),unidadeNome:text(el('areaUnitName').value),
+    tacsId:text(el('areaTacsId').value),microareaPadrao:text(el('areaMicroarea').value)||'1',
+    equipe:text(el('areaTeam').value),planilhaId:text(el('areaSpreadsheet').value),
+    criarFonte:Boolean(el('areaCreateSource').checked),
+    consultaPorDocumento:Boolean(el('areaDocumentLookup').checked),
+    ativa:Boolean(el('areaActive').checked)
+  };
+}
+function areaSnapshotFromRecord(a){
+  if(!a)return null;
+  return {
+    areaId:text(a.areaId),areaNome:text(a.areaNome),unidadeId:text(a.unidadeId),unidadeNome:text(a.unidadeNome),
+    tacsId:text(a.tacsId),microareaPadrao:text(a.microareaPadrao)||'1',equipe:text(a.equipe),
+    planilhaId:text(a.planilhaId),criarFonte:false,consultaPorDocumento:a.consultaPorDocumento!==false,
+    ativa:bool(a.ativa)
+  };
+}
+function sameAreaValue(a,b,key){return String(a&&a[key]==null?'':a[key])===String(b&&b[key]==null?'':b[key]);}
+function syncAreaLinkState(){
+  var button=el('saveAreaButton'),stateBox=el('areaLinkState');if(!button||!stateBox)return;
+  var current=areaFormBody(),saved=areaEditSnapshot;
+  if(!saved){
+    button.disabled=false;button.textContent='Salvar e validar área';stateBox.hidden=true;return;
+  }
+  var keys=Object.keys(saved),changed=keys.some(function(k){return !sameAreaValue(current,saved,k);});
+  var linkKeys=['areaId','areaNome','unidadeId','unidadeNome','tacsId','planilhaId','criarFonte'];
+  var linkChanged=linkKeys.some(function(k){return !sameAreaValue(current,saved,k);});
+  if(!changed&&saved.ativa){
+    button.disabled=true;button.textContent='✓ Área vinculada e ativa';
+    stateBox.hidden=false;stateBox.textContent='Vínculo confirmado: '+(saved.areaNome||saved.areaId)+' → '+(saved.unidadeNome||saved.unidadeId)+' • Área ativa.';
+    return;
+  }
+  button.disabled=false;button.textContent=linkChanged?'Salvar novo vínculo':'Salvar alterações';
+  stateBox.hidden=!(saved.ativa&&!linkChanged);
+  if(!stateBox.hidden)stateBox.textContent='Área vinculada e ativa. Há alterações operacionais ainda não salvas.';
+}
 function openArea(a){
   el('areaForm').reset();el('areaId').value=a&&a.areaId||'';el('areaName').value=a&&a.areaNome||'';el('areaUnitId').value=a&&a.unidadeId||'';el('areaUnitName').value=a&&a.unidadeNome||'';
   renderAreaOptions();el('areaTacsId').value=a&&a.tacsId||'';el('areaMicroarea').value=a&&a.microareaPadrao||'1';el('areaTeam').value=a&&a.equipe||'';el('areaSpreadsheet').value=a&&a.planilhaId||'';
-  el('areaCreateSource').checked=false;el('areaDocumentLookup').checked=!a||a.consultaPorDocumento!==false;el('areaActive').checked=Boolean(a&&bool(a.ativa));el('areaFormTitle').textContent=a?'Editar área':'Nova área';el('areaForm').classList.remove('hidden');el('areaForm').scrollIntoView({behavior:'smooth',block:'start'});
+  el('areaCreateSource').checked=false;el('areaDocumentLookup').checked=!a||a.consultaPorDocumento!==false;el('areaActive').checked=Boolean(a&&bool(a.ativa));el('areaFormTitle').textContent=a?'Editar área':'Nova área';
+  areaEditSnapshot=areaSnapshotFromRecord(a);
+  el('areaForm').classList.remove('hidden');syncAreaLinkState();el('areaForm').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function saveArea(event){
-  event.preventDefault();var body={areaId:el('areaId').value,areaNome:el('areaName').value,unidadeId:el('areaUnitId').value,unidadeNome:el('areaUnitName').value,tacsId:el('areaTacsId').value,microareaPadrao:el('areaMicroarea').value,equipe:el('areaTeam').value,planilhaId:el('areaSpreadsheet').value,criarFonte:el('areaCreateSource').checked,consultaPorDocumento:el('areaDocumentLookup').checked,ativa:el('areaActive').checked};
+  event.preventDefault();var body=areaFormBody();
   if(!confirm('Salvar e validar esta área? Uma área ativa precisa ter fonte 20/20 exclusiva.'))return;
-  status('Validando TACS, CNS, unidade e fonte de moradores…','warn');territoryPost('admin_territorio_salvar_area',{payload:JSON.stringify(body)},function(r){if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar a área.'),'err');return;}el('areaForm').classList.add('hidden');loadData('',text(r.message||'Área salva e validada.'));});
+  status('Validando TACS, CNS, unidade e fonte de moradores…','warn');territoryPost('admin_territorio_salvar_area',{payload:JSON.stringify(body)},function(r){
+    if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar a área.'),'err');return;}
+    var saved=r.area||body,found=false;
+    data.areas=data.areas.map(function(a){if(text(a.areaId)===text(saved.areaId)){found=true;return saved;}return a;});
+    if(!found)data.areas.push(saved);
+    render();openArea(saved);
+    status(bool(saved.ativa)?'Vínculo confirmado: '+text(saved.areaNome||saved.areaId)+' → '+text(saved.unidadeNome||saved.unidadeId)+' • Área ativa.':text(r.message||'Área salva e validada.'),'ok');
+  });
 }
 
 function validateArea(id){status('Conferindo área e schema 20/20…','warn');territoryPost('admin_territorio_validar_area',{areaId:id},function(r){status(text(r&&r.message||'Não foi possível validar a área.'),r&&r.ok===true?'ok':'err');});}
@@ -278,7 +327,8 @@ el('tacsLoginButton').addEventListener('click',function(){var pin=digits(el('tac
 el('logoutButton').addEventListener('click',function(){var action=mode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout',result=mode==='tacs'?'admin_territorio_result':'admin_result';post(action,session(),result,function(){clearSession();loginStatus('Sessão encerrada.','ok');});});
 document.querySelectorAll('.sectionTab').forEach(function(b){b.addEventListener('click',function(){switchSection(b.dataset.section);});});
 el('newTacsButton').addEventListener('click',function(){openTacs(null);});el('cancelTacsButton').addEventListener('click',function(){el('tacsForm').classList.add('hidden');});el('tacsForm').addEventListener('submit',saveTacs);
-el('newAreaButton').addEventListener('click',function(){openArea(null);});el('cancelAreaButton').addEventListener('click',function(){el('areaForm').classList.add('hidden');});el('areaForm').addEventListener('submit',saveArea);
+el('newAreaButton').addEventListener('click',function(){openArea(null);});el('cancelAreaButton').addEventListener('click',function(){el('areaForm').classList.add('hidden');areaEditSnapshot=null;});el('areaForm').addEventListener('submit',saveArea);
+['areaId','areaName','areaUnitId','areaUnitName','areaTacsId','areaMicroarea','areaTeam','areaSpreadsheet','areaCreateSource','areaDocumentLookup','areaActive'].forEach(function(id){var n=el(id);if(n){n.addEventListener('input',syncAreaLinkState);n.addEventListener('change',syncAreaLinkState);}});
 el('tacsList').addEventListener('click',function(e){var b=e.target.closest('.editTacs');if(b)openTacs(data.tacs.find(function(t){return t.tacsId===b.dataset.id;})||null);});
 el('areasList').addEventListener('click',function(e){var edit=e.target.closest('.editArea'),validate=e.target.closest('.validateArea');if(edit)openArea(data.areas.find(function(a){return a.areaId===edit.dataset.id;})||null);if(validate)validateArea(validate.dataset.id);});
 el('csvFile').addEventListener('change',function(){prepareFile(this.files&&this.files[0]);});el('previewCsvButton').addEventListener('click',previewCsv);el('importCsvButton').addEventListener('click',importCsv);el('csvArea').addEventListener('change',loadBatches);el('batchList').addEventListener('click',function(e){var b=e.target.closest('.undoBatch');if(b)undoBatch(b.dataset.id);});
