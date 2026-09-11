@@ -1,24 +1,18 @@
 {
-  "id": "/atendimento-acs-farmaceutico/",
-  "name": "Portal TACS - Técnico Agente Comunitário de Saúde",
-  "short_name": "Portal TACS",
-  "description": "Portal do TACS - Técnico Agente Comunitário de Saúde da Unidade de Saúde Posto Matias para moradores do Sítio Japaranduba.",
-  "start_url": "./index.html",
-  "scope": "./",
+  "id": "/atendimento-acs-farmaceutico/conecta-saude-comunitaria",
+  "name": "Conecta Saúde Comunitária",
+  "short_name": "Conecta Saúde",
+  "description": "Plataforma institucional de gestão e acesso à saúde comunitária.",
+  "start_url": "/atendimento-acs-farmaceutico/central-administrativa-tacs.html",
+  "scope": "/atendimento-acs-farmaceutico/",
   "display": "standalone",
-  "background_color": "#e9eff3",
-  "theme_color": "#062c46",
+  "background_color": "#071827",
+  "theme_color": "#071827",
   "lang": "pt-BR",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png",
+      "src": "/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

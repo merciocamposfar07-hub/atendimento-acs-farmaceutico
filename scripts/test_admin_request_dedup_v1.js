@@ -10,10 +10,12 @@ const agendas=read('painel-oficial-agendas-vagas.html');
 const prof=read('teste-v1/painel-profissionais-servicos-v1.html');
 assert.match(central,/HEALTH_REFRESH_TTL=30000/);
 assert.match(central,/healthRefreshInFlight/);
-assert.match(central,/admin_notificacoes_saude_rapida/);
+assert.match(central,/admin_notificacoes_saude_remota/);
+assert.doesNotMatch(central,/admin_notificacoes_saude_rapida/);
 assert.doesNotMatch(central,/post\('admin_notificacoes_saude',\{areaId:context\.areaId\}/);
-assert.match(central,/jsonp\('publico_conteudo_status'/);
-assert.doesNotMatch(central,/jsonp\('publico_conteudo',\{areaId:context\.areaId\}/);
+assert.match(central,/jsonp\('publico_conteudo',\{areaId:areaId\}/);
+assert.match(central,/lastHealthRefreshArea===areaId&&now-lastHealthRefreshAt<HEALTH_REFRESH_TTL/);
+assert.match(central,/if\(healthRefreshInFlight\)return/);
 assert.match(perf,/profissionais:2400/);
 assert.match(perf,/recados:850/);
 for(const source of [agendas,prof]){

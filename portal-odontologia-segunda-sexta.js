@@ -279,12 +279,12 @@
   function statusText() {
     if (loading && slots.length && cacheVisible) return cacheFresh
       ? 'Confirmando a agenda atual em segundo plano...'
-      : 'Última agenda disponível. Atualizando em segundo plano...';
+      : 'Última agenda exibida. Você já pode tocar na vaga; o servidor confirma a disponibilidade antes de liberar o envio.';
     if (loading) return 'Atualizando a agenda odontológica pela planilha...';
     if (!slots.length) return 'Nenhum dia está publicado na planilha odontológica.';
     if (cacheVisible) return cacheFresh
       ? 'Última agenda disponível. A confirmação online continuará em segundo plano.'
-      : 'Última agenda disponível. Aguarde a atualização para escolher uma vaga.';
+      : 'Última agenda exibida. Toque na vaga desejada; a reserva só é liberada depois da confirmação do servidor.';
     if (selection) {
       if (selection.confirmed) return 'Vaga reservada na agenda. O envio pelo WhatsApp está liberado.';
       if (selection.explicitFailure) return selection.errorMessage || 'Não foi possível reservar essa vaga.';
@@ -337,8 +337,10 @@
         button.dataset.id = slot.id;
         button.dataset.type = type;
         button.dataset.value = value === null ? '' : String(value);
-        var staleCacheBlocked = cacheVisible && !cacheFresh && !same;
-        button.disabled = staleCacheBlocked || Boolean(selection && !same) || (!same && (value === null || value <= 0));
+        /* CACHE_ODONTO_SEM_BLOQUEIO_VISUAL_V1:
+           cache antigo pode ser exibido e tocado; a segurança continua no servidor.
+           O envio só é liberado depois que reservar_get confirma a vaga. */
+        button.disabled = Boolean(selection && !same) || (!same && (value === null || value <= 0));
         button.textContent = vacancyLabel(value, type);
         if (same) button.classList.add('selected');
         actions.appendChild(button);

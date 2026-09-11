@@ -130,3 +130,21 @@ Uma nova funcionalidade só está concluída quando preserva simultaneamente:
 **funcionalidade + território + segurança + gravação + reedição + auditoria + acessibilidade + layout + desempenho.**
 
 Correções pontuais não devem quebrar esse contrato.
+
+## 2.1 Acesso local-first por PIN
+
+O caminho crítico de reentrada não pode depender da latência do Apps Script quando o perfil já possui PIN e aparelho reconhecido.
+
+Fluxo canônico:
+
+`PIN correto → desbloqueio criptográfico local → renderização do contexto autorizado → revalidação remota em segundo plano.`
+
+Contratos:
+- PBKDF2/AES-GCM ou mecanismo equivalente aprovado; PIN nunca em texto persistido;
+- credenciais/cache separados para Administrador, TACS e Morador;
+- o contexto local deve conter somente o último estado previamente confirmado;
+- a interface deve identificar quando está sincronizando;
+- escrita permanece bloqueada ou condicionada à confirmação remota atual;
+- resposta remota que revogue perfil, território ou permissão deve retirar o acesso local;
+- tela de PIN não deve iniciar requisições que atrasem seu primeiro carregamento;
+- transporte Safari/iPhone deve priorizar resposta direta e usar polling apenas como contingência controlada.

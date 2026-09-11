@@ -9,6 +9,7 @@ var territorioToken=sessionStorage.getItem(TACS_TOKEN_KEY)||'';
 var device=localStorage.getItem(DEVICE_KEY)||'';
 var mode=territorioToken?'tacs':(token?'admin':'');
 var active=null,data={tacs:[],areas:[],podeAdministrar:false,perfil:''};
+var areaEditSnapshot=null;
 var csvState={file:null,base64:'',name:'',headers:[],delimiter:'',headerRow:-1,encoding:'',mapping:{},preview:null};
 var MAP_FIELDS=[
   ['idPortal','ID Portal'],['id','ID original'],['cpf','CPF'],['cns','CNS'],['nome','Nome completo'],
@@ -27,11 +28,72 @@ var TACS_PERMISSIONS=[
   ['permAgenda','AGENDAS_GERENCIAR'],
   ['permProfessionals','PROFISSIONAIS_GERENCIAR']
 ];
+var ACCESS_PROFILES={
+  ADMIN_TACS_MORADOR:'Administrador + TACS + Morador',
+  ADMIN_TACS:'Administrador + TACS',
+  ADMIN_MORADOR:'Administrador + Morador',
+  TACS_MORADOR:'TACS + Morador',
+  TACS:'TACS',
+  ADMIN:'Administrador'
+};
+function normalizeAccessProfile(v){v=text(v).toUpperCase();return Object.prototype.hasOwnProperty.call(ACCESS_PROFILES,v)?v:(v==='ADMIN_GERAL'?'ADMIN':'TACS');}
+function profileHasTacs(v){return normalizeAccessProfile(v).indexOf('TACS')!==-1;}
+function profileHasAdmin(v){return normalizeAccessProfile(v).indexOf('ADMIN')!==-1;}
+function profileLabel(v){return ACCESS_PROFILES[normalizeAccessProfile(v)]||'TACS';}
+function syncAccessProfileUi(){
+  var profile=normalizeAccessProfile(el('tacsProfile').value),isTacs=profileHasTacs(profile);
+  ['tacsCnsWrap','tacsMicroareaWrap','tacsUnitWrap','tacsPermissionsBlock'].forEach(function(id){var n=el(id);if(n)n.classList.toggle('hidden',!isTacs);});
+  el('tacsCns').required=isTacs;el('tacsMicroarea').required=isTacs;el('tacsUnit').required=isTacs;
+}
+function syncTacsActiveUi(){
+  var input=el('tacsActive'),label=input&&input.closest('.access-switch'),out=el('tacsActiveText');
+  if(!input||!out)return;
+  out.textContent=input.checked?'Ativo':'Inativo';
+  if(label)label.classList.toggle('is-active',input.checked);
+}
+function validarRetornoCadastro(r,body){
+  var salvo=r&&r.tacs||{};
+  if(digits(salvo.cpf)!==digits(body.cpf))return 'CPF';
+  if(digits(salvo.telefone)!==digits(body.telefone))return 'celular';
+  if(text(salvo.matricula)!==text(body.matricula))return 'matrícula';
+  if(profileHasTacs(body.perfil)&&digits(salvo.cnsProfissional)!==digits(body.cnsProfissional))return 'CNS';
+  return '';
+}
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device);}
 function el(id){return document.getElementById(id);}
 function text(v){return String(v==null?'':v).trim();}
 function digits(v){return String(v==null?'':v).replace(/\D/g,'');}
 function birthText(v){var d=digits(v).slice(0,8);return d.slice(0,2)+(d.length>2?'/'+d.slice(2,4):'')+(d.length>4?'/'+d.slice(4,8):'');}
+function cpfText(v){
+  var d=digits(v).slice(0,11),out=d.slice(0,3);
+  if(d.length>3)out+='.'+d.slice(3,6);
+  if(d.length>6)out+='.'+d.slice(6,9);
+  if(d.length>9)out+='-'+d.slice(9,11);
+  return out;
+}
+function cnsText(v){
+  var d=digits(v).slice(0,15),parts=[];
+  if(d.length)parts.push(d.slice(0,3));
+  if(d.length>3)parts.push(d.slice(3,7));
+  if(d.length>7)parts.push(d.slice(7,11));
+  if(d.length>11)parts.push(d.slice(11,15));
+  return parts.join(' ');
+}
+function phoneText(v){
+  var d=digits(v).slice(0,11);
+  if(!d)return '';
+  if(d.length<3)return '('+d;
+  var ddd=d.slice(0,2),rest=d.slice(2),prefix='',suffix='';
+  if(rest.length<=4)return '('+ddd+') '+rest;
+  if(d.length<=10){prefix=rest.slice(0,4);suffix=rest.slice(4,8);}
+  else{prefix=rest.slice(0,5);suffix=rest.slice(5,9);}
+  return '('+ddd+') '+prefix+(suffix?'-'+suffix:'');
+}
+function bindMask(id,formatter){
+  var input=el(id);if(!input)return;
+  input.addEventListener('input',function(){this.value=formatter(this.value);});
+  input.addEventListener('blur',function(){this.value=formatter(this.value);});
+}
 function validBirth(v){var m=text(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!m)return false;var day=Number(m[1]),month=Number(m[2]),year=Number(m[3]),date=new Date(Date.UTC(year,month-1,day)),today=new Date(),todayUtc=Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate());return date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day&&date.getTime()<=todayUtc;}
 function bool(v){return v===true||v===1||['true','1','sim','yes','ativo','ativa'].indexOf(text(v).toLowerCase())!==-1;}
 function esc(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
@@ -117,8 +179,13 @@ function render(){
 }
 
 function renderTacs(){
-  var list=el('tacsList');if(!data.tacs.length){list.innerHTML='<div class="card">Nenhum TACS cadastrado nesta visão.</div>';return;}
-  list.innerHTML=data.tacs.map(function(t){return '<div class="card"><strong>'+esc(t.nomeCompleto||t.tacsId)+'</strong><div class="sub">CNS: '+esc(t.cnsProfissional||'não informado')+' • Área: '+esc(t.areaId||'não vinculada')+' • Unidade: '+esc(t.unidadeId||'não vinculada')+'</div><span class="pill '+(bool(t.ativo)?'':'off')+'">'+(bool(t.ativo)?'Ativo':'Inativo')+'</span>'+(data.podeAdministrar?'<div class="actions"><button class="btn editTacs" data-id="'+esc(t.tacsId)+'" type="button">Editar cadastro completo</button></div>':'')+'</div>';}).join('');
+  var list=el('tacsList');if(!data.tacs.length){list.innerHTML='<div class="card">Nenhum Administrador/TACS cadastrado nesta visão.</div>';return;}
+  list.innerHTML=data.tacs.map(function(t){
+    var isTacs=profileHasTacs(t.perfil),meta='<div class="sub">Perfil: '+esc(profileLabel(t.perfil));
+    if(isTacs)meta+=' • CNS: '+esc(cnsText(t.cnsProfissional)||'não informado')+' • Área: '+esc(t.areaId||'não vinculada')+' • Unidade: '+esc(t.unidadeId||'não vinculada');
+    meta+='</div>';
+    return '<div class="card"><strong>'+esc(t.nomeCompleto||t.tacsId)+'</strong>'+meta+'<span class="pill '+(bool(t.ativo)?'':'off')+'">'+(bool(t.ativo)?'Ativo':'Inativo')+'</span>'+(data.podeAdministrar?'<div class="actions"><button class="btn editTacs" data-id="'+esc(t.tacsId)+'" type="button">Editar cadastro completo</button></div>':'')+'</div>';
+  }).join('');
 }
 
 function renderAreas(){
@@ -127,7 +194,8 @@ function renderAreas(){
 }
 
 function renderAreaOptions(){
-  var select=el('areaTacsId');select.innerHTML='<option value="">Selecione</option>'+data.tacs.map(function(t){return '<option value="'+esc(t.tacsId)+'">'+esc(t.nomeCompleto||t.tacsId)+' — CNS '+esc(t.cnsProfissional||'ausente')+'</option>';}).join('');
+  var select=el('areaTacsId'),tacsDisponiveis=data.tacs.filter(function(t){return profileHasTacs(t.perfil);});
+  select.innerHTML='<option value="">Selecione</option>'+tacsDisponiveis.map(function(t){return '<option value="'+esc(t.tacsId)+'">'+esc(t.nomeCompleto||t.tacsId)+' — CNS '+esc(t.cnsProfissional||'ausente')+'</option>';}).join('');
 }
 
 function renderCsvAreaOptions(){
@@ -144,37 +212,95 @@ function renderTacsUnitOptions(current){
 }
 
 function openTacs(t){
-  el('tacsForm').reset();el('tacsId').value=t&&t.tacsId||'';el('tacsName').value=t&&t.nomeCompleto||'';el('tacsCns').value=t&&t.cnsProfissional||'';
-  el('tacsBirth').value=birthText(t&&t.dataNascimento||'');el('tacsCpf').value=t&&t.cpf||'';el('tacsRegistration').value=t&&t.matricula||'';el('tacsPhone').value=t&&t.telefone||'';el('tacsEmail').value=t&&t.email||'';
+  el('tacsForm').reset();el('tacsId').value=t&&t.tacsId||'';el('tacsProfile').value=normalizeAccessProfile(t&&t.perfil||'TACS');el('tacsName').value=t&&t.nomeCompleto||'';el('tacsCns').value=cnsText(t&&t.cnsProfissional||'');
+  el('tacsBirth').value=birthText(t&&t.dataNascimento||'');el('tacsCpf').value=cpfText(t&&t.cpf||'');el('tacsRegistration').value=t&&t.matricula||'';el('tacsPhone').value=phoneText(t&&t.telefone||'');el('tacsEmail').value=t&&t.email||'';
   el('tacsArea').value=t&&t.areaId||'';renderTacsUnitOptions(t&&t.unidadeId||'');el('tacsMicroarea').value=t&&t.microarea||'';el('tacsActive').checked=Boolean(t&&bool(t.ativo));
   el('tacsPin').required=!t;
   var selecionadas=t&&Array.isArray(t.permissoes)?t.permissoes:TACS_PERMISSIONS.map(function(item){return item[1];});
   TACS_PERMISSIONS.forEach(function(item){el(item[0]).checked=selecionadas.indexOf(item[1])!==-1;});
-  el('tacsFormTitle').textContent=t?'Editar TACS':'Novo TACS';el('tacsForm').classList.remove('hidden');el('tacsForm').scrollIntoView({behavior:'smooth',block:'start'});
+  syncAccessProfileUi();syncTacsActiveUi();
+  if(t&&digits(t.cpf).length!==11)status('Atenção: este cadastro possui CPF incompleto na base. Corrija os 11 números antes de salvar novamente.','err');
+  el('tacsFormTitle').textContent=t?'Editar Administrador / TACS':'Novo Administrador / TACS';el('tacsForm').classList.remove('hidden');el('tacsForm').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function saveTacs(event){
-  event.preventDefault();var birth=birthText(el('tacsBirth').value),cns=digits(el('tacsCns').value),cpf=digits(el('tacsCpf').value),phone=digits(el('tacsPhone').value),pin=digits(el('tacsPin').value),isNew=!text(el('tacsId').value);
+  event.preventDefault();
+  var profile=normalizeAccessProfile(el('tacsProfile').value),isTacs=profileHasTacs(profile),birth=birthText(el('tacsBirth').value),cns=digits(el('tacsCns').value),cpf=digits(el('tacsCpf').value),phone=digits(el('tacsPhone').value),pin=digits(el('tacsPin').value),isNew=!text(el('tacsId').value);
   if(!validBirth(birth)){status('Informe uma data de nascimento válida no formato DD/MM/AAAA.','err');el('tacsBirth').focus();return;}
-  if(!/^\d{15}$/.test(cns)){status('Informe os 15 números do CNS (Cartão SUS).','err');el('tacsCns').focus();return;}
+  if(isTacs&&!/^\d{15}$/.test(cns)){status('Informe os 15 números do CNS (Cartão SUS) para o perfil TACS.','err');el('tacsCns').focus();return;}
   if(!/^\d{11}$/.test(cpf)){status('Informe os 11 números do CPF.','err');el('tacsCpf').focus();return;}
   if(!/^\d{10,11}$/.test(phone)){status('Informe um celular com DDD.','err');el('tacsPhone').focus();return;}
+  if(isTacs&&!text(el('tacsMicroarea').value)){status('Informe a microárea para o perfil TACS.','err');el('tacsMicroarea').focus();return;}
+  if(isTacs&&!text(el('tacsUnit').value)){status('Informe a unidade de saúde para o perfil TACS.','err');el('tacsUnit').focus();return;}
   if(isNew&&!/^\d{4,8}$/.test(pin)){status('Defina um PIN de acesso com 4 a 8 números.','err');el('tacsPin').focus();return;}
-  var body={tacsId:el('tacsId').value,nomeCompleto:el('tacsName').value,dataNascimento:birth,cnsProfissional:cns,cpf:cpf,matricula:el('tacsRegistration').value,telefone:phone,email:el('tacsEmail').value,areaId:el('tacsArea').value,unidadeId:el('tacsUnit').value,microarea:el('tacsMicroarea').value,pin:pin,permissoes:TACS_PERMISSIONS.filter(function(item){return el(item[0]).checked;}).map(function(item){return item[1];}),ativo:el('tacsActive').checked};
-  if(!confirm('Salvar este cadastro completo do TACS? Todos os campos poderão ser corrigidos depois.'))return;
-  status('Salvando e conferindo o cadastro do TACS…','warn');territoryPost('admin_territorio_salvar_tacs',{payload:JSON.stringify(body)},function(r){if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar.'),'err');return;}el('tacsForm').classList.add('hidden');loadData('',text(r.message||'Cadastro do TACS salvo e conferido.'));});
+  var body={tacsId:el('tacsId').value,perfil:profile,nomeCompleto:el('tacsName').value,dataNascimento:birth,cnsProfissional:isTacs?cns:'',cpf:cpf,matricula:el('tacsRegistration').value,telefone:phone,email:el('tacsEmail').value,areaId:isTacs?el('tacsArea').value:'',unidadeId:isTacs?el('tacsUnit').value:'',microarea:isTacs?el('tacsMicroarea').value:'',pin:pin,permissoes:isTacs?TACS_PERMISSIONS.filter(function(item){return el(item[0]).checked;}).map(function(item){return item[1];}):[],ativo:el('tacsActive').checked};
+  if(!confirm('Salvar este cadastro de '+profileLabel(profile)+'? Todos os campos poderão ser corrigidos depois.'))return;
+  status('Salvando e conferindo o cadastro de acesso…','warn');territoryPost('admin_territorio_salvar_tacs',{payload:JSON.stringify(body)},function(r){
+    if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar.'),'err');return;}
+    var divergente=validarRetornoCadastro(r,body);
+    if(divergente){status('Falha de integridade: o '+divergente+' retornou diferente do valor enviado. O formulário foi mantido aberto para impedir uma alteração silenciosa.','err');return;}
+    el('tacsForm').classList.add('hidden');loadData('',text(r.message||'Cadastro salvo e conferido.'));
+  });
 }
 
+function areaFormBody(){
+  return {
+    areaId:text(el('areaId').value),areaNome:text(el('areaName').value),
+    unidadeId:text(el('areaUnitId').value),unidadeNome:text(el('areaUnitName').value),
+    tacsId:text(el('areaTacsId').value),microareaPadrao:text(el('areaMicroarea').value)||'1',
+    equipe:text(el('areaTeam').value),planilhaId:text(el('areaSpreadsheet').value),
+    criarFonte:Boolean(el('areaCreateSource').checked),
+    consultaPorDocumento:Boolean(el('areaDocumentLookup').checked),
+    ativa:Boolean(el('areaActive').checked)
+  };
+}
+function areaSnapshotFromRecord(a){
+  if(!a)return null;
+  return {
+    areaId:text(a.areaId),areaNome:text(a.areaNome),unidadeId:text(a.unidadeId),unidadeNome:text(a.unidadeNome),
+    tacsId:text(a.tacsId),microareaPadrao:text(a.microareaPadrao)||'1',equipe:text(a.equipe),
+    planilhaId:text(a.planilhaId),criarFonte:false,consultaPorDocumento:a.consultaPorDocumento!==false,
+    ativa:bool(a.ativa)
+  };
+}
+function sameAreaValue(a,b,key){return String(a&&a[key]==null?'':a[key])===String(b&&b[key]==null?'':b[key]);}
+function syncAreaLinkState(){
+  var button=el('saveAreaButton'),stateBox=el('areaLinkState');if(!button||!stateBox)return;
+  var current=areaFormBody(),saved=areaEditSnapshot;
+  if(!saved){
+    button.disabled=false;button.textContent='Salvar e validar área';stateBox.hidden=true;return;
+  }
+  var keys=Object.keys(saved),changed=keys.some(function(k){return !sameAreaValue(current,saved,k);});
+  var linkKeys=['areaId','areaNome','unidadeId','unidadeNome','tacsId','planilhaId','criarFonte'];
+  var linkChanged=linkKeys.some(function(k){return !sameAreaValue(current,saved,k);});
+  if(!changed&&saved.ativa){
+    button.disabled=true;button.textContent='✓ Área vinculada e ativa';
+    stateBox.hidden=false;stateBox.textContent='Vínculo confirmado: '+(saved.areaNome||saved.areaId)+' → '+(saved.unidadeNome||saved.unidadeId)+' • Área ativa.';
+    return;
+  }
+  button.disabled=false;button.textContent=linkChanged?'Salvar novo vínculo':'Salvar alterações';
+  stateBox.hidden=!(saved.ativa&&!linkChanged);
+  if(!stateBox.hidden)stateBox.textContent='Área vinculada e ativa. Há alterações operacionais ainda não salvas.';
+}
 function openArea(a){
   el('areaForm').reset();el('areaId').value=a&&a.areaId||'';el('areaName').value=a&&a.areaNome||'';el('areaUnitId').value=a&&a.unidadeId||'';el('areaUnitName').value=a&&a.unidadeNome||'';
   renderAreaOptions();el('areaTacsId').value=a&&a.tacsId||'';el('areaMicroarea').value=a&&a.microareaPadrao||'1';el('areaTeam').value=a&&a.equipe||'';el('areaSpreadsheet').value=a&&a.planilhaId||'';
-  el('areaCreateSource').checked=false;el('areaDocumentLookup').checked=!a||a.consultaPorDocumento!==false;el('areaActive').checked=Boolean(a&&bool(a.ativa));el('areaFormTitle').textContent=a?'Editar área':'Nova área';el('areaForm').classList.remove('hidden');el('areaForm').scrollIntoView({behavior:'smooth',block:'start'});
+  el('areaCreateSource').checked=false;el('areaDocumentLookup').checked=!a||a.consultaPorDocumento!==false;el('areaActive').checked=Boolean(a&&bool(a.ativa));el('areaFormTitle').textContent=a?'Editar área':'Nova área';
+  areaEditSnapshot=areaSnapshotFromRecord(a);
+  el('areaForm').classList.remove('hidden');syncAreaLinkState();el('areaForm').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function saveArea(event){
-  event.preventDefault();var body={areaId:el('areaId').value,areaNome:el('areaName').value,unidadeId:el('areaUnitId').value,unidadeNome:el('areaUnitName').value,tacsId:el('areaTacsId').value,microareaPadrao:el('areaMicroarea').value,equipe:el('areaTeam').value,planilhaId:el('areaSpreadsheet').value,criarFonte:el('areaCreateSource').checked,consultaPorDocumento:el('areaDocumentLookup').checked,ativa:el('areaActive').checked};
+  event.preventDefault();var body=areaFormBody();
   if(!confirm('Salvar e validar esta área? Uma área ativa precisa ter fonte 20/20 exclusiva.'))return;
-  status('Validando TACS, CNS, unidade e fonte de moradores…','warn');territoryPost('admin_territorio_salvar_area',{payload:JSON.stringify(body)},function(r){if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar a área.'),'err');return;}el('areaForm').classList.add('hidden');loadData('',text(r.message||'Área salva e validada.'));});
+  status('Validando TACS, CNS, unidade e fonte de moradores…','warn');territoryPost('admin_territorio_salvar_area',{payload:JSON.stringify(body)},function(r){
+    if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar a área.'),'err');return;}
+    var saved=r.area||body,found=false;
+    data.areas=data.areas.map(function(a){if(text(a.areaId)===text(saved.areaId)){found=true;return saved;}return a;});
+    if(!found)data.areas.push(saved);
+    render();openArea(saved);
+    status(bool(saved.ativa)?'Vínculo confirmado: '+text(saved.areaNome||saved.areaId)+' → '+text(saved.unidadeNome||saved.unidadeId)+' • Área ativa.':text(r.message||'Área salva e validada.'),'ok');
+  });
 }
 
 function validateArea(id){status('Conferindo área e schema 20/20…','warn');territoryPost('admin_territorio_validar_area',{areaId:id},function(r){status(text(r&&r.message||'Não foi possível validar a área.'),r&&r.ok===true?'ok':'err');});}
@@ -277,12 +403,16 @@ el('adminLoginButton').addEventListener('click',function(){var pin=digits(el('ad
 el('tacsLoginButton').addEventListener('click',function(){var pin=digits(el('tacsPinLogin').value);if(!/^\d{4,8}$/.test(pin)){loginStatus('Informe o PIN individual de 4 a 8 números.','err');return;}loginStatus('Validando o PIN individual…','warn');post('admin_territorio_login_pin',{pin:pin,dispositivo:device},'admin_territorio_result',function(r){el('tacsPinLogin').value='';if(!r||r.ok!==true||!r.token){loginStatus(text(r&&r.message||'Acesso recusado.'),'err');return;}clearSession();territorioToken=r.token;mode='tacs';sessionStorage.setItem(TACS_TOKEN_KEY,territorioToken);loadData('Acesso individual validado para '+text(r.areaNome||r.areaId)+'.');});});
 el('logoutButton').addEventListener('click',function(){var action=mode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout',result=mode==='tacs'?'admin_territorio_result':'admin_result';post(action,session(),result,function(){clearSession();loginStatus('Sessão encerrada.','ok');});});
 document.querySelectorAll('.sectionTab').forEach(function(b){b.addEventListener('click',function(){switchSection(b.dataset.section);});});
-el('newTacsButton').addEventListener('click',function(){openTacs(null);});el('cancelTacsButton').addEventListener('click',function(){el('tacsForm').classList.add('hidden');});el('tacsForm').addEventListener('submit',saveTacs);
-el('newAreaButton').addEventListener('click',function(){openArea(null);});el('cancelAreaButton').addEventListener('click',function(){el('areaForm').classList.add('hidden');});el('areaForm').addEventListener('submit',saveArea);
+el('newTacsButton').addEventListener('click',function(){openTacs(null);});el('cancelTacsButton').addEventListener('click',function(){el('tacsForm').classList.add('hidden');});el('tacsForm').addEventListener('submit',saveTacs);el('tacsProfile').addEventListener('change',syncAccessProfileUi);el('tacsActive').addEventListener('change',syncTacsActiveUi);
+el('newAreaButton').addEventListener('click',function(){openArea(null);});el('cancelAreaButton').addEventListener('click',function(){el('areaForm').classList.add('hidden');areaEditSnapshot=null;});el('areaForm').addEventListener('submit',saveArea);
+['areaId','areaName','areaUnitId','areaUnitName','areaTacsId','areaMicroarea','areaTeam','areaSpreadsheet','areaCreateSource','areaDocumentLookup','areaActive'].forEach(function(id){var n=el(id);if(n){n.addEventListener('input',syncAreaLinkState);n.addEventListener('change',syncAreaLinkState);}});
 el('tacsList').addEventListener('click',function(e){var b=e.target.closest('.editTacs');if(b)openTacs(data.tacs.find(function(t){return t.tacsId===b.dataset.id;})||null);});
 el('areasList').addEventListener('click',function(e){var edit=e.target.closest('.editArea'),validate=e.target.closest('.validateArea');if(edit)openArea(data.areas.find(function(a){return a.areaId===edit.dataset.id;})||null);if(validate)validateArea(validate.dataset.id);});
 el('csvFile').addEventListener('change',function(){prepareFile(this.files&&this.files[0]);});el('previewCsvButton').addEventListener('click',previewCsv);el('importCsvButton').addEventListener('click',importCsv);el('csvArea').addEventListener('change',loadBatches);el('batchList').addEventListener('click',function(e){var b=e.target.closest('.undoBatch');if(b)undoBatch(b.dataset.id);});
-el('tacsBirth').addEventListener('input',function(){this.value=birthText(this.value);});
+bindMask('tacsBirth',birthText);
+bindMask('tacsCpf',cpfText);
+bindMask('tacsCns',cnsText);
+bindMask('tacsPhone',phoneText);
 
 if(mode)loadData('Conferindo a sessão existente…');else{showLogin('admin');loginStatus('Escolha o tipo de acesso.','ok');}
 }());

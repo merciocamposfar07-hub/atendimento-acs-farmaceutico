@@ -14,6 +14,23 @@ const build=read('scripts/build_apps_script_release.js');
 
 assert.match(territory,/MAX_TACS:500/,'A base territorial deve comportar muito mais que os 50 TACS iniciais.');
 assert.match(territory,/MAX_AREAS:500/,'A base territorial deve comportar muito mais que as 50 áreas iniciais.');
+assert.match(territory,/function tacsTerritorioV1AdministradorAtual_\(/,
+  'Backend deve identificar o administrador atual depois da autenticação.');
+assert.match(territory,/administradorAtual:administradorAtual/,
+  'Contexto administrativo deve devolver o administrador autenticado à Central.');
+assert.match(territory,/ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_MORADOR','TACS','ADMIN'/,
+  'O cadastro deve oferecer exatamente os seis perfis funcionais definidos.');
+assert.match(territory,/tacsTerritorioV1PerfilTem_\(tacs\.perfil,'TACS'\)/,
+  'O login territorial deve aceitar somente cadastros que realmente possuam vínculo TACS.');
+assert.match(territory,/DOCUMENTOS_TEXTO_V1/,
+  'A gravação territorial deve proteger documentos contra conversão numérica.');
+for(const campo of ['CPF','CNS_PROFISSIONAL','TELEFONE','MATRICULA']){
+  assert.match(territory,new RegExp("'"+campo+"'"),'Campo textual protegido ausente: '+campo);
+}
+assert.match(territory,/setNumberFormat\('@'\)[\s\S]{0,260}String\(values\[indice\]\)/,
+  'Documentos devem ser formatados como texto e gravados como string para preservar zeros iniciais.');
+assert.match(quickBackend,/tacsTerritorioV1PerfilTem_\(item\.perfil,'TACS'\)/,
+  'PIN-only do TACS não pode aceitar um Administrador neutro.');
 for(const permission of ['MORADORES_EDITAR','PUBLICACOES_GERENCIAR','AGENDAS_GERENCIAR','PROFISSIONAIS_GERENCIAR']){
   assert.match(territory,new RegExp(permission),`Permissão operacional ausente: ${permission}`);
 }
@@ -39,6 +56,22 @@ assert.doesNotMatch(centralHtml,/id="tacsCns"|for="tacsCns"/,
   'A Central não deve exibir campo de CNS para o TACS.');
 assert.doesNotMatch(centralJs,/Informe o CNS profissional com 15 números|Validando CNS e PIN/,
   'O fluxo principal da Central não deve exigir CNS.');
+assert.doesNotMatch(quickFrontend,/nome:text\(r\.nome\)/,
+  'O acesso rápido TACS não deve persistir o nome profissional no aparelho.');
+assert.doesNotMatch(quickFrontend,/\(p\.nome\?'<span>'/,
+  'O acesso público TACS não pode exibir o nome do agente antes da autenticação.');
+assert.match(quickFrontend,/delete p\.nome/,
+  'Perfis antigos devem remover o nome TACS já salvo localmente.');
+assert.match(quickFrontend,/schedulePoll\(8000\)/,
+  'Acesso rápido TACS deve priorizar a resposta direta do POST e usar polling apenas como contingência tardia.');
+assert.match(quickFrontend,/frame\.setAttribute\('name',frameName\)/,
+  'TACS deve registrar o iframe de transporte antes do POST no Safari.');
+assert.match(quickFrontend,/form\.setAttribute\('target',frameName\)/,
+  'TACS deve registrar o target do formulário explicitamente no Safari.');
+assert.match(quickFrontend,/api\.abrir\('tacs',pin\)/,
+  'TACS deve tentar o desbloqueio local por PIN antes da validação remota.');
+assert.match(quickFrontend,/function aquecerPinTacs\(\)/,
+  'TACS deve manter aquecimento sob interação, sem bloquear a abertura inicial.');
 const recados=read('painel-oficial-recados-campanhas.html');
 const moradoresHtml=read('teste-v1/painel-moradores-v2.html');
 const moradoresJs=read('teste-v1/painel-moradores-transport-v2.js');

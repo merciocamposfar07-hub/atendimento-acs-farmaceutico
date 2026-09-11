@@ -14,7 +14,7 @@ const professionalsWrapper=read('painel-oficial-profissionais-servicos.html');
 const territoryWrapper=read('painel-oficial-tacs-areas.html');
 const publicPortal=read('index.html');
 const manifest=JSON.parse(read('manifest-central-admin.webmanifest'));
-assert.equal(manifest.name,'Central Administrativa TACS');
+assert.equal(manifest.name,'Conecta Saúde Comunitária');
 assert.match(manifest.start_url,/central-administrativa-tacs\.html$/);
 assert.equal(manifest.display,'standalone');
 assert.match(html,/CENTRAL ADMINISTRATIVA TACS/);
@@ -41,8 +41,42 @@ assert.match(js,/admin_territorio_login_pin/,
 assert.doesNotMatch(js,/admin_territorio_login_tacs/,
   'A Central não deve voltar ao login antigo por CNS + PIN.');
 assert.match(js,/admin_territorio_dados/);
-assert.match(js,/post\('admin_notificacoes_saude'/,
-  'A Central deve manter a consulta autenticada de saúde das notificações usada pelo runtime atual.');
+assert.match(js,/function aquecerValidacaoPin\(\)/,
+  'Administrador e TACS devem aquecer o Apps Script enquanto o PIN é digitado.');
+assert.match(js,/event\.source!==active\.frame\.contentWindow/,
+  'A confirmação da Central deve priorizar a resposta direta do POST pelo iframe correto.');
+assert.match(js,/frame\.setAttribute\('name',frameName\)/,
+  'A Central deve registrar o iframe antes do POST no Safari.');
+assert.match(js,/form\.setAttribute\('target',frameName\)/,
+  'A Central deve registrar explicitamente o target do formulário no Safari.');
+assert.match(js,/schedulePoll\(fastPin\?8000:1800\)/,
+  'Polling deve ser apenas contingência tardia, sem saturar o Apps Script.');
+assert.doesNotMatch(js,/O servidor demorou para confirmar a operação\./,
+  'A Central não pode manter o timeout legado que bloqueava o acesso pelo PIN.');
+assert.match(html,/central-administrativa-tacs\.js\?v=[A-Za-z0-9._-]+/,
+  'A Central deve invalidar o cache para carregar a versão atual do acesso.');
+assert.match(js,/ACCESS_PROFILE_LABELS/,
+  'A Central deve traduzir o perfil funcional cadastrado.');
+assert.match(js,/function currentAdministrator\(\)/,
+  'A Central deve resolver o administrador autenticado antes de montar a saudação.');
+assert.match(js,/var adminNome=text\(admin&&admin\.nomeCompleto\)\|\|'Administrador'/,
+  'A saudação administrativa deve usar o nome cadastrado quando disponível.');
+assert.doesNotMatch(js,/<small>Olá, administrador<\/small><h1>Administrador<\/h1>/,
+  'A Central não pode manter saudação fixa genérica para administrador autenticado.');
+assert.match(js,/Olá, '\+esc\(nome\)/,
+  'A saudação do TACS deve usar o nome do agente autenticado.');
+assert.match(js,/accessProfileLabel\(tacs&&tacs\.perfil\|\|'TACS'\)/,
+  'A saudação deve refletir o perfil real do TACS, inclusive perfis combinados.');
+assert.match(js,/var adminPerfil=accessProfileLabel\(admin&&admin\.perfil\|\|context&&context\.perfil\|\|'ADMIN'\)/,
+  'O administrador deve manter o próprio perfil, sem ser rotulado como TACS.');
+assert.match(js,/NOTIFICACOES_FONTE_UNICA_ATUAL_V2/,
+  'A Central deve usar uma única fonte atual para a Saúde das notificações.');
+assert.doesNotMatch(js,/function refreshNotificationHealth[\s\S]*admin_notificacoes_saude_rapida/,
+  'A Central não pode exibir snapshot rápido/cache como contagem atual.');
+assert.match(js,/notificationPostIsolated\('admin_notificacoes_saude_remota'/,
+  'A Central deve validar a saúde das notificações diretamente na fonte remota.');
+assert.match(js,/result\.oneSignalConsultado!==true/,
+  'A Central não pode aceitar contagens provisórias como verdade confirmada.');
 assert.match(js,/painel-oficial-recados-campanhas\.html\?area=/);
 assert.doesNotMatch(js,/moduleUrl\(name\)[\s\S]*name==='notificacoes'/,
   'A rota do painel redundante de Saúde das notificações deve ser removida.');
@@ -95,13 +129,23 @@ assert.match(publicPortal,/\.hero-actions\{grid-template-columns:1fr;margin:0;bo
   'O quadro inferior do Portal TACS deve alinhar com a largura do quadro superior no celular.');
 assert.match(js,/teste-v1\/painel-moradores-v2\.html/);
 assert.match(js,/filter\(function\(a\)\{return a&&a\.ativa!==false\}\)/);
-assert.match(js,/post\('admin_moradores_status'[\s\S]*post\('admin_notificacoes_saude'/,
-  'Saúde de moradores deve terminar antes da consulta autenticada das notificações.');
+assert.match(js,/refreshNotificationHealth\(areaId,Boolean\(force\)\)/,
+  'A saúde das notificações deve iniciar independentemente da leitura de moradores.');
+assert.doesNotMatch(js,/post\('admin_moradores_status'[\s\S]{0,1800}post\('admin_notificacoes_saude_rapida'/,
+  'A saúde das notificações não pode ficar presa ao término da consulta de moradores.');
 assert.match(notificationHealthBackend,/contagens=\{ativos:0,inativos:0,reparo:0,semConfirmacao:0,total:0\}/,
   'O contrato do backend deve expor a quantidade apta em contagens.ativos.');
-assert.match(js,/Number\(c\.ativos\|\|0\)\+' aptos/,
-  'A Central deve ler os aptos do campo contagens.ativos retornado pelo backend.');
-assert.doesNotMatch(js,/Number\(c\.aptos\|\|0\)\+' aptos/,
+assert.ok(notificationHealthBackend.includes('SAUDE_NOTIFICACOES_DEDUP_V2'),
+  'A saúde remota deve deduplicar aparelhos por Subscription ID.');
+assert.ok(notificationHealthBackend.includes('registros=Object.keys(registroPorId).map'),
+  'Linhas repetidas do registro não podem inflar aptos ou reparos.');
+assert.ok(notificationHealthBackend.includes('||remotoTodos[id])return'),
+  'A exportação OneSignal não pode contar a mesma Subscription ID duas vezes.');
+assert.match(js,/c\.ativos\+' aptos/,
+  'A Central deve exibir somente contagens.ativos já normalizado e confirmado.');
+assert.match(js,/notificationCount\(c\.ativos\)/,
+  'A Central deve validar numericamente contagens.ativos antes de exibir.');
+assert.doesNotMatch(js,/c\.aptos\+' aptos/,
   'A Central não pode usar contagens.aptos, pois esse campo não existe no backend.');
 assert.doesNotMatch(js,/subscriptionId\s*[:=]\s*['"][0-9a-f-]{20,}/i);
 console.log('Central Administrativa TACS: sessão territorial PIN-only, permissões, Saúde Geral e gestão multi-município ADMIN_GERAL validados.');

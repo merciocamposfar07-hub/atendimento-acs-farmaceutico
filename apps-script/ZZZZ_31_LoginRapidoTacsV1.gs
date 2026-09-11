@@ -93,13 +93,13 @@ function tacsLoginRapidoV1EntrarPorPin_(p){
   var tacsId=chave?tacsLoginRapidoV1ValidarChave_(chave,dispositivo):'';
   if(tacsId){
     var lembrado=tacsTerritorioV1EncontrarTacs_(tacsId);
-    if(lembrado&&lembrado.ativo&&lembrado.pinSalt&&lembrado.pinHash&&
+    if(lembrado&&lembrado.ativo&&tacsTerritorioV1PerfilTem_(lembrado.perfil,'TACS')&&lembrado.pinSalt&&lembrado.pinHash&&
        tacsTerritorioV1CompararSeguro_(lembrado.pinHash,tacsTerritorioV1HashPin_(pin,lembrado.pinSalt))){
       tacs=lembrado;
     }
   }else{
     var correspondentes=tacsTerritorioV1LerTacs_().filter(function(item){
-      return item&&item.ativo===true&&item.pinSalt&&item.pinHash&&
+      return item&&item.ativo===true&&tacsTerritorioV1PerfilTem_(item.perfil,'TACS')&&item.pinSalt&&item.pinHash&&
         tacsTerritorioV1CompararSeguro_(item.pinHash,tacsTerritorioV1HashPin_(pin,item.pinSalt));
     });
     if(correspondentes.length>1){
@@ -115,6 +115,7 @@ function tacsLoginRapidoV1EntrarPorPin_(p){
   }
   tacsTerritorioV1LimparFalhasLogin_(tentativa);
 
+  if(!tacsTerritorioV1PerfilTem_(tacs.perfil,'TACS'))throw new Error('Este PIN não possui perfil TACS.');
   var area=tacsTerritorioV1EncontrarArea_(tacs.areaId);
   if(!area||!area.ativa||area.tacsId!==tacs.tacsId){
     throw new Error('Este TACS ainda não possui uma área ativa e validada.');
