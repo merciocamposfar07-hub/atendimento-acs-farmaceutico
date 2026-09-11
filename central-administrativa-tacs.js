@@ -179,7 +179,7 @@ function refreshNotificationHealth(areaId,force){
 function refreshHealth(force){
   if(!context)return;
   var areaId=selectedAreaId,now=Date.now();
-  if(healthRefreshInFlight&&!force)return;
+  if(healthRefreshInFlight)return;
   if(!force&&lastHealthRefreshArea===areaId&&now-lastHealthRefreshAt<HEALTH_REFRESH_TTL){refreshNotificationHealth(areaId,false);return}
   healthRefreshInFlight=true;lastHealthRefreshArea=areaId;lastHealthRefreshAt=now;
   ['healthPortal','healthResidents','healthAgenda','healthContent'].forEach(function(id){markHealth(id,'Verificando…','')});
