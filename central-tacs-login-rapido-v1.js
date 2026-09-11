@@ -58,12 +58,18 @@ function getProfile(){
     if(!raw)return null;
     var p=JSON.parse(raw);
     if(!p||!/^qt1\.[A-Z0-9_-]{1,64}\.[a-f0-9]{64}$/.test(String(p.quickKey||'')))return null;
+    /* PRIVACIDADE_TACS_LOGIN_V1: nome profissional não permanece exposto no acesso público. */
+    if(Object.prototype.hasOwnProperty.call(p,'nome')){
+      delete p.nome;
+      try{localStorage.setItem(PROFILE_KEY,JSON.stringify(p))}catch(e){}
+    }
     return p;
   }catch(e){return null}
 }
 function saveProfile(r){
   if(!r||!r.quickKey)return;
-  var p={quickKey:String(r.quickKey),tacsId:text(r.tacsId),nome:text(r.nome),areaId:text(r.areaId),areaNome:text(r.areaNome)};
+  /* PRIVACIDADE_TACS_LOGIN_V1: o acesso rápido guarda apenas o necessário para autenticação/território. */
+  var p={quickKey:String(r.quickKey),tacsId:text(r.tacsId),areaId:text(r.areaId),areaNome:text(r.areaNome)};
   try{localStorage.setItem(PROFILE_KEY,JSON.stringify(p))}catch(e){}
 }
 function clearProfile(){try{localStorage.removeItem(PROFILE_KEY)}catch(e){}}
@@ -85,7 +91,6 @@ function renderLogin(){
     if(cnsInput)cnsInput.hidden=true;
     remembered.hidden=false;
     remembered.innerHTML='<strong>Acesso rápido neste aparelho</strong><br>'+
-      (p.nome?'<span>'+escapeHtml(p.nome)+'</span><br>':'')+
       (p.areaNome||p.areaId?'<span>'+escapeHtml(p.areaNome||p.areaId)+'</span><br>':'')+
       '<button id="tacsQuickForget" type="button" style="margin-top:10px;border:0;border-radius:12px;padding:9px 12px;background:#607985;color:#fff;font-weight:850">Usar outro TACS neste aparelho</button>';
     var forget=document.getElementById('tacsQuickForget');
