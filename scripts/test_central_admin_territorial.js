@@ -14,7 +14,7 @@ const professionalsWrapper=read('painel-oficial-profissionais-servicos.html');
 const territoryWrapper=read('painel-oficial-tacs-areas.html');
 const publicPortal=read('index.html');
 const manifest=JSON.parse(read('manifest-central-admin.webmanifest'));
-assert.equal(manifest.name,'Central Administrativa TACS');
+assert.equal(manifest.name,'Conecta Saúde Comunitária');
 assert.match(manifest.start_url,/central-administrativa-tacs\.html$/);
 assert.equal(manifest.display,'standalone');
 assert.match(html,/CENTRAL ADMINISTRATIVA TACS/);
