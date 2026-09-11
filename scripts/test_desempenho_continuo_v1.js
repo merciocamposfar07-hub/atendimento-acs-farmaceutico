@@ -10,6 +10,8 @@ const html=read('central-administrativa-tacs.html');
 const warm=read('admin-warmup.js');
 const backend=read('apps-script/ZZZZ_17_TacsAreasAdminV1.gs');
 const resident=read('conecta-morador-session-v1.js');
+const quick=read('central-tacs-login-rapido-v1.js');
+const back=read('central-back-button-v1.js');
 const flux=read('conecta-saude-homologacao/FLUXOGRAMA_ABERTURA_CANONICA.md');
 const matriz=read('PORTAL_TACS_MATRIZ.md');
 const registro=read('REGISTRO_CANONICO_PIN_LOCAL_V2_2026_09_11.md');
@@ -18,6 +20,8 @@ const plano=read('PLANO_CANONICO_MIGRACAO_PAINÉIS_APP_INSTITUCIONAL.md');
 new Function(central);
 new Function(warm);
 new Function(resident);
+new Function(quick);
+new Function(back);
 
 assert.match(central,/HEALTH_CACHE_PREFIX='portalTacsHealthSnapshotV2:'/);
 assert.match(central,/function renderHealthSnapshot\(areaId\)/);
@@ -41,6 +45,14 @@ assert.match(html,/\.csc-profile-card strong\{[^}]*font-weight:950/i);
 assert.match(resident,/\.csc-resident-bar strong\{[^}]*font-weight:950[^}]*color:#fff/i);
 assert.match(resident,/\.csc-family-person\{[^}]*font-size:1\.02rem[^}]*font-weight:950/i);
 
+assert.match(quick,/PIN_UNICO_CENTRAL_V1/);
+assert.match(quick,/if\(!hasAnySession\(\)\)return;/);
+assert.match(back,/function installSinglePinGate\(\)/);
+assert.match(back,/Painéis internos jamais pedem outro PIN/);
+assert.match(back,/location\.replace\(centralUrl\(\)\)/);
+assert.match(back,/#tacsPinPublicacoes/);
+assert.doesNotMatch(back,/#tacsPin\b/,'PIN funcional de cadastro do próprio TACS não pode ser ocultado pelo gate único');
+
 assert.match(backend,/chavesFortes=\[/);
 assert.match(backend,/var adminsDaArea=\(todos\|\|\[\]\)\.filter/);
 assert.match(backend,/identidadeAutenticada:administradorAtual/);
@@ -53,5 +65,9 @@ assert.match(flux,/Desempenho contínuo obrigatório/);
 assert.match(matriz,/preparação assíncrona não bloqueante/);
 assert.match(registro,/Revisão de desempenho contínuo/);
 assert.match(plano,/identidade, área e Saúde Geral incluídas/);
+assert.match(flux,/PIN único por entrada/);
+assert.match(matriz,/PIN é informado somente na porta de entrada/);
+assert.match(registro,/PIN único na Central/);
+assert.match(plano,/PIN é digitado uma única vez na entrada do perfil/);
 
-console.log('DESEMPENHO_CONTINUO_V1_OK: identidade forte, PIN local, Saúde Geral cache-first e preparação não bloqueante registrados.');
+console.log('DESEMPENHO_CONTINUO_V1_OK: identidade forte, PIN único na Central, Saúde Geral cache-first e preparação não bloqueante registrados.');
