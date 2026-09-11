@@ -43,10 +43,16 @@ assert.doesNotMatch(js,/admin_territorio_login_tacs/,
 assert.match(js,/admin_territorio_dados/);
 assert.match(js,/function aquecerValidacaoPin\(\)/,
   'Administrador e TACS devem aquecer o Apps Script enquanto o PIN é digitado.');
-assert.match(js,/pollWait:fastPin\?450:650/,
-  'A confirmação de PIN deve usar cadência curta sem sobrecarregar o Apps Script.');
-assert.match(js,/Math\.min\(700,op\.pollWait\+80\)/,
-  'A repetição da consulta de PIN deve usar backoff curto e limitado.');
+assert.match(js,/event\.source!==active\.frame\.contentWindow/,
+  'A confirmação da Central deve priorizar a resposta direta do POST pelo iframe correto.');
+assert.match(js,/frame\.setAttribute\('name',frameName\)/,
+  'A Central deve registrar o iframe antes do POST no Safari.');
+assert.match(js,/form\.setAttribute\('target',frameName\)/,
+  'A Central deve registrar explicitamente o target do formulário no Safari.');
+assert.match(js,/schedulePoll\(fastPin\?8000:1800\)/,
+  'Polling deve ser apenas contingência tardia, sem saturar o Apps Script.');
+assert.doesNotMatch(js,/O servidor demorou para confirmar a operação\./,
+  'A Central não pode manter o timeout legado que bloqueava o acesso pelo PIN.');
 assert.match(html,/central-administrativa-tacs\.js\?v=[A-Za-z0-9._-]+/,
   'A Central deve invalidar o cache para carregar a versão atual do acesso.');
 assert.match(js,/ACCESS_PROFILE_LABELS/,

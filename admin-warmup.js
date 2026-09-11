@@ -129,7 +129,8 @@
   window.addEventListener('online',function(){ iniciar(true); });
   document.addEventListener('visibilitychange',reaquecerAoVoltar);
   window.addEventListener('pageshow',reaquecerAoVoltar);
-  estado.ready=iniciar();
+  /* LOGIN_PIN_LOAD_R8: não abrir Apps Script durante o carregamento inicial da tela. O aquecimento continua sendo disparado ao focar/digitar o PIN. */
+  estado.ready=Promise.resolve(cacheInicial||{ok:true,aquecido:false,origem:'tela-pin'});
 }());
 
 (function(){

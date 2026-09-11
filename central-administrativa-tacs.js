@@ -7,7 +7,7 @@ var HEALTH_REFRESH_TTL=30000,healthRefreshInFlight=false,lastHealthRefreshAt=0,l
 var NOTIFICATION_CONFIRMED_CACHE_PREFIX='portalTacsNotificationConfirmedV1:',notificationRemoteSeq=0,notificationRemoteArea='',notificationLatestStarted={};
 var URL_PARAMS=new URLSearchParams(location.search),TACS_ONLY=String(URL_PARAMS.get('acesso')||'').toLowerCase()==='tacs';
 var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
-var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='';
+var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
@@ -54,10 +54,84 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   }catch(e){}
 }
 function jsonp(action,params,cb){var name='__central_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false,timer=setTimeout(function(){finish({ok:false,message:'Consulta indisponível no momento.'})},15000);function finish(r){if(done)return;done=true;clearTimeout(timer);try{delete window[name]}catch(e){window[name]=undefined}if(s.parentNode)s.remove();if(r&&r.ok===true)marcarConexaoRecente();cb(r)}window[name]=finish;s.onerror=function(){finish({ok:false,message:'Falha de rede.'})};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(name),'_='+Date.now()];Object.keys(params||{}).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(params[k]))});s.src=API+'?'+q.join('&');document.head.appendChild(s)}
-function finishPost(result){if(!active)return;var op=active;active=null;clearTimeout(op.timeout);clearTimeout(op.pollTimer);if(op.form&&op.form.parentNode)op.form.remove();if(op.frame&&op.frame.parentNode)setTimeout(function(){if(op.frame.parentNode)op.frame.remove()},150);var finalResult=result||{ok:false,message:'Resposta vazia.'};if(finalResult&&finalResult.ok===true)marcarConexaoRecente();op.cb(finalResult)}
-window.addEventListener('message',function(event){if(!active||!active.frame||event.source!==active.frame.contentWindow)return;var d=event.data;if(typeof d==='string'){try{d=JSON.parse(d)}catch(e){return}}if(!d||typeof d!=='object')return;var rid=text(d.requestId||(d.result&&d.result.requestId));if(rid&&rid!==active.id)return;var r=Object.prototype.hasOwnProperty.call(d,'result')?d.result:(Object.prototype.hasOwnProperty.call(d,'payload')?d.payload:(Object.prototype.hasOwnProperty.call(d,'ok')?d:null));if(r)finishPost(r)});
-function poll(){if(!active)return;var op=active;jsonp(op.resultAction,{requestId:op.id},function(r){if(!active||active.id!==op.id)return;if(r&&r.ok===true&&r.pendente===false){finishPost(r.result);return}op.pollWait=op.fastPin?Math.min(700,op.pollWait+80):900;op.pollTimer=setTimeout(poll,op.pollWait)})}
-function post(action,payload,resultAction,cb){if(active){cb({ok:false,message:'Aguarde a operação anterior.'});return}var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form'),frameName='centralFrame'+Date.now()+Math.floor(Math.random()*1000),fields={},fastPin=/^(?:admin_login|admin_territorio_login_pin)$/.test(action);Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});fields.action=action;fields.requestId=rid;frame.name=frameName;frame.src='about:blank';frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none';form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.style.display='none';Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=String(fields[k]==null?'':fields[k]);form.appendChild(i)});active={id:rid,frame:frame,form:form,resultAction:resultAction,cb:cb,fastPin:fastPin,pollWait:fastPin?450:650,pollTimer:null,timeout:setTimeout(function(){finishPost({ok:false,message:'O servidor demorou para confirmar a operação.'})},fastPin?15000:45000)};document.body.appendChild(frame);document.body.appendChild(form);var sent=false;function send(){if(sent||!active||active.id!==rid)return;sent=true;try{form.submit()}catch(e){finishPost({ok:false,message:'Não foi possível iniciar a comunicação.'});return}active.pollTimer=setTimeout(poll,active.pollWait)}frame.addEventListener('load',send,{once:true});setTimeout(send,60)}
+function finishPost(result){
+  if(!active)return;
+  var op=active;active=null;
+  clearTimeout(op.timeout);clearTimeout(op.pollTimer);clearTimeout(op.submitTimer);
+  if(op.form&&op.form.parentNode)op.form.remove();
+  if(op.frame&&op.frame.parentNode)setTimeout(function(){if(op.frame.parentNode)op.frame.remove()},180);
+  var finalResult=result||{ok:false,message:'Resposta vazia.'};
+  if(finalResult&&finalResult.ok===true)marcarConexaoRecente();
+  op.cb(finalResult);
+}
+window.addEventListener('message',function(event){
+  if(!active||!active.frame||event.source!==active.frame.contentWindow)return;
+  var d=event.data;if(typeof d==='string'){try{d=JSON.parse(d)}catch(e){return}}
+  if(!d||typeof d!=='object')return;
+  var rid=text(d.requestId||(d.result&&d.result.requestId));
+  if(rid&&rid!==active.id)return;
+  var r=Object.prototype.hasOwnProperty.call(d,'result')?d.result:(Object.prototype.hasOwnProperty.call(d,'payload')?d.payload:(Object.prototype.hasOwnProperty.call(d,'ok')?d:null));
+  if(r)finishPost(r);
+});
+function schedulePoll(delay){
+  if(!active)return;
+  clearTimeout(active.pollTimer);
+  active.pollTimer=setTimeout(poll,Math.max(0,Number(delay||active.nextWait||1600)));
+}
+function poll(){
+  if(!active)return;
+  var op=active;
+  jsonp(op.resultAction,{requestId:op.id},function(r){
+    if(!active||active.id!==op.id)return;
+    if(r&&r.ok===true&&r.pendente===false){finishPost(r.result);return}
+    if(Date.now()>=op.deadline){
+      finishPost({ok:false,temporario:true,message:'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'});
+      return;
+    }
+    op.nextWait=Math.min(2200,Math.max(1400,op.nextWait+200));
+    schedulePoll(op.nextWait);
+  });
+}
+function post(action,payload,resultAction,cb){
+  if(active){cb({ok:false,message:'Aguarde a operação anterior.'});return}
+  var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form');
+  var frameName='centralFrame'+Date.now()+'_'+Math.floor(Math.random()*1000),fields={};
+  Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});
+  fields.action=action;fields.requestId=rid;
+  var fastPin=/^(?:admin_login|admin_territorio_login_pin)$/.test(action);
+  var duration=fastPin?45000:60000;
+  frame.name=frameName;frame.setAttribute('name',frameName);frame.src='about:blank';frame.setAttribute('aria-hidden','true');
+  frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;visibility:hidden;pointer-events:none;z-index:-1';
+  form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.setAttribute('target',frameName);form.style.display='none';
+  Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=String(fields[k]==null?'':fields[k]);form.appendChild(i)});
+  active={
+    id:rid,action:action,frame:frame,form:form,resultAction:resultAction,cb:cb,
+    pollTimer:null,submitTimer:null,nextWait:1600,deadline:Date.now()+duration,
+    timeout:setTimeout(function(){
+      finishPost({ok:false,temporario:true,message:'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'});
+    },duration+500)
+  };
+  document.body.appendChild(frame);document.body.appendChild(form);
+  var sent=false;
+  function sendOnce(){
+    if(sent||!active||active.id!==rid)return;
+    sent=true;clearTimeout(active.submitTimer);active.submitTimer=null;
+    try{form.submit()}catch(e){finishPost({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});return}
+    /* LOGIN_TRANSPORTE_R8: a resposta direta por postMessage é a via principal.
+       O polling só entra como fallback tardio, evitando dezenas de chamadas paralelas ao Apps Script. */
+    schedulePoll(fastPin?8000:1800);
+  }
+  function sendAfterRegistration(){
+    if(typeof window.requestAnimationFrame==='function'){
+      window.requestAnimationFrame(function(){window.requestAnimationFrame(sendOnce)});
+      return;
+    }
+    setTimeout(sendOnce,60);
+  }
+  frame.addEventListener('load',sendAfterRegistration,{once:true});
+  sendAfterRegistration();
+  active.submitTimer=setTimeout(sendOnce,180);
+}
 function showLogin(kind){var admin=!TACS_ONLY&&kind==='admin';el('adminLogin').hidden=!admin;el('tacsLogin').hidden=admin;el('tabAdmin').hidden=TACS_ONLY;el('tabAdmin').classList.toggle('active',admin);el('tabTacs').classList.toggle('active',!admin);el('tabTacs').parentNode.style.gridTemplateColumns=TACS_ONLY?'1fr':'1fr 1fr';if(TACS_ONLY)setStatus('Entre como TACS da sua área.','')}
 function permission(name){if(mode==='admin')return true;var tacs=context&&Array.isArray(context.tacs)?context.tacs[0]:null;var list=tacs&&Array.isArray(tacs.permissoes)?tacs.permissoes:[];return list.indexOf(name)!==-1}
 function selectedArea(){var list=context&&Array.isArray(context.areas)?context.areas:[];for(var i=0;i<list.length;i++)if(normArea(list[i].areaId)===selectedAreaId)return list[i];return list[0]||null}
@@ -72,6 +146,53 @@ function saveContextCache(){
       savedAt:Date.now()
     }));
   }catch(e){}
+}
+function pinLocalApi(){
+  var api=window.ConectaPinLocalV2;
+  return api&&typeof api.abrir==='function'&&typeof api.guardar==='function'?api:null;
+}
+function guardarAcessoLocal(scope,pin){
+  var api=pinLocalApi();
+  if(!api||!context||!mode)return Promise.resolve(false);
+  return Promise.resolve(api.guardar(scope,pin,{
+    device:device,
+    context:context,
+    selectedAreaId:selectedAreaId,
+    mode:scope,
+    salvoRemotoEm:Date.now()
+  })).catch(function(){return false});
+}
+function abrirAcessoLocal(scope,pin){
+  var api=pinLocalApi();if(!api)return Promise.resolve(null);
+  return Promise.resolve(api.abrir(scope,pin)).then(function(saved){
+    if(!saved||text(saved.device)!==text(device)||!saved.context)return null;
+    if(saved.mode&&text(saved.mode)!==scope)return null;
+    return saved;
+  }).catch(function(){return null});
+}
+function aplicarAcessoLocal(scope,saved){
+  if(!saved||!saved.context)return false;
+  /* PIN_LOCAL_SEM_TOKEN_V3: o PIN libera somente o último contexto confirmado.
+     Credenciais do servidor nunca são restauradas do armazenamento persistente. */
+  token='';territoryToken='';
+  sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
+  mode=scope;context=saved.context;selectedAreaId=normArea(saved.selectedAreaId||'');
+  saveContextCache();
+  acessoLocalAberto=scope;
+  renderContext(true);
+  setStatus('Acesso liberado. Confirmando a sessão atual em segundo plano…','ok');
+  return true;
+}
+function removerAcessoLocal(scope){
+  var api=pinLocalApi();if(api&&typeof api.remover==='function')api.remover(scope);
+}
+function bloquearAcessoLocal(scope,message){
+  removerAcessoLocal(scope);
+  token='';territoryToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
+  sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
+  el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;el('loginPanel').hidden=false;
+  showLogin(scope==='tacs'?'tacs':'admin');
+  setStatus(message||'O acesso deste perfil precisa ser validado novamente.','err');
 }
 function restoreContextCache(){
   try{
@@ -244,9 +365,41 @@ function refreshHealth(force){
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
 function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260823-recados-safari-render-v1';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?v='+revision;if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
-function openModule(name,title){var url=moduleUrl(name);if(!url)return;if(name==='portal'){window.open(url,'_blank','noopener');return}var sep=url.indexOf('?')===-1?'?':'&';/* AGENDA_DIRECT_NAV_V1: evita o iframe oculto e o travamento observado no iPhone; o retorno usa from=central. */if(name==='agendas'){location.assign(url+sep+'from=central&_cb='+Date.now());return}url=url+sep+'_cb='+Date.now();el('viewerTitle').textContent=title||'Painel';el('viewerFrame').src=url;el('viewer').hidden=false;document.body.classList.add('viewer-open')}
+function openModule(name,title){
+  var url=moduleUrl(name);if(!url)return;
+  if(name==='portal'){window.open(url,'_blank','noopener');return}
+  if(acessoLocalAberto&&!(token||territoryToken)){
+    moduloPendente={name:name,title:title||'Painel'};
+    setStatus('Central aberta. Confirmando a sessão atual para liberar este painel…','warn');
+    return;
+  }
+  moduloPendente=null;
+  var sep=url.indexOf('?')===-1?'?':'&';
+  /* AGENDA_DIRECT_NAV_V1: evita o iframe oculto e o travamento observado no iPhone; o retorno usa from=central. */
+  if(name==='agendas'){location.assign(url+sep+'from=central&_cb='+Date.now());return}
+  url=url+sep+'_cb='+Date.now();el('viewerTitle').textContent=title||'Painel';el('viewerFrame').src=url;el('viewer').hidden=false;document.body.classList.add('viewer-open')
+}
 function closeViewer(){el('viewer').hidden=true;el('viewerFrame').src='about:blank';document.body.classList.remove('viewer-open');refreshHealth()}
-function loadContext(message){post('admin_territorio_dados',session(),'admin_territorio_result',function(r){if(!r||r.ok!==true){token='';territoryToken='';mode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);el('loginPanel').hidden=false;el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;setStatus(text(r&&r.message)||'A sessão não pôde ser reutilizada. Entre novamente.','warn');return}context=r;mode=r.perfil==='TACS'?'tacs':'admin';saveContextCache();setStatus(message||'Acesso validado.','ok');renderContext(false)})}
+function loadContext(message){
+  post('admin_territorio_dados',session(),'admin_territorio_result',function(r){
+    if(!r||r.ok!==true){
+      if(acessoLocalAberto&&r&&r.temporario===true){setStatus('Painéis locais disponíveis. A sincronização continuará quando o servidor responder.','warn');return}
+      if(acessoLocalAberto){bloquearAcessoLocal(acessoLocalAberto,text(r&&r.message)||'O servidor recusou a sessão deste perfil.');return}
+      token='';territoryToken='';mode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
+      el('loginPanel').hidden=false;el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;
+      setStatus(text(r&&r.message)||'A sessão não pôde ser reutilizada. Entre novamente.','warn');return;
+    }
+    context=r;mode=r.perfil==='TACS'?'tacs':'admin';saveContextCache();
+    var pin=pinLocalPendente,scope=pinLocalPerfil||mode;
+    pinLocalPendente='';pinLocalPerfil='';acessoLocalAberto='';
+    if(pin)guardarAcessoLocal(scope,pin);
+    setStatus(message||'Acesso validado.','ok');renderContext(false);
+    if(moduloPendente){
+      var proximo=moduloPendente;moduloPendente=null;
+      setTimeout(function(){openModule(proximo.name,proximo.title)},0);
+    }
+  });
+}
 var logoutEmCurso=false;
 function cancelarOperacaoAtivaSemCallback(){
   if(!active)return;
@@ -289,7 +442,9 @@ function logout(){
   setStatus('Sessão encerrada. Seus dados locais foram preservados para o próximo acesso.','ok');
   window.scrollTo({top:0,behavior:'auto'});
 
-  if(hasSession)invalidarSessaoServidorEmSegundoPlano(action,payload);
+  /* LOGOFF_SEGURO_PIN_LOCAL_V3: preserva somente contexto local cifrado.
+     A sessão remota anterior é invalidada sem bloquear a interface. */
+  if(hasSession&&payload)invalidarSessaoServidorEmSegundoPlano(action,payload);
   setTimeout(function(){logoutEmCurso=false},250);
 }
 /* LOGIN_PREFETCH_ESTATICO_V2: a tela termina de carregar primeiro. Depois, fetch assíncrono aquece o cache sem iframe oculto e sem bloquear o evento load do Safari. */
@@ -311,8 +466,48 @@ function prefetchStaticPanels(){
 ['adminPin','tacsPin'].forEach(function(id){var input=el(id);if(!input)return;input.addEventListener('focus',aquecerValidacaoPin,{once:true});input.addEventListener('input',aquecerValidacaoPin,{once:true})});
 window.addEventListener('load',function(){if('requestIdleCallback' in window)requestIdleCallback(prefetchStaticPanels,{timeout:3000});else setTimeout(prefetchStaticPanels,2500)},{once:true});
 el('tabAdmin').addEventListener('click',function(){if(!TACS_ONLY)showLogin('admin')});el('tabTacs').addEventListener('click',function(){showLogin('tacs')});
-el('loginAdmin').addEventListener('click',function(){var pin=digits(el('adminPin').value);if(!/^\d{4,8}$/.test(pin)){setStatus('Digite um PIN administrativo de 4 a 8 números.','err');return}setStatus('Validando o acesso…','warn');post('admin_login',{pin:pin,dispositivo:device},'admin_result',function(r){el('adminPin').value='';if(!r||r.ok!==true||!r.token){setStatus(text(r&&r.message)||'Acesso recusado.','err');return}territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=r.token;mode='admin';sessionStorage.setItem(TOKEN_KEY,token);if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('ADMIN');restoreContextCache();loadContext('Administrador validado.')})});
-el('loginTacs').addEventListener('click',function(){var pin=digits(el('tacsPin').value);if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN individual de 4 a 8 números.','err');return}setStatus('Validando seu PIN…','warn');post('admin_territorio_login_pin',{pin:pin,dispositivo:device},'admin_territorio_result',function(r){el('tacsPin').value='';if(!r||r.ok!==true||!r.token){setStatus(text(r&&r.message)||'Acesso recusado.','err');return}token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=r.token;mode='tacs';selectedAreaId=normArea(r.areaId);sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('TACS');restoreContextCache();loadContext('Acesso individual validado para '+(text(r.areaNome)||r.areaId)+'.')})});
+el('loginAdmin').addEventListener('click',function(){
+  var pin=digits(el('adminPin').value);
+  if(!/^\d{4,8}$/.test(pin)){setStatus('Digite um PIN administrativo de 4 a 8 números.','err');return}
+  setStatus('Liberando o acesso…','warn');
+  abrirAcessoLocal('admin',pin).then(function(saved){
+    if(saved)aplicarAcessoLocal('admin',saved);
+    post('admin_login',{pin:pin,dispositivo:device},'admin_result',function(r){
+      el('adminPin').value='';
+      if(!r||r.ok!==true||!r.token){
+        if(saved&&r&&r.temporario===true){setStatus('Central aberta com os dados locais. O servidor ainda está sincronizando.','warn');return}
+        if(saved){bloquearAcessoLocal('admin',text(r&&r.message)||'Acesso administrativo recusado.');return}
+        setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
+      }
+      territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=r.token;mode='admin';sessionStorage.setItem(TOKEN_KEY,token);
+      pinLocalPendente=pin;pinLocalPerfil='admin';
+      if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('ADMIN');
+      if(!saved)restoreContextCache();
+      loadContext(saved?'Administrador sincronizado.':'Administrador validado.');
+    });
+  });
+});
+el('loginTacs').addEventListener('click',function(){
+  var pin=digits(el('tacsPin').value);
+  if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN individual de 4 a 8 números.','err');return}
+  setStatus('Liberando o acesso…','warn');
+  abrirAcessoLocal('tacs',pin).then(function(saved){
+    if(saved)aplicarAcessoLocal('tacs',saved);
+    post('admin_territorio_login_pin',{pin:pin,dispositivo:device},'admin_territorio_result',function(r){
+      el('tacsPin').value='';
+      if(!r||r.ok!==true||!r.token){
+        if(saved&&r&&r.temporario===true){setStatus('Área TACS aberta com os dados locais. O servidor ainda está sincronizando.','warn');return}
+        if(saved){bloquearAcessoLocal('tacs',text(r&&r.message)||'Acesso TACS recusado.');return}
+        setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
+      }
+      token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=r.token;mode='tacs';selectedAreaId=normArea(r.areaId);sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);
+      pinLocalPendente=pin;pinLocalPerfil='tacs';
+      if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('TACS');
+      if(!saved)restoreContextCache();
+      loadContext(saved?'Acesso TACS sincronizado.':'Acesso individual validado para '+(text(r.areaNome)||r.areaId)+'.');
+    });
+  });
+});
 el('adminArea').addEventListener('change',function(){if(mode!=='admin')return;selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
 el('viewerFrame').addEventListener('load',function(){try{applyUiStandard(el('viewerFrame').contentDocument)}catch(e){}});
 el('moduleGrid').addEventListener('click',function(e){var btn=e.target.closest('.module');if(!btn||btn.disabled||btn.hidden)return;openModule(btn.dataset.module,btn.querySelector('strong').textContent)});
@@ -330,6 +525,35 @@ window.addEventListener('pageshow',function(){
     setTimeout(function(){if(!active)loadContext('Sessão existente validada.')},140);
   }
 });
+window.PortalTacsCentralPinLocalV2={
+  abrir:function(scope,pin){return abrirAcessoLocal(scope,pin)},
+  aplicar:function(scope,saved){return aplicarAcessoLocal(scope,saved)},
+  prepararSincronizacao:function(scope,pin){pinLocalPendente=pin;pinLocalPerfil=scope},
+  guardar:function(scope,pin){return guardarAcessoLocal(scope,pin)},
+  bloquear:function(scope,msg){bloquearAcessoLocal(scope,msg)},
+  sincronizar:function(scope,newToken,pin,areaId,message){
+    if(scope==='tacs'){
+      token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=text(newToken);mode='tacs';
+      if(areaId)selectedAreaId=normArea(areaId);
+      sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);
+    }else{
+      territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=text(newToken);mode='admin';
+      sessionStorage.setItem(TOKEN_KEY,token);
+    }
+    pinLocalPendente=pin;pinLocalPerfil=scope;
+    loadContext(message||'Acesso sincronizado.');
+  }
+};
 applyUiStandard(document);
-if(token||territoryToken){var restored=restoreContextCache();if(!restored)setStatus('Conferindo a sessão existente…','warn');setTimeout(function(){if(!active)loadContext('Sessão existente validada.')},restored?120:0)}else{showLogin(TACS_ONLY?'tacs':'admin')}
+if(token||territoryToken){
+  try{
+    var pendingPin=sessionStorage.getItem('portalTacsPinLocalPendenteV2')||'';
+    var pendingScope=sessionStorage.getItem('portalTacsPinLocalPerfilV2')||'';
+    sessionStorage.removeItem('portalTacsPinLocalPendenteV2');sessionStorage.removeItem('portalTacsPinLocalPerfilV2');
+    if(/^\d{4,8}$/.test(pendingPin)){pinLocalPendente=pendingPin;pinLocalPerfil=pendingScope||mode}
+  }catch(e){}
+  var restored=restoreContextCache();
+  if(!restored)setStatus('Conferindo a sessão existente…','warn');
+  setTimeout(function(){if(!active)loadContext('Sessão existente validada.')},restored?120:0);
+}else{showLogin(TACS_ONLY?'tacs':'admin')}
 }());

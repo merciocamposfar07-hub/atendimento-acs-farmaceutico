@@ -23,7 +23,7 @@ assert(central.includes('conecta-acesso-unificado-v1.js'),'A Central deve carreg
 assert(unified.includes("b.id='tabMorador'"),'Entrada unificada deve oferecer perfil Morador');
 assert(unified.includes("p.textContent='Esqueci meu PIN'"),'Tela de acesso deve oferecer Esqueci meu PIN');
 assert(unified.includes("fastPin=/(?:login_pin|criar_pin)$/.test(action)"),'Morador deve usar confirmação rápida para login/criação de PIN');
-assert(unified.includes("wait=fastPin?140:650"),'Morador deve consultar o PIN em cadência curta sem saturar o servidor');
+assert(unified.includes("wait=fastPin?450:650"),'Fallback remoto do Morador deve consultar o PIN em cadência curta sem saturar o servidor');
 assert(unified.includes("function aquecerPinMorador()"),'Morador deve aquecer o backend ao digitar o PIN');
 assert(/conecta-acesso-unificado-v1\.js\?v=[A-Za-z0-9._-]+/.test(central),'Acesso unificado deve carregar com revisão explícita para invalidar cache');
 assert(unified.includes("currentRecoveryRole"),'Recuperação deve respeitar o perfil escolhido');
@@ -47,12 +47,19 @@ assert(!/Agora n[aã]o/i.test(resident),'Gate inicial não deve oferecer pular n
 assert(resident.includes("conecta_morador_notificacao_confirmar"),'Ativação precisa ser confirmada no backend');
 assert(resident.includes("renderFamily"),'Sessão autenticada deve apresentar núcleo familiar');
 assert(resident.includes("portalConectaMoradorTokenV1"),'Próximos acessos devem usar sessão do morador');
+assert(resident.includes('hasBackgroundRequest()'),'Morador deve poder abrir o snapshot local enquanto uma nova sessão é confirmada');
+assert(resident.includes("if(!token){showPortalToast('Acesso aberto. Aguarde a confirmação segura do servidor"),'Alterações do morador devem esperar token remoto novo');
 
 assert(centralJs.includes('LOGOFF_PRESERVA_CACHE_V2'),'Logoff deve preservar cache e dados locais');
 assert(centralJs.includes('LOGOFF_IMEDIATO_V1'),'Logoff deve responder no primeiro toque sem esperar o servidor');
 assert(centralJs.includes('cancelarOperacaoAtivaSemCallback'),'Logoff deve cancelar transporte pendente para evitar disputa de interface');
-assert(centralJs.includes('invalidarSessaoServidorEmSegundoPlano'),'Invalidação remota deve ocorrer em segundo plano');
-assert(centralJs.indexOf("sessionStorage.removeItem(TOKEN_KEY)")<centralJs.indexOf("invalidarSessaoServidorEmSegundoPlano(action,payload)"),'A interface deve encerrar localmente antes da invalidação remota');
+assert(centralJs.includes('LOGOFF_SEGURO_PIN_LOCAL_V3'),'Logoff deve preservar o cache local sem preservar credencial remota reutilizável');
+assert(centralJs.includes("if(hasSession&&payload)invalidarSessaoServidorEmSegundoPlano(action,payload);"),'Logoff deve invalidar a sessão remota em segundo plano sem bloquear a interface');
+assert(centralJs.includes('PIN_LOCAL_SEM_TOKEN_V3'),'PIN local deve abrir somente contexto confirmado, nunca um token remoto persistido');
+assert(!centralJs.includes('token:bearer'),'Cofre local administrativo não pode receber token do servidor');
+assert(centralJs.includes("abrirAcessoLocal('admin',pin)")&&centralJs.includes("abrirAcessoLocal('tacs',pin)"),'Administrador e TACS devem tentar o PIN local antes do servidor');
+assert(central.includes('conecta-pin-local-v2.js'),'Central deve carregar o cofre local cifrado');
+assert(central.includes('conecta-morador-pin-local-v2.js'),'Central deve carregar o desbloqueio local do Morador');
 assert(central.includes('touch-action:manipulation!important'),'Botão Logoff deve usar toque direto no iPhone');
 assert(centralJs.includes("sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY)"),'Logoff deve remover somente tokens de autenticação');
 assert(!/sessionStorage\.clear\(|localStorage\.clear\(/.test(centralJs),'Logoff não pode apagar armazenamento inteiro');

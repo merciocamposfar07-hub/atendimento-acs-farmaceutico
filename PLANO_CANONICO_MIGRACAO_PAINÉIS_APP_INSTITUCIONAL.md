@@ -55,3 +55,22 @@ Um painel só substitui o antigo depois de passar por:
 
 ## Primeiro bloco autorizado para planejamento técnico
 Começar pelo módulo **Agendas e vagas**, sem alterar ainda os outros painéis. O primeiro objetivo funcional é garantir que uma edição administrativa apareça corretamente na Central e no Portal, sem depender de recarregamentos manuais ou cache antigo.
+
+## Acesso canônico antes dos painéis
+
+A camada de desempenho dos painéis começa no próprio acesso. Depois da criação do PIN e do reconhecimento do aparelho:
+
+1. o PIN destrava localmente o último contexto/snapshot cifrado e previamente confirmado do perfil;
+2. o shell e o último contexto válido aparecem sem esperar o Apps Script;
+3. módulos já visitados reutilizam memória/snapshot local;
+4. a sincronização remota ocorre em paralelo;
+5. dados alterados são substituídos somente quando a versão/consulta remota confirma mudança;
+6. operações críticas nunca são confirmadas somente por snapshot e aguardam uma sessão remota nova.
+
+Metas de homologação:
+- resposta visual ao toque: abaixo de 100 ms;
+- desbloqueio local do PIN: alvo de 100–300 ms no aparelho;
+- retorno a painel já carregado: alvo de 100–200 ms;
+- latência remota não pode transformar a aplicação em tela parada.
+
+Esses números são metas de teste, não podem ser declarados atingidos sem medição real.

@@ -154,13 +154,13 @@ function createResidentPin(){
  var a=digits(el('cscResidentNewPin')&&el('cscResidentNewPin').value),b=digits(el('cscResidentNewPin2')&&el('cscResidentNewPin2').value);
  if(!/^\d{4}$/.test(a)||a!==b){setStatus('O PIN deve ter exatamente 4 números e os dois campos precisam ser iguais.','err');return}
  setStatus('Salvando seu acesso…','warn');
- post('conecta_morador_criar_pin',{identidadeToken:state.identidadeToken,pin:a,confirmacao:b,dispositivo:device()}).then(function(r){saveProfile(r);saveSession(r);setStatus('PIN salvo. Agora ative as notificações para concluir o primeiro acesso.','ok');openResidentPortal(r,true)}).catch(function(e){setStatus(e.message,'err')});
+ post('conecta_morador_criar_pin',{identidadeToken:state.identidadeToken,pin:a,confirmacao:b,dispositivo:device()}).then(function(r){saveProfile(r);saveSession(r);setStatus('PIN salvo. Preparando o acesso rápido deste aparelho…','ok');var hook=window.ConectaMoradorPinLocalV2;return Promise.resolve(hook&&typeof hook.registrar==='function'?hook.registrar(a,r):null).then(function(){openResidentPortal(r,true)})}).catch(function(e){setStatus(e.message,'err')});
 }
 function loginResident(){
  var p=profile(),pin=digits(el('cscResidentPin')&&el('cscResidentPin').value);if(!p){renderResidentStart();return}
  if(!/^\d{4}$/.test(pin)){setStatus('Digite seu PIN de 4 números.','err');return}
  setStatus('Validando seu PIN…','warn');
- post('conecta_morador_login_pin',{quickKey:p.quickKey,pin:pin,dispositivo:device()}).then(function(r){saveSession(r);setStatus('Acesso validado.','ok');openResidentPortal(r,!r.notificacoesAtivas)}).catch(function(e){setStatus(e.message,'err')});
+ post('conecta_morador_login_pin',{quickKey:p.quickKey,pin:pin,dispositivo:device()}).then(function(r){saveSession(r);setStatus('Acesso validado.','ok');var hook=window.ConectaMoradorPinLocalV2;return Promise.resolve(hook&&typeof hook.registrar==='function'?hook.registrar(pin,r):null).then(function(){openResidentPortal(r,!r.notificacoesAtivas)})}).catch(function(e){setStatus(e.message,'err')});
 }
 function openResidentPortal(r,onboarding){
  var area=encodeURIComponent(r.areaId||profile()&&profile().areaId||'JAPARANDUBA');
@@ -179,7 +179,7 @@ function renderRecoveryPin(r){
  var body=el('cscRecoveryBody');if(!body)return;
  setRecoveryMessage('CPF confirmado. Crie um novo PIN.','ok');
  body.innerHTML=field('cscRecoveryPin','Novo PIN de 4 números','type="password" inputmode="numeric" maxlength="4" autocomplete="new-password"')+field('cscRecoveryPin2','Confirmar novo PIN','type="password" inputmode="numeric" maxlength="4" autocomplete="new-password"')+'<div class="csc-inline-actions"><button class="btn green" id="cscRecoverySave" type="button">Salvar novo PIN</button></div>';
- el('cscRecoverySave').onclick=function(){var a=digits(el('cscRecoveryPin').value),b=digits(el('cscRecoveryPin2').value);if(!/^\d{4}$/.test(a)||a!==b){setRecoveryMessage('O PIN deve ter 4 números e a confirmação deve ser igual.','err');return}setRecoveryMessage('Salvando novo PIN…','warn');post('conecta_pin_recuperar_salvar',{recuperacaoToken:r.recuperacaoToken,pin:a,confirmacao:b,dispositivo:device()}).then(function(x){setRecoveryMessage(x.message||'PIN atualizado.','ok');setTimeout(closeRecovery,900)}).catch(function(e){setRecoveryMessage(e.message,'err')})};
+ el('cscRecoverySave').onclick=function(){var a=digits(el('cscRecoveryPin').value),b=digits(el('cscRecoveryPin2').value);if(!/^\d{4}$/.test(a)||a!==b){setRecoveryMessage('O PIN deve ter 4 números e a confirmação deve ser igual.','err');return}setRecoveryMessage('Salvando novo PIN…','warn');post('conecta_pin_recuperar_salvar',{recuperacaoToken:r.recuperacaoToken,pin:a,confirmacao:b,dispositivo:device()}).then(function(x){var hook=window.ConectaMoradorPinLocalV2;if(hook&&typeof hook.removerPerfil==='function')hook.removerPerfil(currentRecoveryRole());setRecoveryMessage(x.message||'PIN atualizado.','ok');setTimeout(closeRecovery,900)}).catch(function(e){setRecoveryMessage(e.message,'err')})};
 }
 function closeRecovery(){var m=el('cscRecovery');if(m)m.hidden=true;var lead=el('cscRecoveryLead');if(lead){lead.textContent='Confirme seu CPF para criar um novo PIN.';lead.className='muted'}}
 
