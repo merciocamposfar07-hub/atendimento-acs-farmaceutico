@@ -54,7 +54,7 @@ jobs:
           walk(root);
           for(const f of files){
             const s=fs.readFileSync(f,'utf8');
-            if(!/admin_login|admin_result|PIN_ADMIN|ADMIN_PIN|CHAVE_ADMIN/i.test(s))continue;
+            if(!/admin_login|admin_result|PIN_ADMIN|ADMIN_PIN|CHAVE_ADMIN|ADMIN_TACS_V1|adminTacsV1Dados_/i.test(s))continue;
             console.log('=== FILE',path.basename(f),'===');
             const lines=s.split(/\r?\n/);
             lines.forEach((line,i)=>{
