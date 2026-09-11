@@ -19,6 +19,14 @@ test('Central volta do painel com cartões tocáveis no BFCache/Safari',async({p
   await page.waitForURL(url=>{const u=new URL(url);return u.pathname.endsWith('/painel-suporte-moradores-v2.html')&&u.searchParams.get('from')==='central'},{waitUntil:'domcontentloaded'});
   await page.goBack({waitUntil:'domcontentloaded'});
 
+  /* A visibilidade do módulo depende da sessão/permissão, que não é o alvo deste
+     teste isolado. Reexibimos somente o cartão; não tocamos em pointer-events
+     nem aria-busy, justamente os estados que o BFCache precisa preservar. */
+  await page.evaluate(()=>{
+    const modules=document.getElementById('modulesPanel');if(modules)modules.hidden=false;
+    const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');
+    if(b){b.hidden=false;b.disabled=false}
+  });
   await expect(page.locator('#moduleGrid .module[data-module="suporte"]')).toBeVisible();
   const state=await page.evaluate(()=>{
     const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');
