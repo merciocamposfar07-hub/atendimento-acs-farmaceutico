@@ -199,6 +199,15 @@ async function testTerritoryPanel() {
   assert.match(html, /id="tacsActiveText"/);
   assert.match(html, /id="accessStateControlV1"/);
   assert.match(js, /function syncTacsActiveUi\(\)/);
+  assert.match(js, /function cpfText\(v\)/);
+  assert.match(js, /function cnsText\(v\)/);
+  assert.match(js, /function phoneText\(v\)/);
+  assert.match(js, /cpf=digits\(el\('tacsCpf'\)\.value\)/,
+    'A máscara do CPF não pode alterar os 11 dígitos enviados ao servidor.');
+  assert.match(js, /cns=digits\(el\('tacsCns'\)\.value\)/,
+    'A máscara do CNS não pode alterar os 15 dígitos enviados ao servidor.');
+  assert.match(js, /phone=digits\(el\('tacsPhone'\)\.value\)/,
+    'A máscara do celular não pode alterar os dígitos enviados ao servidor.');
   for (const perfil of ['ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_MORADOR','TACS','ADMIN']) {
     assert.match(html, new RegExp('value="'+perfil+'"'), 'Perfil ausente no formulário: '+perfil);
   }
@@ -250,6 +259,25 @@ async function testTerritoryPanel() {
   window.document.getElementById('newTacsButton').click();
   assert.equal(window.document.getElementById('tacsForm').classList.contains('hidden'), false);
   assert.equal(window.document.getElementById('tacsPin').required, true);
+  const cpfInput=window.document.getElementById('tacsCpf');
+  cpfInput.value='06192630402';
+  cpfInput.dispatchEvent(new window.Event('input',{bubbles:true}));
+  assert.equal(cpfInput.value,'061.926.304-02');
+
+  const cnsInput=window.document.getElementById('tacsCns');
+  cnsInput.value='708209101334741';
+  cnsInput.dispatchEvent(new window.Event('input',{bubbles:true}));
+  assert.equal(cnsInput.value,'708 2091 0133 4741');
+
+  const phoneInput=window.document.getElementById('tacsPhone');
+  phoneInput.value='81989613130';
+  phoneInput.dispatchEvent(new window.Event('input',{bubbles:true}));
+  assert.equal(phoneInput.value,'(81) 98961-3130');
+
+  const birthInput=window.document.getElementById('tacsBirth');
+  birthInput.value='28121984';
+  birthInput.dispatchEvent(new window.Event('input',{bubbles:true}));
+  assert.equal(birthInput.value,'28/12/1984');
   assert.equal(window.document.getElementById('tacsActiveText').textContent,'Inativo');
   window.document.getElementById('tacsActive').checked=true;
   window.document.getElementById('tacsActive').dispatchEvent(new window.Event('change',{bubbles:true}));
