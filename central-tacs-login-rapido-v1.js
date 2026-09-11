@@ -132,12 +132,18 @@ function post(action,payload,cb){
   if(busy){cb({ok:false,message:'Aguarde a operação anterior.'});return}
   busy=true;
   var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form');
-  var frameName='quickFrame'+Date.now()+Math.floor(Math.random()*1000),finished=false,pollTimer=null,pollWait=450;
-  frame.name=frameName;frame.src='about:blank';frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;visibility:hidden;pointer-events:none;z-index:-1';
-  form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.style.display='none';
+  var frameName='quickFrame'+Date.now()+'_'+Math.floor(Math.random()*1000),finished=false,pollTimer=null,submitTimer=null,nextWait=1600,deadline=Date.now()+45000;
+  frame.name=frameName;frame.setAttribute('name',frameName);frame.src='about:blank';frame.setAttribute('aria-hidden','true');
+  frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;visibility:hidden;pointer-events:none;z-index:-1';
+  form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.setAttribute('target',frameName);form.style.display='none';
   var fields={};Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});fields.action=action;fields.requestId=rid;
   Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=String(fields[k]==null?'':fields[k]);form.appendChild(i)});
-  function cleanup(){window.removeEventListener('message',onMessage);clearTimeout(timeout);clearTimeout(pollTimer);if(form.parentNode)form.remove();if(frame.parentNode)setTimeout(function(){if(frame.parentNode)frame.remove()},120)}
+  function cleanup(){
+    window.removeEventListener('message',onMessage);
+    clearTimeout(timeout);clearTimeout(pollTimer);clearTimeout(submitTimer);
+    if(form.parentNode)form.remove();
+    if(frame.parentNode)setTimeout(function(){if(frame.parentNode)frame.remove()},180);
+  }
   function finish(r){if(finished)return;finished=true;busy=false;cleanup();cb(r||{ok:false,message:'Resposta vazia.'})}
   function onMessage(event){
     if(event.source!==frame.contentWindow)return;
@@ -147,20 +153,32 @@ function post(action,payload,cb){
     var r=Object.prototype.hasOwnProperty.call(d,'result')?d.result:(Object.prototype.hasOwnProperty.call(d,'payload')?d.payload:(Object.prototype.hasOwnProperty.call(d,'ok')?d:null));
     if(r)finish(r);
   }
+  function schedulePoll(delay){clearTimeout(pollTimer);pollTimer=setTimeout(poll,Math.max(0,Number(delay||nextWait)))}
   function poll(){
     if(finished)return;
     jsonp('admin_territorio_result',{requestId:rid},function(r){
       if(finished)return;
       if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}
-      pollWait=Math.min(700,pollWait+80);
-      pollTimer=setTimeout(poll,pollWait);
+      if(Date.now()>=deadline){finish({ok:false,temporario:true,message:'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'});return}
+      nextWait=Math.min(2200,Math.max(1400,nextWait+200));schedulePoll(nextWait);
     });
   }
   window.addEventListener('message',onMessage);
-  var timeout=setTimeout(function(){finish({ok:false,message:'O servidor demorou para confirmar o acesso.'})},45000);
+  var timeout=setTimeout(function(){finish({ok:false,temporario:true,message:'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'})},45500);
   document.body.appendChild(frame);document.body.appendChild(form);
-  var sent=false;function send(){if(sent||finished)return;sent=true;try{form.submit()}catch(e){finish({ok:false,message:'Não foi possível iniciar a comunicação.'});return}pollTimer=setTimeout(poll,pollWait)}
-  frame.addEventListener('load',send,{once:true});setTimeout(send,60);
+  var sent=false;
+  function sendOnce(){
+    if(sent||finished)return;sent=true;clearTimeout(submitTimer);
+    try{form.submit()}catch(e){finish({ok:false,message:'Não foi possível iniciar a comunicação.'});return}
+    /* PIN_TACS_TRANSPORTE_R8: postMessage primeiro; polling apenas após 8 s como contingência. */
+    schedulePoll(8000);
+  }
+  function sendAfterRegistration(){
+    if(typeof window.requestAnimationFrame==='function'){window.requestAnimationFrame(function(){window.requestAnimationFrame(sendOnce)});return}
+    setTimeout(sendOnce,60);
+  }
+  frame.addEventListener('load',sendAfterRegistration,{once:true});
+  sendAfterRegistration();submitTimer=setTimeout(sendOnce,180);
 }
 
 function abrirSessao(token){
