@@ -80,7 +80,7 @@ function conectaAcessoV1TratarPost_(e){
   var id=conectaAcessoV1Texto_(p.requestId),resultado;
   try{
     if(!/^[A-Za-z0-9_-]{8,160}$/.test(id))throw new Error('Identificador da operação inválido.');
-    conectaAcessoV1Limitar_(p.dispositivo||p.cpf||action);
+    if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_pin_recuperar_iniciar'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||action);
     if(action==='conecta_morador_identificar')resultado=conectaAcessoV1Identificar_(p);
     else if(action==='conecta_morador_confirmar')resultado=conectaAcessoV1Confirmar_(p);
     else if(action==='conecta_morador_criar_pin')resultado=conectaAcessoV1CriarPin_(p);
@@ -200,6 +200,7 @@ function conectaAcessoV1SessaoMorador_(p){
 function conectaAcessoV1ConfirmarNotificacao_(p){
   var sessao=conectaAcessoV1ValidarSessao_(p),sub=conectaAcessoV1Texto_(p.subscriptionId).toLowerCase();
   if(!conectaAcessoV1Bool_(p.permission)||!conectaAcessoV1Bool_(p.optedIn)||!/^[0-9a-f-]{36}$/.test(sub))throw new Error('Ative as notificações neste aparelho para continuar.');
+  if(!conectaAcessoV1SubscriptionAtiva_(sessao.areaId,sub))throw new Error('A ativação ainda não foi confirmada pelo serviço de notificações. Aguarde alguns segundos e tente continuar.');
   conectaAcessoV1AtualizarAcesso_(sessao.accessId,{10:true,11:sub});
   return {ok:true,notificacoesAtivas:true,message:'Notificações ativadas neste aparelho.'};
 }
@@ -349,18 +350,14 @@ function conectaAcessoV1CpfAdministrador_(cpf){
   }catch(e){return false;}
 }
 function conectaAcessoV1SalvarPinTacs_(tacsId,pin){
-  var sh=tacsTerritorioV1TabelaTacs_(true),t=tacsTerritorioV1EncontrarTacs_(tacsId);if(!t)throw new Error('TACS não localizado.');
-  var salt=Utilities.getUuid().replace(/-/g,''),row=t._linha||t.linha;
-  if(!row){
-    var rows=sh.sheet.getRange(2,1,Math.max(0,sh.sheet.getLastRow()-1),sh.headers.length).getDisplayValues();
-    for(var i=0;i<rows.length;i++)if(conectaAcessoV1Texto_(rows[i][0])===tacsId){row=i+2;break;}
-  }
+  var tab=tacsTerritorioV1TabelaTacs_(true),t=tacsTerritorioV1EncontrarTacs_(tacsId);if(!t)throw new Error('TACS não localizado.');
+  var row=0;
+  for(var i=0;i<tab.rows.length;i++)if(conectaAcessoV1Id_(tab.rows[i].display[tab.map.TACS_ID])===conectaAcessoV1Id_(tacsId)){row=tab.rows[i].row;break;}
   if(!row)throw new Error('Linha do TACS não localizada.');
-  var saltI=sh.map?sh.map.PIN_SALT:-1,hashI=sh.map?sh.map.PIN_HASH:-1;
-  if(saltI<0||hashI<0){
-    var hs=sh.headers.map(conectaAcessoV1Chave_);saltI=hs.indexOf('PINSALT');hashI=hs.indexOf('PINHASH');
-  }
-  sh.sheet.getRange(row,saltI+1).setValue(salt);sh.sheet.getRange(row,hashI+1).setValue(tacsTerritorioV1HashPin_(pin,salt));
+  var salt=Utilities.getUuid().replace(/-/g,'');
+  tab.sheet.getRange(row,tab.map.PIN_SALT+1).setValue(salt);
+  tab.sheet.getRange(row,tab.map.PIN_HASH+1).setValue(tacsTerritorioV1HashPin_(pin,salt));
+  if(tab.map.ATUALIZADO_EM>=0)tab.sheet.getRange(row,tab.map.ATUALIZADO_EM+1).setValue(new Date());
 }
 function conectaAcessoV1SalvarPinAdmin_(pin){
   if(typeof ADMIN_TACS_V1==='undefined'||typeof adminTacsV1Hash_!=='function')throw new Error('A autenticação administrativa principal não está disponível.');
@@ -379,6 +376,19 @@ function conectaAcessoV1ValidarSessao_(p){
   var raw=CacheService.getScriptCache().get(TACS_CONECTA_ACESSO_V1.SESSION_PREFIX+conectaAcessoV1Hash_(token));
   if(!raw)throw new Error('Sua sessão expirou. Entre novamente com seu PIN.');
   var s=JSON.parse(raw);if(s.dispositivoHash!==conectaAcessoV1Hash_(dispositivo))throw new Error('Esta sessão pertence a outro aparelho.');return s;
+}
+
+function conectaAcessoV1SubscriptionAtiva_(areaId,subscriptionId){
+  if(typeof saudeNotificacoesV1GarantirSheet_!=='function'||typeof TACS_SAUDE_NOTIFICACOES_V1==='undefined')return false;
+  var ss=tacsTerritorioV1Planilha_(),sh=saudeNotificacoesV1GarantirSheet_(ss,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_SHEET,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_HEADERS),last=sh.getLastRow();
+  if(last<=1)return false;
+  var rows=sh.getRange(2,1,last-1,TACS_SAUDE_NOTIFICACOES_V1.REGISTRY_HEADERS.length).getDisplayValues(),sub=conectaAcessoV1Texto_(subscriptionId).toLowerCase(),area=conectaAcessoV1Id_(areaId);
+  for(var i=rows.length-1;i>=0;i--){
+    if(conectaAcessoV1Texto_(rows[i][0]).toLowerCase()!==sub)continue;
+    if(conectaAcessoV1Id_(rows[i][1])!==area)return false;
+    return rows[i][7]==='SIM'&&rows[i][8]==='SIM'&&rows[i][9]==='SIM'&&rows[i][10]==='SIM';
+  }
+  return false;
 }
 
 function conectaAcessoV1AtualizarAcesso_(id,updates){
