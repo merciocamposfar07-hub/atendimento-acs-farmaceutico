@@ -43,10 +43,10 @@ assert.doesNotMatch(js,/admin_territorio_login_tacs/,
 assert.match(js,/admin_territorio_dados/);
 assert.match(js,/function aquecerValidacaoPin\(\)/,
   'Administrador e TACS devem aquecer o Apps Script enquanto o PIN é digitado.');
-assert.match(js,/pollWait:fastPin\?140:650/,
-  'A confirmação de PIN deve começar a ser consultada sem espera longa.');
-assert.match(js,/Math\.min\(420,op\.pollWait\+70\)/,
-  'A repetição da consulta de PIN deve permanecer rápida com backoff curto.');
+assert.match(js,/pollWait:fastPin\?450:650/,
+  'A confirmação de PIN deve usar cadência curta sem sobrecarregar o Apps Script.');
+assert.match(js,/Math\.min\(700,op\.pollWait\+80\)/,
+  'A repetição da consulta de PIN deve usar backoff curto e limitado.');
 assert.match(html,/central-administrativa-tacs\.js\?v=[A-Za-z0-9._-]+/,
   'A Central deve invalidar o cache para carregar a versão atual do acesso.');
 assert.match(js,/ACCESS_PROFILE_LABELS/,
