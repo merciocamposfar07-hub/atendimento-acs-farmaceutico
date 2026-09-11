@@ -194,8 +194,12 @@ function conectaAcessoV1SessaoMorador_(p){
   var sessao=conectaAcessoV1ValidarSessao_(p);
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=conectaAcessoV1AcessoPorId_(sheet,sessao.accessId);
   if(!registro)throw new Error('Acesso do morador não localizado.');
-  var v=registro.values,familia=conectaAcessoV1Familia_(v);
-  return {ok:true,perfil:'MORADOR',areaId:v[1],cpf:v[3],nome:v[4],nascimento:v[5],notificacoesAtivas:conectaAcessoV1Bool_(v[10]),subscriptionId:conectaAcessoV1Texto_(v[11]).toLowerCase(),silencioso:conectaAcessoV1Bool_(v[12]),provisorio:conectaAcessoV1Bool_(v[13]),pendenciaId:conectaAcessoV1Texto_(v[14]),familia:familia};
+  var v=registro.values,familia=conectaAcessoV1Familia_(v),endereco='';
+  try{
+    var achados=conectaAcessoV1BuscarCpf_(conectaAcessoV1Texto_(v[3]));
+    if(achados.length===1)endereco=conectaAcessoV1Texto_(achados[0].morador.endereco||'');
+  }catch(e){}
+  return {ok:true,perfil:'MORADOR',areaId:v[1],cpf:v[3],nome:v[4],nascimento:v[5],endereco:endereco,notificacoesAtivas:conectaAcessoV1Bool_(v[10]),subscriptionId:conectaAcessoV1Texto_(v[11]).toLowerCase(),silencioso:conectaAcessoV1Bool_(v[12]),provisorio:conectaAcessoV1Bool_(v[13]),pendenciaId:conectaAcessoV1Texto_(v[14]),familia:familia};
 }
 
 function conectaAcessoV1ConfirmarNotificacao_(p){
