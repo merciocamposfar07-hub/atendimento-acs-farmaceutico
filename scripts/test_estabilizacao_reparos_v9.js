@@ -15,6 +15,8 @@ const context={console,Date,Object,String,Number,Math,isFinite,Array};
 vm.createContext(context);vm.runInContext(backend,context);
 const now=new Date(2026,7,21,15,30,0);
 let c=context.reparosV9ClassificarCiclo_({}, {reparoId:'r1',solicitadoEm:'2026-08-13 18:00:00'}, now);
+assert.strictEqual(c.fase,'AGUARDANDO_ACESSO_AUTO');assert.strictEqual(c.precisaMorador,false);
+c=context.reparosV9ClassificarCiclo_({}, {reparoId:'r1b',solicitadoEm:'2026-08-21 10:00:00'}, now);
 assert.strictEqual(c.fase,'AGUARDANDO_PORTAL');assert.strictEqual(c.precisaMorador,true);
 c=context.reparosV9ClassificarCiclo_({}, {reparoId:'r2',detectadoEm:'2026-08-21 15:20:00'}, now);
 assert.strictEqual(c.fase,'TRAVADO_DETECTADO');assert.strictEqual(c.travado,true);assert.strictEqual(c.reexecutavel,true);
