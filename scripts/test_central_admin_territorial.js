@@ -51,6 +51,12 @@ assert.match(html,/central-administrativa-tacs\.js\?v=20260911-pin-fast-v1/,
   'A Central deve invalidar o cache para carregar o transporte rápido de PIN.');
 assert.match(js,/ACCESS_PROFILE_LABELS/,
   'A Central deve traduzir o perfil funcional cadastrado.');
+assert.match(js,/function currentAdministrator\(\)/,
+  'A Central deve resolver o administrador autenticado antes de montar a saudação.');
+assert.match(js,/var adminNome=text\(admin&&admin\.nomeCompleto\)\|\|'Administrador'/,
+  'A saudação administrativa deve usar o nome cadastrado quando disponível.');
+assert.doesNotMatch(js,/<small>Olá, administrador<\/small><h1>Administrador<\/h1>/,
+  'A Central não pode manter saudação fixa genérica para administrador autenticado.');
 assert.match(js,/Olá, '\+esc\(nome\)/,
   'A saudação do TACS deve usar o nome do agente autenticado.');
 assert.match(js,/accessProfileLabel\(tacs&&tacs\.perfil\|\|'TACS'\)/,
