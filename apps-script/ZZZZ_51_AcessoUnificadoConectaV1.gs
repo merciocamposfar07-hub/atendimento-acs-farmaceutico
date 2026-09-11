@@ -10,6 +10,10 @@ var TACS_CONECTA_ACESSO_V1 = Object.freeze({
   VERSAO:'1.0.0',
   ACCESS_SHEET:'TACS_CONECTA_ACESSO_MORADOR',
   PENDING_SHEET:'TACS_CONECTA_PENDENCIAS',
+  TRUST_SHEET:'TACS_CONECTA_APARELHOS_CONFIAVEIS',
+  TRUST_HEADERS:Object.freeze([
+    'TRUST_ID','PERFIL','REFERENCIA_ID','DISPOSITIVO_HASH','CHAVE_HASH','ATIVO','CRIADO_EM','ATUALIZADO_EM'
+  ]),
   ACCESS_HEADERS:Object.freeze([
     'ACCESS_ID','AREA_ID','MORADOR_CHAVE','CPF','NOME','DATA_NASCIMENTO',
     'PIN_SALT','PIN_HASH','QUICK_HASH','DISPOSITIVO_HASH','NOTIFICACOES_ATIVAS',
@@ -73,7 +77,7 @@ function conectaAcessoV1TratarPost_(e){
     'conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_criar_pin',
     'conecta_morador_login_pin','conecta_morador_sessao','conecta_morador_notificacao_confirmar',
     'conecta_morador_preferencia_notificacao','conecta_morador_membro_salvar_cpf','conecta_morador_encerrar',
-    'conecta_pin_recuperar_iniciar','conecta_pin_recuperar_salvar',
+    'conecta_pin_recuperar_iniciar','conecta_pin_recuperar_salvar','conecta_recuperacao_registrar_aparelho',
     'conecta_pendencias_contagem'
   ];
   if(aceitas.indexOf(action)===-1)return null;
@@ -91,6 +95,7 @@ function conectaAcessoV1TratarPost_(e){
     else if(action==='conecta_morador_encerrar')resultado=conectaAcessoV1EncerrarMorador_(p);
     else if(action==='conecta_pin_recuperar_iniciar')resultado=conectaAcessoV1RecuperarIniciar_(p);
     else if(action==='conecta_pin_recuperar_salvar')resultado=conectaAcessoV1RecuperarSalvar_(p);
+    else if(action==='conecta_recuperacao_registrar_aparelho')resultado=conectaAcessoV1RegistrarAparelhoConfiavel_(p);
     else resultado=conectaAcessoV1PendenciasContagem_(p);
   }catch(erro){
     resultado={ok:false,message:conectaAcessoV1Erro_(erro)};
@@ -255,26 +260,79 @@ function conectaAcessoV1EncerrarMorador_(p){
   return {ok:true,message:'Sessão encerrada.'};
 }
 
+function conectaAcessoV1RegistrarAparelhoConfiavel_(p){
+  var perfil=conectaAcessoV1Texto_(p.perfil).toUpperCase(),dispositivo=conectaAcessoV1Texto_(p.dispositivo),referencia='';
+  if(!dispositivo)throw new Error('A identificação do aparelho está ausente.');
+  if(perfil==='TACS'){
+    var acesso=tacsTerritorioV1ValidarSessaoToken_(p,false);
+    if(!acesso||!acesso.tacsId)throw new Error('Sessão TACS inválida.');
+    referencia=conectaAcessoV1Id_(acesso.tacsId);
+  }else if(perfil==='ADMIN'||perfil==='ADMINISTRADOR'){
+    if(typeof profissionaisDinamicosV1ValidarSessao_!=='function')throw new Error('A autenticação administrativa não está disponível.');
+    var admin=profissionaisDinamicosV1ValidarSessao_(p);
+    if(!admin||admin.ok!==true)throw new Error('Sessão administrativa inválida.');
+    perfil='ADMIN';referencia='ADMIN_GERAL';
+  }else throw new Error('Perfil inválido para registrar este aparelho.');
+  var chave=conectaAcessoV1Token_('ctr1'),chaveHash=conectaAcessoV1Hash_(chave),dispositivoHash=conectaAcessoV1Hash_(dispositivo);
+  var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.TRUST_SHEET,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS),last=sh.getLastRow(),row=0,agora=new Date();
+  if(last>1){
+    var rows=sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS.length).getValues();
+    for(var i=rows.length-1;i>=0;i--){
+      if(conectaAcessoV1Texto_(rows[i][1])===perfil&&conectaAcessoV1Id_(rows[i][2])===referencia&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][3]),dispositivoHash)){row=i+2;break;}
+    }
+  }
+  var vals=['TRUST-'+Utilities.getUuid().replace(/-/g,'').slice(0,18).toUpperCase(),perfil,referencia,dispositivoHash,chaveHash,true,agora,agora];
+  if(row){
+    vals[0]=conectaAcessoV1Texto_(sh.getRange(row,1).getValue())||vals[0];
+    vals[6]=sh.getRange(row,7).getValue()||agora;
+    sh.getRange(row,1,1,vals.length).setValues([vals]);
+  }else sh.appendRow(vals);
+  return {ok:true,perfil:perfil,chaveConfianca:chave,message:'Aparelho reconhecido para recuperação segura de PIN.'};
+}
+
+function conectaAcessoV1ConfiancaValida_(perfil,referencia,dispositivo,chave){
+  perfil=conectaAcessoV1Texto_(perfil).toUpperCase();referencia=conectaAcessoV1Id_(referencia);
+  dispositivo=conectaAcessoV1Texto_(dispositivo);chave=conectaAcessoV1Texto_(chave);
+  if(!dispositivo||!/^ctr1\./.test(chave))return false;
+  var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.TRUST_SHEET,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS),last=sh.getLastRow();
+  if(last<=1)return false;
+  var dh=conectaAcessoV1Hash_(dispositivo),kh=conectaAcessoV1Hash_(chave),rows=sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS.length).getValues();
+  for(var i=rows.length-1;i>=0;i--){
+    if(conectaAcessoV1Texto_(rows[i][1])!==perfil||conectaAcessoV1Id_(rows[i][2])!==referencia||!conectaAcessoV1Bool_(rows[i][5]))continue;
+    if(conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][3]),dh)&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][4]),kh))return true;
+  }
+  return false;
+}
+
 function conectaAcessoV1RecuperarIniciar_(p){
   var perfil=conectaAcessoV1Texto_(p.perfil).toUpperCase(),cpf=conectaAcessoV1Cpf_(p.cpf),payload=null;
+  var dispositivo=conectaAcessoV1Texto_(p.dispositivo),chave=conectaAcessoV1Texto_(p.chaveConfianca||p.quickKey);
+  if(!dispositivo)throw new Error('A identificação do aparelho está ausente.');
   if(perfil==='MORADOR'){
     var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),r=conectaAcessoV1AcessoPorCpf_(sh,cpf);
     if(!r)throw new Error('CPF não localizado em um acesso de morador.');
-    payload={perfil:'MORADOR',accessId:r.values[0],cpf:cpf};
+    if(!/^cmq1\./.test(chave)||!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(r.values[8]),conectaAcessoV1Hash_(chave))||!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(r.values[9]),conectaAcessoV1Hash_(dispositivo))){
+      throw new Error('Por segurança, recupere o PIN no aparelho já reconhecido por este morador.');
+    }
+    payload={perfil:'MORADOR',accessId:r.values[0],cpf:cpf,dispositivoHash:conectaAcessoV1Hash_(dispositivo)};
   }else if(perfil==='TACS'){
     var t=conectaAcessoV1TacsPorCpf_(cpf);
     if(!t||!t.ativo)throw new Error('CPF não localizado em um TACS ativo.');
-    payload={perfil:'TACS',tacsId:t.tacsId,cpf:cpf};
+    if(!conectaAcessoV1ConfiancaValida_('TACS',t.tacsId,dispositivo,chave))throw new Error('Por segurança, recupere o PIN em um aparelho já reconhecido para este TACS.');
+    payload={perfil:'TACS',tacsId:t.tacsId,cpf:cpf,dispositivoHash:conectaAcessoV1Hash_(dispositivo)};
   }else if(perfil==='ADMIN'||perfil==='ADMINISTRADOR'){
     if(!conectaAcessoV1CpfAdministrador_(cpf))throw new Error('CPF não localizado entre os administradores cadastrados.');
-    payload={perfil:'ADMIN',cpf:cpf};
+    if(!conectaAcessoV1ConfiancaValida_('ADMIN','ADMIN_GERAL',dispositivo,chave))throw new Error('Por segurança, recupere o PIN em um aparelho já reconhecido para a administração.');
+    payload={perfil:'ADMIN',cpf:cpf,dispositivoHash:conectaAcessoV1Hash_(dispositivo)};
   }else throw new Error('Selecione Administrador, TACS ou Morador.');
   var token=conectaAcessoV1TokenCache_('cr1',TACS_CONECTA_ACESSO_V1.RECOVERY_PREFIX,payload,TACS_CONECTA_ACESSO_V1.RECOVERY_SECONDS);
-  return {ok:true,recuperacaoToken:token,perfil:payload.perfil,message:'CPF confirmado. Crie um novo PIN.'};
+  return {ok:true,recuperacaoToken:token,perfil:payload.perfil,message:'CPF e aparelho confirmados. Crie um novo PIN.'};
 }
 
 function conectaAcessoV1RecuperarSalvar_(p){
   var rec=conectaAcessoV1LerTokenCache_(p.recuperacaoToken,TACS_CONECTA_ACESSO_V1.RECOVERY_PREFIX,'cr1');
+  var dispositivo=conectaAcessoV1Texto_(p.dispositivo);
+  if(!dispositivo||!rec.dispositivoHash||!conectaAcessoV1Seguro_(rec.dispositivoHash,conectaAcessoV1Hash_(dispositivo)))throw new Error('A recuperação precisa ser concluída no mesmo aparelho confirmado.');
   var pin=conectaAcessoV1Pin_(p.pin,p.confirmacao);
   if(rec.perfil==='MORADOR'){
     var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),r=conectaAcessoV1AcessoPorId_(sh,rec.accessId);
