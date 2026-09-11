@@ -6,7 +6,7 @@ var PROFILE_KEY='portalConectaMoradorQuickV1';
 var RESIDENT_TOKEN_KEY='portalConectaMoradorTokenV1';
 var AREA_KEY='portalTacsCentralAreaV1';
 var TRUST_ADMIN_KEY='portalConectaRecoveryTrustV1:admin',TRUST_TACS_KEY='portalConectaRecoveryTrustV1:tacs';
-var activeRole='admin',busy=false,state={cpf:'',nascimento:'',nome:'',areaId:'',identidadeToken:''};
+var activeRole='admin',busy=false,pinWarmup=false,state={cpf:'',nascimento:'',nome:'',areaId:'',identidadeToken:''};
 
 function text(v){return String(v==null?'':v).trim()}
 function digits(v){return text(v).replace(/\D/g,'')}
@@ -35,7 +35,14 @@ function registerTrustedDeviceFromSession(){
 function setStatus(msg,type){var n=el('loginStatus');if(!n)return;n.textContent=msg;n.className='status'+(type?' '+type:'')}
 function requestId(prefix){return 'conecta_'+prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
 function jsonp(params){return new Promise(function(resolve,reject){var cb='__conecta_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false,t=setTimeout(function(){finish(null,new Error('A confirmação demorou demais. Tente novamente.'))},14000);function finish(data,err){if(done)return;done=true;clearTimeout(t);try{delete window[cb]}catch(e){window[cb]=undefined}if(s.parentNode)s.remove();err?reject(err):resolve(data)}window[cb]=function(d){finish(d,null)};s.onerror=function(){finish(null,new Error('Falha de comunicação.'))};params.callback=cb;params._=Date.now();s.src=API+'?'+Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k])}).join('&');document.head.appendChild(s)})}
-function post(action,payload){if(busy)return Promise.reject(new Error('Aguarde a operação em andamento.'));busy=true;var id=requestId(action),body=new URLSearchParams();body.set('action',action);body.set('requestId',id);Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});var started=Date.now();return fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){}).then(function poll(){return jsonp({action:'conecta_result',requestId:id}).then(function(r){if(r&&r.ok===true&&r.pendente===false&&r.result){if(r.result.ok===true)return r.result;throw new Error(r.result.message||'Não foi possível concluir a operação.')}if(Date.now()-started>30000)throw new Error('A operação demorou demais. Tente novamente.');return new Promise(function(resolve){setTimeout(resolve,650)}).then(poll)})}).finally(function(){busy=false})}
+function post(action,payload){if(busy)return Promise.reject(new Error('Aguarde a operação em andamento.'));busy=true;var id=requestId(action),body=new URLSearchParams(),fastPin=/(?:login_pin|criar_pin)$/.test(action),wait=fastPin?140:650;body.set('action',action);body.set('requestId',id);Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});var started=Date.now();return fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){}).then(function poll(){return jsonp({action:'conecta_result',requestId:id}).then(function(r){if(r&&r.ok===true&&r.pendente===false&&r.result){if(r.result.ok===true)return r.result;throw new Error(r.result.message||'Não foi possível concluir a operação.')}if(Date.now()-started>30000)throw new Error('A operação demorou demais. Tente novamente.');if(fastPin)wait=Math.min(420,wait+70);return new Promise(function(resolve){setTimeout(resolve,wait)}).then(poll)})}).finally(function(){busy=false})}
+function aquecerPinMorador(){
+ if(pinWarmup)return;
+ pinWarmup=true;
+ try{
+  fetch(API+'?action=publico_areas_ativas&_='+Date.now(),{method:'GET',mode:'no-cors',cache:'no-store',credentials:'omit'}).catch(function(){}).finally(function(){pinWarmup=false});
+ }catch(e){pinWarmup=false}
+}
 
 function ensureStyle(){
  if(el('cscUnifiedAccessStyle'))return;
@@ -86,6 +93,7 @@ function renderResidentStart(){
  bindResidentStage();
 }
 function bindResidentStage(){
+ var pin=el('cscResidentPin');if(pin){pin.addEventListener('focus',aquecerPinMorador,{once:true});pin.addEventListener('input',aquecerPinMorador,{once:true})}
  var b=el('cscResidentCpfNext');if(b)b.onclick=startCpf;
  b=el('cscResidentLogin');if(b)b.onclick=loginResident;
  b=el('cscResidentOther');if(b)b.onclick=function(){try{localStorage.removeItem(PROFILE_KEY)}catch(e){}renderResidentStart();setStatus('Informe o CPF para identificar o morador neste aparelho.','')};
@@ -155,7 +163,7 @@ function loginResident(){
 function openResidentPortal(r,onboarding){
  var area=encodeURIComponent(r.areaId||profile()&&profile().areaId||'JAPARANDUBA');
  var url='/atendimento-acs-farmaceutico/?area='+area+'&conecta=1'+(onboarding?'&onboarding=1':'');
- setTimeout(function(){location.assign(url)},70);
+ setTimeout(function(){location.assign(url)},0);
 }
 
 function currentRecoveryRole(){return activeRole==='tacs'?'TACS':activeRole==='morador'?'MORADOR':'ADMIN'}
