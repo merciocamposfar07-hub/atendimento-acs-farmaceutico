@@ -41,6 +41,14 @@ assert.match(js,/admin_territorio_login_pin/,
 assert.doesNotMatch(js,/admin_territorio_login_tacs/,
   'A Central não deve voltar ao login antigo por CNS + PIN.');
 assert.match(js,/admin_territorio_dados/);
+assert.match(js,/function aquecerValidacaoPin\(\)/,
+  'Administrador e TACS devem aquecer o Apps Script enquanto o PIN é digitado.');
+assert.match(js,/pollWait:fastPin\?140:650/,
+  'A confirmação de PIN deve começar a ser consultada sem espera longa.');
+assert.match(js,/Math\.min\(420,op\.pollWait\+70\)/,
+  'A repetição da consulta de PIN deve permanecer rápida com backoff curto.');
+assert.match(html,/central-administrativa-tacs\.js\?v=20260911-pin-fast-v1/,
+  'A Central deve invalidar o cache para carregar o transporte rápido de PIN.');
 assert.match(js,/ACCESS_PROFILE_LABELS/,
   'A Central deve traduzir o perfil funcional cadastrado.');
 assert.match(js,/Olá, '\+esc\(nome\)/,
