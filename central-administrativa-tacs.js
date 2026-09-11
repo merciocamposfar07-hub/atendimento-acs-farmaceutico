@@ -4,10 +4,11 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1',AREA_KEY='portalTacsCentralAreaV1',CONTEXT_CACHE_KEY='portalTacsCentralContextCacheV3';
 var SHARED_WARM_KEY='portalTacsAppsScriptWarmAtV1';
 var HEALTH_REFRESH_TTL=30000,healthRefreshInFlight=false,lastHealthRefreshAt=0,lastHealthRefreshArea='';
+var HEALTH_CACHE_PREFIX='portalTacsHealthSnapshotV2:',HEALTH_CACHE_MAX_AGE=7*24*60*60*1000;
 var NOTIFICATION_CONFIRMED_CACHE_PREFIX='portalTacsNotificationConfirmedV1:',notificationRemoteSeq=0,notificationRemoteArea='',notificationLatestStarted={};
 var URL_PARAMS=new URLSearchParams(location.search),TACS_ONLY=String(URL_PARAMS.get('acesso')||'').toLowerCase()==='tacs';
 var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
-var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
+var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null,pendingAdminIdentity=null;
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
@@ -222,9 +223,22 @@ function accessProfileLabel(value){
   var key=text(value).toUpperCase().replace(/[+\s-]+/g,'_');
   return ACCESS_PROFILE_LABELS[key]||((key.indexOf('TACS')!==-1)?'TACS':'Administrador');
 }
+function identityFrom(value,perfilPadrao){
+  value=value&&typeof value==='object'?value:{};
+  var nome=text(value.nomeCompleto||value.nome||value.operadorNome||value.usuarioNome||value.displayName);
+  if(!nome||/^(ADMIN_GERAL|ADMINISTRADOR GERAL|ADMINISTRAÇÃO GERAL|AG\d+)$/i.test(nome))return null;
+  return {nomeCompleto:nome,perfil:text(value.perfil||value.tipo||perfilPadrao||'ADMIN'),ativo:value.ativo!==false};
+}
+function rememberAdminIdentity(value){
+  var id=identityFrom(value,'ADMIN');if(id)pendingAdminIdentity=id;
+  return id;
+}
 function currentAdministrator(){
   var atual=context&&context.administradorAtual;
   if(atual&&text(atual.nomeCompleto))return atual;
+  var autenticada=context&&context.identidadeAutenticada;
+  if(autenticada&&text(autenticada.nomeCompleto))return autenticada;
+  if(pendingAdminIdentity&&text(pendingAdminIdentity.nomeCompleto))return pendingAdminIdentity;
   var lista=context&&Array.isArray(context.administradores)?context.administradores.filter(function(a){return a&&a.ativo!==false&&text(a.nomeCompleto)}):[];
   return lista.length===1?lista[0]:null;
 }
@@ -250,9 +264,57 @@ function updateCentralWelcome(area,tacs){
   var adminPerfil=accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');
   node.innerHTML='<small>Olá, '+esc(adminNome)+'</small><h1>'+esc(adminPerfil)+'</h1><p>Gestão administrativa da área selecionada.</p>';
 }
-function renderContext(skipHealth){var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(text(admin&&admin.nomeCompleto)||'Administrador');el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);el('identityPanel').hidden=false;el('healthPanel').hidden=false;el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=mode!=='admin'||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;renderModules();if(!skipHealth)refreshHealth()}
+function renderContext(skipHealth){
+  var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];
+  if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}
+  var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}
+  if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);
+  else if(!selectedAreaId)selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId));
+  var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),profileIcon=el('profileIcon');
+  if(profileIcon)profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';
+  var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');
+  el('profileLabel').textContent=perfilAtual;
+  el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(text(admin&&admin.nomeCompleto)||'Administrador');
+  el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;
+  el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';
+  updateCentralWelcome(area,tacs);
+  el('identityPanel').hidden=false;el('healthPanel').hidden=false;el('modulesPanel').hidden=false;el('loginPanel').hidden=true;
+  var box=el('adminAreaBox'),select=el('adminArea');box.hidden=mode!=='admin'||areas.length<2;
+  select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;
+  renderModules();
+  renderHealthSnapshot(selectedAreaId);
+  if(!skipHealth)refreshHealth();
+}
 function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
-function markHealth(id,label,state){var n=el(id),s=n.querySelector('span');n.className='health-card'+(state?' '+state:'');s.textContent=label}
+function healthCacheKey(areaId){return HEALTH_CACHE_PREFIX+normArea(areaId)}
+function readHealthSnapshot(areaId){
+  try{
+    var raw=localStorage.getItem(healthCacheKey(areaId));if(!raw)return null;
+    var saved=JSON.parse(raw),age=Date.now()-Number(saved&&saved.savedAt||0);
+    if(!saved||!saved.cards||age<0||age>HEALTH_CACHE_MAX_AGE)return null;
+    return saved;
+  }catch(e){return null}
+}
+function saveHealthValue(areaId,id,label,state){
+  areaId=normArea(areaId);if(!areaId||!id||!label)return;
+  try{
+    var saved=readHealthSnapshot(areaId)||{areaId:areaId,cards:{},savedAt:0};
+    saved.cards[id]={label:text(label),state:text(state),confirmedAt:Date.now()};
+    saved.savedAt=Date.now();
+    localStorage.setItem(healthCacheKey(areaId),JSON.stringify(saved));
+  }catch(e){}
+}
+function renderHealthSnapshot(areaId){
+  var saved=readHealthSnapshot(areaId);if(!saved||!saved.cards)return false;
+  Object.keys(saved.cards).forEach(function(id){
+    var card=saved.cards[id];if(card&&el(id))markHealth(id,card.label,card.state);
+  });
+  var stamp=el('healthUpdated');
+  if(stamp)stamp.textContent='Última leitura confirmada exibida • sincronizando em segundo plano';
+  return true;
+}
+function hasHealthValue(areaId,id){var s=readHealthSnapshot(areaId);return Boolean(s&&s.cards&&s.cards[id])}
+function markHealth(id,label,state){var n=el(id);if(!n)return;var s=n.querySelector('span');n.className='health-card'+(state?' '+state:'');if(s)s.textContent=label}
 function updatePendingBadge(result){
   var badge=el('cscPendingBadge');if(!badge)return;
   var p=result&&result.pendencias?result.pendencias:{},total=Math.max(0,Number(p.total||0));
@@ -299,8 +361,8 @@ function saveConfirmedNotification(result,areaId){
 }
 function renderConfirmedNotification(result,areaId){
   var confirmed=normalizeConfirmedNotification(result,areaId);if(!confirmed||normArea(areaId)!==selectedAreaId)return false;
-  var c=confirmed.contagens,label=c.ativos+' aptos • '+c.inativos+' inativos • '+c.reparo+' reparo';
-  markHealth('healthNotifications',label,(c.inativos||c.reparo)?'warn':'ok');
+  var c=confirmed.contagens,label=c.ativos+' aptos • '+c.inativos+' inativos • '+c.reparo+' reparo',state=(c.inativos||c.reparo)?'warn':'ok';
+  markHealth('healthNotifications',label,state);saveHealthValue(areaId,'healthNotifications',label,state);
   updatePendingBadge(confirmed);
   return true;
 }
@@ -327,41 +389,76 @@ function notificationPostIsolated(action,areaId,cb){
 function refreshNotificationHealth(areaId,force){
   areaId=normArea(areaId);
   if(!permission('PUBLICACOES_GERENCIAR')){markHealth('healthNotifications','Sem permissão','warn');return}
-
-  /* NOTIFICACOES_FONTE_UNICA_ATUAL_V2:
-     A Central não apresenta mais snapshot do navegador nem cache rápido como número atual.
-     Em cada entrada/atualização, mostra "Confirmando…" e só publica contagens após
-     uma consulta remota concluída ao OneSignal. Isso elimina a troca visual entre
-     "última confirmação" e "confirmação atual". */
+  var cached=readConfirmedNotification(areaId);
+  if(cached)renderConfirmedNotification(cached,areaId);
   if(notificationRemoteArea===areaId&&!force)return;
   notificationRemoteArea=areaId;
-  markHealth('healthNotifications','Confirmando…','');
-
+  if(!cached&&!hasHealthValue(areaId,'healthNotifications'))markHealth('healthNotifications','Confirmando…','');
   notificationPostIsolated('admin_notificacoes_saude_remota',areaId,function(remote,seq){
     if(seq!==notificationLatestStarted[areaId])return;
     if(notificationRemoteArea===areaId)notificationRemoteArea='';
     var confirmed=saveConfirmedNotification(remote,areaId);
     if(confirmed){renderConfirmedNotification(confirmed,areaId);return}
     if(areaId!==selectedAreaId)return;
-    markHealth('healthNotifications','Sem confirmação','warn');
+    if(!cached&&!hasHealthValue(areaId,'healthNotifications'))markHealth('healthNotifications','Sem confirmação','warn');
   });
+}
+function isolatedPost(action,payload,resultAction,cb,timeoutMs){
+  var id=requestId(action),body=new URLSearchParams(),started=Date.now(),finished=false;
+  Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});
+  body.set('action',action);body.set('requestId',id);
+  function finish(result){if(finished)return;finished=true;cb(result||{ok:false,temporario:true})}
+  function pollResult(){
+    if(finished)return;
+    jsonp(resultAction,{requestId:id},function(r){
+      if(finished)return;
+      if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}
+      if(Date.now()-started>=Number(timeoutMs||12000)){finish({ok:false,temporario:true});return}
+      setTimeout(pollResult,700);
+    });
+  }
+  try{
+    fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});
+    setTimeout(pollResult,320);
+  }catch(e){finish({ok:false,temporario:true})}
 }
 function refreshHealth(force){
   if(!context)return;
-  var areaId=selectedAreaId,now=Date.now();
+  var areaId=selectedAreaId,now=Date.now(),hadCache=renderHealthSnapshot(areaId);
   if(healthRefreshInFlight)return;
   if(!force&&lastHealthRefreshArea===areaId&&now-lastHealthRefreshAt<HEALTH_REFRESH_TTL){refreshNotificationHealth(areaId,false);return}
   healthRefreshInFlight=true;lastHealthRefreshArea=areaId;lastHealthRefreshAt=now;
-  ['healthPortal','healthResidents','healthAgenda','healthContent'].forEach(function(id){markHealth(id,'Verificando…','')});
+  ['healthPortal','healthResidents','healthAgenda','healthContent'].forEach(function(id){if(!hasHealthValue(areaId,id))markHealth(id,'Verificando…','')});
   refreshNotificationHealth(areaId,Boolean(force));
-  var area=selectedArea();markHealth('healthArea',(text(area&&area.areaNome)||areaId)+' • '+(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'unidade'),'ok');
+  var area=selectedArea(),areaLabel=(text(area&&area.areaNome)||areaId)+' • '+(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'unidade');
+  markHealth('healthArea',areaLabel,'ok');saveHealthValue(areaId,'healthArea',areaLabel,'ok');
   var pending=4;
-  function done(){pending--;if(pending<=0)healthRefreshInFlight=false}
-  jsonp('portal_manutencao_status',{areaId:areaId},function(r){if(normArea(areaId)!==selectedAreaId){done();return}if(r&&r.ok===true)markHealth('healthPortal',r.ativa?'Em manutenção':'Disponível',r.ativa?'warn':'ok');else markHealth('healthPortal','Sem confirmação','warn');done()});
-  post('admin_moradores_status',session({areaId:areaId}),'admin_moradores_result',function(r){if(normArea(areaId)===selectedAreaId)markHealth('healthResidents',r&&r.ok===true?'Base acessível':'Falha na leitura',r&&r.ok===true?'ok':'err');done()});
-  jsonp('painel_publico',{areaId:areaId},function(r){if(normArea(areaId)===selectedAreaId)markHealth('healthAgenda',r&&r.ok===true?'Agenda pública acessível':'Sem confirmação',r&&r.ok===true?'ok':'warn');done()});
-  jsonp('publico_conteudo',{areaId:areaId},function(r){if(normArea(areaId)===selectedAreaId)markHealth('healthContent',r&&r.ok===true?'Conteúdo acessível':'Sem confirmação',r&&r.ok===true?'ok':'warn');done()});
-  el('healthUpdated').textContent='Atualizando dados validados • área '+(text(area&&area.areaNome)||areaId);
+  function done(){pending--;if(pending<=0){healthRefreshInFlight=false;var stamp=el('healthUpdated');if(stamp)stamp.textContent='Dados confirmados atualizados • área '+(text(area&&area.areaNome)||areaId)}}
+  function keepOrFallback(id,label,state){if(!hasHealthValue(areaId,id))markHealth(id,label,state)}
+  jsonp('portal_manutencao_status',{areaId:areaId},function(r){
+    if(normArea(areaId)!==selectedAreaId){done();return}
+    if(r&&r.ok===true){var label=r.ativa?'Em manutenção':'Disponível',state=r.ativa?'warn':'ok';markHealth('healthPortal',label,state);saveHealthValue(areaId,'healthPortal',label,state)}
+    else keepOrFallback('healthPortal','Sem confirmação','warn');done();
+  });
+  isolatedPost('admin_moradores_status',session({areaId:areaId}),'admin_moradores_result',function(r){
+    if(normArea(areaId)===selectedAreaId){
+      if(r&&r.ok===true){markHealth('healthResidents','Base acessível','ok');saveHealthValue(areaId,'healthResidents','Base acessível','ok')}
+      else keepOrFallback('healthResidents','Sem confirmação','warn');
+    }done();
+  },12000);
+  jsonp('painel_publico',{areaId:areaId},function(r){
+    if(normArea(areaId)===selectedAreaId){
+      if(r&&r.ok===true){markHealth('healthAgenda','Agenda pública acessível','ok');saveHealthValue(areaId,'healthAgenda','Agenda pública acessível','ok')}
+      else keepOrFallback('healthAgenda','Sem confirmação','warn');
+    }done();
+  });
+  jsonp('publico_conteudo',{areaId:areaId},function(r){
+    if(normArea(areaId)===selectedAreaId){
+      if(r&&r.ok===true){markHealth('healthContent','Conteúdo acessível','ok');saveHealthValue(areaId,'healthContent','Conteúdo acessível','ok')}
+      else keepOrFallback('healthContent','Sem confirmação','warn');
+    }done();
+  });
+  var stamp=el('healthUpdated');if(stamp)stamp.textContent=hadCache?'Última leitura confirmada exibida • atualizando em segundo plano':'Atualizando dados validados • área '+(text(area&&area.areaNome)||areaId);
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
 function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260823-recados-safari-render-v1';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?v='+revision;if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
@@ -389,6 +486,7 @@ function loadContext(message){
       el('loginPanel').hidden=false;el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;
       setStatus(text(r&&r.message)||'A sessão não pôde ser reutilizada. Entre novamente.','warn');return;
     }
+    if(mode==='admin'&&!r.administradorAtual&&pendingAdminIdentity){r.administradorAtual=pendingAdminIdentity;r.identidadeAutenticada=pendingAdminIdentity}
     context=r;mode=r.perfil==='TACS'?'tacs':'admin';saveContextCache();
     var pin=pinLocalPendente,scope=pinLocalPerfil||mode;
     pinLocalPendente='';pinLocalPerfil='';acessoLocalAberto='';
@@ -447,11 +545,11 @@ function logout(){
   if(hasSession&&payload)invalidarSessaoServidorEmSegundoPlano(action,payload);
   setTimeout(function(){logoutEmCurso=false},250);
 }
-/* LOGIN_PREFETCH_ESTATICO_V2: a tela termina de carregar primeiro. Depois, fetch assíncrono aquece o cache sem iframe oculto e sem bloquear o evento load do Safari. */
-var staticPrefetchStarted=false;
+/* PREPARACAO_CONTINUA_V1: a tela de PIN aparece primeiro; logo após o primeiro paint,
+   o app aquece servidor, arquivos estáticos e leituras públicas sem bloquear Safari. */
+var staticPrefetchStarted=false,publicHealthPrefetchStarted=false;
 function prefetchStaticPanels(){
   if(staticPrefetchStarted)return;
-  if(active){setTimeout(prefetchStaticPanels,1200);return}
   staticPrefetchStarted=true;
   [
     '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html',
@@ -460,11 +558,30 @@ function prefetchStaticPanels(){
     '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html',
     '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html'
   ].forEach(function(url){
-    try{fetch(url+'?v=20260910-login-prefetch-v2',{method:'GET',cache:'force-cache',credentials:'same-origin',priority:'low'}).catch(function(){})}catch(e){}
+    try{fetch(url+'?v=20260911-performance-continuo-v1',{method:'GET',cache:'force-cache',credentials:'same-origin',priority:'low'}).catch(function(){})}catch(e){}
   });
 }
+function prefetchPublicHealth(){
+  if(publicHealthPrefetchStarted)return;publicHealthPrefetchStarted=true;
+  var areaId='';try{areaId=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}
+  if(!areaId)return;
+  jsonp('portal_manutencao_status',{areaId:areaId},function(r){if(r&&r.ok===true){var label=r.ativa?'Em manutenção':'Disponível',state=r.ativa?'warn':'ok';saveHealthValue(areaId,'healthPortal',label,state)}});
+  jsonp('painel_publico',{areaId:areaId},function(r){if(r&&r.ok===true)saveHealthValue(areaId,'healthAgenda','Agenda pública acessível','ok')});
+  jsonp('publico_conteudo',{areaId:areaId},function(r){if(r&&r.ok===true)saveHealthValue(areaId,'healthContent','Conteúdo acessível','ok')});
+}
+function startEarlyPreparation(){
+  var warm=window.PortalTacsAdminWarmup;
+  if(warm&&typeof warm.preaquecer==='function')warm.preaquecer();
+  else try{fetch(API+'?action=admin_status&_='+Date.now(),{method:'GET',mode:'no-cors',cache:'no-store'}).catch(function(){})}catch(e){}
+  prefetchStaticPanels();prefetchPublicHealth();
+}
+function scheduleEarlyPreparation(){
+  var start=function(){setTimeout(startEarlyPreparation,0)};
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(function(){requestAnimationFrame(start)});
+  else setTimeout(start,30);
+}
 ['adminPin','tacsPin'].forEach(function(id){var input=el(id);if(!input)return;input.addEventListener('focus',aquecerValidacaoPin,{once:true});input.addEventListener('input',aquecerValidacaoPin,{once:true})});
-window.addEventListener('load',function(){if('requestIdleCallback' in window)requestIdleCallback(prefetchStaticPanels,{timeout:3000});else setTimeout(prefetchStaticPanels,2500)},{once:true});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleEarlyPreparation,{once:true});else scheduleEarlyPreparation();
 el('tabAdmin').addEventListener('click',function(){if(!TACS_ONLY)showLogin('admin')});el('tabTacs').addEventListener('click',function(){showLogin('tacs')});
 el('loginAdmin').addEventListener('click',function(){
   var pin=digits(el('adminPin').value);
@@ -480,6 +597,7 @@ el('loginAdmin').addEventListener('click',function(){
         setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
       }
       territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=r.token;mode='admin';sessionStorage.setItem(TOKEN_KEY,token);
+      rememberAdminIdentity(r);
       pinLocalPendente=pin;pinLocalPerfil='admin';
       if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('ADMIN');
       if(!saved)restoreContextCache();
