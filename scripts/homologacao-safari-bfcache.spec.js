@@ -25,7 +25,8 @@ test('Central volta do painel com cartões tocáveis no BFCache/Safari',async({p
   await expect(support).toBeVisible();
   await support.click();
   await page.waitForURL(url=>{const u=new URL(url);return u.pathname.endsWith('/painel-suporte-moradores-v2.html')&&u.searchParams.get('from')==='central'},{waitUntil:'domcontentloaded'});
-  await page.goBack({waitUntil:'domcontentloaded'});
+  await page.goBack({waitUntil:'commit',timeout:10000});
+  await page.waitForSelector('#moduleGrid',{state:'attached',timeout:7000});
 
   /* A visibilidade do módulo depende da sessão/permissão, que não é o alvo deste
      teste isolado. Reexibimos somente o cartão; não tocamos em pointer-events
