@@ -286,6 +286,40 @@ function centralUrl(){
   return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html'+(tacs?'?acesso=tacs':'');
 }
 
+function hasCentralSession(){
+  try{return Boolean(
+    sessionStorage.getItem('portalTacsAdminTokenV1')||
+    sessionStorage.getItem('portalTacsTerritorioTokenV1')
+  )}catch(e){return false}
+}
+
+/* PIN_UNICO_PAINEIS_V1:
+ * Painel aberto pela Central reutiliza a sessão já autenticada.
+ * Nunca apresenta um segundo formulário de PIN.
+ * Se, por uma navegação antiga/cacheada, o painel chegar sem sessão, volta à
+ * Central em vez de iniciar outro login dentro do painel. */
+function installSinglePinGate(){
+  if(!fromCentral||!isAdminPanel)return true;
+  if(!hasCentralSession()){
+    try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
+    location.replace(centralUrl());
+    return false;
+  }
+  var style=document.getElementById('portalTacsSinglePinGateV1');
+  if(!style){
+    style=document.createElement('style');
+    style.id='portalTacsSinglePinGateV1';
+    style.textContent=[
+      '#pin,label[for="pin"],#adminPin,label[for="adminPin"],#tacsPinLogin,label[for="tacsPinLogin"],#tacsPinAccess,label[for="tacsPinAccess"],#tacsPinPublicacoes,label[for="tacsPinPublicacoes"]{display:none!important}',
+      '#login,#entrar,#loginTacs,#entrarTacs,#adminLoginButton,#tacsLoginButton{display:none!important}',
+      '.csc-auth-control,.csc-auth-title{display:none!important}'
+    ].join('\n');
+    (document.head||document.documentElement).appendChild(style);
+  }
+  document.documentElement.dataset.tacsSessionReused='1';
+  return true;
+}
+
 function install(){
   if(document.getElementById('portalTacsBackCentralV1'))return;
   if(!document.body){setTimeout(install,0);return;}
@@ -308,6 +342,10 @@ function install(){
   document.body.insertBefore(bar,document.body.firstChild);
 }
 
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
-else install();
+function bootCentralPanel(){
+  if(!installSinglePinGate())return;
+  install();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootCentralPanel,{once:true});
+else bootCentralPanel();
 }());
