@@ -25,7 +25,12 @@ test('Central volta do painel com cartões tocáveis no BFCache/Safari',async({p
   await expect(support).toBeVisible();
   await support.click();
   await page.waitForURL(url=>{const u=new URL(url);return u.pathname.endsWith('/painel-suporte-moradores-v2.html')&&u.searchParams.get('from')==='central'},{waitUntil:'domcontentloaded'});
-  await page.goBack({waitUntil:'commit',timeout:10000});
+  const back=page.locator('.csc-appbar-back');
+  await expect(back).toBeVisible();
+  await Promise.all([
+    page.waitForURL(url=>new URL(url).pathname.endsWith('/central-administrativa-tacs.html'),{waitUntil:'domcontentloaded'}),
+    back.click()
+  ]);
   await page.waitForSelector('#moduleGrid',{state:'attached',timeout:7000});
 
   /* A visibilidade do módulo depende da sessão/permissão, que não é o alvo deste
