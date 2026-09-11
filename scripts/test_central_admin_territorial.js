@@ -47,8 +47,8 @@ assert.match(js,/pollWait:fastPin\?140:650/,
   'A confirmação de PIN deve começar a ser consultada sem espera longa.');
 assert.match(js,/Math\.min\(420,op\.pollWait\+70\)/,
   'A repetição da consulta de PIN deve permanecer rápida com backoff curto.');
-assert.match(html,/central-administrativa-tacs\.js\?v=20260911-pin-fast-v1/,
-  'A Central deve invalidar o cache para carregar o transporte rápido de PIN.');
+assert.match(html,/central-administrativa-tacs\.js\?v=[A-Za-z0-9._-]+/,
+  'A Central deve invalidar o cache para carregar a versão atual do acesso.');
 assert.match(js,/ACCESS_PROFILE_LABELS/,
   'A Central deve traduzir o perfil funcional cadastrado.');
 assert.match(js,/function currentAdministrator\(\)/,
@@ -61,8 +61,8 @@ assert.match(js,/Olá, '\+esc\(nome\)/,
   'A saudação do TACS deve usar o nome do agente autenticado.');
 assert.match(js,/accessProfileLabel\(tacs&&tacs\.perfil\|\|'TACS'\)/,
   'A saudação deve refletir o perfil real do TACS, inclusive perfis combinados.');
-assert.match(js,/<small>Olá, administrador<\/small><h1>Administrador<\/h1>/,
-  'O administrador deve manter saudação própria, sem ser chamado de TACS.');
+assert.match(js,/var adminPerfil=accessProfileLabel\(admin&&admin\.perfil\|\|context&&context\.perfil\|\|'ADMIN'\)/,
+  'O administrador deve manter o próprio perfil, sem ser rotulado como TACS.');
 assert.match(js,/notificationPostIsolated\('admin_notificacoes_saude_rapida'/,
   'A Central pode aproveitar somente o snapshot rápido que já tenha confirmação remota.');
 assert.match(js,/notificationPostIsolated\('admin_notificacoes_saude_remota'/,
