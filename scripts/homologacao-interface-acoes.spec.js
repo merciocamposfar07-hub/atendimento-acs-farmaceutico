@@ -8,7 +8,8 @@ async function blockExternal(page){
   await page.route('https://api.onesignal.com/**',route=>route.abort());
 }
 async function prepareCentral(page,name){
-  await page.goto('central-administrativa-tacs.html',{waitUntil:'domcontentloaded'});
+  await page.goto('central-administrativa-tacs.html',{waitUntil:'commit',timeout:10000});
+  await page.waitForSelector('#moduleGrid',{state:'attached',timeout:7000});
   await page.evaluate(moduleName=>{const modules=document.getElementById('modulesPanel');if(modules)modules.hidden=false;const b=document.querySelector('#moduleGrid .module[data-module="'+moduleName+'"]');if(b){b.hidden=false;b.disabled=false}},name);
 }
 
