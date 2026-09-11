@@ -13,7 +13,16 @@ var tacsLogin=document.getElementById('tacsLogin');
 var status=document.getElementById('loginStatus');
 if(!loginBtn||!pinInput||!tacsLogin)return;
 
-var busy=false;
+var busy=false,pinWarmup=false;
+function aquecerPinTacs(){
+  if(pinWarmup)return;
+  pinWarmup=true;
+  try{
+    fetch(API+'?action=publico_areas_ativas&_='+Date.now(),{method:'GET',mode:'no-cors',cache:'no-store',credentials:'omit'})
+      .catch(function(){})
+      .finally(function(){pinWarmup=false});
+  }catch(e){pinWarmup=false}
+}
 function text(v){return String(v==null?'':v).trim()}
 function digits(v){return text(v).replace(/\D/g,'')}
 function setStatus(msg,type){if(!status)return;status.textContent=msg;status.className='status'+(type?' '+type:'')}
@@ -124,7 +133,7 @@ function post(action,payload,cb){
   if(busy){cb({ok:false,message:'Aguarde a operação anterior.'});return}
   busy=true;
   var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form');
-  var frameName='quickFrame'+Date.now()+Math.floor(Math.random()*1000),finished=false,pollTimer=null;
+  var frameName='quickFrame'+Date.now()+Math.floor(Math.random()*1000),finished=false,pollTimer=null,pollWait=140;
   frame.name=frameName;frame.src='about:blank';frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;visibility:hidden;pointer-events:none;z-index:-1';
   form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.style.display='none';
   var fields={};Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});fields.action=action;fields.requestId=rid;
@@ -144,21 +153,22 @@ function post(action,payload,cb){
     jsonp('admin_territorio_result',{requestId:rid},function(r){
       if(finished)return;
       if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}
-      pollTimer=setTimeout(poll,900);
+      pollWait=Math.min(420,pollWait+70);
+      pollTimer=setTimeout(poll,pollWait);
     });
   }
   window.addEventListener('message',onMessage);
   var timeout=setTimeout(function(){finish({ok:false,message:'O servidor demorou para confirmar o acesso.'})},45000);
   document.body.appendChild(frame);document.body.appendChild(form);
-  var sent=false;function send(){if(sent||finished)return;sent=true;try{form.submit()}catch(e){finish({ok:false,message:'Não foi possível iniciar a comunicação.'});return}pollTimer=setTimeout(poll,650)}
-  frame.addEventListener('load',send,{once:true});setTimeout(send,120);
+  var sent=false;function send(){if(sent||finished)return;sent=true;try{form.submit()}catch(e){finish({ok:false,message:'Não foi possível iniciar a comunicação.'});return}pollTimer=setTimeout(poll,pollWait)}
+  frame.addEventListener('load',send,{once:true});setTimeout(send,60);
 }
 
 function abrirSessao(token){
   try{sessionStorage.removeItem(ADMIN_TOKEN_KEY);sessionStorage.setItem(TERRITORY_TOKEN_KEY,token);sessionStorage.setItem(EXCLUSIVE_MODE_KEY,'tacs')}catch(e){}
   enforceExclusiveTacsUi();
   setStatus('Acesso validado. Abrindo sua área…','ok');
-  setTimeout(function(){location.reload()},80);
+  setTimeout(function(){location.reload()},0);
 }
 function concluirPrimeiroAcesso(r,device){
   if(r.quickKey){saveProfile(r);abrirSessao(r.token);return}
@@ -168,6 +178,9 @@ function concluirPrimeiroAcesso(r,device){
     abrirSessao(r.token);
   });
 }
+
+pinInput.addEventListener('focus',aquecerPinTacs,{once:true});
+pinInput.addEventListener('input',aquecerPinTacs,{once:true});
 
 loginBtn.addEventListener('click',function(event){
   event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
