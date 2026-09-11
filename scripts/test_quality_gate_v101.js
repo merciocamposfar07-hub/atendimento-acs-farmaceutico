@@ -83,7 +83,7 @@ registrar('usabilidade', 'Campo de validade possui correção de overflow Safari
 registrar('usabilidade', 'Controle de contraste do painel de recados permanece oculto', contem(recados, '.preferenciaVisual,#alternarContraste{display:none!important'));
 registrar('usabilidade', 'Padrão visual petróleo permanece definido no painel de recados', contem(recados, 'tema-petroleo') && contem(recados, 'linear-gradient(145deg,#073a55,#0b5878)'));
 registrar('usabilidade', 'Portal público mantém atualização sem recarga forçada', /portal-auto-update\.js\?v=[^\"']+/.test(index));
-registrar('usabilidade', 'Mensagens administrativas permanecem em português claro', contem(agenda, 'Digite o PIN para carregar as agendas') && contem(recados, 'Digite o PIN administrativo ou entre como TACS da área.'));
+registrar('usabilidade', 'Mensagens administrativas permanecem em português claro', contem(agenda, 'Conferindo a sessão da Central…') && contem(recados, 'A conexão já está sendo preparada em segundo plano.'));
 
 let geral = 0;
 let falhas = [];
