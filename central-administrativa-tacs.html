@@ -1775,6 +1775,11 @@ html body .csc-profile-admin-toggle{
 }
 html body .csc-profile-admin-toggle[aria-expanded="true"]{border-color:#83efa9!important}
 html body .csc-profile-admin-names[hidden]{display:none!important}
+
+/* LOGIN_PROPOSITO_INSTITUCIONAL_V1 */
+.csc-login-purpose{margin-top:16px;padding:15px 16px;background:#102d46;border:1px solid #365f78;border-radius:18px;color:#d8e6ee}
+.csc-login-purpose strong{display:block;margin-bottom:6px;color:#f7fcff;font-size:.92rem;font-weight:900}
+.csc-login-purpose p{margin:0;color:#c1d3de;font-size:.82rem;line-height:1.42;font-weight:620}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
@@ -2004,7 +2009,7 @@ function buildPlatformFooter(){
   var footer=document.createElement('footer');
   footer.id='cscPlatformFooter';
   footer.className='csc-platform-footer';
-  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong><small>Conecta Saúde Comunitária — Plataforma</small>';
+  footer.innerHTML='<strong>Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</strong><small>Plataforma institucional de gestão e acesso à saúde comunitária.</small>';
   var old=document.querySelector('body>footer:not(#cscPlatformFooter)');
   if(old)old.hidden=true;
   document.body.appendChild(footer);
@@ -2061,6 +2066,10 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 <div id="adminLogin"><label for="adminPin">PIN administrativo</label><input id="adminPin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="actions"><button id="loginAdmin" class="btn" type="button">Entrar na Central</button></div></div>
 <div id="tacsLogin" hidden><label for="tacsPin">PIN individual</label><input id="tacsPin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="actions"><button id="loginTacs" class="btn" type="button">Entrar na minha área</button></div></div>
 <div id="loginStatus" class="status">Entre como administrador ou TACS da sua área.</div>
+<div class="csc-login-purpose" aria-label="Propósito do Conecta Saúde Comunitária">
+<strong>Por que o Conecta Saúde Comunitária foi criado</strong>
+<p>Criado para transformar a forma como a população acessa os serviços de saúde da sua comunidade, o Conecta Saúde Comunitária reduz deslocamentos desnecessários, filas presenciais e incertezas no acesso, reunindo agendas, vagas, solicitações, serviços e informações em um único ambiente digital.</p>
+</div>
 </section>
 <section id="identityPanel" class="panel identity" hidden>
 <div class="avatar"><img id="profileIcon" src="/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=3cc161456ca4" alt=""></div><div><small id="profileLabel">TACS</small><strong id="professionalName">—</strong><p><span id="areaName">—</span> • <span id="unitName">—</span></p><div id="adminAreaBox" class="area-admin" hidden><label for="adminArea">Área de trabalho</label><select id="adminArea" class="field"></select></div></div>
