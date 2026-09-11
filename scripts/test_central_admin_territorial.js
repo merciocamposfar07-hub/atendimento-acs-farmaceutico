@@ -41,6 +41,14 @@ assert.match(js,/admin_territorio_login_pin/,
 assert.doesNotMatch(js,/admin_territorio_login_tacs/,
   'A Central não deve voltar ao login antigo por CNS + PIN.');
 assert.match(js,/admin_territorio_dados/);
+assert.match(js,/ACCESS_PROFILE_LABELS/,
+  'A Central deve traduzir o perfil funcional cadastrado.');
+assert.match(js,/Olá, '\+esc\(nome\)/,
+  'A saudação do TACS deve usar o nome do agente autenticado.');
+assert.match(js,/accessProfileLabel\(tacs&&tacs\.perfil\|\|'TACS'\)/,
+  'A saudação deve refletir o perfil real do TACS, inclusive perfis combinados.');
+assert.match(js,/<small>Olá, administrador<\/small><h1>Administrador<\/h1>/,
+  'O administrador deve manter saudação própria, sem ser chamado de TACS.');
 assert.match(js,/notificationPostIsolated\('admin_notificacoes_saude_rapida'/,
   'A Central pode aproveitar somente o snapshot rápido que já tenha confirmação remota.');
 assert.match(js,/notificationPostIsolated\('admin_notificacoes_saude_remota'/,
