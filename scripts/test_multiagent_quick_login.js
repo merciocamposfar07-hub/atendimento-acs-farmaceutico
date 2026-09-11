@@ -18,6 +18,13 @@ assert.match(territory,/ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_M
   'O cadastro deve oferecer exatamente os seis perfis funcionais definidos.');
 assert.match(territory,/tacsTerritorioV1PerfilTem_\(tacs\.perfil,'TACS'\)/,
   'O login territorial deve aceitar somente cadastros que realmente possuam vínculo TACS.');
+assert.match(territory,/DOCUMENTOS_TEXTO_V1/,
+  'A gravação territorial deve proteger documentos contra conversão numérica.');
+for(const campo of ['CPF','CNS_PROFISSIONAL','TELEFONE','MATRICULA']){
+  assert.match(territory,new RegExp("'"+campo+"'"),'Campo textual protegido ausente: '+campo);
+}
+assert.match(territory,/setNumberFormat\('@'\)[\s\S]{0,260}String\(values\[indice\]\)/,
+  'Documentos devem ser formatados como texto e gravados como string para preservar zeros iniciais.');
 assert.match(quickBackend,/tacsTerritorioV1PerfilTem_\(item\.perfil,'TACS'\)/,
   'PIN-only do TACS não pode aceitar um Administrador neutro.');
 for(const permission of ['MORADORES_EDITAR','PUBLICACOES_GERENCIAR','AGENDAS_GERENCIAR','PROFISSIONAIS_GERENCIAR']){
