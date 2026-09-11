@@ -25,7 +25,7 @@ assert(unified.includes("p.textContent='Esqueci meu PIN'"),'Tela de acesso deve 
 assert(unified.includes("fastPin=/(?:login_pin|criar_pin)$/.test(action)"),'Morador deve usar confirmação rápida para login/criação de PIN');
 assert(unified.includes("wait=fastPin?140:650"),'Morador deve iniciar polling de PIN sem atraso longo');
 assert(unified.includes("function aquecerPinMorador()"),'Morador deve aquecer o backend ao digitar o PIN');
-assert(central.includes('conecta-acesso-unificado-v1.js?v=20260911-pin-fast-v1'),'Acesso unificado deve invalidar cache para o PIN rápido');
+assert(/conecta-acesso-unificado-v1\.js\?v=[A-Za-z0-9._-]+/.test(central),'Acesso unificado deve carregar com revisão explícita para invalidar cache');
 assert(unified.includes("currentRecoveryRole"),'Recuperação deve respeitar o perfil escolhido');
 assert(unified.includes("chaveConfianca:proof"),'Recuperação deve enviar prova do aparelho');
 assert(!/SMS|WhatsApp OTP|c[oó]digo SMS/i.test(unified),'Recuperação não deve depender de SMS');
