@@ -5,6 +5,7 @@ var DEVICE_KEY='portalTacsDispositivoV1';
 var PROFILE_KEY='portalConectaMoradorQuickV1';
 var RESIDENT_TOKEN_KEY='portalConectaMoradorTokenV1';
 var AREA_KEY='portalTacsCentralAreaV1';
+var TRUST_ADMIN_KEY='portalConectaRecoveryTrustV1:admin',TRUST_TACS_KEY='portalConectaRecoveryTrustV1:tacs';
 var activeRole='admin',busy=false,state={cpf:'',nascimento:'',nome:'',areaId:'',identidadeToken:''};
 
 function text(v){return String(v==null?'':v).trim()}
@@ -15,6 +16,22 @@ function device(){var d='';try{d=localStorage.getItem(DEVICE_KEY)||''}catch(e){}
 function profile(){try{var p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');return p&&/^cmq1\./.test(text(p.quickKey))?p:null}catch(e){return null}}
 function saveProfile(r){try{localStorage.setItem(PROFILE_KEY,JSON.stringify({quickKey:r.quickKey,areaId:r.areaId||'',areaNome:r.areaNome||'',nome:r.nome||''}))}catch(e){}}
 function saveSession(r){try{sessionStorage.setItem(RESIDENT_TOKEN_KEY,r.token);if(r.areaId)localStorage.setItem(AREA_KEY,r.areaId)}catch(e){}}
+function trustKey(role){try{return text(localStorage.getItem(role==='TACS'?TRUST_TACS_KEY:TRUST_ADMIN_KEY)||'')}catch(e){return''}}
+function saveTrustKey(role,key){try{localStorage.setItem(role==='TACS'?TRUST_TACS_KEY:TRUST_ADMIN_KEY,text(key))}catch(e){}}
+function recoveryProof(role){if(role==='MORADOR'){var p=profile();return p&&p.quickKey||''}return trustKey(role)}
+function registerTrustedDevice(role){
+ role=String(role||'').toUpperCase();if(role!=='ADMIN'&&role!=='TACS')return Promise.resolve(null);
+ var payload={perfil:role,dispositivo:device()},admin='',territory='';
+ try{admin=text(sessionStorage.getItem('portalTacsAdminTokenV1')||'');territory=text(sessionStorage.getItem('portalTacsTerritorioTokenV1')||'')}catch(e){}
+ if(role==='TACS'){if(!territory)return Promise.resolve(null);payload.territorioToken=territory;payload.token=territory}else{if(!admin)return Promise.resolve(null);payload.token=admin}
+ return post('conecta_recuperacao_registrar_aparelho',payload).then(function(r){if(r&&r.chaveConfianca)saveTrustKey(role,r.chaveConfianca);return r}).catch(function(){return null});
+}
+function registerTrustedDeviceFromSession(){
+ var admin='',territory='';try{admin=text(sessionStorage.getItem('portalTacsAdminTokenV1')||'');territory=text(sessionStorage.getItem('portalTacsTerritorioTokenV1')||'')}catch(e){}
+ if(territory&&!trustKey('TACS'))return registerTrustedDevice('TACS');
+ if(admin&&!trustKey('ADMIN'))return registerTrustedDevice('ADMIN');
+ return Promise.resolve(null);
+}
 function setStatus(msg,type){var n=el('loginStatus');if(!n)return;n.textContent=msg;n.className='status'+(type?' '+type:'')}
 function requestId(prefix){return 'conecta_'+prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
 function jsonp(params){return new Promise(function(resolve,reject){var cb='__conecta_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false,t=setTimeout(function(){finish(null,new Error('A confirmação demorou demais. Tente novamente.'))},14000);function finish(data,err){if(done)return;done=true;clearTimeout(t);try{delete window[cb]}catch(e){window[cb]=undefined}if(s.parentNode)s.remove();err?reject(err):resolve(data)}window[cb]=function(d){finish(d,null)};s.onerror=function(){finish(null,new Error('Falha de comunicação.'))};params.callback=cb;params._=Date.now();s.src=API+'?'+Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k])}).join('&');document.head.appendChild(s)})}
@@ -48,7 +65,7 @@ function resetState(){state={cpf:'',nascimento:'',nome:'',areaId:'',identidadeTo
 function setTabs(role){
  activeRole=role;
  ['Admin','Tacs','Morador'].forEach(function(k){var n=el('tab'+k);if(!n)return;var on=role===k.toLowerCase()||(k==='Tacs'&&role==='tacs');n.classList.toggle('active',on);n.setAttribute('aria-selected',on?'true':'false')});
- var tabs=document.querySelector('.login-tabs');if(tabs)tabs.style.gridTemplateColumns='repeat(3,minmax(0,1fr))';
+ var tabs=document.querySelector('.login-tabs');if(tabs){var visible=Array.prototype.filter.call(tabs.querySelectorAll('.tab'),function(x){return !x.hidden}).length||1;tabs.style.gridTemplateColumns='repeat('+visible+',minmax(0,1fr))'};
 }
 function showRole(role){
  setTabs(role);
@@ -145,7 +162,7 @@ function currentRecoveryRole(){return activeRole==='tacs'?'TACS':activeRole==='m
 function openRecovery(){
  var modal=el('cscRecovery'),body=el('cscRecoveryBody'),role=currentRecoveryRole();if(!modal||!body)return;
  modal.hidden=false;body.innerHTML='<div class="csc-access-note">Perfil: <strong>'+esc(role==='ADMIN'?'Administrador':role==='TACS'?'TACS — Agente Comunitário de Saúde':'Morador')+'</strong></div>'+field('cscRecoveryCpf','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"')+'<div class="csc-inline-actions"><button class="btn green" id="cscRecoveryStart" type="button">Confirmar CPF</button></div>';
- el('cscRecoveryStart').onclick=function(){var cpf=digits(el('cscRecoveryCpf').value);if(cpf.length!==11){setRecoveryMessage('Informe um CPF válido com 11 números.','err');return}setRecoveryMessage('Conferindo CPF…','warn');post('conecta_pin_recuperar_iniciar',{perfil:role,cpf:cpf,dispositivo:device()}).then(renderRecoveryPin).catch(function(e){setRecoveryMessage(e.message,'err')})};
+ el('cscRecoveryStart').onclick=function(){var cpf=digits(el('cscRecoveryCpf').value),proof=recoveryProof(role);if(cpf.length!==11){setRecoveryMessage('Informe um CPF válido com 11 números.','err');return}if(!proof){setRecoveryMessage('Este aparelho ainda não possui um vínculo seguro para recuperar o PIN deste perfil. Use um aparelho já reconhecido ou solicite a redefinição pelo administrador responsável.','err');return}setRecoveryMessage('Conferindo CPF e aparelho…','warn');post('conecta_pin_recuperar_iniciar',{perfil:role,cpf:cpf,dispositivo:device(),chaveConfianca:proof,quickKey:proof}).then(renderRecoveryPin).catch(function(e){setRecoveryMessage(e.message,'err')})};
 }
 function setRecoveryMessage(msg,type){var lead=el('cscRecoveryLead');if(!lead)return;lead.textContent=msg;lead.className='status'+(type?' '+type:'')}
 function renderRecoveryPin(r){
@@ -157,7 +174,7 @@ function renderRecoveryPin(r){
 function closeRecovery(){var m=el('cscRecovery');if(m)m.hidden=true;var lead=el('cscRecoveryLead');if(lead){lead.textContent='Confirme seu CPF para criar um novo PIN.';lead.className='muted'}}
 
 function install(){
- try{if(String(new URLSearchParams(location.search).get('acesso')||'').toLowerCase()==='tacs')return}catch(e){}
+ var tacsOnly=false;try{tacsOnly=String(new URLSearchParams(location.search).get('acesso')||'').toLowerCase()==='tacs'}catch(e){}
  ensureStyle();addResidentTab();residentMarkup();recoveryMarkup();
  var tabs=document.querySelector('.login-tabs');if(tabs)tabs.classList.add('csc-three');
  var a=el('tabAdmin'),t=el('tabTacs'),m=el('tabMorador');
@@ -166,9 +183,10 @@ function install(){
  if(m)m.addEventListener('click',function(e){e.preventDefault();showRole('morador')});
  var forgot=el('cscForgotPin');if(forgot)forgot.addEventListener('click',openRecovery);
  var close=el('cscRecoveryClose');if(close)close.addEventListener('click',closeRecovery);
- if(el('loginPanel')&&!el('loginPanel').hidden)showRole('admin');
- window.addEventListener('pageshow',function(){var tabs=document.querySelector('.login-tabs');if(tabs)tabs.style.gridTemplateColumns='repeat(3,minmax(0,1fr))'});
+ if(el('loginPanel')&&!el('loginPanel').hidden)showRole(tacsOnly?'tacs':'admin');
+ setTimeout(registerTrustedDeviceFromSession,700);
+ window.addEventListener('pageshow',function(){setTabs(activeRole);setTimeout(registerTrustedDeviceFromSession,250)});
 }
-window.ConectaAcessoUnificado={showRole:showRole,profile:profile};
+window.ConectaAcessoUnificado={showRole:showRole,profile:profile,registrarAparelho:registerTrustedDevice};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 }());
