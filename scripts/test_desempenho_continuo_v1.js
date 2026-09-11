@@ -50,7 +50,10 @@ assert.match(quick,/if\(!hasAnySession\(\)\)return;/);
 assert.match(back,/function installSinglePinGate\(\)/);
 assert.match(back,/Painéis internos jamais pedem outro PIN/);
 assert.match(back,/location\.replace\(centralUrl\(\)\)/);
+assert.match(back,/window\.parent\.location\.replace\(centralUrl\(\)\)/);
 assert.match(back,/#tacsPinPublicacoes/);
+assert.match(quick,/origin='&from=central'/);
+assert.match(central,/origin='&from=central'/);
 assert.doesNotMatch(back,/#tacsPin\b/,'PIN funcional de cadastro do próprio TACS não pode ser ocultado pelo gate único');
 
 assert.match(backend,/chavesFortes=\[/);
