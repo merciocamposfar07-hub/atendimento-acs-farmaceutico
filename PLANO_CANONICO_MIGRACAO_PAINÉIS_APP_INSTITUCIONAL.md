@@ -60,12 +60,12 @@ Começar pelo módulo **Agendas e vagas**, sem alterar ainda os outros painéis.
 
 A camada de desempenho dos painéis começa no próprio acesso. Depois da criação do PIN e do reconhecimento do aparelho:
 
-1. o PIN destrava localmente a credencial cifrada do perfil;
+1. o PIN destrava localmente o último contexto/snapshot cifrado e previamente confirmado do perfil;
 2. o shell e o último contexto válido aparecem sem esperar o Apps Script;
 3. módulos já visitados reutilizam memória/snapshot local;
 4. a sincronização remota ocorre em paralelo;
 5. dados alterados são substituídos somente quando a versão/consulta remota confirma mudança;
-6. operações críticas nunca são confirmadas somente por snapshot.
+6. operações críticas nunca são confirmadas somente por snapshot e aguardam uma sessão remota nova.
 
 Metas de homologação:
 - resposta visual ao toque: abaixo de 100 ms;

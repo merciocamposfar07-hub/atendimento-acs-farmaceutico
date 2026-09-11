@@ -60,10 +60,10 @@ Esta decisão está registrada como padrão canônico da abertura e não deve se
 Depois de `Acessar conta`, o app segue dois caminhos.
 
 ### Primeiro acesso
-`Selecionar perfil → identificação necessária → servidor confirma vínculo → criar PIN → reconhecer aparelho → preparar credencial local cifrada → sincronizar dados iniciais → abrir área correspondente.`
+`Selecionar perfil → identificação necessária → servidor confirma vínculo → criar PIN → reconhecer aparelho → preparar contexto/snapshot local cifrado → sincronizar dados iniciais → abrir área correspondente.`
 
 ### Segundo acesso e seguintes
-`Selecionar perfil → digitar PIN → destravar credencial local do aparelho → abrir imediatamente a área correspondente → sincronizar servidor em segundo plano.`
+`Selecionar perfil → digitar PIN → destravar contexto/snapshot local do aparelho → abrir imediatamente o último estado confirmado → criar sessão remota nova e sincronizar em segundo plano.`
 
 Por perfil:
 - **Administrador:** abre a Central e somente as estruturas administrativas autorizadas.

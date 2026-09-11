@@ -15,7 +15,7 @@ Quando o Apps Script demorava, o usuário continuava preso na tela de PIN e podi
 
 Depois da criação do PIN e reconhecimento do aparelho:
 
-`PIN → credencial local cifrada → área/painel/portal → sincronização remota em segundo plano`.
+`PIN → contexto/snapshot local cifrado → área/painel/portal → nova sessão remota + sincronização em segundo plano`.
 
 A regra vale separadamente para:
 - Administrador;
@@ -24,16 +24,16 @@ A regra vale separadamente para:
 
 ## Implementação
 
-- Cofre local cifrado com PBKDF2 + AES-GCM.
+- Cofre local cifrado com PBKDF2 + AES-GCM para contexto/snapshot, com descarte explícito de campos de credencial antes da cifra.
 - PIN não é persistido em texto.
 - Cofres separados por perfil.
-- Credencial vinculada ao identificador do aparelho.
+- Contexto/snapshot local vinculado ao identificador do aparelho; nenhum token reutilizável é persistido no cofre.
 - Administrador restaura contexto administrativo local antes da chamada remota.
 - TACS restaura somente o contexto territorial correspondente ao perfil.
 - Morador abre o portal com bootstrap local e a revalidação remota continua por requestId, sem transportar o PIN para a página seguinte.
 - Recusa real do servidor remove o cofre local do perfil.
 - Redefinição de PIN invalida o cofre anterior.
-- Logoff remove a sessão ativa da interface e exige PIN novamente, preservando cache, vínculo do aparelho e credencial cifrada.
+- Logoff remove a sessão ativa da interface, invalida a sessão remota em segundo plano e preserva somente cache/snapshot cifrado e vínculo do aparelho.
 - Tela de PIN deixa de iniciar warmup remoto no carregamento inicial.
 - Safari/iPhone prioriza a resposta direta do POST; polling fica como contingência tardia e controlada.
 
@@ -79,8 +79,8 @@ Antes de publicação:
 4. TACS tenta local antes de `admin_territorio_login_pin`;
 5. Morador tenta local antes de `conecta_morador_login_pin`;
 6. isolamento territorial TACS permanece;
-7. recusa real remove credencial local;
-8. Logoff não limpa armazenamento integral;
+7. recusa real remove o contexto/snapshot local do perfil;
+8. Logoff invalida a sessão remota sem limpar cache/aparelho nem o armazenamento integral;
 9. Safari não volta ao timeout/polling agressivo;
 10. suíte integral do repositório.
 
