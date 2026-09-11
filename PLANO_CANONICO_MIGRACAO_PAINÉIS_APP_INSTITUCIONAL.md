@@ -65,7 +65,8 @@ A camada de desempenho dos painéis começa no próprio acesso. Depois da criaç
 3. módulos já visitados reutilizam memória/snapshot local;
 4. a sincronização remota ocorre em paralelo;
 5. dados alterados são substituídos somente quando a versão/consulta remota confirma mudança;
-6. operações críticas nunca são confirmadas somente por snapshot e aguardam uma sessão remota nova.
+6. operações críticas nunca são confirmadas somente por snapshot e aguardam uma sessão remota nova;
+7. o PIN é digitado uma única vez na entrada do perfil; os painéis administrativos reutilizam a sessão e jamais apresentam um segundo formulário de PIN dentro do fluxo vindo da Central.
 
 Metas de homologação:
 - resposta visual ao toque: abaixo de 100 ms;

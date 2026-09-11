@@ -79,7 +79,8 @@ Regras:
 - o nome real do Administrador, TACS ou Morador autenticado faz parte do contexto local confirmado e deve aparecer com alto contraste;
 - a Saúde Geral usa stale-while-revalidate: último valor confirmado primeiro, atualização remota depois;
 - falha transitória não apaga um valor confirmado nem obriga o usuário a tocar em `Atualizar`;
-- cache e pré-carregamento permanecem isolados por perfil e área.
+- cache e pré-carregamento permanecem isolados por perfil e área;
+- **PIN único por entrada:** depois que o PIN válido abriu Administrador/TACS, nenhum painel administrativo interno pede PIN novamente; se a nova sessão remota ainda estiver sendo criada, o toque fica aguardando na Central e o painel abre automaticamente quando a sessão estiver pronta; um painel nunca deve exibir formulário legado de PIN como continuação do acesso.
 
 ### Operações críticas
 `Tela local → usuário solicita alteração/reserva → servidor valida estado atual + sessão + território/permissão → servidor confirma → interface marca como concluída.`

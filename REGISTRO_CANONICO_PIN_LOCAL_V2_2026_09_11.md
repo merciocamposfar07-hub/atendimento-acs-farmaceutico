@@ -43,6 +43,7 @@ A regra vale separadamente para:
 - Falhas temporárias de rede não apagam snapshots confirmados.
 - A identificação principal (Administrador, TACS, Morador/família) deve ser legível em alto contraste.
 - Pré-carregamento começa após o primeiro paint da tela de PIN, sem segurar o carregamento do Safari.
+- **PIN único na Central:** após o primeiro PIN válido, Moradores, Agendas, Recados/Campanhas, Profissionais/Serviços, TACS/Áreas, Municípios/Organizações e Suporte não podem exigir outro PIN durante a mesma sessão. Se a sessão remota ainda estiver em criação, a Central segura/enfileira a abertura e continua automaticamente sem pedir nova digitação.
 
 ## Autoridade dos dados
 

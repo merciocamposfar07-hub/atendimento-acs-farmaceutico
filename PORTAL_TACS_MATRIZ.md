@@ -108,4 +108,5 @@ Regras obrigatórias:
 - recusa real, inativação ou revogação pelo servidor invalida o acesso local correspondente;
 - Logoff encerra/invalida a sessão remota sem bloquear a interface, preserva aparelho e cache/snapshot cifrado, e exige novamente o PIN;
 - assim que a tela de PIN estiver desenhada, o app inicia preparação assíncrona não bloqueante de backend, módulos e leituras públicas; isso nunca pode atrasar a exibição/teclado do PIN;
-- nenhuma correção de desempenho pode misturar cache entre áreas, perfis, municípios ou organizações.
+- nenhuma correção de desempenho pode misturar cache entre áreas, perfis, municípios ou organizações;
+- o PIN é informado somente na porta de entrada da Central/TACS. Painéis administrativos internos reutilizam a sessão já criada e não podem solicitar novo PIN. Quando abertos a partir da Central sem sessão remota pronta, devem retornar/aguardar a Central em vez de mostrar login legado.
