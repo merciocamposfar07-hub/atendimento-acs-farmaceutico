@@ -124,6 +124,15 @@ function installSafeNavigation(){
     var url=moduleUrl(button.dataset.module||'');
     if(!url)return;
 
+    /* PIN_UNICO_PAINEIS_V1:
+     * Se o PIN local já abriu a Central, mas a nova sessão remota ainda está
+     * sendo confirmada, este controlador NÃO navega para fora da Central.
+     * O clique segue para o controlador principal, que mantém o painel
+     * enfileirado e o abre automaticamente quando a sessão existir.
+     * Assim o usuário não cai em um segundo pedido de PIN e a validação em
+     * segundo plano não é destruída por uma navegação prematura. */
+    if(!hasAnySession())return;
+
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
