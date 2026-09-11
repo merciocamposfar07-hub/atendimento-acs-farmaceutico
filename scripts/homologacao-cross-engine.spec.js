@@ -1,5 +1,13 @@
 'use strict';
 const { test, expect } = require('@playwright/test');
+
+async function seedCentralSession(page){
+  await page.addInitScript(()=>{
+    sessionStorage.setItem('portalTacsAdminTokenV1','homologacao-admin-session');
+    sessionStorage.setItem('portalTacsCentralReturnUrlV1',location.origin+'/atendimento-acs-farmaceutico/central-administrativa-tacs.html');
+    localStorage.setItem('portalTacsCentralAreaV1','JAPARANDUBA');
+  });
+}
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -50,6 +58,7 @@ for(const vp of [{name:'central-mobile-390',width:390,height:844},{name:'central
 
 test('PIN local V3 funciona nos navegadores reais sem persistir token remoto',async({page,browserName})=>{
   await page.setViewportSize({width:390,height:844});await blockExternal(page);
+  await seedCentralSession(page);
   await page.goto('central-administrativa-tacs.html',{waitUntil:'domcontentloaded'});
   const rows=await page.evaluate(async()=>{
     const api=window.ConectaPinLocalV2;if(!api)throw new Error('ConectaPinLocalV2 ausente');
@@ -76,6 +85,7 @@ for(const cfg of [
 ]){
   test('Central navega diretamente para '+cfg.name+' sem iframe oculto',async({page,browserName})=>{
     await page.setViewportSize({width:390,height:844});await blockExternal(page);
+    await seedCentralSession(page);
     await page.goto('central-administrativa-tacs.html',{waitUntil:'domcontentloaded'});await expose(page,cfg.name);
     await expect(page.locator('#portalTacsAdminPreloadPoolV1')).toHaveCount(0);
     await page.evaluate(moduleName=>{
