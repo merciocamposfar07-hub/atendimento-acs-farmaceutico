@@ -31,9 +31,12 @@ assert.doesNotMatch(vaultSource,/localStorage\.setItem\([^\n]*pin/i);
 const adminListener=central.slice(central.indexOf("el('loginAdmin').addEventListener"),central.indexOf("el('loginTacs').addEventListener"));
 assert(adminListener.indexOf("abrirAcessoLocal('admin',pin)")<adminListener.indexOf("post('admin_login'"),
   'Administrador deve tentar o desbloqueio local antes da validação remota');
-assert.match(central,/LOGOFF_COMO_BLOQUEIO_LOCAL_V2/);
-assert.doesNotMatch(central,/if\(hasSession\)invalidarSessaoServidorEmSegundoPlano\(action,payload\)/);
-assert.match(central,/Acesso liberado\. Sincronizando em segundo plano/);
+assert.match(central,/LOGOFF_SEGURO_PIN_LOCAL_V3/);
+assert.match(central,/if\(hasSession&&payload\)invalidarSessaoServidorEmSegundoPlano\(action,payload\)/);
+assert.match(central,/PIN_LOCAL_SEM_TOKEN_V3/);
+assert.match(central,/Acesso liberado\. Confirmando a sessão atual em segundo plano/);
+assert.doesNotMatch(central,/token:bearer/);
+assert.doesNotMatch(central,/territoryToken=text\(saved\.token\)|token=text\(saved\.token\)/);
 assert.match(central,/PortalTacsCentralPinLocalV2/);
 
 const quickListener=quick.slice(quick.indexOf("loginBtn.addEventListener('click'"),quick.indexOf('HOMOLOGACAO_ARQUITETURAL_V1'));
@@ -46,6 +49,10 @@ assert.match(residentHook,/v\.abrir\('morador',pin\)/);
 assert.match(residentHook,/backgroundLogin\(p,pin\)/);
 assert(residentHook.indexOf('backgroundLogin(p,pin)')<residentHook.indexOf('openPortal(saved.snapshot||saved)'),
   'Morador deve iniciar sincronização em segundo plano antes de navegar, sem esperar a resposta');
+assert.doesNotMatch(residentHook,/token:r\.token/);
+assert.doesNotMatch(residentHook,/sessionStorage\.setItem\(TOKEN_KEY,saved\.token\)/);
+assert.match(residentSession,/hasBackgroundRequest\(\)/);
+assert.match(residentSession,/if\(!token\)\{showPortalToast\('Acesso aberto\. Aguarde a confirmação segura do servidor/);
 assert.match(unified,/hook\.registrar\(pin,r\)/);
 assert.match(unified,/hook\.registrar\(a,r\)/);
 assert.match(residentSession,/if\(local\)applyResident\(local,true\)/);
@@ -78,14 +85,17 @@ assert(indexHtml.indexOf('conecta-pin-local-v2.js')<indexHtml.indexOf('conecta-m
   for(const scope of ['admin','tacs','morador']){
     const t0=performance.now();
     assert.equal(await api.guardar(scope,'2468',{device:'iphone-teste',token:'token-'+scope,context:{areas:[{areaId:'JAPARANDUBA'}]}}),true);
-    const raw=store.get('conectaPinLocalV2:'+scope)||'';
+    const raw=store.get('conectaPinLocalV3:'+scope)||'';
+    assert(raw,'Cofre local V3 não foi gravado para '+scope);
     assert(!raw.includes('2468'),'PIN não pode aparecer em texto no armazenamento local');
     assert(!raw.includes('token-'+scope),'Credencial não pode aparecer em texto no armazenamento local');
     const ok=await api.abrir(scope,'2468');
     const elapsed=performance.now()-t0;
-    assert.equal(ok.token,'token-'+scope);
+    assert.equal(ok.token,undefined,'Token remoto não pode sobreviver à sanitização do cofre em '+scope);
+    assert.equal(ok.device,'iphone-teste');
+    assert.equal(ok.context.areas[0].areaId,'JAPARANDUBA');
     assert.equal(await api.abrir(scope,'1357'),null,'PIN incorreto deve bloquear '+scope);
     assert(elapsed<1500,'Desbloqueio local muito lento em '+scope+': '+elapsed.toFixed(1)+' ms');
   }
-  console.log('PIN_LOCAL_V2_OK: Administrador, TACS e Morador usam PIN local primeiro; PIN incorreto bloqueado.');
+  console.log('PIN_LOCAL_V3_OK: Administrador, TACS e Morador liberam cache local sem persistir token remoto; PIN incorreto bloqueado.');
 })().catch(err=>{console.error(err);process.exitCode=1});
