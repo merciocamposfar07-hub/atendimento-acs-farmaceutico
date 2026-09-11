@@ -513,8 +513,30 @@ window.PortalTacsCentralPinLocalV2={
   aplicar:function(scope,saved){return aplicarAcessoLocal(scope,saved)},
   prepararSincronizacao:function(scope,pin){pinLocalPendente=pin;pinLocalPerfil=scope},
   guardar:function(scope,pin){return guardarAcessoLocal(scope,pin)},
-  bloquear:function(scope,msg){bloquearAcessoLocal(scope,msg)}
+  bloquear:function(scope,msg){bloquearAcessoLocal(scope,msg)},
+  sincronizar:function(scope,newToken,pin,areaId,message){
+    if(scope==='tacs'){
+      token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=text(newToken);mode='tacs';
+      if(areaId)selectedAreaId=normArea(areaId);
+      sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);
+    }else{
+      territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=text(newToken);mode='admin';
+      sessionStorage.setItem(TOKEN_KEY,token);
+    }
+    pinLocalPendente=pin;pinLocalPerfil=scope;
+    loadContext(message||'Acesso sincronizado.');
+  }
 };
 applyUiStandard(document);
-if(token||territoryToken){var restored=restoreContextCache();if(!restored)setStatus('Conferindo a sessão existente…','warn');setTimeout(function(){if(!active)loadContext('Sessão existente validada.')},restored?120:0)}else{showLogin(TACS_ONLY?'tacs':'admin')}
+if(token||territoryToken){
+  try{
+    var pendingPin=sessionStorage.getItem('portalTacsPinLocalPendenteV2')||'';
+    var pendingScope=sessionStorage.getItem('portalTacsPinLocalPerfilV2')||'';
+    sessionStorage.removeItem('portalTacsPinLocalPendenteV2');sessionStorage.removeItem('portalTacsPinLocalPerfilV2');
+    if(/^\d{4,8}$/.test(pendingPin)){pinLocalPendente=pendingPin;pinLocalPerfil=pendingScope||mode}
+  }catch(e){}
+  var restored=restoreContextCache();
+  if(!restored)setStatus('Conferindo a sessão existente…','warn');
+  setTimeout(function(){if(!active)loadContext('Sessão existente validada.')},restored?120:0);
+}else{showLogin(TACS_ONLY?'tacs':'admin')}
 }());
