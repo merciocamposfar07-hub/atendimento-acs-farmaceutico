@@ -21,10 +21,13 @@ old_territory = """  window.document.getElementById('tacsCnsLogin').value = '123
   window.document.getElementById('tacsLoginButton').click();
   assert.match(window.document.getElementById('loginStatus').textContent, /CNS profissional com 15 números/);
 """
-new_territory = """  assert.equal(window.document.getElementById('tacsCnsLogin'), null, 'O painel TACS e áreas não deve pedir CNS para login');
-  assert.ok(window.document.getElementById('tacsPinLogin'), 'O painel TACS e áreas deve manter o PIN individual');
-  assert.ok(window.document.getElementById('tacsLoginButton'), 'O botão de login TACS deve permanecer disponível');
-  assert.match(js, /admin_territorio_login_pin/, 'O painel TACS e áreas deve usar a rota de login somente por PIN');
+new_territory = """  assert.equal(window.document.getElementById('loginPanel'),null,'Módulo territorial não deve ter segundo login.');
+  assert.equal(window.document.getElementById('adminLoginButton'),null,'Login administrativo interno deve permanecer removido.');
+  assert.equal(window.document.getElementById('tacsLoginButton'),null,'Login TACS interno deve permanecer removido.');
+  assert.ok(window.document.getElementById('workAreaSelect'),'Área de trabalho deve existir.');
+  assert.match(js, /TERRITORIO_HERDA_SESSAO_CENTRAL_V1/, 'O painel territorial deve herdar a sessão da Central.');
+  assert.doesNotMatch(js, /post\\('admin_login'/, 'O painel territorial não pode refazer login administrativo.');
+  assert.doesNotMatch(js, /post\\('admin_territorio_login_pin'/, 'O painel territorial não pode refazer login TACS.');
 """
 
 def apply_idempotent(text, old, new, label):
@@ -37,17 +40,23 @@ def apply_idempotent(text, old, new, label):
     raise SystemExit(f'Estado inesperado em {label}: legado={old_count}, atual={new_count}.')
 
 s = apply_idempotent(s, old_resident, new_resident, 'teste de Moradores')
-s = apply_idempotent(s, old_territory, new_territory, 'teste TACS e áreas')
+old_count = s.count(old_territory)
+new_contract = "TERRITORIO_HERDA_SESSAO_CENTRAL_V1"
+if old_count == 1:
+    s = s.replace(old_territory, new_territory, 1)
+elif old_count == 0 and new_contract in s and "getElementById('workAreaSelect')" in s:
+    pass
+else:
+    raise SystemExit(f'Estado inesperado em teste TACS e áreas: legado={old_count}, contrato_novo={new_contract in s}.')
 
 for marker in [
     "getElementById('tacsCnsAccess'), null",
-    "getElementById('tacsCnsLogin'), null",
     "getElementById('tacsPinAccess')",
-    "getElementById('tacsPinLogin')",
-    "admin_territorio_login_pin"
+    "getElementById('workAreaSelect')",
+    "TERRITORIO_HERDA_SESSAO_CENTRAL_V1"
 ]:
     if marker not in s:
         raise SystemExit('Gate PIN-only ausente: ' + marker)
 
 p.write_text(s, encoding='utf-8')
-print('Dois testes territoriais PIN-only validados/atualizados com idempotência.')
+print('Moradores PIN-only e Gestão territorial sem segundo login validados/atualizados com idempotência.')
