@@ -19,8 +19,8 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R13",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_09_PIN_SOMENTE_ENTRADA_2026_09_12.md",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R14",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_10_SESSAO_SHELL_PERSISTENTE_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
   "notes": [
@@ -482,6 +482,39 @@
       ],
       "pagesWorkflowRun": 34723459550,
       "pagesDeploymentSuccess": true
+    }
+  },
+  "task10SingleSessionPersistentShell": {
+    "status": "implemented-awaiting-validation",
+    "authorizedOn": "2026-09-12",
+    "centralRemainsMounted": true,
+    "oneCanonicalSession": true,
+    "moduleFramesPersistent": true,
+    "moduleFramesLazyLoaded": true,
+    "agendaLoadsOnlyAfterShellVisible": true,
+    "agendaTopLevelNavigationRemoved": true,
+    "returnToCentralDoesNotUnloadModule": true,
+    "moduleReuseWithoutNewPin": true,
+    "singleNavigationAuthority": "Central Conecta",
+    "legacyQuickRouterDelegatesToCentral": true,
+    "shellResetOnlyOn": [
+      "explicit-logoff",
+      "authentication-refusal",
+      "area-scope-change"
+    ],
+    "task9PinOnlyContractPreserved": true,
+    "requestPerformanceDeferredToTask11": true,
+    "cacheFreshnessDeferredToTask12": true,
+    "requestDedupDeferredToTask13": true,
+    "timeoutSessionRuleDeferredToTask14": true,
+    "appBackDeferredToTask15": true,
+    "moduleMigrationDeferredToTask16": true,
+    "specificGate": "TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK",
+    "validation": {
+      "specificGate": "pending",
+      "fullSuite": "pending",
+      "appsScriptDeploy": "pending",
+      "pagesDeployment": "pending"
     }
   }
 }
