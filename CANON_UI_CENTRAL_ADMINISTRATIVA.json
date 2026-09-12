@@ -93,7 +93,7 @@
     "UBS"
   ],
   "task1ProfileUbs": {
-    "status": "validated-technical-deployed",
+    "status": "validated-internal-deployed",
     "authorizedOn": "2026-09-12",
     "standaloneOnly": true,
     "registrationFields": [
@@ -122,6 +122,12 @@
     "pagesDeploymentRun": 34710674013,
     "pagesDeploymentHead": "266319d8153802fad8b893638264bf176b67cfae",
     "pagesDeploymentSuccess": true,
-    "userDeviceValidation": "pending"
+    "userDeviceValidation": "pending",
+    "appsScriptVersion": 198,
+    "appsScriptWorkflowRun": 34711600074,
+    "pagesWorkflowRuns": [
+      34711593498,
+      34711695935
+    ]
   }
 }
