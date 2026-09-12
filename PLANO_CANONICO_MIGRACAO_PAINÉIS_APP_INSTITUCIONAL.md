@@ -275,5 +275,9 @@ Regras:
 - roteadores legados permanecem somente como fallback;
 - desempenho de dados, cache, deduplicação, timeout, histórico/back e migração definitiva continuam reservados às Tarefas 11–16.
 
-### Status da Tarefa 10: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK`.
+### Status final da Tarefa 10: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate `TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK`, suíte integral e `QUALITY_GATE_V101_OK` aprovados. O workflow final `34724133585` implantou Apps Script **208** no mesmo deployment e aprovou todos os health checks na primeira tentativa.
+
+Os runs `34724024689` e `34724081752` foram bloqueados antes do deploy por asserts históricos incompatíveis com o shell já implementado e não geraram versão.
+
+**Regra de sequência cumprida:** Tarefa 10 encerrada tecnicamente; Tarefa 11 liberada para execução.
