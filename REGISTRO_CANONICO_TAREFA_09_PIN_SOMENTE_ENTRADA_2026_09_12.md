@@ -49,3 +49,23 @@ A Tarefa 9 só será concluída após gate específico, suíte integral, implant
 A **Tarefa 9 está validada internamente, implantada e registrada canonicamente**. A autenticação por PIN fica concentrada na entrada/Central; os módulos consomem a sessão e o contexto do núcleo e não mantêm autenticação paralela.
 
 A Tarefa 10 permanece separada: ela tratará o shell persistente e a navegação entre Central e módulos sem reiniciar autenticação ou reconstruir a aplicação.
+
+
+## Resultado técnico verificado
+- gate específico `TAREFA_9_PIN_SOMENTE_ENTRADA_OK`: **aprovado**;
+- suíte integral: **aprovada**;
+- `QUALITY_GATE_V101_OK`: **aprovado**;
+- workflow Apps Script definitivo: **success**, run `34723196310`;
+- versão anterior: `206`;
+- nova versão criada e implantada: **`207`**;
+- health checks: **aprovados na primeira tentativa** para moradores, território, CSV, manutenção, isolamento, agendas Japaranduba/Matias, painéis públicos e conteúdo;
+- versões ativas após a implantação: `6, 7, 9, 207`;
+- GitHub Pages: **success**, run `34723459550`.
+
+## Ajustes de regressão durante a validação
+O primeiro run ficou preso em um teste legado de transporte que ainda tentava autenticar dentro do módulo Profissionais. O teste foi alinhado ao contrato da Tarefa 9 e passou. O teste DOM de Profissionais também foi atualizado para receber a sessão canônica da Central, sem chamar `admin_login` dentro do módulo.
+
+Nenhuma dessas correções alterou a lógica funcional dos painéis; foram ajustes dos gates históricos ao fluxo já autorizado.
+
+## Fechamento
+A **Tarefa 9 está validada internamente, implantada e registrada canonicamente**. A Tarefa 10 fica liberada para implementar sessão única + shell persistente, sem reiniciar autenticação ao trocar de módulo.
