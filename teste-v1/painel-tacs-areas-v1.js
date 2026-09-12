@@ -4,10 +4,11 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var TACS_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
-var token=sessionStorage.getItem(ADMIN_TOKEN_KEY)||'';
-var territorioToken=sessionStorage.getItem(TACS_TOKEN_KEY)||'';
-var device=localStorage.getItem(DEVICE_KEY)||'';
-var mode=territorioToken?'tacs':(token?'admin':'');
+var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'territorio'}):null;
+var token=moduleSession&&moduleSession.token||'';
+var territorioToken=moduleSession&&moduleSession.territorioToken||'';
+var device=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
+var mode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territorioToken?'tacs':(token?'admin':''));
 var active=null,data={tacs:[],areas:[],podeAdministrar:false,perfil:''};
 var areaEditSnapshot=null;
 var csvState={file:null,base64:'',name:'',headers:[],delimiter:'',headerRow:-1,encoding:'',mapping:{},preview:null};
@@ -114,7 +115,7 @@ function esc(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){retur
 function status(msg,type){var node=el('operationStatus')||el('loginStatus');node.textContent=msg;node.className='status'+(type?' '+type:'');}
 function loginStatus(msg,type){var node=el('loginStatus');node.textContent=msg;node.className='status'+(type?' '+type:'');}
 function requestId(prefix){return String(prefix||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);}
-function session(){var out={dispositivo:device};if(mode==='tacs'&&territorioToken)out.territorioToken=territorioToken;else if(token)out.token=token;return out;}
+function session(){if(moduleCore&&typeof moduleCore.session==='function')return moduleCore.session({escopo:'territorio'});var out={dispositivo:device};if(mode==='tacs'&&territorioToken)out.territorioToken=territorioToken;else if(token)out.token=token;return out;}
 function payload(extra){var out=session();Object.keys(extra||{}).forEach(function(k){out[k]=extra[k];});return out;}
 
 function jsonp(action,params,cb){
