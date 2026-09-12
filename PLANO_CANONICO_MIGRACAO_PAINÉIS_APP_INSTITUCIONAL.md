@@ -281,3 +281,24 @@ Gate `TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK`, suíte integral e `QUALITY_GATE_V1
 Os runs `34724024689` e `34724081752` foram bloqueados antes do deploy por asserts históricos incompatíveis com o shell já implementado e não geraram versão.
 
 **Regra de sequência cumprida:** Tarefa 10 encerrada tecnicamente; Tarefa 11 liberada para execução.
+
+
+## Tarefa 11 autorizada — Desempenho dos módulos
+O toque no módulo deve responder imediatamente no shell. Quando houver leitura confirmada na sessão atual, ela aparece primeiro em modo seguro; o servidor é consultado em paralelo e somente uma resposta diferente provoca a reconstrução dos dados principais.
+
+Regras:
+- cache de leitura separado por modo/perfil, área e módulo;
+- cache em `sessionStorage`, sem tokens, PIN, quickKey ou chave de confiança;
+- conteúdo vindo do cache fica somente para consulta até a confirmação do servidor;
+- servidor continua sendo consultado em toda abertura/atualização desta etapa;
+- resposta remota idêntica apenas confirma o estado e libera controles, sem rerender integral;
+- resposta remota diferente atualiza o módulo;
+- Agendas, Moradores, Profissionais, Recados/Campanhas, Suporte, TACS/Áreas e Municípios/Organizações seguem o mesmo contrato;
+- versionamento/frescor de cache pertence à Tarefa 12;
+- deduplicação de chamadas pertence à Tarefa 13;
+- timeout/sessão pertence à Tarefa 14.
+
+### Status da Tarefa 11: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL EM ANDAMENTO — 12/09/2026
+Gate específico: `TAREFA_11_DESEMPENHO_MODULOS_OK`.
+
+Nenhuma alteração de backend Apps Script foi necessária nesta etapa; a versão de produção deve permanecer **208** se a validação confirmar o escopo.
