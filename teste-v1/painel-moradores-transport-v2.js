@@ -5,7 +5,7 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var TOKEN_KEY='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
-var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'moradores'}):null;
+var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'moradores'}):null,modulePerf=moduleCore&&moduleCore.performance;
 var token=moduleSession&&moduleSession.token||'';
 var territoryToken=moduleSession&&moduleSession.territorioToken||'';
 var accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':''));
@@ -447,50 +447,69 @@ function syncControls(){
   }
 }
 
-function renderBase(r,message){
-  if(!r||r.ok!==true){
-    setBaseLoading(false);
-    syncControls();
-    setStatus('loginStatus',text(r&&r.message||'Não foi possível carregar a base.'),'err');
-    return false;
-  }
+function basePerformancePayload(r){
+  r=r||{};return{
+    ok:r.ok===true,escritaHabilitada:r.escritaHabilitada===true,situacaoHabilitada:r.situacaoHabilitada===true,
+    consolidacaoHabilitada:r.consolidacaoHabilitada===true,versao:text(r.versao),
+    areas:Array.isArray(r.areas)?r.areas:[],areaId:text(r.areaId),areaNome:text(r.areaNome),
+    totalRegistros:Number(r.totalRegistros||0),schemaValido:r.schemaValido===true,
+    filtroPublicoSituacao:r.filtroPublicoSituacao===true,podeAtivarSituacao:r.podeAtivarSituacao===true
+  };
+}
+function confirmBaseState(r,message){
   writesEnabled=r.escritaHabilitada===true;
   situationEnabled=r.situacaoHabilitada===true;
   consolidationEnabled=r.consolidacaoHabilitada===true;
   backendVersion=text(r.versao);
-  renderAreaSelector(r.areas,r.areaId,r.areaNome);
-  if(el('countResidents'))el('countResidents').textContent=String(r.totalRegistros);
-  if(el('schema'))el('schema').textContent=r.schemaValido?'20/20':'ERRO';
+  setBaseLoading(false);updateNote();syncControls();
   if(el('write'))el('write').textContent=writesEnabled?'LIBERADO':'BLOQ.';
   if(el('consolidation'))el('consolidation').textContent=consolidationEnabled?'LIBERADA':'BLOQ.';
   if(el('situation'))el('situation').textContent=situationEnabled?'LIBERADA':'PROTEGIDA';
+  setStatus('loginStatus',message||'Sessão validada e base conferida.','ok');
+  var operation=el('operationStatus');
+  if(operation&&text(operation.textContent).indexOf('conferência das permissões')!==-1)setStatus('operationStatus','Base conferida. O painel está pronto para uso.','ok');
+  setTimeout(function(){maybeActivateSituation(r)},0);
+}
+function renderBase(r,message,confirmed){
+  if(!r||r.ok!==true){
+    setBaseLoading(false);syncControls();setStatus('loginStatus',text(r&&r.message||'Não foi possível carregar a base.'),'err');return false;
+  }
+  var remoteConfirmed=confirmed!==false;
+  writesEnabled=remoteConfirmed&&r.escritaHabilitada===true;
+  situationEnabled=remoteConfirmed&&r.situacaoHabilitada===true;
+  consolidationEnabled=remoteConfirmed&&r.consolidacaoHabilitada===true;
+  backendVersion=text(r.versao);
+  renderAreaSelector(r.areas,r.areaId,r.areaNome);
+  if(el('countResidents'))el('countResidents').textContent=String(r.totalRegistros);
+  if(el('schema'))el('schema').textContent=r.schemaValido?'20/20':'ERRO';
+  if(el('write'))el('write').textContent=remoteConfirmed?(writesEnabled?'LIBERADO':'BLOQ.'):'AGUARDE';
+  if(el('consolidation'))el('consolidation').textContent=remoteConfirmed?(consolidationEnabled?'LIBERADA':'BLOQ.'):'AGUARDE';
+  if(el('situation'))el('situation').textContent=remoteConfirmed?(situationEnabled?'LIBERADA':'PROTEGIDA'):'AGUARDE';
   if(el('summary'))el('summary').classList.remove('hidden');
   if(el('content'))el('content').classList.remove('hidden');
   if(el('logout'))el('logout').disabled=false;
-  ensureSituationUi();
-  setBaseLoading(false);
-  updateNote();
-  syncControls();
-  setStatus('loginStatus',message||'Sessão validada e base conferida.','ok');
-  var operation=el('operationStatus');
-  if(
-    operation&&
-    text(operation.textContent).indexOf('conferência das permissões')!==-1
-  ){
-    setStatus('operationStatus','Base conferida. O painel está pronto para uso.','ok');
-  }
+  ensureSituationUi();setBaseLoading(false);updateNote();syncControls();
+  setStatus('loginStatus',message||(remoteConfirmed?'Sessão validada e base conferida.':'Última confirmação exibida. Conferindo a base em segundo plano…'),remoteConfirmed?'ok':'warn');
   if(PRONTUARIOS_VIEW&&accessMode==='admin'){
     var searchHelp=document.querySelector('#searchArea .muted');
     if(searchHelp)searchHelp.textContent='Busque por nome, CPF, CNS ou cadastro familiar. A consulta percorre todas as áreas cadastradas.';
     var searchButton=el('search');if(searchButton)searchButton.textContent='Buscar em todas as áreas';
   }
-  setTimeout(function(){maybeActivateSituation(r)},0);
+  if(remoteConfirmed)setTimeout(function(){maybeActivateSituation(r)},0);
   return true;
 }
 
 function loadBase(message,done){
+  var cached=null;
+  if(modulePerf&&typeof modulePerf.prime==='function'){
+    cached=modulePerf.prime('moradores-base',function(data){renderBase(data,'Última confirmação exibida. Conferindo moradores em segundo plano…',false)});
+  }
   post('admin_moradores_status',session(),'admin_moradores_result',function(r){
-    var ok=renderBase(r,message);
+    if(!r||r.ok!==true){var ok=renderBase(r,message,true);if(typeof done==='function')done(r,ok);return}
+    var payload=basePerformancePayload(r),diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('moradores-base',payload):{changed:true};
+    var ok=true;
+    if(diff.changed||!cached)ok=renderBase(payload,message,true);
+    else confirmBaseState(payload,'Base atual confirmada; nenhuma mudança nova encontrada.');
     if(typeof done==='function')done(r,ok);
   });
 }
