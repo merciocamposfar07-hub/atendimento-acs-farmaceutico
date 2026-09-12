@@ -85,7 +85,6 @@ for(const [moduleName,src] of [
   assert.ok(!src.includes('conecta-module-core-v1.js?v=20260912-tarefa11-performance-v1'),'Módulo ainda preso ao core antigo da Tarefa 11: '+moduleName);
 }
 
-// Tarefa 13 ainda não foi antecipada.
-assert.doesNotMatch(core,/requestPromiseMap|inFlightRequestMap|dedupRequestPromise/i);
+// A Tarefa 13 pode acrescentar o broker após o fechamento desta etapa.\nif(core.includes('TAREFA_13_DEDUP_REQUISICOES_V1'))assert.match(core,/dedupRequestPromise/);
 
 console.log('TAREFA_12_CACHE_FRESCOR_OK: cache possui referência de versão/frescor, é sempre não autoritativo, servidor continua obrigatório e dados críticos só são liberados após confirmação remota atual.');
