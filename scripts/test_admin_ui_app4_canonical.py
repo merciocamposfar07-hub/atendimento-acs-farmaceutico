@@ -176,6 +176,18 @@ for forbidden in [
         raise SystemExit(f'Tela de acesso voltou a exibir texto removido: {forbidden}')
 print('LOGIN_PROPOSTA_APP4_OK')
 
+# LOGOFF — exceção funcional solicitada ao padrão cromático geral.
+for token in [
+    'LOGOFF_VERMELHO_2026_09_11_V1',
+    'html body #logout.csc-logout-button',
+    'background:#972f2f!important',
+]:
+    if token not in css:
+        raise SystemExit(f'Logoff vermelho incompleto no CSS canônico: {token}')
+if '#logout.csc-logout-button{background:#972f2f!important' not in behavior_v2:
+    raise SystemExit('Skin final voltou a pintar o Logoff de azul.')
+print('LOGOFF_VERMELHO_OK')
+
 # CORRECOES_PONTUAIS_APP_2026_09_10_V5
 behavior_now = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')
 css_now = (ROOT / 'admin-ui-standard.inline.css').read_text(encoding='utf-8')
