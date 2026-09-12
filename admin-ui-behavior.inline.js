@@ -25,14 +25,31 @@ var TERRITORY_TOKEN='portalTacsTerritorioTokenV1';
 var RETURN_FLAG='portalTacsRetornoCentralV1';
 var ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3';
 var sessionTimer=0;
+/* SESSAO_UNICA_PAINEL_V1: painel administrativo nunca exibe um segundo formulário de PIN.
+   Sem sessão da Central, a página fica oculta só durante o redirecionamento para a entrada única. */
+if(!CENTRAL&&!hasSession()){
+  try{
+    var singleEntryStyle=document.createElement('style');
+    singleEntryStyle.id='cscSingleEntryGateV1';
+    singleEntryStyle.textContent='html,body{visibility:hidden!important}';
+    (document.head||document.documentElement).appendChild(singleEntryStyle);
+  }catch(e){}
+}
 
 function text(v){return String(v==null?'':v).trim()}
 function hasSession(){
   try{return Boolean(text(sessionStorage.getItem(ADMIN_TOKEN)||'')||text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}
 }
 function isTerritory(){try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}}
+function singleEntryCentralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260911-sessao-unica-v1'}
+function enforceSingleEntry(){
+  if(CENTRAL||hasSession())return false;
+  try{location.replace(singleEntryCentralUrl())}catch(e){location.href=singleEntryCentralUrl()}
+  return true;
+}
 function syncSessionClass(){
   var active=hasSession();
+  if(!CENTRAL&&!active){enforceSingleEntry();return}
   ROOT.classList.toggle('csc-session-active',active);
   ROOT.classList.toggle('csc-session-missing',!active);
   if(document.body){
@@ -100,7 +117,7 @@ function buildAppbar(){
 }
 
 function markAuthControls(){
-  var loginPasswordIds=['pin','adminPin','tacsPinLogin'];
+  var loginPasswordIds=['pin','adminPin','tacsPinLogin','tacsPinAccess','tacsPinPublicacoes'];
   loginPasswordIds.forEach(function(id){
     var input=document.getElementById(id);
     if(!input||input.id==='tacsPin')return;
@@ -110,7 +127,7 @@ function markAuthControls(){
     if(wrap)wrap.classList.add('csc-auth-control','csc-admin-only-auth');
   });
   ['accessActions','pinHelp','loginAdminTab','loginTacsTab','adminLogin','tacsLogin'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-auth-control','csc-admin-only-auth')});
-  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs'].forEach(function(id){var n=document.getElementById(id);if(!n)return;if(CENTRAL&&id==='logout'){n.classList.remove('csc-admin-only-auth','csc-auth-control');return}n.classList.add('csc-admin-only-auth')});
+  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs','entrarTacs'].forEach(function(id){var n=document.getElementById(id);if(!n)return;if(CENTRAL&&id==='logout'){n.classList.remove('csc-admin-only-auth','csc-auth-control');return}n.classList.add('csc-admin-only-auth')});
   var accessTitle=document.getElementById('accessTitle');if(accessTitle)accessTitle.classList.add('csc-admin-only-auth');
 
   /* No painel de moradores, o perfil já foi definido pelo PIN da Central.
@@ -298,6 +315,7 @@ function keepFinalSkinLast(){
 }
 
 function boot(){
+  if(enforceSingleEntry())return;
   buildAppbar();
   markAuthControls();
   buildCentralWelcome();
