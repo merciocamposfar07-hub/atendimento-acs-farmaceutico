@@ -294,3 +294,20 @@ Gate `TAREFA_12_CACHE_FRESCOR_OK` aprovado. A correção pós-auditoria da Taref
 Apps Script permanece na versão `208` porque a Tarefa 12 é exclusivamente de frontend/core de módulos.
 
 **Sequência canônica:** Tarefa 12 encerrada tecnicamente; Tarefa 13 continua como próxima etapa autorizável.
+
+
+### Registro canônico — Tarefa 13 / Deduplicação de requisições
+No shell autenticado:
+
+`módulo/Central solicita leitura → core identifica ação + modo + área + sessão em hash → uma única chamada remota → resposta distribuída aos consumidores compatíveis`.
+
+Leituras em andamento são compartilhadas. Uma resposta remota confirmada pode ser reutilizada por uma janela curta de 5 segundos. O metadado local `escopo` não separa consumidores da mesma consulta, permitindo que Agendas e Profissionais compartilhem `admin_dados`.
+
+O broker fica somente na memória do shell. Não guarda tokens, PIN, quickKey ou chave de confiança. Escritas não são deduplicadas e invalidam imediatamente as leituras recentes; a geração impede que uma leitura iniciada antes da escrita volte a ser tratada como atual.
+
+O cache versionado da Tarefa 12 continua sendo apenas continuidade visual e não se transforma em fonte autoritativa por causa do broker.
+
+### Status da Tarefa 13: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate: `TAREFA_13_DEDUP_REQUISICOES_OK`.
+
+A Tarefa 13 é de frontend/core; Apps Script deve permanecer na versão **208**. A regra de timeout/sessão permanece exclusiva da Tarefa 14.
