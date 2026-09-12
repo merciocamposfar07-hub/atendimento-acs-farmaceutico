@@ -82,6 +82,16 @@ function showRole(role){
  if(a)a.hidden=role!=='admin';if(t)t.hidden=role!=='tacs';if(m)m.hidden=role!=='morador';
  if(role==='morador'){renderResidentStart();setStatus(profile()?'Digite seu PIN de 4 números.':'Primeiro acesso: informe seu CPF.','')}
 }
+function focusRoleField(role){
+ var n=role==='admin'?el('adminPin'):role==='tacs'?el('tacsPin'):(el('cscResidentPin')||el('cscResidentCpf'));
+ if(!n||n.disabled||n.hidden)return;
+ try{n.focus({preventScroll:true})}catch(e){try{n.focus()}catch(_e){}}
+}
+function selectRoleFromTap(role,event){
+ if(event&&typeof event.preventDefault==='function')event.preventDefault();
+ showRole(role);
+ focusRoleField(role);
+}
 function field(id,label,attrs){
  return '<label for="'+id+'">'+label+'</label><input class="field" id="'+id+'" '+(attrs||'')+'>';
 }
@@ -188,9 +198,9 @@ function install(){
  ensureStyle();addResidentTab();residentMarkup();recoveryMarkup();
  var tabs=document.querySelector('.login-tabs');if(tabs)tabs.classList.add('csc-three');
  var a=el('tabAdmin'),t=el('tabTacs'),m=el('tabMorador');
- if(a)a.addEventListener('click',function(){setTimeout(function(){showRole('admin')},0)});
- if(t)t.addEventListener('click',function(){setTimeout(function(){showRole('tacs')},0)});
- if(m)m.addEventListener('click',function(e){e.preventDefault();showRole('morador')});
+ if(a)a.addEventListener('click',function(e){selectRoleFromTap('admin',e)});
+ if(t)t.addEventListener('click',function(e){selectRoleFromTap('tacs',e)});
+ if(m)m.addEventListener('click',function(e){selectRoleFromTap('morador',e)});
  var forgot=el('cscForgotPin');if(forgot)forgot.addEventListener('click',openRecovery);
  var close=el('cscRecoveryClose');if(close)close.addEventListener('click',closeRecovery);
  if(el('loginPanel')&&!el('loginPanel').hidden)showRole(tacsOnly?'tacs':'admin');

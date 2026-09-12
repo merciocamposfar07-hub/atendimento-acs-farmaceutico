@@ -1820,6 +1820,98 @@ html body .csc-profile-admin-toggle{
 }
 html body .csc-profile-admin-toggle[aria-expanded="true"]{border-color:#83efa9!important}
 html body .csc-profile-admin-names[hidden]{display:none!important}
+
+
+/* UNISONO_SEM_BORDAS_2026_09_11_V1
+   Correção visual cirúrgica: uma única família azul-petróleo para superfícies
+   funcionais. Bordas de balões/cards removidas. Botões e campos mantêm seus
+   próprios estados de interação. */
+body.csc-brand-enhanced main>section.panel,
+body.csc-brand-enhanced main>section.painel,
+body.csc-brand-enhanced main>section.card,
+body.csc-brand-enhanced main>div.panel,
+body.csc-brand-enhanced main>div.painel,
+body.csc-brand-enhanced main>div.card,
+body.csc-brand-enhanced main>.box,
+body.csc-brand-enhanced main>.caixa,
+body.csc-brand-enhanced main>.newbox,
+html body #conteudo.card,
+html body #content.panel,
+html body #ticketsPane,
+html body #devicesPane,
+html body #secaoRecados,
+html body #secaoCampanhas,
+html body .lista,
+html body .list,
+html body #results{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html body .panel .card,
+html body .painel .card,
+html body .card .card,
+html body .item,
+html body .cartao,
+html body .ticket,
+html body .grupoProfissional,
+html body .area-row,
+html body .maprow,
+html body .health-card,
+html body .saude-numero,
+html body .numero,
+html body .number,
+html body .stat,
+html body .metric,
+html body .quick-card,
+html body .saude-aparelho,
+html body #results .card,
+html body #listaRecados .item,
+html body #listaCampanhas .item,
+html body .msg-familia-acao,
+html body .msg-ind-form-action,
+html body .msg-rel-box,
+html body .msg-rel-status,
+html body .msg-rel-event,
+html body .msg-rel-message,
+html body .msg-rel-device,
+html body .msg-rel-grid div,
+html body .protect,
+html body .area-control,
+html body .csc-profile-card,
+html body .csc-profile-empty{
+  background:#102d46!important;
+  background-image:none!important;
+  color:#f7fcff!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html body .status,
+html body .status.ok,
+html body .status.warn,
+html body .status.aviso,
+html body .status.err,
+html body .status.erro,
+html body .nota,
+html body .note{
+  background:#102d46!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html body .protect p,
+html body .protect small,
+html body .protect .muted,
+html body .protect .sub{
+  color:#d8e6ee!important;
+}
+html body .module{
+  background:#102d46!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
@@ -2162,8 +2254,23 @@ var sharedAdminReadConsumido=false;
 function sharedAdminReadKey(){var id=cacheIdentity();return id?'portalTacsAdminSharedReadV1:admin_dados:v1:'+id:''}
 function lerSharedAdminDados(){try{var key=sharedAdminReadKey();if(!key)return null;var item=JSON.parse(localStorage.getItem(key)||'null');if(!item||!item.data||Date.now()-Number(item.salvoEm||0)>5000)return null;return item.data}catch(e){return null}}
 function salvarSharedAdminDados(r){try{var key=sharedAdminReadKey();if(!key||!r||r.ok!==true)return;localStorage.setItem(key,JSON.stringify({salvoEm:Date.now(),data:{ok:true,profissionais:Array.isArray(r.profissionais)?r.profissionais:[],servicos:Array.isArray(r.servicos)?r.servicos:[],agendas:Array.isArray(r.agendas)?r.agendas:[]}}))}catch(e){}}
-function lerSnapshot(){try{var key=dataCacheKey();if(!key)return null;var item=JSON.parse(localStorage.getItem(key)||'null');if(!item||!item.data||Date.now()-Number(item.salvoEm||0)>24*60*60*1000)return null;return item}catch(e){return null}}
-function salvarSnapshot(r){try{var key=dataCacheKey();if(!key)return;localStorage.setItem(key,JSON.stringify({salvoEm:Date.now(),data:{ok:true,profissionais:Array.isArray(r.profissionais)?r.profissionais:[],agendas:Array.isArray(r.agendas)?r.agendas:[]}}))}catch(e){}}
+function areaDataCacheKey(){return areaId?'portalTacsAgendaAreaSnapshotV1:'+CACHE_SCHEMA+':'+areaId:''}
+function lerSnapshot(){
+  try{
+    var keys=[dataCacheKey(),areaDataCacheKey()].filter(Boolean);
+    for(var i=0;i<keys.length;i++){
+      var item=JSON.parse(localStorage.getItem(keys[i])||'null');
+      if(item&&item.data&&Date.now()-Number(item.salvoEm||0)<=24*60*60*1000)return item;
+    }
+    return null;
+  }catch(e){return null}
+}
+function salvarSnapshot(r){
+  try{
+    var payload=JSON.stringify({salvoEm:Date.now(),data:{ok:true,profissionais:Array.isArray(r.profissionais)?r.profissionais:[],agendas:Array.isArray(r.agendas)?r.agendas:[]}});
+    [dataCacheKey(),areaDataCacheKey()].filter(Boolean).forEach(function(key){localStorage.setItem(key,payload)});
+  }catch(e){}
+}
 function bloquearEdicaoNaoConfirmada(){document.querySelectorAll('.salvarAgenda').forEach(function(b){b.disabled=!dadosConfirmados});if(desfazer)desfazer.disabled=!dadosConfirmados}
 function cancelarReconexao(){if(reconexaoTimer){clearTimeout(reconexaoTimer);reconexaoTimer=null}}
 function aplicarSnapshotSeDisponivel(){if(!token&&!territorioToken)return false;var item=lerSnapshot();if(!item)return false;cancelarReconexao();snapshotVisivel=true;reconexaoTentativas=0;aplicarDados(item.data,false);status('loginStatus','Dados exibidos da última leitura. Atualizando dados em segundo plano…','aviso');return true}
@@ -2378,7 +2485,7 @@ setTimeout(limpar,900);
 window.addEventListener('pageshow',limpar);
 }());
 </script>
-<script src="/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260823-card-institucional-v1"></script>
+<script src="/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260911-sem-atualizar-v1"></script>
 <script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260825-v6"></script>
 </body>
 </html>

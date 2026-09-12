@@ -3,7 +3,7 @@
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1',AREA_KEY='portalTacsCentralAreaV1',CONTEXT_CACHE_KEY='portalTacsCentralContextCacheV3';
 var SHARED_WARM_KEY='portalTacsAppsScriptWarmAtV1';
-var HEALTH_REFRESH_TTL=30000,healthRefreshInFlight=false,lastHealthRefreshAt=0,lastHealthRefreshArea='';
+var HEALTH_REFRESH_TTL=30000,HEALTH_CACHE_TTL=300000,HEALTH_CACHE_PREFIX='portalTacsHealthConfirmedV1:',healthRefreshInFlight=false,lastHealthRefreshAt=0,lastHealthRefreshArea='';
 var NOTIFICATION_CONFIRMED_CACHE_PREFIX='portalTacsNotificationConfirmedV1:',notificationRemoteSeq=0,notificationRemoteArea='',notificationLatestStarted={};
 var URL_PARAMS=new URLSearchParams(location.search),TACS_ONLY=String(URL_PARAMS.get('acesso')||'').toLowerCase()==='tacs';
 var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
@@ -324,6 +324,34 @@ function notificationPostIsolated(action,areaId,cb){
     setTimeout(pollResult,280);
   }catch(e){finish({ok:false,message:'Não foi possível iniciar a validação das notificações.'})}
 }
+function healthCacheKey(areaId){return HEALTH_CACHE_PREFIX+normArea(areaId)}
+function readHealthCache(areaId){
+  try{
+    var raw=localStorage.getItem(healthCacheKey(areaId));if(!raw)return null;
+    var saved=JSON.parse(raw),age=Date.now()-Number(saved&&saved.confirmadoEm||0);
+    if(!saved||!saved.itens||age<0||age>HEALTH_CACHE_TTL)return null;
+    return saved;
+  }catch(e){return null}
+}
+function saveHealthItem(areaId,key,label,state){
+  try{
+    var cacheKey=healthCacheKey(areaId),saved=JSON.parse(localStorage.getItem(cacheKey)||'null')||{itens:{}};
+    if(!saved.itens)saved.itens={};
+    saved.itens[key]={label:text(label),state:text(state)};
+    saved.confirmadoEm=Date.now();
+    localStorage.setItem(cacheKey,JSON.stringify(saved));
+  }catch(e){}
+}
+function renderHealthCache(areaId){
+  var saved=readHealthCache(areaId),used={};
+  if(!saved)return used;
+  var map={portal:'healthPortal',residents:'healthResidents',agenda:'healthAgenda',content:'healthContent'};
+  Object.keys(map).forEach(function(key){
+    var item=saved.itens&&saved.itens[key];if(!item)return;
+    markHealth(map[key],item.label,item.state);used[key]=true;
+  });
+  return used;
+}
 function refreshNotificationHealth(areaId,force){
   areaId=normArea(areaId);
   if(!permission('PUBLICACOES_GERENCIAR')){markHealth('healthNotifications','Sem permissão','warn');return}
@@ -335,7 +363,12 @@ function refreshNotificationHealth(areaId,force){
      "última confirmação" e "confirmação atual". */
   if(notificationRemoteArea===areaId&&!force)return;
   notificationRemoteArea=areaId;
-  markHealth('healthNotifications','Confirmando…','');
+  var confirmadoAnterior=readConfirmedNotification(areaId);
+  if(confirmadoAnterior&&Date.now()-Number(confirmadoAnterior.confirmadoEm||0)<=HEALTH_CACHE_TTL){
+    renderConfirmedNotification(confirmadoAnterior,areaId);
+  }else{
+    markHealth('healthNotifications','Confirmando…','');
+  }
 
   notificationPostIsolated('admin_notificacoes_saude_remota',areaId,function(remote,seq){
     if(seq!==notificationLatestStarted[areaId])return;
@@ -352,15 +385,42 @@ function refreshHealth(force){
   if(healthRefreshInFlight)return;
   if(!force&&lastHealthRefreshArea===areaId&&now-lastHealthRefreshAt<HEALTH_REFRESH_TTL){refreshNotificationHealth(areaId,false);return}
   healthRefreshInFlight=true;lastHealthRefreshArea=areaId;lastHealthRefreshAt=now;
-  ['healthPortal','healthResidents','healthAgenda','healthContent'].forEach(function(id){markHealth(id,'Verificando…','')});
+  var cacheItens=renderHealthCache(areaId);
+  if(!cacheItens.portal)markHealth('healthPortal','Verificando…','');
+  if(!cacheItens.residents)markHealth('healthResidents','Verificando…','');
+  if(!cacheItens.agenda)markHealth('healthAgenda','Verificando…','');
+  if(!cacheItens.content)markHealth('healthContent','Verificando…','');
   refreshNotificationHealth(areaId,Boolean(force));
   var area=selectedArea();markHealth('healthArea',(text(area&&area.areaNome)||areaId)+' • '+(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'unidade'),'ok');
   var pending=4;
   function done(){pending--;if(pending<=0)healthRefreshInFlight=false}
-  jsonp('portal_manutencao_status',{areaId:areaId},function(r){if(normArea(areaId)!==selectedAreaId){done();return}if(r&&r.ok===true)markHealth('healthPortal',r.ativa?'Em manutenção':'Disponível',r.ativa?'warn':'ok');else markHealth('healthPortal','Sem confirmação','warn');done()});
-  post('admin_moradores_status',session({areaId:areaId}),'admin_moradores_result',function(r){if(normArea(areaId)===selectedAreaId)markHealth('healthResidents',r&&r.ok===true?'Base acessível':'Falha na leitura',r&&r.ok===true?'ok':'err');done()});
-  jsonp('painel_publico',{areaId:areaId},function(r){if(normArea(areaId)===selectedAreaId)markHealth('healthAgenda',r&&r.ok===true?'Agenda pública acessível':'Sem confirmação',r&&r.ok===true?'ok':'warn');done()});
-  jsonp('publico_conteudo',{areaId:areaId},function(r){if(normArea(areaId)===selectedAreaId)markHealth('healthContent',r&&r.ok===true?'Conteúdo acessível':'Sem confirmação',r&&r.ok===true?'ok':'warn');done()});
+  jsonp('portal_manutencao_status',{areaId:areaId},function(r){
+    if(normArea(areaId)!==selectedAreaId){done();return}
+    if(r&&r.ok===true){var label=r.ativa?'Em manutenção':'Disponível',state=r.ativa?'warn':'ok';markHealth('healthPortal',label,state);saveHealthItem(areaId,'portal',label,state)}
+    else if(!cacheItens.portal)markHealth('healthPortal','Sem confirmação','warn');
+    done()
+  });
+  post('admin_moradores_status',session({areaId:areaId}),'admin_moradores_result',function(r){
+    if(normArea(areaId)===selectedAreaId){
+      if(r&&r.ok===true){markHealth('healthResidents','Base acessível','ok');saveHealthItem(areaId,'residents','Base acessível','ok')}
+      else if(!cacheItens.residents)markHealth('healthResidents','Falha na leitura','err');
+    }
+    done()
+  });
+  jsonp('painel_publico',{areaId:areaId},function(r){
+    if(normArea(areaId)===selectedAreaId){
+      if(r&&r.ok===true){markHealth('healthAgenda','Agenda pública acessível','ok');saveHealthItem(areaId,'agenda','Agenda pública acessível','ok')}
+      else if(!cacheItens.agenda)markHealth('healthAgenda','Sem confirmação','warn');
+    }
+    done()
+  });
+  jsonp('publico_conteudo',{areaId:areaId},function(r){
+    if(normArea(areaId)===selectedAreaId){
+      if(r&&r.ok===true){markHealth('healthContent','Conteúdo acessível','ok');saveHealthItem(areaId,'content','Conteúdo acessível','ok')}
+      else if(!cacheItens.content)markHealth('healthContent','Sem confirmação','warn');
+    }
+    done()
+  });
   el('healthUpdated').textContent='Atualizando dados validados • área '+(text(area&&area.areaNome)||areaId);
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
