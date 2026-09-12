@@ -139,3 +139,11 @@ Regras:
 
 ### Status da Tarefa 3: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL EM ANDAMENTO — 12/09/2026
 Gate específico: `TAREFA_3_IDENTIDADE_REAL_OK`.
+
+
+### Estado de validação da Tarefa 3 — limite de versões do Apps Script
+O gate `TAREFA_3_IDENTIDADE_REAL_OK` e a suíte integral passaram. O GitHub Pages também foi publicado com sucesso. A implantação no Apps Script não foi concluída porque o projeto atingiu o limite de 200 versões. O deployment principal está na versão 200; as versões em uso por deployments são 6, 7, 9 e 200. A versão 199 não está em uso e é candidata segura para exclusão na História do projeto.
+
+O workflow de implantação foi corrigido para deixar de criar uma versão redundante de backup antes de cada publicação. A versão anteriormente implantada permanece o ponto de rollback imutável.
+
+**Regra de sequência:** não iniciar a Tarefa 4 antes de liberar uma vaga de versão, repetir a implantação da Tarefa 3 e obter health check aprovado.
