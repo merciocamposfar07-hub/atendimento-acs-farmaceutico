@@ -14,7 +14,7 @@ function text(v){return String(v==null?'':v).trim()}
 function esc(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
 function digits(v){return text(v).replace(/\D/g,'')}
-function setStatus(msg,type){var n=el('loginStatus');n.textContent=msg;n.className='status'+(type?' '+type:'')}
+function setStatus(msg,type){var n=el('loginStatus');if(!n)return;var value=text(msg);n.textContent=value;n.hidden=!value;n.className='status'+(type?' '+type:'')}
 function requestId(prefix){return 'central_'+prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
 function marcarConexaoRecente(){try{localStorage.setItem(SHARED_WARM_KEY,String(Date.now()))}catch(e){}}
 var pinWarmupInFlight=false;
