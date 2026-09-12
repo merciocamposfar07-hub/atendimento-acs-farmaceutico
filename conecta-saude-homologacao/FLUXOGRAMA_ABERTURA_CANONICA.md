@@ -275,3 +275,18 @@ Gate `TAREFA_11_DESEMPENHO_MODULOS_OK`, suíte integral e `QUALITY_GATE_V101_OK`
 O backend não foi alterado; Apps Script permanece na versão **208**.
 
 **Sequência canônica:** Tarefa 11 encerrada tecnicamente; Tarefa 12 permanece responsável pela referência de versão/frescor do cache.
+
+
+### Registro canônico — Tarefa 12 / Cache versionado e fresco
+No módulo autenticado:
+
+`abrir → pintar último snapshot versionado em somente leitura → consultar servidor sempre → comparar referência de versão/fingerprint → aplicar somente diferenças → tornar dados críticos autoritativos somente após confirmação remota`.
+
+O cache schema 2 registra referência de versão/frescor. Cache schema 1 é considerado legado, stale e não autoritativo. A existência de cache nunca cancela a chamada remota.
+
+A correção pós-auditoria da Tarefa 11 remove o retorno antecipado de Agendas/Profissionais baseado apenas em leitura compartilhada local.
+
+A Tarefa 12 não implementa deduplicação de chamadas nem altera as regras de timeout da sessão.
+
+### Status da Tarefa 12: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_12_CACHE_FRESCOR_OK`.
