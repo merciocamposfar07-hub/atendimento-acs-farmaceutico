@@ -7,12 +7,21 @@ var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
 var AREA_KEY='portalTacsCentralAreaV1';
+var AUTH_ISSUE_KEY='portalConectaModuleAuthIssueV1';
+var CENTRAL_URL='/atendimento-acs-farmaceutico/central-administrativa-tacs.html';
+var LEGACY_AUTH_IDS=[
+  'pin','pinLabel','pinHelp','accessTitle','accessActions','entrar','sair',
+  'login','loginTacs','loginAdmin','loginAdminTab','loginTacsTab',
+  'adminLogin','tacsLogin','adminLoginButton','tacsLoginButton','logout','logoutButton'
+];
 
 function text(v){return String(v==null?'':v).trim()}
 function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
 function readJson(key){
   try{var raw=sessionStorage.getItem(key)||'';return raw?JSON.parse(raw):null}catch(e){return null}
 }
+function isCentralPage(){return /(?:^|\/)central-administrativa-tacs\.html$/i.test(String(location.pathname||''))}
+function isModulePage(){return !isCentralPage()}
 function context(){
   var ctx=readJson(CONTEXT_KEY);
   return ctx&&ctx.schemaVersion===1?ctx:null;
@@ -83,6 +92,89 @@ function state(){
     savedAt:Number(ctx.savedAt||0)
   };
 }
+function reportAuthIssue(message){
+  if(!isModulePage())return;
+  try{sessionStorage.setItem(AUTH_ISSUE_KEY,JSON.stringify({message:text(message),areaId:areaId(),at:Date.now()}))}catch(e){}
+}
+function centralUrl(){
+  var area=encodeURIComponent(areaId());
+  return CENTRAL_URL+'?from=module&area='+area;
+}
+function legacyAuthTarget(target){
+  if(!target)return false;
+  var node=target.closest?target.closest('[id]'):target;
+  return Boolean(node&&LEGACY_AUTH_IDS.indexOf(String(node.id||''))!==-1);
+}
+function ensureTask9Style(){
+  if(!isModulePage()||document.getElementById('conectaTask9ModuleAuthStyle'))return;
+  var style=document.createElement('style');style.id='conectaTask9ModuleAuthStyle';
+  style.textContent='.csc-task9-auth-legacy{display:none!important}.csc-task9-gate{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:20px;background:#071827;color:#f7fcff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}.csc-task9-gate-card{width:min(520px,100%);padding:22px;border:1px solid #2b5a76;border-radius:24px;background:#102d46;box-shadow:0 18px 48px rgba(0,0,0,.35)}.csc-task9-gate-card h2{margin:0 0 10px}.csc-task9-gate-card p{color:#adc4d2}.csc-task9-gate-card a{display:block;margin-top:16px;padding:14px 16px;border-radius:16px;background:#176c94;color:#fff;text-align:center;text-decoration:none;font-weight:850}';
+  document.head.appendChild(style);
+}
+function hideLegacyAuthUi(){
+  if(!isModulePage())return;
+  ensureTask9Style();
+  LEGACY_AUTH_IDS.forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-task9-auth-legacy')});
+  Array.prototype.forEach.call(document.querySelectorAll('.csc-auth-control,.csc-admin-only-auth'),function(n){n.classList.add('csc-task9-auth-legacy')});
+}
+function showCentralGate(){
+  if(!isModulePage()||ready()||document.getElementById('conectaTask9AuthGate'))return;
+  ensureTask9Style();
+  var gate=document.createElement('div');gate.id='conectaTask9AuthGate';gate.className='csc-task9-gate';
+  gate.innerHTML='<div class="csc-task9-gate-card"><h2>Acesso pelo Conecta Saúde</h2><p>Este módulo não possui login próprio. Entre pelo PIN na tela inicial do Conecta Saúde Comunitária e abra o painel pela Central.</p><a href="'+centralUrl()+'">Voltar à Central</a></div>';
+  document.body.appendChild(gate);
+}
+function protectGlobalSession(){
+  if(!isModulePage()||!window.Storage||Storage.prototype.__conectaTask9Protected)return;
+  var setItem=Storage.prototype.setItem,removeItem=Storage.prototype.removeItem,clear=Storage.prototype.clear;
+  Object.defineProperty(Storage.prototype,'__conectaTask9Protected',{value:true,configurable:false,enumerable:false,writable:false});
+  Storage.prototype.setItem=function(key,value){
+    key=String(key||'');
+    if(this===window.sessionStorage&&(key===ADMIN_TOKEN_KEY||key===TERRITORY_TOKEN_KEY)){
+      reportAuthIssue('Módulo tentou substituir a sessão global; operação bloqueada pelo núcleo.');
+      return;
+    }
+    return setItem.call(this,key,value);
+  };
+  Storage.prototype.removeItem=function(key){
+    key=String(key||'');
+    if(this===window.sessionStorage&&(key===ADMIN_TOKEN_KEY||key===TERRITORY_TOKEN_KEY)){
+      reportAuthIssue('Módulo tentou encerrar a sessão global; operação bloqueada pelo núcleo.');
+      return;
+    }
+    return removeItem.call(this,key);
+  };
+  Storage.prototype.clear=function(){
+    if(this===window.sessionStorage){
+      reportAuthIssue('Módulo tentou limpar a sessão global; operação bloqueada pelo núcleo.');
+      return;
+    }
+    return clear.call(this);
+  };
+}
+function blockLegacyAuthActions(){
+  if(!isModulePage())return;
+  document.addEventListener('click',function(event){
+    if(!legacyAuthTarget(event.target))return;
+    event.preventDefault();event.stopPropagation();if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+    if(!ready())showCentralGate();
+  },true);
+  document.addEventListener('submit',function(event){
+    var form=event.target;if(!form||!form.querySelector)return;
+    if(form.querySelector('#pin,#login,#loginTacs,#loginAdmin')){
+      event.preventDefault();event.stopPropagation();if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+      if(!ready())showCentralGate();
+    }
+  },true);
+}
+function installTask9ModuleGate(){
+  if(!isModulePage())return;
+  protectGlobalSession();blockLegacyAuthActions();
+  function apply(){hideLegacyAuthUi();if(!ready())showCentralGate();else{var g=document.getElementById('conectaTask9AuthGate');if(g)g.remove()}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true});else apply();
+  var observer=new MutationObserver(function(){hideLegacyAuthUi()});
+  if(document.documentElement)observer.observe(document.documentElement,{subtree:true,childList:true});
+}
 
 window.ConectaModuleCoreV1={
   context:context,
@@ -93,7 +185,11 @@ window.ConectaModuleCoreV1={
   identity:identity,
   permissions:permissions,
   can:can,
-  ready:ready
+  ready:ready,
+  reportAuthIssue:reportAuthIssue,
+  centralUrl:centralUrl,
+  task9ModuleGate:installTask9ModuleGate
 };
 try{document.documentElement.dataset.conectaModuleCore='1'}catch(e){}
+installTask9ModuleGate();
 }());
