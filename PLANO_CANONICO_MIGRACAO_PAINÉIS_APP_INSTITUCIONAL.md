@@ -179,3 +179,19 @@ Regras:
 A tentativa `34719025276` foi bloqueada antes do deploy por um teste legado de TACS exclusivo. Após alinhamento do gate, o RETRY `34719091947` passou pela suíte integral, implantou Apps Script **203** no mesmo deployment e aprovou todos os health checks na primeira tentativa.
 
 **Regra de sequência cumprida:** Tarefa 5 encerrada tecnicamente; Tarefa 6 liberada para execução.
+
+
+## Tarefa 6 autorizada — Administrador consulta Morador sem vincular o aparelho
+No aparelho reconhecido como Administrador, a porta Morador passa a permitir consulta administrativa por CPF ou CNS sem criar identidade residencial naquele dispositivo.
+
+Regras:
+- nenhum PIN de Morador é criado;
+- nenhuma sessão de Morador é criada;
+- nenhum quickKey/vínculo residencial é salvo;
+- o dispositivo administrativo não pode virar canal Push do Morador;
+- a consulta é somente leitura;
+- o backend bloqueia também o fluxo residencial normal quando o aparelho é administrativo;
+- a unificação do mesmo formulário com um modo central de diagnóstico fica para a Tarefa 7.
+
+### Status da Tarefa 6: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK`.
