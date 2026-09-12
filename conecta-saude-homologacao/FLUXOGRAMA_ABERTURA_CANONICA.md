@@ -250,5 +250,9 @@ No Safari/iPhone, o módulo começa a carregar somente após o shell ficar visí
 
 As regras de desempenho de dados, frescura de cache, deduplicação, timeout, histórico/back e migração definitiva painel a painel permanecem reservadas às Tarefas 11–16.
 
-### Status da Tarefa 10: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK`.
+### Status final da Tarefa 10: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate `TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK`, suíte integral e `QUALITY_GATE_V101_OK` aprovados. O workflow final `34724133585` implantou Apps Script **208** no mesmo deployment e aprovou os health checks na primeira tentativa.
+
+O shell persistente passa a ser o comportamento canônico da navegação interna. As regras de desempenho e atualização em paralelo pertencem à Tarefa 11.
+
+**Sequência canônica:** Tarefa 10 encerrada tecnicamente; Tarefa 11 liberada para execução.
