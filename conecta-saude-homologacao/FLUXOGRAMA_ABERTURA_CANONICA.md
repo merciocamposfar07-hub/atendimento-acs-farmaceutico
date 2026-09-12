@@ -299,7 +299,9 @@ Apps Script permanece na versão `208` porque a Tarefa 12 é exclusivamente de f
 ### Registro canônico — Tarefa 13 / Deduplicação de requisições
 No shell autenticado:
 
-`módulo/Central solicita leitura → core identifica ação + modo + área + sessão em hash → uma única chamada remota → resposta distribuída aos consumidores compatíveis`.
+`módulo solicita leitura → core identifica ação + modo + área + sessão em hash → uma única chamada remota → resposta distribuída aos módulos consumidores compatíveis`.
+
+A Central permanece a origem do contexto e não carrega o bridge consumidor `ConectaModuleCoreV1`.
 
 Leituras em andamento são compartilhadas. Uma resposta remota confirmada pode ser reutilizada por uma janela curta de 5 segundos. O metadado local `escopo` não separa consumidores da mesma consulta, permitindo que Agendas e Profissionais compartilhem `admin_dados`.
 
