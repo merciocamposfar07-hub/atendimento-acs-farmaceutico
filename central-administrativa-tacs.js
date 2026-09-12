@@ -471,8 +471,8 @@ function openModule(name,title){
   }
   moduloPendente=null;
   var sep=url.indexOf('?')===-1?'?':'&';
-  /* AGENDA_DIRECT_NAV_V1: evita o iframe oculto e o travamento observado no iPhone; o retorno usa from=central. */
-  if(name==='agendas'){location.assign(url+sep+'from=central&_cb='+Date.now());return}
+  /* DIRECT_NAV_CRITICAL_V2: Agenda e Gestão territorial nunca usam o viewer/iframe oculto no iPhone. */
+  if(name==='agendas'||name==='territorio'){location.assign(url+sep+'from=central&_cb='+Date.now());return}
   url=url+sep+'_cb='+Date.now();el('viewerTitle').textContent=title||'Painel';el('viewerFrame').src=url;el('viewer').hidden=false;document.body.classList.add('viewer-open')
 }
 function closeViewer(){el('viewer').hidden=true;el('viewerFrame').src='about:blank';document.body.classList.remove('viewer-open');refreshHealth()}
