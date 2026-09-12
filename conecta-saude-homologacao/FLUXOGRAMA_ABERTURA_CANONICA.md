@@ -197,5 +197,7 @@ O modo é definido antes do início do fluxo, acompanha a requisição e é conf
 
 A Tarefa 7 mantém integralmente as barreiras de segurança da Tarefa 6 e não inicia a migração dos painéis da Tarefa 8.
 
-### Status da Tarefa 7: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_7_MORADOR_CORE_DIAGNOSTICO_OK`.
+### Status final da Tarefa 7: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+O RETRY 2 `34719916306` passou pela suíte integral, implantou Apps Script **205** no mesmo deployment e aprovou os health checks na primeira tentativa. GitHub Pages run `34719909246` também passou. As duas tentativas anteriores foram bloqueadas antes do deploy e não criaram versões.
+
+**Sequência canônica:** Tarefa 7 encerrada tecnicamente; Tarefa 8 liberada para execução.
