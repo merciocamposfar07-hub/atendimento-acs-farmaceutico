@@ -101,7 +101,10 @@ function testStaticSafety() {
   assert.ok(agenda.includes('p&&p.tacsId') && agenda.includes('p&&p.areaId'), 'Snapshot TACS deve exigir TACS + área');
   assert.ok(!agenda.includes("DATA_CACHE_KEY='portalTacsAdminAgendasSnapshotV102:'+areaId"), 'Chave antiga somente por área não pode permanecer');
   assert.ok(agenda.includes('Aguarde a confirmação dos dados atuais antes de salvar.'), 'Snapshot administrativo não pode habilitar escrita antes de revalidação');
-  assert.ok(agenda.includes('aplicarDados(r,true);salvarSnapshot(r);'));
+  assert.ok(agenda.includes("modulePerf.prime('agendas'"), 'Agendas deve pintar a última confirmação antes da consulta remota');
+  assert.ok(agenda.includes("modulePerf.commit('agendas'"), 'Agendas deve comparar a confirmação remota com o estado já exibido');
+  assert.ok(agenda.includes('if(diff.changed||!snapshotVisivel)aplicarDados(r,true)'), 'Agendas só deve reconstruir a lista quando o remoto mudar ou não houver snapshot visível');
+  assert.ok(agenda.includes('dadosConfirmados=true') && agenda.includes('bloquearEdicaoNaoConfirmada()'), 'Resposta remota idêntica deve apenas confirmar e liberar escrita segura');
 
   const index = read('index.html');
   assert.ok(/portal-auto-update\.js\?v=[A-Za-z0-9._-]+/.test(index), 'Atualização pública deve usar revisão explícita');
