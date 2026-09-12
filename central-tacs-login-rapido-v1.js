@@ -6,6 +6,7 @@ var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
 var EXCLUSIVE_MODE_KEY='portalTacsModoExclusivoV2';
+var ADMIN_TRUST_KEY='portalConectaRecoveryTrustV1:admin',ADMIN_LOCAL_VAULT_KEY='conectaPinLocalV3:admin';
 var loginBtn=document.getElementById('loginTacs');
 var cnsInput=document.getElementById('tacsCns');
 var pinInput=document.getElementById('tacsPin');
@@ -26,19 +27,21 @@ function text(v){return String(v==null?'':v).trim()}
 function digits(v){return text(v).replace(/\D/g,'')}
 function setStatus(msg,type){if(!status)return;status.textContent=msg;status.className='status'+(type?' '+type:'')}
 function getDevice(){var d='';try{d=localStorage.getItem(DEVICE_KEY)||''}catch(e){}return d}
-function queryTacsOnly(){try{return String(new URLSearchParams(location.search).get('acesso')||'').toLowerCase()==='tacs'}catch(e){return false}}
+function adminDeviceRecognized(){try{return Boolean(localStorage.getItem(ADMIN_TRUST_KEY)||localStorage.getItem(ADMIN_LOCAL_VAULT_KEY))}catch(e){return false}}
+function queryTacsOnly(){try{return String(new URLSearchParams(location.search).get('acesso')||'').toLowerCase()==='tacs'&&!adminDeviceRecognized()}catch(e){return false}}
 function hasTerritorySession(){try{return !!text(sessionStorage.getItem(TERRITORY_TOKEN_KEY))}catch(e){return false}}
 function hasAdminSession(){try{return !!text(sessionStorage.getItem(ADMIN_TOKEN_KEY))}catch(e){return false}}
 function hasAnySession(){return hasTerritorySession()||hasAdminSession()}
 function rememberExclusiveMode(){
   try{
+    if(adminDeviceRecognized()){sessionStorage.removeItem(EXCLUSIVE_MODE_KEY);return}
     if(queryTacsOnly()||hasTerritorySession())sessionStorage.setItem(EXCLUSIVE_MODE_KEY,'tacs');
     else sessionStorage.removeItem(EXCLUSIVE_MODE_KEY);
   }catch(e){}
 }
 function exclusiveMode(){
   rememberExclusiveMode();
-  return queryTacsOnly()||hasTerritorySession();
+  return !adminDeviceRecognized()&&(queryTacsOnly()||hasTerritorySession());
 }
 function enforceExclusiveTacsUi(){
   if(!exclusiveMode())return;
