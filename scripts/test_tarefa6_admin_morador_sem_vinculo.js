@@ -31,7 +31,7 @@ assert.match(backend,/function conectaAcessoV1AparelhoAdministrativo_/);
 assert.match(backend,/function conectaAcessoV1BuscarCns_/);
 assert.match(backend,/function conectaAcessoV1DiagnosticoMoradorAdmin_/);
 assert.match(backend,/conectaAcessoV1ConfiancaValida_\('ADMIN','ADMIN_GERAL',dispositivo,chave\)/);
-assert.match(backend,/modo:'DIAGNOSTICO_ADMINISTRATIVO',somenteLeitura:true/);
+assert.match(backend,/modo:'DIAGNOSTICO_ADMINISTRATIVO',[\s\S]*coreMode:'DIAGNOSTICO_ADMINISTRATIVO',[\s\S]*somenteLeitura:true/);
 assert.match(backend,/vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,notificacoesAlteradas:false,sessaoMoradorCriada:false/);
 
 const backStart=backend.indexOf('function conectaAcessoV1DiagnosticoMoradorAdmin_');
