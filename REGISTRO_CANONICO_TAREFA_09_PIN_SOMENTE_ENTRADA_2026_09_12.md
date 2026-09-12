@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 09 — PIN somente na entrada do Conecta
 
 Data: 12/09/2026  
-Status: IMPLEMENTADA EM CÓDIGO; AGUARDANDO VALIDAÇÃO INTEGRAL
+Status: VALIDADA INTERNAMENTE E IMPLANTADA — APPS SCRIPT VERSÃO 207
 
 ## Objetivo exclusivo da Tarefa 9
 A autenticação por PIN pertence somente à entrada do Conecta Saúde Comunitária. Depois da autenticação, os módulos recebem do núcleo a identidade, perfil, área, permissões e sessão já confirmados.
@@ -32,3 +32,20 @@ Saída esperada:
 `TAREFA_9_PIN_SOMENTE_ENTRADA_OK`
 
 A Tarefa 9 só será concluída após gate específico, suíte integral, implantação Apps Script/health checks e GitHub Pages passarem com sucesso.
+
+
+## Resultado técnico verificado
+- gate específico `TAREFA_9_PIN_SOMENTE_ENTRADA_OK`: **aprovado**;
+- suíte integral: **aprovada** no workflow final;
+- workflow Apps Script final: **success**, run `34723196310`;
+- versão anterior do deployment principal: `206`;
+- nova versão criada e implantada: **`207`**;
+- health checks: **aprovados na primeira tentativa** para moradores, território, CSV, manutenção, isolamento, agendas Japaranduba/Matias, painéis públicos e conteúdo;
+- versões ativas após o deploy: `6, 7, 9, 207`;
+- GitHub Pages com código da Tarefa 9: **success**, run `34723391600`;
+- execuções anteriores `34722437567` e `34723103101` foram interrompidas/canceladas antes do fechamento final e não constituem validação da tarefa.
+
+## Fechamento
+A **Tarefa 9 está validada internamente, implantada e registrada canonicamente**. A autenticação por PIN fica concentrada na entrada/Central; os módulos consomem a sessão e o contexto do núcleo e não mantêm autenticação paralela.
+
+A Tarefa 10 permanece separada: ela tratará o shell persistente e a navegação entre Central e módulos sem reiniciar autenticação ou reconstruir a aplicação.
