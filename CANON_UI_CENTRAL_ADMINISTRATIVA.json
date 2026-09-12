@@ -19,8 +19,8 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R15",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_10_SESSAO_SHELL_PERSISTENTE_2026_09_12.md",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R16",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_11_DESEMPENHO_MODULOS_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
   "notes": [
@@ -531,5 +531,42 @@
       "pagesFinalDocsHeadSha": "ae5dc1640a1e1aa3e3834d9ca7466010d993e3ba"
     },
     "validatedOn": "2026-09-12"
+  },
+  "task11ModulePerformance": {
+    "status": "implemented-awaiting-validation",
+    "authorizedOn": "2026-09-12",
+    "immediateShellResponse": true,
+    "currentSessionReadCache": true,
+    "cacheScope": [
+      "mode",
+      "area",
+      "module"
+    ],
+    "cacheStorage": "sessionStorage",
+    "cachedDataReadOnlyUntilRemoteConfirmation": true,
+    "remoteSyncAlwaysRuns": true,
+    "unchangedRemoteSkipsFullRerender": true,
+    "authSecretsExcludedFromPerformanceCache": true,
+    "modulesCovered": [
+      "AGENDAS",
+      "MORADORES",
+      "PROFISSIONAIS",
+      "RECADOS_CAMPANHAS",
+      "SUPORTE_MORADORES",
+      "TACS_AREAS",
+      "MUNICIPIOS_ORGANIZACOES"
+    ],
+    "backendChanged": false,
+    "appsScriptVersionExpectedUnchanged": 208,
+    "task12VersionFreshnessDeferred": true,
+    "task13RequestDedupDeferred": true,
+    "task14TimeoutSessionRuleDeferred": true,
+    "specificGate": "TAREFA_11_DESEMPENHO_MODULOS_OK",
+    "validation": {
+      "specificGate": "pending",
+      "fullSuite": "pending",
+      "performanceWorkflow": "pending",
+      "pagesDeployment": "pending"
+    }
   }
 }
