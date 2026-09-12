@@ -343,11 +343,12 @@ function saveHealthItem(areaId,key,label,state){
   }catch(e){}
 }
 function renderHealthCache(areaId){
-  var saved=readHealthCache(areaId);if(!saved)return false;
-  var map={portal:'healthPortal',residents:'healthResidents',agenda:'healthAgenda',content:'healthContent'},used=false;
+  var saved=readHealthCache(areaId),used={};
+  if(!saved)return used;
+  var map={portal:'healthPortal',residents:'healthResidents',agenda:'healthAgenda',content:'healthContent'};
   Object.keys(map).forEach(function(key){
     var item=saved.itens&&saved.itens[key];if(!item)return;
-    markHealth(map[key],item.label,item.state);used=true;
+    markHealth(map[key],item.label,item.state);used[key]=true;
   });
   return used;
 }
@@ -384,8 +385,11 @@ function refreshHealth(force){
   if(healthRefreshInFlight)return;
   if(!force&&lastHealthRefreshArea===areaId&&now-lastHealthRefreshAt<HEALTH_REFRESH_TTL){refreshNotificationHealth(areaId,false);return}
   healthRefreshInFlight=true;lastHealthRefreshArea=areaId;lastHealthRefreshAt=now;
-  var cacheVisivel=renderHealthCache(areaId);
-  if(!cacheVisivel)['healthPortal','healthResidents','healthAgenda','healthContent'].forEach(function(id){markHealth(id,'Verificando…','')});
+  var cacheItens=renderHealthCache(areaId);
+  if(!cacheItens.portal)markHealth('healthPortal','Verificando…','');
+  if(!cacheItens.residents)markHealth('healthResidents','Verificando…','');
+  if(!cacheItens.agenda)markHealth('healthAgenda','Verificando…','');
+  if(!cacheItens.content)markHealth('healthContent','Verificando…','');
   refreshNotificationHealth(areaId,Boolean(force));
   var area=selectedArea();markHealth('healthArea',(text(area&&area.areaNome)||areaId)+' • '+(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'unidade'),'ok');
   var pending=4;
@@ -393,27 +397,27 @@ function refreshHealth(force){
   jsonp('portal_manutencao_status',{areaId:areaId},function(r){
     if(normArea(areaId)!==selectedAreaId){done();return}
     if(r&&r.ok===true){var label=r.ativa?'Em manutenção':'Disponível',state=r.ativa?'warn':'ok';markHealth('healthPortal',label,state);saveHealthItem(areaId,'portal',label,state)}
-    else if(!cacheVisivel)markHealth('healthPortal','Sem confirmação','warn');
+    else if(!cacheItens.portal)markHealth('healthPortal','Sem confirmação','warn');
     done()
   });
   post('admin_moradores_status',session({areaId:areaId}),'admin_moradores_result',function(r){
     if(normArea(areaId)===selectedAreaId){
       if(r&&r.ok===true){markHealth('healthResidents','Base acessível','ok');saveHealthItem(areaId,'residents','Base acessível','ok')}
-      else if(!cacheVisivel)markHealth('healthResidents','Falha na leitura','err');
+      else if(!cacheItens.residents)markHealth('healthResidents','Falha na leitura','err');
     }
     done()
   });
   jsonp('painel_publico',{areaId:areaId},function(r){
     if(normArea(areaId)===selectedAreaId){
       if(r&&r.ok===true){markHealth('healthAgenda','Agenda pública acessível','ok');saveHealthItem(areaId,'agenda','Agenda pública acessível','ok')}
-      else if(!cacheVisivel)markHealth('healthAgenda','Sem confirmação','warn');
+      else if(!cacheItens.agenda)markHealth('healthAgenda','Sem confirmação','warn');
     }
     done()
   });
   jsonp('publico_conteudo',{areaId:areaId},function(r){
     if(normArea(areaId)===selectedAreaId){
       if(r&&r.ok===true){markHealth('healthContent','Conteúdo acessível','ok');saveHealthItem(areaId,'content','Conteúdo acessível','ok')}
-      else if(!cacheVisivel)markHealth('healthContent','Sem confirmação','warn');
+      else if(!cacheItens.content)markHealth('healthContent','Sem confirmação','warn');
     }
     done()
   });
