@@ -19,7 +19,7 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R14",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R15",
   "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_10_SESSAO_SHELL_PERSISTENTE_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
@@ -485,7 +485,7 @@
     }
   },
   "task10SingleSessionPersistentShell": {
-    "status": "implemented-awaiting-validation",
+    "status": "validated-internal-deployed",
     "authorizedOn": "2026-09-12",
     "centralRemainsMounted": true,
     "oneCanonicalSession": true,
@@ -511,10 +511,25 @@
     "moduleMigrationDeferredToTask16": true,
     "specificGate": "TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK",
     "validation": {
-      "specificGate": "pending",
-      "fullSuite": "pending",
-      "appsScriptDeploy": "pending",
-      "pagesDeployment": "pending"
-    }
+      "specificGate": "TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK",
+      "fullSuite": "passed",
+      "qualityGate": "QUALITY_GATE_V101_OK",
+      "initialWorkflowRun": 34723915995,
+      "retry1WorkflowRun": 34723977098,
+      "retry2WorkflowRun": 34724024689,
+      "retry3WorkflowRun": 34724081752,
+      "retry4WorkflowRun": 34724133585,
+      "appsScriptPreviousVersion": 207,
+      "appsScriptCurrentVersion": 208,
+      "appsScriptHealth": "passed-first-attempt",
+      "appsScriptActiveDeploymentVersionsAfterDeploy": [
+        6,
+        7,
+        9,
+        208
+      ],
+      "pagesDeployment": "pending-final-docs-run"
+    },
+    "validatedOn": "2026-09-12"
   }
 }
