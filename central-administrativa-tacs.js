@@ -127,9 +127,9 @@ function post(action,payload,resultAction,cb){
     if(sent||!active||active.id!==rid)return;
     sent=true;clearTimeout(active.submitTimer);active.submitTimer=null;
     try{form.submit()}catch(e){finishPost({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});return}
-    /* LOGIN_TRANSPORTE_PIN_ESTAVEL_V1: no Safari/iPhone, o resultado do PIN precisa ser consultado cedo.
-       Mantém postMessage como via direta e usa polling rápido somente na autenticação inicial. */
-    schedulePoll(fastPin?650:1800);
+    /* LOGIN_TRANSPORTE_R8: postMessage é a via principal no Safari/iPhone.
+       O polling do PIN permanece somente como contingência tardia para não saturar o Apps Script. */
+    schedulePoll(fastPin?8000:1800);
   }
   function sendAfterRegistration(){
     if(typeof window.requestAnimationFrame==='function'){
