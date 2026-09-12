@@ -29,8 +29,8 @@ assert.doesNotMatch(access,/tabAdminUbs|tabAdminMorador|tabAdminTacs/i,'Combina�
 assert.match(access,/if\(role==='ADMIN'\)return vaultHas\('admin'\)\|\|!!trustKey\('ADMIN'\)/);
 assert.doesNotMatch(access,/Administrador reconhecido[^\n]*nome/i);
 
-// Tarefas 6 e 7 continuam fora do escopo.
-assert.doesNotMatch(access,/diagn[oó]stico administrativo|modoDiagnosticoMorador/i);
-assert.doesNotMatch(central,/diagn[oó]stico administrativo|modoDiagnosticoMorador/i);
+// A Tarefa 5 continua responsável pelas quatro portas do Administrador.
+ // Diagnóstico acrescentado em tarefa posterior não pode apagar nem ocultar essas portas.
+for(const tab of ['tabAdmin','tabTacs','tabMorador','tabUbs']) assert.ok(access.includes(tab));
 
-console.log('TAREFA_5_ADMIN_PORTAS_APOIO_OK: aparelho Administrador preserva Administrador/Central, TACS, Morador e UBS sem ficar preso ao modo TACS; diagnóstico administrativo permanece fora desta tarefa.');
+console.log('TAREFA_5_ADMIN_PORTAS_APOIO_OK: aparelho Administrador preserva Administrador/Central, TACS, Morador e UBS sem ficar preso ao modo TACS.');
