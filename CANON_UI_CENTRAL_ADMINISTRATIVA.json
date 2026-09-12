@@ -19,7 +19,7 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R16",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-12-T12",
   "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_12_CACHE_FRESCOR_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
@@ -580,11 +580,18 @@
       "discoveredOn": "2026-09-12",
       "issue": "Agendas e Profissionais podiam encerrar pelo sharedAdminRead de 5s antes da consulta remota própria.",
       "correction": "sharedAdminRead permanece somente como pintura rápida e não substitui mais a chamada remota.",
-      "status": "corrected-awaiting-final-gate"
+      "status": "corrected-and-final-gate-passed",
+      "validation": {
+        "correctedGate": "TAREFA_11_DESEMPENHO_MODULOS_OK",
+        "finalWorkflowRun": 34725768331,
+        "fullSuite": "passed",
+        "qualityGate": "QUALITY_GATE_V101_OK",
+        "internalGate": "V101_INTERNO_APROVADO=SIM"
+      }
     }
   },
   "task12CacheFreshness": {
-    "status": "implemented-awaiting-validation",
+    "status": "validated-internal-pages-passed",
     "authorizedOn": "2026-09-12",
     "cacheSchemaVersion": 2,
     "cacheVersionReference": true,
@@ -617,10 +624,17 @@
     "task14TimeoutSessionRuleDeferred": true,
     "specificGate": "TAREFA_12_CACHE_FRESCOR_OK",
     "validation": {
-      "specificGate": "pending",
-      "fullSuite": "pending",
-      "qualityGate": "pending",
-      "pagesDeployment": "pending"
-    }
+      "specificGate": "TAREFA_12_CACHE_FRESCOR_OK",
+      "task11CorrectedGate": "TAREFA_11_DESEMPENHO_MODULOS_OK",
+      "fullSuite": "passed",
+      "qualityGate": "QUALITY_GATE_V101_OK",
+      "internalGate": "V101_INTERNO_APROVADO=SIM",
+      "performanceWorkflowRun": 34725768331,
+      "pagesWorkflowRun": 34725763575,
+      "pagesDeploymentSuccess": true,
+      "backendChanged": false,
+      "appsScriptVersionUnchanged": 208
+    },
+    "validatedOn": "2026-09-12"
   }
 }
