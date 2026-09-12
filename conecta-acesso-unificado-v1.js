@@ -3,9 +3,10 @@
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var DEVICE_KEY='portalTacsDispositivoV1';
 var PROFILE_KEY='portalConectaMoradorQuickV1';
-var RESIDENT_TOKEN_KEY='portalConectaMoradorTokenV1';
-var AREA_KEY='portalTacsCentralAreaV1';
-var TRUST_ADMIN_KEY='portalConectaRecoveryTrustV1:admin',TRUST_TACS_KEY='portalConectaRecoveryTrustV1:tacs';
+var UBS_PROFILE_KEY='portalConectaUbsQuickV1';
+var RESIDENT_TOKEN_KEY='portalConectaMoradorTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1';
+var AREA_KEY='portalTacsCentralAreaV1',LAST_ROLE_KEY='portalConectaLastRoleV1',TACS_QUICK_KEY='portalTacsAcessoRapidoV1';
+var TRUST_ADMIN_KEY='portalConectaRecoveryTrustV1:admin',TRUST_TACS_KEY='portalConectaRecoveryTrustV1:tacs',TRUST_UBS_KEY='portalConectaRecoveryTrustV1:ubs';
 var activeRole='admin',busy=false,pinWarmup=false,state={cpf:'',nascimento:'',nome:'',areaId:'',identidadeToken:''};
 
 function text(v){return String(v==null?'':v).trim()}
@@ -35,17 +36,38 @@ function accessProfileLabel(value){
 function identityHeadline(nome,perfil){return (text(nome)||'—')+' — '+accessProfileLabel(perfil)}
 function device(){var d='';try{d=localStorage.getItem(DEVICE_KEY)||''}catch(e){}if(!d){d='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);try{localStorage.setItem(DEVICE_KEY,d)}catch(e){}}return d}
 function profile(){try{var p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');return p&&/^cmq1\./.test(text(p.quickKey))?p:null}catch(e){return null}}
-function saveProfile(r){try{localStorage.setItem(PROFILE_KEY,JSON.stringify({quickKey:r.quickKey,areaId:r.areaId||'',areaNome:r.areaNome||'',nome:r.nome||''}))}catch(e){}}
-function saveSession(r){try{sessionStorage.setItem(RESIDENT_TOKEN_KEY,r.token);if(r.areaId)localStorage.setItem(AREA_KEY,r.areaId)}catch(e){}}
-function trustKey(role){try{return text(localStorage.getItem(role==='TACS'?TRUST_TACS_KEY:TRUST_ADMIN_KEY)||'')}catch(e){return''}}
-function saveTrustKey(role,key){try{localStorage.setItem(role==='TACS'?TRUST_TACS_KEY:TRUST_ADMIN_KEY,text(key))}catch(e){}}
+function ubsProfile(){try{var p=JSON.parse(localStorage.getItem(UBS_PROFILE_KEY)||'null');return p&&text(p.cadastroId)&&trustKey('UBS')?p:null}catch(e){return null}}
+function rememberRole(role){role=text(role).toUpperCase();if(['ADMIN','TACS','MORADOR','UBS'].indexOf(role)===-1)return;try{localStorage.setItem(LAST_ROLE_KEY,role)}catch(e){}}
+function saveProfile(r){try{localStorage.setItem(PROFILE_KEY,JSON.stringify({quickKey:r.quickKey,areaId:r.areaId||'',areaNome:r.areaNome||'',nome:r.nome||''}));rememberRole('MORADOR')}catch(e){}}
+function saveSession(r){try{if(r&&r.token)sessionStorage.setItem(RESIDENT_TOKEN_KEY,r.token);if(r&&r.areaId)localStorage.setItem(AREA_KEY,r.areaId)}catch(e){}}
+function saveUbsSession(r){try{if(r&&r.token)sessionStorage.setItem(UBS_TOKEN_KEY,r.token)}catch(e){}}
+function trustStorageKey(role){role=text(role).toUpperCase();return role==='TACS'?TRUST_TACS_KEY:role==='UBS'?TRUST_UBS_KEY:TRUST_ADMIN_KEY}
+function trustKey(role){try{return text(localStorage.getItem(trustStorageKey(role))||'')}catch(e){return''}}
+function saveTrustKey(role,key){try{localStorage.setItem(trustStorageKey(role),text(key))}catch(e){}}
+function saveUbsProfile(r){if(!r||!r.cadastroId)return;try{localStorage.setItem(UBS_PROFILE_KEY,JSON.stringify({cadastroId:text(r.cadastroId),perfil:text(r.perfil)||'UBS',unidadeId:text(r.unidadeId),funcaoUbs:text(r.funcaoUbs)}));if(r.chaveConfianca)saveTrustKey('UBS',r.chaveConfianca);rememberRole('UBS')}catch(e){}}
+function hasTacsQuick(){try{return !!localStorage.getItem(TACS_QUICK_KEY)}catch(e){return false}}
+function vaultHas(scope){try{var v=window.ConectaPinLocalV2;return Boolean(v&&typeof v.existe==='function'&&v.existe(scope))}catch(e){return false}}
+function roleRecognized(role){
+ role=text(role).toUpperCase();
+ if(role==='MORADOR')return !!profile();
+ if(role==='UBS')return !!ubsProfile();
+ if(role==='TACS')return hasTacsQuick()||vaultHas('tacs')||!!trustKey('TACS');
+ if(role==='ADMIN')return vaultHas('admin')||!!trustKey('ADMIN');
+ return false;
+}
+function recognizedRole(){
+ var last='';try{last=text(localStorage.getItem(LAST_ROLE_KEY)||'').toUpperCase()}catch(e){}
+ if(last&&roleRecognized(last))return last.toLowerCase();
+ var roles=['ADMIN','TACS','MORADOR','UBS'].filter(roleRecognized);
+ return roles.length===1?roles[0].toLowerCase():'admin';
+}
 function recoveryProof(role){if(role==='MORADOR'){var p=profile();return p&&p.quickKey||''}return trustKey(role)}
 function registerTrustedDevice(role){
  role=String(role||'').toUpperCase();if(role!=='ADMIN'&&role!=='TACS')return Promise.resolve(null);
  var payload={perfil:role,dispositivo:device()},admin='',territory='';
  try{admin=text(sessionStorage.getItem('portalTacsAdminTokenV1')||'');territory=text(sessionStorage.getItem('portalTacsTerritorioTokenV1')||'')}catch(e){}
  if(role==='TACS'){if(!territory)return Promise.resolve(null);payload.territorioToken=territory;payload.token=territory}else{if(!admin)return Promise.resolve(null);payload.token=admin}
- return post('conecta_recuperacao_registrar_aparelho',payload).then(function(r){if(r&&r.chaveConfianca)saveTrustKey(role,r.chaveConfianca);return r}).catch(function(){return null});
+ return post('conecta_recuperacao_registrar_aparelho',payload).then(function(r){if(r&&r.chaveConfianca)saveTrustKey(role,r.chaveConfianca);rememberRole(role);return r}).catch(function(){return null});
 }
 function registerTrustedDeviceFromSession(){
  var admin='',territory='';try{admin=text(sessionStorage.getItem('portalTacsAdminTokenV1')||'');territory=text(sessionStorage.getItem('portalTacsTerritorioTokenV1')||'')}catch(e){}
@@ -85,8 +107,12 @@ function addUbsTab(){
 }
 function ubsMarkup(){
  if(el('ubsLogin'))return;
- var box=document.createElement('div');box.id='ubsLogin';box.className='csc-access-panel';box.hidden=true;
- box.innerHTML='<div class="csc-access-note"><strong>Primeiro acesso da UBS</strong><br>O responsável precisa estar previamente cadastrado em Administrador / TACS / UBS. Informe CPF e PIN para confirmar sua identificação.</div>'+field('cscUbsCpf','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"')+field('cscUbsPin','PIN de acesso','type="password" inputmode="numeric" maxlength="8" autocomplete="off"')+'<div class="csc-inline-actions"><button class="btn green" id="cscUbsIdentify" type="button">Identificar responsável da UBS</button></div><div id="cscUbsIdentity" class="csc-access-note" hidden></div>';
+ var box=document.createElement('div');box.id='ubsLogin';box.className='csc-access-panel';box.hidden=true;var p=ubsProfile();
+ if(p){
+  box.innerHTML='<div class="csc-access-note"><strong>Aparelho reconhecido para UBS</strong><br>Digite somente o seu PIN para confirmar este acesso.</div>'+field('cscUbsPin','PIN de acesso','type="password" inputmode="numeric" maxlength="8" autocomplete="off"')+'<div class="csc-inline-actions"><button class="btn green" id="cscUbsLogin" type="button">Entrar como UBS</button><button class="btn gray" id="cscUbsOther" type="button">Primeiro acesso de outra UBS</button></div><div id="cscUbsIdentity" class="csc-access-note" hidden></div>';
+ }else{
+  box.innerHTML='<div class="csc-access-note"><strong>Primeiro acesso da UBS</strong><br>O responsável precisa estar previamente cadastrado em Administrador / TACS / UBS. Informe CPF e PIN para confirmar sua identificação.</div>'+field('cscUbsCpf','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"')+field('cscUbsPin','PIN de acesso','type="password" inputmode="numeric" maxlength="8" autocomplete="off"')+'<div class="csc-inline-actions"><button class="btn green" id="cscUbsIdentify" type="button">Identificar responsável da UBS</button></div><div id="cscUbsIdentity" class="csc-access-note" hidden></div>';
+ }
  var anchor=el('moradorLogin')||el('tacsLogin');if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(box,anchor.nextSibling);
 }
 function residentMarkup(){
@@ -113,8 +139,10 @@ function showRole(role){
  var a=el('adminLogin'),t=el('tacsLogin'),m=el('moradorLogin'),u=el('ubsLogin');
  if(a)a.hidden=role!=='admin';if(t)t.hidden=role!=='tacs';if(m)m.hidden=role!=='morador';if(u)u.hidden=role!=='ubs';
  var forgot=el('cscForgotPin');if(forgot)forgot.hidden=role==='ubs';
- if(role==='morador'){renderResidentStart();setStatus(profile()?'Digite seu PIN de 4 números.':'Primeiro acesso: informe seu CPF.','')}
- if(role==='ubs')setStatus('Primeiro acesso UBS: confirme o cadastro do responsável.','');
+ if(role==='morador'){renderResidentStart();setStatus(profile()?'Aparelho reconhecido para Morador. Digite seu PIN de 4 números.':'Primeiro acesso: informe seu CPF.','')}
+ if(role==='ubs')setStatus(ubsProfile()?'Aparelho reconhecido para UBS. Digite somente o seu PIN.':'Primeiro acesso UBS: confirme o cadastro do responsável.','');
+ if(role==='admin'&&roleRecognized('ADMIN'))setStatus('Aparelho reconhecido para Administrador. Digite seu PIN.','');
+ if(role==='tacs'&&roleRecognized('TACS'))setStatus('Aparelho reconhecido para TACS. Digite seu PIN individual.','');
 }
 function focusRoleField(role){
  var n=role==='admin'?el('adminPin'):role==='tacs'?el('tacsPin'):role==='ubs'?(el('cscUbsCpf')||el('cscUbsPin')):(el('cscResidentPin')||el('cscResidentCpf'));
@@ -129,21 +157,42 @@ function selectRoleFromTap(role,event){
 function field(id,label,attrs){
  return '<label for="'+id+'">'+label+'</label><input class="field" id="'+id+'" '+(attrs||'')+'>';
 }
+function renderUbsAuthenticated(r){
+ var out=el('cscUbsIdentity');if(!out)return;
+ out.hidden=false;out.innerHTML='<strong>Identidade autenticada</strong><br><span class="csc-first-name">'+esc(identityHeadline(r.nome||'Responsável UBS',r.perfil||'UBS'))+'</span><br>'+esc(r.funcaoUbs||'Função não informada')+' • '+esc(r.unidadeId||'Unidade não informada');
+}
+function guardarUbsLocal(pin,r){
+ var v=window.ConectaPinLocalV2;if(!v||typeof v.guardar!=='function'||!r)return Promise.resolve(false);
+ return Promise.resolve(v.guardar('ubs',pin,{device:device(),cadastroId:r.cadastroId||'',snapshot:{nome:r.nome||'',perfil:r.perfil||'UBS',funcaoUbs:r.funcaoUbs||'',unidadeId:r.unidadeId||'',permissoes:Array.isArray(r.permissoes)?r.permissoes.slice():[]},salvoRemotoEm:Date.now()})).catch(function(){return false});
+}
 function identifyUbsFirstAccess(){
  var cpf=digits(el('cscUbsCpf')&&el('cscUbsCpf').value),pin=digits(el('cscUbsPin')&&el('cscUbsPin').value),out=el('cscUbsIdentity');
  if(cpf.length!==11){setStatus('Informe um CPF válido com 11 números.','err');return}
  if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN de acesso com 4 a 8 números.','err');return}
  setStatus('Confirmando o cadastro UBS…','warn');
  post('conecta_ubs_identificar_primeiro_acesso',{cpf:cpf,pin:pin,dispositivo:device()}).then(function(r){
-  if(out){out.hidden=false;out.innerHTML='<strong>Cadastro UBS confirmado</strong><br><span class="csc-first-name">'+esc(identityHeadline(r.nome||'Responsável UBS',r.perfil||'UBS'))+'</span><br>'+esc(r.funcaoUbs||'Função não informada')+' • '+esc(r.unidadeId||'Unidade não informada');}
+  saveUbsProfile(r);saveUbsSession(r);renderUbsAuthenticated(r);
   if(el('cscUbsPin'))el('cscUbsPin').value='';
-  setStatus(r.message||'Responsável UBS identificado.','ok');
+  setStatus(r.message||'Responsável UBS identificado e aparelho reconhecido.','ok');
+  return guardarUbsLocal(pin,r);
+ }).catch(function(e){if(out)out.hidden=true;setStatus(e.message,'err')});
+}
+function loginUbsSecondAccess(){
+ var p=ubsProfile(),pin=digits(el('cscUbsPin')&&el('cscUbsPin').value),proof=trustKey('UBS'),out=el('cscUbsIdentity');
+ if(!p||!proof){try{localStorage.removeItem(UBS_PROFILE_KEY)}catch(e){};ubsMarkup();setStatus('Faça o primeiro acesso da UBS neste aparelho.','warn');return}
+ if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN de acesso com 4 a 8 números.','err');return}
+ setStatus('Validando o PIN da UBS…','warn');
+ post('conecta_ubs_login_pin',{pin:pin,dispositivo:device(),chaveConfianca:proof}).then(function(r){
+  saveUbsProfile(r);saveUbsSession(r);renderUbsAuthenticated(r);
+  if(el('cscUbsPin'))el('cscUbsPin').value='';
+  setStatus('Acesso UBS validado.','ok');
+  return guardarUbsLocal(pin,r);
  }).catch(function(e){if(out)out.hidden=true;setStatus(e.message,'err')});
 }
 function renderResidentStart(){
  var stage=el('residentStage');if(!stage)return;resetState();var p=profile();
  if(p){
-  stage.innerHTML='<div class="csc-access-note"><strong>Acesso reconhecido neste aparelho</strong><br><span class="csc-first-name">'+esc(p.nome||'Morador')+'</span>'+(p.areaNome||p.areaId?'<br>'+esc(p.areaNome||p.areaId):'')+'</div>'+field('cscResidentPin','PIN de 4 números','type="password" inputmode="numeric" maxlength="4" autocomplete="off"')+'<div class="csc-inline-actions"><button class="btn green" id="cscResidentLogin" type="button">Entrar</button><button class="btn gray" id="cscResidentOther" type="button">Primeiro acesso ou outro morador</button></div>';
+  stage.innerHTML='<div class="csc-access-note"><strong>Aparelho reconhecido para Morador</strong><br>Digite somente o seu PIN para entrar.</div>'+field('cscResidentPin','PIN de 4 números','type="password" inputmode="numeric" maxlength="4" autocomplete="off"')+'<div class="csc-inline-actions"><button class="btn green" id="cscResidentLogin" type="button">Entrar</button><button class="btn gray" id="cscResidentOther" type="button">Primeiro acesso ou outro morador</button></div>';
  }else{
   stage.innerHTML=field('cscResidentCpf','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"')+'<p class="muted">Se o CPF ainda não estiver no cadastro territorial, o Conecta localizará seu registro por data de nascimento e, quando necessário, nome completo.</p><div class="csc-inline-actions"><button class="btn green" id="cscResidentCpfNext" type="button">Continuar</button></div>';
  }
@@ -248,12 +297,14 @@ function install(){
  if(m)m.addEventListener('click',function(e){selectRoleFromTap('morador',e)});
  if(u)u.addEventListener('click',function(e){selectRoleFromTap('ubs',e)});
  var ubsIdentify=el('cscUbsIdentify');if(ubsIdentify)ubsIdentify.addEventListener('click',identifyUbsFirstAccess);
+ var ubsLogin=el('cscUbsLogin');if(ubsLogin)ubsLogin.addEventListener('click',loginUbsSecondAccess);
+ var ubsOther=el('cscUbsOther');if(ubsOther)ubsOther.addEventListener('click',function(){try{localStorage.removeItem(UBS_PROFILE_KEY);localStorage.removeItem(TRUST_UBS_KEY)}catch(e){}location.reload()});
  var forgot=el('cscForgotPin');if(forgot)forgot.addEventListener('click',openRecovery);
  var close=el('cscRecoveryClose');if(close)close.addEventListener('click',closeRecovery);
- if(el('loginPanel')&&!el('loginPanel').hidden)showRole(tacsOnly?'tacs':'admin');
+ if(el('loginPanel')&&!el('loginPanel').hidden)showRole(tacsOnly?'tacs':recognizedRole());
  setTimeout(registerTrustedDeviceFromSession,700);
  window.addEventListener('pageshow',function(){setTabs(activeRole);setTimeout(registerTrustedDeviceFromSession,250)});
 }
-window.ConectaAcessoUnificado={showRole:showRole,profile:profile,registrarAparelho:registerTrustedDevice};
+window.ConectaAcessoUnificado={showRole:showRole,profile:profile,ubsProfile:ubsProfile,registrarAparelho:registerTrustedDevice,marcarPerfil:rememberRole,perfilReconhecido:recognizedRole};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 }());
