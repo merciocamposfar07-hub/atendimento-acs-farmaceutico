@@ -53,10 +53,10 @@ assert(support.includes("button.style.removeProperty('pointer-events')"),
 assert(support.includes("window.addEventListener('pageshow'"),
   'Retorno pelo histórico do Safari precisa ser tratado.');
 
-assert(base.includes('AGENDA_DIRECT_NAV_V1'),
-  'Fallback da Central-base para Agendas sem iframe foi removido.');
-assert(/if\(name==='agendas'\)\{location\.assign\(/.test(base),
-  'Fallback da Agenda precisa navegar diretamente.');
+assert(base.includes('DIRECT_NAV_CRITICAL_V2'),
+  'Fallback direto da Central para Agenda/Gestão territorial foi removido.');
+assert(/if\(name==='agendas'\|\|name==='territorio'\)\{location\.assign\(/.test(base),
+  'Agenda e Gestão territorial precisam navegar diretamente sem iframe.');
 assert(base.includes("el('viewerFrame').src='about:blank'"),
   'Retorno da Central-base deve descarregar viewer legado.');
 assert(quick.includes('function installInstitutionalNavigation()'),

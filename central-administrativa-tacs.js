@@ -209,6 +209,12 @@ function restoreContextCache(){
   }catch(e){return false}
 }
 function responsible(area){var list=context&&Array.isArray(context.tacs)?context.tacs:[];for(var i=0;i<list.length;i++)if(text(list[i].tacsId)===text(area&&area.tacsId))return list[i];return mode==='tacs'?(list[0]||null):null}
+function areaWorkLabel(area){
+  var t=responsible(area),nome=text(area&&area.areaNome)||text(area&&area.areaId)||'Área';
+  var tacsNome=text(t&&t.nomeCompleto)||text(t&&t.tacsId)||'TACS não definido';
+  var unidade=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||text(t&&t.unidadeId)||'unidade não definida';
+  return nome+' — TACS: '+tacsNome+' — Unidade: '+unidade;
+}
 var ACCESS_PROFILE_LABELS={
   ADMIN_TACS_MORADOR:'Administrador + TACS + Morador',
   ADMIN_TACS:'Administrador + TACS',
@@ -250,7 +256,7 @@ function updateCentralWelcome(area,tacs){
   var adminPerfil=accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');
   node.innerHTML='<small>Olá, '+esc(adminNome)+'</small><h1>'+esc(adminPerfil)+'</h1><p>Gestão administrativa da área selecionada.</p>';
 }
-function renderContext(skipHealth){var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(text(admin&&admin.nomeCompleto)||'Administrador');el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);el('identityPanel').hidden=false;el('healthPanel').hidden=false;el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=mode!=='admin'||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;renderModules();renderHealthInstant(selectedAreaId);if(!skipHealth)refreshHealth()}
+function renderContext(skipHealth){var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(text(admin&&admin.nomeCompleto)||'Administrador');el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);el('identityPanel').hidden=false;el('healthPanel').hidden=false;el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=mode!=='admin'||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(areaWorkLabel(a))+'</option>'}).join('');select.value=selectedAreaId;renderModules();renderHealthInstant(selectedAreaId);if(!skipHealth)refreshHealth()}
 function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
 function markHealth(id,label,state){var n=el(id),s=n.querySelector('span');n.className='health-card'+(state?' '+state:'');s.textContent=label}
 function updatePendingBadge(result){
@@ -454,7 +460,7 @@ function refreshHealth(force){
   el('healthUpdated').textContent='Atualizando dados validados • área '+(text(area&&area.areaNome)||areaId);
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
-function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260823-recados-safari-render-v1';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?v='+revision;if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
+function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260911-area-trabalho-v1';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?area='+area+'&from=central&v='+revision;if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
 function openModule(name,title){
   var url=moduleUrl(name);if(!url)return;
   if(name==='portal'){window.open(url,'_blank','noopener');return}
@@ -465,8 +471,8 @@ function openModule(name,title){
   }
   moduloPendente=null;
   var sep=url.indexOf('?')===-1?'?':'&';
-  /* AGENDA_DIRECT_NAV_V1: evita o iframe oculto e o travamento observado no iPhone; o retorno usa from=central. */
-  if(name==='agendas'){location.assign(url+sep+'from=central&_cb='+Date.now());return}
+  /* DIRECT_NAV_CRITICAL_V2: Agenda e Gestão territorial nunca usam o viewer/iframe oculto no iPhone. */
+  if(name==='agendas'||name==='territorio'){location.assign(url+sep+'from=central&_cb='+Date.now());return}
   url=url+sep+'_cb='+Date.now();el('viewerTitle').textContent=title||'Painel';el('viewerFrame').src=url;el('viewer').hidden=false;document.body.classList.add('viewer-open')
 }
 function closeViewer(){el('viewer').hidden=true;el('viewerFrame').src='about:blank';document.body.classList.remove('viewer-open');refreshHealth()}
@@ -598,7 +604,7 @@ el('loginTacs').addEventListener('click',function(){
     });
   });
 });
-el('adminArea').addEventListener('change',function(){if(mode!=='admin')return;selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
+el('adminArea').addEventListener('change',function(){if(mode!=='admin')return;selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}saveContextCache();renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
 el('viewerFrame').addEventListener('load',function(){try{applyUiStandard(el('viewerFrame').contentDocument)}catch(e){}});
 el('moduleGrid').addEventListener('click',function(e){var btn=e.target.closest('.module');if(!btn||btn.disabled||btn.hidden)return;openModule(btn.dataset.module,btn.querySelector('strong').textContent)});
 /* CENTRAL_RETURN_R6: restaura imediatamente o conteúdo ao voltar pelo histórico/BFCache do iPhone. */

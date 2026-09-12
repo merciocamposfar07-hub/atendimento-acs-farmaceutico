@@ -2366,18 +2366,37 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
   .access-state-control{align-items:flex-start!important;flex-direction:column!important}
   .access-switch{align-self:flex-end!important}
 }
+/* AREA_TRABALHO_SEM_LOGIN_2026_09_11_V1
+   Este módulo herda a autenticação da Central. Não possui segundo login. */
+.territory-workspace-panel{
+  margin:0 0 18px!important;
+  padding:4px 0 2px!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.territory-workspace-panel h2{margin:0 0 12px!important}
+.territory-workspace-panel label{margin:0 0 7px!important}
+.territory-workspace-meta{
+  margin-top:9px!important;
+  color:#adc4d2!important;
+  font-size:.88rem!important;
+  line-height:1.42!important;
+}
+#workspaceStatus{margin-top:11px!important}
 </style>
 </head>
 <body>
 <header><span class="seal">GESTÃO TERRITORIAL • ACESSO PROTEGIDO</span><h1>Administradores, TACS, áreas e moradores</h1><p>Cadastro de acessos, agentes, fontes isoladas e importação CSV.</p></header>
 <main>
-<section id="loginPanel" class="panel">
-  <h2>Entrar</h2>
-  <div class="tabs"><button id="loginAdminTab" class="tab active" type="button">Administrador geral</button><button id="loginTacsTab" class="tab" type="button">TACS da área</button></div>
-  <div id="adminLogin"><label for="adminPin">PIN administrativo</label><input id="adminPin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="actions"><button id="adminLoginButton" class="btn" type="button">Entrar como administrador</button></div></div>
-  <div id="tacsLogin" class="hidden"><label for="tacsPinLogin">PIN individual</label><input id="tacsPinLogin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="actions"><button id="tacsLoginButton" class="btn" type="button">Entrar na minha área</button></div></div>
-  <div class="actions"><button id="logoutButton" class="btn red" type="button" disabled>Encerrar sessão</button></div>
-  <div id="loginStatus" class="status">Aguardando acesso.</div>
+<section id="workspacePanel" class="territory-workspace-panel">
+  <h2>Área de trabalho</h2>
+  <label for="workAreaSelect">Área de trabalho</label>
+  <select id="workAreaSelect" class="field" aria-label="Área de trabalho">
+    <option value="">Carregando áreas cadastradas…</option>
+  </select>
+  <div id="workAreaMeta" class="territory-workspace-meta">Carregando área, TACS responsável e unidade de saúde…</div>
+  <div id="workspaceStatus" class="status" hidden></div>
 </section>
 
 <section id="dashboard" class="panel hidden">
@@ -2431,7 +2450,7 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 </section>
 </main>
 <footer>Portal TACS • Administração de acessos, TACS, áreas e importações</footer>
-<script src="painel-tacs-areas-v1.js?v=20260911-mascaras-documentos-v1"></script>
+<script src="painel-tacs-areas-v1.js?v=20260911-area-trabalho-v1"></script>
 <script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260825-v6"></script>
 </body>
 </html>

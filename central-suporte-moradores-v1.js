@@ -10,7 +10,7 @@ var RETURN_KEY='portalTacsCentralReturnUrlV1';
 var RETURN_FLAG_KEY='portalTacsRetornoCentralV1';
 var PAINT_STYLE_ID='portalTacsCentralIosPaintGuardV3';
 var SAFE_NAV_FLAG='portalTacsSafeNavigationV1';
-var REVISION='20260910-pontuais-v5';
+var REVISION='20260911-area-trabalho-v1';
 
 function text(v){return String(v==null?'':v).trim()}
 function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
@@ -93,7 +93,7 @@ function moduleUrl(name){
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+from+'&v='+REVISION;
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+from+'&v='+REVISION;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+from+'&v='+REVISION;
-  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v='+REVISION;
+  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?area='+area+from+'&v='+REVISION;
   if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+REVISION;
   if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area+'&from=central&v='+REVISION;
   return '';
@@ -121,7 +121,13 @@ function installSafeNavigation(){
     var button=target&&target.closest?target.closest('.module[data-module]'):null;
     if(!button||button.hidden||button.disabled)return;
 
-    var url=moduleUrl(button.dataset.module||'');
+    var moduleName=button.dataset.module||'';
+    /* TERRITORIO_AGUARDA_SESSAO_V1:
+       se a Central abriu pelo PIN local e a sessão remota ainda está chegando,
+       deixa o controlador principal segurar somente este módulo. Assim o painel
+       territorial nunca abre seu antigo segundo login. */
+    if(moduleName==='territorio'&&!hasAnySession())return;
+    var url=moduleUrl(moduleName);
     if(!url)return;
 
     event.preventDefault();
