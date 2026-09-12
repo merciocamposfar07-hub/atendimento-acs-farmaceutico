@@ -213,5 +213,7 @@ Regras:
 - as barreiras de não-vinculação da Tarefa 6 permanecem ativas;
 - a Tarefa 8 ainda não começa nesta etapa.
 
-### Status da Tarefa 7: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_7_MORADOR_CORE_DIAGNOSTICO_OK`.
+### Status final da Tarefa 7: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+O RETRY 2 `34719916306` passou pela suíte integral, implantou Apps Script **205** e aprovou os health checks na primeira tentativa. GitHub Pages run `34719909246` também passou. As duas tentativas anteriores foram interrompidas antes do deploy por gates históricos da Tarefa 6 e não criaram versões.
+
+**Regra de sequência cumprida:** Tarefa 7 encerrada tecnicamente; Tarefa 8 liberada para execução.
