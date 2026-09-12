@@ -34,16 +34,21 @@ var ACCESS_PROFILES={
   ADMIN_MORADOR:'Administrador + Morador',
   TACS_MORADOR:'TACS + Morador',
   TACS:'TACS',
-  ADMIN:'Administrador'
+  ADMIN:'Administrador',
+  UBS:'UBS'
 };
 function normalizeAccessProfile(v){v=text(v).toUpperCase();return Object.prototype.hasOwnProperty.call(ACCESS_PROFILES,v)?v:(v==='ADMIN_GERAL'?'ADMIN':'TACS');}
 function profileHasTacs(v){return normalizeAccessProfile(v).indexOf('TACS')!==-1;}
 function profileHasAdmin(v){return normalizeAccessProfile(v).indexOf('ADMIN')!==-1;}
+function profileHasUbs(v){return normalizeAccessProfile(v).indexOf('UBS')!==-1;}
 function profileLabel(v){return ACCESS_PROFILES[normalizeAccessProfile(v)]||'TACS';}
 function syncAccessProfileUi(){
-  var profile=normalizeAccessProfile(el('tacsProfile').value),isTacs=profileHasTacs(profile);
-  ['tacsCnsWrap','tacsMicroareaWrap','tacsUnitWrap','tacsPermissionsBlock'].forEach(function(id){var n=el(id);if(n)n.classList.toggle('hidden',!isTacs);});
-  el('tacsCns').required=isTacs;el('tacsMicroarea').required=isTacs;el('tacsUnit').required=isTacs;
+  var profile=normalizeAccessProfile(el('tacsProfile').value),isTacs=profileHasTacs(profile),isUbs=profileHasUbs(profile),hasUnit=isTacs||isUbs;
+  ['tacsCnsWrap','tacsMicroareaWrap'].forEach(function(id){var n=el(id);if(n)n.classList.toggle('hidden',!isTacs);});
+  ['tacsUnitWrap','tacsPermissionsBlock'].forEach(function(id){var n=el(id);if(n)n.classList.toggle('hidden',!hasUnit);});
+  var ubsRole=el('tacsUbsRoleWrap');if(ubsRole)ubsRole.classList.toggle('hidden',!isUbs);
+  el('tacsCns').required=isTacs;el('tacsMicroarea').required=isTacs;el('tacsUnit').required=hasUnit;
+  if(el('tacsUbsRole'))el('tacsUbsRole').required=isUbs;
 }
 function syncTacsActiveUi(){
   var input=el('tacsActive'),label=input&&input.closest('.access-switch'),out=el('tacsActiveText');
@@ -57,6 +62,8 @@ function validarRetornoCadastro(r,body){
   if(digits(salvo.telefone)!==digits(body.telefone))return 'celular';
   if(text(salvo.matricula)!==text(body.matricula))return 'matrícula';
   if(profileHasTacs(body.perfil)&&digits(salvo.cnsProfissional)!==digits(body.cnsProfissional))return 'CNS';
+  if((profileHasTacs(body.perfil)||profileHasUbs(body.perfil))&&text(salvo.unidadeId)!==text(body.unidadeId))return 'unidade';
+  if(profileHasUbs(body.perfil)&&text(salvo.funcaoUbs)!==text(body.funcaoUbs))return 'função UBS';
   return '';
 }
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device);}
@@ -179,10 +186,11 @@ function render(){
 }
 
 function renderTacs(){
-  var list=el('tacsList');if(!data.tacs.length){list.innerHTML='<div class="card">Nenhum Administrador/TACS cadastrado nesta visão.</div>';return;}
+  var list=el('tacsList');if(!data.tacs.length){list.innerHTML='<div class="card">Nenhum Administrador/TACS/UBS cadastrado nesta visão.</div>';return;}
   list.innerHTML=data.tacs.map(function(t){
-    var isTacs=profileHasTacs(t.perfil),meta='<div class="sub">Perfil: '+esc(profileLabel(t.perfil));
+    var isTacs=profileHasTacs(t.perfil),isUbs=profileHasUbs(t.perfil),meta='<div class="sub">Perfil: '+esc(profileLabel(t.perfil));
     if(isTacs)meta+=' • CNS: '+esc(cnsText(t.cnsProfissional)||'não informado')+' • Área: '+esc(t.areaId||'não vinculada')+' • Unidade: '+esc(t.unidadeId||'não vinculada');
+    else if(isUbs)meta+=' • Unidade: '+esc(t.unidadeId||'não vinculada')+' • Função: '+esc(t.funcaoUbs||'não informada');
     meta+='</div>';
     return '<div class="card"><strong>'+esc(t.nomeCompleto||t.tacsId)+'</strong>'+meta+'<span class="pill '+(bool(t.ativo)?'':'off')+'">'+(bool(t.ativo)?'Ativo':'Inativo')+'</span>'+(data.podeAdministrar?'<div class="actions"><button class="btn editTacs" data-id="'+esc(t.tacsId)+'" type="button">Editar cadastro completo</button></div>':'')+'</div>';
   }).join('');
@@ -214,26 +222,28 @@ function renderTacsUnitOptions(current){
 function openTacs(t){
   el('tacsForm').reset();el('tacsId').value=t&&t.tacsId||'';el('tacsProfile').value=normalizeAccessProfile(t&&t.perfil||'TACS');el('tacsName').value=t&&t.nomeCompleto||'';el('tacsCns').value=cnsText(t&&t.cnsProfissional||'');
   el('tacsBirth').value=birthText(t&&t.dataNascimento||'');el('tacsCpf').value=cpfText(t&&t.cpf||'');el('tacsRegistration').value=t&&t.matricula||'';el('tacsPhone').value=phoneText(t&&t.telefone||'');el('tacsEmail').value=t&&t.email||'';
-  el('tacsArea').value=t&&t.areaId||'';renderTacsUnitOptions(t&&t.unidadeId||'');el('tacsMicroarea').value=t&&t.microarea||'';el('tacsActive').checked=Boolean(t&&bool(t.ativo));
+  el('tacsArea').value=t&&t.areaId||'';renderTacsUnitOptions(t&&t.unidadeId||'');el('tacsMicroarea').value=t&&t.microarea||'';if(el('tacsUbsRole'))el('tacsUbsRole').value=t&&t.funcaoUbs||'';el('tacsActive').checked=Boolean(t&&bool(t.ativo));
   el('tacsPin').required=!t;
-  var selecionadas=t&&Array.isArray(t.permissoes)?t.permissoes:TACS_PERMISSIONS.map(function(item){return item[1];});
+  var perfilAtual=normalizeAccessProfile(t&&t.perfil||'TACS');
+  var selecionadas=t&&Array.isArray(t.permissoes)?t.permissoes:(profileHasTacs(perfilAtual)?TACS_PERMISSIONS.map(function(item){return item[1];}):[]);
   TACS_PERMISSIONS.forEach(function(item){el(item[0]).checked=selecionadas.indexOf(item[1])!==-1;});
   syncAccessProfileUi();syncTacsActiveUi();
   if(t&&digits(t.cpf).length!==11)status('Atenção: este cadastro possui CPF incompleto na base. Corrija os 11 números antes de salvar novamente.','err');
-  el('tacsFormTitle').textContent=t?'Editar Administrador / TACS':'Novo Administrador / TACS';el('tacsForm').classList.remove('hidden');el('tacsForm').scrollIntoView({behavior:'smooth',block:'start'});
+  el('tacsFormTitle').textContent=t?'Editar Administrador / TACS / UBS':'Novo Administrador / TACS / UBS';el('tacsForm').classList.remove('hidden');el('tacsForm').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function saveTacs(event){
   event.preventDefault();
-  var profile=normalizeAccessProfile(el('tacsProfile').value),isTacs=profileHasTacs(profile),birth=birthText(el('tacsBirth').value),cns=digits(el('tacsCns').value),cpf=digits(el('tacsCpf').value),phone=digits(el('tacsPhone').value),pin=digits(el('tacsPin').value),isNew=!text(el('tacsId').value);
+  var profile=normalizeAccessProfile(el('tacsProfile').value),isTacs=profileHasTacs(profile),isUbs=profileHasUbs(profile),hasUnit=isTacs||isUbs,birth=birthText(el('tacsBirth').value),cns=digits(el('tacsCns').value),cpf=digits(el('tacsCpf').value),phone=digits(el('tacsPhone').value),pin=digits(el('tacsPin').value),isNew=!text(el('tacsId').value);
   if(!validBirth(birth)){status('Informe uma data de nascimento válida no formato DD/MM/AAAA.','err');el('tacsBirth').focus();return;}
   if(isTacs&&!/^\d{15}$/.test(cns)){status('Informe os 15 números do CNS (Cartão SUS) para o perfil TACS.','err');el('tacsCns').focus();return;}
   if(!/^\d{11}$/.test(cpf)){status('Informe os 11 números do CPF.','err');el('tacsCpf').focus();return;}
   if(!/^\d{10,11}$/.test(phone)){status('Informe um celular com DDD.','err');el('tacsPhone').focus();return;}
   if(isTacs&&!text(el('tacsMicroarea').value)){status('Informe a microárea para o perfil TACS.','err');el('tacsMicroarea').focus();return;}
-  if(isTacs&&!text(el('tacsUnit').value)){status('Informe a unidade de saúde para o perfil TACS.','err');el('tacsUnit').focus();return;}
+  if(hasUnit&&!text(el('tacsUnit').value)){status('Informe a unidade de saúde para este perfil.','err');el('tacsUnit').focus();return;}
+  if(isUbs&&!text(el('tacsUbsRole').value)){status('Informe a função do responsável na UBS.','err');el('tacsUbsRole').focus();return;}
   if(isNew&&!/^\d{4,8}$/.test(pin)){status('Defina um PIN de acesso com 4 a 8 números.','err');el('tacsPin').focus();return;}
-  var body={tacsId:el('tacsId').value,perfil:profile,nomeCompleto:el('tacsName').value,dataNascimento:birth,cnsProfissional:isTacs?cns:'',cpf:cpf,matricula:el('tacsRegistration').value,telefone:phone,email:el('tacsEmail').value,areaId:isTacs?el('tacsArea').value:'',unidadeId:isTacs?el('tacsUnit').value:'',microarea:isTacs?el('tacsMicroarea').value:'',pin:pin,permissoes:isTacs?TACS_PERMISSIONS.filter(function(item){return el(item[0]).checked;}).map(function(item){return item[1];}):[],ativo:el('tacsActive').checked};
+  var body={tacsId:el('tacsId').value,perfil:profile,nomeCompleto:el('tacsName').value,dataNascimento:birth,cnsProfissional:isTacs?cns:'',cpf:cpf,matricula:el('tacsRegistration').value,telefone:phone,email:el('tacsEmail').value,areaId:isTacs?el('tacsArea').value:'',unidadeId:hasUnit?el('tacsUnit').value:'',microarea:isTacs?el('tacsMicroarea').value:'',funcaoUbs:isUbs?el('tacsUbsRole').value:'',pin:pin,permissoes:hasUnit?TACS_PERMISSIONS.filter(function(item){return el(item[0]).checked;}).map(function(item){return item[1];}):[],ativo:el('tacsActive').checked};
   if(!confirm('Salvar este cadastro de '+profileLabel(profile)+'? Todos os campos poderão ser corrigidos depois.'))return;
   status('Salvando e conferindo o cadastro de acesso…','warn');territoryPost('admin_territorio_salvar_tacs',{payload:JSON.stringify(body)},function(r){
     if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar.'),'err');return;}
@@ -403,7 +413,7 @@ el('adminLoginButton').addEventListener('click',function(){var pin=digits(el('ad
 el('tacsLoginButton').addEventListener('click',function(){var pin=digits(el('tacsPinLogin').value);if(!/^\d{4,8}$/.test(pin)){loginStatus('Informe o PIN individual de 4 a 8 números.','err');return;}loginStatus('Validando o PIN individual…','warn');post('admin_territorio_login_pin',{pin:pin,dispositivo:device},'admin_territorio_result',function(r){el('tacsPinLogin').value='';if(!r||r.ok!==true||!r.token){loginStatus(text(r&&r.message||'Acesso recusado.'),'err');return;}clearSession();territorioToken=r.token;mode='tacs';sessionStorage.setItem(TACS_TOKEN_KEY,territorioToken);loadData('Acesso individual validado para '+text(r.areaNome||r.areaId)+'.');});});
 el('logoutButton').addEventListener('click',function(){var action=mode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout',result=mode==='tacs'?'admin_territorio_result':'admin_result';post(action,session(),result,function(){clearSession();loginStatus('Sessão encerrada.','ok');});});
 document.querySelectorAll('.sectionTab').forEach(function(b){b.addEventListener('click',function(){switchSection(b.dataset.section);});});
-el('newTacsButton').addEventListener('click',function(){openTacs(null);});el('cancelTacsButton').addEventListener('click',function(){el('tacsForm').classList.add('hidden');});el('tacsForm').addEventListener('submit',saveTacs);el('tacsProfile').addEventListener('change',syncAccessProfileUi);el('tacsActive').addEventListener('change',syncTacsActiveUi);
+el('newTacsButton').addEventListener('click',function(){openTacs(null);});el('cancelTacsButton').addEventListener('click',function(){el('tacsForm').classList.add('hidden');});el('tacsForm').addEventListener('submit',saveTacs);el('tacsProfile').addEventListener('change',function(){syncAccessProfileUi();if(!text(el('tacsId').value)&&profileHasUbs(this.value)){TACS_PERMISSIONS.forEach(function(item){el(item[0]).checked=false;});}});el('tacsActive').addEventListener('change',syncTacsActiveUi);
 el('newAreaButton').addEventListener('click',function(){openArea(null);});el('cancelAreaButton').addEventListener('click',function(){el('areaForm').classList.add('hidden');areaEditSnapshot=null;});el('areaForm').addEventListener('submit',saveArea);
 ['areaId','areaName','areaUnitId','areaUnitName','areaTacsId','areaMicroarea','areaTeam','areaSpreadsheet','areaCreateSource','areaDocumentLookup','areaActive'].forEach(function(id){var n=el(id);if(n){n.addEventListener('input',syncAreaLinkState);n.addEventListener('change',syncAreaLinkState);}});
 el('tacsList').addEventListener('click',function(e){var b=e.target.closest('.editTacs');if(b)openTacs(data.tacs.find(function(t){return t.tacsId===b.dataset.id;})||null);});
