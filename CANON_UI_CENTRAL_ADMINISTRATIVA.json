@@ -20,7 +20,7 @@
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_PIN_LOCAL_V2_2026_09_11.md",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_01_PERFIL_UBS_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-iphone",
   "notes": [
@@ -81,6 +81,30 @@
     "agendaFreezeMitigation": "navegacao direta + limpeza DOM limitada",
     "singlePinAtPlatformEntry": true,
     "panelLevelPinLoginRemoved": true,
-    "panelLevelAdminTacsLoginSelectorRemoved": true
+    "panelLevelAdminTacsLoginSelectorRemoved": true,
+    "ubsFirstAccessProfile": true,
+    "ubsRegistrationInAdminTacsAccess": true,
+    "ubsDeviceRecognitionDeferred": true
+  },
+  "firstAccessProfiles": [
+    "ADMIN",
+    "TACS",
+    "MORADOR",
+    "UBS"
+  ],
+  "task1ProfileUbs": {
+    "status": "canonical-authorized",
+    "authorizedOn": "2026-09-12",
+    "standaloneOnly": true,
+    "registrationFields": [
+      "nomeCompleto",
+      "funcaoUbs",
+      "unidadeId",
+      "pin",
+      "permissoes"
+    ],
+    "firstAccessIdentityConfirmation": true,
+    "persistentDeviceRecognition": false,
+    "ubsCombinationsDeferredToTask2": true
   }
 }
