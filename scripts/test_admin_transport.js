@@ -20,7 +20,8 @@ const CASES = [
     frame: 'pontePainelPSV1',
     actions: ['admin_login', 'admin_dados'],
     success: /Sessão validada e dados carregados/,
-    official: 'painel-oficial-profissionais-servicos.html'
+    official: 'painel-oficial-profissionais-servicos.html',
+    coreSession: true
   },
   {
     file: 'teste-v1/painel-recados-campanhas-v1.html',
@@ -285,6 +286,11 @@ async function testDirectResponse(config) {
     virtualConsole,
     beforeParse(window) {
       window.PortalTacsAdminPreload = {ok: true};
+      if (config.coreSession) {
+        // TAREFA_9: módulo consumidor já recebe a sessão canônica da Central;
+        // ele não executa mais admin_login nem aceita PIN interno.
+        window.sessionStorage.setItem('portalTacsAdminTokenV1', 'token-interno-valido');
+      }
       window.fetch = function(){ errors.push('O fluxo administrativo tentou usar fetch no-cors.'); return Promise.reject(new Error('fetch administrativo proibido neste teste')); };
       window.HTMLFormElement.prototype.submit = function submit() {
         const form = this;
@@ -347,45 +353,69 @@ async function testDirectResponse(config) {
   });
 
   const {window} = dom;
-  await waitFor(
-    () => window.document.readyState === 'complete' || window.document.readyState === 'interactive',
-    `A página ${config.file} não concluiu a inicialização.`
-  );
+  try {
+    await waitFor(
+      () => window.document.readyState === 'complete' || window.document.readyState === 'interactive',
+      `A página ${config.file} não concluiu a inicialização.`
+    );
 
-  const pin = window.document.getElementById('pin');
-  const enter = window.document.getElementById('entrar');
-  assert.ok(pin && enter, `Controles de acesso ausentes em ${config.file}.`);
-  assert.equal(actions.length, 0, `${config.file} consultou o servidor antes do usuário entrar.`);
+    const pin = window.document.getElementById('pin');
+    const enter = window.document.getElementById('entrar');
+    assert.ok(pin && enter, `Controles de acesso ausentes em ${config.file}.`);
 
-  pin.value = '1234';
-  enter.click();
-  enter.click();
-
-  await waitFor(
-    () => {
-      const status = window.document.getElementById('loginStatus');
-      return (
-        actions.length === config.actions.length &&
-        status &&
-        status.classList.contains('ok') &&
-        config.success.test(status.textContent)
+    if (config.coreSession) {
+      await waitFor(
+        () => {
+          const status = window.document.getElementById('loginStatus');
+          return actions.length === 1 &&
+            actions[0] === 'admin_dados' &&
+            status &&
+            status.classList.contains('ok') &&
+            /Sessão existente validada e dados desta área carregados/i.test(status.textContent);
+        },
+        `O módulo não consumiu diretamente a sessão da Central em ${config.file}. Ações: ${actions.join(', ')}`
       );
-    },
-    `O fluxo direto não concluiu em ${config.file}. Ações: ${actions.join(', ')}`
-  );
+      assert.deepEqual(actions, ['admin_dados'], `${config.file} tentou autenticar novamente dentro do módulo.`);
+      assert.equal(
+        window.sessionStorage.getItem('portalTacsAdminTokenV1'),
+        'token-interno-valido',
+        `${config.file} alterou a sessão global recebida da Central.`
+      );
+    } else {
+      assert.equal(actions.length, 0, `${config.file} consultou o servidor antes do usuário entrar.`);
+      pin.value = '1234';
+      enter.click();
+      enter.click();
 
-  assert.deepEqual(actions, config.actions, `${config.file} duplicou ou alterou a ordem dos POSTs.`);
-  assert.equal(pin.value, '', `${config.file} não apagou o PIN depois do envio.`);
-  assert.equal(
-    window.document.getElementById('conteudo').classList.contains('oculto'),
-    false,
-    `${config.file} não exibiu o conteúdo após a resposta direta.`
-  );
+      await waitFor(
+        () => {
+          const status = window.document.getElementById('loginStatus');
+          return (
+            actions.length === config.actions.length &&
+            status &&
+            status.classList.contains('ok') &&
+            config.success.test(status.textContent)
+          );
+        },
+        `O fluxo direto não concluiu em ${config.file}. Ações: ${actions.join(', ')}`
+      );
 
-  await wait(2700);
-  assert.deepEqual(jsonpPolls, [], `${config.file} iniciou polling mesmo após a resposta direta.`);
-  assert.deepEqual(errors, [], `${config.file} produziu erros internos: ${errors.join(' | ')}`);
-  window.close();
+      assert.deepEqual(actions, config.actions, `${config.file} duplicou ou alterou a ordem dos POSTs.`);
+      assert.equal(pin.value, '', `${config.file} não apagou o PIN depois do envio.`);
+    }
+
+    assert.equal(
+      window.document.getElementById('conteudo').classList.contains('oculto'),
+      false,
+      `${config.file} não exibiu o conteúdo após a resposta direta.`
+    );
+
+    await wait(2700);
+    assert.deepEqual(jsonpPolls, [], `${config.file} iniciou polling mesmo após a resposta direta.`);
+    assert.deepEqual(errors, [], `${config.file} produziu erros internos: ${errors.join(' | ')}`);
+  } finally {
+    window.close();
+  }
 }
 
 async function testImmediatePanel(config) {
@@ -529,7 +559,14 @@ async function testExpiredStoredSession(config) {
   assert.deepEqual(actions, [expectedStoredSessionAction], `${config.file} fez consultas extras ao validar a sessão antiga.`);
   assert.equal(status.classList.contains('erro'), false, `${config.file} exibiu alerta vermelho antes do PIN.`);
   assert.equal(status.classList.contains('ok'), true, `${config.file} não voltou ao estado pronto para novo PIN.`);
-  assert.equal(window.sessionStorage.getItem('portalTacsAdminTokenV1'), null);
+  if (config.coreSession) {
+    // TAREFA_9: o módulo reporta a recusa, mas não pode apagar a sessão global.
+    // A invalidação pertence exclusivamente à Central.
+    assert.equal(window.sessionStorage.getItem('portalTacsAdminTokenV1'), 'token-antigo');
+    assert.ok(window.sessionStorage.getItem('portalConectaModuleAuthIssueV1'), `${config.file} não reportou a tentativa de invalidar a sessão global.`);
+  } else {
+    assert.equal(window.sessionStorage.getItem('portalTacsAdminTokenV1'), null);
+  }
   assert.equal(window.document.getElementById('entrar').disabled, false);
   assert.deepEqual(errors, [], `${config.file} produziu erros internos: ${errors.join(' | ')}`);
   window.close();
