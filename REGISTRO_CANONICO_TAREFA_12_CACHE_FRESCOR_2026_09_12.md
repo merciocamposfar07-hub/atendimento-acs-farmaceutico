@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 12 — Versão e frescor do cache
 
 Data: 12/09/2026  
-Status: IMPLEMENTADA EM CÓDIGO; AGUARDANDO VALIDAÇÃO INTEGRAL
+Status: VALIDADA INTERNAMENTE E PUBLICADA NO GITHUB PAGES
 
 ## Objetivo exclusivo
 Impedir dados congelados ou tratados como atuais apenas porque existe cache local.
@@ -38,3 +38,22 @@ Saída esperada:
 `TAREFA_12_CACHE_FRESCOR_OK`
 
 A Tarefa 12 só será concluída após gate específico, suíte integral, quality gate e GitHub Pages passarem no estado final do `main`.
+
+
+## Resultado técnico verificado
+- gate pós-auditoria da Tarefa 11: `TAREFA_11_DESEMPENHO_MODULOS_OK` — **aprovado**;
+- gate específico da Tarefa 12: `TAREFA_12_CACHE_FRESCOR_OK` — **aprovado**;
+- suíte integral: **aprovada**;
+- quality gate: `QUALITY_GATE_V101_OK`;
+- homologação interna: `V101_INTERNO_APROVADO=SIM`, exigência interna 100%;
+- workflow de desempenho final: **success**, run `34725768331`;
+- GitHub Pages do mesmo estado validado: **success**, run `34725763575`;
+- backend Apps Script: **não alterado** nesta tarefa;
+- versão Apps Script permanece **208**.
+
+## Fechamento
+A exceção encontrada na Tarefa 11 foi corrigida e passou novamente pelo gate completo. Com isso, a Tarefa 11 fica revalidada após auditoria.
+
+A **Tarefa 12 está concluída tecnicamente**: cache versionado/fresco, cache não autoritativo, servidor obrigatório após pintura local, diferenças aplicadas após confirmação e operações críticas protegidas até resposta remota atual.
+
+A deduplicação de requisições permanece reservada à Tarefa 13.
