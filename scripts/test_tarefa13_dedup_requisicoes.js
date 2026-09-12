@@ -52,11 +52,10 @@ assert.match(core,/if\(!requestIsRead\(action\)\)requestInvalidate\(\)/);
 assert.match(core,/registry\.generation=Number\(registry\.generation\|\|0\)\+1/);
 assert.match(core,/registry\.recent=\{\}/);
 
-// A Central participa do mesmo broker e distribui contexto/base de moradores.
-assert.match(centralHtml,/conecta-module-core-v1\.js\?v=[^"'\\<\\s]+/);
-assert.match(central,/moduleRequests=moduleCore&&moduleCore\.requests/);
-assert.match(central,/coreRead\('admin_territorio_dados'/);
-assert.match(central,/coreRead\('admin_moradores_status'/);
+// A Central continua sendo a origem do contexto (Tarefa 9); o broker consumidor
+// vive nos módulos e compartilha o registro volátil pelo window.top.
+assert.doesNotMatch(centralHtml,/conecta-module-core-v1\.js/);
+assert.doesNotMatch(central,/moduleRequests=moduleCore&&moduleCore\.requests/);
 
 // Agendas e Profissionais deixam de disparar admin_dados independentemente quando
 // o mesmo resultado já está em voo/confirmado na janela curta do core.
