@@ -20,7 +20,7 @@
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R11",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_07_MORADOR_CORE_DIAGNOSTICO_2026_09_12.md",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_08_MODULOS_CORE_CONTEXTO_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
   "notes": [
@@ -359,5 +359,42 @@
       "pagesDeploymentSuccess": true
     },
     "validatedOn": "2026-09-12"
+  },
+  "task8PanelsAsCoreModules": {
+    "status": "implemented-awaiting-validation",
+    "authorizedOn": "2026-09-12",
+    "coreBridge": "conecta-module-core-v1.js",
+    "centralOwnsContext": true,
+    "moduleContextIncludes": [
+      "identity",
+      "profile",
+      "ubsFunctionUnit",
+      "area",
+      "permissions",
+      "session",
+      "state",
+      "cache"
+    ],
+    "remoteTokensExcludedFromContextSnapshot": true,
+    "modulesConnected": [
+      "AGENDAS",
+      "MORADORES",
+      "PROFISSIONAIS",
+      "RECADOS_CAMPANHAS",
+      "SUPORTE_MORADORES",
+      "TACS_AREAS",
+      "MUNICIPIOS_ORGANIZACOES"
+    ],
+    "legacyLoginFallbackTemporarilyPreserved": true,
+    "legacyLoginRemovalDeferredToTask9": true,
+    "persistentShellDeferredToTask10": true,
+    "definitivePanelMigrationDeferredToTask16": true,
+    "specificGate": "TAREFA_8_MODULOS_CORE_CONTEXTO_OK",
+    "validation": {
+      "specificGate": "pending",
+      "fullSuite": "pending",
+      "appsScriptDeploy": "pending",
+      "pagesDeployment": "pending"
+    }
   }
 }
