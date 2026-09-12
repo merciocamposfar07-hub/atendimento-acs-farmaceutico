@@ -174,5 +174,19 @@
     "pagesDeploymentHead": "6cff63d84eb15ef7fe19816454e7480b1ca1b320",
     "pagesDeploymentSuccess": true,
     "userDeviceValidation": "pending"
+  },
+  "task3AuthenticatedIdentity": {
+    "status": "implementation_pending_github_validation",
+    "identitySource": "authenticated_person",
+    "nameAndRegisteredProfiles": true,
+    "areaResponsibleIsNotAuthenticatedPerson": true,
+    "singleAdminFallback": false,
+    "legibleUntruncatedNames": true,
+    "ubsCombinedProfiles": true,
+    "missingIdentity": "explicit_message_preserve_session",
+    "loadingFeedback": true,
+    "footerPreserved": true,
+    "specificGate": "scripts/test_tarefa3_identidade_real.js",
+    "realDeviceValidation": "pending"
   }
 }

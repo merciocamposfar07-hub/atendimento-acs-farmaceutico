@@ -172,9 +172,13 @@ function showLogin(which){
 }
 
 function loadData(message,operationMessage){
+  var loading=el('panelLoadStatus');
+  if(loading){loading.hidden=false;loading.textContent='Aguarde, carregando dados…';}
+
   territoryPost('admin_territorio_dados',{},function(r){
-    if(!r||r.ok!==true){clearSession();loginStatus(text(r&&r.message||'Sessão inválida ou expirada.'),'err');if(operationMessage)status('A alteração foi salva, mas não foi possível atualizar a tela. Reabra o painel.','err');return;}
+    if(!r||r.ok!==true){if(loading){loading.textContent=text(r&&r.message)||'Não foi possível carregar os dados. Tente abrir o painel novamente.';}clearSession();loginStatus(text(r&&r.message||'Sessão inválida ou expirada.'),'err');if(operationMessage)status('A alteração foi salva, mas não foi possível atualizar a tela. Reabra o painel.','err');return;}
     data={tacs:Array.isArray(r.tacs)?r.tacs:[],areas:Array.isArray(r.areas)?r.areas:[],podeAdministrar:r.podeAdministrar===true,perfil:text(r.perfil)};
+    if(loading)loading.hidden=true;
     render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;loginStatus(message||'Sessão validada.','ok');if(operationMessage)status(operationMessage,'ok');
   });
 }
@@ -431,5 +435,5 @@ bindMask('tacsCpf',cpfText);
 bindMask('tacsCns',cnsText);
 bindMask('tacsPhone',phoneText);
 
-if(mode)loadData('Conferindo a sessão existente…');else{showLogin('admin');loginStatus('Escolha o tipo de acesso.','ok');}
+if(mode)loadData('Conferindo a sessão existente…');else{if(el('panelLoadStatus'))el('panelLoadStatus').hidden=true;showLogin('admin');loginStatus('Escolha o tipo de acesso.','ok');}
 }());

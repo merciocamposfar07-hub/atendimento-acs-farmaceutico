@@ -2367,10 +2367,16 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
   .access-switch{align-self:flex-end!important}
 }
 </style>
+<style>
+#panelLoadStatus{color:#fff;background:#102d46;border:1px solid #62c8e8;font-size:1rem;line-height:1.5;padding:14px}
+#panelLoadStatus[hidden]{display:none!important}
+#tacsList strong{white-space:normal;overflow-wrap:anywhere;font-size:1.125rem;line-height:1.5}
+</style>
 </head>
 <body>
 <header><span class="seal">GESTÃO TERRITORIAL • ACESSO PROTEGIDO</span><h1>Administradores, TACS, áreas e moradores</h1><p>Cadastro de acessos, agentes, fontes isoladas e importação CSV.</p></header>
 <main>
+<div id="panelLoadStatus" class="status" role="status" aria-live="polite">Aguarde, carregando dados…</div>
 <section id="loginPanel" class="panel">
   <h2>Entrar</h2>
   <div class="tabs"><button id="loginAdminTab" class="tab active" type="button">Administrador geral</button><button id="loginTacsTab" class="tab" type="button">TACS da área</button></div>
@@ -2431,7 +2437,7 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 </section>
 </main>
 <footer>Portal TACS • Administração de acessos, TACS, áreas e importações</footer>
-<script src="painel-tacs-areas-v1.js?v=20260912-tarefa2-perfis-ubs-v1"></script>
+<script src="painel-tacs-areas-v1.js?v=tarefa3-identidade-v1"></script>
 <script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260912-no-panel-pin-v4"></script>
 </body>
 </html>

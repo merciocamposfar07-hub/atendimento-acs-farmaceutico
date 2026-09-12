@@ -121,3 +121,8 @@ Regras:
 
 ### Status da Tarefa 2: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
 A matriz canônica de 14 perfis foi aprovada pelos gates automatizados, incluindo **UBS pura**. Apps Script versão 200 foi implantado com health checks aprovados e GitHub Pages publicado. A Tarefa 3 permanece não iniciada até validação visual/operacional desta etapa pelo usuário.
+
+
+## Tarefa 3 — Identidade real após autenticação (12/09/2026)
+Autorizada pelo usuário. Fluxo: PIN validado → identidade pessoal confirmada pelo servidor → nome completo + perfis cadastrados legíveis. O responsável territorial não substitui a pessoa autenticada. Identidade ausente/ambígua gera mensagem explícita sem encerrar sessão. UBS mostra combinações completas; Morador mostra nome e perfil. Rodapé preservado e carregamento visível no cadastro de acessos.
+Status: validação no GitHub e implantação pendentes. Ver `REGISTRO_CANONICO_TAREFA_03_IDENTIDADE_REAL_2026_09_12.md`. Tarefa 4 depende do encerramento comprovado desta etapa.

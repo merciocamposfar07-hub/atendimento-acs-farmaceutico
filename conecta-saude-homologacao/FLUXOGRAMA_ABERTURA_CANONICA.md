@@ -119,3 +119,8 @@ A Tarefa 2 não implementa reconhecimento persistente do aparelho, segunda entra
 
 ### Status da Tarefa 2: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
 Matriz de 14 perfis validada, incluindo **UBS pura**. Gate específico e suíte integral aprovados. Apps Script versão 200 implantado com health checks aprovados e GitHub Pages publicado. A validação visual final no aparelho do usuário permanece pendente. A Tarefa 3 não foi iniciada.
+
+
+## Tarefa 3 — Identidade real após autenticação (12/09/2026)
+Autorizada pelo usuário. Fluxo: PIN validado → identidade pessoal confirmada pelo servidor → nome completo + perfis cadastrados legíveis. O responsável territorial não substitui a pessoa autenticada. Identidade ausente/ambígua gera mensagem explícita sem encerrar sessão. UBS mostra combinações completas; Morador mostra nome e perfil. Rodapé preservado e carregamento visível no cadastro de acessos.
+Status: validação no GitHub e implantação pendentes. Ver `REGISTRO_CANONICO_TAREFA_03_IDENTIDADE_REAL_2026_09_12.md`. Tarefa 4 depende do encerramento comprovado desta etapa.
