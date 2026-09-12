@@ -74,3 +74,14 @@ Metas de homologação:
 - latência remota não pode transformar a aplicação em tela parada.
 
 Esses números são metas de teste, não podem ser declarados atingidos sem medição real.
+
+
+## Tarefa 1 autorizada — Perfil UBS
+Em 12/09/2026 foi autorizada a primeira tarefa da evolução do acesso único:
+
+- incluir **UBS** como quarto perfil disponível no primeiro acesso, ao lado de Administrador, TACS e Morador;
+- ampliar o cadastro de acessos para **Administrador / TACS / UBS**;
+- o cadastro UBS deve armazenar nome do responsável, função na UBS, unidade vinculada, PIN e permissões;
+- o perfil UBS desta tarefa é isolado; combinações envolvendo UBS ficam para a Tarefa 2;
+- a confirmação do primeiro acesso UBS não cria vínculo permanente do computador nesta tarefa; o reconhecimento do aparelho e a experiência da segunda entrada pertencem à tarefa específica posterior;
+- nenhuma mudança desta tarefa autoriza alterar regras internas dos painéis existentes.
