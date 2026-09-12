@@ -20,12 +20,12 @@ assert.match(recados,/loginAdminTab/);
 assert.match(recados,/loginTacsTab/);
 assert.match(recados,/portalTacsAdminTokenV1/);
 assert.match(recados,/portalTacsTerritorioTokenV1/);
-assert.match(recados,/accessMode=territorioToken\?'tacs':\(token\?'admin':''\)/,
-  'Recados deve inferir sessão TACS pelo token territorial, sem confiar no navegador.');
-assert.match(recados,/if\(accessMode==='tacs'&&territorioToken\)s\.territorioToken=territorioToken/,
-  'Recados deve enviar o token territorial quando a sessão é TACS.');
+assert.match(recados,/moduleCore=window\.ConectaModuleCoreV1/,
+  'Recados deve consumir o contexto/sessão definido pelo núcleo do Conecta.');
+assert.match(recados,/moduleCore\.session\(\{areaId:areaId,escopo:'recados'\}\)/,
+  'Recados deve receber do core a sessão territorial ou administrativa da área atual.');
 assert.match(recados,/admin_territorio_login_tacs/,
-  'Recados deve preservar o login individual do TACS.');
+  'Recados deve preservar temporariamente o login individual legado até a Tarefa 9.');
 
 const autofill=get('moradores-autofill.js');
 assert.match(autofill,/&areaId=' \+ encodeURIComponent\(portalAreaId\(\)\)/);
