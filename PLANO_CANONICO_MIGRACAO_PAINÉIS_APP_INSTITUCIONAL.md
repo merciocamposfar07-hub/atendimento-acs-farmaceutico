@@ -145,3 +145,19 @@ Validação concluída no RETRY_3: suíte integral aprovada, workflow Apps Scrip
 O limite de 200 versões foi saneado preservando as versões recentes `189–199`, e o workflow permanece corrigido para consumir apenas uma nova versão por implantação.
 
 **Regra de sequência cumprida:** a Tarefa 3 está fechada tecnicamente e a Tarefa 4 pode ser iniciada, sem antecipar nenhuma regra das tarefas posteriores.
+
+## Tarefa 4 autorizada — Reconhecimento do aparelho e perfil no segundo acesso
+Depois do primeiro acesso confirmado, o Conecta reconhece localmente a porta correspondente ao perfil já utilizado no aparelho e solicita somente o PIN para a nova entrada.
+
+Regras:
+- Administrador, TACS, Morador e UBS são reconhecidos como as quatro portas canônicas;
+- combinações de perfis continuam sendo identidade/permissões, não novas portas;
+- nenhum nome pessoal é exibido antes da autenticação;
+- Administrador e TACS reutilizam o cofre local cifrado e sincronizam a sessão remota depois;
+- Morador mantém o vínculo rápido já existente e entra por PIN;
+- UBS passa a ter vínculo seguro do aparelho e segundo acesso por PIN;
+- as outras portas do Administrador permanecem disponíveis;
+- modo diagnóstico administrativo do Morador fica fora desta tarefa.
+
+### Status da Tarefa 4: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK`.
