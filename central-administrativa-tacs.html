@@ -239,6 +239,8 @@ label{color:var(--tacs-app-text)!important;font-weight:800!important}
 }
 .csc-welcome-copy{position:relative;z-index:1}
 .csc-welcome-copy small{display:block;color:var(--tacs-app-muted)!important}
+.csc-welcome-copy .csc-authenticated-name{color:#fff!important;font-size:clamp(1.25rem,4.8vw,1.78rem)!important;line-height:1.3!important;letter-spacing:normal!important;white-space:normal!important;overflow-wrap:anywhere;word-break:normal}
+.csc-welcome-copy .csc-authenticated-profiles{color:#c9dce6!important;font-size:1rem!important;line-height:1.5!important;font-weight:700;white-space:normal;overflow-wrap:anywhere}
 .csc-welcome-copy h1{margin:6px 0 8px!important;font-size:1.78rem!important;line-height:1.06!important;letter-spacing:-.04em!important}
 .csc-welcome-copy p{margin:0 0 14px!important;color:var(--tacs-app-muted)!important;font-size:.92rem!important}
 .csc-central #identityPanel>.avatar,
@@ -2451,10 +2453,10 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 <div id="viewer" class="viewer" hidden><div class="viewer-bar"><button id="viewerBack" class="viewer-back" type="button">← Central</button><div id="viewerTitle" class="viewer-title">Painel</div></div><iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe></div>
 <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=064d169a96b7"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=064d169a96b7"></script>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=064d169a96b7"></script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=tarefa3-identidade-v1"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=064d169a96b7"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=064d169a96b7"></script>
-<script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=064d169a96b7"></script>
+<script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=tarefa3-identidade-v1"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-morador-pin-local-v2.js?v=064d169a96b7"></script>
 </body>
 </html>

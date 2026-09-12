@@ -1,0 +1,56 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const {JSDOM}=require('jsdom');
+const read=p=>fs.readFileSync(p,'utf8');
+const territory=read('apps-script/ZZZZ_17_TacsAreasAdminV1.gs');
+const central=read('central-administrativa-tacs.js');
+function part(src,start,end){return src.slice(src.indexOf(start),src.indexOf(end,src.indexOf(start)));}
+const backend={tacsTerritorioV1Texto_:v=>String(v??'').trim(),tacsTerritorioV1PerfilTem_:(p,r)=>String(p).split('_').includes(r)};
+vm.createContext(backend);
+vm.runInContext(part(territory,'function tacsTerritorioV1AdministradorAtual_','function tacsTerritorioV1SalvarTacs_'),backend);
+const admin={tacsId:'person-a',nomeCompleto:'Mércio José Campos dos Santos',perfil:'ADMIN_TACS',ativo:true};
+const other={tacsId:'person-b',nomeCompleto:'Outra Pessoa',perfil:'ADMIN',ativo:true};
+const resolve=backend.tacsTerritorioV1AdministradorAtual_;
+assert.equal(resolve({perfil:'ADMIN_GERAL',base:{}},[admin],[admin]),null,'Um único cadastro não prova a identidade');
+assert.equal(resolve({perfil:'ADMIN_GERAL',agenteId:'person-a',base:{agenteId:'person-a'}},[admin],[admin]),null,'Área/agente territorial não identifica administrador');
+assert.equal(resolve({base:{operadorId:'person-a'}},[other,admin],[]).nomeCompleto,admin.nomeCompleto);
+assert.equal(resolve({base:{operadorId:'person-a',nome:admin.nomeCompleto,perfil:'ADMIN_GERAL'}},[admin],[]).perfil,'ADMIN_TACS','Preferir perfil funcional do cadastro correspondente');
+assert.equal(resolve({base:{operadorId:'person-a'}},[admin,{...other,tacsId:'person-a'}],[]),null,'Não escolher primeiro resultado ambíguo');
+backend.TACS_TERRITORIO_V1={VERSAO:'test'};
+backend.tacsTerritorioV1LerTacs_=()=>[other,{tacsId:'agent-a',nomeCompleto:'Manuel Heleno',perfil:'TACS_MORADOR',ativo:true}];
+backend.tacsTerritorioV1LerAreas_=()=>[{areaId:'area-a',tacsId:'other-agent'}];
+backend.tacsTerritorioV1PublicarTacs_=x=>x;
+const ctx=backend.tacsTerritorioV1Dados_({perfil:'TACS',tacsId:'agent-a',areaId:'area-a'});
+assert.equal(ctx.usuarioAtual.nomeCompleto,'Manuel Heleno','Pessoa autenticada independe do responsável da área');
+const dom=new JSDOM('<div id="identityPanel"></div>',{runScripts:'outside-only'});
+const w=dom.window;
+w.eval("var context=null,mode='admin'; function text(v){return String(v==null?'':v).trim()} function esc(v){var x=document.createElement('span');x.textContent=v;return x.innerHTML} function el(id){return document.getElementById(id)};"+part(central,'var ACCESS_PROFILE_LABELS=','function renderContext('));
+for(const [profile,label] of Object.entries(w.ACCESS_PROFILE_LABELS)){
+ w.context={usuarioAtual:{nomeCompleto:admin.nomeCompleto,perfil:profile}};
+ w.mode=profile==='TACS'?'tacs':'admin';w.updateCentralWelcome({areaNome:'Outra área'});
+ assert.equal(w.document.querySelector('.csc-authenticated-name').textContent,admin.nomeCompleto);
+ assert.equal(w.document.querySelector('.csc-authenticated-profiles').textContent,label);
+}
+w.mode='tacs';w.context=ctx;w.updateCentralWelcome({tacsId:'person-b'});
+assert.equal(w.document.querySelector('.csc-authenticated-name').textContent,'Manuel Heleno');
+w.mode='admin';w.context={administradores:[admin]};w.updateCentralWelcome({});
+assert.match(w.document.getElementById('identityPanel').textContent,/Identificação indisponível/);
+assert(!w.document.getElementById('identityPanel').textContent.includes(admin.nomeCompleto));
+const longName='Júlia Maria da Silva '+ 'Conceição '.repeat(18)+'<img src=x onerror=alert(1)>';
+w.context={usuarioAtual:{nomeCompleto:longName,perfil:'UBS_MORADOR'}};w.updateCentralWelcome({});
+assert.equal(w.document.querySelector('.csc-authenticated-name').textContent,longName);
+assert.equal(w.document.querySelectorAll('img').length,0,'Nome não executa HTML');
+// Exercise the authenticated UBS endpoint with a combined registration.
+const ubs={conectaAcessoV1Cpf_:v=>v,conectaAcessoV1Texto_:backend.tacsTerritorioV1Texto_,tacsTerritorioV1PerfilTem_:backend.tacsTerritorioV1PerfilTem_,tacsTerritorioV1LerTacs_:()=>[{...admin,perfil:'ADMIN_TACS_UBS_MORADOR',cpf:'12345678901',pinSalt:'s',pinHash:'h',unidadeId:'U',funcaoUbs:'Coordenação',permissoes:['AGENDAS']}],tacsTerritorioV1CompararSeguro_:(a,b)=>a===b,tacsTerritorioV1HashPin_:p=>p==='1234'?'h':'wrong'};
+vm.createContext(ubs);vm.runInContext(part(read('apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs'),'function conectaAcessoV1IdentificarUbsPrimeiroAcesso_','function conectaAcessoV1TacsPorCpf_'),ubs);
+const identified=ubs.conectaAcessoV1IdentificarUbsPrimeiroAcesso_({cpf:'12345678901',pin:'1234',dispositivo:'test'});
+assert.equal(identified.perfilCadastrado,'ADMIN_TACS_UBS_MORADOR');
+assert.equal(identified.vinculoAparelhoCriado,false);
+assert.throws(()=>ubs.conectaAcessoV1IdentificarUbsPrimeiroAcesso_({cpf:'12345678901',pin:'5678',dispositivo:'test'}),/incorreto/);
+assert.match(read('conecta-morador-session-v1.js'),/Morador • Conecta Saúde Comunitária/);
+assert.match(read('central-administrativa-tacs.html'),/csc-authenticated-name\{[^}]*white-space:normal/);
+assert.match(read('teste-v1/painel-tacs-areas-v1.html'),/id="panelLoadStatus"[^>]*role="status"/);
+dom.window.close();
+console.log('TAREFA_3_IDENTIDADE_REAL_OK: identidade explícita, ambiguidades, 17 rótulos, UBS combinado, nomes completos e HTML seguro.');

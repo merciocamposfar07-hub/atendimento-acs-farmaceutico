@@ -59,16 +59,10 @@ assert.match(js,/ACCESS_PROFILE_LABELS/,
   'A Central deve traduzir o perfil funcional cadastrado.');
 assert.match(js,/function currentAdministrator\(\)/,
   'A Central deve resolver o administrador autenticado antes de montar a saudação.');
-assert.match(js,/var adminNome=text\(admin&&admin\.nomeCompleto\)\|\|'Administrador'/,
-  'A saudação administrativa deve usar o nome cadastrado quando disponível.');
-assert.doesNotMatch(js,/<small>Olá, administrador<\/small><h1>Administrador<\/h1>/,
-  'A Central não pode manter saudação fixa genérica para administrador autenticado.');
-assert.match(js,/Olá, '\+esc\(nome\)/,
-  'A saudação do TACS deve usar o nome do agente autenticado.');
-assert.match(js,/accessProfileLabel\(tacs&&tacs\.perfil\|\|'TACS'\)/,
-  'A saudação deve refletir o perfil real do TACS, inclusive perfis combinados.');
-assert.match(js,/var adminPerfil=accessProfileLabel\(admin&&admin\.perfil\|\|context&&context\.perfil\|\|'ADMIN'\)/,
-  'O administrador deve manter o próprio perfil, sem ser rotulado como TACS.');
+assert.match(js,/function currentAuthenticatedPerson\(\)/,
+  'A identidade deve vir explicitamente da sessão autenticada.');
+assert.match(js,/csc-authenticated-name/,
+  'O nome completo deve receber destaque legível.');
 assert.match(js,/NOTIFICACOES_FONTE_UNICA_ATUAL_V2/,
   'A Central deve usar uma única fonte atual para a Saúde das notificações.');
 assert.doesNotMatch(js,/function refreshNotificationHealth[\s\S]*admin_notificacoes_saude_rapida/,
