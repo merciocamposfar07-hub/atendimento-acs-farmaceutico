@@ -338,7 +338,9 @@ var REQUEST_READ_ACTIONS={
 };
 var REQUEST_SECRET_KEYS={
   token:1,territoriotoken:1,dispositivo:1,requestid:1,callback:1,pin:1,
-  quickkey:1,chaveconfianca:1,authorization:1,bearer:1
+  quickkey:1,chaveconfianca:1,authorization:1,bearer:1,
+  /* metadado somente do cliente; não altera a leitura remota */
+  escopo:1
 };
 function requestRoot(){
   try{if(window.top&&window.top.location&&window.top.location.origin===location.origin)return window.top}catch(e){}
