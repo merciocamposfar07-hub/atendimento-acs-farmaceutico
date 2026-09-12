@@ -445,5 +445,43 @@
       "pagesEvidenceRun": 34723391600,
       "pagesEvidenceResult": "success"
     }
+  },
+  "task9PinOnlyAtEntry": {
+    "status": "validated-internal-deployed",
+    "authorizedOn": "2026-09-12",
+    "validatedOn": "2026-09-12",
+    "centralOwnsAuthentication": true,
+    "centralOwnsLogoff": true,
+    "modulePinControlsRuntimeBlocked": true,
+    "moduleProfileSelectionBlocked": true,
+    "moduleCanWriteGlobalSession": false,
+    "moduleCanRemoveGlobalSession": false,
+    "moduleCanClearGlobalSession": false,
+    "missingCanonicalSessionBehavior": "return-to-central-without-local-login",
+    "moduleContextSource": "ConectaModuleCoreV1",
+    "legacyHandlers": "preserved-in-source-but-blocked-at-runtime",
+    "persistentShellDeferredToTask10": true,
+    "specificGate": "TAREFA_9_PIN_SOMENTE_ENTRADA_OK",
+    "validation": {
+      "specificGate": "TAREFA_9_PIN_SOMENTE_ENTRADA_OK",
+      "fullSuite": "passed",
+      "qualityGate": "QUALITY_GATE_V101_OK",
+      "initialWorkflowRun": 34722437567,
+      "initialRunResult": "cancelled-after-legacy-admin-transport-test-held-open-handles-before-deploy",
+      "retry1WorkflowRun": 34723103101,
+      "retry1RunResult": "superseded-before-deploy-after-next-historical-test-was-aligned",
+      "retry2WorkflowRun": 34723196310,
+      "appsScriptPreviousVersion": 206,
+      "appsScriptCurrentVersion": 207,
+      "appsScriptHealth": "passed-first-attempt",
+      "appsScriptActiveDeploymentVersionsAfterDeploy": [
+        6,
+        7,
+        9,
+        207
+      ],
+      "pagesWorkflowRun": 34723459550,
+      "pagesDeploymentSuccess": true
+    }
   }
 }
