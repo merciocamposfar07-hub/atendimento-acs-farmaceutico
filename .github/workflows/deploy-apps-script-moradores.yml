@@ -106,10 +106,13 @@ jobs:
           DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
           PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
           test -n "$PREVIOUS_VERSION"
+          ACTIVE_VERSIONS=$(printf '%s\n' "$DEPLOYMENTS" | grep -Eo '@[0-9]+' | tr -d '@' | sort -n -u | paste -sd, - || true)
+          printf 'Versão atual do deployment principal: %s; versões em uso por deployments: %s\n' "$PREVIOUS_VERSION" "${ACTIVE_VERSIONS:-nenhuma}"
 
-          npx --yes @google/clasp@3.3.0 version "Backup antes das agendas territoriais - ${GITHUB_SHA::7}"
+          # A versão já implantada é o ponto de rollback imutável. Criar uma versão
+          # adicional só para backup consumia desnecessariamente o limite de 200.
           npx --yes @google/clasp@3.3.0 push --force
-          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Agendas territoriais 1.0.0 e TACS 1.2.0 - ${GITHUB_SHA::7}")
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Conecta Saúde Comunitária - ${GITHUB_SHA::7}")
           NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
           test -n "$NEW_VERSION"
 
