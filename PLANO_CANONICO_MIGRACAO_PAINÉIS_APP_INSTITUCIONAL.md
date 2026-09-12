@@ -319,5 +319,7 @@ Agendas, Profissionais e Recados, quando executados pelo core, não usam mais fa
 
 Deduplicação continua reservada à Tarefa 13; timeout/sessão continua na Tarefa 14.
 
-### Status da Tarefa 12: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_12_CACHE_FRESCOR_OK`.
+### Status final da Tarefa 12: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate específico `TAREFA_12_CACHE_FRESCOR_OK` aprovado junto com o gate pós-auditoria `TAREFA_11_DESEMPENHO_MODULOS_OK`. A suíte integral, o `QUALITY_GATE_V101_OK` e a homologação `V101_INTERNO_APROVADO=SIM` passaram no workflow `34725768331`. GitHub Pages do mesmo estado: run `34725763575`, success. Apps Script permaneceu na versão `208`, pois não houve alteração de backend.
+
+**Sequência canônica:** Tarefa 11 revalidada após correção pós-auditoria; Tarefa 12 encerrada tecnicamente; Tarefa 13 permanece a próxima etapa.
