@@ -115,3 +115,7 @@ Perfis válidos no cadastro de acesso:
 As combinações são identidade/permissões do mesmo cadastro, não novos botões de entrada. Se o perfil contém TACS, preserva exigências de CNS, microárea e vínculo territorial; se contém UBS, exige função na UBS e unidade vinculada; se contém ambos, exige os dois conjuntos.
 
 A Tarefa 2 não implementa reconhecimento persistente do aparelho, segunda entrada exclusiva por perfil nem modo diagnóstico administrativo.
+
+
+### Status da Tarefa 2: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Matriz de 14 perfis validada, incluindo **UBS pura**. Gate específico e suíte integral aprovados. Apps Script versão 200 implantado com health checks aprovados e GitHub Pages publicado. A validação visual final no aparelho do usuário permanece pendente. A Tarefa 3 não foi iniciada.
