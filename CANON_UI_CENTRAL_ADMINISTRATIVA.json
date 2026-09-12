@@ -133,7 +133,7 @@
     ]
   },
   "task2ProfileCombinationsUbs": {
-    "status": "implemented-awaiting-full-validation",
+    "status": "validated-internal-deployed",
     "authorizedOn": "2026-09-12",
     "firstAccessDoors": [
       "ADMIN",
@@ -163,6 +163,16 @@
     "ubsRequirementsPreserved": true,
     "persistentDeviceRecognition": false,
     "secondAccessBehaviorDeferred": true,
-    "diagnosticModeDeferred": true
+    "diagnosticModeDeferred": true,
+    "validatedOn": "2026-09-12",
+    "specificGate": "TAREFA_2_COMBINACOES_PERFIS_UBS_OK",
+    "fullSuite": "passed",
+    "appsScriptWorkflowRun": 34713166644,
+    "appsScriptVersion": 200,
+    "appsScriptHealth": "passed",
+    "pagesWorkflowRun": 34713294470,
+    "pagesDeploymentHead": "6cff63d84eb15ef7fe19816454e7480b1ca1b320",
+    "pagesDeploymentSuccess": true,
+    "userDeviceValidation": "pending"
   }
 }
