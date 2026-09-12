@@ -304,3 +304,20 @@ Gate `TAREFA_11_DESEMPENHO_MODULOS_OK`, suíte integral, `QUALITY_GATE_V101_OK`,
 Nenhuma alteração de backend Apps Script foi necessária; a produção permanece na versão **208** e nenhuma nova versão foi consumida.
 
 **Regra de sequência:** a Tarefa 11 está encerrada tecnicamente. A Tarefa 12 permanece separada para versionamento/frescor de cache.
+
+
+### Registro canônico — Tarefa 12 / Versão e frescor do cache
+Fluxo desta etapa:
+
+`snapshot versionado → exibir somente leitura → servidor obrigatoriamente consultado → comparar referência/fingerprint → atualizar tela se mudou → confirmar estado crítico somente com remoto atual`.
+
+O cache do core passa ao schema 2 e registra `cacheVersionReference`, `confirmedAt` e `checkedAt`. Cache legado sem versão permanece apenas como continuidade visual stale e não autoritativa.
+
+A auditoria desta etapa também encontrou e corrigiu uma exceção da Tarefa 11: Agendas e Profissionais podiam encerrar a carga usando o `sharedAdminRead` de 5 segundos. Agora essa leitura serve apenas para pintura imediata; a consulta remota própria sempre continua.
+
+Agendas, Profissionais e Recados, quando executados pelo core, não usam mais fallback antigo sem referência de versão.
+
+Deduplicação continua reservada à Tarefa 13; timeout/sessão continua na Tarefa 14.
+
+### Status da Tarefa 12: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_12_CACHE_FRESCOR_OK`.
