@@ -654,10 +654,7 @@
     "writesDeduplicated": false,
     "mutationInvalidatesSharedReads": true,
     "generationGuardsLateReads": true,
-    "centralReadsCovered": [
-      "admin_territorio_dados",
-      "admin_moradores_status"
-    ],
+    "centralReadsCovered": [],
     "sharedReadAcrossModules": [
       {
         "action": "admin_dados",
@@ -686,6 +683,10 @@
       "fullSuite": "pending",
       "qualityGate": "pending",
       "pagesDeployment": "pending"
-    }
+    },
+    "centralOwnsContext": true,
+    "centralLoadsConsumerBridge": false,
+    "brokerConsumers": "modules-only",
+    "brokerSharedRegistry": "window.top volatile memory"
   }
 }
