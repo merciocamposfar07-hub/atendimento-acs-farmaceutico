@@ -49,13 +49,24 @@ function aquecerPinMorador(){
 function ensureStyle(){
  if(el('cscUnifiedAccessStyle'))return;
  var s=document.createElement('style');s.id='cscUnifiedAccessStyle';s.textContent=
- '.login-tabs.csc-three{grid-template-columns:repeat(3,minmax(0,1fr))!important}.csc-access-panel{margin-top:4px}.csc-access-panel[hidden]{display:none!important}.csc-access-note{margin:10px 0;padding:12px 13px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:15px;background:rgba(255,255,255,.04);color:var(--tacs-app-muted,#adc4d2)}.csc-access-note strong{color:#fff}.csc-forgot{width:100%;min-height:48px;margin-top:11px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:15px;background:transparent;color:var(--tacs-app-accent2,#62c8e8);font-weight:850}.csc-inline-actions{display:grid;gap:9px;margin-top:13px}.csc-recovery{position:fixed;inset:0;z-index:60000;display:grid;place-items:end center;padding:16px;background:rgba(2,12,20,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}.csc-recovery[hidden]{display:none!important}.csc-recovery-card{width:min(520px,100%);max-height:88svh;overflow:auto;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:24px;background:var(--tacs-app-card,#102d46);padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.45);color:#fff}.csc-recovery-card h3{margin:0 0 8px;font-size:1.35rem}.csc-recovery-close{float:right;width:44px;height:44px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:14px;background:var(--tacs-app-top,#0b263d);color:#fff;font-size:1.4rem}.csc-first-name{font-weight:900;color:var(--tacs-app-accent,#83efa9)}@media(max-width:430px){.login-tabs.csc-three{gap:6px}.login-tabs.csc-three .tab{font-size:.9rem;padding:8px 4px}}';
+ '.login-tabs.csc-four{grid-template-columns:repeat(4,minmax(0,1fr))!important}.csc-access-panel{margin-top:4px}.csc-access-panel[hidden]{display:none!important}.csc-access-note{margin:10px 0;padding:12px 13px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:15px;background:rgba(255,255,255,.04);color:var(--tacs-app-muted,#adc4d2)}.csc-access-note strong{color:#fff}.csc-forgot{width:100%;min-height:48px;margin-top:11px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:15px;background:transparent;color:var(--tacs-app-accent2,#62c8e8);font-weight:850}.csc-inline-actions{display:grid;gap:9px;margin-top:13px}.csc-recovery{position:fixed;inset:0;z-index:60000;display:grid;place-items:end center;padding:16px;background:rgba(2,12,20,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}.csc-recovery[hidden]{display:none!important}.csc-recovery-card{width:min(520px,100%);max-height:88svh;overflow:auto;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:24px;background:var(--tacs-app-card,#102d46);padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.45);color:#fff}.csc-recovery-card h3{margin:0 0 8px;font-size:1.35rem}.csc-recovery-close{float:right;width:44px;height:44px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:14px;background:var(--tacs-app-top,#0b263d);color:#fff;font-size:1.4rem}.csc-first-name{font-weight:900;color:var(--tacs-app-accent,#83efa9)}@media(max-width:430px){.login-tabs.csc-four{gap:5px}.login-tabs.csc-four .tab{font-size:.78rem;padding:8px 3px}}';
  document.head.appendChild(s);
 }
 function addResidentTab(){
  var tabs=document.querySelector('.login-tabs'),tacs=el('tabTacs');if(!tabs||!tacs||el('tabMorador'))return;
- tabs.classList.add('csc-three');
+ tabs.classList.add('csc-four');
  var b=document.createElement('button');b.id='tabMorador';b.type='button';b.className='tab';b.textContent='Morador';b.setAttribute('aria-selected','false');tabs.appendChild(b);
+}
+function addUbsTab(){
+ var tabs=document.querySelector('.login-tabs');if(!tabs||el('tabUbs'))return;
+ tabs.classList.add('csc-four');
+ var b=document.createElement('button');b.id='tabUbs';b.type='button';b.className='tab';b.textContent='UBS';b.setAttribute('aria-selected','false');tabs.appendChild(b);
+}
+function ubsMarkup(){
+ if(el('ubsLogin'))return;
+ var box=document.createElement('div');box.id='ubsLogin';box.className='csc-access-panel';box.hidden=true;
+ box.innerHTML='<div class="csc-access-note"><strong>Primeiro acesso da UBS</strong><br>O responsável precisa estar previamente cadastrado em Administrador / TACS / UBS. Informe CPF e PIN para confirmar sua identificação.</div>'+field('cscUbsCpf','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"')+field('cscUbsPin','PIN de acesso','type="password" inputmode="numeric" maxlength="8" autocomplete="off"')+'<div class="csc-inline-actions"><button class="btn green" id="cscUbsIdentify" type="button">Identificar responsável da UBS</button></div><div id="cscUbsIdentity" class="csc-access-note" hidden></div>';
+ var anchor=el('moradorLogin')||el('tacsLogin');if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(box,anchor.nextSibling);
 }
 function residentMarkup(){
  var box=document.createElement('div');box.id='moradorLogin';box.className='csc-access-panel';box.hidden=true;
@@ -73,17 +84,19 @@ function recoveryMarkup(){
 function resetState(){state={cpf:'',nascimento:'',nome:'',areaId:'',identidadeToken:''}}
 function setTabs(role){
  activeRole=role;
- ['Admin','Tacs','Morador'].forEach(function(k){var n=el('tab'+k);if(!n)return;var on=role===k.toLowerCase()||(k==='Tacs'&&role==='tacs');n.classList.toggle('active',on);n.setAttribute('aria-selected',on?'true':'false')});
+ ['Admin','Tacs','Morador','Ubs'].forEach(function(k){var n=el('tab'+k);if(!n)return;var on=role===k.toLowerCase()||(k==='Tacs'&&role==='tacs')||(k==='Ubs'&&role==='ubs');n.classList.toggle('active',on);n.setAttribute('aria-selected',on?'true':'false')});
  var tabs=document.querySelector('.login-tabs');if(tabs){var visible=Array.prototype.filter.call(tabs.querySelectorAll('.tab'),function(x){return !x.hidden}).length||1;tabs.style.gridTemplateColumns='repeat('+visible+',minmax(0,1fr))'};
 }
 function showRole(role){
  setTabs(role);
- var a=el('adminLogin'),t=el('tacsLogin'),m=el('moradorLogin');
- if(a)a.hidden=role!=='admin';if(t)t.hidden=role!=='tacs';if(m)m.hidden=role!=='morador';
+ var a=el('adminLogin'),t=el('tacsLogin'),m=el('moradorLogin'),u=el('ubsLogin');
+ if(a)a.hidden=role!=='admin';if(t)t.hidden=role!=='tacs';if(m)m.hidden=role!=='morador';if(u)u.hidden=role!=='ubs';
+ var forgot=el('cscForgotPin');if(forgot)forgot.hidden=role==='ubs';
  if(role==='morador'){renderResidentStart();setStatus(profile()?'Digite seu PIN de 4 números.':'Primeiro acesso: informe seu CPF.','')}
+ if(role==='ubs')setStatus('Primeiro acesso UBS: confirme o cadastro do responsável.','');
 }
 function focusRoleField(role){
- var n=role==='admin'?el('adminPin'):role==='tacs'?el('tacsPin'):(el('cscResidentPin')||el('cscResidentCpf'));
+ var n=role==='admin'?el('adminPin'):role==='tacs'?el('tacsPin'):role==='ubs'?(el('cscUbsCpf')||el('cscUbsPin')):(el('cscResidentPin')||el('cscResidentCpf'));
  if(!n||n.disabled||n.hidden)return;
  try{n.focus({preventScroll:true})}catch(e){try{n.focus()}catch(_e){}}
 }
@@ -94,6 +107,17 @@ function selectRoleFromTap(role,event){
 }
 function field(id,label,attrs){
  return '<label for="'+id+'">'+label+'</label><input class="field" id="'+id+'" '+(attrs||'')+'>';
+}
+function identifyUbsFirstAccess(){
+ var cpf=digits(el('cscUbsCpf')&&el('cscUbsCpf').value),pin=digits(el('cscUbsPin')&&el('cscUbsPin').value),out=el('cscUbsIdentity');
+ if(cpf.length!==11){setStatus('Informe um CPF válido com 11 números.','err');return}
+ if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN de acesso com 4 a 8 números.','err');return}
+ setStatus('Confirmando o cadastro UBS…','warn');
+ post('conecta_ubs_identificar_primeiro_acesso',{cpf:cpf,pin:pin,dispositivo:device()}).then(function(r){
+  if(out){out.hidden=false;out.innerHTML='<strong>Cadastro UBS confirmado</strong><br><span class="csc-first-name">'+esc(r.nome||'Responsável UBS')+'</span><br>'+esc(r.funcaoUbs||'Função não informada')+' • '+esc(r.unidadeId||'Unidade não informada');}
+  if(el('cscUbsPin'))el('cscUbsPin').value='';
+  setStatus(r.message||'Responsável UBS identificado.','ok');
+ }).catch(function(e){if(out)out.hidden=true;setStatus(e.message,'err')});
 }
 function renderResidentStart(){
  var stage=el('residentStage');if(!stage)return;resetState();var p=profile();
@@ -178,7 +202,7 @@ function openResidentPortal(r,onboarding){
  setTimeout(function(){location.assign(url)},0);
 }
 
-function currentRecoveryRole(){return activeRole==='tacs'?'TACS':activeRole==='morador'?'MORADOR':'ADMIN'}
+function currentRecoveryRole(){return activeRole==='tacs'?'TACS':activeRole==='morador'?'MORADOR':activeRole==='ubs'?'UBS':'ADMIN'}
 function openRecovery(){
  var modal=el('cscRecovery'),body=el('cscRecoveryBody'),role=currentRecoveryRole();if(!modal||!body)return;
  modal.hidden=false;body.innerHTML='<div class="csc-access-note">Perfil: <strong>'+esc(role==='ADMIN'?'Administrador':role==='TACS'?'TACS — Agente Comunitário de Saúde':'Morador')+'</strong></div>'+field('cscRecoveryCpf','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"')+'<div class="csc-inline-actions"><button class="btn green" id="cscRecoveryStart" type="button">Confirmar CPF</button></div>';
@@ -195,12 +219,14 @@ function closeRecovery(){var m=el('cscRecovery');if(m)m.hidden=true;var lead=el(
 
 function install(){
  var tacsOnly=false;try{tacsOnly=String(new URLSearchParams(location.search).get('acesso')||'').toLowerCase()==='tacs'}catch(e){}
- ensureStyle();addResidentTab();residentMarkup();recoveryMarkup();
- var tabs=document.querySelector('.login-tabs');if(tabs)tabs.classList.add('csc-three');
- var a=el('tabAdmin'),t=el('tabTacs'),m=el('tabMorador');
+ ensureStyle();addResidentTab();residentMarkup();addUbsTab();ubsMarkup();recoveryMarkup();
+ var tabs=document.querySelector('.login-tabs');if(tabs)tabs.classList.add('csc-four');
+ var a=el('tabAdmin'),t=el('tabTacs'),m=el('tabMorador'),u=el('tabUbs');
  if(a)a.addEventListener('click',function(e){selectRoleFromTap('admin',e)});
  if(t)t.addEventListener('click',function(e){selectRoleFromTap('tacs',e)});
  if(m)m.addEventListener('click',function(e){selectRoleFromTap('morador',e)});
+ if(u)u.addEventListener('click',function(e){selectRoleFromTap('ubs',e)});
+ var ubsIdentify=el('cscUbsIdentify');if(ubsIdentify)ubsIdentify.addEventListener('click',identifyUbsFirstAccess);
  var forgot=el('cscForgotPin');if(forgot)forgot.addEventListener('click',openRecovery);
  var close=el('cscRecoveryClose');if(close)close.addEventListener('click',closeRecovery);
  if(el('loginPanel')&&!el('loginPanel').hidden)showRole(tacsOnly?'tacs':'admin');
