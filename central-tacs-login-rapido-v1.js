@@ -192,6 +192,7 @@ function abrirSessao(token,pin,meta){
     sessionStorage.setItem(EXCLUSIVE_MODE_KEY,'tacs');
     if(pin){sessionStorage.setItem('portalTacsPinLocalPendenteV2',pin);sessionStorage.setItem('portalTacsPinLocalPerfilV2','tacs')}
   }catch(e){}
+  try{if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.marcarPerfil==='function')window.ConectaAcessoUnificado.marcarPerfil('TACS')}catch(e){}
   enforceExclusiveTacsUi();
   setStatus('Acesso validado. Abrindo sua área…','ok');
   var api=centralPinLocal();
