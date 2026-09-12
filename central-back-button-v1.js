@@ -282,21 +282,45 @@ function hasCentralSession(){
   try{return !!(sessionStorage.getItem('portalTacsAdminTokenV1')||sessionStorage.getItem('portalTacsTerritorioTokenV1'))}catch(e){return false}
 }
 function removeRedundantPinAccess(){
-  if(!isAdminPanel||!(fromCentral||hasCentralSession()))return;
+  if(!isAdminPanel)return;
   var style=document.getElementById('portalTacsSinglePinEntryV1');
   if(!style){
     style=document.createElement('style');
     style.id='portalTacsSinglePinEntryV1';
     style.textContent=[
       '#adminLogin,#tacsLogin,#accessActions,#pinHelp,#loginAdminTab,#loginTacsTab{display:none!important}',
-      'label[for="pin"],#pin,label[for="adminPin"],#adminPin,label[for="tacsPinLogin"],#tacsPinLogin,label[for="tacsPinPublicacoes"],#tacsPinPublicacoes,label[for="tacsPinAccess"],#tacsPinAccess{display:none!important}',
-      '#entrar,#entrarTacs,#loginAdmin,#loginTacs,#adminLoginButton,#tacsLoginButton{display:none!important}'
+      'label[for="pin"],#pin,#pinLabel,label[for="adminPin"],#adminPin,label[for="tacsPinLogin"],#tacsPinLogin,label[for="tacsPinPublicacoes"],#tacsPinPublicacoes,label[for="tacsPinAccess"],#tacsPinAccess{display:none!important}',
+      '#entrar,#entrarTacs,#loginAdmin,#loginTacs,#adminLoginButton,#tacsLoginButton{display:none!important}',
+      '.csc-legacy-auth-heading,.csc-legacy-auth-note,.csc-legacy-auth-actions{display:none!important}'
     ].join('\n');
     (document.head||document.documentElement).appendChild(style);
   }
-  ['adminLogin','tacsLogin','accessActions','pinHelp','loginAdminTab','loginTacsTab','pin','adminPin','tacsPinLogin','tacsPinPublicacoes','tacsPinAccess','entrar','entrarTacs','loginAdmin','loginTacs','adminLoginButton','tacsLoginButton'].forEach(function(id){
+  ['adminLogin','tacsLogin','accessActions','pinHelp','loginAdminTab','loginTacsTab','pin','pinLabel','adminPin','tacsPinLogin','tacsPinPublicacoes','tacsPinAccess','entrar','entrarTacs','loginAdmin','loginTacs','adminLoginButton','tacsLoginButton'].forEach(function(id){
     var n=document.getElementById(id);if(n)n.hidden=true;
   });
+  ['adminLogin','tacsLogin','accessActions','pinHelp','loginAdminTab','loginTacsTab'].forEach(function(id){
+    var n=document.getElementById(id);if(n&&n.closest('.abas'))n.closest('.abas').classList.add('csc-legacy-auth-actions');
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('h2,h3,strong,p,.muted'),function(n){
+    var v=String(n.textContent||'').trim();
+    if(/^(Acesso administrativo|Acesso às publicações|Entrar)$/i.test(v))n.classList.add('csc-legacy-auth-heading');
+    if(/PIN (administrativo|individual|do administrador)|Digite o PIN|escolha o tipo de acesso|O administrador pode alternar áreas.*PIN individual|O PIN (é enviado|não fica salvo)/i.test(v))n.classList.add('csc-legacy-auth-note');
+  });
+  var residentPin=document.getElementById('tacsPinAccess');
+  if(residentPin){
+    var box=residentPin.closest('.area-control');if(box)box.classList.add('csc-legacy-auth-actions');
+  }
+  var status=document.getElementById('loginStatus');
+  function suppressLegacyPrompt(){
+    if(!status)return;
+    var v=String(status.textContent||'');
+    if(/Digite .*PIN|Escolha o tipo de acesso|Aguardando acesso|entre como TACS|PIN administrativo/i.test(v))status.hidden=true;
+  }
+  suppressLegacyPrompt();
+  if(status&&window.MutationObserver){
+    var obs=new MutationObserver(suppressLegacyPrompt);obs.observe(status,{childList:true,subtree:true,characterData:true});
+    window.addEventListener('pagehide',function(){try{obs.disconnect()}catch(e){}},{once:true});
+  }
 }
 
 function centralUrl(){
