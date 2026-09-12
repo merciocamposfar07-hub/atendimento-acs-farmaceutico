@@ -46,6 +46,12 @@ function installReturnGuard(){
  * Mantemos apenas proteções leves de layout e desativamos qualquer viewer legado.
  */
 function installPaintGuard(){
+  /* TAREFA_10_SHELL_PERSISTENTE_V1: a correção antiga de Safari que escondia o
+     viewer não pode desativar o shell canônico. Ela permanece apenas como fallback legado. */
+  if(window.ConectaCentralShellV1&&typeof window.ConectaCentralShellV1.abrir==='function'){
+    var antigo=document.getElementById(PAINT_STYLE_ID);if(antigo&&antigo.parentNode)antigo.remove();
+    return;
+  }
   if(!document.getElementById(PAINT_STYLE_ID)){
     var style=document.createElement('style');
     style.id=PAINT_STYLE_ID;
@@ -113,6 +119,8 @@ function restoreModuleTouchState(){
 }
 
 function installSafeNavigation(){
+  /* O shell canônico assume os cliques; não instalar captura concorrente/location.assign. */
+  if(window.ConectaCentralShellV1&&typeof window.ConectaCentralShellV1.abrir==='function')return;
   if(document.documentElement.dataset[SAFE_NAV_FLAG]==='1')return;
   document.documentElement.dataset[SAFE_NAV_FLAG]='1';
 
