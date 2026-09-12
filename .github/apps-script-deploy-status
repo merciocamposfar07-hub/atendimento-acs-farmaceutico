@@ -1,6 +1,6 @@
-run_id=34719916306
-head_sha=48610542274b2bd48fbff4f4eec70449f86df450
-conclusion=success
-jobs=testar-e-implantar:completed:success
+run_id=34720676321
+head_sha=893be21e6320efb474f625c44a798196f1396acf
+conclusion=cancelled
+jobs=testar-e-implantar:completed:cancelled
 failed_steps=
-recorded_at=2026-09-12T21:27:35Z
+recorded_at=2026-09-12T22:02:33Z
