@@ -201,3 +201,21 @@ A Tarefa 7 mantém integralmente as barreiras de segurança da Tarefa 6 e não i
 O RETRY 2 `34719916306` passou pela suíte integral, implantou Apps Script **205** no mesmo deployment e aprovou os health checks na primeira tentativa. GitHub Pages run `34719909246` também passou. As duas tentativas anteriores foram bloqueadas antes do deploy e não criaram versões.
 
 **Sequência canônica:** Tarefa 7 encerrada tecnicamente; Tarefa 8 liberada para execução.
+
+
+### Registro canônico — Tarefa 8 / Painéis como módulos do núcleo Conecta
+A Central passa a ser a autoridade do contexto compartilhado. Os painéis administrativos conectados recebem do núcleo identidade, perfil, unidade/função UBS, área, permissões, sessão, estado e política de cache.
+
+Fluxo desta tarefa:
+`Central autenticada → publicar contexto Conecta → abrir módulo → módulo consome ConectaModuleCoreV1 → usar sessão/área/permissões recebidas → preservar compatibilidade legada somente onde ainda necessária.`
+
+Tokens remotos não são gravados no snapshot compartilhado. Agendas, Moradores, Profissionais, Recados/Campanhas, Suporte, TACS/Áreas e Municípios/Organizações passam a consumir o bridge do core.
+
+A remoção definitiva dos logins/PIN internos dos módulos pertence à Tarefa 9. O shell persistente pertence à Tarefa 10. A migração definitiva painel a painel continua reservada à Tarefa 16, iniciando por Agendas e vagas.
+
+### Status final da Tarefa 8: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate `TAREFA_8_MODULOS_CORE_CONTEXTO_OK` e suíte integral aprovados. O RETRY 2 `34721946917` implantou Apps Script **206** no mesmo deployment; o health check passou na primeira tentativa. GitHub Pages run `34722041965` concluiu build, deploy e report com sucesso.
+
+As duas execuções anteriores foram interrompidas antes do deploy por gates legados incompatíveis com a nova fonte de autoridade do core; os testes foram alinhados sem remover antecipadamente os logins transitórios da Tarefa 9.
+
+**Sequência canônica:** Tarefa 8 encerrada tecnicamente; Tarefa 9 liberada para execução.
