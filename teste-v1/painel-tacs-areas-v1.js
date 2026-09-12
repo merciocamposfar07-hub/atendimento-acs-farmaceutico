@@ -4,7 +4,7 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var TACS_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
-var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'territorio'}):null,modulePerf=moduleCore&&moduleCore.performance;
+var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'territorio'}):null,modulePerf=moduleCore&&moduleCore.performance,moduleRequests=moduleCore&&moduleCore.requests;
 var token=moduleSession&&moduleSession.token||'';
 var territorioToken=moduleSession&&moduleSession.territorioToken||'';
 var device=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
@@ -117,6 +117,9 @@ function loginStatus(msg,type){var node=el('loginStatus');node.textContent=msg;n
 function requestId(prefix){return String(prefix||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);}
 function session(){if(moduleCore&&typeof moduleCore.session==='function')return moduleCore.session({escopo:'territorio'});var out={dispositivo:device};if(mode==='tacs'&&territorioToken)out.territorioToken=territorioToken;else if(token)out.token=token;return out;}
 function payload(extra){var out=session();Object.keys(extra||{}).forEach(function(k){out[k]=extra[k];});return out;}
+function coreRead(action,payloadData,runner,cb){if(moduleRequests&&typeof moduleRequests.read==='function'){moduleRequests.read(action,payloadData,function(done){runner(done)},function(result,meta){cb(result,meta)}).catch(function(e){cb({ok:false,temporario:true,message:text(e&&e.message)||'Falha na leitura compartilhada.'},{shared:false,source:'broker-error'})});return}runner(function(result){cb(result,{shared:false,source:'legacy'})})}
+function noteRequestAction(action){if(moduleRequests&&typeof moduleRequests.noteAction==='function')moduleRequests.noteAction(action)}
+
 
 function jsonp(action,params,cb){
   var name='territorioCb'+Date.now()+Math.floor(Math.random()*100000),script=document.createElement('script'),done=false;
@@ -154,6 +157,7 @@ function poll(){
 }
 
 function post(action,fields,resultAction,cb){
+  noteRequestAction(action);
   if(active){cb({ok:false,message:'Aguarde a operação anterior terminar.'});return;}
   var id=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form'),all={};
   Object.keys(fields||{}).forEach(function(k){all[k]=fields[k];});all.action=action;all.requestId=id;
@@ -184,7 +188,7 @@ function loadData(message,operationMessage){
       loginStatus('Última confirmação territorial exibida. Atualizando em segundo plano…','warn');
     });
   }
-  territoryPost('admin_territorio_dados',{},function(r){
+  var leituraPayload=payload({});coreRead('admin_territorio_dados',leituraPayload,function(done){post('admin_territorio_dados',leituraPayload,'admin_territorio_result',done)},function(r){
     if(!r||r.ok!==true){if(cached){territoryConfirmed=false;syncTerritoryWriteState();loginStatus('Última confirmação territorial permanece disponível somente para consulta; a atualização ainda não foi confirmada.','warn');if(operationMessage)status('A alteração foi salva, mas a releitura ainda não foi confirmada.','warn');return}clearSession();loginStatus(text(r&&r.message||'Sessão inválida ou expirada.'),'err');if(operationMessage)status('A alteração foi salva, mas não foi possível atualizar a tela. Reabra o painel.','err');return;}
     var payload=territoryPerformancePayload(r),diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('territorio',payload):{changed:true};
     territoryConfirmed=true;data=payload;
