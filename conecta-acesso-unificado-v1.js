@@ -12,6 +12,27 @@ function text(v){return String(v==null?'':v).trim()}
 function digits(v){return text(v).replace(/\D/g,'')}
 function esc(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function el(id){return document.getElementById(id)}
+var ACCESS_PROFILE_LABELS={
+ ADMIN_TACS_UBS_MORADOR:'Administrador + TACS + UBS + Morador',
+ ADMIN_TACS_UBS:'Administrador + TACS + UBS',
+ ADMIN_UBS_MORADOR:'Administrador + UBS + Morador',
+ TACS_UBS_MORADOR:'TACS + UBS + Morador',
+ ADMIN_UBS:'Administrador + UBS',
+ TACS_UBS:'TACS + UBS',
+ UBS_MORADOR:'UBS + Morador',
+ ADMIN_TACS_MORADOR:'Administrador + TACS + Morador',
+ ADMIN_TACS:'Administrador + TACS',
+ ADMIN_MORADOR:'Administrador + Morador',
+ TACS_MORADOR:'TACS + Morador',
+ TACS:'TACS',
+ ADMIN:'Administrador',
+ UBS:'UBS'
+};
+function accessProfileLabel(value){
+ var key=text(value).toUpperCase().replace(/[+\s-]+/g,'_');
+ return ACCESS_PROFILE_LABELS[key]||((key.indexOf('UBS')!==-1)?'UBS':((key.indexOf('TACS')!==-1)?'TACS':((key.indexOf('MORADOR')!==-1)?'Morador':'Administrador')));
+}
+function identityHeadline(nome,perfil){return (text(nome)||'—')+' — '+accessProfileLabel(perfil)}
 function device(){var d='';try{d=localStorage.getItem(DEVICE_KEY)||''}catch(e){}if(!d){d='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);try{localStorage.setItem(DEVICE_KEY,d)}catch(e){}}return d}
 function profile(){try{var p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');return p&&/^cmq1\./.test(text(p.quickKey))?p:null}catch(e){return null}}
 function saveProfile(r){try{localStorage.setItem(PROFILE_KEY,JSON.stringify({quickKey:r.quickKey,areaId:r.areaId||'',areaNome:r.areaNome||'',nome:r.nome||''}))}catch(e){}}
@@ -114,7 +135,7 @@ function identifyUbsFirstAccess(){
  if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN de acesso com 4 a 8 números.','err');return}
  setStatus('Confirmando o cadastro UBS…','warn');
  post('conecta_ubs_identificar_primeiro_acesso',{cpf:cpf,pin:pin,dispositivo:device()}).then(function(r){
-  if(out){out.hidden=false;out.innerHTML='<strong>Cadastro UBS confirmado</strong><br><span class="csc-first-name">'+esc(r.nome||'Responsável UBS')+'</span><br>'+esc(r.funcaoUbs||'Função não informada')+' • '+esc(r.unidadeId||'Unidade não informada');}
+  if(out){out.hidden=false;out.innerHTML='<strong>Cadastro UBS confirmado</strong><br><span class="csc-first-name">'+esc(identityHeadline(r.nome||'Responsável UBS',r.perfil||'UBS'))+'</span><br>'+esc(r.funcaoUbs||'Função não informada')+' • '+esc(r.unidadeId||'Unidade não informada');}
   if(el('cscUbsPin'))el('cscUbsPin').value='';
   setStatus(r.message||'Responsável UBS identificado.','ok');
  }).catch(function(e){if(out)out.hidden=true;setStatus(e.message,'err')});
