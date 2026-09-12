@@ -112,6 +112,7 @@ print(f'PAINEIS_VALIDADOS={len(TARGETS)}')
 # R7 VISUAL ONLY — nenhuma regra de autenticação faz parte desta revisão.
 for token in [
     'R7 VISUAL ONLY — UNIFICAÇÃO CROMÁTICA + MARCA/LEITURA',
+    'UNISONO_SEM_BORDAS_2026_09_11_V1',
     'width:104px!important',
     'font-size:1.08rem!important',
     'color:#d8e6ee!important',
@@ -179,6 +180,14 @@ for token in [
         raise SystemExit(f'Agendas sem proteção solicitada: {token}')
 if 'new MutationObserver(limpar).observe' in agenda_html:
     raise SystemExit('Agendas voltou a usar MutationObserver contínuo que pode travar o iPhone.')
+
+agenda_card_js = (ROOT / 'agenda-whatsapp-card-v1.js').read_text(encoding='utf-8')
+for forbidden in [
+    "b.id='atualizarPaginaAgendasFlutuante'",
+    "b.innerHTML='<span aria-hidden=\"true\">↻</span><span>Atualizar página</span>'",
+]:
+    if forbidden in agenda_card_js:
+        raise SystemExit('O script de cards do WhatsApp voltou a criar o botão flutuante Atualizar página.')
 
 # 3. Vínculo: só confirma depois da resposta do servidor.
 municipios_html = (ROOT / 'painel-oficial-organizacoes-municipios.html').read_text(encoding='utf-8')
