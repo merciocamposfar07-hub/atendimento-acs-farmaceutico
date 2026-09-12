@@ -19,7 +19,7 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R7",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R8",
   "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_04_RECONHECIMENTO_APARELHO_PERFIL_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
@@ -213,7 +213,7 @@
     }
   },
   "task4DeviceProfileRecognition": {
-    "status": "implemented-awaiting-validation",
+    "status": "validated-internal-deployed",
     "authorizedOn": "2026-09-12",
     "recognizedProfiles": [
       "ADMIN",
@@ -234,10 +234,21 @@
     "adminResidentDiagnosticDeferred": true,
     "specificGate": "TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK",
     "validation": {
-      "specificGate": "pending",
-      "fullSuite": "pending",
-      "appsScriptDeploy": "pending",
-      "pagesDeployment": "pending"
-    }
+      "specificGate": "TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK",
+      "fullSuite": "passed",
+      "appsScriptWorkflowRun": 34718800583,
+      "appsScriptPreviousVersion": 201,
+      "appsScriptCurrentVersion": 202,
+      "appsScriptHealth": "passed-first-attempt",
+      "appsScriptActiveDeploymentVersionsAfterDeploy": [
+        6,
+        7,
+        9,
+        202
+      ],
+      "pagesWorkflowRun": 34718794886,
+      "pagesDeploymentSuccess": true
+    },
+    "validatedOn": "2026-09-12"
   }
 }
