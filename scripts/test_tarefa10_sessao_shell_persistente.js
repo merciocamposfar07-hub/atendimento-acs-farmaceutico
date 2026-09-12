@@ -50,7 +50,7 @@ const loadContextStart=central.indexOf('function loadContext(message)',closeStar
 const closeBlock=central.slice(closeStart,loadContextStart);
 assert.doesNotMatch(closeBlock,/about:blank|\.src\s*=/,'Voltar à Central não pode descarregar o módulo.');
 assert.doesNotMatch(closeBlock,/removeItem\(TOKEN_KEY\)|removeItem\(TERRITORY_TOKEN_KEY\)/,'Voltar não pode encerrar sessão.');
-assert.match(closeBlock,/viewer\.hidden=true/);
+assert.match(closeBlock,/(?:viewer|el\('viewer'\))\.hidden=true/);
 assert.match(closeBlock,/shellActiveModule=''/);
 
 // A sessão só destrói os frames em eventos realmente estruturais.
