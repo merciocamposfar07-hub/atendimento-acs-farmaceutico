@@ -119,3 +119,19 @@ A Tarefa 2 não implementa reconhecimento persistente do aparelho, segunda entra
 
 ### Status da Tarefa 2: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
 Matriz de 14 perfis validada, incluindo **UBS pura**. Gate específico e suíte integral aprovados. Apps Script versão 200 implantado com health checks aprovados e GitHub Pages publicado. A validação visual final no aparelho do usuário permanece pendente. A Tarefa 3 não foi iniciada.
+
+
+### Registro canônico — Tarefa 3 / Identidade real após o acesso
+Depois da autenticação, o Conecta exibe **nome completo — perfil cadastrado**. Perfis combinados não podem ser reduzidos ao rótulo da porta usada na entrada.
+
+Exemplos canônicos:
+- `Mércio José Campos dos Santos — Administrador + TACS`;
+- `Manuel … — TACS`;
+- `Júlia Maria da Silva — UBS`.
+
+Administrador e TACS usam o cadastro autenticado real. O primeiro acesso UBS devolve o perfil real do cadastro, inclusive combinações. Morador autenticado exibe `nome — Morador`.
+
+A Tarefa 3 não cria reconhecimento persistente do aparelho, não altera a lógica de segundo acesso e não implementa o modo diagnóstico do Administrador.
+
+### Status da Tarefa 3: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL EM ANDAMENTO — 12/09/2026
+Gate específico: `TAREFA_3_IDENTIDADE_REAL_OK`.
