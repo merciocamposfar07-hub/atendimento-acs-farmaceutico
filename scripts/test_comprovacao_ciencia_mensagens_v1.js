@@ -22,6 +22,6 @@ ok(report.includes('📋 Relatório de entrega'),'botão individual de relatóri
 ok(report.includes('📋 Relatório da família'),'botão familiar de relatório ausente');
 ok(report.includes("escopo:'INDIVIDUAL'"),'consulta individual ausente');
 ok(report.includes("escopo:'FAMILIA'"),'consulta familiar ausente');
-ok(panel.includes('mensagem-relatorio-entrega-v1.js?v=20260820-ciencia-v1'),'painel não carrega relatório');
+ok(panel.includes('mensagem-relatorio-entrega-v1.js?v=20260911-app4-sem-bordas-v2'),'painel não carrega a versão visual atual do relatório');
 ok(build.includes("apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs"),'build não inclui ZZZZ_42');
 console.log('Comprovação de ciência e relatório de mensagens V1: contrato aprovado.');
