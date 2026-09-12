@@ -81,6 +81,16 @@ assert(central.includes('<strong>TACS e áreas</strong>')&&
 
 assert(base.includes("HEALTH_CACHE_PREFIX='portalTacsHealthConfirmedV1:'")&&base.includes('function renderHealthCache(areaId)'),
   'Saúde geral deve exibir a última confirmação válida imediatamente enquanto sincroniza em segundo plano.');
+assert(base.includes('HEALTH_DISPLAY_CACHE_TTL=86400000'),
+  'Saúde geral deve reaproveitar a última confirmação por 24h apenas para pintura imediata, mantendo sincronização em segundo plano.');
+assert(base.includes('function renderHealthInstant(areaId)')&&base.includes('renderModules();renderHealthInstant(selectedAreaId);if(!skipHealth)refreshHealth()'),
+  'Abertura local por PIN deve pintar Saúde geral antes da confirmação remota.');
+assert(base.includes("healthPostIsolated('admin_moradores_status'"),
+  'Saúde geral não pode ocupar o transporte global da Central para consultar moradores.');
+assert(base.includes("jsonp('publico_conteudo_status'"),
+  'Saúde geral deve usar o status leve de conteúdo, sem carregar recados/campanhas completos.');
+assert(base.includes("if(confirmadoAnterior){\n    renderConfirmedNotification(confirmadoAnterior,areaId);"),
+  'Notificações devem mostrar a última confirmação válida imediatamente enquanto revalidam.');
 assert(base.includes("var confirmadoAnterior=readConfirmedNotification(areaId)"),
   'Notificações confirmadas não devem voltar para Confirmando a cada navegação quando há confirmação recente.');
 assert(agenda.includes("portalTacsAgendaAreaSnapshotV1:"),
