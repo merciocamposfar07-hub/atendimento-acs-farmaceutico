@@ -342,7 +342,7 @@ button,.btn,.botao{
   line-height:1.18;
   white-space:normal;
   overflow-wrap:break-word;
-  touch-action:manipulation;
+  touch-action:manipulation!important;
   -webkit-tap-highlight-color:transparent;
   transition:transform .11s ease,filter .11s ease,background-color .11s ease,box-shadow .11s ease!important;
 }
