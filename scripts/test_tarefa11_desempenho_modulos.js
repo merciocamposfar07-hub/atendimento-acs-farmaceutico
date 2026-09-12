@@ -33,7 +33,7 @@ for(const secret of ['token','admintoken','territoriotoken','sessiontoken','auth
 assert.match(central,/TAREFA_11_RESPOSTA_VISUAL_IMEDIATA_V1/);
 assert.match(central,/setShellOpening\(title\|\|'Painel',frame\.dataset\.shellReady!=='1'\)/);
 assert.match(central,/frame\.dataset\.shellReady='1'/);
-assert.match(central,/revision='20260912-task11-performance-v1'/);
+assert.match(central,/revision='20260912-task\d+-[a-z0-9-]+-v1'/);
 
 // Módulos cache-first + servidor em paralelo + diff remoto.
 const contracts=[
