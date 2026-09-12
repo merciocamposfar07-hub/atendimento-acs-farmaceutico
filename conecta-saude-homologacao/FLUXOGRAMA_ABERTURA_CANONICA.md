@@ -164,5 +164,7 @@ Um aparelho reconhecido como Administrador permanece capaz de escolher Administr
 
 Esta tarefa preserva as quatro portas existentes, não cria portas para combinações de perfil e não implementa ainda o diagnóstico administrativo do Morador.
 
-### Status da Tarefa 5: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_5_ADMIN_PORTAS_APOIO_OK`.
+### Status final da Tarefa 5: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+O RETRY `34719091947` passou pela suíte integral, implantou Apps Script **203** no mesmo deployment e aprovou todos os health checks na primeira tentativa. A tentativa anterior `34719025276` foi interrompida antes do deploy por um gate legado e não gerou versão.
+
+**Sequência canônica:** Tarefa 5 encerrada tecnicamente; Tarefa 6 liberada para execução.
