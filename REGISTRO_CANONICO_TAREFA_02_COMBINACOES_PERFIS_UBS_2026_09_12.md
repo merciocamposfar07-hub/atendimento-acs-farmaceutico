@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 02 — Combinações de perfis com UBS
 
 Data: 12/09/2026  
-Status: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE
+Status: VALIDADA INTERNAMENTE E PUBLICADA; VALIDAÇÃO VISUAL DO USUÁRIO PENDENTE
 
 ## Autorização
 O usuário encerrou a Tarefa 1 como bem-sucedida e autorizou o início da Tarefa 2, mantendo execução sequencial e sem avançar para a próxima tarefa antes dos testes e registros.
@@ -72,3 +72,18 @@ A Tarefa 2 não implementa:
 
 ## Regra de conclusão
 A Tarefa 2 somente poderá ser marcada VALIDADA após todos os gates acima. A Tarefa 3 não deve começar antes disso.
+
+
+## Resultado da validação
+- gate específico: `TAREFA_2_COMBINACOES_PERFIS_UBS_OK`;
+- suíte integral: aprovada;
+- workflow Apps Script: `34713166644`;
+- versão Apps Script implantada: `200`;
+- health checks: aprovados;
+- workflow GitHub Pages: `34713294470`;
+- publicação Pages: aprovada;
+- UBS pura: preservada e coberta pelo gate;
+- quatro portas de entrada: preservadas;
+- reconhecimento persistente do aparelho: não antecipado.
+
+A Tarefa 3 permanece não iniciada até o encerramento desta etapa.
