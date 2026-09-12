@@ -163,3 +163,17 @@ Regras:
 Gate específico `TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK` aprovado dentro da suíte integral. Apps Script versão **202** implantado no mesmo deployment pelo run `34718800583`, com health checks aprovados na primeira tentativa. GitHub Pages run `34718794886` concluído com sucesso.
 
 **Regra de sequência cumprida:** a Tarefa 4 está fechada tecnicamente e a Tarefa 5 pode ser iniciada.
+
+
+## Tarefa 5 autorizada — Administrador mantém as portas de apoio
+O aparelho reconhecido como Administrador mantém acesso às quatro portas canônicas do Conecta: Administrador/Central, TACS, Morador e UBS. Entrar em um fluxo TACS não pode aprisionar a interface administrativa nesse modo.
+
+Regras:
+- reconhecimento administrativo tem precedência sobre a trava visual `acesso=tacs`;
+- as quatro portas continuam visíveis e independentes;
+- combinações de perfil não criam novas portas;
+- nenhum nome pessoal aparece antes da autenticação;
+- diagnóstico administrativo do Morador e regras de não-vinculação pertencem às Tarefas 6 e 7.
+
+### Status da Tarefa 5: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_5_ADMIN_PORTAS_APOIO_OK`.
