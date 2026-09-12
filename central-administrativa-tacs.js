@@ -13,6 +13,7 @@ function adminDeviceRecognized(){
 var TACS_ONLY=String(URL_PARAMS.get('acesso')||'').toLowerCase()==='tacs'&&!adminDeviceRecognized();
 var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
 var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
+var shellFrames={},shellActiveModule='',shellScopeKey='';
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
@@ -204,6 +205,7 @@ function removerAcessoLocal(scope){
 }
 function bloquearAcessoLocal(scope,message){
   removerAcessoLocal(scope);
+  resetModuleShell();
   token='';territoryToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
   sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
   el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;el('loginPanel').hidden=false;
@@ -513,6 +515,65 @@ function refreshHealth(force){
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
 function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260912-single-pin-v2',from='&from=central';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+from+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+from+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+from+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+from+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v=20260912-tarefa1-ubs-v1';if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
+
+/* TAREFA_10_SHELL_PERSISTENTE_V1:
+   a Central permanece montada e é a única dona da navegação interna.
+   Cada módulo é carregado uma vez por perfil/área e preservado ao voltar à Central. */
+function shellCurrentScope(){return (mode||'')+'|'+normArea(selectedAreaId)}
+function shellFrameKey(name){return shellCurrentScope()+'|'+text(name).toLowerCase()}
+function shellActiveFrame(){return shellActiveModule&&shellFrames[shellFrameKey(shellActiveModule)]||null}
+function resetModuleShell(){
+  var viewer=el('viewer'),base=el('viewerFrame');
+  Object.keys(shellFrames).forEach(function(key){
+    var frame=shellFrames[key];if(!frame)return;
+    try{frame.src='about:blank'}catch(e){}
+    if(frame!==base&&frame.parentNode)frame.remove();
+  });
+  shellFrames={};shellActiveModule='';shellScopeKey='';
+  if(base){base.hidden=false;base.removeAttribute('data-shell-key');base.removeAttribute('data-shell-module');if(base.src!=='about:blank')base.src='about:blank'}
+  if(viewer)viewer.hidden=true;
+  document.body.classList.remove('viewer-open');
+}
+function prepareShellScope(){
+  var scope=shellCurrentScope();
+  if(shellScopeKey&&shellScopeKey!==scope)resetModuleShell();
+  shellScopeKey=scope;
+}
+function enhanceShellFrame(frame){
+  if(!frame||frame.dataset.shellEnhanced==='1')return;
+  frame.dataset.shellEnhanced='1';
+  frame.addEventListener('load',function(){
+    try{applyUiStandard(frame.contentDocument)}catch(e){}
+  });
+}
+function ensureShellFrame(name,url,title){
+  prepareShellScope();
+  var key=shellFrameKey(name),frame=shellFrames[key],base=el('viewerFrame'),viewer=el('viewer');
+  if(frame)return frame;
+  if(base&&!base.dataset.shellKey){
+    frame=base;
+  }else{
+    frame=document.createElement('iframe');
+    frame.className='csc-module-frame';
+    frame.setAttribute('title',title||'Painel administrativo');
+    frame.src='about:blank';
+    viewer.appendChild(frame);
+  }
+  frame.dataset.shellKey=key;frame.dataset.shellModule=name;frame.hidden=true;
+  enhanceShellFrame(frame);shellFrames[key]=frame;
+  frame.src=url;
+  return frame;
+}
+function showShellFrame(name,frame,title){
+  Object.keys(shellFrames).forEach(function(key){var item=shellFrames[key];if(item)item.hidden=item!==frame});
+  shellActiveModule=name;
+  el('viewerTitle').textContent=title||'Painel';
+  var viewer=el('viewer');viewer.classList.add('csc-shell-viewer');viewer.hidden=false;
+  frame.hidden=false;document.body.classList.add('viewer-open');
+}
+function shellHasUnsaved(frame){
+  try{return Boolean(frame&&frame.contentDocument&&frame.contentDocument.documentElement.dataset.tacsDirty==='1')}catch(e){return false}
+}
 function openModule(name,title){
   var url=moduleUrl(name);if(!url)return;
   if(name==='portal'){window.open(url,'_blank','noopener');return}
@@ -521,13 +582,16 @@ function openModule(name,title){
     setStatus('Central pronta. Confirmando a sessão para carregar os dados deste painel…','warn');
     return;
   }
-  moduloPendente=null;
-  var sep=url.indexOf('?')===-1?'?':'&';
-  /* AGENDA_DIRECT_NAV_V1: evita o iframe oculto e o travamento observado no iPhone; o retorno usa from=central. */
-  if(name==='agendas'){location.assign(url+sep+'from=central&_cb='+Date.now());return}
-  url=url+sep+'_cb='+Date.now();el('viewerTitle').textContent=title||'Painel';el('viewerFrame').src=url;el('viewer').hidden=false;document.body.classList.add('viewer-open')
+  moduloPendente=null;publishModuleCore();
+  var frame=ensureShellFrame(name,url,title||'Painel');
+  showShellFrame(name,frame,title||'Painel');
 }
-function closeViewer(){el('viewer').hidden=true;el('viewerFrame').src='about:blank';document.body.classList.remove('viewer-open');refreshHealth()}
+function closeViewer(){
+  var frame=shellActiveFrame();
+  if(shellHasUnsaved(frame)&&!window.confirm('Há alterações que podem não ter sido salvas. Deseja voltar à Central mesmo assim?'))return false;
+  el('viewer').hidden=true;document.body.classList.remove('viewer-open');shellActiveModule='';
+  refreshHealth(false);return true;
+}
 function loadContext(message){
   post('admin_territorio_dados',session(),'admin_territorio_result',function(r){
     if(!r||r.ok!==true){
@@ -540,7 +604,7 @@ function loadContext(message){
         return;
       }
       if(acessoLocalAberto){bloquearAcessoLocal(acessoLocalAberto,falhaMsg);return}
-      token='';territoryToken='';mode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);syncAppState();
+      resetModuleShell();token='';territoryToken='';mode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);syncAppState();
       el('loginPanel').hidden=false;el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;
       setStatus(falhaMsg||'A sessão foi recusada pelo servidor. Entre novamente.','warn');return;
     }
@@ -589,6 +653,7 @@ function logout(){
      o primeiro toque encerra a autenticação local imediatamente.
      A confirmação remota não bloqueia a interface nem exige segundo toque. */
   cancelarOperacaoAtivaSemCallback();
+  resetModuleShell();
   token='';territoryToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
   sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
   syncAppState();
@@ -686,7 +751,7 @@ el('loginTacs').addEventListener('click',function(){
     sincronizar();
   });
 });
-el('adminArea').addEventListener('change',function(){if(mode!=='admin')return;selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}publishModuleCore();renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
+el('adminArea').addEventListener('change',function(){if(mode!=='admin')return;resetModuleShell();selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}publishModuleCore();renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
 el('viewerFrame').addEventListener('load',function(){try{applyUiStandard(el('viewerFrame').contentDocument)}catch(e){}});
 el('moduleGrid').addEventListener('click',function(e){var btn=e.target.closest('.module');if(!btn||btn.disabled||btn.hidden)return;openModule(btn.dataset.module,btn.querySelector('strong').textContent)});
 /* CENTRAL_RETURN_R6: restaura imediatamente o conteúdo ao voltar pelo histórico/BFCache do iPhone. */
@@ -696,7 +761,7 @@ window.addEventListener('pageshow',function(){
   mode=territoryToken?'tacs':(token?'admin':'');
   document.body.classList.remove('viewer-open');
   var viewer=el('viewer');if(viewer)viewer.hidden=true;
-  var frame=el('viewerFrame');if(frame&&frame.src!=='about:blank')frame.src='about:blank';
+  shellActiveModule='';
   if(token||territoryToken){
     if(context)renderContext(true);
     else restoreContextCache();
@@ -704,6 +769,13 @@ window.addEventListener('pageshow',function(){
   }
 });
 window.ConectaCentralModuleCoreV1={publicar:publishModuleCore,chave:MODULE_CORE_KEY};
+window.ConectaCentralShellV1={
+  abrir:openModule,
+  fechar:closeViewer,
+  resetar:resetModuleShell,
+  ativo:function(){return shellActiveModule},
+  escopo:function(){return shellCurrentScope()}
+};
 window.PortalTacsCentralPinLocalV2={
   abrir:function(scope,pin){return abrirAcessoLocal(scope,pin)},
   aplicar:function(scope,saved){return aplicarAcessoLocal(scope,saved)},
