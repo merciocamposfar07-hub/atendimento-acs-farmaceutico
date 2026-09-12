@@ -114,8 +114,8 @@ assert.match(professionalsPage,/escopo:'profissionais'/,
 const territorioVersionado=/painel-oficial-tacs-areas\.html\?[^'"]*\bv=/.test(js)||/painel-oficial-tacs-areas\.html\?[^'"]*['"]\+revision/.test(js);
 assert.ok(territorioVersionado,
   'A Central deve carregar o painel de TACS com revisão explícita para invalidar cache.');
-assert.match(js,/painel-oficial-organizacoes-municipios\.html\?v=/,
-  'A Central deve abrir o painel global de organizações e municípios.');
+assert.match(js,/painel-oficial-organizacoes-municipios\.html\?[^'"]*\bv=/,
+  'A Central deve abrir o painel global de organizações e municípios com revisão explícita.');
 assert.match(multiPage,/ADMINISTRADOR GERAL/);
 assert.match(multiPage,/admin_multimunicipio_dados/);
 assert.match(multiPage,/admin_multimunicipio_salvar_organizacao/);
