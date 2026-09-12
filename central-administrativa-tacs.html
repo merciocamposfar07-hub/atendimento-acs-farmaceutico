@@ -264,26 +264,6 @@ label{color:var(--tacs-app-text)!important;font-weight:800!important}
 }
 .csc-central #modulesPanel>h2{margin:0 2px 5px!important}
 .csc-central #modulesPanel>p{margin:0 2px 13px!important}
-.csc-central #modulesPanel .csc-logout-actions{
-  display:grid!important;
-  margin-top:18px!important;
-}
-.csc-central #modulesPanel #logout.csc-logout-button{
-  display:block!important;
-  width:100%!important;
-  min-height:54px!important;
-  margin:0!important;
-  border:1px solid #9f5360!important;
-  border-radius:17px!important;
-  background:#7e2e38!important;
-  color:#fff!important;
-  font-weight:900!important;
-  box-shadow:var(--tacs-app-shadow-soft)!important;
-  touch-action:manipulation!important;
-  -webkit-tap-highlight-color:transparent!important;
-  user-select:none!important;
-  -webkit-user-select:none!important;
-}
 
 /* Indicadores e cards internos. */
 .resumo,.summary,.stats,.metrics,.health-grid,.saude-resumo{gap:10px!important}
@@ -1257,9 +1237,9 @@ html body .sinal.ativo,
 html body .pill:not(.off),
 html body .health-card.ok>span{color:#83efa9!important}
 html body .sinal.inativo,
-html body .pill.off{color:#c0d3df!important}
-html body .health-card.warn>span{color:#ffd27a!important}
-html body .health-card.err>span{color:#ffaaa5!important}
+html body .pill.off,
+html body .health-card.warn>span,
+html body .health-card.err>span{color:#c0d3df!important}
 
 /* Ícones dos módulos — maiores, nítidos e com contraste consistente. */
 .csc-central .module .icon,
@@ -1796,10 +1776,97 @@ html body .csc-profile-admin-toggle{
 html body .csc-profile-admin-toggle[aria-expanded="true"]{border-color:#83efa9!important}
 html body .csc-profile-admin-names[hidden]{display:none!important}
 
-/* LOGIN_PROPOSITO_INSTITUCIONAL_V1 */
-.csc-login-purpose{margin-top:16px;padding:15px 16px;background:#102d46;border:1px solid #365f78;border-radius:18px;color:#d8e6ee}
-.csc-login-purpose strong{display:block;margin-bottom:6px;color:#f7fcff;font-size:.92rem;font-weight:900}
-.csc-login-purpose p{margin:0;color:#c1d3de;font-size:.82rem;line-height:1.42;font-weight:620}.csc-login-purpose small{display:block;margin-top:10px;padding-top:10px;border-top:1px solid #365f78;color:#83efa9!important;font-size:.78rem;line-height:1.4;font-weight:850}
+
+/* UNISONO_SEM_BORDAS_2026_09_11_V1
+   Correção visual cirúrgica: uma única família azul-petróleo para superfícies
+   funcionais. Bordas de balões/cards removidas. Botões e campos mantêm seus
+   próprios estados de interação. */
+body.csc-brand-enhanced main>section.panel,
+body.csc-brand-enhanced main>section.painel,
+body.csc-brand-enhanced main>section.card,
+body.csc-brand-enhanced main>div.panel,
+body.csc-brand-enhanced main>div.painel,
+body.csc-brand-enhanced main>div.card,
+body.csc-brand-enhanced main>.box,
+body.csc-brand-enhanced main>.caixa,
+body.csc-brand-enhanced main>.newbox,
+html body #conteudo.card,
+html body #content.panel,
+html body #ticketsPane,
+html body #devicesPane,
+html body #secaoRecados,
+html body #secaoCampanhas,
+html body .lista,
+html body .list,
+html body #results{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html body .panel .card,
+html body .painel .card,
+html body .card .card,
+html body .item,
+html body .cartao,
+html body .ticket,
+html body .grupoProfissional,
+html body .area-row,
+html body .maprow,
+html body .health-card,
+html body .saude-numero,
+html body .numero,
+html body .number,
+html body .stat,
+html body .metric,
+html body .quick-card,
+html body .saude-aparelho,
+html body #results .card,
+html body #listaRecados .item,
+html body #listaCampanhas .item,
+html body .msg-familia-acao,
+html body .msg-ind-form-action,
+html body .msg-rel-box,
+html body .msg-rel-status,
+html body .msg-rel-event,
+html body .msg-rel-message,
+html body .msg-rel-device,
+html body .msg-rel-grid div,
+html body .protect,
+html body .area-control,
+html body .csc-profile-card,
+html body .csc-profile-empty{
+  background:#102d46!important;
+  background-image:none!important;
+  color:#f7fcff!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html body .status,
+html body .status.ok,
+html body .status.warn,
+html body .status.aviso,
+html body .status.err,
+html body .status.erro,
+html body .nota,
+html body .note{
+  background:#102d46!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html body .protect p,
+html body .protect small,
+html body .protect .muted,
+html body .protect .sub{
+  color:#d8e6ee!important;
+}
+html body .module{
+  background:#102d46!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
