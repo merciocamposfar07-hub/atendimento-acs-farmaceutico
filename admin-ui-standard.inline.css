@@ -1950,3 +1950,36 @@ html body .csc-pressed{
   border:0!important;
   box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important;
 }
+
+
+/* LOGIN_PROPOSTA_APP4_2026_09_11_V1
+   Tela de acesso: texto institucional dentro do card da paleta App4 oficial.
+   Sem borda, sem branco, sem cor alternativa. */
+html body #loginStatus[hidden]{display:none!important}
+html body .csc-login-purpose{
+  margin-top:14px!important;
+  color:#f7fcff!important;
+}
+html body .csc-login-purpose>strong{
+  display:block!important;
+  margin:0 0 12px!important;
+  color:#f7fcff!important;
+  font-weight:900!important;
+  font-size:1.08rem!important;
+  line-height:1.25!important;
+}
+html body .csc-login-purpose-card{
+  padding:18px 20px!important;
+  border:0!important;
+  border-radius:22px!important;
+  background:linear-gradient(145deg,#153b58,#102d46)!important;
+  background-image:linear-gradient(145deg,#153b58,#102d46)!important;
+  box-shadow:none!important;
+  color:#f7fcff!important;
+}
+html body .csc-login-purpose-card p{
+  margin:0!important;
+  color:#d8e6ee!important;
+  font-size:1rem!important;
+  line-height:1.55!important;
+}

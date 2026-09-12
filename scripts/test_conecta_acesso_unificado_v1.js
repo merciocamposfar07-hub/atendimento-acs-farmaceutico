@@ -90,7 +90,11 @@ assert(central.includes('Plataforma institucional de saúde comunitária.'),'Rod
 assert(!/2026\/2027/.test(central),'Rodapé não pode ter 2026/2027');
 assert(central.includes('plataforma de gestão e acesso à saúde comunitária'),'Login deve explicar claramente o que é o Conecta');
 assert(central.includes('acessível pelo celular'),'Login deve explicitar o acesso pelo celular');
-assert(central.includes('Porque o Conecta Saúde Comunitária foi desenvolvido'),'Título institucional aprovado deve permanecer no acesso.');
+assert(central.includes('Proposta do Conecta Saúde Comunitária'),'Título institucional da proposta deve permanecer no acesso.');
+assert(!central.includes('Porque o Conecta Saúde Comunitária foi desenvolvido'),'Título antigo não deve reaparecer no acesso.');
+assert(!central.includes('Entre como administrador ou TACS da sua área.'),'Aviso antigo circulado em verde deve permanecer removido.');
+assert(central.includes('class="csc-login-purpose-card"'),'Texto da proposta deve permanecer dentro do card institucional.');
+assert(central.includes('LOGIN_PROPOSTA_APP4_2026_09_11_V1'),'A proposta deve usar a skin App4 oficial da tela de acesso.');
 assert(!central.includes('<small>Tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</small>'),'A assinatura institucional não deve reaparecer duplicada no bloco de acesso.');
 
 console.log('Conecta acesso unificado e correções pendentes: OK');
