@@ -41,13 +41,13 @@ assert.match(
 
 assert.match(
   central,
-  /AGENDA_DIRECT_NAV_V1/,
-  'Agendas e Vagas deve manter a correção de navegação direta'
+  /DIRECT_NAV_CRITICAL_V2/,
+  'Agendas e Gestão territorial devem manter a correção de navegação direta'
 );
 assert.match(
   central,
-  /if\(name==='agendas'\)\{location\.assign/,
-  'Agendas e Vagas não pode voltar a abrir pelo iframe oculto'
+  /if\(name==='agendas'\|\|name==='territorio'\)\{location\.assign/,
+  'Agendas e Gestão territorial não podem voltar a abrir pelo iframe oculto'
 );
 assert.match(
   central,
