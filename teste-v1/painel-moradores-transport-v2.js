@@ -5,7 +5,7 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var TOKEN_KEY='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
-var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'moradores'}):null,modulePerf=moduleCore&&moduleCore.performance;
+var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'moradores'}):null,modulePerf=moduleCore&&moduleCore.performance,moduleRequests=moduleCore&&moduleCore.requests;
 var token=moduleSession&&moduleSession.token||'';
 var territoryToken=moduleSession&&moduleSession.territorioToken||'';
 var accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':''));
@@ -64,6 +64,9 @@ function cloneSession(extra){
   Object.keys(extra||{}).forEach(function(k){out[k]=extra[k]});
   return out;
 }
+function coreRead(action,payload,runner,cb){if(moduleRequests&&typeof moduleRequests.read==='function'){moduleRequests.read(action,payload,function(done){runner(done)},function(result,meta){cb(result,meta)}).catch(function(e){cb({ok:false,temporario:true,message:text(e&&e.message)||'Falha na leitura compartilhada.'},{shared:false,source:'broker-error'})});return}runner(function(result){cb(result,{shared:false,source:'legacy'})})}
+function noteRequestAction(action){if(moduleRequests&&typeof moduleRequests.noteAction==='function')moduleRequests.noteAction(action)}
+
 function digits(v){return String(v==null?'':v).replace(/\D/g,'')}
 function validCpf(v){
   var d=digits(v);
@@ -228,6 +231,7 @@ function pollResult(){
 }
 
 function post(action,payload,resultAction,cb){
+  noteRequestAction(action);
   if(active){cb({ok:false,message:'Aguarde a operação anterior terminar.'});return}
   var rid=requestId(action),fields={};Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});fields.action=action;fields.requestId=rid;
   var escrita=/(?:salvar|situacao|consolid|ativar|remover|restaurar|criar)/i.test(action);
@@ -504,7 +508,7 @@ function loadBase(message,done){
   if(modulePerf&&typeof modulePerf.prime==='function'){
     cached=modulePerf.prime('moradores-base',function(data){renderBase(data,'Última confirmação exibida. Conferindo moradores em segundo plano…',false)});
   }
-  post('admin_moradores_status',session(),'admin_moradores_result',function(r){
+  var leituraPayload=session();coreRead('admin_moradores_status',leituraPayload,function(next){post('admin_moradores_status',leituraPayload,'admin_moradores_result',next)},function(r){
     if(!r||r.ok!==true){var ok=renderBase(r,message,true);if(typeof done==='function')done(r,ok);return}
     var payload=basePerformancePayload(r),diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('moradores-base',payload):{changed:true};
     var ok=true;
