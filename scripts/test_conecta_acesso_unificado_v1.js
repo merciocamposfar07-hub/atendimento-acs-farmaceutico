@@ -73,8 +73,10 @@ assert(!/sessionStorage\.clear\(|localStorage\.clear\(/.test(centralJs),'Logoff 
 assert(centralJs.includes('LOGIN_PREFETCH_ESTATICO_V2'),'Login deve aquecer recursos sem bloquear o carregamento inicial');
 assert(centralJs.includes("window.addEventListener('load'"),'Pré-carga deve começar depois do primeiro load ou por interação no PIN');
 assert(centralJs.includes("fetch(url+'?v=20260910-login-prefetch-v2'"),'Pré-carga deve usar fetch assíncrono/cache');
-assert(centralJs.includes("location.assign(url+sep+'from=central&_cb='+Date.now());"),'Agendas deve usar navegação direta quando exigido');
-assert(centralJs.includes("painel-oficial-agendas-vagas.html?area="),'Agendas e Vagas deve manter rota direta');
+assert(centralJs.includes('TAREFA_10_SHELL_PERSISTENTE_V1'),'Central deve usar o shell persistente aprovado na Tarefa 10');
+assert(!centralJs.includes("location.assign(url+sep+'from=central&_cb='+Date.now());"),'Agendas não deve abandonar a Central após a Tarefa 10');
+assert(centralJs.includes("painel-oficial-agendas-vagas.html?area="),'Agendas e Vagas deve manter a rota canônica dentro do shell');
+assert(centralJs.includes('ensureShellFrame(name,url,title')&&centralJs.includes('showShellFrame(name,frame,title'),'Agendas e demais módulos devem abrir pela mesma sessão/shell');
 assert(!centralJs.includes("link.rel='prefetch'"),'Não voltar ao prefetch que mantém o Safari carregando');
 
 assert(health.includes('REPAIR_VALID_HOURS:24'),'Solicitação de reparo deve expirar em 24 horas');
