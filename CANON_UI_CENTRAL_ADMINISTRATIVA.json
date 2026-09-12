@@ -526,7 +526,9 @@
         9,
         208
       ],
-      "pagesDeployment": "pending-final-docs-run"
+      "pagesDeployment": "success",
+      "pagesFinalDocsWorkflowRun": 34724279216,
+      "pagesFinalDocsHeadSha": "ae5dc1640a1e1aa3e3834d9ca7466010d993e3ba"
     },
     "validatedOn": "2026-09-12"
   }
