@@ -153,5 +153,7 @@ Para UBS, o primeiro acesso válido passa a registrar uma prova segura de aparel
 
 A Tarefa 4 não implementa diagnóstico administrativo do Morador e não altera as regras especiais do Administrador reservadas às tarefas seguintes.
 
-### Status da Tarefa 4: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK`.
+### Status final da Tarefa 4: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate específico `TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK` aprovado. Apps Script versão **202** implantado no mesmo deployment pelo run `34718800583`, com health checks aprovados na primeira tentativa. GitHub Pages run `34718794886` concluído com sucesso.
+
+**Sequência canônica:** Tarefa 4 encerrada tecnicamente; Tarefa 5 liberada para execução.
