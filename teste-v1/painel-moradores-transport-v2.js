@@ -5,10 +5,11 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var TOKEN_KEY='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
-var token=sessionStorage.getItem(TOKEN_KEY)||'';
-var territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'';
-var accessMode=territoryToken?'tacs':(token?'admin':'');
-var device=localStorage.getItem(DEVICE_KEY)||'';
+var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'moradores'}):null;
+var token=moduleSession&&moduleSession.token||'';
+var territoryToken=moduleSession&&moduleSession.territorioToken||'';
+var accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':''));
+var device=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
 var active=null;
 var writesEnabled=false;
 var situationEnabled=false;
@@ -51,6 +52,7 @@ function requestId(action){
   return 'morv2_'+String(action||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
 }
 function session(){
+  if(moduleCore&&typeof moduleCore.session==='function')return moduleCore.session({areaId:selectedAreaId||undefined,escopo:'moradores'});
   var out={dispositivo:device};
   if(accessMode==='tacs'&&territoryToken)out.territorioToken=territoryToken;
   else out.token=token;
