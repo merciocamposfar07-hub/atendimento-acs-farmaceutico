@@ -2162,8 +2162,23 @@ var sharedAdminReadConsumido=false;
 function sharedAdminReadKey(){var id=cacheIdentity();return id?'portalTacsAdminSharedReadV1:admin_dados:v1:'+id:''}
 function lerSharedAdminDados(){try{var key=sharedAdminReadKey();if(!key)return null;var item=JSON.parse(localStorage.getItem(key)||'null');if(!item||!item.data||Date.now()-Number(item.salvoEm||0)>5000)return null;return item.data}catch(e){return null}}
 function salvarSharedAdminDados(r){try{var key=sharedAdminReadKey();if(!key||!r||r.ok!==true)return;localStorage.setItem(key,JSON.stringify({salvoEm:Date.now(),data:{ok:true,profissionais:Array.isArray(r.profissionais)?r.profissionais:[],servicos:Array.isArray(r.servicos)?r.servicos:[],agendas:Array.isArray(r.agendas)?r.agendas:[]}}))}catch(e){}}
-function lerSnapshot(){try{var key=dataCacheKey();if(!key)return null;var item=JSON.parse(localStorage.getItem(key)||'null');if(!item||!item.data||Date.now()-Number(item.salvoEm||0)>24*60*60*1000)return null;return item}catch(e){return null}}
-function salvarSnapshot(r){try{var key=dataCacheKey();if(!key)return;localStorage.setItem(key,JSON.stringify({salvoEm:Date.now(),data:{ok:true,profissionais:Array.isArray(r.profissionais)?r.profissionais:[],agendas:Array.isArray(r.agendas)?r.agendas:[]}}))}catch(e){}}
+function areaDataCacheKey(){return areaId?'portalTacsAgendaAreaSnapshotV1:'+CACHE_SCHEMA+':'+areaId:''}
+function lerSnapshot(){
+  try{
+    var keys=[dataCacheKey(),areaDataCacheKey()].filter(Boolean);
+    for(var i=0;i<keys.length;i++){
+      var item=JSON.parse(localStorage.getItem(keys[i])||'null');
+      if(item&&item.data&&Date.now()-Number(item.salvoEm||0)<=24*60*60*1000)return item;
+    }
+    return null;
+  }catch(e){return null}
+}
+function salvarSnapshot(r){
+  try{
+    var payload=JSON.stringify({salvoEm:Date.now(),data:{ok:true,profissionais:Array.isArray(r.profissionais)?r.profissionais:[],agendas:Array.isArray(r.agendas)?r.agendas:[]}});
+    [dataCacheKey(),areaDataCacheKey()].filter(Boolean).forEach(function(key){localStorage.setItem(key,payload)});
+  }catch(e){}
+}
 function bloquearEdicaoNaoConfirmada(){document.querySelectorAll('.salvarAgenda').forEach(function(b){b.disabled=!dadosConfirmados});if(desfazer)desfazer.disabled=!dadosConfirmados}
 function cancelarReconexao(){if(reconexaoTimer){clearTimeout(reconexaoTimer);reconexaoTimer=null}}
 function aplicarSnapshotSeDisponivel(){if(!token&&!territorioToken)return false;var item=lerSnapshot();if(!item)return false;cancelarReconexao();snapshotVisivel=true;reconexaoTentativas=0;aplicarDados(item.data,false);status('loginStatus','Dados exibidos da última leitura. Atualizando dados em segundo plano…','aviso');return true}
@@ -2378,7 +2393,7 @@ setTimeout(limpar,900);
 window.addEventListener('pageshow',limpar);
 }());
 </script>
-<script src="/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260823-card-institucional-v1"></script>
+<script src="/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260911-sem-atualizar-v1"></script>
 <script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260825-v6"></script>
 </body>
 </html>
