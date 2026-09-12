@@ -121,3 +121,21 @@ Regras:
 
 ### Status da Tarefa 2: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
 A matriz canônica de 14 perfis foi aprovada pelos gates automatizados, incluindo **UBS pura**. Apps Script versão 200 foi implantado com health checks aprovados e GitHub Pages publicado. A Tarefa 3 permanece não iniciada até validação visual/operacional desta etapa pelo usuário.
+
+
+## Tarefa 3 autorizada — Identidade real após o acesso
+Após autenticação, a interface deve exibir a identidade real no formato **nome completo + perfil cadastrado**, sem reduzir combinações a um rótulo genérico.
+
+Exemplos:
+- `Mércio José Campos dos Santos — Administrador + TACS`;
+- `Manuel … — TACS`;
+- `Júlia Maria da Silva — UBS`.
+
+Regras:
+- Administrador e TACS usam o cadastro autenticado real;
+- UBS devolve e mostra o perfil efetivamente cadastrado, inclusive combinações com UBS;
+- Morador autenticado mostra `nome — Morador`;
+- reconhecimento persistente do aparelho, segundo acesso específico e modo diagnóstico permanecem fora desta tarefa e pertencem às tarefas seguintes.
+
+### Status da Tarefa 3: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL EM ANDAMENTO — 12/09/2026
+Gate específico: `TAREFA_3_IDENTIDADE_REAL_OK`.
