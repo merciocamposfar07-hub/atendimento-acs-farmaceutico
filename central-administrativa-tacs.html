@@ -2400,6 +2400,13 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 }());
 </script>
 <!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->
+<style id="cscTask10PersistentShellStyle">
+/* TAREFA_10_SHELL_PERSISTENTE_V1 — viewer visível, não oculto, mantendo a Central montada. */
+html body .viewer.csc-shell-viewer:not([hidden]){display:flex!important;position:fixed!important;inset:0!important;z-index:30000!important;overflow:hidden!important;background:#071827!important;flex-direction:column!important}
+html body.viewer-open{overflow:hidden!important}
+html body .viewer.csc-shell-viewer iframe{display:block;width:100%;min-width:0;min-height:0;flex:1 1 auto;border:0;background:#071827}
+html body .viewer.csc-shell-viewer iframe[hidden]{display:none!important}
+</style>
 </head>
 <body>
 <header><span class="badge">CENTRAL ADMINISTRATIVA TACS</span><h1>Seus painéis em um só lugar</h1><p>Um único acesso para administrar a área, sem misturar a lógica interna dos módulos.</p></header>
