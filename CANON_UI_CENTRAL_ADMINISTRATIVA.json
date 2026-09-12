@@ -20,7 +20,7 @@
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R9",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_05_PORTAS_APOIO_ADMIN_2026_09_12.md",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_06_ADMIN_MORADOR_SEM_VINCULO_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
   "notes": [
@@ -285,5 +285,28 @@
       "pagesDeploymentSuccess": true
     },
     "validatedOn": "2026-09-12"
+  },
+  "task6AdminResidentNoBinding": {
+    "status": "implemented-awaiting-validation",
+    "authorizedOn": "2026-09-12",
+    "adminResidentLookupDocuments": [
+      "CPF",
+      "CNS"
+    ],
+    "diagnosticReadOnly": true,
+    "residentPinCreationBlockedOnAdminDevice": true,
+    "residentSessionBlockedOnAdminDevice": true,
+    "residentNotificationBindingBlockedOnAdminDevice": true,
+    "residentDeviceBindingBlockedOnAdminDevice": true,
+    "backendRecognizesAdminDeviceByTrustedDeviceHash": true,
+    "adminTrustRequiredForDiagnostic": true,
+    "residentCoreDiagnosticSeparationDeferredToTask7": true,
+    "specificGate": "TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK",
+    "validation": {
+      "specificGate": "pending",
+      "fullSuite": "pending",
+      "appsScriptDeploy": "pending",
+      "pagesDeployment": "pending"
+    }
   }
 }
