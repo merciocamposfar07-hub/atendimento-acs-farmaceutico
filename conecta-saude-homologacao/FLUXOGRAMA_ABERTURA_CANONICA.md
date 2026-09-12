@@ -157,3 +157,12 @@ A Tarefa 4 não implementa diagnóstico administrativo do Morador e não altera 
 Gate específico `TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK` aprovado. Apps Script versão **202** implantado no mesmo deployment pelo run `34718800583`, com health checks aprovados na primeira tentativa. GitHub Pages run `34718794886` concluído com sucesso.
 
 **Sequência canônica:** Tarefa 4 encerrada tecnicamente; Tarefa 5 liberada para execução.
+
+
+### Registro canônico — Tarefa 5 / Portas de apoio do Administrador
+Um aparelho reconhecido como Administrador permanece capaz de escolher Administrador/Central, TACS, Morador e UBS. O parâmetro ou sessão de acesso TACS não pode ocultar a porta administrativa nem prender esse aparelho ao modo TACS.
+
+Esta tarefa preserva as quatro portas existentes, não cria portas para combinações de perfil e não implementa ainda o diagnóstico administrativo do Morador.
+
+### Status da Tarefa 5: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_5_ADMIN_PORTAS_APOIO_OK`.
