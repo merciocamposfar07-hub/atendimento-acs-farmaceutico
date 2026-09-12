@@ -83,7 +83,6 @@ assert.doesNotMatch(agendas,/Object\.assign\(\{compartilhado:true\}/);
 assert.doesNotMatch(profissionais,/Object\.assign\(\{compartilhado:true\}/);
 
 // A Tarefa 12 pode acrescentar versionamento/frescor sem invalidar o contrato da Tarefa 11.
-// Deduplicação continua reservada à Tarefa 13.
-assert.doesNotMatch(core,/requestPromiseMap|inFlightRequestMap|dedupRequestPromise/i);
+// A Tarefa 13 pode acrescentar deduplicação sem invalidar o contrato de desempenho da Tarefa 11.\nif(core.includes('TAREFA_13_DEDUP_REQUISICOES_V1'))assert.match(core,/dedupRequestPromise/);
 
 console.log('TAREFA_11_DESEMPENHO_MODULOS_OK: toque abre shell imediatamente; módulos exibem última confirmação em modo seguro, sincronizam o servidor em paralelo e evitam rerender quando não há mudança.');
