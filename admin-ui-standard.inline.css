@@ -534,7 +534,7 @@ html body .saude-resumo button.saude-numero[data-saude-filtro="SEM_CONFIRMACAO"]
 .csc-session-active #loginPanel:not(.csc-moradores-access){min-height:0!important;margin:0 0 12px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
 .csc-session-active #loginPanel:not(.csc-moradores-access)>h2,.csc-session-active #loginPanel:not(.csc-moradores-access)>.tabs,.csc-session-active #loginPanel:not(.csc-moradores-access)>#adminLogin,.csc-session-active #loginPanel:not(.csc-moradores-access)>#tacsLogin,.csc-session-active #loginPanel:not(.csc-moradores-access)>.actions{display:none!important}
 .csc-moradores-access .area-control{margin-top:0!important;padding:14px!important;background:linear-gradient(145deg,var(--tacs-app-card2),var(--tacs-app-card))!important;border:1px solid var(--tacs-app-line)!important;border-radius:20px!important}
-.csc-moradores-access #tacsPinAccess,.csc-moradores-access label[for="tacsPinAccess"],.csc-moradores-access #loginTacs{display:block!important}
+.csc-session-active .csc-resident-redundant-tacs-access{display:none!important}
 .csc-pressed{transform:translateY(2px) scale(.965)!important;filter:brightness(1.12)!important;box-shadow:inset 0 4px 10px rgba(0,0,0,.34)!important}
 @media(max-width:430px){body.csc-brand-enhanced>header p{font-size:.82rem!important}}
 
@@ -2000,4 +2000,22 @@ html body #logout.csc-logout-button.csc-pressed{
   color:#fff!important;
   border:0!important;
   box-shadow:inset 0 3px 8px rgba(0,0,0,.28)!important;
+}
+
+
+/* SESSAO_UNICA_PAINEL_2026_09_11_V1
+   PIN existe somente na entrada unificada. Dentro de qualquer painel administrativo,
+   controles legados de autenticação ficam ocultos durante a sessão válida. */
+.csc-session-active #adminLogin,
+.csc-session-active #tacsLogin,
+.csc-session-active #loginAdminTab,
+.csc-session-active #loginTacsTab,
+.csc-session-active #tacsPinAccess,
+.csc-session-active label[for="tacsPinAccess"],
+.csc-session-active #tacsPinPublicacoes,
+.csc-session-active label[for="tacsPinPublicacoes"],
+.csc-session-active #entrarTacs,
+.csc-session-active #loginTacs,
+.csc-session-active .csc-resident-redundant-tacs-access{
+  display:none!important;
 }
