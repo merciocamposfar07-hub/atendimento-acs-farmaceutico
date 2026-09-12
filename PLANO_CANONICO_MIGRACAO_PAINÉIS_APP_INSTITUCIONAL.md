@@ -85,3 +85,7 @@ Em 12/09/2026 foi autorizada a primeira tarefa da evolução do acesso único:
 - o perfil UBS desta tarefa é isolado; combinações envolvendo UBS ficam para a Tarefa 2;
 - a confirmação do primeiro acesso UBS não cria vínculo permanente do computador nesta tarefa; o reconhecimento do aparelho e a experiência da segunda entrada pertencem à tarefa específica posterior;
 - nenhuma mudança desta tarefa autoriza alterar regras internas dos painéis existentes.
+
+
+### Status final da Tarefa 1: VALIDADA — 12/09/2026
+Validação técnica concluída: suíte integral aprovada, Apps Script versão 196 implantado com health checks aprovados e GitHub Pages publicado. Nenhuma combinação UBS da Tarefa 2 foi antecipada.
