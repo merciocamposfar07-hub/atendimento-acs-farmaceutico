@@ -4,12 +4,14 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var TACS_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
+var AREA_KEY='portalTacsCentralAreaV1';
+var CENTRAL_CONTEXT_CACHE_KEY='portalTacsCentralContextCacheV3';
 var token=sessionStorage.getItem(ADMIN_TOKEN_KEY)||'';
 var territorioToken=sessionStorage.getItem(TACS_TOKEN_KEY)||'';
 var device=localStorage.getItem(DEVICE_KEY)||'';
 var mode=territorioToken?'tacs':(token?'admin':'');
-var active=null,data={tacs:[],areas:[],podeAdministrar:false,perfil:''};
-var areaEditSnapshot=null;
+var active=null,data={tacs:[],areas:[],administradores:[],administradorAtual:null,podeAdministrar:false,perfil:''};
+var selectedWorkAreaId='',cacheRendered=false,areaEditSnapshot=null;
 var csvState={file:null,base64:'',name:'',headers:[],delimiter:'',headerRow:-1,encoding:'',mapping:{},preview:null};
 var MAP_FIELDS=[
   ['idPortal','ID Portal'],['id','ID original'],['cpf','CPF'],['cns','CNS'],['nome','Nome completo'],
@@ -97,11 +99,97 @@ function bindMask(id,formatter){
 function validBirth(v){var m=text(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!m)return false;var day=Number(m[1]),month=Number(m[2]),year=Number(m[3]),date=new Date(Date.UTC(year,month-1,day)),today=new Date(),todayUtc=Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate());return date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day&&date.getTime()<=todayUtc;}
 function bool(v){return v===true||v===1||['true','1','sim','yes','ativo','ativa'].indexOf(text(v).toLowerCase())!==-1;}
 function esc(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
-function status(msg,type){var node=el('operationStatus')||el('loginStatus');node.textContent=msg;node.className='status'+(type?' '+type:'');}
-function loginStatus(msg,type){var node=el('loginStatus');node.textContent=msg;node.className='status'+(type?' '+type:'');}
+function status(msg,type){var node=el('operationStatus')||el('workspaceStatus');if(!node)return;node.textContent=msg;node.className='status'+(type?' '+type:'');node.hidden=!text(msg);}
+function workspaceStatus(msg,type){var node=el('workspaceStatus');if(!node)return;node.textContent=text(msg);node.className='status'+(type?' '+type:'');node.hidden=!text(msg);}
 function requestId(prefix){return String(prefix||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);}
+function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64);}
+function syncSessionFromStorage(){token=sessionStorage.getItem(ADMIN_TOKEN_KEY)||'';territorioToken=sessionStorage.getItem(TACS_TOKEN_KEY)||'';mode=territorioToken?'tacs':(token?'admin':'');return Boolean(token||territorioToken);}
 function session(){var out={dispositivo:device};if(mode==='tacs'&&territorioToken)out.territorioToken=territorioToken;else if(token)out.token=token;return out;}
 function payload(extra){var out=session();Object.keys(extra||{}).forEach(function(k){out[k]=extra[k];});return out;}
+function centralCacheKey(){return CENTRAL_CONTEXT_CACHE_KEY+':'+(mode==='tacs'?'tacs':'admin');}
+function readCentralContextCache(){
+  try{
+    if(!syncSessionFromStorage())return null;
+    var raw=sessionStorage.getItem(centralCacheKey());if(!raw)return null;
+    var saved=JSON.parse(raw);
+    if(!saved||!saved.context||!Array.isArray(saved.context.areas))return null;
+    return saved;
+  }catch(e){return null;}
+}
+function dataFromContext(ctx){
+  ctx=ctx&&typeof ctx==='object'?ctx:{};
+  return {
+    tacs:Array.isArray(ctx.tacs)?ctx.tacs:[],
+    areas:Array.isArray(ctx.areas)?ctx.areas:[],
+    administradores:Array.isArray(ctx.administradores)?ctx.administradores:[],
+    administradorAtual:ctx.administradorAtual||null,
+    podeAdministrar:ctx.podeAdministrar===true||mode==='admin',
+    perfil:text(ctx.perfil||'')
+  };
+}
+function requestedWorkArea(){
+  var requested='';try{requested=normArea(new URLSearchParams(location.search||'').get('area')||'');}catch(e){}
+  if(requested)return requested;
+  try{requested=normArea(localStorage.getItem(AREA_KEY)||'');}catch(e){}
+  return requested;
+}
+function workAreaById(id){id=normArea(id);return data.areas.find(function(a){return normArea(a&&a.areaId)===id;})||null;}
+function responsibleForArea(area){
+  if(!area)return null;
+  var areaId=normArea(area.areaId),tacsId=text(area.tacsId);
+  return data.tacs.find(function(t){return tacsId&&text(t&&t.tacsId)===tacsId;})||
+    data.tacs.find(function(t){return profileHasTacs(t&&t.perfil)&&normArea(t&&t.areaId)===areaId;})||null;
+}
+function currentAdministrator(){
+  var atual=data.administradorAtual;
+  if(atual&&text(atual.nomeCompleto||atual.nome))return atual;
+  var ativos=(data.administradores||[]).filter(function(a){return a&&a.ativo!==false&&text(a.nomeCompleto||a.nome);});
+  return ativos.length===1?ativos[0]:null;
+}
+function areaWorkLabel(area){
+  var t=responsibleForArea(area),name=text(area&&area.areaNome)||text(area&&area.areaId)||'Área';
+  var tacsName=text(t&&t.nomeCompleto)||text(t&&t.tacsId)||'TACS não definido';
+  var unit=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||text(t&&t.unidadeId)||'unidade não definida';
+  return name+' — TACS: '+tacsName+' — Unidade: '+unit+(area&&area.ativa===false?' — INATIVA':'');
+}
+function chooseWorkArea(preferred){
+  var areas=data.areas||[];if(!areas.length){selectedWorkAreaId='';return '';}
+  var id=normArea(preferred||selectedWorkAreaId||requestedWorkArea());
+  if(id&&areas.some(function(a){return normArea(a&&a.areaId)===id;})){selectedWorkAreaId=id;return id;}
+  var activeArea=areas.find(function(a){return a&&a.ativa!==false;})||areas[0];
+  selectedWorkAreaId=normArea(activeArea&&activeArea.areaId);return selectedWorkAreaId;
+}
+function persistWorkArea(id){
+  id=normArea(id);if(!id)return;selectedWorkAreaId=id;
+  try{localStorage.setItem(AREA_KEY,id);}catch(e){}
+  try{
+    var raw=sessionStorage.getItem(centralCacheKey()),saved=raw?JSON.parse(raw):null;
+    if(saved&&saved.context){saved.selectedAreaId=id;sessionStorage.setItem(centralCacheKey(),JSON.stringify(saved));}
+  }catch(e){}
+  try{
+    var url=new URL(location.href);url.searchParams.set('area',id);history.replaceState(history.state,'',url.pathname+url.search+url.hash);
+  }catch(e){}
+}
+function renderWorkArea(){
+  var select=el('workAreaSelect'),meta=el('workAreaMeta');if(!select||!meta)return;
+  chooseWorkArea();
+  select.innerHTML=(data.areas||[]).map(function(a){return '<option value="'+esc(normArea(a.areaId))+'">'+esc(areaWorkLabel(a))+'</option>';}).join('');
+  select.disabled=!data.podeAdministrar||data.areas.length<2;
+  if(selectedWorkAreaId)select.value=selectedWorkAreaId;
+  var area=workAreaById(selectedWorkAreaId),t=responsibleForArea(area),admin=currentAdministrator();
+  if(!area){meta.textContent='Nenhuma área cadastrada foi devolvida para esta sessão.';return;}
+  var pieces=[];
+  if(admin&&data.podeAdministrar)pieces.push('Administrador: '+text(admin.nomeCompleto||admin.nome));
+  pieces.push('TACS responsável: '+(text(t&&t.nomeCompleto)||text(t&&t.tacsId)||'não definido'));
+  pieces.push('Unidade: '+(text(area.unidadeNome)||text(area.unidadeId)||text(t&&t.unidadeId)||'não definida'));
+  meta.textContent=pieces.join(' • ');
+}
+function hydrateFromCentralCache(){
+  var saved=readCentralContextCache();if(!saved)return false;
+  data=dataFromContext(saved.context);selectedWorkAreaId=normArea(requestedWorkArea()||saved.selectedAreaId||'');
+  chooseWorkArea();persistWorkArea(selectedWorkAreaId);render();el('dashboard').classList.remove('hidden');
+  cacheRendered=true;workspaceStatus('Área carregada. Sincronizando dados atuais em segundo plano…','ok');return true;
+}
 
 function jsonp(action,params,cb){
   var name='territorioCb'+Date.now()+Math.floor(Math.random()*100000),script=document.createElement('script'),done=false;
