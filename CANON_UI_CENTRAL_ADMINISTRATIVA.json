@@ -20,7 +20,7 @@
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R8",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_04_RECONHECIMENTO_APARELHO_PERFIL_2026_09_12.md",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_05_PORTAS_APOIO_ADMIN_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
   "notes": [
@@ -250,5 +250,26 @@
       "pagesDeploymentSuccess": true
     },
     "validatedOn": "2026-09-12"
+  },
+  "task5AdminSupportDoors": {
+    "status": "implemented-awaiting-validation",
+    "authorizedOn": "2026-09-12",
+    "administratorRecognizedDeviceKeepsDoors": [
+      "ADMIN",
+      "TACS",
+      "MORADOR",
+      "UBS"
+    ],
+    "adminNotTrappedInTacsOnlyMode": true,
+    "combinedProfilesDoNotCreateDoors": true,
+    "preAuthNameDisclosure": false,
+    "residentDiagnosticDeferred": true,
+    "specificGate": "TAREFA_5_ADMIN_PORTAS_APOIO_OK",
+    "validation": {
+      "specificGate": "pending",
+      "fullSuite": "pending",
+      "appsScriptDeploy": "pending",
+      "pagesDeployment": "pending"
+    }
   }
 }
