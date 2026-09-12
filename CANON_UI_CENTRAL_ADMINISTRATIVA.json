@@ -19,7 +19,7 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R8",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R9",
   "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_05_PORTAS_APOIO_ADMIN_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
@@ -252,7 +252,7 @@
     "validatedOn": "2026-09-12"
   },
   "task5AdminSupportDoors": {
-    "status": "implemented-awaiting-validation",
+    "status": "validated-internal-deployed",
     "authorizedOn": "2026-09-12",
     "administratorRecognizedDeviceKeepsDoors": [
       "ADMIN",
@@ -266,10 +266,22 @@
     "residentDiagnosticDeferred": true,
     "specificGate": "TAREFA_5_ADMIN_PORTAS_APOIO_OK",
     "validation": {
-      "specificGate": "pending",
-      "fullSuite": "pending",
-      "appsScriptDeploy": "pending",
-      "pagesDeployment": "pending"
-    }
+      "specificGate": "TAREFA_5_ADMIN_PORTAS_APOIO_OK",
+      "fullSuite": "passed",
+      "initialWorkflowRun": 34719025276,
+      "initialRunResult": "blocked-before-deploy-by-legacy-test",
+      "retryWorkflowRun": 34719091947,
+      "appsScriptPreviousVersion": 202,
+      "appsScriptCurrentVersion": 203,
+      "appsScriptHealth": "passed-first-attempt",
+      "appsScriptActiveDeploymentVersionsAfterDeploy": [
+        6,
+        7,
+        9,
+        203
+      ],
+      "pagesDeployment": "pending-final-docs"
+    },
+    "validatedOn": "2026-09-12"
   }
 }
