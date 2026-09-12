@@ -180,5 +180,7 @@ O backend recusa identificação/onboarding, criação de PIN, login residencial
 
 A Tarefa 7 fica responsável por transformar essa proteção em um único núcleo/formulário de Morador com modo explícito `DIAGNOSTICO_ADMINISTRATIVO`.
 
-### Status da Tarefa 6: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK`.
+### Status final da Tarefa 6: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+O RETRY `34719509591` passou pela suíte integral, implantou Apps Script **204** no mesmo deployment e aprovou os health checks na primeira tentativa. GitHub Pages run `34719505209` também passou.
+
+**Sequência canônica:** Tarefa 6 encerrada tecnicamente; Tarefa 7 liberada para execução.
