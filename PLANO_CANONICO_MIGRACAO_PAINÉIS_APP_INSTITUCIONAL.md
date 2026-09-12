@@ -326,7 +326,7 @@ Gate específico `TAREFA_12_CACHE_FRESCOR_OK` aprovado junto com o gate pós-aud
 
 
 ## Tarefa 13 autorizada — Deduplicação de requisições ao servidor
-O núcleo passa a coordenar leituras idênticas feitas pela Central e pelos módulos para evitar chamadas repetidas ao Apps Script.
+O núcleo dos módulos passa a coordenar leituras idênticas para evitar chamadas repetidas ao Apps Script. A Central continua sendo a origem do contexto e não passa a depender do bridge consumidor.
 
 Fluxo:
 `pedido de leitura → chave canônica por ação/modo/área/sessão → reutilizar voo remoto em andamento ou resposta remota recente → distribuir aos consumidores → escrita invalida imediatamente o compartilhamento`.
