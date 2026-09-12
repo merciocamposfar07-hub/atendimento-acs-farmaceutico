@@ -29,6 +29,7 @@ var TACS_CONECTA_ACESSO_V1 = Object.freeze({
   IDENTITY_PREFIX:'tacs_conecta_identidade_',
   RECOVERY_PREFIX:'tacs_conecta_recuperacao_',
   SESSION_PREFIX:'tacs_conecta_sessao_',
+  UBS_SESSION_PREFIX:'tacs_conecta_ubs_sessao_',
   RATE_PREFIX:'tacs_conecta_rate_',
   RESULT_SECONDS:300,
   IDENTITY_SECONDS:900,
@@ -78,13 +79,13 @@ function conectaAcessoV1TratarPost_(e){
     'conecta_morador_login_pin','conecta_morador_sessao','conecta_morador_notificacao_confirmar',
     'conecta_morador_preferencia_notificacao','conecta_morador_membro_salvar_cpf','conecta_morador_encerrar',
     'conecta_pin_recuperar_iniciar','conecta_pin_recuperar_salvar','conecta_recuperacao_registrar_aparelho',
-    'conecta_ubs_identificar_primeiro_acesso','conecta_pendencias_contagem'
+    'conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_pendencias_contagem'
   ];
   if(aceitas.indexOf(action)===-1)return null;
   var id=conectaAcessoV1Texto_(p.requestId),resultado;
   try{
     if(!/^[A-Za-z0-9_-]{8,160}$/.test(id))throw new Error('Identificador da operação inválido.');
-    if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_pin_recuperar_iniciar','conecta_ubs_identificar_primeiro_acesso'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||action);
+    if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_pin_recuperar_iniciar','conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||action);
     if(action==='conecta_morador_identificar')resultado=conectaAcessoV1Identificar_(p);
     else if(action==='conecta_morador_confirmar')resultado=conectaAcessoV1Confirmar_(p);
     else if(action==='conecta_morador_criar_pin')resultado=conectaAcessoV1CriarPin_(p);
@@ -97,6 +98,7 @@ function conectaAcessoV1TratarPost_(e){
     else if(action==='conecta_pin_recuperar_salvar')resultado=conectaAcessoV1RecuperarSalvar_(p);
     else if(action==='conecta_recuperacao_registrar_aparelho')resultado=conectaAcessoV1RegistrarAparelhoConfiavel_(p);
     else if(action==='conecta_ubs_identificar_primeiro_acesso')resultado=conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p);
+    else if(action==='conecta_ubs_login_pin')resultado=conectaAcessoV1LoginUbs_(p);
     else resultado=conectaAcessoV1PendenciasContagem_(p);
   }catch(erro){
     resultado={ok:false,message:conectaAcessoV1Erro_(erro)};
@@ -430,6 +432,48 @@ function conectaAcessoV1Familia_(v){
   }catch(e){return [{nome:v[4],cpf:v[3],responsavel:true}];}
 }
 
+function conectaAcessoV1RegistrarUbsConfiavel_(ubs,dispositivo){
+  var chave=conectaAcessoV1Token_('ctr1'),chaveHash=conectaAcessoV1Hash_(chave),dispositivoHash=conectaAcessoV1Hash_(dispositivo);
+  var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.TRUST_SHEET,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS),last=sh.getLastRow(),row=0,agora=new Date(),referencia=conectaAcessoV1Id_(ubs.tacsId);
+  if(last>1){
+    var rows=sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS.length).getValues();
+    for(var i=rows.length-1;i>=0;i--){
+      if(conectaAcessoV1Texto_(rows[i][1])==='UBS'&&conectaAcessoV1Id_(rows[i][2])===referencia&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][3]),dispositivoHash)){row=i+2;break;}
+    }
+  }
+  var vals=['TRUST-'+Utilities.getUuid().replace(/-/g,'').slice(0,18).toUpperCase(),'UBS',referencia,dispositivoHash,chaveHash,true,agora,agora];
+  if(row){vals[0]=conectaAcessoV1Texto_(sh.getRange(row,1).getValue())||vals[0];vals[6]=sh.getRange(row,7).getValue()||agora;sh.getRange(row,1,1,vals.length).setValues([vals]);}
+  else sh.appendRow(vals);
+  return chave;
+}
+
+function conectaAcessoV1ReferenciaUbsConfiavel_(dispositivo,chave){
+  if(!dispositivo||!/^ctr1\./.test(chave))return '';
+  var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.TRUST_SHEET,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS),last=sh.getLastRow();
+  if(last<=1)return '';
+  var dh=conectaAcessoV1Hash_(dispositivo),kh=conectaAcessoV1Hash_(chave),rows=sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS.length).getValues();
+  for(var i=rows.length-1;i>=0;i--){
+    if(conectaAcessoV1Texto_(rows[i][1])!=='UBS'||!conectaAcessoV1Bool_(rows[i][5]))continue;
+    if(conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][3]),dh)&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][4]),kh))return conectaAcessoV1Id_(rows[i][2]);
+  }
+  return '';
+}
+
+function conectaAcessoV1CriarSessaoUbs_(ubs,dispositivo){
+  var token=conectaAcessoV1Token_('cus1'),payload={token:token,cadastroId:ubs.tacsId,dispositivoHash:conectaAcessoV1Hash_(dispositivo),criadoEm:Date.now()};
+  CacheService.getScriptCache().put(TACS_CONECTA_ACESSO_V1.UBS_SESSION_PREFIX+conectaAcessoV1Hash_(token),JSON.stringify(payload),TACS_CONECTA_ACESSO_V1.SESSION_SECONDS);
+  return payload;
+}
+
+function conectaAcessoV1RespostaUbs_(ubs,dispositivo,chave,mensagem){
+  var sessao=conectaAcessoV1CriarSessaoUbs_(ubs,dispositivo);
+  return {
+    ok:true,token:sessao.token,perfil:conectaAcessoV1Texto_(ubs.perfil)||'UBS',cadastroId:ubs.tacsId,nome:ubs.nomeCompleto,funcaoUbs:ubs.funcaoUbs,
+    unidadeId:ubs.unidadeId,permissoes:Array.isArray(ubs.permissoes)?ubs.permissoes.slice():[],
+    chaveConfianca:chave||'',vinculoAparelhoCriado:true,message:mensagem||'Acesso UBS validado.'
+  };
+}
+
 function conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p){
   var cpf=conectaAcessoV1Cpf_(p.cpf),pin=conectaAcessoV1Texto_(p.pin).replace(/\D/g,''),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
   if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
@@ -443,12 +487,22 @@ function conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p){
   if(!ubs.pinSalt||!ubs.pinHash||!tacsTerritorioV1CompararSeguro_(ubs.pinHash,tacsTerritorioV1HashPin_(pin,ubs.pinSalt)))throw new Error('CPF ou PIN do perfil UBS incorreto.');
   if(!conectaAcessoV1Texto_(ubs.unidadeId))throw new Error('O perfil UBS ainda não possui unidade vinculada.');
   if(!conectaAcessoV1Texto_(ubs.funcaoUbs))throw new Error('O perfil UBS ainda não possui função cadastrada.');
-  return {
-    ok:true,perfil:conectaAcessoV1Texto_(ubs.perfil)||'UBS',cadastroId:ubs.tacsId,nome:ubs.nomeCompleto,funcaoUbs:ubs.funcaoUbs,
-    unidadeId:ubs.unidadeId,permissoes:Array.isArray(ubs.permissoes)?ubs.permissoes.slice():[],
-    vinculoAparelhoCriado:false,
-    message:'Responsável UBS identificado. Nenhum vínculo permanente de aparelho foi criado nesta etapa.'
-  };
+  var chave=conectaAcessoV1RegistrarUbsConfiavel_(ubs,dispositivo);
+  return conectaAcessoV1RespostaUbs_(ubs,dispositivo,chave,'Responsável UBS identificado. Este aparelho foi reconhecido para os próximos acessos por PIN.');
+}
+
+function conectaAcessoV1LoginUbs_(p){
+  var pin=conectaAcessoV1Texto_(p.pin).replace(/\D/g,''),dispositivo=conectaAcessoV1Texto_(p.dispositivo),chave=conectaAcessoV1Texto_(p.chaveConfianca);
+  if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
+  if(!/^\d{4,8}$/.test(pin))throw new Error('Informe o PIN de acesso com 4 a 8 números.');
+  var referencia=conectaAcessoV1ReferenciaUbsConfiavel_(dispositivo,chave);
+  if(!referencia)throw new Error('Este aparelho ainda não está reconhecido para um perfil UBS. Faça o primeiro acesso.');
+  if(typeof tacsTerritorioV1EncontrarTacs_!=='function'||typeof tacsTerritorioV1PerfilTem_!=='function')throw new Error('O cadastro de perfis da UBS não está disponível.');
+  var ubs=tacsTerritorioV1EncontrarTacs_(referencia);
+  if(!ubs||ubs.ativo!==true||!tacsTerritorioV1PerfilTem_(ubs.perfil,'UBS'))throw new Error('O acesso UBS foi desativado ou alterado.');
+  if(!ubs.pinSalt||!ubs.pinHash||!tacsTerritorioV1CompararSeguro_(ubs.pinHash,tacsTerritorioV1HashPin_(pin,ubs.pinSalt)))throw new Error('PIN do perfil UBS incorreto.');
+  if(!conectaAcessoV1Texto_(ubs.unidadeId)||!conectaAcessoV1Texto_(ubs.funcaoUbs))throw new Error('O cadastro UBS precisa de unidade e função válidas.');
+  return conectaAcessoV1RespostaUbs_(ubs,dispositivo,'','Acesso UBS validado neste aparelho.');
 }
 
 function conectaAcessoV1TacsPorCpf_(cpf){
