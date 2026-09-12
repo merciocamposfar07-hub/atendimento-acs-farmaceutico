@@ -65,6 +65,9 @@ async function main() {
     virtualConsole,
     beforeParse(window) {
       window.PortalTacsAdminPreload = {ok: true};
+      // TAREFA_9: Profissionais é módulo consumidor. A sessão já vem da Central;
+      // o teste não deve mais autenticar com PIN dentro do painel.
+      window.sessionStorage.setItem('portalTacsAdminTokenV1', 'token-valido');
       window.confirm = () => true;
       window.HTMLFormElement.prototype.submit = function submit() {
         const payload = fields(this);
@@ -126,16 +129,21 @@ async function main() {
   const {window} = dom;
   try {
     await waitFor(
-      () => window.document.getElementById('loginStatus').classList.contains('ok'),
-      'O painel não ficou pronto para o login. Estado: ' +
+      () => window.document.getElementById('qProf').textContent === '5',
+      'Os cinco profissionais iniciais não foram carregados pela sessão canônica da Central. Estado: ' +
         window.document.getElementById('loginStatus').textContent +
+        ' | ações: ' + actions.join(', ') +
         ' | erros: ' + errors.join(' | ')
     );
-    setField(window, 'pin', '1234');
-    window.document.getElementById('entrar').click();
-    await waitFor(
-      () => window.document.getElementById('qProf').textContent === '5',
-      'Os cinco profissionais iniciais não foram carregados.'
+    assert.equal(
+      actions.includes('admin_login'),
+      false,
+      'Profissionais tentou executar admin_login dentro do módulo após a Tarefa 9.'
+    );
+    assert.equal(
+      window.sessionStorage.getItem('portalTacsAdminTokenV1'),
+      'token-valido',
+      'Profissionais alterou a sessão global recebida da Central.'
     );
     assert.match(window.document.getElementById('listaProfissionais').textContent, /PSICÓLOGO/);
 
