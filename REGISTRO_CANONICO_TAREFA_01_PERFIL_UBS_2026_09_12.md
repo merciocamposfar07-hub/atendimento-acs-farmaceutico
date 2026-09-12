@@ -92,15 +92,28 @@ A coluna `FUNCAO_UBS` foi acrescentada **ao final** da estrutura existente `TACS
 - `PLANO_CANONICO_MIGRACAO_PAINÉIS_APP_INSTITUCIONAL.md`;
 - `CANON_UI_CENTRAL_ADMINISTRATIVA.json`.
 
+## Evidências de validação e implantação
+
+- Gate específico da Tarefa 1: aprovado.
+- Sintaxe dos JavaScripts e módulos Apps Script alterados: aprovada.
+- Suíte integral `npm test`: **aprovada** no workflow `Implantar Apps Script de Moradores`, execução **34710566535**, job **103598473562**.
+- Validação de credenciais do Apps Script: aprovada.
+- Download do projeto real antes da alteração: aprovado.
+- Substituição somente dos módulos autorizados: aprovada.
+- Criação de versão, atualização da mesma implantação e validação: **aprovadas**.
+- GitHub Pages: execução **34710674013**, conclusão **success**, head implantado `266319d8153802fad8b893638264bf176b67cfae`.
+- Conferência do head efetivamente implantado:
+  - `conecta-acesso-unificado-v1.js` contém quarto perfil UBS e grade de quatro perfis;
+  - `teste-v1/painel-tacs-areas-v1.html` contém `Administrador / TACS / UBS`, opção `UBS` e campo `Função na UBS`;
+  - `teste-v1/painel-tacs-areas-v1.js` contém o tratamento funcional UBS;
+  - o fluxograma canônico implantado contém os quatro perfis;
+  - o contrato canônico JSON implantado contém o registro da Tarefa 1.
+
+A validação técnica acima comprova código, testes, backend e publicação. A experiência final em aparelho real continua pendente da conferência do usuário e não é declarada concluída antes desse teste.
+
 ## Regra de conclusão
 
-A Tarefa 1 só muda para **VALIDADA** depois de:
-
-1. gates específicos aprovados;
-2. suíte integral aprovada;
-3. backend Apps Script implantado com validação do workflow;
-4. GitHub Pages publicado;
-5. arquivos servidos conferidos.
+Os cinco gates técnicos foram cumpridos. A Tarefa 1 está **VALIDADA TECNICAMENTE E IMPLANTADA**.
 
 A validação visual/operacional final no aparelho do usuário permanece necessária antes de declarar a experiência de produção concluída.
 
