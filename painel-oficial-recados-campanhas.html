@@ -2398,15 +2398,17 @@ html{overflow-x:hidden!important;overflow-y:auto!important}body{overflow-x:hidde
 </section>
 </main>
 <footer><p>Portal TACS • Painel administrativo oficial</p><p>Alterações confirmadas são aplicadas ao Portal do Morador</p></footer>
+<script src="/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-tarefa8-v1"></script>
 <script>
 (function(){
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1',PROFILE_KEY='portalTacsAcessoRapidoV1',UNDO_KEY='portalTacsUndoConteudoV1',TEMA_KEY='portalTacsTemaRecadosV1',CACHE_SCHEMA='lf1';
-var token=sessionStorage.getItem(TOKEN_KEY)||'',territorioToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',dispositivo=localStorage.getItem(DEVICE_KEY)||'';
-var accessMode=territorioToken?'tacs':(token?'admin':'');var podeAdministrar=accessMode==='admin';
+var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'recados'}):null;
+var token=moduleSession&&moduleSession.token||'',territorioToken=moduleSession&&moduleSession.territorioToken||'',dispositivo=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
+var accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territorioToken?'tacs':(token?'admin':''));var podeAdministrar=accessMode==='admin';
 if(!dispositivo){dispositivo='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,dispositivo)}
-var areaId=(new URLSearchParams(location.search).get('area')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA';
+var areaId=moduleCore&&typeof moduleCore.areaId==='function'?moduleCore.areaId():(new URLSearchParams(location.search).get('area')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA';
 var dados={recados:[],campanhas:[]},areas=[],ativa=null,contador=0,abaAtual='recados',testesOk=false,manutencaoAtiva=false,manutencaoConhecida=false,contextoPronto=false,confirmacaoPendente=false,snapshotVisivel=false,snapshotReconexaoTentativas=0,snapshotReconexaoTimer=null;
 var entrar=document.getElementById('entrar'),entrarTacs=document.getElementById('entrarTacs'),sair=document.getElementById('sair'),desfazer=document.getElementById('desfazer'),contraste=document.getElementById('alternarContraste');
 function txt(v){return String(v==null?'':v)}
@@ -2462,7 +2464,7 @@ function post(action,payload,cb,resultAction){
     agendarConsulta();
   });
 }
-function sessao(){var s={dispositivo:dispositivo,areaId:areaId};if(accessMode==='tacs'&&territorioToken)s.territorioToken=territorioToken;else s.token=token;return s}
+function sessao(){if(moduleCore&&typeof moduleCore.session==='function')return moduleCore.session({areaId:areaId,escopo:'recados'});var s={dispositivo:dispositivo,areaId:areaId};if(accessMode==='tacs'&&territorioToken)s.territorioToken=territorioToken;else s.token=token;return s}
 function setUndo(o){sessionStorage.setItem(UNDO_KEY,JSON.stringify(o));atualizarUndo()}
 function getUndo(){try{return JSON.parse(sessionStorage.getItem(UNDO_KEY)||'null')}catch(e){return null}}
 function clearUndo(){sessionStorage.removeItem(UNDO_KEY);atualizarUndo()}
