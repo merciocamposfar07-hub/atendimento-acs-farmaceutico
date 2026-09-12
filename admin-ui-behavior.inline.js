@@ -252,8 +252,39 @@ function installFinalSkin(){
   var old=document.getElementById('cscApp4FinalSkinR6');if(old)old.remove();
   var style=document.createElement('style');
   style.id='cscApp4FinalSkinR6';
-  style.textContent='html,body{background:#071827!important;background-image:none!important;color:#f7fcff!important}body{background:#071827!important;background-image:none!important}header,footer,.footer{border:0!important;box-shadow:none!important}input:not([type=checkbox]):not([type=radio]),select,textarea,.campo,.field,.validadeCampo,.validadeControle{background:#071827!important;background-image:none!important;color:#fff!important;border-color:#416f89!important}input::placeholder,textarea::placeholder{color:#aec4d1!important;opacity:1!important}.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
+  style.textContent=''
+    +'html,body{background:#071827!important;background-image:none!important;color:#f7fcff!important}'
+    +'body{background:#071827!important;background-image:none!important}'
+    +'header,footer,.footer{border:0!important;box-shadow:none!important}'
+    +'body.csc-brand-enhanced main>section.panel,body.csc-brand-enhanced main>section.painel,body.csc-brand-enhanced main>section.card,body.csc-brand-enhanced main>div.panel,body.csc-brand-enhanced main>div.painel,body.csc-brand-enhanced main>div.card,body.csc-brand-enhanced main>.box,body.csc-brand-enhanced main>.caixa,body.csc-brand-enhanced main>.newbox,#conteudo.card,#content.panel,#ticketsPane,#devicesPane,#secaoRecados,#secaoCampanhas,.lista,.list,#results{background:transparent!important;background-image:none!important;border:0!important;box-shadow:none!important}'
+    +'.panel .card,.painel .card,.card .card,#results>.card,#results .card,#listaRecados .item,#listaCampanhas .item,.item,.cartao,.ticket,.grupoProfissional,.area-row,.maprow,.health-card,.saude-numero,.numero,.number,.stat,.metric,.quick-card,.saude-aparelho,.protect,.area-control,.csc-profile-card,.csc-profile-empty,.msg-familia-acao,.msg-ind-form-action,.msg-ind-box,.msg-ind-person,.msg-ind-preview,.msg-ind-status,.msg-ind-step,.msg-rel-box,.msg-rel-status,.msg-rel-event,.msg-rel-message,.msg-rel-device,.msg-rel-grid div{background:linear-gradient(145deg,#153b58,#102d46)!important;background-image:linear-gradient(145deg,#153b58,#102d46)!important;color:#f7fcff!important;border:0!important;box-shadow:none!important}'
+    +'#results>.card>button:first-child,#results .card>button:first-child{background:transparent!important;background-image:none!important;color:#f7fcff!important;border:0!important;box-shadow:none!important;border-radius:0!important}'
+    +'button,.btn,.botao,.grupoAcao,.msg-ind-card-button,.msg-ind-form-button,.msg-familia-acao button,.msg-ind-send,.msg-ind-refresh,.msg-rel-button,.msg-rel-family,.msg-rel-close{background:#135272!important;background-image:none!important;color:#fff!important;border:0!important;box-shadow:none!important}'
+    +'.module{background:linear-gradient(145deg,#174765,#0c3049)!important;background-image:linear-gradient(145deg,#174765,#0c3049)!important;color:#fff!important;border:0!important;box-shadow:none!important}'
+    +'.module .icon,.module-icon{background:linear-gradient(145deg,#176c94,#0b263d)!important;border:0!important;box-shadow:none!important}'
+    +'.status,.status.ok,.status.warn,.status.aviso,.status.err,.status.erro,.nota,.note{background:#102d46!important;background-image:none!important;border:0!important;box-shadow:none!important}'
+    +'.status.ok{color:#c7f7d6!important}.status.warn,.status.aviso{color:#f5e1b7!important}.status.err,.status.erro{color:#ffd0d5!important}'
+    +'input:not([type=checkbox]):not([type=radio]),select,textarea,.campo,.field,.validadeCampo,.validadeControle{background:#071827!important;background-image:none!important;color:#fff!important;border:1px solid #2b5a76!important;box-shadow:none!important}'
+    +'input::placeholder,textarea::placeholder{color:#aec4d1!important;opacity:1!important}'
+    +'.msg-ind-preview-edit{background:#071827!important;color:#f7fcff!important;border:0!important}'
+    +'.msg-ind-step small,.msg-rel-device small,.msg-familia-acao span,.msg-ind-form-action small,.protect p,.protect small,.protect .muted,.protect .sub{color:#adc4d2!important}'
+    +'.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}'
+    +'button:active:not(:disabled),.btn:active:not(:disabled),.botao:active:not(:disabled),.module:active:not(:disabled),.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;border:0!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
   (document.head||document.documentElement).appendChild(style);
+}
+var finalSkinObserver=null;
+function keepFinalSkinLast(){
+  if(finalSkinObserver||!document.head)return;
+  finalSkinObserver=new MutationObserver(function(records){
+    var lateStyle=false;
+    records.forEach(function(record){
+      Array.prototype.forEach.call(record.addedNodes||[],function(node){
+        if(node&&node.nodeType===1&&(node.tagName==='STYLE'||node.tagName==='LINK')&&node.id!=='cscApp4FinalSkinR6')lateStyle=true;
+      });
+    });
+    if(lateStyle)setTimeout(installFinalSkin,0);
+  });
+  finalSkinObserver.observe(document.head,{childList:true});
 }
 
 function boot(){
@@ -264,6 +295,9 @@ function boot(){
   syncSessionClass();
   installTouchFeedback();
   installFinalSkin();
+  keepFinalSkinLast();
+  setTimeout(installFinalSkin,0);
+  setTimeout(installFinalSkin,250);
   sessionTimer=setInterval(syncSessionClass,700);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
