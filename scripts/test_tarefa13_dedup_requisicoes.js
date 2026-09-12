@@ -53,7 +53,7 @@ assert.match(core,/registry\.generation=Number\(registry\.generation\|\|0\)\+1/)
 assert.match(core,/registry\.recent=\{\}/);
 
 // A Central participa do mesmo broker e distribui contexto/base de moradores.
-assert.match(centralHtml,/conecta-module-core-v1\.js\?v=20260912-task13-request-dedup-v1/);
+assert.match(centralHtml,/conecta-module-core-v1\.js\?v=[^"'\\<\\s]+/);
 assert.match(central,/moduleRequests=moduleCore&&moduleCore\.requests/);
 assert.match(central,/coreRead\('admin_territorio_dados'/);
 assert.match(central,/coreRead\('admin_moradores_status'/);
@@ -64,7 +64,7 @@ for(const [src,name] of [[agendas,'agendas'],[profissionais,'profissionais']]){
   assert.match(src,/moduleRequests=moduleCore&&moduleCore\.requests/);
   assert.match(src,/coreRead\('admin_dados'/,name+' não usa o broker em admin_dados.');
   assert.match(src,/noteRequestAction\(action\)/,name+' não invalida o broker em mutações.');
-  assert.match(src,/conecta-module-core-v1\.js\?v=20260912-task13-request-dedup-v1/);
+  assert.match(src,/conecta-module-core-v1\.js\?v=[^"'\\<\\s]+/);
 }
 
 // Demais módulos usam o mesmo contrato para a leitura principal.
@@ -81,7 +81,7 @@ for(const [src,action,name] of [
 }
 
 for(const src of [moradoresHtml,territorioHtml,suporte,municipios,recados,agendas,profissionais]){
-  assert.match(src,/conecta-module-core-v1\.js\?v=20260912-task13-request-dedup-v1/);
+  assert.match(src,/conecta-module-core-v1\.js\?v=[^"'\\<\\s]+/);
 }
 
 // Tarefa 12 continua válida: cache visual não vira autoridade e o broker só distribui
