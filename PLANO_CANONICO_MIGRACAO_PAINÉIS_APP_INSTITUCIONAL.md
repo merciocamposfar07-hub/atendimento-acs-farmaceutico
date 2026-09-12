@@ -217,3 +217,23 @@ Regras:
 O RETRY 2 `34719916306` passou pela suíte integral, implantou Apps Script **205** e aprovou os health checks na primeira tentativa. GitHub Pages run `34719909246` também passou. As duas tentativas anteriores foram interrompidas antes do deploy por gates históricos da Tarefa 6 e não criaram versões.
 
 **Regra de sequência cumprida:** Tarefa 7 encerrada tecnicamente; Tarefa 8 liberada para execução.
+
+
+## Tarefa 8 autorizada — Painéis passam a consumir o núcleo do Conecta
+Os painéis antigos passam progressivamente a funcionar como módulos consumidores de um contexto único publicado pela Central, sem criar autenticação paralela.
+
+Regras:
+- bridge oficial: `conecta-module-core-v1.js`;
+- o core fornece identidade, perfil, função/unidade UBS, área, permissões, sessão, estado e política de cache;
+- tokens remotos não ficam persistidos no snapshot de contexto;
+- Agendas, Moradores, Profissionais, Recados/Campanhas, Suporte, TACS/Áreas e Municípios/Organizações consomem o core;
+- logins legados que ainda existam permanecem apenas como compatibilidade transitória até a Tarefa 9;
+- shell persistente fica para a Tarefa 10;
+- migração definitiva painel a painel continua reservada à Tarefa 16, iniciando por Agendas e vagas.
+
+### Status final da Tarefa 8: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate específico `TAREFA_8_MODULOS_CORE_CONTEXTO_OK` aprovado dentro da suíte integral. O RETRY 2 `34721946917` implantou Apps Script **206** no mesmo deployment e aprovou o health check na primeira tentativa. GitHub Pages run `34722041965` concluiu build, deploy e report com sucesso.
+
+As tentativas anteriores `34720676321` e `34721822778` foram interrompidas antes do deploy por testes legados que ainda simulavam a arquitetura anterior; os gates foram alinhados ao comportamento real do núcleo sem antecipar a remoção dos logins da Tarefa 9.
+
+**Regra de sequência cumprida:** Tarefa 8 encerrada tecnicamente; Tarefa 9 liberada para execução.
