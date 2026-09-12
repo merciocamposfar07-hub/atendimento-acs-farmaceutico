@@ -14,6 +14,7 @@ var TACS_ONLY=String(URL_PARAMS.get('acesso')||'').toLowerCase()==='tacs'&&!admi
 var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
 var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
 var shellFrames={},shellActiveModule='',shellScopeKey='';
+var moduleCore=window.ConectaModuleCoreV1,moduleRequests=moduleCore&&moduleCore.requests;
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
@@ -44,6 +45,15 @@ function aquecerValidacaoPin(){
   }
 }
 function session(extra){var out={dispositivo:device};if(mode==='tacs'&&territoryToken)out.territorioToken=territoryToken;else if(token)out.token=token;if(selectedAreaId)out.areaId=selectedAreaId;Object.keys(extra||{}).forEach(function(k){out[k]=extra[k]});return out}
+function coreRead(action,payload,runner,cb){
+  if(moduleRequests&&typeof moduleRequests.read==='function'){
+    moduleRequests.read(action,payload,function(done){runner(done)},function(result,meta){cb(result,meta)}).catch(function(e){cb({ok:false,temporario:true,message:text(e&&e.message)||'Falha na leitura compartilhada.'},{shared:false,source:'broker-error'})});
+    return;
+  }
+  runner(function(result){cb(result,{shared:false,source:'legacy'})});
+}
+function noteRequestAction(action){if(moduleRequests&&typeof moduleRequests.noteAction==='function')moduleRequests.noteAction(action)}
+
 function applyUiStandard(doc){
   try{
     if(!doc||!doc.documentElement||!doc.head||!doc.body)return;
@@ -490,7 +500,8 @@ function refreshHealth(force){
     else if(!cacheItens.portal)markHealth('healthPortal','Sem confirmação','warn');
     done()
   });
-  healthPostIsolated('admin_moradores_status',session({areaId:areaId}),'admin_moradores_result',function(r){
+  var moradoresPayload=session({areaId:areaId});
+  coreRead('admin_moradores_status',moradoresPayload,function(done){healthPostIsolated('admin_moradores_status',moradoresPayload,'admin_moradores_result',done)},function(r){
     if(normArea(areaId)===selectedAreaId){
       if(r&&r.ok===true){markHealth('healthResidents','Base acessível','ok');saveHealthItem(areaId,'residents','Base acessível','ok')}
       else if(!cacheItens.residents)markHealth('healthResidents','Falha na leitura','err');
@@ -514,7 +525,7 @@ function refreshHealth(force){
   el('healthUpdated').textContent='Atualizando dados validados • área '+(text(area&&area.areaNome)||areaId);
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
-function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260912-task12-cache-version-v1',from='&from=central';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+from+'&v='+revision;if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+from+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+from+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+from+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+from+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v=20260912-task12-cache-version-v1';if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
+function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260912-task13-request-dedup-v1',from='&from=central';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+from+'&v='+revision;if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+from+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+from+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+from+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+from+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v=20260912-task13-request-dedup-v1';if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
 
 /* TAREFA_10_SHELL_PERSISTENTE_V1:
    a Central permanece montada e é a única dona da navegação interna.
@@ -619,7 +630,8 @@ function closeViewer(){
   refreshHealth(false);return true;
 }
 function loadContext(message){
-  post('admin_territorio_dados',session(),'admin_territorio_result',function(r){
+  var contextoPayload=session();
+  coreRead('admin_territorio_dados',contextoPayload,function(done){post('admin_territorio_dados',contextoPayload,'admin_territorio_result',done)},function(r){
     if(!r||r.ok!==true){
       var falhaMsg=text(r&&r.message)||'A leitura do contexto ainda não foi confirmada.';
       var authInvalida=Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(falhaMsg));
@@ -673,6 +685,7 @@ function logout(){
   logoutEmCurso=true;
   var lastMode=mode||'admin',hasSession=Boolean(token||territoryToken);
   var action=lastMode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout';
+  noteRequestAction(action);
   var payload=hasSession?session():null;
 
   /* LOGOFF_IMEDIATO_V1:
