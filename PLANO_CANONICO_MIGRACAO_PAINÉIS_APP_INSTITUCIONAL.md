@@ -237,3 +237,21 @@ Gate específico `TAREFA_8_MODULOS_CORE_CONTEXTO_OK` aprovado dentro da suíte i
 As tentativas anteriores `34720676321` e `34721822778` foram interrompidas antes do deploy por testes legados que ainda simulavam a arquitetura anterior; os gates foram alinhados ao comportamento real do núcleo sem antecipar a remoção dos logins da Tarefa 9.
 
 **Regra de sequência cumprida:** Tarefa 8 encerrada tecnicamente; Tarefa 9 liberada para execução.
+
+
+## Tarefa 9 autorizada — PIN somente na entrada do Conecta
+A autenticação pertence ao núcleo do Conecta. Depois do PIN válido na entrada, os módulos usam o contexto já autenticado e não pedem PIN, não escolhem perfil e não controlam os tokens globais.
+
+Regras:
+- Central é a única autoridade de login e logoff;
+- módulos não exibem nem executam login/PIN próprio;
+- módulos não gravam, removem ou limpam tokens globais Administrador/TACS;
+- perfil e sessão vêm exclusivamente do `ConectaModuleCoreV1`;
+- ausência de sessão canônica orienta retorno à Central;
+- shell persistente fica reservado à Tarefa 10;
+- migração definitiva painel a painel permanece reservada à Tarefa 16.
+
+### Status final da Tarefa 9: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate `TAREFA_9_PIN_SOMENTE_ENTRADA_OK` e suíte integral aprovados. O workflow final `34723196310` implantou Apps Script **207** no mesmo deployment e aprovou todos os health checks na primeira tentativa. GitHub Pages com o código desta tarefa concluiu com sucesso no run `34723391600`.
+
+**Regra de sequência cumprida:** Tarefa 9 encerrada tecnicamente; Tarefa 10 liberada para execução.
