@@ -37,14 +37,15 @@ assert.match(core,/freshness:performanceFreshness/);
 assert.match(core,/if\(item\.schemaVersion===1\)[\s\S]*legacyUnversioned=true[\s\S]*requiresRemote=true/);
 assert.match(core,/stale:!confirmedAt\|\|age>PERFORMANCE_STALE_MS\|\|Boolean\(item&&item\.legacyUnversioned\)/);
 
-// Todos os módulos continuam cache-first, mas cada fluxo mantém consulta remota.
+// Todos os módulos continuam cache-first. Após a Tarefa 13, a confirmação remota
+// pode vir do broker do core em vez de cada módulo abrir uma chamada duplicada própria.
 const modules=[
  [agendas,'agendas',"post('admin_dados'"],
  [profissionais,'profissionais',"post('admin_dados'"],
  [recados,'recados','post('],
  [moradores,'moradores-base',"post('admin_moradores_status'"],
  [suporte,'suporte-chamados',"post('admin_suporte_chamados_listar'"],
- [territorio,'territorio',"territoryPost('admin_territorio_dados'"],
+ [territorio,'territorio',"coreRead('admin_territorio_dados'"],
  [municipios,'municipios',"post('admin_multimunicipio_dados'"]
 ];
 for(const [src,name,remote] of modules){
