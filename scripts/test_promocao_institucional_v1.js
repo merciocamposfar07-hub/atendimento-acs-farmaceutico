@@ -63,8 +63,10 @@ assert.match(centralQuick, /portalTacsCentralRefreshV1/);
 assert.match(centralQuick, /event\.isTrusted/);
 assert.match(centralQuick, /Há alterações que podem não ter sido salvas/);
 
-// O núcleo legado ainda contém cache-busting; a camada B precisa interceptar antes dele.
-assert.match(centralCore, /_cb='?\+?Date\.now\(\)/);
+// A Tarefa 10 substitui o cache-busting destrutivo por shell persistente.
+assert.match(centralCore, /TAREFA_10_SHELL_PERSISTENTE_V1/);
+assert.doesNotMatch(centralCore, /_cb='?\+?Date\.now\(\)/);
+assert.match(centralQuick, /TAREFA_10_ROUTER_UNICO_V1/);
 assert.match(centralQuick, /grid\.addEventListener\('click'/);
 
 console.log('PROMOCAO_INSTITUCIONAL_V1_OK');
