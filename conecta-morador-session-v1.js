@@ -69,7 +69,7 @@ function prefill(r){
 function topBar(r){
  if(el('cscResidentBar'))return;
  var bar=document.createElement('div');bar.id='cscResidentBar';bar.className='csc-resident-bar';
- bar.innerHTML='<div class="csc-resident-icon" aria-hidden="true">C</div><strong>'+esc(r.nome||'Morador')+'<small>Conecta Saúde Comunitária • '+esc(r.areaId||areaId())+'</small></strong><div class="csc-resident-menu"><button type="button" id="cscMuteToggle">'+(r.silencioso?'🔕 Silenciado':'🔔 Avisos')+'</button><button type="button" id="cscResidentLogout">Sair</button></div>';
+ bar.innerHTML='<div class="csc-resident-icon" aria-hidden="true">C</div><strong>'+esc(r.nome||'Morador')+' — Morador<small>Conecta Saúde Comunitária • '+esc(r.areaId||areaId())+'</small></strong><div class="csc-resident-menu"><button type="button" id="cscMuteToggle">'+(r.silencioso?'🔕 Silenciado':'🔔 Avisos')+'</button><button type="button" id="cscResidentLogout">Sair</button></div>';
  document.body.insertBefore(bar,document.body.firstChild);
  el('cscResidentLogout').onclick=logout;
  el('cscMuteToggle').onclick=toggleMute;
