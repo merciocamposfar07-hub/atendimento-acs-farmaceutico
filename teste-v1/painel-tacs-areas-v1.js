@@ -4,12 +4,12 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var TACS_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
-var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'territorio'}):null;
+var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'territorio'}):null,modulePerf=moduleCore&&moduleCore.performance;
 var token=moduleSession&&moduleSession.token||'';
 var territorioToken=moduleSession&&moduleSession.territorioToken||'';
 var device=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
 var mode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territorioToken?'tacs':(token?'admin':''));
-var active=null,data={tacs:[],areas:[],podeAdministrar:false,perfil:''};
+var active=null,data={tacs:[],areas:[],podeAdministrar:false,perfil:''},territoryConfirmed=false;
 var areaEditSnapshot=null;
 var csvState={file:null,base64:'',name:'',headers:[],delimiter:'',headerRow:-1,encoding:'',mapping:{},preview:null};
 var MAP_FIELDS=[
@@ -172,11 +172,26 @@ function showLogin(which){
   el('loginAdminTab').classList.toggle('active',admin);el('loginTacsTab').classList.toggle('active',!admin);
 }
 
+function territoryPerformancePayload(r){return{ok:true,tacs:Array.isArray(r&&r.tacs)?r.tacs:[],areas:Array.isArray(r&&r.areas)?r.areas:[],podeAdministrar:r&&r.podeAdministrar===true,perfil:text(r&&r.perfil)}}
+function syncTerritoryWriteState(){
+  document.querySelectorAll('#newTacsButton,#newAreaButton,#previewCsvButton,#importCsvButton,#saveAreaButton,.editTacs,.editArea,.validateArea,.undoBatch,#tacsForm button[type="submit"],#areaForm button[type="submit"]').forEach(function(n){n.disabled=!territoryConfirmed});
+}
 function loadData(message,operationMessage){
+  var cached=null;
+  if(modulePerf&&typeof modulePerf.prime==='function'){
+    cached=modulePerf.prime('territorio',function(saved){
+      data=territoryPerformancePayload(saved);territoryConfirmed=false;render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;
+      loginStatus('Última confirmação territorial exibida. Atualizando em segundo plano…','warn');
+    });
+  }
   territoryPost('admin_territorio_dados',{},function(r){
-    if(!r||r.ok!==true){clearSession();loginStatus(text(r&&r.message||'Sessão inválida ou expirada.'),'err');if(operationMessage)status('A alteração foi salva, mas não foi possível atualizar a tela. Reabra o painel.','err');return;}
-    data={tacs:Array.isArray(r.tacs)?r.tacs:[],areas:Array.isArray(r.areas)?r.areas:[],podeAdministrar:r.podeAdministrar===true,perfil:text(r.perfil)};
-    render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;loginStatus(message||'Sessão validada.','ok');if(operationMessage)status(operationMessage,'ok');
+    if(!r||r.ok!==true){if(cached){territoryConfirmed=false;syncTerritoryWriteState();loginStatus('Última confirmação territorial permanece disponível somente para consulta; a atualização ainda não foi confirmada.','warn');if(operationMessage)status('A alteração foi salva, mas a releitura ainda não foi confirmada.','warn');return}clearSession();loginStatus(text(r&&r.message||'Sessão inválida ou expirada.'),'err');if(operationMessage)status('A alteração foi salva, mas não foi possível atualizar a tela. Reabra o painel.','err');return;}
+    var payload=territoryPerformancePayload(r),diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('territorio',payload):{changed:true};
+    territoryConfirmed=true;data=payload;
+    if(diff.changed||!cached)render();else syncTerritoryWriteState();
+    el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;
+    loginStatus(diff.changed?(message||'Sessão validada.'):'Dados territoriais atuais confirmados; nenhuma mudança nova encontrada.','ok');
+    if(operationMessage)status(operationMessage,'ok');
   });
 }
 
@@ -190,7 +205,7 @@ function render(){
   el('activeAreasCount').textContent=String(data.areas.filter(function(a){return bool(a.ativa);}).length);
   el('profileLabel').textContent=data.podeAdministrar?'ADMIN':'TACS';
   el('tacsAdminActions').classList.toggle('hidden',!data.podeAdministrar);el('areasAdminActions').classList.toggle('hidden',!data.podeAdministrar);
-  renderTacs();renderAreas();renderAreaOptions();renderCsvAreaOptions();
+  renderTacs();renderAreas();renderAreaOptions();renderCsvAreaOptions();syncTerritoryWriteState();
 }
 
 function renderTacs(){
@@ -240,7 +255,7 @@ function openTacs(t){
   el('tacsFormTitle').textContent=t?'Editar Administrador / TACS / UBS':'Novo Administrador / TACS / UBS';el('tacsForm').classList.remove('hidden');el('tacsForm').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-function saveTacs(event){
+function saveTacs(event){if(!territoryConfirmed){status('Aguarde a confirmação do servidor antes de alterar cadastros.','warn');return;}
   event.preventDefault();
   var profile=normalizeAccessProfile(el('tacsProfile').value),isTacs=profileHasTacs(profile),isUbs=profileHasUbs(profile),hasUnit=isTacs||isUbs,birth=birthText(el('tacsBirth').value),cns=digits(el('tacsCns').value),cpf=digits(el('tacsCpf').value),phone=digits(el('tacsPhone').value),pin=digits(el('tacsPin').value),isNew=!text(el('tacsId').value);
   if(!validBirth(birth)){status('Informe uma data de nascimento válida no formato DD/MM/AAAA.','err');el('tacsBirth').focus();return;}
@@ -308,7 +323,7 @@ function openArea(a){
   el('areaForm').classList.remove('hidden');syncAreaLinkState();el('areaForm').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-function saveArea(event){
+function saveArea(event){if(!territoryConfirmed){status('Aguarde a confirmação do servidor antes de alterar áreas.','warn');return;}
   event.preventDefault();var body=areaFormBody();
   if(!confirm('Salvar e validar esta área? Uma área ativa precisa ter fonte 20/20 exclusiva.'))return;
   status('Validando TACS, CNS, unidade e fonte de moradores…','warn');territoryPost('admin_territorio_salvar_area',{payload:JSON.stringify(body)},function(r){
@@ -389,7 +404,7 @@ function renderMapping(){
 function collectMapping(){var out={};document.querySelectorAll('.mappingSelect').forEach(function(s){out[s.dataset.field]=s.value===''?-1:Number(s.value);});return out;}
 function csvBody(){return {arquivo:csvState.name,csvBase64:csvState.base64,delimitador:csvState.delimiter,mapeamento:csvState.mapping,previewToken:csvState.preview&&csvState.preview.previewToken||''};}
 
-function previewCsv(){
+function previewCsv(){if(!territoryConfirmed){status('Aguarde a confirmação do servidor antes de validar o CSV.','warn');return;}
   var area=el('csvArea').value;if(!area||!csvState.base64){status('Escolha a área e o arquivo CSV.','err');return;}csvState.mapping=collectMapping();
   status('Validando o CSV sem gravar na planilha…','warn');csvPost('admin_csv_previa',area,csvBody(),function(r){if(!r||r.ok!==true){status(text(r&&r.message||'A prévia foi recusada.'),'err');return;}csvState.preview=r;renderPreview(r);status('Prévia concluída. Nenhuma linha foi gravada.','ok');});
 }
@@ -400,7 +415,7 @@ function renderPreview(r){
   el('csvPreview').classList.remove('hidden');
 }
 
-function importCsv(){
+function importCsv(){if(!territoryConfirmed){status('Aguarde a confirmação do servidor antes de importar o CSV.','warn');return;}
   if(!csvState.preview)return;var area=el('csvArea').value,decisions={};document.querySelectorAll('.csvDecision').forEach(function(s){decisions[s.dataset.line]=s.value;});var body=csvBody();body.decisoes=decisions;
   var total=Number(csvState.preview.totalLinhas||0),mostradas=(csvState.preview.linhas||[]).length;
   var aviso='Confirmar a importação para esta área? O lote terá auditoria e opção segura de desfazer.';
