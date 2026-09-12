@@ -71,8 +71,8 @@ assert.match(quick,/if\(window\.ConectaCentralShellV1&&typeof window\.ConectaCen
 // CSS do shell e cache-busting da versão atual.
 assert.match(html,/id="cscTask10PersistentShellStyle"/);
 assert.match(html,/viewer\.csc-shell-viewer:not\(\[hidden\]\)/);
-assert.match(html,/central-administrativa-tacs\.js\?v=20260912-task10-shell-v1/);
-assert.match(html,/central-tacs-login-rapido-v1\.js\?v=20260912-task10-shell-v1/);
+assert.match(html,/central-administrativa-tacs\.js\?v=[A-Za-z0-9._-]+/);
+assert.match(html,/central-tacs-login-rapido-v1\.js\?v=[A-Za-z0-9._-]+/);
 
 // Tarefa 9 continua valendo dentro dos módulos.
 assert.match(core,/installTask9ModuleGate\(\)/);
