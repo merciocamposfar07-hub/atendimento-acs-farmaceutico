@@ -20,8 +20,8 @@ new Function(backend);
 assert.match(access,/b\.id='tabUbs'/);
 assert.match(access,/b\.textContent='UBS'/);
 assert.match(access,/\.login-tabs\.csc-four\{grid-template-columns:repeat\(4/);
-assert.match(access,/id="cscUbsCpf"/);
-assert.match(access,/id="cscUbsPin"/);
+assert.match(access,/field\('cscUbsCpf'/);
+assert.match(access,/field\('cscUbsPin'/);
 assert.match(access,/conecta_ubs_identificar_primeiro_acesso/);
 
 // O primeiro acesso identifica o cadastro, mas ainda NÃO faz o vínculo permanente
