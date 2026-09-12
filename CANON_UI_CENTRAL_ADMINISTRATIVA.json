@@ -19,7 +19,7 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R10",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R11",
   "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_07_MORADOR_CORE_DIAGNOSTICO_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
@@ -323,7 +323,7 @@
     "validatedOn": "2026-09-12"
   },
   "task7ResidentCoreDiagnostic": {
-    "status": "implemented-awaiting-validation",
+    "status": "validated-internal-deployed",
     "authorizedOn": "2026-09-12",
     "residentCoreModes": [
       "MORADOR_REAL",
@@ -339,10 +339,25 @@
     "task8PanelsNotStarted": true,
     "specificGate": "TAREFA_7_MORADOR_CORE_DIAGNOSTICO_OK",
     "validation": {
-      "specificGate": "pending",
-      "fullSuite": "pending",
-      "appsScriptDeploy": "pending",
-      "pagesDeployment": "pending"
-    }
+      "specificGate": "TAREFA_7_MORADOR_CORE_DIAGNOSTICO_OK",
+      "fullSuite": "passed",
+      "initialWorkflowRun": 34719766745,
+      "initialRunResult": "blocked-before-deploy-by-task6-historical-assertion",
+      "retry1WorkflowRun": 34719839779,
+      "retry1RunResult": "blocked-before-deploy-by-task6-historical-coremode-assertion",
+      "retry2WorkflowRun": 34719916306,
+      "appsScriptPreviousVersion": 204,
+      "appsScriptCurrentVersion": 205,
+      "appsScriptHealth": "passed-first-attempt",
+      "appsScriptActiveDeploymentVersionsAfterDeploy": [
+        6,
+        7,
+        9,
+        205
+      ],
+      "pagesWorkflowRun": 34719909246,
+      "pagesDeploymentSuccess": true
+    },
+    "validatedOn": "2026-09-12"
   }
 }
