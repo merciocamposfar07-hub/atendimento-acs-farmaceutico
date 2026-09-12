@@ -252,7 +252,7 @@
     "validatedOn": "2026-09-12"
   },
   "task5AdminSupportDoors": {
-    "status": "validated-internal-deployed",
+    "status": "validated-internal-deployed-pages-passed",
     "authorizedOn": "2026-09-12",
     "administratorRecognizedDeviceKeepsDoors": [
       "ADMIN",
@@ -280,7 +280,9 @@
         9,
         203
       ],
-      "pagesDeployment": "pending-final-docs"
+      "pagesDeployment": "passed",
+      "pagesWorkflowRun": 34719205935,
+      "pagesDeploymentSuccess": true
     },
     "validatedOn": "2026-09-12"
   }
