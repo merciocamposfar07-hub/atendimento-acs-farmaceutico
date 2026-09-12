@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 06 — Administrador testa Morador sem vincular o aparelho
 
 Data: 12/09/2026  
-Status: IMPLEMENTADA EM CÓDIGO; AGUARDANDO VALIDAÇÃO INTEGRAL
+Status: VALIDADA INTERNAMENTE E IMPLANTADA — APPS SCRIPT VERSÃO 204
 
 ## Objetivo exclusivo da Tarefa 6
 Quando um aparelho já reconhecido como Administrador for usado para consultar/testar um Morador, o Conecta não pode transformar esse aparelho em aparelho residencial.
@@ -37,3 +37,18 @@ Saída esperada:
 `TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK`
 
 A Tarefa 6 só pode ser encerrada depois de gate específico, suíte integral, deploy/health check do Apps Script e GitHub Pages passarem.
+
+
+## Resultado técnico verificado
+- primeira tentativa: workflow `34719436725` interrompido **antes do deploy** porque gates históricos das Tarefas 4 e 5 ainda proibiam qualquer diagnóstico administrativo;
+- esses gates foram atualizados apenas para permitir a evolução posterior, preservando seus contratos originais;
+- RETRY: workflow `34719509591` **success**;
+- gate `TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK`: **aprovado**;
+- suíte integral: **aprovada**;
+- Apps Script: versão anterior `203`, nova versão **`204`**;
+- health checks: **aprovados na primeira tentativa**;
+- versões ativas após implantação: `6, 7, 9, 204`;
+- GitHub Pages: **success**, run `34719505209`.
+
+## Fechamento
+A **Tarefa 6 está validada internamente, implantada e publicada**. O aparelho Administrador pode consultar Morador por CPF/CNS sem criar PIN, sessão, quickKey, vínculo de aparelho ou notificações residenciais. A unificação do fluxo visual em um núcleo explícito de diagnóstico permanece para a Tarefa 7.
