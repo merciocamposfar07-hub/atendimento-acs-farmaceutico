@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 01 — Perfil UBS
 
 Data: 12/09/2026  
-Status: IMPLEMENTAÇÃO DA TAREFA 1 CONCLUÍDA EM CÓDIGO; TESTES/IMPLANTAÇÃO A VALIDAR  
+Status: VALIDADA — código, suíte integral, Apps Script e GitHub Pages conferidos em 12/09/2026  
 Autorização: usuário autorizou execução sequencial das tarefas 1 a 16, uma por vez, com teste e registro antes de avançar.
 
 ## Objetivo exclusivo da Tarefa 1
@@ -103,3 +103,20 @@ A Tarefa 1 só muda para **VALIDADA** depois de:
 5. arquivos servidos conferidos.
 
 A validação visual/operacional final no aparelho do usuário permanece necessária antes de declarar a experiência de produção concluída.
+
+
+## Evidências de validação
+
+Validação concluída em 12/09/2026 sem avanço para a Tarefa 2.
+
+- gate específico: `TAREFA_1_PERFIL_UBS_OK`;
+- suíte integral do repositório: **aprovada**;
+- workflow de implantação Apps Script: execução `34710566535`, **success**;
+- Apps Script publicado e validado: **versão 196**;
+- health check pós-implantação: moradores, território, CSV, manutenção, isolamento, agendas territoriais, portais públicos e conteúdo territorial = **sim**;
+- GitHub Pages: execução `34710674013`, **success**;
+- artefato Pages `github-pages`: conferido diretamente; contém `conecta-acesso-unificado-v1.js` com `tabUbs`, formulário `Administrador / TACS / UBS`, `tacsUbsRole`, contrato canônico, fluxograma e este registro;
+- proteção de escopo confirmada: nenhuma combinação UBS da Tarefa 2 foi introduzida;
+- primeiro acesso UBS confirmado sem criação de vínculo permanente de aparelho nesta tarefa.
+
+A validação em aparelho real continua sendo a confirmação visual final da experiência, mas não há pendência técnica conhecida da Tarefa 1 nos gates automatizados e na implantação publicada.
