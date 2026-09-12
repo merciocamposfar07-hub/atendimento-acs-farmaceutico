@@ -117,9 +117,9 @@ function post(action,payload,resultAction,cb){
     if(sent||!active||active.id!==rid)return;
     sent=true;clearTimeout(active.submitTimer);active.submitTimer=null;
     try{form.submit()}catch(e){finishPost({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});return}
-    /* LOGIN_TRANSPORTE_R8: a resposta direta por postMessage é a via principal.
-       O polling só entra como fallback tardio, evitando dezenas de chamadas paralelas ao Apps Script. */
-    schedulePoll(fastPin?8000:1800);
+    /* LOGIN_TRANSPORTE_PIN_ESTAVEL_V1: no Safari/iPhone, o resultado do PIN precisa ser consultado cedo.
+       Mantém postMessage como via direta e usa polling rápido somente na autenticação inicial. */
+    schedulePoll(fastPin?650:1800);
   }
   function sendAfterRegistration(){
     if(typeof window.requestAnimationFrame==='function'){
@@ -562,19 +562,30 @@ el('loginAdmin').addEventListener('click',function(){
   setStatus('Liberando o acesso…','warn');
   abrirAcessoLocal('admin',pin).then(function(saved){
     if(saved)aplicarAcessoLocal('admin',saved);
-    post('admin_login',{pin:pin,dispositivo:device},'admin_result',function(r){
-      el('adminPin').value='';
-      if(!r||r.ok!==true||!r.token){
-        if(saved&&r&&r.temporario===true){setStatus('Central aberta com os dados locais. O servidor ainda está sincronizando.','warn');return}
-        if(saved){bloquearAcessoLocal('admin',text(r&&r.message)||'Acesso administrativo recusado.');return}
-        setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
-      }
-      territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=r.token;mode='admin';sessionStorage.setItem(TOKEN_KEY,token);
-      pinLocalPendente=pin;pinLocalPerfil='admin';
-      if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('ADMIN');
-      if(!saved)restoreContextCache();
-      loadContext(saved?'Administrador sincronizado.':'Administrador validado.');
-    });
+    var tentativa=0;
+    function sincronizar(){
+      tentativa++;
+      post('admin_login',{pin:pin,dispositivo:device},'admin_result',function(r){
+        if(!r||r.ok!==true||!r.token){
+          if(r&&r.temporario===true&&tentativa<2){
+            setStatus('Central aberta. Confirmando a sessão para carregar os painéis…','warn');
+            setTimeout(sincronizar,700);
+            return;
+          }
+          el('adminPin').value='';
+          if(saved&&r&&r.temporario===true){setStatus('Central aberta localmente. A sessão de dados ainda não foi confirmada; os painéis permanecem protegidos até a sincronização.','warn');return}
+          if(saved){bloquearAcessoLocal('admin',text(r&&r.message)||'Acesso administrativo recusado.');return}
+          setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
+        }
+        el('adminPin').value='';
+        territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=r.token;mode='admin';sessionStorage.setItem(TOKEN_KEY,token);
+        pinLocalPendente=pin;pinLocalPerfil='admin';
+        if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('ADMIN');
+        if(!saved)restoreContextCache();
+        loadContext(saved?'Administrador sincronizado.':'Administrador validado.');
+      });
+    }
+    sincronizar();
   });
 });
 el('loginTacs').addEventListener('click',function(){
@@ -583,19 +594,30 @@ el('loginTacs').addEventListener('click',function(){
   setStatus('Liberando o acesso…','warn');
   abrirAcessoLocal('tacs',pin).then(function(saved){
     if(saved)aplicarAcessoLocal('tacs',saved);
-    post('admin_territorio_login_pin',{pin:pin,dispositivo:device},'admin_territorio_result',function(r){
-      el('tacsPin').value='';
-      if(!r||r.ok!==true||!r.token){
-        if(saved&&r&&r.temporario===true){setStatus('Área TACS aberta com os dados locais. O servidor ainda está sincronizando.','warn');return}
-        if(saved){bloquearAcessoLocal('tacs',text(r&&r.message)||'Acesso TACS recusado.');return}
-        setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
-      }
-      token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=r.token;mode='tacs';selectedAreaId=normArea(r.areaId);sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);
-      pinLocalPendente=pin;pinLocalPerfil='tacs';
-      if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('TACS');
-      if(!saved)restoreContextCache();
-      loadContext(saved?'Acesso TACS sincronizado.':'Acesso individual validado para '+(text(r.areaNome)||r.areaId)+'.');
-    });
+    var tentativa=0;
+    function sincronizar(){
+      tentativa++;
+      post('admin_territorio_login_pin',{pin:pin,dispositivo:device},'admin_territorio_result',function(r){
+        if(!r||r.ok!==true||!r.token){
+          if(r&&r.temporario===true&&tentativa<2){
+            setStatus('Área TACS aberta. Confirmando a sessão para carregar os painéis…','warn');
+            setTimeout(sincronizar,700);
+            return;
+          }
+          el('tacsPin').value='';
+          if(saved&&r&&r.temporario===true){setStatus('Área TACS aberta localmente. A sessão de dados ainda não foi confirmada; os painéis permanecem protegidos até a sincronização.','warn');return}
+          if(saved){bloquearAcessoLocal('tacs',text(r&&r.message)||'Acesso TACS recusado.');return}
+          setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
+        }
+        el('tacsPin').value='';
+        token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=r.token;mode='tacs';selectedAreaId=normArea(r.areaId);sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);
+        pinLocalPendente=pin;pinLocalPerfil='tacs';
+        if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('TACS');
+        if(!saved)restoreContextCache();
+        loadContext(saved?'Acesso TACS sincronizado.':'Acesso individual validado para '+(text(r.areaNome)||r.areaId)+'.');
+      });
+    }
+    sincronizar();
   });
 });
 el('adminArea').addEventListener('change',function(){if(mode!=='admin')return;selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
