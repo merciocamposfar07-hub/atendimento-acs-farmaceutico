@@ -28,7 +28,7 @@ required_css = [
     'font-size:2.25rem!important',
     'R6 FINAL',
     'background:linear-gradient(145deg,#174765,#0c3049)',
-    'border:2px solid #69b8c0',
+    'APP4_CANON_COR_SEM_BORDAS_2026_09_11_V2',
     'background:#135272',
     'background:#236581',
     CANON,
@@ -43,7 +43,7 @@ required_css = [
     '.csc-appbar-icon',
     'width:80px',
     '.module-grid,.modules',
-    'border:1px solid var(--tacs-app-line)',
+    'border:0!important',
     '.csc-session-active .csc-auth-control',
     '#portalTacsBackCentralV1{display:none!important}',
 ]
@@ -112,7 +112,7 @@ print(f'PAINEIS_VALIDADOS={len(TARGETS)}')
 # R7 VISUAL ONLY — nenhuma regra de autenticação faz parte desta revisão.
 for token in [
     'R7 VISUAL ONLY — UNIFICAÇÃO CROMÁTICA + MARCA/LEITURA',
-    'UNISONO_SEM_BORDAS_2026_09_11_V1',
+    'APP4_CANON_COR_SEM_BORDAS_2026_09_11_V2',
     'width:104px!important',
     'font-size:1.08rem!important',
     'color:#d8e6ee!important',
@@ -122,6 +122,40 @@ for token in [
     if token not in css:
         raise SystemExit(f'Visual R7 sem requisito obrigatório: {token}')
 print('R7_VISUAL_ONLY_OK')
+
+# APP4 V2 — cor exatamente do protótipo aprovado e balões sem borda.
+for token in [
+    'background:linear-gradient(145deg,#153b58,#102d46)!important',
+    'background:linear-gradient(145deg,#174765,#0c3049)!important',
+    'background:#135272!important',
+    'background:#236581!important',
+    '#results>.card>button:first-child',
+]:
+    if token not in css:
+        raise SystemExit(f'App4 V2 sem cor canônica obrigatória: {token}')
+if 'UNISONO_SEM_BORDAS_2026_09_11_V1' in css:
+    raise SystemExit('Bloco visual incorreto anterior ainda está ativo.')
+
+behavior_v2 = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')
+for token in [
+    'function keepFinalSkinLast()',
+    "node.id!=='cscApp4FinalSkinR6'",
+    'background:linear-gradient(145deg,#153b58,#102d46)!important',
+    'border:0!important',
+]:
+    if token not in behavior_v2:
+        raise SystemExit(f'Skin final App4 V2 incompleta: {token}')
+
+msg_ind = (ROOT / 'teste-v1/mensagem-individual-morador-v1.js').read_text(encoding='utf-8')
+msg_integ = (ROOT / 'teste-v1/mensagem-individual-morador-integracao-v1.js').read_text(encoding='utf-8')
+msg_rel = (ROOT / 'teste-v1/mensagem-relatorio-entrega-v1.js').read_text(encoding='utf-8')
+for source_name, source in [('mensagem individual',msg_ind),('integração moradores',msg_integ),('relatório entrega',msg_rel)]:
+    if 'background:#fff!important' in source or 'background:#fff8df!important' in source:
+        raise SystemExit(f'{source_name} voltou a criar balão branco.')
+for forbidden in ['border:3px solid #69c7e7!important','border:3px solid #8df0b4!important','border:3px solid #ffd36a!important']:
+    if forbidden in msg_ind or forbidden in msg_integ or forbidden in msg_rel:
+        raise SystemExit(f'Extensão de moradores voltou a criar borda rejeitada: {forbidden}')
+print('APP4_CANON_COR_SEM_BORDAS_V2_OK')
 
 # CORRECOES_PONTUAIS_APP_2026_09_10_V5
 behavior_now = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')

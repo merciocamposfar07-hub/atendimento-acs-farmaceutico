@@ -387,7 +387,7 @@ button,.btn,.botao{
   line-height:1.18;
   white-space:normal;
   overflow-wrap:break-word;
-  touch-action:manipulation;
+  touch-action:manipulation!important;
   -webkit-tap-highlight-color:transparent;
   transition:transform .11s ease,filter .11s ease,background-color .11s ease,box-shadow .11s ease!important;
 }
@@ -1791,11 +1791,31 @@ html body .csc-profile-admin-toggle{
 html body .csc-profile-admin-toggle[aria-expanded="true"]{border-color:#83efa9!important}
 html body .csc-profile-admin-names[hidden]{display:none!important}
 
+/* APP4_CANON_COR_SEM_BORDAS_2026_09_11_V2
+   Referência oficial escolhida: 4 • App institucional.
+   A exigência posterior do usuário remove TODAS as bordas dos balões/cards,
+   preservando as cores canônicas do protótipo. */
+:root{
+  --tacs-app-bg:#071827!important;
+  --tacs-app-top:#0b263d!important;
+  --tacs-app-card:#102d46!important;
+  --tacs-app-card2:#153b58!important;
+  --tacs-app-text:#f7fcff!important;
+  --tacs-app-muted:#adc4d2!important;
+  --tacs-app-accent:#83efa9!important;
+  --tacs-app-accent2:#62c8e8!important;
+  --tacs-app-primary:#176c94!important;
+  --tacs-app-button:#135272!important;
+  --tacs-app-pressed:#236581!important;
+}
 
-/* UNISONO_SEM_BORDAS_2026_09_11_V1
-   Correção visual cirúrgica: uma única família azul-petróleo para superfícies
-   funcionais. Bordas de balões/cards removidas. Botões e campos mantêm seus
-   próprios estados de interação. */
+html,body{
+  background:#071827!important;
+  background-image:none!important;
+  color:#f7fcff!important;
+}
+
+/* Contêineres estruturais não viram balões. */
 body.csc-brand-enhanced main>section.panel,
 body.csc-brand-enhanced main>section.painel,
 body.csc-brand-enhanced main>section.card,
@@ -1819,9 +1839,15 @@ html body #results{
   border:0!important;
   box-shadow:none!important;
 }
+
+/* Balões/cards funcionais: mesma cor do App institucional, sem borda. */
 html body .panel .card,
 html body .painel .card,
 html body .card .card,
+html body #results>.card,
+html body #results .card,
+html body #listaRecados .item,
+html body #listaCampanhas .item,
 html body .item,
 html body .cartao,
 html body .ticket,
@@ -1836,27 +1862,77 @@ html body .stat,
 html body .metric,
 html body .quick-card,
 html body .saude-aparelho,
-html body #results .card,
-html body #listaRecados .item,
-html body #listaCampanhas .item,
+html body .protect,
+html body .area-control,
+html body .csc-profile-card,
+html body .csc-profile-empty,
 html body .msg-familia-acao,
 html body .msg-ind-form-action,
+html body .msg-ind-box,
+html body .msg-ind-person,
+html body .msg-ind-preview,
+html body .msg-ind-status,
+html body .msg-ind-step,
 html body .msg-rel-box,
 html body .msg-rel-status,
 html body .msg-rel-event,
 html body .msg-rel-message,
 html body .msg-rel-device,
-html body .msg-rel-grid div,
-html body .protect,
-html body .area-control,
-html body .csc-profile-card,
-html body .csc-profile-empty{
-  background:#102d46!important;
-  background-image:none!important;
+html body .msg-rel-grid div{
+  background:linear-gradient(145deg,#153b58,#102d46)!important;
+  background-image:linear-gradient(145deg,#153b58,#102d46)!important;
   color:#f7fcff!important;
   border:0!important;
   box-shadow:none!important;
 }
+
+/* O resumo do morador faz parte do card: não cria um segundo balão interno. */
+html body #results>.card>button:first-child,
+html body #results .card>button:first-child{
+  background:transparent!important;
+  background-image:none!important;
+  color:#f7fcff!important;
+  border:0!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+}
+
+/* Botões: cor canônica do protótipo, sem contorno. */
+html body button,
+html body .btn,
+html body .botao,
+html body .grupoAcao,
+html body .msg-ind-card-button,
+html body .msg-ind-form-button,
+html body .msg-familia-acao button,
+html body .msg-ind-send,
+html body .msg-ind-refresh,
+html body .msg-rel-button,
+html body .msg-rel-family,
+html body .msg-rel-close{
+  background:#135272!important;
+  background-image:none!important;
+  color:#fff!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+
+/* Módulos preservam a cor específica do protótipo escolhido. */
+html body .module{
+  background:linear-gradient(145deg,#174765,#0c3049)!important;
+  background-image:linear-gradient(145deg,#174765,#0c3049)!important;
+  color:#fff!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html body .module .icon,
+html body .module-icon{
+  background:linear-gradient(145deg,#176c94,#0b263d)!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+
+/* Estados informativos continuam dentro da mesma família cromática. */
 html body .status,
 html body .status.ok,
 html body .status.warn,
@@ -1870,17 +1946,54 @@ html body .note{
   border:0!important;
   box-shadow:none!important;
 }
+html body .status.ok{color:#c7f7d6!important}
+html body .status.warn,
+html body .status.aviso{color:#f5e1b7!important}
+html body .status.err,
+html body .status.erro{color:#ffd0d5!important}
+
+/* Campos permanecem escuros; são controles, não balões decorativos. */
+html body input:not([type="checkbox"]):not([type="radio"]),
+html body select,
+html body textarea,
+html body .field,
+html body .campo,
+html body .validadeCampo,
+html body .validadeControle{
+  background:#071827!important;
+  background-image:none!important;
+  color:#f7fcff!important;
+  border:1px solid #2b5a76!important;
+  box-shadow:none!important;
+}
+
+/* Sem branco nas extensões de mensagem/relatório carregadas em runtime. */
+html body .msg-ind-preview-edit{
+  background:#071827!important;
+  color:#f7fcff!important;
+  border:0!important;
+}
+html body .msg-ind-step small,
+html body .msg-rel-device small,
+html body .msg-familia-acao span,
+html body .msg-ind-form-action small,
 html body .protect p,
 html body .protect small,
 html body .protect .muted,
 html body .protect .sub{
-  color:#d8e6ee!important;
+  color:#adc4d2!important;
 }
-html body .module{
-  background:#102d46!important;
-  background-image:none!important;
+
+/* Feedback de toque sem restaurar borda. */
+html body button:active:not(:disabled),
+html body .btn:active:not(:disabled),
+html body .botao:active:not(:disabled),
+html body .module:active:not(:disabled),
+html body .csc-pressed{
+  background:#236581!important;
+  color:#fff!important;
   border:0!important;
-  box-shadow:none!important;
+  box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important;
 }
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
@@ -1996,7 +2109,7 @@ function markAuthControls(){
     if(wrap)wrap.classList.add('csc-auth-control','csc-admin-only-auth');
   });
   ['accessActions','pinHelp','loginAdminTab','loginTacsTab','adminLogin','tacsLogin'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-auth-control','csc-admin-only-auth')});
-  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-admin-only-auth')});
+  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs'].forEach(function(id){var n=document.getElementById(id);if(!n)return;if(CENTRAL&&id==='logout'){n.classList.remove('csc-admin-only-auth','csc-auth-control');return}n.classList.add('csc-admin-only-auth')});
   var accessTitle=document.getElementById('accessTitle');if(accessTitle)accessTitle.classList.add('csc-admin-only-auth');
 
   /* No painel de moradores, o perfil já foi definido pelo PIN da Central.
@@ -2035,7 +2148,12 @@ function centralAreaId(){
   try{return text(localStorage.getItem('portalTacsCentralAreaV1')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA'}catch(e){return'JAPARANDUBA'}
 }
 function centralContextFromCache(){
-  try{var raw=sessionStorage.getItem('portalTacsCentralContextCacheV2');if(!raw)return null;var saved=JSON.parse(raw);return saved&&saved.context?saved.context:null}catch(e){return null}
+  try{
+    var territorial=Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''));
+    var key='portalTacsCentralContextCacheV3:'+(territorial?'tacs':'admin');
+    var raw=sessionStorage.getItem(key)||sessionStorage.getItem('portalTacsCentralContextCacheV2');
+    if(!raw)return null;var saved=JSON.parse(raw);return saved&&saved.context?saved.context:null
+  }catch(e){return null}
 }
 function showCentralHome(){
   var page=document.getElementById('cscProfilePage');if(page)page.hidden=true;
@@ -2083,7 +2201,7 @@ function buildCentralWelcome(){
     var copy=document.createElement('div');
     copy.id='cscCentralWelcomeCopy';
     copy.className='csc-welcome-copy';
-    copy.innerHTML='<small>Olá, administrador</small><h1>Gestão da área</h1><p>Acesse os serviços, acompanhe a situação e administre sua unidade.</p>';
+    copy.innerHTML='<small>Perfil autenticado</small><h1>Gestão da área</h1><p>Carregando sua identificação…</p>';
     identity.insertBefore(copy,identity.firstChild);
   }
   if(document.getElementById('cscInstitutionalDock'))return;
@@ -2099,7 +2217,10 @@ function buildCentralWelcome(){
   ];
   items.forEach(function(item,i){
     var b=document.createElement('button');b.type='button';b.className='csc-navitem'+(i===0?' active':'');
-    b.innerHTML='<i>'+item[0]+'</i><span>'+item[1]+'</span>';
+    if(item[1]==='Pendências'){
+      b.id='cscPendingNav';b.style.position='relative';
+      b.innerHTML='<i>'+item[0]+'</i><span>'+item[1]+'</span><em id="cscPendingBadge" hidden aria-label="Nenhuma pendência" style="position:absolute;top:4px;left:calc(50% + 7px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#d62f2f;color:#fff;font:900 11px/18px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px #071827">0</em>';
+    }else b.innerHTML='<i>'+item[0]+'</i><span>'+item[1]+'</span>';
     b.addEventListener('click',function(){vibrate();dock.querySelectorAll('.csc-navitem').forEach(function(x){x.classList.toggle('active',x===b)});item[2]()});
     dock.appendChild(b);
   });
@@ -2111,7 +2232,7 @@ function buildPlatformFooter(){
   var footer=document.createElement('footer');
   footer.id='cscPlatformFooter';
   footer.className='csc-platform-footer';
-  footer.innerHTML='<strong>Conecta Saúde Comunitária - tecnologia aproximando pessoas, serviços e comunidade.</strong><small>Conecta Saúde Comunitária — Plataforma</small>';
+  footer.innerHTML='<strong>Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</strong><small>Plataforma institucional de saúde comunitária.</small>';
   var old=document.querySelector('body>footer:not(#cscPlatformFooter)');
   if(old)old.hidden=true;
   document.body.appendChild(footer);
@@ -2138,8 +2259,39 @@ function installFinalSkin(){
   var old=document.getElementById('cscApp4FinalSkinR6');if(old)old.remove();
   var style=document.createElement('style');
   style.id='cscApp4FinalSkinR6';
-  style.textContent='html,body{background:#071827!important;background-image:none!important;color:#f7fcff!important}body{background:#071827!important;background-image:none!important}header,footer,.footer{border:0!important;box-shadow:none!important}input:not([type=checkbox]):not([type=radio]),select,textarea,.campo,.field,.validadeCampo,.validadeControle{background:#071827!important;background-image:none!important;color:#fff!important;border-color:#416f89!important}input::placeholder,textarea::placeholder{color:#aec4d1!important;opacity:1!important}.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
+  style.textContent=''
+    +'html,body{background:#071827!important;background-image:none!important;color:#f7fcff!important}'
+    +'body{background:#071827!important;background-image:none!important}'
+    +'header,footer,.footer{border:0!important;box-shadow:none!important}'
+    +'body.csc-brand-enhanced main>section.panel,body.csc-brand-enhanced main>section.painel,body.csc-brand-enhanced main>section.card,body.csc-brand-enhanced main>div.panel,body.csc-brand-enhanced main>div.painel,body.csc-brand-enhanced main>div.card,body.csc-brand-enhanced main>.box,body.csc-brand-enhanced main>.caixa,body.csc-brand-enhanced main>.newbox,#conteudo.card,#content.panel,#ticketsPane,#devicesPane,#secaoRecados,#secaoCampanhas,.lista,.list,#results{background:transparent!important;background-image:none!important;border:0!important;box-shadow:none!important}'
+    +'.panel .card,.painel .card,.card .card,#results>.card,#results .card,#listaRecados .item,#listaCampanhas .item,.item,.cartao,.ticket,.grupoProfissional,.area-row,.maprow,.health-card,.saude-numero,.numero,.number,.stat,.metric,.quick-card,.saude-aparelho,.protect,.area-control,.csc-profile-card,.csc-profile-empty,.msg-familia-acao,.msg-ind-form-action,.msg-ind-box,.msg-ind-person,.msg-ind-preview,.msg-ind-status,.msg-ind-step,.msg-rel-box,.msg-rel-status,.msg-rel-event,.msg-rel-message,.msg-rel-device,.msg-rel-grid div{background:linear-gradient(145deg,#153b58,#102d46)!important;background-image:linear-gradient(145deg,#153b58,#102d46)!important;color:#f7fcff!important;border:0!important;box-shadow:none!important}'
+    +'#results>.card>button:first-child,#results .card>button:first-child{background:transparent!important;background-image:none!important;color:#f7fcff!important;border:0!important;box-shadow:none!important;border-radius:0!important}'
+    +'button,.btn,.botao,.grupoAcao,.msg-ind-card-button,.msg-ind-form-button,.msg-familia-acao button,.msg-ind-send,.msg-ind-refresh,.msg-rel-button,.msg-rel-family,.msg-rel-close{background:#135272!important;background-image:none!important;color:#fff!important;border:0!important;box-shadow:none!important}'
+    +'.module{background:linear-gradient(145deg,#174765,#0c3049)!important;background-image:linear-gradient(145deg,#174765,#0c3049)!important;color:#fff!important;border:0!important;box-shadow:none!important}'
+    +'.module .icon,.module-icon{background:linear-gradient(145deg,#176c94,#0b263d)!important;border:0!important;box-shadow:none!important}'
+    +'.status,.status.ok,.status.warn,.status.aviso,.status.err,.status.erro,.nota,.note{background:#102d46!important;background-image:none!important;border:0!important;box-shadow:none!important}'
+    +'.status.ok{color:#c7f7d6!important}.status.warn,.status.aviso{color:#f5e1b7!important}.status.err,.status.erro{color:#ffd0d5!important}'
+    +'input:not([type=checkbox]):not([type=radio]),select,textarea,.campo,.field,.validadeCampo,.validadeControle{background:#071827!important;background-image:none!important;color:#fff!important;border:1px solid #2b5a76!important;box-shadow:none!important}'
+    +'input::placeholder,textarea::placeholder{color:#aec4d1!important;opacity:1!important}'
+    +'.msg-ind-preview-edit{background:#071827!important;color:#f7fcff!important;border:0!important}'
+    +'.msg-ind-step small,.msg-rel-device small,.msg-familia-acao span,.msg-ind-form-action small,.protect p,.protect small,.protect .muted,.protect .sub{color:#adc4d2!important}'
+    +'.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}'
+    +'button:active:not(:disabled),.btn:active:not(:disabled),.botao:active:not(:disabled),.module:active:not(:disabled),.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;border:0!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
   (document.head||document.documentElement).appendChild(style);
+}
+var finalSkinObserver=null;
+function keepFinalSkinLast(){
+  if(finalSkinObserver||!document.head)return;
+  finalSkinObserver=new MutationObserver(function(records){
+    var lateStyle=false;
+    records.forEach(function(record){
+      Array.prototype.forEach.call(record.addedNodes||[],function(node){
+        if(node&&node.nodeType===1&&(node.tagName==='STYLE'||node.tagName==='LINK')&&node.id!=='cscApp4FinalSkinR6')lateStyle=true;
+      });
+    });
+    if(lateStyle)setTimeout(installFinalSkin,0);
+  });
+  finalSkinObserver.observe(document.head,{childList:true});
 }
 
 function boot(){
@@ -2150,6 +2302,9 @@ function boot(){
   syncSessionClass();
   installTouchFeedback();
   installFinalSkin();
+  keepFinalSkinLast();
+  setTimeout(installFinalSkin,0);
+  setTimeout(installFinalSkin,250);
   sessionTimer=setInterval(syncSessionClass,700);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

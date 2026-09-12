@@ -25,12 +25,12 @@ function instalarEstilo(){
   var style=document.createElement('style');
   style.id='msgFamiliaBuscaV2Style';
   style.textContent='\
-.msg-familia-acao{margin:0 0 14px;padding:15px;border:3px solid #69c7e7;border-radius:20px;background:#e8f7ee;color:#073a55}\
-.msg-familia-acao strong{display:block;font-size:1.18rem}.msg-familia-acao span{display:block;margin-top:4px;color:#365a69;font-weight:800}\
-.msg-familia-acao button{display:block!important;width:100%!important;min-height:58px!important;margin-top:12px!important;padding:11px 14px!important;border:3px solid #69c7e7!important;border-radius:18px!important;background:linear-gradient(145deg,#073a55,#0b5878)!important;color:#fff!important;text-align:center!important;font-weight:900!important;font-size:1rem!important;line-height:1.2!important}\
-.msg-ind-card-button,.msg-ind-form-button{display:block!important;width:100%!important;min-height:56px!important;margin-top:12px!important;padding:11px 14px!important;border:3px solid #8df0b4!important;border-radius:18px!important;background:#fff!important;color:#073a55!important;text-align:center!important;font-weight:900!important;font-size:1rem!important;line-height:1.2!important;box-shadow:0 5px 14px rgba(7,58,85,.12)!important}\
-.msg-ind-form-action{margin:14px 0;padding:13px;border:2px solid #8fd5b0;border-radius:18px;background:#edf9f1}\
-.msg-ind-form-action small{display:block;margin-top:7px;color:#365a69;font-weight:750}';
+.msg-familia-acao{margin:0 0 14px;padding:15px;border:0;border-radius:20px;background:linear-gradient(145deg,#153b58,#102d46);color:#f7fcff}\
+.msg-familia-acao strong{display:block;font-size:1.18rem;color:#f7fcff}.msg-familia-acao span{display:block;margin-top:4px;color:#adc4d2;font-weight:800}\
+.msg-familia-acao button{display:block!important;width:100%!important;min-height:58px!important;margin-top:12px!important;padding:11px 14px!important;border:0!important;border-radius:18px!important;background:#135272!important;color:#fff!important;text-align:center!important;font-weight:900!important;font-size:1rem!important;line-height:1.2!important;box-shadow:none!important}\
+.msg-ind-card-button,.msg-ind-form-button{display:block!important;width:100%!important;min-height:56px!important;margin-top:12px!important;padding:11px 14px!important;border:0!important;border-radius:18px!important;background:#135272!important;color:#fff!important;text-align:center!important;font-weight:900!important;font-size:1rem!important;line-height:1.2!important;box-shadow:none!important}\
+.msg-ind-form-action{margin:14px 0;padding:13px;border:0;border-radius:18px;background:linear-gradient(145deg,#153b58,#102d46);color:#f7fcff;box-shadow:none}\
+.msg-ind-form-action small{display:block;margin-top:7px;color:#adc4d2;font-weight:750}';
   document.head.appendChild(style);
 }
 

@@ -75,9 +75,10 @@ assert.match(frontend,/msgIndPreviewTexto/,'A prévia precisa ser um único camp
 assert.match(frontend,/Este é exatamente o texto que será enviado/,'A interface deve deixar claro que a prévia é a mensagem final.');
 assert.match(frontend,/type=\"text\" inputmode=\"numeric\" maxlength=\"10\"/,'A data não pode depender do seletor nativo fora do padrão.');
 assert.match(frontend,/08:00 às 11:00 hs/,'O horário deve aceitar intervalo de atendimento.');
-assert.match(frontend,/background:linear-gradient\(160deg,#073a55,#0b5878\)/,'A área externa da janela individual deve usar azul-petróleo.');
+assert.match(frontend,/background:linear-gradient\(145deg,#153b58,#102d46\)/,'A janela individual deve usar a cor canônica do protótipo App4.');
+assert.doesNotMatch(frontend,/border:3px solid #69c7e7/,'A janela individual não pode recriar borda ciano nos balões.');
 assert.match(backend,/mensagemFinal=mensagemIndividualV1Texto_\(p\.mensagem\)/,'O servidor deve respeitar exatamente a mensagem editada na prévia.');
-assert.match(panel,/mensagem-individual-morador-v1\.js\?v=20260820-ux-v2/,'O painel deve quebrar o cache da nova interface individual.');
+assert.match(panel,/mensagem-individual-morador-v1\.js\?v=20260911-app4-sem-bordas-v2/,'O painel deve quebrar o cache da interface App4 sem bordas.');
 assert.match(familyFrontend,/Enviar para toda a família/);
 assert.match(familyFrontend,/admin_mensagem_familia_enviar/);
 assert.match(familyFrontend,/admin_mensagem_familia_status/);
