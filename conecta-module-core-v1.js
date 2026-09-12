@@ -321,6 +321,120 @@ var performanceApi={
   fingerprint:function(data){return performanceFingerprint(performanceSanitize(data))}
 };
 
+/* TAREFA_13_DEDUP_REQUISICOES_V1:
+   leituras idênticas da mesma sessão/área usam um único voo remoto e o resultado
+   confirmado pode ser distribuído aos módulos por uma janela curta.
+   Escritas nunca são deduplicadas e invalidam imediatamente a janela compartilhada. */
+var REQUEST_REUSE_MS=5000;
+var REQUEST_READ_ACTIONS={
+  admin_dados:1,
+  admin_moradores_status:1,
+  admin_publicacoes_dados:1,
+  admin_suporte_chamados_listar:1,
+  admin_territorio_dados:1,
+  admin_multimunicipio_dados:1,
+  admin_moradores_areas:1,
+  admin_portal_manutencao_status:1
+};
+var REQUEST_SECRET_KEYS={
+  token:1,territoriotoken:1,dispositivo:1,requestid:1,callback:1,pin:1,
+  quickkey:1,chaveconfianca:1,authorization:1,bearer:1
+};
+function requestRoot(){
+  try{if(window.top&&window.top.location&&window.top.location.origin===location.origin)return window.top}catch(e){}
+  return window;
+}
+function requestRegistry(){
+  var root=requestRoot();
+  if(!root.__conectaRequestBrokerV1){
+    root.__conectaRequestBrokerV1={inFlight:{},recent:{},generation:0};
+  }
+  return root.__conectaRequestBrokerV1;
+}
+function requestHash(value){
+  var s=text(value),h=2166136261;
+  for(var i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);
+  return (h>>>0).toString(16);
+}
+function requestScope(){
+  var s=canonicalSession(),credential=s.territoryToken||s.adminToken||'';
+  return (mode()||'anon')+'|'+areaId()+'|'+requestHash(credential+'|'+s.device);
+}
+function requestPayloadSafe(payload){
+  var out={};
+  Object.keys(payload||{}).sort().forEach(function(k){
+    var normalized=String(k||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    if(REQUEST_SECRET_KEYS[normalized])return;
+    var v=payload[k];
+    if(v==null||typeof v==='string'||typeof v==='number'||typeof v==='boolean')out[k]=v;
+    else out[k]=performanceSanitize(v);
+  });
+  return out;
+}
+function requestIsRead(action){return REQUEST_READ_ACTIONS[text(action).toLowerCase()]===1}
+function requestKey(action,payload){
+  var safe=requestPayloadSafe(payload),fingerprint=performanceFingerprint(safe);
+  return text(action).toLowerCase()+'|'+requestScope()+'|'+fingerprint;
+}
+function requestInvalidate(){
+  var registry=requestRegistry();
+  registry.generation=Number(registry.generation||0)+1;
+  registry.recent={};
+}
+function requestNoteAction(action){
+  if(!requestIsRead(action))requestInvalidate();
+}
+function requestExecute(executor){
+  return new Promise(function(resolve){
+    var done=false;
+    function finish(result){if(done)return;done=true;resolve(result||{ok:false,message:'Resposta vazia.'})}
+    try{
+      var returned=executor(finish);
+      if(returned&&typeof returned.then==='function')returned.then(finish).catch(function(e){finish({ok:false,message:text(e&&e.message)||'Falha na leitura.'})});
+    }catch(e){finish({ok:false,message:text(e&&e.message)||'Falha na leitura.'})}
+  });
+}
+function dedupRequestPromise(action,payload,executor,options){
+  action=text(action).toLowerCase();options=options||{};
+  if(!requestIsRead(action))return requestExecute(executor).then(function(result){return{result:result,meta:{shared:false,source:'direct-write-safe',action:action}}});
+  var registry=requestRegistry(),key=requestKey(action,payload),now=Date.now(),generation=Number(registry.generation||0);
+  var active=registry.inFlight[key];
+  if(active&&active.promise){
+    return active.promise.then(function(packet){
+      return{result:packet.result,meta:{shared:true,source:'in-flight',action:action,key:key,startedAt:active.startedAt}};
+    });
+  }
+  var recent=registry.recent[key],reuseMs=Math.max(0,Number(options.reuseMs==null?REQUEST_REUSE_MS:options.reuseMs));
+  if(recent&&recent.result&&recent.generation===generation&&now-Number(recent.confirmedAt||0)<=reuseMs){
+    return Promise.resolve({result:recent.result,meta:{shared:true,source:'recent-core',action:action,key:key,confirmedAt:recent.confirmedAt}});
+  }
+  var startedAt=now;
+  var promise=requestExecute(executor).then(function(result){
+    delete registry.inFlight[key];
+    var confirmedAt=Date.now();
+    if(result&&result.ok===true&&Number(registry.generation||0)===generation){
+      registry.recent[key]={result:result,confirmedAt:confirmedAt,generation:generation};
+    }
+    return{result:result,meta:{shared:false,source:'remote',action:action,key:key,startedAt:startedAt,confirmedAt:confirmedAt}};
+  });
+  registry.inFlight[key]={promise:promise,startedAt:startedAt,generation:generation};
+  return promise;
+}
+function requestRead(action,payload,executor,callback,options){
+  return dedupRequestPromise(action,payload,executor,options).then(function(packet){
+    if(typeof callback==='function')callback(packet.result,packet.meta);
+    return packet;
+  });
+}
+var requestApi={
+  read:requestRead,
+  dedupRequestPromise:dedupRequestPromise,
+  noteAction:requestNoteAction,
+  invalidate:requestInvalidate,
+  isRead:requestIsRead,
+  reuseMs:REQUEST_REUSE_MS
+};
+
 window.ConectaModuleCoreV1={
   context:context,
   state:state,
@@ -334,6 +448,7 @@ window.ConectaModuleCoreV1={
   reportAuthIssue:reportAuthIssue,
   centralUrl:centralUrl,
   performance:performanceApi,
+  requests:requestApi,
   task9ModuleGate:installTask9ModuleGate
 };
 try{document.documentElement.dataset.conectaModuleCore='1'}catch(e){}
