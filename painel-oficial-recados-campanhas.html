@@ -2422,7 +2422,8 @@ function aplicarSnapshotSeDisponivel(){
  if(!(token||territorioToken))return false;
  if(modulePerf&&typeof modulePerf.prime==='function'){
   var coreItem=modulePerf.prime('recados',function(data){snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;aplicar(data,true)});
-  if(coreItem){status('loginStatus','Última confirmação exibida. Atualizando recados em segundo plano…','aviso');return true}
+  if(coreItem){status('loginStatus','Última confirmação versionada exibida. Atualizando recados em segundo plano…','aviso');return true}
+  return false;
  }
  var item=lerSnapshot();if(!item)return false;snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;aplicar(item.data,true);status('loginStatus','Dados exibidos da última leitura. Atualizando dados em segundo plano…','aviso');return true
 }
