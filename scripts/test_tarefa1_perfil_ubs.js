@@ -24,11 +24,11 @@ assert.match(access,/field\('cscUbsCpf'/);
 assert.match(access,/field\('cscUbsPin'/);
 assert.match(access,/conecta_ubs_identificar_primeiro_acesso/);
 
-// O primeiro acesso identifica o cadastro, mas ainda NÃO faz o vínculo permanente
-// do computador — reconhecimento do aparelho pertence à tarefa posterior.
+// O primeiro acesso UBS permanece identificável. O reconhecimento persistente,
+ // originalmente adiado na Tarefa 1, pode ser acrescentado pela Tarefa 4 sem
+ // descaracterizar este gate histórico.
 assert.match(backend,/function conectaAcessoV1IdentificarUbsPrimeiroAcesso_/);
-assert.match(backend,/vinculoAparelhoCriado:false/);
-assert.doesNotMatch(access,/localStorage\.setItem\([^\n]*UBS/i);
+assert.match(access,/function identifyUbsFirstAccess\(\)/);
 
 // Cadastro administrativo passa a contemplar UBS isolado.
 assert.match(form,/Administrador \/ TACS \/ UBS/);
