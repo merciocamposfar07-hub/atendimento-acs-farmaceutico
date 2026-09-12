@@ -9,15 +9,15 @@ const backend=read('apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs');
 new Function(access);
 new Function(backend);
 
-// Cliente: aparelho administrativo usa consulta por CPF/CNS e não o onboarding residencial.
+// Cliente: aparelho administrativo continua em modo somente leitura, mesmo após a
+// unificação do núcleo de Morador feita pela Tarefa 7.
 assert.match(access,/function adminResidentDiagnostic\(\)\{return roleRecognized\('ADMIN'\)\}/);
 assert.match(access,/Diagnóstico administrativo do Morador/);
-assert.match(access,/cscResidentDiagnosticDoc/);
 assert.match(access,/CPF ou CNS/);
 assert.match(access,/post\('conecta_morador_diagnostico_admin'/);
 
-const diagStart=access.indexOf('function diagnoseResidentAdmin()');
-const diagEnd=access.indexOf('function startCpf()',diagStart);
+const diagStart=access.indexOf('function diagnoseResidentAdmin(');
+const diagEnd=access.indexOf('function startCpf(',diagStart);
 assert(diagStart>=0&&diagEnd>diagStart,'Função de diagnóstico administrativo não localizada.');
 const diagBlock=access.slice(diagStart,diagEnd);
 assert.doesNotMatch(diagBlock,/saveProfile\(|saveSession\(|openResidentPortal\(|localStorage\.setItem|ConectaMoradorPinLocalV2/,'Diagnóstico não pode gravar sessão/vínculo residencial local.');
@@ -47,7 +47,8 @@ assert.match(backend,/function conectaAcessoV1CriarPin_[\s\S]*Aparelho administr
 assert.match(backend,/function conectaAcessoV1LoginMorador_[\s\S]*Aparelho administrativo não pode assumir sessão de Morador/);
 assert.match(backend,/function conectaAcessoV1ConfirmarNotificacao_[\s\S]*Aparelho administrativo não pode ser registrado para notificações de Morador/);
 
-// Tarefa 7 ainda não foi antecipada: não há reutilização integral do onboarding como núcleo diagnóstico.
-assert.doesNotMatch(access,/CORE_MODE_DIAGNOSTICO_ADMIN|residentCoreMode|reutilizarOnboardingMorador/i);
+// A evolução da Tarefa 7 pode reutilizar o núcleo visual, mas não pode retirar a barreira.
+assert.match(access,/RESIDENT_CORE_DIAGNOSTIC='DIAGNOSTICO_ADMINISTRATIVO'/);
+assert.match(access,/function residentCoreMode\(\)/);
 
-console.log('TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK: CPF/CNS em aparelho Administrador usam diagnóstico somente leitura; PIN, sessão, vínculo residencial e notificações são bloqueados sem antecipar a Tarefa 7.');
+console.log('TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK: CPF/CNS em aparelho Administrador permanecem em diagnóstico somente leitura; PIN, sessão, vínculo residencial e notificações continuam bloqueados.');
