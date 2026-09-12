@@ -2047,6 +2047,25 @@ html.csc-central-login-visible #loginPanel #tacsLogin:not([hidden]) .actions{dis
 /* CENTRAL_ESTADOS_APP_2026_09_12_V1
    Fluxo canônico: tela de acesso OU Central autenticada. Nunca empilhadas.
    Alteração restrita à Central; não afeta os módulos internos. */
+/* CENTRAL_FLUXO_APP_LOCAL_FIRST_2026_09_12_V2
+   Entrada e Central são estados distintos do app.
+   Dock e rodapé institucional pertencem somente ao estado autenticado. */
+html.csc-central-state-login #cscInstitutionalDock,
+html.csc-central-state-login .csc-dock,
+html.csc-central-state-login #cscPlatformFooter,
+html.csc-central-state-login .csc-platform-footer{display:none!important}
+html.csc-central-state-login #loginPanel{display:block!important}
+html.csc-central-state-login #identityPanel,
+html.csc-central-state-login #healthPanel,
+html.csc-central-state-login #modulesPanel{display:none!important}
+html.csc-central-state-app #loginPanel,
+html.csc-central-state-app .csc-login-purpose{display:none!important}
+html.csc-central-state-app #cscInstitutionalDock,
+html.csc-central-state-app .csc-dock{display:grid!important}
+html.csc-central-state-app #identityPanel:not([hidden]),
+html.csc-central-state-app #healthPanel:not([hidden]),
+html.csc-central-state-app #modulesPanel:not([hidden]){display:block!important}
+
 html.csc-central-state-login #identityPanel,
 html.csc-central-state-login #healthPanel,
 html.csc-central-state-login #modulesPanel{display:none!important}
@@ -2429,7 +2448,7 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 <div id="viewer" class="viewer" hidden><div class="viewer-bar"><button id="viewerBack" class="viewer-back" type="button">← Central</button><div id="viewerTitle" class="viewer-title">Painel</div></div><iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe></div>
 <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=e7ac93ce8a47"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=e7ac93ce8a47"></script>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=e7ac93ce8a47"></script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260912-fluxo-app-local-first-v2"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=e7ac93ce8a47"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=e7ac93ce8a47"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=e7ac93ce8a47"></script>
