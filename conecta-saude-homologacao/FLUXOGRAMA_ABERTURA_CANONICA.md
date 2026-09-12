@@ -86,3 +86,32 @@ O cache não substitui a autoridade do servidor. Ele elimina a espera desnecess�
 
 ### Status da Tarefa 1: VALIDADA — 12/09/2026
 A inclusão do perfil UBS no primeiro acesso e no cadastro administrativo foi validada por gate específico, suíte integral, implantação Apps Script versão 196 e GitHub Pages publicado. O escopo permanece limitado ao perfil UBS isolado; combinações de perfis UBS e reconhecimento persistente do computador ficam fora desta tarefa.
+
+
+### Registro canônico — Tarefa 2 / Combinações de perfis com UBS
+A Tarefa 2 autorizada em 12/09/2026 amplia o cadastro de identidade funcional sem alterar as quatro portas de entrada do aplicativo.
+
+Portas de entrada permanecem:
+`Administrador | TACS | Morador | UBS`
+
+Perfis válidos no cadastro de acesso:
+- Administrador + TACS + UBS + Morador;
+- Administrador + TACS + UBS;
+- Administrador + UBS + Morador;
+- TACS + UBS + Morador;
+- Administrador + UBS;
+- TACS + UBS;
+- UBS + Morador;
+- Administrador + TACS + Morador;
+- Administrador + TACS;
+- Administrador + Morador;
+- TACS + Morador;
+- TACS;
+- Administrador;
+- UBS.
+
+**UBS pura permanece válida.**
+
+As combinações são identidade/permissões do mesmo cadastro, não novos botões de entrada. Se o perfil contém TACS, preserva exigências de CNS, microárea e vínculo territorial; se contém UBS, exige função na UBS e unidade vinculada; se contém ambos, exige os dois conjuntos.
+
+A Tarefa 2 não implementa reconhecimento persistente do aparelho, segunda entrada exclusiva por perfil nem modo diagnóstico administrativo.
