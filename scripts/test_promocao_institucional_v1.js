@@ -45,7 +45,7 @@ assert.doesNotMatch(update, /[?&](?:token|territorioToken)=/);
 // Central única: perfil é sessão, não URL de segurança; atalho TACS continua opcional.
 assert.match(centralQuick, /function hasAdminSession\(\)/);
 assert.match(centralQuick, /function hasTerritorySession\(\)/);
-assert.match(centralQuick, /return queryTacsOnly\(\)\|\|hasTerritorySession\(\)/);
+assert.match(centralQuick, /return !adminDeviceRecognized\(\)&&\(queryTacsOnly\(\)\|\|hasTerritorySession\(\)\)/);
 assert.match(centralQuick, /function stableModuleUrl\(name\)/);
 assert.match(centralQuick, /from=central/);
 assert.match(centralQuick, /grid\.addEventListener\('click',[\s\S]*?,true\)/);
