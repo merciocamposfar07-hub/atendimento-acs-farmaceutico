@@ -73,8 +73,17 @@ assert.match(suporte,/if\(diff\.changed\|\|!cached\)\{items=payload\.tickets/);
 assert.match(territorio,/if\(diff\.changed\|\|!cached\)render\(\);else syncTerritoryWriteState/);
 assert.match(municipios,/if\(diff\.changed\|\|!cached\)render\(\);else syncMunicipioWriteState/);
 
-// Fronteira de escopo: Tarefa 12 e Tarefa 13 permanecem posteriores.
-assert.doesNotMatch(core,/remoteVersion|serverVersion|cacheVersionReference|etag/i);
+// Correção pós-auditoria: leitura compartilhada pode acelerar a pintura, mas nunca encerrar
+// a função antes da confirmação remota própria do módulo.
+assert.ok(agendas.includes('Leitura compartilhada exibida somente para consulta. Confirmando agendas no servidor'));
+assert.ok(profissionais.includes('Leitura compartilhada exibida somente para consulta. Confirmando profissionais no servidor'));
+assert.doesNotMatch(agendas,/Dados confirmados pela leitura compartilhada desta sessão\./);
+assert.doesNotMatch(profissionais,/Dados confirmados pela leitura compartilhada desta sessão\./);
+assert.doesNotMatch(agendas,/Object\.assign\(\{compartilhado:true\}/);
+assert.doesNotMatch(profissionais,/Object\.assign\(\{compartilhado:true\}/);
+
+// A Tarefa 12 pode acrescentar versionamento/frescor sem invalidar o contrato da Tarefa 11.
+// Deduplicação continua reservada à Tarefa 13.
 assert.doesNotMatch(core,/requestPromiseMap|inFlightRequestMap|dedupRequestPromise/i);
 
 console.log('TAREFA_11_DESEMPENHO_MODULOS_OK: toque abre shell imediatamente; módulos exibem última confirmação em modo seguro, sincronizam o servidor em paralelo e evitam rerender quando não há mudança.');
