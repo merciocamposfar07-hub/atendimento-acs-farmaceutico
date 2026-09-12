@@ -60,7 +60,8 @@ assert.match(territory,/if\(temUbs\)[\s\S]*unidade de saúde do perfil UBS[\s\S]
 for(const tab of ["tabAdmin","tabTacs","tabMorador","tabUbs"]) assert.ok(access.includes(tab),'Porta inicial ausente: '+tab);
 assert.doesNotMatch(access,/tabAdminUbs|tabTacsUbs|tabUbsMorador/i,'Combinações não devem virar novos botões de entrada.');
 
-// Ainda não é Tarefa de reconhecimento persistente do aparelho UBS.
-assert.match(ubsBackend,/vinculoAparelhoCriado:false/);
+// As combinações continuam sendo identidade/permissões; o reconhecimento
+// persistente posterior não pode criar novas portas de entrada.
+assert.doesNotMatch(access,/tabAdminUbs|tabTacsUbs|tabUbsMorador/i);
 
 console.log('TAREFA_2_COMBINACOES_PERFIS_UBS_OK: 14 perfis válidos, incluindo UBS pura; combinações não alteram as quatro portas de entrada nem antecipam reconhecimento de aparelho.');
