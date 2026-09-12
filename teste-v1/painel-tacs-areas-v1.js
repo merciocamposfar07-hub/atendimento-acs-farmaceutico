@@ -29,6 +29,13 @@ var TACS_PERMISSIONS=[
   ['permProfessionals','PROFISSIONAIS_GERENCIAR']
 ];
 var ACCESS_PROFILES={
+  ADMIN_TACS_UBS_MORADOR:'Administrador + TACS + UBS + Morador',
+  ADMIN_TACS_UBS:'Administrador + TACS + UBS',
+  ADMIN_UBS_MORADOR:'Administrador + UBS + Morador',
+  TACS_UBS_MORADOR:'TACS + UBS + Morador',
+  ADMIN_UBS:'Administrador + UBS',
+  TACS_UBS:'TACS + UBS',
+  UBS_MORADOR:'UBS + Morador',
   ADMIN_TACS_MORADOR:'Administrador + TACS + Morador',
   ADMIN_TACS:'Administrador + TACS',
   ADMIN_MORADOR:'Administrador + Morador',
