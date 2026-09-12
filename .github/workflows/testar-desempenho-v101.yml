@@ -25,6 +25,16 @@ on:
       - 'scripts/test_campanhas_periodo_v1.js'
       - 'scripts/build_apps_script_release.js'
       - 'package.json'
+      - 'conecta-module-core-v1.js'
+      - 'central-administrativa-tacs.js'
+      - 'central-administrativa-tacs.html'
+      - 'painel-suporte-moradores-v2.html'
+      - 'teste-v1/painel-moradores-transport-v2.js'
+      - 'teste-v1/painel-moradores-v2.html'
+      - 'teste-v1/painel-tacs-areas-v1.js'
+      - 'teste-v1/painel-tacs-areas-v1.html'
+      - 'teste-v1/painel-profissionais-servicos-v1.html'
+      - 'scripts/test_tarefa13_dedup_requisicoes.js'
 
 permissions:
   contents: read
