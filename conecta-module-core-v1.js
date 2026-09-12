@@ -176,6 +176,82 @@ function installTask9ModuleGate(){
   if(document.documentElement)observer.observe(document.documentElement,{subtree:true,childList:true});
 }
 
+
+/* TAREFA_11_DESEMPENHO_MODULOS_V1:
+   cache de leitura somente da sessão atual, separado por modo/área/módulo.
+   Não substitui autenticação, não confirma escrita e não implementa versionamento remoto
+   (isso permanece reservado à Tarefa 12). */
+var PERFORMANCE_PREFIX='portalConectaModulePerfV1:';
+var PERFORMANCE_SECRET_KEYS={
+  token:1,admintoken:1,territoriotoken:1,sessiontoken:1,bearer:1,authorization:1,
+  accesstoken:1,refreshtoken:1,quickkey:1,chaveconfianca:1,pin:1,pinhash:1,pinsalt:1
+};
+function performanceModuleName(name){
+  return text(name).toLowerCase().replace(/[^a-z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,64);
+}
+function performanceKey(name){
+  var moduleName=performanceModuleName(name);
+  if(!moduleName)return'';
+  return PERFORMANCE_PREFIX+(mode()||'anon')+':'+areaId()+':'+moduleName;
+}
+function performanceSanitize(value){
+  if(value==null||typeof value==='string'||typeof value==='number'||typeof value==='boolean')return value;
+  if(Array.isArray(value))return value.map(performanceSanitize);
+  if(typeof value!=='object')return null;
+  var out={};
+  Object.keys(value).forEach(function(k){
+    var normalized=String(k||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    if(PERFORMANCE_SECRET_KEYS[normalized])return;
+    out[k]=performanceSanitize(value[k]);
+  });
+  return out;
+}
+function performanceStable(value){
+  if(value==null||typeof value!=='object')return JSON.stringify(value);
+  if(Array.isArray(value))return '['+value.map(performanceStable).join(',')+']';
+  return '{'+Object.keys(value).sort().map(function(k){return JSON.stringify(k)+':'+performanceStable(value[k])}).join(',')+'}';
+}
+function performanceFingerprint(value){
+  var s=performanceStable(value),a=2166136261,b=2246822519;
+  for(var i=0;i<s.length;i++){var code=s.charCodeAt(i);a=Math.imul(a^code,16777619);b=Math.imul(b^code,3266489917)}
+  return (a>>>0).toString(16)+(b>>>0).toString(16);
+}
+function performanceRead(name){
+  var key=performanceKey(name);if(!key)return null;
+  try{
+    var item=JSON.parse(sessionStorage.getItem(key)||'null');
+    if(!item||item.schemaVersion!==1||!item.data||item.areaId!==areaId()||item.mode!==mode())return null;
+    return item;
+  }catch(e){return null}
+}
+function performancePrime(name,apply){
+  var item=performanceRead(name);
+  if(item&&typeof apply==='function')apply(item.data,{cached:true,changed:false,confirmedAt:Number(item.confirmedAt||0),fingerprint:item.fingerprint||''});
+  return item;
+}
+function performanceCommit(name,data,apply){
+  var key=performanceKey(name),safe=performanceSanitize(data);
+  if(!key||!safe||typeof safe!=='object')return {changed:true,item:null};
+  var previous=performanceRead(name),fingerprint=performanceFingerprint(safe),changed=!previous||previous.fingerprint!==fingerprint;
+  var item={schemaVersion:1,module:performanceModuleName(name),mode:mode(),areaId:areaId(),confirmedAt:Date.now(),fingerprint:fingerprint,data:safe};
+  try{sessionStorage.setItem(key,JSON.stringify(item))}catch(e){}
+  if(changed&&typeof apply==='function')apply(safe,{cached:false,changed:true,confirmedAt:item.confirmedAt,fingerprint:fingerprint});
+  return {changed:changed,item:item,previous:previous};
+}
+function performanceForget(name){var key=performanceKey(name);if(key)try{sessionStorage.removeItem(key)}catch(e){}}
+function performanceSame(name,data){
+  var previous=performanceRead(name);if(!previous)return false;
+  return previous.fingerprint===performanceFingerprint(performanceSanitize(data));
+}
+var performanceApi={
+  read:performanceRead,
+  prime:performancePrime,
+  commit:performanceCommit,
+  forget:performanceForget,
+  same:performanceSame,
+  fingerprint:function(data){return performanceFingerprint(performanceSanitize(data))}
+};
+
 window.ConectaModuleCoreV1={
   context:context,
   state:state,
@@ -188,6 +264,7 @@ window.ConectaModuleCoreV1={
   ready:ready,
   reportAuthIssue:reportAuthIssue,
   centralUrl:centralUrl,
+  performance:performanceApi,
   task9ModuleGate:installTask9ModuleGate
 };
 try{document.documentElement.dataset.conectaModuleCore='1'}catch(e){}
