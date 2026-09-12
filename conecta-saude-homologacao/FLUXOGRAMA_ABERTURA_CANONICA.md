@@ -143,3 +143,15 @@ O bloqueio do limite de versões foi removido após limpeza das versões antigas
 A Tarefa 3 não introduziu reconhecimento persistente do aparelho, lógica nova de segundo acesso nem modo diagnóstico administrativo. Esses comportamentos continuam reservados às tarefas seguintes.
 
 **Sequência canônica:** Tarefa 3 encerrada tecnicamente; Tarefa 4 liberada para execução.
+
+### Registro canônico — Tarefa 4 / Reconhecimento do aparelho e perfil
+No segundo acesso, o aparelho já reconhecido prepara a porta correspondente ao perfil utilizado: Administrador, TACS, Morador ou UBS. A entrada exige PIN e não exibe identidade nominal antes da autenticação.
+
+As combinações de perfil permanecem associadas ao cadastro e às permissões, sem criar novos botões de entrada. Após PIN válido, a Tarefa 3 continua determinando a exibição de `nome completo — perfil cadastrado`.
+
+Para UBS, o primeiro acesso válido passa a registrar uma prova segura de aparelho; acessos seguintes validam aparelho + chave de confiança + PIN e criam nova sessão remota. Administrador, TACS e Morador preservam seus mecanismos locais já existentes.
+
+A Tarefa 4 não implementa diagnóstico administrativo do Morador e não altera as regras especiais do Administrador reservadas às tarefas seguintes.
+
+### Status da Tarefa 4: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK`.
