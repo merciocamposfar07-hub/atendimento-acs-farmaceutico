@@ -135,3 +135,9 @@ A Tarefa 3 não cria reconhecimento persistente do aparelho, não altera a lógi
 
 ### Status da Tarefa 3: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL EM ANDAMENTO — 12/09/2026
 Gate específico: `TAREFA_3_IDENTIDADE_REAL_OK`.
+
+
+### Bloqueio de implantação da Tarefa 3 — 12/09/2026
+A implementação da identidade real passou no gate específico e na suíte integral, e o GitHub Pages foi publicado. O Apps Script permanece na versão 200 porque o projeto atingiu o limite máximo de 200 versões.
+
+Versões atualmente usadas por deployments: `6, 7, 9, 200`. A versão `199` não está em uso. A Tarefa 3 permanece tecnicamente aberta até a liberação de uma vaga na História do projeto, nova implantação e health check aprovado. A Tarefa 4 não deve ser iniciada antes desse fechamento.
