@@ -555,7 +555,7 @@ html body .saude-resumo button.saude-numero[data-saude-filtro="SEM_CONFIRMACAO"]
 .csc-session-active #loginPanel:not(.csc-moradores-access){min-height:0!important;margin:0 0 12px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
 .csc-session-active #loginPanel:not(.csc-moradores-access)>h2,.csc-session-active #loginPanel:not(.csc-moradores-access)>.tabs,.csc-session-active #loginPanel:not(.csc-moradores-access)>#adminLogin,.csc-session-active #loginPanel:not(.csc-moradores-access)>#tacsLogin,.csc-session-active #loginPanel:not(.csc-moradores-access)>.actions{display:none!important}
 .csc-moradores-access .area-control{margin-top:0!important;padding:14px!important;background:linear-gradient(145deg,var(--tacs-app-card2),var(--tacs-app-card))!important;border:1px solid var(--tacs-app-line)!important;border-radius:20px!important}
-.csc-moradores-access #tacsPinAccess,.csc-moradores-access label[for="tacsPinAccess"],.csc-moradores-access #loginTacs{display:block!important}
+.csc-session-active .csc-resident-redundant-tacs-access{display:none!important}
 .csc-pressed{transform:translateY(2px) scale(.965)!important;filter:brightness(1.12)!important;box-shadow:inset 0 4px 10px rgba(0,0,0,.34)!important}
 @media(max-width:430px){body.csc-brand-enhanced>header p{font-size:.82rem!important}}
 
@@ -1971,6 +1971,75 @@ html body .csc-pressed{
   border:0!important;
   box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important;
 }
+
+
+/* LOGIN_PROPOSTA_APP4_2026_09_11_V1
+   Tela de acesso: texto institucional dentro do card da paleta App4 oficial.
+   Sem borda, sem branco, sem cor alternativa. */
+html body #loginStatus[hidden]{display:none!important}
+html body .csc-login-purpose{
+  margin-top:14px!important;
+  color:#f7fcff!important;
+}
+html body .csc-login-purpose>strong{
+  display:block!important;
+  margin:0 0 12px!important;
+  color:#f7fcff!important;
+  font-weight:900!important;
+  font-size:1.08rem!important;
+  line-height:1.25!important;
+}
+html body .csc-login-purpose-card{
+  padding:18px 20px!important;
+  border:0!important;
+  border-radius:22px!important;
+  background:linear-gradient(145deg,#153b58,#102d46)!important;
+  background-image:linear-gradient(145deg,#153b58,#102d46)!important;
+  box-shadow:none!important;
+  color:#f7fcff!important;
+}
+html body .csc-login-purpose-card p{
+  margin:0!important;
+  color:#d8e6ee!important;
+  font-size:1rem!important;
+  line-height:1.55!important;
+}
+
+
+/* LOGOFF_VERMELHO_2026_09_11_V1
+   Exceção funcional solicitada: encerrar sessão volta ao vermelho histórico. */
+html body #logout.csc-logout-button{
+  background:#972f2f!important;
+  background-image:none!important;
+  color:#fff!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html body #logout.csc-logout-button:active,
+html body #logout.csc-logout-button.csc-pressed{
+  background:#7f2626!important;
+  color:#fff!important;
+  border:0!important;
+  box-shadow:inset 0 3px 8px rgba(0,0,0,.28)!important;
+}
+
+
+/* SESSAO_UNICA_PAINEL_2026_09_11_V1
+   PIN existe somente na entrada unificada. Dentro de qualquer painel administrativo,
+   controles legados de autenticação ficam ocultos durante a sessão válida. */
+.csc-session-active #adminLogin,
+.csc-session-active #tacsLogin,
+.csc-session-active #loginAdminTab,
+.csc-session-active #loginTacsTab,
+.csc-session-active #tacsPinAccess,
+.csc-session-active label[for="tacsPinAccess"],
+.csc-session-active #tacsPinPublicacoes,
+.csc-session-active label[for="tacsPinPublicacoes"],
+.csc-session-active #entrarTacs,
+.csc-session-active #loginTacs,
+.csc-session-active .csc-resident-redundant-tacs-access{
+  display:none!important;
+}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
@@ -2000,14 +2069,32 @@ var TERRITORY_TOKEN='portalTacsTerritorioTokenV1';
 var RETURN_FLAG='portalTacsRetornoCentralV1';
 var ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3';
 var sessionTimer=0;
+/* SESSAO_UNICA_PAINEL_V1
+   Fora da Central, PIN nunca aparece. Sem sessão válida, o painel fica oculto
+   somente durante o redirecionamento para a entrada única do Conecta. */
+if(!CENTRAL&&!hasSession()){
+  try{
+    var singleEntryStyle=document.createElement('style');
+    singleEntryStyle.id='cscSingleEntryGateV1';
+    singleEntryStyle.textContent='html,body{visibility:hidden!important}';
+    (document.head||document.documentElement).appendChild(singleEntryStyle);
+  }catch(e){}
+}
 
 function text(v){return String(v==null?'':v).trim()}
 function hasSession(){
   try{return Boolean(text(sessionStorage.getItem(ADMIN_TOKEN)||'')||text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}
 }
 function isTerritory(){try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}}
+function singleEntryCentralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260911-sessao-unica-v1'}
+function enforceSingleEntry(){
+  if(CENTRAL||hasSession())return false;
+  try{location.replace(singleEntryCentralUrl())}catch(e){location.href=singleEntryCentralUrl()}
+  return true;
+}
 function syncSessionClass(){
   var active=hasSession();
+  if(!CENTRAL&&!active){enforceSingleEntry();return}
   ROOT.classList.toggle('csc-session-active',active);
   ROOT.classList.toggle('csc-session-missing',!active);
   if(document.body){
@@ -2075,7 +2162,7 @@ function buildAppbar(){
 }
 
 function markAuthControls(){
-  var loginPasswordIds=['pin','adminPin','tacsPinLogin'];
+  var loginPasswordIds=['pin','adminPin','tacsPinLogin','tacsPinAccess','tacsPinPublicacoes'];
   loginPasswordIds.forEach(function(id){
     var input=document.getElementById(id);
     if(!input||input.id==='tacsPin')return;
@@ -2085,7 +2172,7 @@ function markAuthControls(){
     if(wrap)wrap.classList.add('csc-auth-control','csc-admin-only-auth');
   });
   ['accessActions','pinHelp','loginAdminTab','loginTacsTab','adminLogin','tacsLogin'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-auth-control','csc-admin-only-auth')});
-  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs'].forEach(function(id){var n=document.getElementById(id);if(!n)return;if(CENTRAL&&id==='logout'){n.classList.remove('csc-admin-only-auth','csc-auth-control');return}n.classList.add('csc-admin-only-auth')});
+  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs','entrarTacs'].forEach(function(id){var n=document.getElementById(id);if(!n)return;if(CENTRAL&&id==='logout'){n.classList.remove('csc-admin-only-auth','csc-auth-control');return}n.classList.add('csc-admin-only-auth')});
   var accessTitle=document.getElementById('accessTitle');if(accessTitle)accessTitle.classList.add('csc-admin-only-auth');
 
   /* No painel de moradores, o perfil já foi definido pelo PIN da Central.
@@ -2243,6 +2330,7 @@ function installFinalSkin(){
     +'.panel .card,.painel .card,.card .card,#results>.card,#results .card,#listaRecados .item,#listaCampanhas .item,.item,.cartao,.ticket,.grupoProfissional,.area-row,.maprow,.health-card,.saude-numero,.numero,.number,.stat,.metric,.quick-card,.saude-aparelho,.protect,.area-control,.csc-profile-card,.csc-profile-empty,.msg-familia-acao,.msg-ind-form-action,.msg-ind-box,.msg-ind-person,.msg-ind-preview,.msg-ind-status,.msg-ind-step,.msg-rel-box,.msg-rel-status,.msg-rel-event,.msg-rel-message,.msg-rel-device,.msg-rel-grid div{background:linear-gradient(145deg,#153b58,#102d46)!important;background-image:linear-gradient(145deg,#153b58,#102d46)!important;color:#f7fcff!important;border:0!important;box-shadow:none!important}'
     +'#results>.card>button:first-child,#results .card>button:first-child{background:transparent!important;background-image:none!important;color:#f7fcff!important;border:0!important;box-shadow:none!important;border-radius:0!important}'
     +'button,.btn,.botao,.grupoAcao,.msg-ind-card-button,.msg-ind-form-button,.msg-familia-acao button,.msg-ind-send,.msg-ind-refresh,.msg-rel-button,.msg-rel-family,.msg-rel-close{background:#135272!important;background-image:none!important;color:#fff!important;border:0!important;box-shadow:none!important}'
+    +'#logout.csc-logout-button{background:#972f2f!important;background-image:none!important;color:#fff!important;border:0!important;box-shadow:none!important}'
     +'.module{background:linear-gradient(145deg,#174765,#0c3049)!important;background-image:linear-gradient(145deg,#174765,#0c3049)!important;color:#fff!important;border:0!important;box-shadow:none!important}'
     +'.module .icon,.module-icon{background:linear-gradient(145deg,#176c94,#0b263d)!important;border:0!important;box-shadow:none!important}'
     +'.status,.status.ok,.status.warn,.status.aviso,.status.err,.status.erro,.nota,.note{background:#102d46!important;background-image:none!important;border:0!important;box-shadow:none!important}'
@@ -2252,7 +2340,8 @@ function installFinalSkin(){
     +'.msg-ind-preview-edit{background:#071827!important;color:#f7fcff!important;border:0!important}'
     +'.msg-ind-step small,.msg-rel-device small,.msg-familia-acao span,.msg-ind-form-action small,.protect p,.protect small,.protect .muted,.protect .sub{color:#adc4d2!important}'
     +'.csc-session-missing .csc-dock{display:none!important}.csc-session-active .csc-dock{display:grid!important}'
-    +'button:active:not(:disabled),.btn:active:not(:disabled),.botao:active:not(:disabled),.module:active:not(:disabled),.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;border:0!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}';
+    +'button:active:not(:disabled),.btn:active:not(:disabled),.botao:active:not(:disabled),.module:active:not(:disabled),.csc-pressed{transform:translateY(2px) scale(.98)!important;filter:brightness(1.08)!important;background:#236581!important;color:#fff!important;border:0!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.35)!important}'
+    +'#logout.csc-logout-button:active,#logout.csc-logout-button.csc-pressed{background:#7f2626!important;color:#fff!important;border:0!important;box-shadow:inset 0 3px 8px rgba(0,0,0,.28)!important}';
   (document.head||document.documentElement).appendChild(style);
 }
 var finalSkinObserver=null;
@@ -2271,6 +2360,7 @@ function keepFinalSkinLast(){
 }
 
 function boot(){
+  if(enforceSingleEntry())return;
   buildAppbar();
   markAuthControls();
   buildCentralWelcome();
