@@ -233,3 +233,22 @@ Módulos não controlam tokens globais, não escolhem o perfil e não podem apag
 Gate `TAREFA_9_PIN_SOMENTE_ENTRADA_OK` e suíte integral aprovados. Apps Script **207** foi implantado no workflow `34723196310`, com health checks aprovados na primeira tentativa. GitHub Pages run `34723391600` concluiu com sucesso.
 
 **Sequência canônica:** Tarefa 9 encerrada tecnicamente; Tarefa 10 liberada para execução.
+
+
+### Registro canônico — Tarefa 10 / Sessão única e shell persistente
+A Central permanece montada durante a navegação interna. Depois da autenticação inicial, Agendas, Profissionais, Recados e os demais módulos administrativos utilizam a mesma sessão e o mesmo contexto do núcleo Conecta.
+
+Fluxo:
+`Central autenticada → abrir módulo no shell → voltar à Central sem descarregar módulo → abrir outro módulo → reutilizar módulo anterior sem novo PIN.`
+
+O shell é resetado somente em:
+- logoff explícito;
+- recusa real de autenticação;
+- troca de área/escopo.
+
+No Safari/iPhone, o módulo começa a carregar somente após o shell ficar visível, evitando o antigo padrão de Agenda carregando em iframe oculto. `pageshow`/BFCache não descarrega os módulos nem retorna ao PIN.
+
+As regras de desempenho de dados, frescura de cache, deduplicação, timeout, histórico/back e migração definitiva painel a painel permanecem reservadas às Tarefas 11–16.
+
+### Status da Tarefa 10: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK`.
