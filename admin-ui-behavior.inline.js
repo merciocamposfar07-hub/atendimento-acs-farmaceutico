@@ -19,38 +19,21 @@ var ADMIN_PANEL=CENTRAL||(
   /\/teste-v1\/painel-(?:profissionais-servicos|tacs-areas)-v1\.html$/i.test(PATH)
 );
 if(!ADMIN_PANEL)return;
+ROOT.classList.toggle('csc-admin-panel',!CENTRAL);
 
 var ADMIN_TOKEN='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN='portalTacsTerritorioTokenV1';
 var RETURN_FLAG='portalTacsRetornoCentralV1';
 var ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3';
 var sessionTimer=0;
-/* SESSAO_UNICA_PAINEL_V1
-   Fora da Central, PIN nunca aparece. Sem sessão válida, o painel fica oculto
-   somente durante o redirecionamento para a entrada única do Conecta. */
-if(!CENTRAL&&!hasSession()){
-  try{
-    var singleEntryStyle=document.createElement('style');
-    singleEntryStyle.id='cscSingleEntryGateV1';
-    singleEntryStyle.textContent='html,body{visibility:hidden!important}';
-    (document.head||document.documentElement).appendChild(singleEntryStyle);
-  }catch(e){}
-}
 
 function text(v){return String(v==null?'':v).trim()}
 function hasSession(){
   try{return Boolean(text(sessionStorage.getItem(ADMIN_TOKEN)||'')||text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}
 }
 function isTerritory(){try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}}
-function singleEntryCentralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260911-sessao-unica-v1'}
-function enforceSingleEntry(){
-  if(CENTRAL||hasSession())return false;
-  try{location.replace(singleEntryCentralUrl())}catch(e){location.href=singleEntryCentralUrl()}
-  return true;
-}
 function syncSessionClass(){
   var active=hasSession();
-  if(!CENTRAL&&!active){enforceSingleEntry();return}
   ROOT.classList.toggle('csc-session-active',active);
   ROOT.classList.toggle('csc-session-missing',!active);
   if(document.body){
@@ -316,7 +299,6 @@ function keepFinalSkinLast(){
 }
 
 function boot(){
-  if(enforceSingleEntry())return;
   buildAppbar();
   markAuthControls();
   buildCentralWelcome();
