@@ -9,7 +9,8 @@
     "test:tarefa12": "node scripts/test_tarefa12_cache_frescor.js",
     "test:tarefa11": "node scripts/test_tarefa11_desempenho_modulos.js",
     "test:tarefa12:retry": "node scripts/test_tarefa12_cache_frescor.js",
-    "test:tarefa12:final": "node scripts/test_tarefa12_cache_frescor.js"
+    "test:tarefa12:final": "node scripts/test_tarefa12_cache_frescor.js",
+    "test:task13": "node scripts/test_tarefa13_dedup_requisicoes.js"
   },
   "devDependencies": {
     "jsdom": "27.0.1"
