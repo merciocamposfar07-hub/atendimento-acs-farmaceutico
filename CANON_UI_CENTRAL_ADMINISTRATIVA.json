@@ -20,7 +20,7 @@
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-12-T12",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_12_CACHE_FRESCOR_2026_09_12.md",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_13_DEDUP_REQUISICOES_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
   "notes": [
@@ -636,5 +636,56 @@
       "appsScriptVersionUnchanged": 208
     },
     "validatedOn": "2026-09-12"
+  },
+  "task13RequestDedup": {
+    "status": "implemented-awaiting-validation",
+    "authorizedOn": "2026-09-12",
+    "broker": "ConectaModuleCoreV1.requests",
+    "brokerStorage": "top-window-memory-only",
+    "sameReadInFlightDedup": true,
+    "recentRemoteReuseWindowMs": 5000,
+    "requestScope": [
+      "mode",
+      "area",
+      "hashed-session-device"
+    ],
+    "rawCredentialsInBrokerKey": false,
+    "clientOnlyScopeExcludedFromSignature": true,
+    "writesDeduplicated": false,
+    "mutationInvalidatesSharedReads": true,
+    "generationGuardsLateReads": true,
+    "centralReadsCovered": [
+      "admin_territorio_dados",
+      "admin_moradores_status"
+    ],
+    "sharedReadAcrossModules": [
+      {
+        "action": "admin_dados",
+        "consumers": [
+          "AGENDAS",
+          "PROFISSIONAIS"
+        ]
+      }
+    ],
+    "modulesCovered": [
+      "AGENDAS",
+      "MORADORES",
+      "PROFISSIONAIS",
+      "RECADOS_CAMPANHAS",
+      "SUPORTE_MORADORES",
+      "TACS_AREAS",
+      "MUNICIPIOS_ORGANIZACOES"
+    ],
+    "task12CacheContractPreserved": true,
+    "backendChanged": false,
+    "appsScriptVersionExpectedUnchanged": 208,
+    "task14TimeoutSessionRuleDeferred": true,
+    "specificGate": "TAREFA_13_DEDUP_REQUISICOES_OK",
+    "validation": {
+      "specificGate": "pending",
+      "fullSuite": "pending",
+      "qualityGate": "pending",
+      "pagesDeployment": "pending"
+    }
   }
 }
