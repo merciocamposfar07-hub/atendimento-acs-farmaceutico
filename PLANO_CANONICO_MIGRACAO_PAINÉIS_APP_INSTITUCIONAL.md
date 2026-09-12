@@ -175,5 +175,7 @@ Regras:
 - nenhum nome pessoal aparece antes da autenticação;
 - diagnóstico administrativo do Morador e regras de não-vinculação pertencem às Tarefas 6 e 7.
 
-### Status da Tarefa 5: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_5_ADMIN_PORTAS_APOIO_OK`.
+### Status final da Tarefa 5: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+A tentativa `34719025276` foi bloqueada antes do deploy por um teste legado de TACS exclusivo. Após alinhamento do gate, o RETRY `34719091947` passou pela suíte integral, implantou Apps Script **203** no mesmo deployment e aprovou todos os health checks na primeira tentativa.
+
+**Regra de sequência cumprida:** Tarefa 5 encerrada tecnicamente; Tarefa 6 liberada para execução.
