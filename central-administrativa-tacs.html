@@ -2031,6 +2031,18 @@ html body #logout.csc-logout-button.csc-pressed{
   border:0!important;
   box-shadow:inset 0 3px 8px rgba(0,0,0,.28)!important;
 }
+
+/* CENTRAL_LOGIN_PIN_VISIVEL_2026_09_12_V1
+   Correção exclusiva da porta inicial: uma classe de sessão visual antiga não pode ocultar
+   o formulário do perfil que o usuário acabou de selecionar. Não afeta módulos/painéis. */
+html.csc-central-login-visible #loginPanel{display:block!important}
+html.csc-central-login-visible #loginPanel .login-tabs{display:grid!important}
+html.csc-central-login-visible #loginPanel #adminLogin:not([hidden]),
+html.csc-central-login-visible #loginPanel #tacsLogin:not([hidden]){display:block!important}
+html.csc-central-login-visible #loginPanel #adminLogin:not([hidden]) .csc-admin-only-auth,
+html.csc-central-login-visible #loginPanel #tacsLogin:not([hidden]) .csc-admin-only-auth{display:block!important}
+html.csc-central-login-visible #loginPanel #adminLogin:not([hidden]) .actions,
+html.csc-central-login-visible #loginPanel #tacsLogin:not([hidden]) .actions{display:grid!important}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
