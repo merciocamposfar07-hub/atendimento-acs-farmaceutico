@@ -255,3 +255,25 @@ Regras:
 Gate `TAREFA_9_PIN_SOMENTE_ENTRADA_OK` e suíte integral aprovados. O workflow final `34723196310` implantou Apps Script **207** no mesmo deployment e aprovou todos os health checks na primeira tentativa. GitHub Pages com o código desta tarefa concluiu com sucesso no run `34723391600`.
 
 **Regra de sequência cumprida:** Tarefa 9 encerrada tecnicamente; Tarefa 10 liberada para execução.
+
+
+## Tarefa 10 autorizada — Sessão única e shell persistente
+A Central permanece montada durante a navegação interna e mantém a mesma sessão autenticada ao alternar entre os módulos.
+
+Fluxo canônico desta etapa:
+`Central → Agendas → Central → Profissionais → Central → Recados`
+
+Regras:
+- Central é a única autoridade de navegação interna;
+- módulos são carregados sob demanda dentro do shell;
+- módulo já carregado é reutilizado sem novo PIN e sem reconstrução;
+- voltar à Central apenas oculta o módulo atual;
+- Agendas não usa mais navegação superior por `location.assign`;
+- no Safari/iPhone, o módulo começa a carregar somente depois que a superfície do shell está visível;
+- shell é eliminado apenas em logoff explícito, recusa real de autenticação ou troca de área/escopo;
+- BFCache/pageshow não descarrega módulo nem recria login;
+- roteadores legados permanecem somente como fallback;
+- desempenho de dados, cache, deduplicação, timeout, histórico/back e migração definitiva continuam reservados às Tarefas 11–16.
+
+### Status da Tarefa 10: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK`.
