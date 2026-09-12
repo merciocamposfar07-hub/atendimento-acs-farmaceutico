@@ -63,8 +63,8 @@ assert.match(js,/var adminNome=text\(admin&&admin\.nomeCompleto\)\|\|'Administra
   'A saudação administrativa deve usar o nome cadastrado quando disponível.');
 assert.doesNotMatch(js,/<small>Olá, administrador<\/small><h1>Administrador<\/h1>/,
   'A Central não pode manter saudação fixa genérica para administrador autenticado.');
-assert.match(js,/Olá, '\+esc\(nome\)/,
-  'A saudação do TACS deve usar o nome do agente autenticado.');
+assert.match(js,/identityHeadline\(nome,tacs&&tacs\.perfil\|\|'TACS'\)/,
+  'A identidade do TACS deve usar nome + perfil real do agente autenticado.');
 assert.match(js,/accessProfileLabel\(tacs&&tacs\.perfil\|\|'TACS'\)/,
   'A saudação deve refletir o perfil real do TACS, inclusive perfis combinados.');
 assert.match(js,/var adminPerfil=accessProfileLabel\(admin&&admin\.perfil\|\|context&&context\.perfil\|\|'ADMIN'\)/,
