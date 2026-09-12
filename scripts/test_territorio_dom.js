@@ -208,7 +208,7 @@ async function testTerritoryPanel() {
     'A máscara do CNS não pode alterar os 15 dígitos enviados ao servidor.');
   assert.match(js, /phone=digits\(el\('tacsPhone'\)\.value\)/,
     'A máscara do celular não pode alterar os dígitos enviados ao servidor.');
-  for (const perfil of ['ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_MORADOR','TACS','ADMIN','UBS']) {
+  for (const perfil of ['ADMIN_TACS_UBS_MORADOR','ADMIN_TACS_UBS','ADMIN_UBS_MORADOR','TACS_UBS_MORADOR','ADMIN_UBS','TACS_UBS','UBS_MORADOR','ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_MORADOR','TACS','ADMIN','UBS']) {
     assert.match(html, new RegExp('value="'+perfil+'"'), 'Perfil ausente no formulário: '+perfil);
   }
   assert.doesNotMatch(html, /<label for="tacsRegistration">/);
@@ -308,6 +308,20 @@ async function testTerritoryPanel() {
   for (const id of ['permRead','permEdit','permStatus','permCsv','permPublish','permAgenda','permProfessionals']) {
     assert.equal(window.document.getElementById(id).checked,false,'Novo perfil UBS não deve receber permissão automática: '+id);
   }
+
+  window.document.getElementById('tacsProfile').value='ADMIN_UBS';
+  window.document.getElementById('tacsProfile').dispatchEvent(new window.Event('change',{bubbles:true}));
+  assert.equal(window.document.getElementById('tacsCns').required,false,'Administrador + UBS não deve exigir CNS TACS.');
+  assert.equal(window.document.getElementById('tacsMicroarea').required,false,'Administrador + UBS não deve exigir microárea TACS.');
+  assert.equal(window.document.getElementById('tacsUnit').required,true,'Administrador + UBS deve exigir unidade UBS.');
+  assert.equal(window.document.getElementById('tacsUbsRole').required,true,'Administrador + UBS deve exigir função UBS.');
+
+  window.document.getElementById('tacsProfile').value='TACS_UBS';
+  window.document.getElementById('tacsProfile').dispatchEvent(new window.Event('change',{bubbles:true}));
+  assert.equal(window.document.getElementById('tacsCns').required,true,'TACS + UBS deve manter CNS obrigatório.');
+  assert.equal(window.document.getElementById('tacsMicroarea').required,true,'TACS + UBS deve manter microárea obrigatória.');
+  assert.equal(window.document.getElementById('tacsUnit').required,true,'TACS + UBS deve exigir unidade.');
+  assert.equal(window.document.getElementById('tacsUbsRole').required,true,'TACS + UBS deve exigir função UBS.');
 
   const esusCsv = [
     'e-SUS - Atenção Primária',
