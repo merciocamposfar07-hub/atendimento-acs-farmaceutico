@@ -89,3 +89,31 @@ Em 12/09/2026 foi autorizada a primeira tarefa da evolução do acesso único:
 
 ### Status final da Tarefa 1: VALIDADA — 12/09/2026
 Validação técnica concluída: suíte integral aprovada, Apps Script versão 196 implantado com health checks aprovados e GitHub Pages publicado. Nenhuma combinação UBS da Tarefa 2 foi antecipada.
+
+
+## Tarefa 2 autorizada — Combinações de perfis com UBS
+A Tarefa 2 mantém os perfis existentes e acrescenta as combinações autorizadas com UBS, preservando também **UBS pura**.
+
+Matriz canônica desta tarefa:
+`ADMIN_TACS_UBS_MORADOR`
+`ADMIN_TACS_UBS`
+`ADMIN_UBS_MORADOR`
+`TACS_UBS_MORADOR`
+`ADMIN_UBS`
+`TACS_UBS`
+`UBS_MORADOR`
+`ADMIN_TACS_MORADOR`
+`ADMIN_TACS`
+`ADMIN_MORADOR`
+`TACS_MORADOR`
+`TACS`
+`ADMIN`
+`UBS`
+
+Regras:
+- as quatro portas de entrada continuam Administrador, TACS, Morador e UBS;
+- combinações não viram novas portas;
+- perfis com TACS mantêm regras territoriais de TACS;
+- perfis com UBS mantêm função e unidade UBS obrigatórias;
+- perfis com TACS + UBS cumprem os dois conjuntos;
+- reconhecimento persistente do aparelho e segundo acesso ficam para tarefa posterior.
