@@ -532,6 +532,7 @@ function resetModuleShell(){
   shellFrames={};shellActiveModule='';shellScopeKey='';
   if(base){base.hidden=false;base.removeAttribute('data-shell-key');base.removeAttribute('data-shell-module');base.removeAttribute('data-shell-url');base.removeAttribute('data-shell-loaded');if(base.src!=='about:blank')base.src='about:blank'}
   if(viewer)viewer.hidden=true;
+  setShellOpening('',false);
   document.body.classList.remove('viewer-open');
 }
 function prepareShellScope(){
@@ -539,11 +540,25 @@ function prepareShellScope(){
   if(shellScopeKey&&shellScopeKey!==scope)resetModuleShell();
   shellScopeKey=scope;
 }
+function ensureShellOpening(){
+  var viewer=el('viewer'),node=el('cscModuleOpening');if(!viewer)return null;
+  if(node)return node;
+  node=document.createElement('div');node.id='cscModuleOpening';
+  node.setAttribute('role','status');node.setAttribute('aria-live','polite');
+  node.style.cssText='padding:10px 14px;background:#102d46;color:#adc4d2;border-bottom:1px solid #2b5a76;font-weight:800;font-size:.86rem';
+  var frame=el('viewerFrame');viewer.insertBefore(node,frame||null);return node;
+}
+function setShellOpening(title,visible){
+  var node=ensureShellOpening();if(!node)return;
+  node.hidden=!visible;if(visible)node.textContent='Abrindo '+text(title||'painel')+' • exibindo a última confirmação disponível enquanto sincroniza';
+}
 function enhanceShellFrame(frame){
   if(!frame||frame.dataset.shellEnhanced==='1')return;
   frame.dataset.shellEnhanced='1';
   frame.addEventListener('load',function(){
+    frame.dataset.shellReady='1';
     try{applyUiStandard(frame.contentDocument)}catch(e){}
+    if(shellActiveFrame()===frame)setShellOpening('',false);
   });
 }
 function ensureShellFrame(name,url,title){
@@ -569,6 +584,10 @@ function showShellFrame(name,frame,title){
   el('viewerTitle').textContent=title||'Painel';
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer');viewer.hidden=false;
   frame.hidden=false;document.body.classList.add('viewer-open');
+  /* TAREFA_11_RESPOSTA_VISUAL_IMEDIATA_V1:
+     o shell responde no mesmo toque; o módulo pode então pintar seu último dado confirmado
+     enquanto a consulta remota continua em paralelo. */
+  setShellOpening(title||'Painel',frame.dataset.shellReady!=='1');
   /* TAREFA_10_AGENDA_LAZY_VISIBLE_V1:
      o documento só começa a carregar depois que shell e frame já estão visíveis.
      No Safari/iPhone isso evita voltar ao padrão antigo de agenda em iframe oculto. */
@@ -596,7 +615,7 @@ function openModule(name,title){
 function closeViewer(){
   var frame=shellActiveFrame();
   if(shellHasUnsaved(frame)&&!window.confirm('Há alterações que podem não ter sido salvas. Deseja voltar à Central mesmo assim?'))return false;
-  el('viewer').hidden=true;document.body.classList.remove('viewer-open');shellActiveModule='';
+  el('viewer').hidden=true;setShellOpening('',false);document.body.classList.remove('viewer-open');shellActiveModule='';
   refreshHealth(false);return true;
 }
 function loadContext(message){
