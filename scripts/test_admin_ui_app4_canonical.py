@@ -157,6 +157,25 @@ for forbidden in ['border:3px solid #69c7e7!important','border:3px solid #8df0b4
         raise SystemExit(f'Extensão de moradores voltou a criar borda rejeitada: {forbidden}')
 print('APP4_CANON_COR_SEM_BORDAS_V2_OK')
 
+# LOGIN PROPOSTA — referência exata do protótipo 4 • App institucional.
+central_login = (ROOT / 'central-administrativa-tacs.html').read_text(encoding='utf-8')
+for token in [
+    'Proposta do Conecta Saúde Comunitária',
+    'class="csc-login-purpose-card"',
+    'LOGIN_PROPOSTA_APP4_2026_09_11_V1',
+    'background:linear-gradient(145deg,#153b58,#102d46)!important',
+    'border:0!important',
+]:
+    if token not in central_login:
+        raise SystemExit(f'Tela de acesso sem requisito da proposta App4: {token}')
+for forbidden in [
+    'Entre como administrador ou TACS da sua área.',
+    'Porque o Conecta Saúde Comunitária foi desenvolvido',
+]:
+    if forbidden in central_login:
+        raise SystemExit(f'Tela de acesso voltou a exibir texto removido: {forbidden}')
+print('LOGIN_PROPOSTA_APP4_OK')
+
 # CORRECOES_PONTUAIS_APP_2026_09_10_V5
 behavior_now = (ROOT / 'admin-ui-behavior.inline.js').read_text(encoding='utf-8')
 css_now = (ROOT / 'admin-ui-standard.inline.css').read_text(encoding='utf-8')
