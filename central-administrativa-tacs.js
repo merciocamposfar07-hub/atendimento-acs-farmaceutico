@@ -221,17 +221,25 @@ function restoreContextCache(){
 }
 function responsible(area){var list=context&&Array.isArray(context.tacs)?context.tacs:[];for(var i=0;i<list.length;i++)if(text(list[i].tacsId)===text(area&&area.tacsId))return list[i];return mode==='tacs'?(list[0]||null):null}
 var ACCESS_PROFILE_LABELS={
+  ADMIN_TACS_UBS_MORADOR:'Administrador + TACS + UBS + Morador',
+  ADMIN_TACS_UBS:'Administrador + TACS + UBS',
+  ADMIN_UBS_MORADOR:'Administrador + UBS + Morador',
+  TACS_UBS_MORADOR:'TACS + UBS + Morador',
+  ADMIN_UBS:'Administrador + UBS',
+  TACS_UBS:'TACS + UBS',
+  UBS_MORADOR:'UBS + Morador',
   ADMIN_TACS_MORADOR:'Administrador + TACS + Morador',
   ADMIN_TACS:'Administrador + TACS',
   ADMIN_MORADOR:'Administrador + Morador',
   TACS_MORADOR:'TACS + Morador',
   TACS:'TACS',
   ADMIN:'Administrador',
+  UBS:'UBS',
   ADMIN_GERAL:'Administrador'
 };
 function accessProfileLabel(value){
   var key=text(value).toUpperCase().replace(/[+\s-]+/g,'_');
-  return ACCESS_PROFILE_LABELS[key]||((key.indexOf('TACS')!==-1)?'TACS':'Administrador');
+  return ACCESS_PROFILE_LABELS[key]||((key.indexOf('UBS')!==-1)?'UBS':((key.indexOf('TACS')!==-1)?'TACS':'Administrador'));
 }
 function currentAdministrator(){
   var atual=context&&context.administradorAtual;
