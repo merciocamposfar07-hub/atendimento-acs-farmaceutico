@@ -159,5 +159,7 @@ Regras:
 - as outras portas do Administrador permanecem disponíveis;
 - modo diagnóstico administrativo do Morador fica fora desta tarefa.
 
-### Status da Tarefa 4: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK`.
+### Status final da Tarefa 4: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate específico `TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK` aprovado dentro da suíte integral. Apps Script versão **202** implantado no mesmo deployment pelo run `34718800583`, com health checks aprovados na primeira tentativa. GitHub Pages run `34718794886` concluído com sucesso.
+
+**Regra de sequência cumprida:** a Tarefa 4 está fechada tecnicamente e a Tarefa 5 pode ser iniciada.
