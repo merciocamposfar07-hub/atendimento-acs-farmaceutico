@@ -256,3 +256,18 @@ Gate `TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK`, suíte integral e `QUALITY_GATE_V1
 O shell persistente passa a ser o comportamento canônico da navegação interna. As regras de desempenho e atualização em paralelo pertencem à Tarefa 11.
 
 **Sequência canônica:** Tarefa 10 encerrada tecnicamente; Tarefa 11 liberada para execução.
+
+
+### Registro canônico — Tarefa 11 / Desempenho dos módulos
+Fluxo desta etapa:
+
+`toque no módulo → shell aparece imediatamente → último dado confirmado da sessão é pintado em leitura → servidor sincroniza em paralelo → comparar resposta → aplicar somente se houver mudança → liberar gravação após confirmação remota.`
+
+O cache é isolado por modo/perfil, área e módulo e fica em `sessionStorage`. Credenciais, PIN, quickKey e chave de confiança são excluídos do snapshot de desempenho.
+
+Todos os módulos administrativos conectados ao core passam a seguir este contrato: Agendas, Moradores, Profissionais, Recados/Campanhas, Suporte, TACS/Áreas e Municípios/Organizações.
+
+A Tarefa 11 não define ainda referência de versão/frescor do cache, deduplicação de chamadas nem regra de timeout da sessão; esses pontos permanecem nas Tarefas 12, 13 e 14.
+
+### Status da Tarefa 11: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL EM ANDAMENTO — 12/09/2026
+Gate específico: `TAREFA_11_DESEMPENHO_MODULOS_OK`.
