@@ -2307,10 +2307,12 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 <div class="login-tabs"><button id="tabAdmin" class="tab active" type="button">Administrador geral</button><button id="tabTacs" class="tab" type="button">TACS da área</button></div>
 <div id="adminLogin"><label for="adminPin">PIN administrativo</label><input id="adminPin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="actions"><button id="loginAdmin" class="btn" type="button">Entrar na Central</button></div></div>
 <div id="tacsLogin" hidden><label for="tacsPin">PIN individual</label><input id="tacsPin" class="field" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="actions"><button id="loginTacs" class="btn" type="button">Entrar na minha área</button></div></div>
-<div id="loginStatus" class="status">Entre como administrador ou TACS da sua área.</div>
-<div class="csc-login-purpose" aria-label="Propósito do Conecta Saúde Comunitária">
-<strong>Porque o Conecta Saúde Comunitária foi desenvolvido</strong>
+<div id="loginStatus" class="status" hidden></div>
+<div class="csc-login-purpose" aria-label="Proposta do Conecta Saúde Comunitária">
+<strong>Proposta do Conecta Saúde Comunitária</strong>
+<div class="csc-login-purpose-card">
 <p>O Conecta Saúde Comunitária é uma plataforma de gestão e acesso à saúde comunitária desenvolvida para aproximar a população dos serviços disponíveis em seu território. Criado para reduzir deslocamentos desnecessários, filas presenciais e incertezas no acesso, reúne agendas, vagas, solicitações, serviços e informações da comunidade em um único ambiente digital, acessível pelo celular.</p>
+</div>
 </div>
 </section>
 <section id="identityPanel" class="panel identity" hidden>
