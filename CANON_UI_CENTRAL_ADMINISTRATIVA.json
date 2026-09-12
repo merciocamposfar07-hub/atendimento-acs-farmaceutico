@@ -20,7 +20,7 @@
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_02_COMBINACOES_PERFIS_UBS_2026_09_12.md",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_03_IDENTIDADE_REAL_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
   "notes": [
@@ -86,7 +86,8 @@
     "ubsRegistrationInAdminTacsAccess": true,
     "ubsDeviceRecognitionDeferred": true,
     "ubsProfileCombinationsTask2": true,
-    "ubsStandaloneProfilePreserved": true
+    "ubsStandaloneProfilePreserved": true,
+    "realAuthenticatedIdentityTask3": true
   },
   "firstAccessProfiles": [
     "ADMIN",
@@ -173,6 +174,21 @@
     "pagesWorkflowRun": 34713294470,
     "pagesDeploymentHead": "6cff63d84eb15ef7fe19816454e7480b1ca1b320",
     "pagesDeploymentSuccess": true,
+    "userDeviceValidation": "pending"
+  },
+  "task3RealIdentity": {
+    "status": "implemented-awaiting-full-validation",
+    "authorizedOn": "2026-09-12",
+    "displayRule": "nome completo — perfil cadastrado",
+    "preservesCombinedProfiles": true,
+    "adminUsesAuthenticatedIdentity": true,
+    "tacsUsesAuthenticatedIdentity": true,
+    "ubsUsesRegisteredProfile": true,
+    "residentDisplaysMoradorProfile": true,
+    "persistentDeviceRecognition": false,
+    "secondAccessBehaviorDeferred": true,
+    "diagnosticModeDeferred": true,
+    "specificGate": "TAREFA_3_IDENTIDADE_REAL_OK",
     "userDeviceValidation": "pending"
   }
 }
