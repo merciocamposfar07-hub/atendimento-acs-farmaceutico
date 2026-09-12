@@ -2388,14 +2388,16 @@ html body .cartao input[readonly]{background:#0b263d!important;color:#d8e6ee!imp
 
 
 
+<script src="/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-tarefa8-v1"></script>
 <iframe name="ponteAgendaV1" class="ponte" src="about:blank" title="Envio seguro ao servidor"></iframe>
 <script>
 (function(){
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1',PROFILE_KEY='portalTacsAcessoRapidoV1',UNDO_KEY='portalTacsUndoAgendaV1',CACHE_SCHEMA='lf1';
-var areaId=String(new URLSearchParams(location.search).get('area')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)||'JAPARANDUBA';
-var token=sessionStorage.getItem(TOKEN_KEY)||'',territorioToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',dispositivo=localStorage.getItem(DEVICE_KEY)||'',tacsMode=Boolean(territorioToken);
+var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'agendas'}):null;
+var areaId=moduleCore&&typeof moduleCore.areaId==='function'?moduleCore.areaId():String(new URLSearchParams(location.search).get('area')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)||'JAPARANDUBA';
+var token=moduleSession&&moduleSession.token||'',territorioToken=moduleSession&&moduleSession.territorioToken||'',dispositivo=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'',tacsMode=(moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode()==='tacs':Boolean(territorioToken));
 if(!dispositivo){dispositivo='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,dispositivo)}
 var dados={profissionais:[],agendas:[]},ativa=null,contador=0;
 var entrar=document.getElementById('entrar'),sair=document.getElementById('sair'),desfazer=document.getElementById('desfazer');
@@ -2458,7 +2460,7 @@ function post(action,payload,receber){
   try{form.submit()}catch(erro){if(form.parentNode)form.parentNode.removeChild(form);finalizar({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});return}
   setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form)},4000);agendarConsultaResultado(450)
 }
-function sessao(){var out={dispositivo:dispositivo,areaId:areaId,escopo:'agendas'};if(tacsMode&&territorioToken)out.territorioToken=territorioToken;else out.token=token;return out}
+function sessao(){if(moduleCore&&typeof moduleCore.session==='function')return moduleCore.session({areaId:areaId,escopo:'agendas'});var out={dispositivo:dispositivo,areaId:areaId,escopo:'agendas'};if(tacsMode&&territorioToken)out.territorioToken=territorioToken;else out.token=token;return out}
 function prof(id){var chaveId=normalId(id);return dados.profissionais.find(function(x){return normalId(x.ID)===chaveId})||null}
 function chave(a){return normalId(a.MODULO)+'|'+normalDia(a.DIA)}
 function achar(modulo,dia){var m=normalId(modulo),d=normalDia(dia);return dados.agendas.find(function(a){return normalId(a.MODULO)===m&&normalDia(a.DIA)===d})||null}
