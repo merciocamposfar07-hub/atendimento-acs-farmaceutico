@@ -208,7 +208,7 @@ async function testTerritoryPanel() {
     'A máscara do CNS não pode alterar os 15 dígitos enviados ao servidor.');
   assert.match(js, /phone=digits\(el\('tacsPhone'\)\.value\)/,
     'A máscara do celular não pode alterar os dígitos enviados ao servidor.');
-  for (const perfil of ['ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_MORADOR','TACS','ADMIN']) {
+  for (const perfil of ['ADMIN_TACS_MORADOR','ADMIN_TACS','ADMIN_MORADOR','TACS_MORADOR','TACS','ADMIN','UBS']) {
     assert.match(html, new RegExp('value="'+perfil+'"'), 'Perfil ausente no formulário: '+perfil);
   }
   assert.doesNotMatch(html, /<label for="tacsRegistration">/);
@@ -296,6 +296,18 @@ async function testTerritoryPanel() {
   }
   assert.equal(window.document.getElementById('tacsPermissionsBlock').classList.contains('hidden'),true,
     'Administrador neutro não deve receber permissões territoriais de TACS.');
+
+  window.document.getElementById('tacsProfile').value='UBS';
+  window.document.getElementById('tacsProfile').dispatchEvent(new window.Event('change',{bubbles:true}));
+  assert.equal(window.document.getElementById('tacsCns').required,false,'UBS não deve exigir CNS de TACS.');
+  assert.equal(window.document.getElementById('tacsMicroarea').required,false,'UBS não deve exigir microárea de TACS.');
+  assert.equal(window.document.getElementById('tacsUnit').required,true,'UBS deve exigir unidade vinculada.');
+  assert.equal(window.document.getElementById('tacsUbsRole').required,true,'UBS deve exigir função do responsável.');
+  assert.equal(window.document.getElementById('tacsUbsRoleWrap').classList.contains('hidden'),false,'Campo de função UBS deve aparecer.');
+  assert.equal(window.document.getElementById('tacsPermissionsBlock').classList.contains('hidden'),false,'UBS deve permitir configuração explícita de permissões.');
+  for (const id of ['permRead','permEdit','permStatus','permCsv','permPublish','permAgenda','permProfessionals']) {
+    assert.equal(window.document.getElementById(id).checked,false,'Novo perfil UBS não deve receber permissão automática: '+id);
+  }
 
   const esusCsv = [
     'e-SUS - Atenção Primária',
