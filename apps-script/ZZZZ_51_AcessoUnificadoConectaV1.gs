@@ -79,13 +79,13 @@ function conectaAcessoV1TratarPost_(e){
     'conecta_morador_login_pin','conecta_morador_sessao','conecta_morador_notificacao_confirmar',
     'conecta_morador_preferencia_notificacao','conecta_morador_membro_salvar_cpf','conecta_morador_encerrar',
     'conecta_pin_recuperar_iniciar','conecta_pin_recuperar_salvar','conecta_recuperacao_registrar_aparelho',
-    'conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_pendencias_contagem'
+    'conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_morador_diagnostico_admin','conecta_pendencias_contagem'
   ];
   if(aceitas.indexOf(action)===-1)return null;
   var id=conectaAcessoV1Texto_(p.requestId),resultado;
   try{
     if(!/^[A-Za-z0-9_-]{8,160}$/.test(id))throw new Error('Identificador da operação inválido.');
-    if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_pin_recuperar_iniciar','conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||action);
+    if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_pin_recuperar_iniciar','conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_morador_diagnostico_admin'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||p.documento||action);
     if(action==='conecta_morador_identificar')resultado=conectaAcessoV1Identificar_(p);
     else if(action==='conecta_morador_confirmar')resultado=conectaAcessoV1Confirmar_(p);
     else if(action==='conecta_morador_criar_pin')resultado=conectaAcessoV1CriarPin_(p);
@@ -99,6 +99,7 @@ function conectaAcessoV1TratarPost_(e){
     else if(action==='conecta_recuperacao_registrar_aparelho')resultado=conectaAcessoV1RegistrarAparelhoConfiavel_(p);
     else if(action==='conecta_ubs_identificar_primeiro_acesso')resultado=conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p);
     else if(action==='conecta_ubs_login_pin')resultado=conectaAcessoV1LoginUbs_(p);
+    else if(action==='conecta_morador_diagnostico_admin')resultado=conectaAcessoV1DiagnosticoMoradorAdmin_(p);
     else resultado=conectaAcessoV1PendenciasContagem_(p);
   }catch(erro){
     resultado={ok:false,message:conectaAcessoV1Erro_(erro)};
@@ -110,6 +111,7 @@ function conectaAcessoV1TratarPost_(e){
 function conectaAcessoV1Identificar_(p){
   var cpf=conectaAcessoV1Cpf_(p.cpf),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
   if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
+  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo))throw new Error('Aparelho administrativo: use o diagnóstico do Morador sem criar vínculo.');
   var achados=conectaAcessoV1BuscarCpf_(cpf);
   if(achados.length===1)return conectaAcessoV1IdentidadeResposta_(achados[0],cpf,false,'Cadastro localizado.');
   if(achados.length>1)return {ok:true,encontrado:false,precisaNascimento:true,ambiguo:true,message:'Precisamos confirmar mais um dado para localizar seu cadastro com segurança.'};
@@ -117,6 +119,8 @@ function conectaAcessoV1Identificar_(p){
 }
 
 function conectaAcessoV1Confirmar_(p){
+  var dispositivo=conectaAcessoV1Texto_(p.dispositivo);
+  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo))throw new Error('Aparelho administrativo: confirmação residencial bloqueada; use o diagnóstico sem vínculo.');
   var cpf=conectaAcessoV1Cpf_(p.cpf),nascimento=conectaAcessoV1Nascimento_(p.nascimento),nome=conectaAcessoV1Texto_(p.nome),areaPreferida=conectaAcessoV1Id_(p.areaId);
   if(!nascimento)throw new Error('Informe uma data de nascimento válida no formato DD/MM/AAAA.');
   var candidatos=conectaAcessoV1BuscarNascimento_(nascimento,areaPreferida);
@@ -167,6 +171,7 @@ function conectaAcessoV1CriarPin_(p){
   var identidade=conectaAcessoV1LerTokenCache_(p.identidadeToken,TACS_CONECTA_ACESSO_V1.IDENTITY_PREFIX,'ci1');
   var pin=conectaAcessoV1Pin_(p.pin,p.confirmacao),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
   if(!dispositivo)throw new Error('A identificação do aparelho está ausente.');
+  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo))throw new Error('Aparelho administrativo não pode criar PIN nem vínculo residencial.');
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),lock=LockService.getScriptLock();
   if(!lock.tryLock(10000))throw new Error('Seu acesso está sendo salvo. Tente novamente em instantes.');
   try{
@@ -190,6 +195,7 @@ function conectaAcessoV1CriarPin_(p){
 function conectaAcessoV1LoginMorador_(p){
   var pin=conectaAcessoV1PinSomente_(p.pin),quick=conectaAcessoV1Texto_(p.quickKey),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
   if(!/^cmq1\./.test(quick)||!dispositivo)throw new Error('Este aparelho ainda não possui um acesso de morador reconhecido.');
+  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo))throw new Error('Aparelho administrativo não pode assumir sessão de Morador; use o diagnóstico sem vínculo.');
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=conectaAcessoV1AcessoPorQuick_(sheet,quick);
   if(!registro||!conectaAcessoV1Bool_(registro.values[15]))throw new Error('Acesso não localizado ou inativo.');
   if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo)))throw new Error('Este acesso rápido pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
@@ -211,6 +217,8 @@ function conectaAcessoV1SessaoMorador_(p){
 }
 
 function conectaAcessoV1ConfirmarNotificacao_(p){
+  var dispositivo=conectaAcessoV1Texto_(p.dispositivo);
+  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo))throw new Error('Aparelho administrativo não pode ser registrado para notificações de Morador.');
   var sessao=conectaAcessoV1ValidarSessao_(p),sub=conectaAcessoV1Texto_(p.subscriptionId).toLowerCase();
   if(!conectaAcessoV1Bool_(p.permission)||!conectaAcessoV1Bool_(p.optedIn)||!/^[0-9a-f-]{36}$/.test(sub))throw new Error('Ative as notificações neste aparelho para continuar.');
   if(!conectaAcessoV1SubscriptionAtiva_(sessao.areaId,sub))throw new Error('A ativação ainda não foi confirmada pelo serviço de notificações. Aguarde alguns segundos e tente continuar.');
@@ -430,6 +438,47 @@ function conectaAcessoV1Familia_(v){
     var membros=typeof identificacaoFamiliarPublicaV1Membros_==='function'?identificacaoFamiliarPublicaV1Membros_(familia,contexto):[];
     return (membros||[]).map(function(m){return {token:m.token||'',nome:m.nome||'',nascimento:m.nascimento||'',temDocumento:Boolean(m.temDocumento),responsavel:conectaAcessoV1Nome_(m.nome)===conectaAcessoV1Nome_(v[4])};});
   }catch(e){return [{nome:v[4],cpf:v[3],responsavel:true}];}
+}
+
+function conectaAcessoV1AparelhoAdministrativo_(dispositivo){
+  dispositivo=conectaAcessoV1Texto_(dispositivo);
+  if(!dispositivo)return false;
+  var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.TRUST_SHEET,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS),last=sh.getLastRow();
+  if(last<=1)return false;
+  var dh=conectaAcessoV1Hash_(dispositivo),rows=sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS.length).getValues();
+  for(var i=rows.length-1;i>=0;i--){
+    if(conectaAcessoV1Texto_(rows[i][1])!=='ADMIN'||!conectaAcessoV1Bool_(rows[i][5]))continue;
+    if(conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][3]),dh))return true;
+  }
+  return false;
+}
+
+function conectaAcessoV1BuscarCns_(cns){
+  var out=[],doc=conectaAcessoV1Texto_(cns).replace(/\D/g,'');
+  conectaAcessoV1Areas_().forEach(function(area){
+    conectaAcessoV1RegistrosArea_(area).forEach(function(x){
+      if(conectaAcessoV1Texto_(x.morador.cns).replace(/\D/g,'')===doc)out.push(x);
+    });
+  });
+  return out;
+}
+
+function conectaAcessoV1DiagnosticoMoradorAdmin_(p){
+  var dispositivo=conectaAcessoV1Texto_(p.dispositivo),chave=conectaAcessoV1Texto_(p.chaveConfianca),doc=conectaAcessoV1Texto_(p.documento).replace(/\D/g,'');
+  if(!dispositivo||!conectaAcessoV1ConfiancaValida_('ADMIN','ADMIN_GERAL',dispositivo,chave))throw new Error('Aparelho administrativo não reconhecido para diagnóstico.');
+  var lista=[],tipo='';
+  if(/^\d{11}$/.test(doc)){conectaAcessoV1Cpf_(doc);lista=conectaAcessoV1BuscarCpf_(doc);tipo='CPF';}
+  else if(/^\d{15}$/.test(doc)){lista=conectaAcessoV1BuscarCns_(doc);tipo='CNS';}
+  else throw new Error('Informe um CPF com 11 números ou CNS com 15 números.');
+  if(lista.length!==1)throw new Error(lista.length>1?'Há mais de um cadastro para este documento. Corrija a duplicidade antes do diagnóstico.':'Morador não localizado para este documento.');
+  var item=lista[0],m=item.morador||{},a=item.area||{};
+  return {
+    ok:true,modo:'DIAGNOSTICO_ADMINISTRATIVO',somenteLeitura:true,
+    documentoTipo:tipo,nome:conectaAcessoV1Texto_(m.nome),areaId:conectaAcessoV1Id_(a.areaId),
+    areaNome:conectaAcessoV1Texto_(a.areaNome||a.areaId),unidadeId:conectaAcessoV1Texto_(a.unidadeId),
+    vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,notificacoesAlteradas:false,sessaoMoradorCriada:false,
+    message:'Diagnóstico administrativo concluído sem criar ou alterar vínculo residencial.'
+  };
 }
 
 function conectaAcessoV1RegistrarUbsConfiavel_(ubs,dispositivo){
