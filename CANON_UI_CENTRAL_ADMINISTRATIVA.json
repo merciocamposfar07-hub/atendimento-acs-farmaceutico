@@ -19,7 +19,7 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R7",
   "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_03_IDENTIDADE_REAL_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
@@ -177,8 +177,9 @@
     "userDeviceValidation": "pending"
   },
   "task3RealIdentity": {
-    "status": "tests-and-pages-passed-apps-script-deploy-blocked-version-limit",
+    "status": "validated-internal-deployed",
     "authorizedOn": "2026-09-12",
+    "validatedOn": "2026-09-12",
     "displayRule": "nome completo — perfil cadastrado",
     "preservesCombinedProfiles": true,
     "adminUsesAuthenticatedIdentity": true,
@@ -189,24 +190,26 @@
     "secondAccessBehaviorDeferred": true,
     "diagnosticModeDeferred": true,
     "specificGate": "TAREFA_3_IDENTIDADE_REAL_OK",
-    "userDeviceValidation": "pending",
+    "userDeviceValidation": "pending-global-device-tests",
     "validation": {
       "specificGate": "TAREFA_3_IDENTIDADE_REAL_OK",
       "fullSuite": "passed",
       "retry1WorkflowRun": 34715479401,
       "retry2WorkflowRun": 34715608111,
-      "pagesWorkflowRun": 34715602611,
+      "retry3WorkflowRun": 34718306192,
+      "pagesWorkflowRun": 34718300856,
       "pagesDeploymentSuccess": true,
-      "appsScriptCurrentVersion": 200,
-      "appsScriptActiveDeploymentVersions": [
+      "appsScriptPreviousVersion": 200,
+      "appsScriptCurrentVersion": 201,
+      "appsScriptActiveDeploymentVersionsAfterDeploy": [
         6,
         7,
         9,
-        200
+        201
       ],
-      "safeUnusedVersionCandidate": 199,
-      "appsScriptDeploy": "blocked-200-version-limit",
-      "blocker": "Google Apps Script atingiu o limite de 200 versões; é necessário excluir uma versão não usada na História do projeto antes de criar a próxima."
+      "appsScriptDeploy": "passed",
+      "appsScriptHealth": "passed-first-attempt",
+      "versionHistoryCleanup": "versões antigas não utilizadas removidas pelo usuário; faixa recente 189-199 preservada"
     }
   }
 }
