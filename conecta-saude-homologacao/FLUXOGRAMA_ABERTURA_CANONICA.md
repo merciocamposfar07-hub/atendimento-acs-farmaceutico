@@ -219,3 +219,17 @@ Gate `TAREFA_8_MODULOS_CORE_CONTEXTO_OK` e suíte integral aprovados. O RETRY 2 
 As duas execuções anteriores foram interrompidas antes do deploy por gates legados incompatíveis com a nova fonte de autoridade do core; os testes foram alinhados sem remover antecipadamente os logins transitórios da Tarefa 9.
 
 **Sequência canônica:** Tarefa 8 encerrada tecnicamente; Tarefa 9 liberada para execução.
+
+
+### Registro canônico — Tarefa 9 / PIN somente na entrada
+Depois do PIN válido na entrada do Conecta, a Central publica o contexto autenticado e os módulos passam a consumi-lo pelo núcleo comum.
+
+Fluxo:
+`PIN na entrada → Central autentica → contexto Conecta publicado → módulo consome perfil/área/permissões/sessão → nenhuma nova tela de PIN dentro do módulo.`
+
+Módulos não controlam tokens globais, não escolhem o perfil e não podem apagar a sessão da plataforma. Se não houver sessão canônica, a orientação é retornar à Central.
+
+### Status final da Tarefa 9: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate `TAREFA_9_PIN_SOMENTE_ENTRADA_OK` e suíte integral aprovados. Apps Script **207** foi implantado no workflow `34723196310`, com health checks aprovados na primeira tentativa. GitHub Pages run `34723391600` concluiu com sucesso.
+
+**Sequência canônica:** Tarefa 9 encerrada tecnicamente; Tarefa 10 liberada para execução.
