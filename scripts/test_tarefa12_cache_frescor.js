@@ -11,6 +11,7 @@ const recados=read('painel-oficial-recados-campanhas.html');
 const moradores=read('teste-v1/painel-moradores-transport-v2.js');
 const suporte=read('painel-suporte-moradores-v2.html');
 const territorio=read('teste-v1/painel-tacs-areas-v1.js');
+const territorioHtml=read('teste-v1/painel-tacs-areas-v1.html');
 const municipios=read('painel-oficial-organizacoes-municipios.html');
 
 new Function(core);
@@ -76,7 +77,7 @@ assert.match(municipios,/n\.disabled=!dataConfirmed/);
 
 // Cache busting publica a revisão nova em vez da revisão da Tarefa 11.
 assert.match(central,/revision='20260912-task12-cache-version-v1'/);
-for(const src of [agendas,profissionais,recados,suporte,territorio,municipios,read('teste-v1/painel-moradores-v2.html')]){
+for(const src of [agendas,profissionais,recados,suporte,territorioHtml,municipios,read('teste-v1/painel-moradores-v2.html')]){
   assert.ok(src.includes('conecta-module-core-v1.js?v=20260912-tarefa12-cache-version-v1'),'Módulo sem revisão do core da Tarefa 12.');
 }
 
