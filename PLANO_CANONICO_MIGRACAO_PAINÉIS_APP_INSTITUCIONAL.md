@@ -120,7 +120,7 @@ Regras:
 
 
 ### Status da Tarefa 2: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
-A matriz canônica de 14 perfis foi aprovada pelos gates automatizados, incluindo **UBS pura**. Apps Script versão 200 foi implantado com health checks aprovados e GitHub Pages publicado. A Tarefa 3 permanece não iniciada até validação visual/operacional desta etapa pelo usuário.
+A matriz canônica de 14 perfis foi aprovada pelos gates automatizados, incluindo **UBS pura**. Apps Script versão 200 foi implantado com health checks aprovados e GitHub Pages publicado. A matriz permanece válida; a validação global em aparelhos reais integra a etapa final obrigatória de testes.
 
 
 ## Tarefa 3 autorizada — Identidade real após o acesso
@@ -137,13 +137,11 @@ Regras:
 - Morador autenticado mostra `nome — Morador`;
 - reconhecimento persistente do aparelho, segundo acesso específico e modo diagnóstico permanecem fora desta tarefa e pertencem às tarefas seguintes.
 
-### Status da Tarefa 3: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL EM ANDAMENTO — 12/09/2026
+### Status final da Tarefa 3: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
 Gate específico: `TAREFA_3_IDENTIDADE_REAL_OK`.
 
+Validação concluída no RETRY_3: suíte integral aprovada, workflow Apps Script run `34718306192` aprovado, versão **201** criada e implantada no mesmo deployment e health checks aprovados na primeira tentativa. O GitHub Pages do disparo também concluiu com sucesso no run `34718300856`.
 
-### Estado de validação da Tarefa 3 — limite de versões do Apps Script
-O gate `TAREFA_3_IDENTIDADE_REAL_OK` e a suíte integral passaram. O GitHub Pages também foi publicado com sucesso. A implantação no Apps Script não foi concluída porque o projeto atingiu o limite de 200 versões. O deployment principal está na versão 200; as versões em uso por deployments são 6, 7, 9 e 200. A versão 199 não está em uso e é candidata segura para exclusão na História do projeto.
+O limite de 200 versões foi saneado preservando as versões recentes `189–199`, e o workflow permanece corrigido para consumir apenas uma nova versão por implantação.
 
-O workflow de implantação foi corrigido para deixar de criar uma versão redundante de backup antes de cada publicação. A versão anteriormente implantada permanece o ponto de rollback imutável.
-
-**Regra de sequência:** não iniciar a Tarefa 4 antes de liberar uma vaga de versão, repetir a implantação da Tarefa 3 e obter health check aprovado.
+**Regra de sequência cumprida:** a Tarefa 3 está fechada tecnicamente e a Tarefa 4 pode ser iniciada, sem antecipar nenhuma regra das tarefas posteriores.
