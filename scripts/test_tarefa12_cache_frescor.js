@@ -77,8 +77,12 @@ assert.match(municipios,/n\.disabled=!dataConfirmed/);
 
 // Cache busting publica a revisão nova em vez da revisão da Tarefa 11.
 assert.match(central,/revision='20260912-task12-cache-version-v1'/);
-for(const src of [agendas,profissionais,recados,suporte,territorioHtml,municipios,read('teste-v1/painel-moradores-v2.html')]){
-  assert.ok(src.includes('conecta-module-core-v1.js?v=20260912-tarefa12-cache-version-v1'),'Módulo sem revisão do core da Tarefa 12.');
+for(const [moduleName,src] of [
+  ['agendas',agendas],['profissionais',profissionais],['recados',recados],['suporte',suporte],
+  ['territorio',territorioHtml],['municipios',municipios],['moradores',read('teste-v1/painel-moradores-v2.html')]
+]){
+  assert.match(src,/conecta-module-core-v1\.js\?v=[^"'\\<\s]+/,'Módulo sem cache-busting do core: '+moduleName);
+  assert.ok(!src.includes('conecta-module-core-v1.js?v=20260912-tarefa11-performance-v1'),'Módulo ainda preso ao core antigo da Tarefa 11: '+moduleName);
 }
 
 // Tarefa 13 ainda não foi antecipada.
