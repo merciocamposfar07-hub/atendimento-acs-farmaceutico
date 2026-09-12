@@ -15,6 +15,12 @@ function esc(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;'
 function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
 function digits(v){return text(v).replace(/\D/g,'')}
 function setStatus(msg,type){var n=el('loginStatus');if(!n)return;var value=text(msg);n.textContent=value;n.hidden=!value;n.className='status'+(type?' '+type:'')}
+function syncAppState(){
+  var authenticated=Boolean(token||territoryToken);
+  document.documentElement.classList.toggle('csc-central-state-app',authenticated);
+  document.documentElement.classList.toggle('csc-central-state-login',!authenticated);
+  if(authenticated)document.documentElement.classList.remove('csc-central-login-visible');
+}
 function requestId(prefix){return 'central_'+prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
 function marcarConexaoRecente(){try{localStorage.setItem(SHARED_WARM_KEY,String(Date.now()))}catch(e){}}
 var pinWarmupInFlight=false;
@@ -132,7 +138,7 @@ function post(action,payload,resultAction,cb){
   sendAfterRegistration();
   active.submitTimer=setTimeout(sendOnce,180);
 }
-function showLogin(kind){var admin=!TACS_ONLY&&kind==='admin';document.documentElement.classList.add('csc-central-login-visible');el('loginPanel').hidden=false;el('adminLogin').hidden=!admin;el('tacsLogin').hidden=admin;el('tabAdmin').hidden=TACS_ONLY;el('tabAdmin').classList.toggle('active',admin);el('tabTacs').classList.toggle('active',!admin);el('tabTacs').parentNode.style.gridTemplateColumns=TACS_ONLY?'1fr':'1fr 1fr';if(TACS_ONLY)setStatus('Entre como TACS da sua área.','')}
+function showLogin(kind){var admin=!TACS_ONLY&&kind==='admin';document.documentElement.classList.add('csc-central-login-visible');syncAppState();el('loginPanel').hidden=false;el('adminLogin').hidden=!admin;el('tacsLogin').hidden=admin;el('tabAdmin').hidden=TACS_ONLY;el('tabAdmin').classList.toggle('active',admin);el('tabTacs').classList.toggle('active',!admin);el('tabTacs').parentNode.style.gridTemplateColumns=TACS_ONLY?'1fr':'1fr 1fr';if(TACS_ONLY)setStatus('Entre como TACS da sua área.','')}
 function permission(name){if(mode==='admin')return true;var tacs=context&&Array.isArray(context.tacs)?context.tacs[0]:null;var list=tacs&&Array.isArray(tacs.permissoes)?tacs.permissoes:[];return list.indexOf(name)!==-1}
 function selectedArea(){var list=context&&Array.isArray(context.areas)?context.areas:[];for(var i=0;i<list.length;i++)if(normArea(list[i].areaId)===selectedAreaId)return list[i];return list[0]||null}
 function contextCacheKey(kind){return CONTEXT_CACHE_KEY+':'+(kind==='tacs'?'tacs':'admin')}
@@ -482,7 +488,7 @@ function loadContext(message){
         return;
       }
       if(acessoLocalAberto){bloquearAcessoLocal(acessoLocalAberto,falhaMsg);return}
-      token='';territoryToken='';mode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
+      token='';territoryToken='';mode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);syncAppState();
       el('loginPanel').hidden=false;el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;
       setStatus(falhaMsg||'A sessão foi recusada pelo servidor. Entre novamente.','warn');return;
     }
@@ -585,7 +591,7 @@ el('loginAdmin').addEventListener('click',function(){
           setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
         }
         el('adminPin').value='';
-        territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=r.token;mode='admin';sessionStorage.setItem(TOKEN_KEY,token);
+        territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=r.token;mode='admin';sessionStorage.setItem(TOKEN_KEY,token);syncAppState();
         pinLocalPendente=pin;pinLocalPerfil='admin';
         if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('ADMIN');
         if(!saved)restoreContextCache();
@@ -617,7 +623,7 @@ el('loginTacs').addEventListener('click',function(){
           setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
         }
         el('tacsPin').value='';
-        token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=r.token;mode='tacs';selectedAreaId=normArea(r.areaId);sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);
+        token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=r.token;mode='tacs';selectedAreaId=normArea(r.areaId);sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);syncAppState();
         pinLocalPendente=pin;pinLocalPerfil='tacs';
         if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('TACS');
         if(!saved)restoreContextCache();
@@ -664,6 +670,7 @@ window.PortalTacsCentralPinLocalV2={
   }
 };
 applyUiStandard(document);
+syncAppState();
 if(token||territoryToken){
   try{
     var pendingPin=sessionStorage.getItem('portalTacsPinLocalPendenteV2')||'';
