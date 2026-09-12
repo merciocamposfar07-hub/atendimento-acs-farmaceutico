@@ -197,3 +197,21 @@ Regras:
 O RETRY `34719509591` passou pela suíte integral, implantou Apps Script **204** e aprovou os health checks na primeira tentativa. GitHub Pages run `34719505209` também passou.
 
 **Regra de sequência cumprida:** Tarefa 6 encerrada tecnicamente; Tarefa 7 liberada para execução.
+
+
+## Tarefa 7 autorizada — Núcleo único de Morador com diagnóstico administrativo
+O fluxo de Morador passa a usar um único núcleo visual e lógico com dois modos explícitos:
+
+`MORADOR_REAL`  
+`DIAGNOSTICO_ADMINISTRATIVO`
+
+Regras:
+- o formulário inicial de identificação é compartilhado;
+- o modo real mantém o fluxo residencial normal;
+- o modo diagnóstico aceita CPF/CNS, mostra o resultado no mesmo `residentStage` e para antes de qualquer PIN/vínculo;
+- a resposta do servidor confirma o modo diagnóstico;
+- as barreiras de não-vinculação da Tarefa 6 permanecem ativas;
+- a Tarefa 8 ainda não começa nesta etapa.
+
+### Status da Tarefa 7: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_7_MORADOR_CORE_DIAGNOSTICO_OK`.
