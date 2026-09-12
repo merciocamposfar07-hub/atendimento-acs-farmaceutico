@@ -458,9 +458,9 @@ function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mo
 function openModule(name,title){
   var url=moduleUrl(name);if(!url)return;
   if(name==='portal'){window.open(url,'_blank','noopener');return}
-  if(acessoLocalAberto&&!(token||territoryToken)){
+  if(!(token||territoryToken)){
     moduloPendente={name:name,title:title||'Painel'};
-    setStatus('Central aberta. Confirmando a sessão atual para liberar este painel…','warn');
+    setStatus('Central pronta. Confirmando a sessão para carregar os dados deste painel…','warn');
     return;
   }
   moduloPendente=null;
