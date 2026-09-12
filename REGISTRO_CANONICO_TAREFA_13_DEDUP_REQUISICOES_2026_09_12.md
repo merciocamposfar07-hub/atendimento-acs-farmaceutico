@@ -4,7 +4,7 @@ Data: 12/09/2026
 Status: IMPLEMENTADA EM CÓDIGO; AGUARDANDO VALIDAÇÃO INTEGRAL
 
 ## Objetivo exclusivo
-Uma leitura idêntica não deve gerar várias chamadas ao Apps Script quando Central e módulos precisam da mesma informação.
+Uma leitura idêntica não deve gerar várias chamadas ao Apps Script quando módulos do shell precisam da mesma informação. A Central permanece a origem do contexto e não depende do bridge consumidor.
 
 Fluxo:
 `consumidor solicita leitura → core calcula chave por ação + modo + área + sessão/aparelho em hash → se já existe voo, compartilhar → se houve resposta remota recente válida, distribuir → senão executar uma única leitura remota → entregar aos consumidores`.
@@ -25,8 +25,8 @@ Fluxo:
 
 ## Cobertura
 Central:
-- `admin_territorio_dados`;
-- `admin_moradores_status`.
+- permanece autoridade/origem do contexto;
+- não carrega `ConectaModuleCoreV1` como consumidor.
 
 Módulos:
 - Agendas e Profissionais compartilham `admin_dados`;
