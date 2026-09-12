@@ -493,7 +493,7 @@ function testTerritory(context) {
   ];
   context.__adminSpreadsheet.insertSheet('TACS_PROFISSIONAIS_AREA').appendRow(legacyHeaders);
   vm.runInContext(read(FILES.territory), context);
-  assert.equal(context.TACS_TERRITORIO_V1.VERSAO, '1.2.0');
+  assert.equal(context.TACS_TERRITORIO_V1.VERSAO, '1.3.0');
 
   const createdBeforeInvalid = context.__created();
   assert.throws(() => saveArea(context, {
@@ -511,6 +511,7 @@ function testTerritory(context) {
   assert.equal(first.tacs.pinConfigurado, true);
   assert.equal(first.tacs.dataNascimento, '01/05/1988');
   assert.equal(context.__adminSpreadsheet.getSheetByName('TACS_PROFISSIONAIS_AREA').rows[0][18], 'DATA_NASCIMENTO', 'A coluna de nascimento não foi anexada com segurança ao cadastro existente.');
+  assert.equal(context.__adminSpreadsheet.getSheetByName('TACS_PROFISSIONAIS_AREA').rows[0][19], 'FUNCAO_UBS', 'A coluna de função UBS deve ser anexada ao final sem deslocar o schema legado.');
   assert.equal(Object.prototype.hasOwnProperty.call(first.tacs, 'pinHash'), false);
 
   const corrected = saveTacs(context, {
