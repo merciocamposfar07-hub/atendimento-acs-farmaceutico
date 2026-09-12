@@ -47,9 +47,6 @@ assert.match(territory,/var temUbs=tacsTerritorioV1PerfilTem_\(perfil,'UBS'\)/);
 assert.match(territory,/Informe a função do responsável na UBS/);
 assert.match(territory,/var permissoes=\(temTacs\|\|temUbs\)/);
 
-// Proteção de escopo: Tarefa 1 NÃO cria combinações UBS, que pertencem à Tarefa 2.
-for(const proibido of ['ADMIN_UBS','TACS_UBS','UBS_MORADOR','ADMIN_TACS_UBS']){
-  assert.equal(territory.includes("'"+proibido+"'"),false,'Combinação UBS antecipada na Tarefa 1: '+proibido);
-}
-
-console.log('TAREFA_1_PERFIL_UBS_OK: primeiro acesso, cadastro e persistência UBS isolados validados; combinações UBS não antecipadas.');
+// Após a autorização da Tarefa 2, este gate preserva somente os contratos
+// funcionais da Tarefa 1. As combinações UBS passam a ser validadas no gate da Tarefa 2.
+console.log('TAREFA_1_PERFIL_UBS_OK: primeiro acesso, cadastro e persistência do perfil UBS continuam preservados.');
