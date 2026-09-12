@@ -42,12 +42,16 @@ Os pictogramas não podem ficar apenas estáticos. O comportamento canônico é 
 
 ## Estrutura do app
 
-O Conecta Saúde Comunitária é um aplicativo único. Após o acesso, o sistema identifica o perfil autorizado e exibe o painel correspondente:
+O Conecta Saúde Comunitária é um aplicativo único. Após o acesso, o sistema identifica o perfil autorizado e exibe o ambiente correspondente.
 
-- Morador;
+Perfis de entrada canônicos a partir da Tarefa 1 autorizada em 12/09/2026:
+
+- Administrador;
 - TACS;
-- Profissional da unidade;
-- Administrador.
+- Morador;
+- UBS.
+
+O perfil UBS representa uma pessoa responsável identificada na unidade (por exemplo, gestor ou atendente), com nome, função, unidade vinculada, PIN e permissões cadastradas.
 
 Os painéis administrativos do projeto anterior permanecem como base administrativa dentro do app único, não como aplicativo separado.
 
@@ -66,9 +70,13 @@ Depois de `Acessar conta`, o app segue dois caminhos.
 `Selecionar perfil → digitar PIN → destravar contexto/snapshot local do aparelho → abrir imediatamente o último estado confirmado → criar sessão remota nova e sincronizar em segundo plano.`
 
 Por perfil:
-- **Administrador:** abre a Central e somente as estruturas administrativas autorizadas.
+- **Administrador:** abre a Central e as estruturas autorizadas.
 - **TACS:** abre exclusivamente a própria área, unidade e permissões.
 - **Morador:** abre exclusivamente seu portal/vínculo familiar/área.
+- **UBS:** no primeiro acesso, seleciona UBS e confirma o cadastro previamente criado do responsável da unidade. A Tarefa 1 não cria ainda o reconhecimento persistente do computador nem restringe a segunda entrada somente à UBS; isso pertence à etapa posterior de reconhecimento do aparelho.
+
+### Registro canônico — Tarefa 1 / Perfil UBS
+A Tarefa 1 autorizada em 12/09/2026 acrescenta **UBS** como quarto perfil de entrada e amplia o cadastro administrativo de **Administrador / TACS** para **Administrador / TACS / UBS**. O cadastro UBS exige responsável identificado, função na UBS, unidade vinculada, PIN e permissões explícitas. Nesta tarefa, UBS existe somente como perfil isolado; combinações como Administrador + UBS, TACS + UBS ou UBS + Morador não são criadas antecipadamente.
 
 ### Operações críticas
 `Tela local → usuário solicita alteração/reserva → servidor valida estado atual + sessão + território/permissão → servidor confirma → interface marca como concluída.`
