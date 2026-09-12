@@ -2047,13 +2047,16 @@ html.csc-central-login-visible #loginPanel #tacsLogin:not([hidden]) .actions{dis
 /* CENTRAL_ESTADOS_APP_2026_09_12_V1
    Fluxo canônico: tela de acesso OU Central autenticada. Nunca empilhadas.
    Alteração restrita à Central; não afeta os módulos internos. */
-/* CENTRAL_FLUXO_APP_LOCAL_FIRST_2026_09_12_V2
+/* CENTRAL_FLUXO_APP_LOCAL_FIRST_2026_09_12_V3
    Entrada e Central são estados distintos do app.
-   Dock e rodapé institucional pertencem somente ao estado autenticado. */
+   O dock pertence somente ao estado autenticado; o rodapé institucional permanece visível também no acesso. */
 html.csc-central-state-login #cscInstitutionalDock,
-html.csc-central-state-login .csc-dock,
+html.csc-central-state-login .csc-dock{display:none!important}
 html.csc-central-state-login #cscPlatformFooter,
-html.csc-central-state-login .csc-platform-footer{display:none!important}
+html.csc-central-state-login .csc-platform-footer{
+  display:grid!important;
+  padding-bottom:calc(30px + env(safe-area-inset-bottom))!important;
+}
 html.csc-central-state-login #loginPanel{display:block!important}
 html.csc-central-state-login #identityPanel,
 html.csc-central-state-login #healthPanel,
