@@ -2432,6 +2432,7 @@ html body details .check{
   </section>
 </main>
 <footer><p>Portal TACS • Painel administrativo isolado</p><p>Portal do Morador não foi modificado</p></footer>
+<script src="/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-tarefa8-v1"></script>
 <iframe name="pontePainelPSV1" class="ponte" src="about:blank" title="Envio seguro ao servidor"></iframe>
 <script>
 (function(){
@@ -2441,11 +2442,12 @@ var TOKEN_KEY='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
 var UNDO_KEY='portalTacsUndoPSV1',PROFILE_KEY='portalTacsAcessoRapidoV1',CACHE_SCHEMA='lf1';
-var token=sessionStorage.getItem(TOKEN_KEY)||'';
-var territorioToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'';
-var areaId=String(new URLSearchParams(location.search).get('area')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)||'JAPARANDUBA';
-var tacsMode=Boolean(territorioToken);
-var dispositivo=localStorage.getItem(DEVICE_KEY)||'';
+var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'profissionais'}):null;
+var token=moduleSession&&moduleSession.token||'';
+var territorioToken=moduleSession&&moduleSession.territorioToken||'';
+var areaId=moduleCore&&typeof moduleCore.areaId==='function'?moduleCore.areaId():String(new URLSearchParams(location.search).get('area')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)||'JAPARANDUBA';
+var tacsMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode()==='tacs':Boolean(territorioToken);
+var dispositivo=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
 if(!dispositivo){dispositivo='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,dispositivo)}
 var dados={profissionais:[],servicos:[]};
 var ativa=null,contador=0,dadosConfirmados=false,snapshotVisivel=false,snapshotReconexaoTentativas=0,snapshotReconexaoTimer=null;
@@ -2492,7 +2494,7 @@ function post(action,payload,receber){
   try{form.submit()}catch(erro){if(form.parentNode)form.parentNode.removeChild(form);finalizar({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});return}
   setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form)},4000);agendarConsultaResultado()
 }
-function sessao(){var out={dispositivo:dispositivo,areaId:areaId,escopo:'profissionais'};if(tacsMode&&territorioToken)out.territorioToken=territorioToken;else out.token=token;return out}
+function sessao(){if(moduleCore&&typeof moduleCore.session==='function')return moduleCore.session({areaId:areaId,escopo:'profissionais'});var out={dispositivo:dispositivo,areaId:areaId,escopo:'profissionais'};if(tacsMode&&territorioToken)out.territorioToken=territorioToken;else out.token=token;return out}
 function normalizarRegistro(reg){var o={};Object.keys(reg||{}).forEach(function(k){o[k]=reg[k]});return o}
 function encontrarProf(id){return dados.profissionais.find(function(x){return txt(x.ID)===txt(id)})||null}
 function encontrarServ(id){return dados.servicos.find(function(x){return txt(x.ID)===txt(id)})||null}
