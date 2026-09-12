@@ -93,7 +93,7 @@
     "UBS"
   ],
   "task1ProfileUbs": {
-    "status": "canonical-authorized",
+    "status": "validated",
     "authorizedOn": "2026-09-12",
     "standaloneOnly": true,
     "registrationFields": [
@@ -105,6 +105,17 @@
     ],
     "firstAccessIdentityConfirmation": true,
     "persistentDeviceRecognition": false,
-    "ubsCombinationsDeferredToTask2": true
+    "ubsCombinationsDeferredToTask2": true,
+    "validatedOn": "2026-09-12",
+    "validation": {
+      "specificGate": "TAREFA_1_PERFIL_UBS_OK",
+      "fullSuite": "passed",
+      "appsScriptRunId": 34710566535,
+      "appsScriptVersion": 196,
+      "appsScriptHealth": "passed",
+      "pagesRunId": 34710674013,
+      "pagesArtifactVerified": true,
+      "task2CombinationsIntroduced": false
+    }
   }
 }
