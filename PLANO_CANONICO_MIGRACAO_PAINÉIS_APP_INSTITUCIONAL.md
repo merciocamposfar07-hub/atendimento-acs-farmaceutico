@@ -193,5 +193,7 @@ Regras:
 - o backend bloqueia também o fluxo residencial normal quando o aparelho é administrativo;
 - a unificação do mesmo formulário com um modo central de diagnóstico fica para a Tarefa 7.
 
-### Status da Tarefa 6: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK`.
+### Status final da Tarefa 6: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+O RETRY `34719509591` passou pela suíte integral, implantou Apps Script **204** e aprovou os health checks na primeira tentativa. GitHub Pages run `34719505209` também passou.
+
+**Regra de sequência cumprida:** Tarefa 6 encerrada tecnicamente; Tarefa 7 liberada para execução.
