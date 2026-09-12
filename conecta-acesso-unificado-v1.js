@@ -138,8 +138,11 @@ function showRole(role){
  setTabs(role);
  var a=el('adminLogin'),t=el('tacsLogin'),m=el('moradorLogin'),u=el('ubsLogin');
  if(a)a.hidden=role!=='admin';if(t)t.hidden=role!=='tacs';if(m)m.hidden=role!=='morador';if(u)u.hidden=role!=='ubs';
- var forgot=el('cscForgotPin');if(forgot)forgot.hidden=role==='ubs';
- if(role==='morador'){renderResidentStart();setStatus(profile()?'Aparelho reconhecido para Morador. Digite seu PIN de 4 números.':'Primeiro acesso: informe seu CPF.','')}
+ var forgot=el('cscForgotPin');if(forgot)forgot.hidden=role==='ubs'||(role==='morador'&&adminResidentDiagnostic());
+ if(role==='morador'){
+  renderResidentStart();
+  setStatus(adminResidentDiagnostic()?'Modo administrativo: consulte CPF ou CNS sem criar vínculo.':(profile()?'Aparelho reconhecido para Morador. Digite seu PIN de 4 números.':'Primeiro acesso: informe seu CPF.'),'');
+ }
  if(role==='ubs')setStatus(ubsProfile()?'Aparelho reconhecido para UBS. Digite somente o seu PIN.':'Primeiro acesso UBS: confirme o cadastro do responsável.','');
  if(role==='admin'&&roleRecognized('ADMIN'))setStatus('Aparelho reconhecido para Administrador. Digite seu PIN.','');
  if(role==='tacs'&&roleRecognized('TACS'))setStatus('Aparelho reconhecido para TACS. Digite seu PIN individual.','');
@@ -189,8 +192,17 @@ function loginUbsSecondAccess(){
   return guardarUbsLocal(pin,r);
  }).catch(function(e){if(out)out.hidden=true;setStatus(e.message,'err')});
 }
+function adminResidentDiagnostic(){return roleRecognized('ADMIN')}
 function renderResidentStart(){
- var stage=el('residentStage');if(!stage)return;resetState();var p=profile();
+ var stage=el('residentStage');if(!stage)return;resetState();
+ if(adminResidentDiagnostic()){
+  try{sessionStorage.removeItem(RESIDENT_TOKEN_KEY)}catch(e){}
+  stage.innerHTML='<div class="csc-access-note"><strong>Diagnóstico administrativo do Morador</strong><br>Consulte por CPF ou CNS. Este modo não cria PIN de Morador, não vincula este aparelho e não altera notificações.</div>'+
+   field('cscResidentDiagnosticDoc','CPF ou CNS','type="text" inputmode="numeric" maxlength="18" autocomplete="off" placeholder="CPF (11) ou CNS (15 números)"')+
+   '<div class="csc-inline-actions"><button class="btn green" id="cscResidentDiagnosticGo" type="button">Consultar morador</button></div><div id="cscResidentDiagnosticResult" class="csc-access-note" hidden></div>';
+  bindResidentStage();return;
+ }
+ var p=profile();
  if(p){
   stage.innerHTML='<div class="csc-access-note"><strong>Aparelho reconhecido para Morador</strong><br>Digite somente o seu PIN para entrar.</div>'+field('cscResidentPin','PIN de 4 números','type="password" inputmode="numeric" maxlength="4" autocomplete="off"')+'<div class="csc-inline-actions"><button class="btn green" id="cscResidentLogin" type="button">Entrar</button><button class="btn gray" id="cscResidentOther" type="button">Primeiro acesso ou outro morador</button></div>';
  }else{
@@ -200,13 +212,29 @@ function renderResidentStart(){
 }
 function bindResidentStage(){
  var pin=el('cscResidentPin');if(pin){pin.addEventListener('focus',aquecerPinMorador,{once:true});pin.addEventListener('input',aquecerPinMorador,{once:true})}
- var b=el('cscResidentCpfNext');if(b)b.onclick=startCpf;
+ var b=el('cscResidentDiagnosticGo');if(b)b.onclick=diagnoseResidentAdmin;
+ b=el('cscResidentCpfNext');if(b)b.onclick=startCpf;
  b=el('cscResidentLogin');if(b)b.onclick=loginResident;
  b=el('cscResidentOther');if(b)b.onclick=function(){try{localStorage.removeItem(PROFILE_KEY)}catch(e){}renderResidentStart();setStatus('Informe o CPF para identificar o morador neste aparelho.','')};
  b=el('cscResidentIdentityNext');if(b)b.onclick=confirmIdentity;
  b=el('cscResidentAreaNext');if(b)b.onclick=function(){var s=el('cscResidentArea');state.areaId=s?text(s.value):'';confirmIdentity()};
  b=el('cscResidentIdentitySave');if(b)b.onclick=renderPinCreate;
  b=el('cscResidentPinCreate');if(b)b.onclick=createResidentPin;
+}
+function diagnoseResidentAdmin(){
+ var input=el('cscResidentDiagnosticDoc'),doc=digits(input&&input.value),out=el('cscResidentDiagnosticResult'),proof=trustKey('ADMIN');
+ if(doc.length!==11&&doc.length!==15){setStatus('Informe um CPF com 11 números ou CNS com 15 números.','err');return}
+ if(!proof){setStatus('Este aparelho não possui reconhecimento administrativo seguro. Entre como Administrador primeiro.','err');return}
+ setStatus('Consultando o cadastro sem criar vínculo…','warn');
+ post('conecta_morador_diagnostico_admin',{documento:doc,dispositivo:device(),chaveConfianca:proof}).then(function(r){
+  if(out){
+   out.hidden=false;
+   out.innerHTML='<strong>Consulta concluída — nenhum vínculo criado</strong><br><span class="csc-first-name">'+esc(r.nome||'Morador')+'</span>'+
+    '<br>'+esc(r.areaNome||r.areaId||'Área não informada')+(r.unidadeId?' • '+esc(r.unidadeId):'')+
+    '<br><small>'+esc(r.documentoTipo||'Documento')+' confirmado somente para diagnóstico.</small>';
+  }
+  setStatus('Diagnóstico administrativo concluído sem alterar aparelho, PIN ou notificações.','ok');
+ }).catch(function(e){if(out)out.hidden=true;setStatus(e.message,'err')});
 }
 function startCpf(){
  var input=el('cscResidentCpf'),cpf=digits(input&&input.value);
@@ -255,12 +283,14 @@ function renderPinCreate(){
  bindResidentStage();
 }
 function createResidentPin(){
+ if(adminResidentDiagnostic()){setStatus('Aparelho administrativo não pode criar vínculo ou PIN de Morador.','err');return}
  var a=digits(el('cscResidentNewPin')&&el('cscResidentNewPin').value),b=digits(el('cscResidentNewPin2')&&el('cscResidentNewPin2').value);
  if(!/^\d{4}$/.test(a)||a!==b){setStatus('O PIN deve ter exatamente 4 números e os dois campos precisam ser iguais.','err');return}
  setStatus('Salvando seu acesso…','warn');
  post('conecta_morador_criar_pin',{identidadeToken:state.identidadeToken,pin:a,confirmacao:b,dispositivo:device()}).then(function(r){saveProfile(r);saveSession(r);setStatus('PIN salvo. Preparando o acesso rápido deste aparelho…','ok');var hook=window.ConectaMoradorPinLocalV2;return Promise.resolve(hook&&typeof hook.registrar==='function'?hook.registrar(a,r):null).then(function(){openResidentPortal(r,true)})}).catch(function(e){setStatus(e.message,'err')});
 }
 function loginResident(){
+ if(adminResidentDiagnostic()){renderResidentStart();setStatus('Aparelho administrativo usa somente o diagnóstico sem vínculo.','warn');return}
  var p=profile(),pin=digits(el('cscResidentPin')&&el('cscResidentPin').value);if(!p){renderResidentStart();return}
  if(!/^\d{4}$/.test(pin)){setStatus('Digite seu PIN de 4 números.','err');return}
  setStatus('Validando seu PIN…','warn');
