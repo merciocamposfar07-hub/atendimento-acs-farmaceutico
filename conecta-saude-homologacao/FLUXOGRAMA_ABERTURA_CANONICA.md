@@ -269,5 +269,9 @@ Todos os módulos administrativos conectados ao core passam a seguir este contra
 
 A Tarefa 11 não define ainda referência de versão/frescor do cache, deduplicação de chamadas nem regra de timeout da sessão; esses pontos permanecem nas Tarefas 12, 13 e 14.
 
-### Status da Tarefa 11: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL EM ANDAMENTO — 12/09/2026
-Gate específico: `TAREFA_11_DESEMPENHO_MODULOS_OK`.
+### Status final da Tarefa 11: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate `TAREFA_11_DESEMPENHO_MODULOS_OK`, suíte integral e `QUALITY_GATE_V101_OK` aprovados no workflow `34725085208`. GitHub Pages do código final passou no run `34725081013`.
+
+O backend não foi alterado; Apps Script permanece na versão **208**.
+
+**Sequência canônica:** Tarefa 11 encerrada tecnicamente; Tarefa 12 permanece responsável pela referência de versão/frescor do cache.
