@@ -331,6 +331,12 @@ function installCentralPageRefresh(){
   document.body.appendChild(button);
 }
 function installInstitutionalNavigation(){
+  /* TAREFA_10_ROUTER_UNICO_V1: a Central canônica é a única dona da navegação.
+     Este roteador legado não intercepta cliques quando o shell persistente está disponível. */
+  if(window.ConectaCentralShellV1&&typeof window.ConectaCentralShellV1.abrir==='function'){
+    installCentralPageRefresh();
+    return;
+  }
   var grid=document.getElementById('moduleGrid');
   if(grid&&grid.dataset.tacsInstitutionalNav!=='1'){
     grid.dataset.tacsInstitutionalNav='1';
