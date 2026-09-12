@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 03 — Identidade real após o acesso
 
 Data: 12/09/2026  
-Status: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL EM ANDAMENTO
+Status: TESTES E GITHUB PAGES APROVADOS; IMPLANTAÇÃO APPS SCRIPT BLOQUEADA PELO LIMITE DE 200 VERSÕES
 
 ## Objetivo exclusivo da Tarefa 3
 Após autenticação, o Conecta Saúde Comunitária deve exibir a identidade humana real do acesso, composta por:
@@ -34,3 +34,16 @@ Saída esperada:
 `TAREFA_3_IDENTIDADE_REAL_OK`
 
 A tarefa só pode ser marcada como validada internamente após o gate específico, a suíte integral, o deploy/health check do Apps Script e a publicação do GitHub Pages passarem com sucesso.
+
+
+## Resultado técnico verificado
+- gate específico `TAREFA_3_IDENTIDADE_REAL_OK`: **aprovado**;
+- suíte integral: **aprovada** no RETRY_2;
+- GitHub Pages: **success**, run `34715602611`;
+- Apps Script: versão ativa principal `200`;
+- versões usadas por deployments: `6, 7, 9, 200`;
+- versão `199`: criada anteriormente como backup redundante e **não usada por nenhum deployment**;
+- tentativa de implantação RETRY_2: run `34715608111`, bloqueada somente por `Script has reached the limit of 200 versions`;
+- workflow corrigido para não criar mais uma versão extra de backup a cada publicação; o rollback continua usando a versão anteriormente implantada.
+
+A Tarefa 3 **não é marcada como concluída** enquanto uma versão antiga não utilizada não for removida da História do projeto e a nova versão não for implantada e validada pelo health check.
