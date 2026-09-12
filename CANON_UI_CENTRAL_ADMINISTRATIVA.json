@@ -19,8 +19,8 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R12",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_08_MODULOS_CORE_CONTEXTO_2026_09_12.md",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R13",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_09_PIN_SOMENTE_ENTRADA_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
   "notes": [
@@ -410,6 +410,40 @@
       ],
       "pagesWorkflowRun": 34722041965,
       "pagesDeploymentSuccess": true
+    }
+  },
+  "task9SinglePinEntry": {
+    "status": "validated-internal-deployed",
+    "authorizedOn": "2026-09-12",
+    "validatedOn": "2026-09-12",
+    "pinAuthority": "Conecta entry / Central only",
+    "modulePinLoginRemovedAtRuntime": true,
+    "moduleProfileSelectorRemovedAtRuntime": true,
+    "modulesCannotWriteGlobalAuthTokens": true,
+    "modulesCannotClearGlobalAuthTokens": true,
+    "modulesUseCoreModeAndContext": true,
+    "centralOwnsLoginAndLogout": true,
+    "missingCanonicalSessionReturnsToCentral": true,
+    "persistentShellDeferredToTask10": true,
+    "definitivePanelMigrationDeferredToTask16": true,
+    "specificGate": "TAREFA_9_PIN_SOMENTE_ENTRADA_OK",
+    "validation": {
+      "specificGate": "TAREFA_9_PIN_SOMENTE_ENTRADA_OK",
+      "fullSuite": "passed",
+      "initialWorkflowRun": 34722437567,
+      "retry1WorkflowRun": 34723103101,
+      "finalWorkflowRun": 34723196310,
+      "appsScriptPreviousVersion": 206,
+      "appsScriptCurrentVersion": 207,
+      "appsScriptHealth": "passed-first-attempt",
+      "appsScriptActiveDeploymentVersionsAfterDeploy": [
+        6,
+        7,
+        9,
+        207
+      ],
+      "pagesEvidenceRun": 34723391600,
+      "pagesEvidenceResult": "success"
     }
   }
 }
