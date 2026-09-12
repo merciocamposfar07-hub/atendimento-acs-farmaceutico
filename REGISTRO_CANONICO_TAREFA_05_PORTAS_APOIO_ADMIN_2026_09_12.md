@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 05 — Portas de apoio do Administrador
 
 Data: 12/09/2026  
-Status: IMPLEMENTADA EM CÓDIGO; AGUARDANDO VALIDAÇÃO INTEGRAL
+Status: VALIDADA INTERNAMENTE E IMPLANTADA — APPS SCRIPT VERSÃO 203
 
 ## Objetivo exclusivo da Tarefa 5
 Um aparelho já reconhecido como Administrador não pode ficar preso a uma única porta do Conecta. Mesmo quando acessar um fluxo TACS, as quatro portas canônicas continuam disponíveis:
@@ -31,3 +31,18 @@ Saída esperada:
 `TAREFA_5_ADMIN_PORTAS_APOIO_OK`
 
 A Tarefa 5 só será concluída após gate específico, suíte integral, implantação/health checks de integração e GitHub Pages passarem com sucesso.
+
+
+## Resultado técnico verificado
+- tentativa inicial: workflow `34719025276` interrompido **antes do deploy** por um gate institucional legado que ainda exigia TACS exclusivo;
+- correção: o gate legado foi alinhado à regra autorizada da Tarefa 5, sem afrouxar a suíte;
+- RETRY: workflow `34719091947` **success**;
+- gate `TAREFA_5_ADMIN_PORTAS_APOIO_OK`: **aprovado**;
+- suíte integral: **aprovada**;
+- versão anterior: `202`;
+- nova versão implantada: **`203`**;
+- health checks: **aprovados na primeira tentativa**;
+- versões ativas após implantação: `6, 7, 9, 203`.
+
+## Fechamento
+A **Tarefa 5 está validada internamente e implantada**. O aparelho Administrador permanece livre para usar as quatro portas canônicas e o diagnóstico administrativo do Morador continua reservado às Tarefas 6 e 7.
