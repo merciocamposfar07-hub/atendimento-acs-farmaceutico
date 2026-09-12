@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 03 — Identidade real após o acesso
 
 Data: 12/09/2026  
-Status: TESTES E GITHUB PAGES APROVADOS; IMPLANTAÇÃO APPS SCRIPT BLOQUEADA PELO LIMITE DE 200 VERSÕES
+Status: VALIDADA INTERNAMENTE E IMPLANTADA — APPS SCRIPT VERSÃO 201
 
 ## Objetivo exclusivo da Tarefa 3
 Após autenticação, o Conecta Saúde Comunitária deve exibir a identidade humana real do acesso, composta por:
@@ -38,12 +38,16 @@ A tarefa só pode ser marcada como validada internamente após o gate específic
 
 ## Resultado técnico verificado
 - gate específico `TAREFA_3_IDENTIDADE_REAL_OK`: **aprovado**;
-- suíte integral: **aprovada** no RETRY_2;
-- GitHub Pages: **success**, run `34715602611`;
-- Apps Script: versão ativa principal `200`;
-- versões usadas por deployments: `6, 7, 9, 200`;
-- versão `199`: criada anteriormente como backup redundante e **não usada por nenhum deployment**;
-- tentativa de implantação RETRY_2: run `34715608111`, bloqueada somente por `Script has reached the limit of 200 versions`;
-- workflow corrigido para não criar mais uma versão extra de backup a cada publicação; o rollback continua usando a versão anteriormente implantada.
+- suíte integral: **aprovada** no RETRY_3;
+- workflow Apps Script: **success**, run `34718306192`;
+- versão anterior do deployment principal: `200`;
+- nova versão criada e implantada: **`201`**;
+- health check: **aprovado na primeira tentativa** para moradores, território, CSV, manutenção, isolamento, agendas Japaranduba/Matias, painéis públicos e conteúdo;
+- GitHub Pages do disparo RETRY_3: **success**, run `34718300856`;
+- o limite de versões foi saneado pelo usuário, preservando a faixa recente `189–199`; versões ativas antigas permanecem protegidas;
+- workflow permanece corrigido para criar somente uma nova versão por implantação, usando a versão anteriormente implantada como rollback.
 
-A Tarefa 3 **não é marcada como concluída** enquanto uma versão antiga não utilizada não for removida da História do projeto e a nova versão não for implantada e validada pelo health check.
+## Fechamento
+A **Tarefa 3 está validada internamente, implantada e registrada canonicamente**. O reconhecimento persistente do aparelho, a lógica específica do segundo acesso e o modo diagnóstico administrativo continuam fora do escopo desta tarefa e permanecem reservados às tarefas seguintes.
+
+A validação global em dispositivos reais permanece concentrada na etapa obrigatória de testes finais do projeto e não altera o resultado técnico desta Tarefa 3.
