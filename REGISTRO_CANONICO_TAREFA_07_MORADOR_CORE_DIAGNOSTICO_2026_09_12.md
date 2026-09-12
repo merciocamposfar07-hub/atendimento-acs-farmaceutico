@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 07 — Núcleo único de Morador com diagnóstico administrativo
 
 Data: 12/09/2026  
-Status: IMPLEMENTADA EM CÓDIGO; AGUARDANDO VALIDAÇÃO INTEGRAL
+Status: VALIDADA INTERNAMENTE E IMPLANTADA — APPS SCRIPT VERSÃO 205
 
 ## Objetivo exclusivo da Tarefa 7
 Separar semanticamente o acesso real do Morador do teste administrativo sem manter dois formulários paralelos.
@@ -31,3 +31,19 @@ Saída esperada:
 `TAREFA_7_MORADOR_CORE_DIAGNOSTICO_OK`
 
 A Tarefa 7 só pode ser concluída após gate específico, suíte integral, Apps Script/health check e GitHub Pages passarem.
+
+
+## Resultado técnico verificado
+- tentativa inicial: workflow `34719766745` interrompido **antes do deploy** por uma asserção histórica da Tarefa 6;
+- RETRY 1: workflow `34719839779` interrompido **antes do deploy** por outra asserção histórica que não admitia o novo `coreMode`;
+- os dois gates históricos foram alinhados sem retirar nenhuma proteção da Tarefa 6;
+- RETRY 2: workflow `34719916306` **success**;
+- gate `TAREFA_7_MORADOR_CORE_DIAGNOSTICO_OK`: **aprovado**;
+- suíte integral: **aprovada**;
+- Apps Script: versão anterior `204`, nova versão **`205`**;
+- health checks: **aprovados na primeira tentativa**;
+- versões ativas após implantação: `6, 7, 9, 205`;
+- GitHub Pages: **success**, run `34719909246`.
+
+## Fechamento
+A **Tarefa 7 está validada internamente, implantada e publicada**. Morador real e diagnóstico administrativo compartilham o mesmo núcleo/formulário, mas o modo administrativo continua sem assumir PIN, sessão, aparelho, quickKey ou notificações do Morador.
