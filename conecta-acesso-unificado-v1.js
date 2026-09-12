@@ -288,7 +288,7 @@ function renderRecoveryPin(r){
 function closeRecovery(){var m=el('cscRecovery');if(m)m.hidden=true;var lead=el('cscRecoveryLead');if(lead){lead.textContent='Confirme seu CPF para criar um novo PIN.';lead.className='muted'}}
 
 function install(){
- var tacsOnly=false;try{tacsOnly=String(new URLSearchParams(location.search).get('acesso')||'').toLowerCase()==='tacs'}catch(e){}
+ var tacsOnly=false;try{tacsOnly=String(new URLSearchParams(location.search).get('acesso')||'').toLowerCase()==='tacs'&&!roleRecognized('ADMIN')}catch(e){}
  ensureStyle();addResidentTab();residentMarkup();addUbsTab();ubsMarkup();recoveryMarkup();
  var tabs=document.querySelector('.login-tabs');if(tabs)tabs.classList.add('csc-four');
  var a=el('tabAdmin'),t=el('tabTacs'),m=el('tabMorador'),u=el('tabUbs');
