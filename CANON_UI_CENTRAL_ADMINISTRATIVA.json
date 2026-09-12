@@ -177,7 +177,7 @@
     "userDeviceValidation": "pending"
   },
   "task3RealIdentity": {
-    "status": "implemented-awaiting-full-validation",
+    "status": "tests-and-pages-passed-apps-script-deploy-blocked-version-limit",
     "authorizedOn": "2026-09-12",
     "displayRule": "nome completo — perfil cadastrado",
     "preservesCombinedProfiles": true,
@@ -189,6 +189,24 @@
     "secondAccessBehaviorDeferred": true,
     "diagnosticModeDeferred": true,
     "specificGate": "TAREFA_3_IDENTIDADE_REAL_OK",
-    "userDeviceValidation": "pending"
+    "userDeviceValidation": "pending",
+    "validation": {
+      "specificGate": "TAREFA_3_IDENTIDADE_REAL_OK",
+      "fullSuite": "passed",
+      "retry1WorkflowRun": 34715479401,
+      "retry2WorkflowRun": 34715608111,
+      "pagesWorkflowRun": 34715602611,
+      "pagesDeploymentSuccess": true,
+      "appsScriptCurrentVersion": 200,
+      "appsScriptActiveDeploymentVersions": [
+        6,
+        7,
+        9,
+        200
+      ],
+      "safeUnusedVersionCandidate": 199,
+      "appsScriptDeploy": "blocked-200-version-limit",
+      "blocker": "Google Apps Script atingiu o limite de 200 versões; é necessário excluir uma versão não usada na História do projeto antes de criar a próxima."
+    }
   }
 }
