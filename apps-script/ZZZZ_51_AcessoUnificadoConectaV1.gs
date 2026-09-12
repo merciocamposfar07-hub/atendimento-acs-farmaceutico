@@ -473,7 +473,7 @@ function conectaAcessoV1DiagnosticoMoradorAdmin_(p){
   if(lista.length!==1)throw new Error(lista.length>1?'Há mais de um cadastro para este documento. Corrija a duplicidade antes do diagnóstico.':'Morador não localizado para este documento.');
   var item=lista[0],m=item.morador||{},a=item.area||{};
   return {
-    ok:true,modo:'DIAGNOSTICO_ADMINISTRATIVO',somenteLeitura:true,
+    ok:true,modo:'DIAGNOSTICO_ADMINISTRATIVO',coreMode:'DIAGNOSTICO_ADMINISTRATIVO',somenteLeitura:true,
     documentoTipo:tipo,nome:conectaAcessoV1Texto_(m.nome),areaId:conectaAcessoV1Id_(a.areaId),
     areaNome:conectaAcessoV1Texto_(a.areaNome||a.areaId),unidadeId:conectaAcessoV1Texto_(a.unidadeId),
     vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,notificacoesAlteradas:false,sessaoMoradorCriada:false,
