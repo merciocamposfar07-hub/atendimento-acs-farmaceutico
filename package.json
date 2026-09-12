@@ -8,7 +8,8 @@
     "test:autofill": "node scripts/test_autofill_adaptativo_v1.js",
     "test:tarefa12": "node scripts/test_tarefa12_cache_frescor.js",
     "test:tarefa11": "node scripts/test_tarefa11_desempenho_modulos.js",
-    "test:tarefa12:retry": "node scripts/test_tarefa12_cache_frescor.js"
+    "test:tarefa12:retry": "node scripts/test_tarefa12_cache_frescor.js",
+    "test:tarefa12:final": "node scripts/test_tarefa12_cache_frescor.js"
   },
   "devDependencies": {
     "jsdom": "27.0.1"
