@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 10 — Sessão única e shell persistente
 
 Data: 12/09/2026  
-Status: IMPLEMENTADA EM CÓDIGO; AGUARDANDO VALIDAÇÃO INTEGRAL
+Status: VALIDADA INTERNAMENTE E IMPLANTADA — APPS SCRIPT VERSÃO 208
 
 ## Objetivo exclusivo da Tarefa 10
 Manter a Central do Conecta Saúde Comunitária montada durante a navegação interna e preservar uma única sessão autenticada ao alternar entre os módulos.
@@ -40,3 +40,20 @@ Saída esperada:
 `TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK`
 
 A Tarefa 10 só será concluída após gate específico, suíte integral, implantação Apps Script/health checks e GitHub Pages passarem com sucesso.
+
+
+## Resultado técnico verificado
+- gate específico `TAREFA_10_SESSAO_SHELL_PERSISTENTE_OK`: **aprovado**;
+- quality gate `QUALITY_GATE_V101_OK`: **aprovado**;
+- suíte integral: **aprovada**;
+- workflow final Apps Script: **success**, run `34724133585`;
+- versão anterior do deployment principal: `207`;
+- nova versão criada e implantada: **`208`**;
+- health checks: **aprovados na primeira tentativa** para moradores, território, CSV, manutenção, isolamento, agendas Japaranduba/Matias, painéis públicos e conteúdo;
+- versões ativas após o deploy: `6, 7, 9, 208`;
+- as execuções anteriores foram bloqueadas antes do deploy por asserts históricos/textuais incompatíveis com o shell persistente; não criaram versões novas.
+
+## Fechamento
+A **Tarefa 10 está validada internamente, implantada e registrada canonicamente** no Apps Script v208. A navegação interna usa uma sessão e um shell persistente, preservando os módulos já carregados ao voltar à Central.
+
+As Tarefas 11–16 permanecem separadas conforme o plano canônico.
