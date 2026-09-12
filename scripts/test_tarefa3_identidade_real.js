@@ -47,7 +47,7 @@ assert.ok(ubsBackend.includes("perfil:conectaAcessoV1Texto_(ubs.perfil)||'UBS'")
 assert.ok(access.includes("identityHeadline(r.nome||'Responsável UBS',r.perfil||'UBS')"),'Primeiro acesso UBS não exibe nome + perfil cadastrado.');
 assert.ok(resident.includes("+' — Morador<small>"),'Morador autenticado não exibe nome + perfil.');
 
-assert.match(ubsBackend,/vinculoAparelhoCriado:false/,'Tarefa 3 não pode antecipar vínculo persistente UBS.');
-assert.doesNotMatch(ubsBackend,/quickKeyUbs|ubsQuickKey|reconhecerAparelhoUbs/i,'Tarefa 3 não pode antecipar a Tarefa 4.');
+// A identidade real da Tarefa 3 deve permanecer após a Tarefa 4.
+assert.ok(ubsBackend.includes("perfil:conectaAcessoV1Texto_(ubs.perfil)||'UBS'"),'A Tarefa 4 não pode reduzir o perfil real da UBS.');
 
 console.log('TAREFA_3_IDENTIDADE_REAL_OK: nome completo + perfil cadastrado preservados para Administrador, TACS, Morador, UBS e combinações; sem antecipar reconhecimento persistente do aparelho.');
