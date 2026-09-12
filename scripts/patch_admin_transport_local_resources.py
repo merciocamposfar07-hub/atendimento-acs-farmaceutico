@@ -44,6 +44,26 @@ for p in sorted(Path('scripts').glob('test_*.js')):
         s = s.replace(ROOT_LINE, HELPER, 1)
     s = s.replace("resources: 'usable'", 'resources: new LocalPortalResourceLoader()')
     s = s.replace('resources: "usable"', 'resources: new LocalPortalResourceLoader()')
+
+    # A Tarefa 8 tornou conecta-module-core-v1.js uma dependência real dos painéis.
+    # O cenário de sessão expirada do teste administrativo também precisa carregar
+    # esse recurso local; sem isso o JSDOM testa um ambiente que não existe no app.
+    if p.name == 'test_admin_transport.js':
+        inicio = s.find('async function testExpiredStoredSession(config) {')
+        fim = s.find('async function testNewNoticeWithoutReturnedId', inicio)
+        if inicio >= 0 and fim > inicio:
+            trecho = s[inicio:fim]
+            ancora = "    runScripts: 'dangerously',\n    pretendToBeVisual: true,"
+            if 'resources: new LocalPortalResourceLoader()' not in trecho:
+                if ancora not in trecho:
+                    raise SystemExit(f'{p}: cenário de sessão expirada não possui âncora JSDOM esperada.')
+                trecho = trecho.replace(
+                    ancora,
+                    "    runScripts: 'dangerously',\n    resources: new LocalPortalResourceLoader(),\n    pretendToBeVisual: true,",
+                    1
+                )
+                s = s[:inicio] + trecho + s[fim:]
+
     p.write_text(s, encoding='utf-8')
     alterados.append(str(p))
 
