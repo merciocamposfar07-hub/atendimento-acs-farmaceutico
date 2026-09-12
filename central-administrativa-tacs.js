@@ -473,11 +473,18 @@ function closeViewer(){el('viewer').hidden=true;el('viewerFrame').src='about:bla
 function loadContext(message){
   post('admin_territorio_dados',session(),'admin_territorio_result',function(r){
     if(!r||r.ok!==true){
-      if(acessoLocalAberto&&r&&r.temporario===true){setStatus('Painéis locais disponíveis. A sincronização continuará quando o servidor responder.','warn');return}
-      if(acessoLocalAberto){bloquearAcessoLocal(acessoLocalAberto,text(r&&r.message)||'O servidor recusou a sessão deste perfil.');return}
+      var falhaMsg=text(r&&r.message)||'A leitura do contexto ainda não foi confirmada.';
+      var authInvalida=Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(falhaMsg));
+      if(!authInvalida){
+        if(!context)restoreContextCache();
+        setStatus('Sessão preservada. Sincronizando os dados em segundo plano…','warn');
+        setTimeout(function(){if(!active&&(token||territoryToken))loadContext(message)},1800);
+        return;
+      }
+      if(acessoLocalAberto){bloquearAcessoLocal(acessoLocalAberto,falhaMsg);return}
       token='';territoryToken='';mode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
       el('loginPanel').hidden=false;el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;
-      setStatus(text(r&&r.message)||'A sessão não pôde ser reutilizada. Entre novamente.','warn');return;
+      setStatus(falhaMsg||'A sessão foi recusada pelo servidor. Entre novamente.','warn');return;
     }
     context=r;mode=r.perfil==='TACS'?'tacs':'admin';saveContextCache();
     var pin=pinLocalPendente,scope=pinLocalPerfil||mode;
