@@ -2028,19 +2028,21 @@ html body #logout.csc-logout-button.csc-pressed{
 
 
 /* SESSAO_UNICA_PAINEL_2026_09_11_V1
-   PIN existe somente na entrada unificada. Dentro de qualquer painel administrativo,
-   controles legados de autenticação ficam ocultos durante a sessão válida. */
-.csc-session-active #adminLogin,
-.csc-session-active #tacsLogin,
-.csc-session-active #loginAdminTab,
-.csc-session-active #loginTacsTab,
-.csc-session-active #tacsPinAccess,
-.csc-session-active label[for="tacsPinAccess"],
-.csc-session-active #tacsPinPublicacoes,
-.csc-session-active label[for="tacsPinPublicacoes"],
-.csc-session-active #entrarTacs,
-.csc-session-active #loginTacs,
-.csc-session-active .csc-resident-redundant-tacs-access{
+   PIN existe somente na entrada unificada. Em qualquer painel administrativo,
+   os controles legados de autenticação ficam sempre fora da interface. */
+.csc-admin-panel .csc-auth-control,
+.csc-admin-panel .csc-admin-only-auth,
+.csc-admin-panel #adminLogin,
+.csc-admin-panel #tacsLogin,
+.csc-admin-panel #loginAdminTab,
+.csc-admin-panel #loginTacsTab,
+.csc-admin-panel #tacsPinAccess,
+.csc-admin-panel label[for="tacsPinAccess"],
+.csc-admin-panel #tacsPinPublicacoes,
+.csc-admin-panel label[for="tacsPinPublicacoes"],
+.csc-admin-panel #entrarTacs,
+.csc-admin-panel #loginTacs,
+.csc-admin-panel .csc-resident-redundant-tacs-access{
   display:none!important;
 }
 </style>
@@ -2066,38 +2068,21 @@ var ADMIN_PANEL=CENTRAL||(
   /\/teste-v1\/painel-(?:profissionais-servicos|tacs-areas)-v1\.html$/i.test(PATH)
 );
 if(!ADMIN_PANEL)return;
+ROOT.classList.toggle('csc-admin-panel',!CENTRAL);
 
 var ADMIN_TOKEN='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN='portalTacsTerritorioTokenV1';
 var RETURN_FLAG='portalTacsRetornoCentralV1';
 var ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3';
 var sessionTimer=0;
-/* SESSAO_UNICA_PAINEL_V1
-   Fora da Central, PIN nunca aparece. Sem sessão válida, o painel fica oculto
-   somente durante o redirecionamento para a entrada única do Conecta. */
-if(!CENTRAL&&!hasSession()){
-  try{
-    var singleEntryStyle=document.createElement('style');
-    singleEntryStyle.id='cscSingleEntryGateV1';
-    singleEntryStyle.textContent='html,body{visibility:hidden!important}';
-    (document.head||document.documentElement).appendChild(singleEntryStyle);
-  }catch(e){}
-}
 
 function text(v){return String(v==null?'':v).trim()}
 function hasSession(){
   try{return Boolean(text(sessionStorage.getItem(ADMIN_TOKEN)||'')||text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}
 }
 function isTerritory(){try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}}
-function singleEntryCentralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260911-sessao-unica-v1'}
-function enforceSingleEntry(){
-  if(CENTRAL||hasSession())return false;
-  try{location.replace(singleEntryCentralUrl())}catch(e){location.href=singleEntryCentralUrl()}
-  return true;
-}
 function syncSessionClass(){
   var active=hasSession();
-  if(!CENTRAL&&!active){enforceSingleEntry();return}
   ROOT.classList.toggle('csc-session-active',active);
   ROOT.classList.toggle('csc-session-missing',!active);
   if(document.body){
@@ -2363,7 +2348,6 @@ function keepFinalSkinLast(){
 }
 
 function boot(){
-  if(enforceSingleEntry())return;
   buildAppbar();
   markAuthControls();
   buildCentralWelcome();
