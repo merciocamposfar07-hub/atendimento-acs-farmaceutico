@@ -78,13 +78,13 @@ function conectaAcessoV1TratarPost_(e){
     'conecta_morador_login_pin','conecta_morador_sessao','conecta_morador_notificacao_confirmar',
     'conecta_morador_preferencia_notificacao','conecta_morador_membro_salvar_cpf','conecta_morador_encerrar',
     'conecta_pin_recuperar_iniciar','conecta_pin_recuperar_salvar','conecta_recuperacao_registrar_aparelho',
-    'conecta_pendencias_contagem'
+    'conecta_ubs_identificar_primeiro_acesso','conecta_pendencias_contagem'
   ];
   if(aceitas.indexOf(action)===-1)return null;
   var id=conectaAcessoV1Texto_(p.requestId),resultado;
   try{
     if(!/^[A-Za-z0-9_-]{8,160}$/.test(id))throw new Error('Identificador da operação inválido.');
-    if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_pin_recuperar_iniciar'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||action);
+    if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_pin_recuperar_iniciar','conecta_ubs_identificar_primeiro_acesso'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||action);
     if(action==='conecta_morador_identificar')resultado=conectaAcessoV1Identificar_(p);
     else if(action==='conecta_morador_confirmar')resultado=conectaAcessoV1Confirmar_(p);
     else if(action==='conecta_morador_criar_pin')resultado=conectaAcessoV1CriarPin_(p);
@@ -96,6 +96,7 @@ function conectaAcessoV1TratarPost_(e){
     else if(action==='conecta_pin_recuperar_iniciar')resultado=conectaAcessoV1RecuperarIniciar_(p);
     else if(action==='conecta_pin_recuperar_salvar')resultado=conectaAcessoV1RecuperarSalvar_(p);
     else if(action==='conecta_recuperacao_registrar_aparelho')resultado=conectaAcessoV1RegistrarAparelhoConfiavel_(p);
+    else if(action==='conecta_ubs_identificar_primeiro_acesso')resultado=conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p);
     else resultado=conectaAcessoV1PendenciasContagem_(p);
   }catch(erro){
     resultado={ok:false,message:conectaAcessoV1Erro_(erro)};
@@ -427,6 +428,27 @@ function conectaAcessoV1Familia_(v){
     var membros=typeof identificacaoFamiliarPublicaV1Membros_==='function'?identificacaoFamiliarPublicaV1Membros_(familia,contexto):[];
     return (membros||[]).map(function(m){return {token:m.token||'',nome:m.nome||'',nascimento:m.nascimento||'',temDocumento:Boolean(m.temDocumento),responsavel:conectaAcessoV1Nome_(m.nome)===conectaAcessoV1Nome_(v[4])};});
   }catch(e){return [{nome:v[4],cpf:v[3],responsavel:true}];}
+}
+
+function conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p){
+  var cpf=conectaAcessoV1Cpf_(p.cpf),pin=conectaAcessoV1Texto_(p.pin).replace(/\D/g,''),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
+  if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
+  if(!/^\d{4,8}$/.test(pin))throw new Error('Informe o PIN de acesso com 4 a 8 números.');
+  if(typeof tacsTerritorioV1LerTacs_!=='function'||typeof tacsTerritorioV1PerfilTem_!=='function')throw new Error('O cadastro de perfis da UBS não está disponível.');
+  var lista=tacsTerritorioV1LerTacs_().filter(function(item){
+    return item&&item.ativo===true&&tacsTerritorioV1PerfilTem_(item.perfil,'UBS')&&conectaAcessoV1Texto_(item.cpf).replace(/\D/g,'')===cpf;
+  });
+  if(lista.length!==1)throw new Error(lista.length>1?'Há mais de um cadastro UBS para este CPF. O administrador precisa corrigir a duplicidade.':'CPF não localizado em um perfil UBS ativo.');
+  var ubs=lista[0];
+  if(!ubs.pinSalt||!ubs.pinHash||!tacsTerritorioV1CompararSeguro_(ubs.pinHash,tacsTerritorioV1HashPin_(pin,ubs.pinSalt)))throw new Error('CPF ou PIN do perfil UBS incorreto.');
+  if(!conectaAcessoV1Texto_(ubs.unidadeId))throw new Error('O perfil UBS ainda não possui unidade vinculada.');
+  if(!conectaAcessoV1Texto_(ubs.funcaoUbs))throw new Error('O perfil UBS ainda não possui função cadastrada.');
+  return {
+    ok:true,perfil:'UBS',cadastroId:ubs.tacsId,nome:ubs.nomeCompleto,funcaoUbs:ubs.funcaoUbs,
+    unidadeId:ubs.unidadeId,permissoes:Array.isArray(ubs.permissoes)?ubs.permissoes.slice():[],
+    vinculoAparelhoCriado:false,
+    message:'Responsável UBS identificado. Nenhum vínculo permanente de aparelho foi criado nesta etapa.'
+  };
 }
 
 function conectaAcessoV1TacsPorCpf_(cpf){
