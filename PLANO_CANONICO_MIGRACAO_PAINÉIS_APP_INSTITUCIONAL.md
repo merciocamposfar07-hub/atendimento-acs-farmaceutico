@@ -298,7 +298,9 @@ Regras:
 - deduplicação de chamadas pertence à Tarefa 13;
 - timeout/sessão pertence à Tarefa 14.
 
-### Status da Tarefa 11: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL EM ANDAMENTO — 12/09/2026
-Gate específico: `TAREFA_11_DESEMPENHO_MODULOS_OK`.
+### Status final da Tarefa 11: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate `TAREFA_11_DESEMPENHO_MODULOS_OK`, suíte integral, `QUALITY_GATE_V101_OK`, sintaxe e regras críticas aprovados no workflow `34725085208`. GitHub Pages do código final passou no run `34725081013`.
 
-Nenhuma alteração de backend Apps Script foi necessária nesta etapa; a versão de produção deve permanecer **208** se a validação confirmar o escopo.
+Nenhuma alteração de backend Apps Script foi necessária; a produção permanece na versão **208** e nenhuma nova versão foi consumida.
+
+**Regra de sequência:** a Tarefa 11 está encerrada tecnicamente. A Tarefa 12 permanece separada para versionamento/frescor de cache.
