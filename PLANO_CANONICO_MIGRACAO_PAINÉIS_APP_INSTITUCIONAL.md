@@ -117,3 +117,7 @@ Regras:
 - perfis com UBS mantêm função e unidade UBS obrigatórias;
 - perfis com TACS + UBS cumprem os dois conjuntos;
 - reconhecimento persistente do aparelho e segundo acesso ficam para tarefa posterior.
+
+
+### Status da Tarefa 2: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+A matriz canônica de 14 perfis foi aprovada pelos gates automatizados, incluindo **UBS pura**. Apps Script versão 200 foi implantado com health checks aprovados e GitHub Pages publicado. A Tarefa 3 permanece não iniciada até validação visual/operacional desta etapa pelo usuário.
