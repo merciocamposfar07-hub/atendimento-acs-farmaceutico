@@ -20,7 +20,7 @@
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R16",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_11_DESEMPENHO_MODULOS_2026_09_12.md",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_12_CACHE_FRESCOR_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
   "notes": [
@@ -575,6 +575,52 @@
       "backendChanged": false,
       "appsScriptVersionUnchanged": 208
     },
-    "validatedOn": "2026-09-12"
+    "validatedOn": "2026-09-12",
+    "postValidationAudit": {
+      "discoveredOn": "2026-09-12",
+      "issue": "Agendas e Profissionais podiam encerrar pelo sharedAdminRead de 5s antes da consulta remota própria.",
+      "correction": "sharedAdminRead permanece somente como pintura rápida e não substitui mais a chamada remota.",
+      "status": "corrected-awaiting-final-gate"
+    }
+  },
+  "task12CacheFreshness": {
+    "status": "implemented-awaiting-validation",
+    "authorizedOn": "2026-09-12",
+    "cacheSchemaVersion": 2,
+    "cacheVersionReference": true,
+    "freshnessFields": [
+      "cacheVersionReference",
+      "confirmedAt",
+      "checkedAt",
+      "stale",
+      "requiresRemote",
+      "authoritative"
+    ],
+    "explicitServerVersionPreferred": true,
+    "fingerprintFallbackVersion": true,
+    "legacyUnversionedCache": "read-only-stale-requires-remote",
+    "remoteAlwaysRequired": true,
+    "criticalDataAuthoritativeFromCache": false,
+    "writesRemainBlockedUntilRemoteConfirmation": true,
+    "modulesCovered": [
+      "AGENDAS",
+      "MORADORES",
+      "PROFISSIONAIS",
+      "RECADOS_CAMPANHAS",
+      "SUPORTE_MORADORES",
+      "TACS_AREAS",
+      "MUNICIPIOS_ORGANIZACOES"
+    ],
+    "backendChanged": false,
+    "appsScriptVersionExpectedUnchanged": 208,
+    "task13RequestDedupDeferred": true,
+    "task14TimeoutSessionRuleDeferred": true,
+    "specificGate": "TAREFA_12_CACHE_FRESCOR_OK",
+    "validation": {
+      "specificGate": "pending",
+      "fullSuite": "pending",
+      "qualityGate": "pending",
+      "pagesDeployment": "pending"
+    }
   }
 }
