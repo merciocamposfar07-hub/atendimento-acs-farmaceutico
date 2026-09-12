@@ -36,6 +36,8 @@ assert.match(core,/requestHash\(credential\+'\|'\+s\.device\)/);
 for(const secret of ['token','territoriotoken','dispositivo','requestid','pin','quickkey','chaveconfianca']){
   assert.ok(core.includes(secret+':1'),'Segredo não filtrado do payload do broker: '+secret);
 }
+assert.ok(core.includes('escopo:1'),'O escopo local precisa ser ignorado para Agendas e Profissionais compartilharem admin_dados.');
+
 assert.doesNotMatch(core,/sessionStorage\.setItem\([^\n]*conectaRequestBroker/i);
 assert.doesNotMatch(core,/localStorage\.setItem\([^\n]*conectaRequestBroker/i);
 
