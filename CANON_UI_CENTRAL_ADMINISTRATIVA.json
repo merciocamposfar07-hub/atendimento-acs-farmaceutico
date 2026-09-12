@@ -19,7 +19,7 @@
   },
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
-  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R11",
+  "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R12",
   "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_08_MODULOS_CORE_CONTEXTO_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
@@ -361,8 +361,9 @@
     "validatedOn": "2026-09-12"
   },
   "task8PanelsAsCoreModules": {
-    "status": "implemented-awaiting-validation",
+    "status": "validated-internal-deployed",
     "authorizedOn": "2026-09-12",
+    "validatedOn": "2026-09-12",
     "coreBridge": "conecta-module-core-v1.js",
     "centralOwnsContext": true,
     "moduleContextIncludes": [
@@ -391,10 +392,24 @@
     "definitivePanelMigrationDeferredToTask16": true,
     "specificGate": "TAREFA_8_MODULOS_CORE_CONTEXTO_OK",
     "validation": {
-      "specificGate": "pending",
-      "fullSuite": "pending",
-      "appsScriptDeploy": "pending",
-      "pagesDeployment": "pending"
+      "specificGate": "TAREFA_8_MODULOS_CORE_CONTEXTO_OK",
+      "fullSuite": "passed",
+      "initialWorkflowRun": 34720676321,
+      "initialRunResult": "cancelled-before-deploy-by-stale-admin-transport-test",
+      "retry1WorkflowRun": 34721822778,
+      "retry1RunResult": "blocked-before-deploy-by-stale-territorial-test",
+      "retry2WorkflowRun": 34721946917,
+      "appsScriptPreviousVersion": 205,
+      "appsScriptCurrentVersion": 206,
+      "appsScriptHealth": "passed-first-attempt",
+      "appsScriptActiveDeploymentVersionsAfterDeploy": [
+        6,
+        7,
+        9,
+        206
+      ],
+      "pagesWorkflowRun": 34722041965,
+      "pagesDeploymentSuccess": true
     }
   }
 }
