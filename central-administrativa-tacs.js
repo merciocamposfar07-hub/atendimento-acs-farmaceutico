@@ -514,7 +514,7 @@ function refreshHealth(force){
   el('healthUpdated').textContent='Atualizando dados validados • área '+(text(area&&area.areaNome)||areaId);
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
-function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260912-single-pin-v2',from='&from=central';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+from+'&v='+revision;if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+from+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+from+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+from+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+from+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v=20260912-tarefa1-ubs-v1';if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
+function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260912-task10-shell-v1',from='&from=central';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+from+'&v='+revision;if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+from+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+from+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+from+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+from+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v=20260912-tarefa1-ubs-v1';if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
 
 /* TAREFA_10_SHELL_PERSISTENTE_V1:
    a Central permanece montada e é a única dona da navegação interna.
@@ -530,7 +530,7 @@ function resetModuleShell(){
     if(frame!==base&&frame.parentNode)frame.remove();
   });
   shellFrames={};shellActiveModule='';shellScopeKey='';
-  if(base){base.hidden=false;base.removeAttribute('data-shell-key');base.removeAttribute('data-shell-module');if(base.src!=='about:blank')base.src='about:blank'}
+  if(base){base.hidden=false;base.removeAttribute('data-shell-key');base.removeAttribute('data-shell-module');base.removeAttribute('data-shell-url');base.removeAttribute('data-shell-loaded');if(base.src!=='about:blank')base.src='about:blank'}
   if(viewer)viewer.hidden=true;
   document.body.classList.remove('viewer-open');
 }
@@ -559,9 +559,8 @@ function ensureShellFrame(name,url,title){
     frame.src='about:blank';
     viewer.appendChild(frame);
   }
-  frame.dataset.shellKey=key;frame.dataset.shellModule=name;frame.hidden=true;
+  frame.dataset.shellKey=key;frame.dataset.shellModule=name;frame.dataset.shellUrl=url;frame.hidden=true;
   enhanceShellFrame(frame);shellFrames[key]=frame;
-  frame.src=url;
   return frame;
 }
 function showShellFrame(name,frame,title){
@@ -570,6 +569,14 @@ function showShellFrame(name,frame,title){
   el('viewerTitle').textContent=title||'Painel';
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer');viewer.hidden=false;
   frame.hidden=false;document.body.classList.add('viewer-open');
+  /* TAREFA_10_AGENDA_LAZY_VISIBLE_V1:
+     o documento só começa a carregar depois que shell e frame já estão visíveis.
+     No Safari/iPhone isso evita voltar ao padrão antigo de agenda em iframe oculto. */
+  if(frame.dataset.shellLoaded!=='1'){
+    frame.dataset.shellLoaded='1';
+    var carregar=function(){var url=frame.dataset.shellUrl||'about:blank';if(frame.src!==url)frame.src=url};
+    if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(carregar);else setTimeout(carregar,0);
+  }
 }
 function shellHasUnsaved(frame){
   try{return Boolean(frame&&frame.contentDocument&&frame.contentDocument.documentElement.dataset.tacsDirty==='1')}catch(e){return false}
@@ -774,7 +781,8 @@ window.ConectaCentralShellV1={
   fechar:closeViewer,
   resetar:resetModuleShell,
   ativo:function(){return shellActiveModule},
-  escopo:function(){return shellCurrentScope()}
+  escopo:function(){return shellCurrentScope()},
+  contagemFrames:function(){return Object.keys(shellFrames).length}
 };
 window.PortalTacsCentralPinLocalV2={
   abrir:function(scope,pin){return abrirAcessoLocal(scope,pin)},
