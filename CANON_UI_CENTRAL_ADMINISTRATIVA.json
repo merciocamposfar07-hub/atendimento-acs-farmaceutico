@@ -20,7 +20,7 @@
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R7",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_03_IDENTIDADE_REAL_2026_09_12.md",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_04_RECONHECIMENTO_APARELHO_PERFIL_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
   "notes": [
@@ -210,6 +210,34 @@
       "appsScriptDeploy": "passed",
       "appsScriptHealth": "passed-first-attempt",
       "versionHistoryCleanup": "versões antigas não utilizadas removidas pelo usuário; faixa recente 189-199 preservada"
+    }
+  },
+  "task4DeviceProfileRecognition": {
+    "status": "implemented-awaiting-validation",
+    "authorizedOn": "2026-09-12",
+    "recognizedProfiles": [
+      "ADMIN",
+      "TACS",
+      "MORADOR",
+      "UBS"
+    ],
+    "recognizedDeviceSelectsRelevantDoor": true,
+    "profileCombinationsRemainIdentityNotDoors": true,
+    "preAuthNameDisclosure": false,
+    "adminSupportDoorsPreserved": true,
+    "adminSecondAccessPinOnly": true,
+    "tacsSecondAccessPinOnly": true,
+    "residentSecondAccessPinOnly": true,
+    "ubsPersistentDeviceRecognition": true,
+    "ubsSecondAccessPinOnly": true,
+    "ubsTrustProof": "hashed-device + hashed-trust-key + PIN",
+    "adminResidentDiagnosticDeferred": true,
+    "specificGate": "TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK",
+    "validation": {
+      "specificGate": "pending",
+      "fullSuite": "pending",
+      "appsScriptDeploy": "pending",
+      "pagesDeployment": "pending"
     }
   }
 }
