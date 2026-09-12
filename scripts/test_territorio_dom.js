@@ -194,7 +194,7 @@ async function testTerritoryPanel() {
   assert.match(html, /<label for="tacsCns">CNS \(Cartão SUS\)<\/label>/);
   assert.match(html, /<label for="tacsPhone">Celular<\/label>/);
   assert.match(html, /<label for="tacsUnit">Unidade de saúde<\/label>/);
-  assert.match(html, /<label for="tacsPin">PIN de acesso aos painéis<\/label>/);
+  assert.match(html, /<label for="tacsPin">PIN de acesso à plataforma<\/label>/);
   assert.match(html, /id="tacsProfile"/);
   assert.match(html, /id="tacsActiveText"/);
   assert.match(html, /id="accessStateControlV1"/);
