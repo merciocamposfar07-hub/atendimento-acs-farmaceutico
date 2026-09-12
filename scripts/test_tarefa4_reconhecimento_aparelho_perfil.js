@@ -54,7 +54,8 @@ assert.match(access,/guardar\('ubs',pin/);
 assert.ok(backend.includes("perfil:conectaAcessoV1Texto_(ubs.perfil)||'UBS'"));
 assert.ok(access.includes("identityHeadline(r.nome||'Responsável UBS',r.perfil||'UBS')"));
 
-// Tarefa 4 não implementa ainda diagnóstico administrativo de Morador.
-assert.doesNotMatch(access,/diagn[oó]stico administrativo|modoDiagnosticoMorador/i);
+// A Tarefa 4 continua responsável apenas pelo reconhecimento de aparelho/perfil.
+ // Tarefas posteriores podem acrescentar diagnóstico sem invalidar este contrato histórico.
+assert.match(access,/function recognizedRole\(\)/);
 
-console.log('TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK: segundo acesso reconhece Administrador, TACS, Morador e UBS; UBS usa PIN + vínculo seguro do aparelho; nenhuma nova porta de combinação ou diagnóstico administrativo foi antecipado.');
+console.log('TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK: segundo acesso reconhece Administrador, TACS, Morador e UBS; UBS usa PIN + vínculo seguro do aparelho e nenhuma nova porta de combinação foi criada.');
