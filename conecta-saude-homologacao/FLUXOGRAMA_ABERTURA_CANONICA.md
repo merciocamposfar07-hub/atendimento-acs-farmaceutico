@@ -168,3 +168,17 @@ Esta tarefa preserva as quatro portas existentes, não cria portas para combina�
 O RETRY `34719091947` passou pela suíte integral, implantou Apps Script **203** no mesmo deployment e aprovou todos os health checks na primeira tentativa. A tentativa anterior `34719025276` foi interrompida antes do deploy por um gate legado e não gerou versão.
 
 **Sequência canônica:** Tarefa 5 encerrada tecnicamente; Tarefa 6 liberada para execução.
+
+
+### Registro canônico — Tarefa 6 / Administrador testa Morador sem vínculo
+Quando o aparelho é reconhecido como Administrador e a porta Morador é utilizada para teste/suporte, o fluxo não assume identidade residencial.
+
+Fluxo desta tarefa:
+`Morador → CPF/CNS → validar aparelho administrativo confiável → localizar cadastro em somente leitura → exibir resultado diagnóstico → permanecer sem PIN, sessão, quickKey, Subscription ou vínculo residencial.`
+
+O backend recusa identificação/onboarding, criação de PIN, login residencial e confirmação de notificações quando o dispositivo pertence ao perfil Administrador.
+
+A Tarefa 7 fica responsável por transformar essa proteção em um único núcleo/formulário de Morador com modo explícito `DIAGNOSTICO_ADMINISTRATIVO`.
+
+### Status da Tarefa 6: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK`.
