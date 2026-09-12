@@ -288,5 +288,9 @@ A correção pós-auditoria da Tarefa 11 remove o retorno antecipado de Agendas/
 
 A Tarefa 12 não implementa deduplicação de chamadas nem altera as regras de timeout da sessão.
 
-### Status da Tarefa 12: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_12_CACHE_FRESCOR_OK`.
+### Status final da Tarefa 12: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate `TAREFA_12_CACHE_FRESCOR_OK` aprovado. A correção pós-auditoria da Tarefa 11 também foi revalidada pelo gate `TAREFA_11_DESEMPENHO_MODULOS_OK`. Suíte integral, quality gate e homologação interna passaram no run `34725768331`; GitHub Pages do estado validado passou no run `34725763575`.
+
+Apps Script permanece na versão `208` porque a Tarefa 12 é exclusivamente de frontend/core de módulos.
+
+**Sequência canônica:** Tarefa 12 encerrada tecnicamente; Tarefa 13 continua como próxima etapa autorizável.
