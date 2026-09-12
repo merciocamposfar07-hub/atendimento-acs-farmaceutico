@@ -12,55 +12,51 @@ const agenda=read('painel-oficial-agendas-vagas.html');
 const agendaCard=read('agenda-whatsapp-card-v1.js');
 
 /*
- * Contrato vigente no iPhone: navegação administrativa direta.
- * O host persistente de iframes foi aposentado porque podia manter a Agenda
- * carregando em um viewer invisível e aparentar travamento no Safari.
+ * Contrato vigente a partir da Tarefa 10:
+ * a Central é o shell persistente visível. O contorno antigo de navegação direta
+ * continua apenas como fallback quando o shell canônico não estiver disponível.
  */
 assert(!/central-admin-performance-v1\.js\?v=/.test(central),
-  'Central não deve reinstalar o antigo host persistente de iframes.');
+  'Central não deve reinstalar o antigo host de preload oculto.');
 assert(/central-suporte-moradores-v1\.js\?v=[^"']+/.test(central),
-  'Central deve carregar a proteção de navegação direta com revisão explícita.');
-assert(support.includes('CENTRAL_IOS_PAINT_GUARD_V3'),
-  'Proteção de pintura/navegação do iPhone ausente.');
-assert(support.includes('function installSafeNavigation()'),
-  'Navegação direta segura dos cartões ausente.');
-assert(support.includes("document.addEventListener('click',function(event)"),
-  'Navegação segura precisa interceptar o toque antes do listener legado.');
-assert(support.includes('event.stopImmediatePropagation()'),
-  'Listener legado não pode abrir um segundo destino em paralelo.');
-assert(support.includes('location.assign(url)'),
-  'Painéis administrativos devem abrir por navegação direta.');
-assert(support.includes("document.addEventListener('click',function(event)")&&support.includes('},true);'),
-  'Interceptação de navegação precisa operar em fase de captura.');
-
+  'Central deve preservar a camada de compatibilidade Safari.');
+assert(base.includes('TAREFA_10_SHELL_PERSISTENTE_V1'),
+  'Shell persistente canônico da Tarefa 10 ausente.');
+assert(base.includes('function ensureShellFrame(name,url,title)')&&base.includes('function showShellFrame(name,frame,title)'),
+  'Central deve manter host persistente por módulo.');
+assert(base.includes("var shellFrames={},shellActiveModule='',shellScopeKey=''"),
+  'Pool de módulos persistentes não foi criado.');
 ['moradores','suporte','recados','agendas','profissionais','territorio','municipios','portal'].forEach((modulo)=>{
-  assert(support.includes("name==='"+modulo+"'"),
-    'Navegação direta não cobre módulo obrigatório: '+modulo);
+  assert(base.includes("name==='"+modulo+"'"),
+    'Roteador canônico não cobre módulo obrigatório: '+modulo);
 });
-assert(support.includes("if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html"),
-  'Agendas e vagas não aponta para a página oficial por navegação direta.');
-assert(support.includes("from='&from=central'"),
-  'Painéis diretos precisam preservar o retorno à Central.');
-
-assert(support.includes('#viewer,#portalTacsCentralRefreshV1,#portalTacsAdminPreloadPoolV1{display:none!important}'),
-  'Viewer/host legado deve permanecer desativado no iPhone.');
-assert(support.includes("if(frame){try{frame.src='about:blank'}catch(e){}}"),
-  'Iframe legado deve ser descarregado no bootstrap.');
-assert(support.includes('function restoreModuleTouchState()'),
-  'Restauração do estado tátil após BFCache ausente.');
-assert(support.includes("button.style.removeProperty('pointer-events')"),
-  'Cartão não pode voltar do BFCache com toque bloqueado.');
-assert(support.includes("window.addEventListener('pageshow'"),
-  'Retorno pelo histórico do Safari precisa ser tratado.');
-
-assert(base.includes('AGENDA_DIRECT_NAV_V1'),
-  'Fallback da Central-base para Agendas sem iframe foi removido.');
-assert(/if\(name==='agendas'\)\{location\.assign\(/.test(base),
-  'Fallback da Agenda precisa navegar diretamente.');
-assert(base.includes("el('viewerFrame').src='about:blank'"),
-  'Retorno da Central-base deve descarregar viewer legado.');
-assert(quick.includes('function installInstitutionalNavigation()'),
-  'Compatibilidade do login rápido foi alterada fora do escopo.');
+assert(!base.includes('AGENDA_DIRECT_NAV_V1'),
+  'Agenda não deve continuar presa ao fallback de navegação direta.');
+assert(!/if\(name==='agendas'\)\{location\.assign\(/.test(base),
+  'Agenda deve abrir no shell persistente, não por troca de página.');
+const closeStart=base.indexOf('function closeViewer()');
+const closeEnd=base.indexOf('function loadContext(',closeStart);
+const closeBlock=base.slice(closeStart,closeEnd);
+assert(!/about:blank/.test(closeBlock),
+  'Voltar à Central não pode destruir o módulo carregado.');
+assert(base.includes('function resetModuleShell()')&&base.includes("frame.src='about:blank'"),
+  'Shell deve descarregar módulos somente em reset explícito.');
+assert(base.includes("resetModuleShell();selectedAreaId=normArea(this.value)"),
+  'Troca de área deve eliminar módulos do escopo anterior.');
+assert(base.includes('cancelarOperacaoAtivaSemCallback();\n  resetModuleShell();'),
+  'Logoff deve descarregar o shell autenticado.');
+assert(base.includes('TAREFA_10_AGENDA_LAZY_VISIBLE_V1'),
+  'Agenda precisa iniciar o carregamento somente depois que o shell estiver visível.');
+assert(central.includes('cscTask10PersistentShellStyle')&&central.includes('.viewer.csc-shell-viewer:not([hidden])'),
+  'Viewer da Tarefa 10 deve ser uma superfície visível, não iframe oculto.');
+assert(quick.includes('TAREFA_10_ROUTER_UNICO_V1')&&quick.includes("if(window.ConectaCentralShellV1&&typeof window.ConectaCentralShellV1.abrir==='function')"),
+  'Login rápido não pode reinstalar um segundo roteador.');
+assert(support.includes('TAREFA_10_SHELL_PERSISTENTE_V1')&&support.includes("if(window.ConectaCentralShellV1&&typeof window.ConectaCentralShellV1.abrir==='function')"),
+  'Fallback Safari precisa ceder ao shell canônico.');
+assert(support.includes('location.assign(url)'),
+  'Fallback de navegação direta deve permanecer disponível apenas para ambientes sem shell.');
+assert(support.includes('function restoreModuleTouchState()')&&support.includes("window.addEventListener('pageshow'"),
+  'Proteções de BFCache/touch continuam preservadas como fallback.');
 
 assert(!/localStorage\.clear\s*\(/.test(support),
   'Proteção de navegação não pode limpar identidade local.');
@@ -104,4 +100,4 @@ assert(!unified.includes("setTimeout(function(){showRole('admin')},0)")&&!unifie
 assert(unified.includes("focusRoleField(role)"),
   'A troca de perfil deve manter a caixa de identificação/PIN disponível para digitação.');
 
-console.log('Central Administrativa: navegação direta sem iframe, retorno BFCache e Agenda no iPhone validados.');
+console.log('Central Administrativa: shell persistente visível, sessão única, BFCache e Agenda sem troca de página validados.');
