@@ -248,15 +248,46 @@ async function testTerritoryPanel() {
   const {window} = dom;
   window.HTMLElement.prototype.scrollIntoView = function scrollIntoView() {};
   window.TextDecoder = TextDecoder;
+  window.sessionStorage.setItem('portalTacsAdminTokenV1','token-admin-territorio');
+  window.localStorage.setItem('portalTacsCentralAreaV1','JAPARANDUBA');
+  window.sessionStorage.setItem('portalTacsCentralContextCacheV3:admin',JSON.stringify({
+    mode:'admin',
+    selectedAreaId:'JAPARANDUBA',
+    savedAt:Date.now(),
+    context:{
+      perfil:'ADMIN_GERAL',
+      podeAdministrar:true,
+      administradorAtual:{nomeCompleto:'Administrador Teste',perfil:'ADMIN_TACS',ativo:true},
+      administradores:[{nomeCompleto:'Administrador Teste',perfil:'ADMIN_TACS',ativo:true}],
+      tacs:[
+        {tacsId:'TACS001',nomeCompleto:'Agente Japaranduba',perfil:'TACS',areaId:'JAPARANDUBA',unidadeId:'POSTO_MATIAS',cnsProfissional:'708209101334741',ativo:true,permissoes:[]},
+        {tacsId:'TACS002',nomeCompleto:'Agente Matias',perfil:'TACS',areaId:'MATIAS',unidadeId:'USF_MATIAS',cnsProfissional:'898004139258782',ativo:true,permissoes:[]}
+      ],
+      areas:[
+        {areaId:'JAPARANDUBA',areaNome:'Sítio Japaranduba',tacsId:'TACS001',unidadeId:'POSTO_MATIAS',unidadeNome:'USF Matias',ativa:true},
+        {areaId:'MATIAS',areaNome:'Sítio Matias',tacsId:'TACS002',unidadeId:'USF_MATIAS',unidadeNome:'USF Matias CDS',ativa:true}
+      ]
+    }
+  }));
   window.eval(js);
-  assert.equal(window.document.getElementById('adminLogin').classList.contains('hidden'), false);
-  window.document.getElementById('loginTacsTab').click();
-  assert.equal(window.document.getElementById('tacsLogin').classList.contains('hidden'), false);
-  assert.equal(window.document.getElementById('tacsCnsLogin'), null, 'O painel TACS e áreas não deve pedir CNS para login');
-  assert.ok(window.document.getElementById('tacsPinLogin'), 'O painel TACS e áreas deve manter o PIN individual');
-  assert.ok(window.document.getElementById('tacsLoginButton'), 'O botão de login TACS deve permanecer disponível');
-  assert.match(js, /admin_territorio_login_pin/, 'O painel TACS e áreas deve usar a rota de login somente por PIN');
+  assert.equal(window.document.getElementById('loginPanel'),null,'Módulo territorial não deve ter segundo login.');
+  assert.equal(window.document.getElementById('adminLoginButton'),null,'Login administrativo interno deve permanecer removido.');
+  assert.equal(window.document.getElementById('tacsLoginButton'),null,'Login TACS interno deve permanecer removido.');
+  const workArea=window.document.getElementById('workAreaSelect');
+  assert.ok(workArea,'Área de trabalho deve existir.');
+  assert.equal(workArea.options.length,2,'Administrador deve receber todas as áreas cadastradas.');
+  assert.match(workArea.options[0].textContent,/Sítio Japaranduba.*TACS: Agente Japaranduba.*Unidade: USF Matias/);
+  assert.match(window.document.getElementById('workAreaMeta').textContent,/Administrador: Administrador Teste/);
+  workArea.value='MATIAS';
+  workArea.dispatchEvent(new window.Event('change',{bubbles:true}));
+  assert.equal(window.localStorage.getItem('portalTacsCentralAreaV1'),'MATIAS');
+  assert.match(window.document.getElementById('tacsList').textContent,/Agente Matias/);
+  assert.doesNotMatch(window.document.getElementById('tacsList').textContent,/Agente Japaranduba/);
+  assert.match(js, /TERRITORIO_HERDA_SESSAO_CENTRAL_V1/, 'O painel territorial deve herdar a sessão da Central.');
+  assert.doesNotMatch(js, /post\('admin_login'/, 'O painel territorial não pode refazer login administrativo.');
+  assert.doesNotMatch(js, /post\('admin_territorio_login_pin'/, 'O painel territorial não pode refazer login TACS.');
   window.document.getElementById('newTacsButton').click();
+  assert.equal(window.document.getElementById('tacsArea').value,'MATIAS','Novo TACS deve nascer no escopo da Área de trabalho atual.');
   assert.equal(window.document.getElementById('tacsForm').classList.contains('hidden'), false);
   assert.equal(window.document.getElementById('tacsPin').required, true);
   const cpfInput=window.document.getElementById('tacsCpf');
