@@ -184,3 +184,18 @@ A Tarefa 7 fica responsável por transformar essa proteção em um único núcle
 O RETRY `34719509591` passou pela suíte integral, implantou Apps Script **204** no mesmo deployment e aprovou os health checks na primeira tentativa. GitHub Pages run `34719505209` também passou.
 
 **Sequência canônica:** Tarefa 6 encerrada tecnicamente; Tarefa 7 liberada para execução.
+
+
+### Registro canônico — Tarefa 7 / Núcleo único de Morador
+A porta Morador usa um único núcleo com dois modos:
+
+`MORADOR_REAL → identificação → confirmação → PIN → sessão Morador`
+
+`DIAGNOSTICO_ADMINISTRATIVO → identificação CPF/CNS → consulta somente leitura → resultado no mesmo residentStage → encerrar sem vínculo`
+
+O modo é definido antes do início do fluxo, acompanha a requisição e é confirmado pelo backend. No diagnóstico, a aplicação não assume identidade, sessão, aparelho nem notificações do Morador.
+
+A Tarefa 7 mantém integralmente as barreiras de segurança da Tarefa 6 e não inicia a migração dos painéis da Tarefa 8.
+
+### Status da Tarefa 7: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_7_MORADOR_CORE_DIAGNOSTICO_OK`.
