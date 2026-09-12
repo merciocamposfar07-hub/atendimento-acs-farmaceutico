@@ -1,6 +1,6 @@
-run_id=34723103101
-head_sha=c6142d7bb23ab3c8880ca3317a349287abacdf12
+run_id=34722437567
+head_sha=1a6d6ff5c9aca11dbde11e33557a35955e4f27a5
 conclusion=cancelled
-jobs=
+jobs=testar-e-implantar:completed:cancelled
 failed_steps=
-recorded_at=2026-09-12T22:36:17Z
+recorded_at=2026-09-12T22:40:36Z
