@@ -179,7 +179,7 @@ function identifyUbsFirstAccess(){
 }
 function loginUbsSecondAccess(){
  var p=ubsProfile(),pin=digits(el('cscUbsPin')&&el('cscUbsPin').value),proof=trustKey('UBS'),out=el('cscUbsIdentity');
- if(!p||!proof){try{localStorage.removeItem(UBS_PROFILE_KEY)}catch(e){};ubsMarkup();setStatus('Faça o primeiro acesso da UBS neste aparelho.','warn');return}
+ if(!p||!proof){try{localStorage.removeItem(UBS_PROFILE_KEY);localStorage.removeItem(TRUST_UBS_KEY)}catch(e){};setStatus('Faça o primeiro acesso da UBS neste aparelho.','warn');setTimeout(function(){location.reload()},0);return}
  if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN de acesso com 4 a 8 números.','err');return}
  setStatus('Validando o PIN da UBS…','warn');
  post('conecta_ubs_login_pin',{pin:pin,dispositivo:device(),chaveConfianca:proof}).then(function(r){
