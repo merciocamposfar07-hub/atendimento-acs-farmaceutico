@@ -16,7 +16,11 @@ function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').sli
 function digits(v){return text(v).replace(/\D/g,'')}
 function setStatus(msg,type){var n=el('loginStatus');if(!n)return;var value=text(msg);n.textContent=value;n.hidden=!value;n.className='status'+(type?' '+type:'')}
 function syncAppState(){
-  var authenticated=Boolean(token||territoryToken);
+  /* FLUXO_CANONICO_LOCAL_FIRST_V1:
+     segundo acesso entra no app assim que o PIN destrava o contexto local confirmado.
+     O token remoto sincroniza depois e não controla a troca visual Login -> Central. */
+  var localUnlocked=Boolean(acessoLocalAberto&&mode&&context);
+  var authenticated=Boolean(token||territoryToken||localUnlocked);
   document.documentElement.classList.toggle('csc-central-state-app',authenticated);
   document.documentElement.classList.toggle('csc-central-state-login',!authenticated);
   if(authenticated)document.documentElement.classList.remove('csc-central-login-visible');
@@ -185,6 +189,7 @@ function aplicarAcessoLocal(scope,saved){
   mode=scope;context=saved.context;selectedAreaId=normArea(saved.selectedAreaId||'');
   saveContextCache();
   acessoLocalAberto=scope;
+  syncAppState();
   renderContext(true);
   setStatus('Acesso liberado. Confirmando a sessão atual em segundo plano…','ok');
   return true;
@@ -256,7 +261,7 @@ function updateCentralWelcome(area,tacs){
   var adminPerfil=accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');
   node.innerHTML='<small>Olá, '+esc(adminNome)+'</small><h1>'+esc(adminPerfil)+'</h1><p>Gestão administrativa da área selecionada.</p>';
 }
-function renderContext(skipHealth){var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(text(admin&&admin.nomeCompleto)||'Administrador');el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);el('identityPanel').hidden=false;el('healthPanel').hidden=false;el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=mode!=='admin'||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;renderModules();renderHealthInstant(selectedAreaId);if(!skipHealth)refreshHealth()}
+function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(text(admin&&admin.nomeCompleto)||'Administrador');el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);el('identityPanel').hidden=false;el('healthPanel').hidden=false;el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=mode!=='admin'||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;renderModules();renderHealthInstant(selectedAreaId);if(!skipHealth)refreshHealth()}
 function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
 function markHealth(id,label,state){var n=el(id),s=n.querySelector('span');n.className='health-card'+(state?' '+state:'');s.textContent=label}
 function updatePendingBadge(result){
@@ -537,8 +542,9 @@ function logout(){
      o primeiro toque encerra a autenticação local imediatamente.
      A confirmação remota não bloqueia a interface nem exige segundo toque. */
   cancelarOperacaoAtivaSemCallback();
-  token='';territoryToken='';mode='';context=null;
+  token='';territoryToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
   sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
+  syncAppState();
   /* LOGOFF_PRESERVA_CACHE_V2: área, aparelho e caches por perfil permanecem intactos. */
   el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;
   el('loginPanel').hidden=false;showLogin(lastMode==='tacs'?'tacs':'admin');
