@@ -240,56 +240,101 @@ function post(action,fields,resultAction,cb){
 function territoryPost(action,extra,cb){post(action,payload(extra),'admin_territorio_result',cb);}
 function csvPost(action,areaId,body,cb){post(action,payload({areaId:areaId,payload:JSON.stringify(body||{})}),'admin_csv_result',cb);}
 
-function showLogin(which){
-  var admin=which==='admin';el('adminLogin').classList.toggle('hidden',!admin);el('tacsLogin').classList.toggle('hidden',admin);
-  el('loginAdminTab').classList.toggle('active',admin);el('loginTacsTab').classList.toggle('active',!admin);
-}
-
 function loadData(message,operationMessage){
+  if(!syncSessionFromStorage()){
+    if(cacheRendered){workspaceStatus('A sessão da Central ainda está sincronizando. Os dados da área permanecem visíveis sem abrir outro login.','warn');return;}
+    workspaceStatus('Esta área administrativa usa a sessão da Central. Retornando para concluir o acesso…','warn');
+    setTimeout(function(){location.assign('/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260911-area-trabalho-v1');},450);
+    return;
+  }
   territoryPost('admin_territorio_dados',{},function(r){
-    if(!r||r.ok!==true){clearSession();loginStatus(text(r&&r.message||'Sessão inválida ou expirada.'),'err');if(operationMessage)status('A alteração foi salva, mas não foi possível atualizar a tela. Reabra o painel.','err');return;}
-    data={tacs:Array.isArray(r.tacs)?r.tacs:[],areas:Array.isArray(r.areas)?r.areas:[],podeAdministrar:r.podeAdministrar===true,perfil:text(r.perfil)};
-    render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;loginStatus(message||'Sessão validada.','ok');if(operationMessage)status(operationMessage,'ok');
+    if(!r||r.ok!==true){
+      if(cacheRendered){workspaceStatus('Últimos dados confirmados mantidos. A sincronização atual não terminou agora.','warn');if(operationMessage)status('A alteração foi salva, mas a releitura atual não terminou.','warn');return;}
+      workspaceStatus(text(r&&r.message||'A sessão da Central não pôde ser confirmada.'),'err');
+      return;
+    }
+    data={
+      tacs:Array.isArray(r.tacs)?r.tacs:[],
+      areas:Array.isArray(r.areas)?r.areas:[],
+      administradores:Array.isArray(r.administradores)?r.administradores:[],
+      administradorAtual:r.administradorAtual||null,
+      podeAdministrar:r.podeAdministrar===true,
+      perfil:text(r.perfil)
+    };
+    chooseWorkArea(selectedWorkAreaId||requestedWorkArea());persistWorkArea(selectedWorkAreaId);
+    render();el('dashboard').classList.remove('hidden');cacheRendered=true;
+    workspaceStatus(message||'Administrador e área confirmados pelo servidor.','ok');
+    if(operationMessage)status(operationMessage,'ok');
   });
 }
-
-function clearSession(){
-  token='';territorioToken='';mode='';sessionStorage.removeItem(ADMIN_TOKEN_KEY);sessionStorage.removeItem(TACS_TOKEN_KEY);
-  el('dashboard').classList.add('hidden');el('logoutButton').disabled=true;
+function scopedArea(){
+  return workAreaById(selectedWorkAreaId);
 }
-
+function scopedTacs(){
+  var area=scopedArea();if(!area)return [];
+  var areaId=normArea(area.areaId),responsavel=text(area.tacsId);
+  return data.tacs.filter(function(t){
+    if(!profileHasTacs(t&&t.perfil))return profileHasAdmin(t&&t.perfil);
+    return (responsavel&&text(t&&t.tacsId)===responsavel)||normArea(t&&t.areaId)===areaId;
+  });
+}
+function scopedTacsOnly(){
+  return scopedTacs().filter(function(t){return profileHasTacs(t&&t.perfil);});
+}
+function resetAreaSensitiveUi(){
+  if(el('tacsForm'))el('tacsForm').classList.add('hidden');
+  if(el('areaForm'))el('areaForm').classList.add('hidden');
+  areaEditSnapshot=null;
+  csvState={file:null,base64:'',name:'',headers:[],delimiter:'',headerRow:-1,encoding:'',mapping:{},preview:null};
+  if(el('csvFile'))el('csvFile').value='';
+  if(el('mappingBox'))el('mappingBox').classList.add('hidden');
+  if(el('csvPreview'))el('csvPreview').classList.add('hidden');
+  if(el('batchList'))el('batchList').innerHTML='';
+}
+function changeWorkArea(id){
+  id=normArea(id);if(!id||!workAreaById(id)||id===selectedWorkAreaId)return;
+  resetAreaSensitiveUi();persistWorkArea(id);render();
+  var area=scopedArea(),t=responsibleForArea(area);
+  workspaceStatus('Área alterada para '+text(area&&area.areaNome||id)+'. Dados isolados de '+(text(t&&t.nomeCompleto)||'seu TACS responsável')+' carregados.','ok');
+}
 function render(){
-  el('tacsCount').textContent=String(data.tacs.length);el('areasCount').textContent=String(data.areas.length);
-  el('activeAreasCount').textContent=String(data.areas.filter(function(a){return bool(a.ativa);}).length);
+  chooseWorkArea();renderWorkArea();
+  var area=scopedArea(),tacsArea=scopedTacsOnly();
+  el('tacsCount').textContent=String(tacsArea.length);
+  el('areasCount').textContent=area?'1':'0';
+  el('activeAreasCount').textContent=area&&bool(area.ativa)?'1':'0';
   el('profileLabel').textContent=data.podeAdministrar?'ADMIN':'TACS';
-  el('tacsAdminActions').classList.toggle('hidden',!data.podeAdministrar);el('areasAdminActions').classList.toggle('hidden',!data.podeAdministrar);
+  el('tacsAdminActions').classList.toggle('hidden',!data.podeAdministrar);
+  el('areasAdminActions').classList.toggle('hidden',!data.podeAdministrar);
   renderTacs();renderAreas();renderAreaOptions();renderCsvAreaOptions();
 }
-
 function renderTacs(){
-  var list=el('tacsList');if(!data.tacs.length){list.innerHTML='<div class="card">Nenhum Administrador/TACS cadastrado nesta visão.</div>';return;}
-  list.innerHTML=data.tacs.map(function(t){
+  var list=el('tacsList'),records=scopedTacs();
+  if(!records.length){list.innerHTML='<div class="card">Nenhum Administrador/TACS vinculado à área selecionada.</div>';return;}
+  list.innerHTML=records.map(function(t){
     var isTacs=profileHasTacs(t.perfil),meta='<div class="sub">Perfil: '+esc(profileLabel(t.perfil));
-    if(isTacs)meta+=' • CNS: '+esc(cnsText(t.cnsProfissional)||'não informado')+' • Área: '+esc(t.areaId||'não vinculada')+' • Unidade: '+esc(t.unidadeId||'não vinculada');
+    if(isTacs)meta+=' • CNS: '+esc(cnsText(t.cnsProfissional)||'não informado')+' • Área: '+esc(t.areaId||selectedWorkAreaId||'não vinculada')+' • Unidade: '+esc(t.unidadeId||'não vinculada');
+    else meta+=' • acesso administrativo global';
     meta+='</div>';
     return '<div class="card"><strong>'+esc(t.nomeCompleto||t.tacsId)+'</strong>'+meta+'<span class="pill '+(bool(t.ativo)?'':'off')+'">'+(bool(t.ativo)?'Ativo':'Inativo')+'</span>'+(data.podeAdministrar?'<div class="actions"><button class="btn editTacs" data-id="'+esc(t.tacsId)+'" type="button">Editar cadastro completo</button></div>':'')+'</div>';
   }).join('');
 }
-
 function renderAreas(){
-  var list=el('areasList');if(!data.areas.length){list.innerHTML='<div class="card">Nenhuma área cadastrada.</div>';return;}
-  list.innerHTML=data.areas.map(function(a){return '<div class="card"><strong>'+esc(a.areaNome||a.areaId)+'</strong><div class="sub">ID: '+esc(a.areaId)+' • TACS: '+esc(a.tacsId||'não definido')+' • Unidade: '+esc(a.unidadeNome||a.unidadeId||'não definida')+'</div><div class="sub">Fonte: '+esc(a.planilhaId||'não definida')+'</div><span class="pill '+(bool(a.ativa)?'':'off')+'">'+(bool(a.ativa)?'Ativa e isolada':'Inativa')+'</span>'+(data.podeAdministrar?'<div class="actions two"><button class="btn editArea" data-id="'+esc(a.areaId)+'" type="button">Editar área</button><button class="btn gray validateArea" data-id="'+esc(a.areaId)+'" type="button">Conferir 20/20</button></div>':'')+'</div>';}).join('');
+  var list=el('areasList'),area=scopedArea();
+  if(!area){list.innerHTML='<div class="card">Nenhuma área selecionada.</div>';return;}
+  var t=responsibleForArea(area);
+  list.innerHTML='<div class="card"><strong>'+esc(area.areaNome||area.areaId)+'</strong><div class="sub">ID: '+esc(area.areaId)+' • TACS: '+esc(text(t&&t.nomeCompleto)||text(area.tacsId)||'não definido')+' • Unidade: '+esc(area.unidadeNome||area.unidadeId||'não definida')+'</div><div class="sub">Fonte: '+esc(area.planilhaId||'não definida')+'</div><span class="pill '+(bool(area.ativa)?'':'off')+'">'+(bool(area.ativa)?'Ativa e isolada':'Inativa')+'</span>'+(data.podeAdministrar?'<div class="actions two"><button class="btn editArea" data-id="'+esc(area.areaId)+'" type="button">Editar área</button><button class="btn gray validateArea" data-id="'+esc(area.areaId)+'" type="button">Conferir 20/20</button></div>':'')+'</div>';
 }
-
 function renderAreaOptions(){
   var select=el('areaTacsId'),tacsDisponiveis=data.tacs.filter(function(t){return profileHasTacs(t.perfil);});
-  select.innerHTML='<option value="">Selecione</option>'+tacsDisponiveis.map(function(t){return '<option value="'+esc(t.tacsId)+'">'+esc(t.nomeCompleto||t.tacsId)+' — CNS '+esc(t.cnsProfissional||'ausente')+'</option>';}).join('');
+  select.innerHTML='<option value="">Selecione</option>'+tacsDisponiveis.map(function(t){return '<option value="'+esc(t.tacsId)+'">'+esc(t.nomeCompleto||t.tacsId)+' — CNS '+esc(cnsText(t.cnsProfissional)||'ausente')+'</option>';}).join('');
 }
-
 function renderCsvAreaOptions(){
-  var select=el('csvArea'),current=select.value;select.innerHTML=data.areas.filter(function(a){return bool(a.ativa);}).map(function(a){return '<option value="'+esc(a.areaId)+'">'+esc(a.areaNome||a.areaId)+'</option>';}).join('');
-  if(current&&Array.prototype.some.call(select.options,function(o){return o.value===current;}))select.value=current;
-  if(select.value)loadBatches();
+  var select=el('csvArea'),area=scopedArea(),current=select.value;
+  select.innerHTML=area&&bool(area.ativa)?'<option value="'+esc(area.areaId)+'">'+esc(areaWorkLabel(area))+'</option>':'';
+  if(area&&select.options.length)select.value=area.areaId;
+  if(current&&current!==select.value){if(el('csvPreview'))el('csvPreview').classList.add('hidden');}
+  if(select.value&&el('csvSection')&&!el('csvSection').classList.contains('hidden'))loadBatches();
 }
 
 function renderTacsUnitOptions(current){
