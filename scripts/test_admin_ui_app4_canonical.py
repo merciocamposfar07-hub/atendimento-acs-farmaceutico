@@ -104,6 +104,24 @@ for forbidden in ["'index.html'", 'portal-morador.html', 'abrir.html']:
 
 print('ADMIN_UI_APP4_CANONICAL_R6_OK')
 print('SESSAO_UNICA_VISUAL_OK')
+for token in [
+    'SESSAO_UNICA_PAINEL_2026_09_11_V1',
+    '.csc-session-active #tacsPinPublicacoes',
+    '.csc-session-active .csc-resident-redundant-tacs-access',
+]:
+    if token not in css:
+        raise SystemExit(f'CSS de sessão única incompleto: {token}')
+for token in [
+    "var loginPasswordIds=['pin','adminPin','tacsPinLogin','tacsPinAccess','tacsPinPublicacoes']",
+    "'entrarTacs'",
+    'function enforceSingleEntry()',
+    'singleEntryCentralUrl()',
+    "singleEntryStyle.id='cscSingleEntryGateV1'",
+]:
+    if token not in behavior:
+        raise SystemExit(f'Comportamento de sessão única incompleto: {token}')
+if '.csc-moradores-access #tacsPinAccess,.csc-moradores-access label[for="tacsPinAccess"],.csc-moradores-access #loginTacs{display:block!important}' in css:
+    raise SystemExit('CSS voltou a forçar PIN dentro do painel de moradores.')
 print('PIN_REPETIDO_OCULTO_COM_SESSAO_OK')
 print('TITULOS_ESPECIFICOS_SUPORTE_OK')
 print(f'PAINEIS_VALIDADOS={len(TARGETS)}')

@@ -30,6 +30,8 @@ assert(support.includes('event.stopImmediatePropagation()'),
   'Listener legado não pode abrir um segundo destino em paralelo.');
 assert(support.includes('location.assign(url)'),
   'Painéis administrativos devem abrir por navegação direta.');
+assert(support.includes('SESSAO_UNICA_PAINEL_V1')&&support.includes('if(!hasAnySession())return;'),
+  'A Central não pode abrir painel administrativo antes da sessão remota existir; isso reexibiria PIN dentro do painel.');
 assert(support.includes("document.addEventListener('click',function(event)")&&support.includes('},true);'),
   'Interceptação de navegação precisa operar em fase de captura.');
 

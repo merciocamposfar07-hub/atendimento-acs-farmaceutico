@@ -19,6 +19,7 @@ var ADMIN_PANEL=CENTRAL||(
   /\/teste-v1\/painel-(?:profissionais-servicos|tacs-areas)-v1\.html$/i.test(PATH)
 );
 if(!ADMIN_PANEL)return;
+ROOT.classList.toggle('csc-admin-panel',!CENTRAL);
 
 var ADMIN_TOKEN='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN='portalTacsTerritorioTokenV1';
@@ -100,7 +101,7 @@ function buildAppbar(){
 }
 
 function markAuthControls(){
-  var loginPasswordIds=['pin','adminPin','tacsPinLogin'];
+  var loginPasswordIds=['pin','adminPin','tacsPinLogin','tacsPinAccess','tacsPinPublicacoes'];
   loginPasswordIds.forEach(function(id){
     var input=document.getElementById(id);
     if(!input||input.id==='tacsPin')return;
@@ -110,7 +111,7 @@ function markAuthControls(){
     if(wrap)wrap.classList.add('csc-auth-control','csc-admin-only-auth');
   });
   ['accessActions','pinHelp','loginAdminTab','loginTacsTab','adminLogin','tacsLogin'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-auth-control','csc-admin-only-auth')});
-  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs'].forEach(function(id){var n=document.getElementById(id);if(!n)return;if(CENTRAL&&id==='logout'){n.classList.remove('csc-admin-only-auth','csc-auth-control');return}n.classList.add('csc-admin-only-auth')});
+  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs','entrarTacs'].forEach(function(id){var n=document.getElementById(id);if(!n)return;if(CENTRAL&&id==='logout'){n.classList.remove('csc-admin-only-auth','csc-auth-control');return}n.classList.add('csc-admin-only-auth')});
   var accessTitle=document.getElementById('accessTitle');if(accessTitle)accessTitle.classList.add('csc-admin-only-auth');
 
   /* No painel de moradores, o perfil já foi definido pelo PIN da Central.

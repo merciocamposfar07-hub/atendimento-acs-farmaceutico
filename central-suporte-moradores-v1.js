@@ -10,7 +10,7 @@ var RETURN_KEY='portalTacsCentralReturnUrlV1';
 var RETURN_FLAG_KEY='portalTacsRetornoCentralV1';
 var PAINT_STYLE_ID='portalTacsCentralIosPaintGuardV3';
 var SAFE_NAV_FLAG='portalTacsSafeNavigationV1';
-var REVISION='20260910-pontuais-v5';
+var REVISION='20260911-sessao-unica-v1';
 
 function text(v){return String(v==null?'':v).trim()}
 function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
@@ -120,6 +120,12 @@ function installSafeNavigation(){
     var target=event.target;
     var button=target&&target.closest?target.closest('.module[data-module]'):null;
     if(!button||button.hidden||button.disabled)return;
+
+    /* SESSAO_UNICA_PAINEL_V1:
+       com acesso local ainda sincronizando, permanece na Central.
+       O listener-base segura o módulo pendente até existir sessão remota,
+       impedindo que qualquer painel volte a pedir PIN. */
+    if(!hasAnySession())return;
 
     var url=moduleUrl(button.dataset.module||'');
     if(!url)return;
