@@ -7,6 +7,9 @@ const central=read('central-administrativa-tacs.html');
 const base=read('central-administrativa-tacs.js');
 const quick=read('central-tacs-login-rapido-v1.js');
 const support=read('central-suporte-moradores-v1.js');
+const unified=read('conecta-acesso-unificado-v1.js');
+const agenda=read('painel-oficial-agendas-vagas.html');
+const agendaCard=read('agenda-whatsapp-card-v1.js');
 
 /*
  * Contrato vigente no iPhone: navegação administrativa direta.
@@ -75,5 +78,20 @@ assert(central.includes('<strong>TACS e áreas</strong>')&&
        central.includes('<strong>Municípios e organizações</strong>')&&
        central.includes('<strong>Portal do Morador</strong>'),
   'Cartões administrativos restritos/públicos precisam permanecer no layout atual');
+
+assert(base.includes("HEALTH_CACHE_PREFIX='portalTacsHealthConfirmedV1:'")&&base.includes('function renderHealthCache(areaId)'),
+  'Saúde geral deve exibir a última confirmação válida imediatamente enquanto sincroniza em segundo plano.');
+assert(base.includes("var confirmadoAnterior=readConfirmedNotification(areaId)"),
+  'Notificações confirmadas não devem voltar para Confirmando a cada navegação quando há confirmação recente.');
+assert(agenda.includes("portalTacsAgendaAreaSnapshotV1:"),
+  'Agendas deve reutilizar snapshot confirmado da área mesmo quando a sessão recebe novo token.');
+assert(!agendaCard.includes("b.id='atualizarPaginaAgendasFlutuante'"),
+  'Agenda não pode recriar o botão flutuante Atualizar página.');
+assert(unified.includes("selectRoleFromTap('admin',e)")&&unified.includes("selectRoleFromTap('tacs',e)")&&unified.includes("selectRoleFromTap('morador',e)"),
+  'Os três perfis devem usar o mesmo controlador de toque.');
+assert(!unified.includes("setTimeout(function(){showRole('admin')},0)")&&!unified.includes("setTimeout(function(){showRole('tacs')},0)"),
+  'Administrador e TACS não podem usar atraso artificial na troca de perfil.');
+assert(unified.includes("focusRoleField(role)"),
+  'A troca de perfil deve manter a caixa de identificação/PIN disponível para digitação.');
 
 console.log('Central Administrativa: navegação direta sem iframe, retorno BFCache e Agenda no iPhone validados.');
