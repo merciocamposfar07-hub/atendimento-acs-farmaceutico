@@ -272,6 +272,33 @@ var returnFlag=false;
 try{returnFlag=sessionStorage.getItem('portalTacsRetornoCentralV1')==='1'}catch(e){}
 if(!isAdminPanel&&!fromCentral&&!returnFlag)return;
 
+/*
+ * SINGLE_PIN_ENTRY_V1
+ * A autenticação por PIN pertence somente à entrada da Central.
+ * Nos painéis administrativos, uma sessão já existente (ou navegação vinda da Central)
+ * elimina os formulários legados de PIN sem alterar permissões, dados ou regras dos módulos.
+ */
+function hasCentralSession(){
+  try{return !!(sessionStorage.getItem('portalTacsAdminTokenV1')||sessionStorage.getItem('portalTacsTerritorioTokenV1'))}catch(e){return false}
+}
+function removeRedundantPinAccess(){
+  if(!isAdminPanel||!(fromCentral||hasCentralSession()))return;
+  var style=document.getElementById('portalTacsSinglePinEntryV1');
+  if(!style){
+    style=document.createElement('style');
+    style.id='portalTacsSinglePinEntryV1';
+    style.textContent=[
+      '#adminLogin,#tacsLogin,#accessActions,#pinHelp,#loginAdminTab,#loginTacsTab{display:none!important}',
+      'label[for="pin"],#pin,label[for="adminPin"],#adminPin,label[for="tacsPinLogin"],#tacsPinLogin,label[for="tacsPinPublicacoes"],#tacsPinPublicacoes,label[for="tacsPinAccess"],#tacsPinAccess{display:none!important}',
+      '#entrar,#entrarTacs,#loginAdmin,#loginTacs,#adminLoginButton,#tacsLoginButton{display:none!important}'
+    ].join('\n');
+    (document.head||document.documentElement).appendChild(style);
+  }
+  ['adminLogin','tacsLogin','accessActions','pinHelp','loginAdminTab','loginTacsTab','pin','adminPin','tacsPinLogin','tacsPinPublicacoes','tacsPinAccess','entrar','entrarTacs','loginAdmin','loginTacs','adminLoginButton','tacsLoginButton'].forEach(function(id){
+    var n=document.getElementById(id);if(n)n.hidden=true;
+  });
+}
+
 function centralUrl(){
   var saved='';
   try{saved=sessionStorage.getItem('portalTacsCentralReturnUrlV1')||''}catch(e){}
@@ -287,6 +314,7 @@ function centralUrl(){
 }
 
 function install(){
+  removeRedundantPinAccess();
   if(document.getElementById('portalTacsBackCentralV1'))return;
   if(!document.body){setTimeout(install,0);return;}
   var bar=document.createElement('div');
