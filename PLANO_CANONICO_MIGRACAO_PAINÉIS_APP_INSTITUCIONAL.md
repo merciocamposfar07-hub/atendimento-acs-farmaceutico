@@ -323,3 +323,26 @@ Deduplicação continua reservada à Tarefa 13; timeout/sessão continua na Tare
 Gate específico `TAREFA_12_CACHE_FRESCOR_OK` aprovado junto com o gate pós-auditoria `TAREFA_11_DESEMPENHO_MODULOS_OK`. A suíte integral, o `QUALITY_GATE_V101_OK` e a homologação `V101_INTERNO_APROVADO=SIM` passaram no workflow `34725768331`. GitHub Pages do mesmo estado: run `34725763575`, success. Apps Script permaneceu na versão `208`, pois não houve alteração de backend.
 
 **Sequência canônica:** Tarefa 11 revalidada após correção pós-auditoria; Tarefa 12 encerrada tecnicamente; Tarefa 13 permanece a próxima etapa.
+
+
+## Tarefa 13 autorizada — Deduplicação de requisições ao servidor
+O núcleo passa a coordenar leituras idênticas feitas pela Central e pelos módulos para evitar chamadas repetidas ao Apps Script.
+
+Fluxo:
+`pedido de leitura → chave canônica por ação/modo/área/sessão → reutilizar voo remoto em andamento ou resposta remota recente → distribuir aos consumidores → escrita invalida imediatamente o compartilhamento`.
+
+Regras:
+- broker `ConectaModuleCoreV1.requests` fica somente em memória no shell;
+- tokens, PINs e chaves de confiança não são persistidos nem entram em claro na chave;
+- `escopo` do módulo não separa Agendas de Profissionais quando ambos pedem o mesmo `admin_dados`;
+- Agendas e Profissionais passam a consumir o mesmo voo de `admin_dados`;
+- as leituras principais de Moradores, Recados, Suporte, Território e Municípios usam o mesmo contrato;
+- escrita nunca é deduplicada;
+- qualquer mutação invalida a janela recente e impede resposta antiga de repovoá-la;
+- cache/frescor da Tarefa 12 permanece não autoritativo;
+- timeout e preservação de sessão continuam reservados à Tarefa 14.
+
+### Status da Tarefa 13: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_13_DEDUP_REQUISICOES_OK`.
+
+Nenhuma mudança de backend Apps Script foi necessária; a versão de produção deve permanecer em **208**.
