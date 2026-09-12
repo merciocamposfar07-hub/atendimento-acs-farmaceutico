@@ -26,6 +26,7 @@ assert.match(access,/registerTrustedDevice\(role\)[\s\S]*rememberRole\(role\)/);
 assert.match(central,/abrirAcessoLocal\('admin',pin\)/);
 assert.match(central,/abrirAcessoLocal\('tacs',pin\)/);
 assert.match(tacsQuick,/getProfile\(\)/);
+assert.match(tacsQuick,/ConectaAcessoUnificado\.marcarPerfil==='function'\)window\.ConectaAcessoUnificado\.marcarPerfil\('TACS'\)/);
 
 // Morador reconhecido entra por PIN e não expõe nome antes da autenticação.
 assert.match(access,/if\(role==='MORADOR'\)return !!profile\(\)/);
