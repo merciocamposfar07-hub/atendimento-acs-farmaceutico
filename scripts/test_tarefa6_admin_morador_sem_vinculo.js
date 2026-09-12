@@ -22,8 +22,8 @@ assert(diagStart>=0&&diagEnd>diagStart,'Função de diagnóstico administrativo 
 const diagBlock=access.slice(diagStart,diagEnd);
 assert.doesNotMatch(diagBlock,/saveProfile\(|saveSession\(|openResidentPortal\(|localStorage\.setItem|ConectaMoradorPinLocalV2/,'Diagnóstico não pode gravar sessão/vínculo residencial local.');
 
-assert.match(access,/function createResidentPin\(\)[\s\S]*adminResidentDiagnostic\(\)[\s\S]*não pode criar vínculo ou PIN de Morador/);
-assert.match(access,/function loginResident\(\)[\s\S]*adminResidentDiagnostic\(\)[\s\S]*somente o diagnóstico sem vínculo/);
+assert.match(access,/function createResidentPin\(\)[\s\S]*RESIDENT_CORE_DIAGNOSTIC\|\|adminResidentDiagnostic\(\)[\s\S]*não pode criar vínculo ou PIN de Morador/);
+assert.match(access,/function loginResident\(\)[\s\S]*RESIDENT_CORE_DIAGNOSTIC\|\|adminResidentDiagnostic\(\)[\s\S]*não assume sessão de Morador/);
 
 // Backend: ação exclusiva de diagnóstico autenticada pelo vínculo administrativo seguro.
 assert.match(backend,/conecta_morador_diagnostico_admin/);
