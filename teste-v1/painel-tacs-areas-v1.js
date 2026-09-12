@@ -237,8 +237,14 @@ function post(action,fields,resultAction,cb){
   document.body.appendChild(frame);document.body.appendChild(form);form.submit();active.pollTimer=setTimeout(poll,active.wait);
 }
 
-function territoryPost(action,extra,cb){post(action,payload(extra),'admin_territorio_result',cb);}
-function csvPost(action,areaId,body,cb){post(action,payload({areaId:areaId,payload:JSON.stringify(body||{})}),'admin_csv_result',cb);}
+function territoryPost(action,extra,cb){
+  if(!syncSessionFromStorage()){cb({ok:false,temporario:true,message:'A sessão da Central ainda está sincronizando. Não é necessário fazer outro login.'});return;}
+  post(action,payload(extra),'admin_territorio_result',cb);
+}
+function csvPost(action,areaId,body,cb){
+  if(!syncSessionFromStorage()){cb({ok:false,temporario:true,message:'A sessão da Central ainda está sincronizando. Não é necessário fazer outro login.'});return;}
+  post(action,payload({areaId:areaId,payload:JSON.stringify(body||{})}),'admin_csv_result',cb);
+}
 
 function loadData(message,operationMessage){
   if(!syncSessionFromStorage()){
@@ -345,9 +351,10 @@ function renderTacsUnitOptions(current){
 }
 
 function openTacs(t){
+  var baseArea=t?workAreaById(t.areaId):scopedArea();
   el('tacsForm').reset();el('tacsId').value=t&&t.tacsId||'';el('tacsProfile').value=normalizeAccessProfile(t&&t.perfil||'TACS');el('tacsName').value=t&&t.nomeCompleto||'';el('tacsCns').value=cnsText(t&&t.cnsProfissional||'');
   el('tacsBirth').value=birthText(t&&t.dataNascimento||'');el('tacsCpf').value=cpfText(t&&t.cpf||'');el('tacsRegistration').value=t&&t.matricula||'';el('tacsPhone').value=phoneText(t&&t.telefone||'');el('tacsEmail').value=t&&t.email||'';
-  el('tacsArea').value=t&&t.areaId||'';renderTacsUnitOptions(t&&t.unidadeId||'');el('tacsMicroarea').value=t&&t.microarea||'';el('tacsActive').checked=Boolean(t&&bool(t.ativo));
+  el('tacsArea').value=t&&t.areaId||(baseArea&&baseArea.areaId)||selectedWorkAreaId||'';renderTacsUnitOptions(t&&t.unidadeId||(baseArea&&baseArea.unidadeId)||'');el('tacsMicroarea').value=t&&t.microarea||(baseArea&&baseArea.microareaPadrao)||'';el('tacsActive').checked=Boolean(t&&bool(t.ativo));
   el('tacsPin').required=!t;
   var selecionadas=t&&Array.isArray(t.permissoes)?t.permissoes:TACS_PERMISSIONS.map(function(item){return item[1];});
   TACS_PERMISSIONS.forEach(function(item){el(item[0]).checked=selecionadas.indexOf(item[1])!==-1;});
@@ -431,6 +438,7 @@ function saveArea(event){
     var saved=r.area||body,found=false;
     data.areas=data.areas.map(function(a){if(text(a.areaId)===text(saved.areaId)){found=true;return saved;}return a;});
     if(!found)data.areas.push(saved);
+    selectedWorkAreaId=normArea(saved.areaId||selectedWorkAreaId);persistWorkArea(selectedWorkAreaId);
     render();openArea(saved);
     status(bool(saved.ativa)?'Vínculo confirmado: '+text(saved.areaNome||saved.areaId)+' → '+text(saved.unidadeNome||saved.unidadeId)+' • Área ativa.':text(r.message||'Área salva e validada.'),'ok');
   });
