@@ -133,3 +133,20 @@ Validação concluída em 12/09/2026 sem avanço para a Tarefa 2.
 - primeiro acesso UBS confirmado sem criação de vínculo permanente de aparelho nesta tarefa.
 
 A validação em aparelho real continua sendo a confirmação visual final da experiência, mas não há pendência técnica conhecida da Tarefa 1 nos gates automatizados e na implantação publicada.
+
+
+## Comprovação de validação e implantação
+
+Validação concluída em 12/09/2026:
+
+- gate específico: `TAREFA_1_PERFIL_UBS_OK`;
+- acesso unificado: `Conecta acesso unificado e correções pendentes: OK`;
+- regressão integral: `REGRESSAO_INTEGRAL_V1_OK`;
+- quality gate: `QUALITY_GATE_V101_OK`;
+- workflow de implantação Apps Script: run `34711600074`, conclusão `success`;
+- versão Apps Script implantada e validada: `198`;
+- health pós-implantação: moradores, território, CSV, manutenção, isolamento, agendas Japaranduba/Matias, portal público Japaranduba/Matias e conteúdo público confirmados;
+- GitHub Pages do código validado: run `34711593498`, conclusão `success`;
+- GitHub Pages da revisão mais recente subsequente: run `34711695935`, conclusão `success`.
+
+A validação interna comprova código, contratos, regressões, backend e publicação. A experiência visual/operacional no iPhone do usuário continua sujeita ao teste do usuário antes de qualquer afirmação de aprovação final de uso.
