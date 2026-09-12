@@ -179,9 +179,15 @@ function installTask9ModuleGate(){
 
 /* TAREFA_11_DESEMPENHO_MODULOS_V1:
    cache de leitura somente da sessão atual, separado por modo/área/módulo.
-   Não substitui autenticação, não confirma escrita e não implementa versionamento remoto
-   (isso permanece reservado à Tarefa 12). */
+   Não substitui autenticação nem confirma escrita. */
+/* TAREFA_12_FRESCOR_CACHE_V1:
+   todo snapshot do core passa a carregar referência explícita de versão/frescor.
+   Cache nunca é autoridade atual: ao ser exibido, exige consulta remota obrigatória.
+   Dados críticos só voltam ao estado confirmado depois de resposta do servidor. */
 var PERFORMANCE_PREFIX='portalConectaModulePerfV1:';
+var PERFORMANCE_SCHEMA_VERSION=2;
+var PERFORMANCE_STALE_MS=60000;
+var PERFORMANCE_VERSION_KEYS=['serverVersion','remoteVersion','version','versao','revision','updatedAt','atualizadoEm','ultimaAtualizacao','lastUpdated','timestamp'];
 var PERFORMANCE_SECRET_KEYS={
   token:1,admintoken:1,territoriotoken:1,sessiontoken:1,bearer:1,authorization:1,
   accesstoken:1,refreshtoken:1,quickkey:1,chaveconfianca:1,pin:1,pinhash:1,pinsalt:1
@@ -216,32 +222,92 @@ function performanceFingerprint(value){
   for(var i=0;i<s.length;i++){var code=s.charCodeAt(i);a=Math.imul(a^code,16777619);b=Math.imul(b^code,3266489917)}
   return (a>>>0).toString(16)+(b>>>0).toString(16);
 }
+function performanceExplicitVersion(value){
+  if(!value||typeof value!=='object')return'';
+  for(var i=0;i<PERFORMANCE_VERSION_KEYS.length;i++){
+    var k=PERFORMANCE_VERSION_KEYS[i],v=value[k];
+    if(v!=null&&typeof v!=='object'&&text(v))return k+':'+text(v);
+  }
+  var containers=['meta','metadata','controle','contexto'];
+  for(var j=0;j<containers.length;j++){
+    var nested=value[containers[j]];
+    if(!nested||typeof nested!=='object')continue;
+    for(var x=0;x<PERFORMANCE_VERSION_KEYS.length;x++){
+      var nk=PERFORMANCE_VERSION_KEYS[x],nv=nested[nk];
+      if(nv!=null&&typeof nv!=='object'&&text(nv))return containers[j]+'.'+nk+':'+text(nv);
+    }
+  }
+  return'';
+}
+function performanceVersionReference(safe,fingerprint){
+  return performanceExplicitVersion(safe)||('fp:'+fingerprint);
+}
+function performanceFreshnessMeta(item){
+  var confirmedAt=Number(item&&item.confirmedAt||0),age=confirmedAt?Math.max(0,Date.now()-confirmedAt):Number.POSITIVE_INFINITY;
+  return {
+    cached:true,
+    authoritative:false,
+    requiresRemote:true,
+    stale:!confirmedAt||age>PERFORMANCE_STALE_MS||Boolean(item&&item.legacyUnversioned),
+    legacyUnversioned:Boolean(item&&item.legacyUnversioned),
+    ageMs:age,
+    confirmedAt:confirmedAt,
+    checkedAt:Number(item&&item.checkedAt||0),
+    fingerprint:item&&item.fingerprint||'',
+    cacheVersionReference:item&&item.cacheVersionReference||''
+  };
+}
 function performanceRead(name){
   var key=performanceKey(name);if(!key)return null;
   try{
     var item=JSON.parse(sessionStorage.getItem(key)||'null');
-    if(!item||item.schemaVersion!==1||!item.data||item.areaId!==areaId()||item.mode!==mode())return null;
+    if(!item||!item.data||item.areaId!==areaId()||item.mode!==mode())return null;
+    if(item.schemaVersion===1){
+      item.legacyUnversioned=true;
+      item.cacheVersionReference='';
+      item.requiresRemote=true;
+      return item;
+    }
+    if(item.schemaVersion!==PERFORMANCE_SCHEMA_VERSION||!item.cacheVersionReference)return null;
+    item.requiresRemote=true;
     return item;
   }catch(e){return null}
 }
 function performancePrime(name,apply){
   var item=performanceRead(name);
-  if(item&&typeof apply==='function')apply(item.data,{cached:true,changed:false,confirmedAt:Number(item.confirmedAt||0),fingerprint:item.fingerprint||''});
+  if(item&&typeof apply==='function')apply(item.data,performanceFreshnessMeta(item));
   return item;
 }
 function performanceCommit(name,data,apply){
   var key=performanceKey(name),safe=performanceSanitize(data);
-  if(!key||!safe||typeof safe!=='object')return {changed:true,item:null};
-  var previous=performanceRead(name),fingerprint=performanceFingerprint(safe),changed=!previous||previous.fingerprint!==fingerprint;
-  var item={schemaVersion:1,module:performanceModuleName(name),mode:mode(),areaId:areaId(),confirmedAt:Date.now(),fingerprint:fingerprint,data:safe};
+  if(!key||!safe||typeof safe!=='object')return {changed:true,item:null,authoritative:false};
+  var previous=performanceRead(name),fingerprint=performanceFingerprint(safe),cacheVersionReference=performanceVersionReference(safe,fingerprint),now=Date.now();
+  var changed=!previous||previous.fingerprint!==fingerprint||previous.cacheVersionReference!==cacheVersionReference||Boolean(previous.legacyUnversioned);
+  var item={
+    schemaVersion:PERFORMANCE_SCHEMA_VERSION,
+    module:performanceModuleName(name),
+    mode:mode(),
+    areaId:areaId(),
+    confirmedAt:now,
+    checkedAt:now,
+    cacheVersionReference:cacheVersionReference,
+    fingerprint:fingerprint,
+    data:safe
+  };
   try{sessionStorage.setItem(key,JSON.stringify(item))}catch(e){}
-  if(changed&&typeof apply==='function')apply(safe,{cached:false,changed:true,confirmedAt:item.confirmedAt,fingerprint:fingerprint});
-  return {changed:changed,item:item,previous:previous};
+  var meta={cached:false,authoritative:true,requiresRemote:false,stale:false,changed:changed,confirmedAt:now,checkedAt:now,cacheVersionReference:cacheVersionReference,fingerprint:fingerprint};
+  if(changed&&typeof apply==='function')apply(safe,meta);
+  return {changed:changed,item:item,previous:previous,authoritative:true,cacheVersionReference:cacheVersionReference};
 }
 function performanceForget(name){var key=performanceKey(name);if(key)try{sessionStorage.removeItem(key)}catch(e){}}
 function performanceSame(name,data){
-  var previous=performanceRead(name);if(!previous)return false;
-  return previous.fingerprint===performanceFingerprint(performanceSanitize(data));
+  var previous=performanceRead(name);if(!previous||previous.legacyUnversioned)return false;
+  var safe=performanceSanitize(data),fingerprint=performanceFingerprint(safe);
+  return previous.fingerprint===fingerprint&&previous.cacheVersionReference===performanceVersionReference(safe,fingerprint);
+}
+function performanceFreshness(name){
+  var item=performanceRead(name);
+  return item?performanceFreshnessMeta(item):{cached:false,authoritative:false,requiresRemote:true,stale:true,legacyUnversioned:false,ageMs:Number.POSITIVE_INFINITY,confirmedAt:0,checkedAt:0,fingerprint:'',cacheVersionReference:''};
 }
 var performanceApi={
   read:performanceRead,
@@ -249,6 +315,9 @@ var performanceApi={
   commit:performanceCommit,
   forget:performanceForget,
   same:performanceSame,
+  freshness:performanceFreshness,
+  schemaVersion:PERFORMANCE_SCHEMA_VERSION,
+  staleAfterMs:PERFORMANCE_STALE_MS,
   fingerprint:function(data){return performanceFingerprint(performanceSanitize(data))}
 };
 
