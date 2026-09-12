@@ -444,7 +444,7 @@ function conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p){
   if(!conectaAcessoV1Texto_(ubs.unidadeId))throw new Error('O perfil UBS ainda não possui unidade vinculada.');
   if(!conectaAcessoV1Texto_(ubs.funcaoUbs))throw new Error('O perfil UBS ainda não possui função cadastrada.');
   return {
-    ok:true,perfil:'UBS',cadastroId:ubs.tacsId,nome:ubs.nomeCompleto,funcaoUbs:ubs.funcaoUbs,
+    ok:true,perfil:conectaAcessoV1Texto_(ubs.perfil)||'UBS',cadastroId:ubs.tacsId,nome:ubs.nomeCompleto,funcaoUbs:ubs.funcaoUbs,
     unidadeId:ubs.unidadeId,permissoes:Array.isArray(ubs.permissoes)?ubs.permissoes.slice():[],
     vinculoAparelhoCriado:false,
     message:'Responsável UBS identificado. Nenhum vínculo permanente de aparelho foi criado nesta etapa.'
