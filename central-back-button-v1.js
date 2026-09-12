@@ -373,7 +373,9 @@ function install(){
   btn.addEventListener('click',function(){
     btn.disabled=true;
     try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
-    if(fromCentral&&history.length>1){history.back();return;}
+    /* RETORNO_CENTRAL_SESSAO_V1:
+       nunca usa history.back(), pois o histórico do Safari pode apontar para a tela de PIN.
+       Retorna explicitamente para a Central e preserva a sessão já existente em sessionStorage. */
     location.assign(centralUrl());
   });
   bar.appendChild(btn);
