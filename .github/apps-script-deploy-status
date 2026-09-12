@@ -1,6 +1,6 @@
-run_id=34715479401
-head_sha=1e93e8c6e6d29103331e21860d1e276049627a22
+run_id=34715608111
+head_sha=69b11841cccd0f2cda232c41b3c109ebcd2d93d6
 conclusion=failure
 jobs=testar-e-implantar:completed:failure
 failed_steps=Criar versão, atualizar a mesma implantação e validar
-recorded_at=2026-09-12T19:54:40Z
+recorded_at=2026-09-12T19:57:23Z
