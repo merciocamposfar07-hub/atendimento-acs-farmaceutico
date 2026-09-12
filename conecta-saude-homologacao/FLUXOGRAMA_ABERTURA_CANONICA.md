@@ -82,3 +82,7 @@ A Tarefa 1 autorizada em 12/09/2026 acrescenta **UBS** como quarto perfil de ent
 `Tela local → usuário solicita alteração/reserva → servidor valida estado atual + sessão + território/permissão → servidor confirma → interface marca como concluída.`
 
 O cache não substitui a autoridade do servidor. Ele elimina a espera desnecessária para desenhar e navegar pela interface.
+
+
+### Status da Tarefa 1: VALIDADA — 12/09/2026
+A inclusão do perfil UBS no primeiro acesso e no cadastro administrativo foi validada por gate específico, suíte integral, implantação Apps Script versão 196 e GitHub Pages publicado. O escopo permanece limitado ao perfil UBS isolado; combinações de perfis UBS e reconhecimento persistente do computador ficam fora desta tarefa.
