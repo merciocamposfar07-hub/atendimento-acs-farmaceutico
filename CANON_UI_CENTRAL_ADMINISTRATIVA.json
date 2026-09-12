@@ -22,7 +22,7 @@
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6",
   "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_01_PERFIL_UBS_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
-  "visualValidation": "pending-user-iphone",
+  "visualValidation": "pending-user-device",
   "notes": [
     "Tela administrativa usa uma única base #071827; cabeçalho, corpo, rodapé e dock não criam faixas cromáticas estruturais.",
     "Ícone oficial canônico preservado.",
@@ -93,7 +93,7 @@
     "UBS"
   ],
   "task1ProfileUbs": {
-    "status": "validated",
+    "status": "validated-technical-deployed",
     "authorizedOn": "2026-09-12",
     "standaloneOnly": true,
     "registrationFields": [
@@ -116,6 +116,12 @@
       "pagesRunId": 34710674013,
       "pagesArtifactVerified": true,
       "task2CombinationsIntroduced": false
-    }
+    },
+    "fullTestWorkflowRun": 34710566535,
+    "appsScriptDeploymentValidated": true,
+    "pagesDeploymentRun": 34710674013,
+    "pagesDeploymentHead": "266319d8153802fad8b893638264bf176b67cfae",
+    "pagesDeploymentSuccess": true,
+    "userDeviceValidation": "pending"
   }
 }
