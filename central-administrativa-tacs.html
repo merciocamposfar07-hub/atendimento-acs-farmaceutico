@@ -2043,6 +2043,21 @@ html.csc-central-login-visible #loginPanel #adminLogin:not([hidden]) .csc-admin-
 html.csc-central-login-visible #loginPanel #tacsLogin:not([hidden]) .csc-admin-only-auth{display:block!important}
 html.csc-central-login-visible #loginPanel #adminLogin:not([hidden]) .actions,
 html.csc-central-login-visible #loginPanel #tacsLogin:not([hidden]) .actions{display:grid!important}
+
+/* CENTRAL_ESTADOS_APP_2026_09_12_V1
+   Fluxo canônico: tela de acesso OU Central autenticada. Nunca empilhadas.
+   Alteração restrita à Central; não afeta os módulos internos. */
+html.csc-central-state-login #identityPanel,
+html.csc-central-state-login #healthPanel,
+html.csc-central-state-login #modulesPanel{display:none!important}
+html.csc-central-state-app #loginPanel{display:none!important}
+html.csc-central-state-app #identityPanel:not([hidden]),
+html.csc-central-state-app #healthPanel:not([hidden]),
+html.csc-central-state-app #modulesPanel:not([hidden]){display:block!important}
+html.csc-central-state-login body,
+html.csc-central-state-app body{min-height:100dvh}
+html.csc-central-state-login main,
+html.csc-central-state-app main{min-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
