@@ -2291,7 +2291,7 @@ window.addEventListener('pagehide',function(){if(sessionTimer)clearInterval(sess
 <script>
 (function(){
 'use strict';
-var source='/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?v=20260910-shell-unico-v1';
+var source='/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?v=20260912-tarefa2-perfis-ubs-v1';
 fetch(source,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text();}).then(function(html){
   html=html.replace('<head>','<head><base href="/atendimento-acs-farmaceutico/teste-v1/">');
   try{delete window.PortalTacsAdminApp4ShellR6}catch(e){window.PortalTacsAdminApp4ShellR6=false}
