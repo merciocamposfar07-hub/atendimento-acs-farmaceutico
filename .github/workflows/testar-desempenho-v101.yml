@@ -84,22 +84,25 @@ jobs:
       - name: Confirmar que regras críticas continuam presentes
         run: |
           set -euo pipefail
-          grep -Fq "add('action', 'reservar')" portal-odontologia-segunda-sexta.js
-          grep -Fq "optimisticRemaining: Math.max(0, Number(available) - 1)" portal-odontologia-segunda-sexta.js
+          grep -Fq "params.set('action', 'reservar_get')" portal-odontologia-segunda-sexta.js
+          if grep -Fq "optimisticRemaining: Math.max(0, Number(available) - 1)" portal-odontologia-segunda-sexta.js; then
+            echo 'Falha: abatimento otimista antigo foi reintroduzido.'
+            exit 1
+          fi
           grep -Fq "validDocument(el('cpf') && el('cpf').value)" portal-odontologia-segunda-sexta.js
           grep -Fq "Solicitar atendimento odontológico (dentista)" portal-odontologia-segunda-sexta.js
           grep -Fq "Solicitar atendimento odontológico de emergência (dentista)" portal-odontologia-segunda-sexta.js
           grep -Fq "TACS_PERFORMANCE_CACHE_V101" apps-script/ZZZZ_21_PerformanceCacheV101.gs
           grep -Fq "TACS_CAMPANHAS_PERIODO_V1" apps-script/ZZZZ_34_CampanhasPeriodoV1.gs
           grep -Fq "Campanhas no mês" campanhas-periodo-v1.js
-          grep -Fq "Vínculo salvo:" painel-oficial-organizacoes-municipios.html
-          grep -Fq "Enviar solicitação em card azul-petróleo" portal-ajustes-finais.js
+          grep -Fq "Área vinculada e ativa" painel-oficial-organizacoes-municipios.html
+          grep -Fq "Card profissional com identificação da área e do TACS responsável." portal-ajustes-finais.js
           if grep -Fq "Enviar solicitação por escrito no WhatsApp" portal-ajustes-finais.js; then
             echo 'Falha: o botão verde antigo de envio por escrito foi reintroduzido.'
             exit 1
           fi
           grep -Fq "Aguarde a confirmação dos dados atuais antes de salvar." painel-oficial-agendas-vagas.html
-          grep -Fq "if(!pageSeen)" portal-auto-update.js
+          grep -Fq "releaseMismatch=!pageRelease||pageRelease!==remote" portal-auto-update.js
           grep -Fq "if(pageSeen!==remote)" portal-auto-update.js
           grep -Fq "QUALITY_GATE_V101_OK" scripts/test_quality_gate_v101.js
           if grep -Fq "currentUrl=new URL" portal-auto-update.js; then
