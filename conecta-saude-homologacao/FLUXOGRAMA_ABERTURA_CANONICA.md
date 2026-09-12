@@ -118,7 +118,7 @@ A Tarefa 2 não implementa reconhecimento persistente do aparelho, segunda entra
 
 
 ### Status da Tarefa 2: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
-Matriz de 14 perfis validada, incluindo **UBS pura**. Gate específico e suíte integral aprovados. Apps Script versão 200 implantado com health checks aprovados e GitHub Pages publicado. A validação visual final no aparelho do usuário permanece pendente. A Tarefa 3 não foi iniciada.
+Matriz de 14 perfis validada, incluindo **UBS pura**. Gate específico e suíte integral aprovados. Apps Script versão 200 implantado com health checks aprovados e GitHub Pages publicado. A validação global em aparelhos reais permanece concentrada na etapa final obrigatória de testes.
 
 
 ### Registro canônico — Tarefa 3 / Identidade real após o acesso
@@ -133,11 +133,13 @@ Administrador e TACS usam o cadastro autenticado real. O primeiro acesso UBS dev
 
 A Tarefa 3 não cria reconhecimento persistente do aparelho, não altera a lógica de segundo acesso e não implementa o modo diagnóstico do Administrador.
 
-### Status da Tarefa 3: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL EM ANDAMENTO — 12/09/2026
+### Status final da Tarefa 3: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
 Gate específico: `TAREFA_3_IDENTIDADE_REAL_OK`.
 
+A implantação final da Tarefa 3 foi concluída no workflow `34718306192`. O Apps Script avançou da versão `200` para a versão **`201`**, mantendo o mesmo deployment, e todos os health checks passaram na primeira tentativa. O GitHub Pages do RETRY_3 também passou no run `34718300856`.
 
-### Bloqueio de implantação da Tarefa 3 — 12/09/2026
-A implementação da identidade real passou no gate específico e na suíte integral, e o GitHub Pages foi publicado. O Apps Script permanece na versão 200 porque o projeto atingiu o limite máximo de 200 versões.
+O bloqueio do limite de versões foi removido após limpeza das versões antigas não utilizadas, preservando a faixa recente `189–199`. O workflow de implantação permanece configurado para criar somente uma nova versão por publicação.
 
-Versões atualmente usadas por deployments: `6, 7, 9, 200`. A versão `199` não está em uso. A Tarefa 3 permanece tecnicamente aberta até a liberação de uma vaga na História do projeto, nova implantação e health check aprovado. A Tarefa 4 não deve ser iniciada antes desse fechamento.
+A Tarefa 3 não introduziu reconhecimento persistente do aparelho, lógica nova de segundo acesso nem modo diagnóstico administrativo. Esses comportamentos continuam reservados às tarefas seguintes.
+
+**Sequência canônica:** Tarefa 3 encerrada tecnicamente; Tarefa 4 liberada para execução.
