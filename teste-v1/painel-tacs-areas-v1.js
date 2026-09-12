@@ -539,21 +539,33 @@ function undoBatch(id){if(!confirm('Desfazer este lote? Linhas novas serão inat
 
 function switchSection(id){document.querySelectorAll('.section').forEach(function(s){s.classList.toggle('hidden',s.id!==id);});document.querySelectorAll('.sectionTab').forEach(function(b){b.classList.toggle('active',b.dataset.section===id);});if(id==='csvSection')loadBatches();}
 
-el('loginAdminTab').addEventListener('click',function(){showLogin('admin');});el('loginTacsTab').addEventListener('click',function(){showLogin('tacs');});
-el('adminLoginButton').addEventListener('click',function(){var pin=digits(el('adminPin').value);if(!/^\d{4,8}$/.test(pin)){loginStatus('Digite um PIN administrativo de 4 a 8 números.','err');return;}loginStatus('Validando o PIN…','warn');post('admin_login',{pin:pin,dispositivo:device},'admin_result',function(r){el('adminPin').value='';if(!r||r.ok!==true||!r.token){loginStatus(text(r&&r.message||'Login recusado.'),'err');return;}clearSession();token=r.token;mode='admin';sessionStorage.setItem(ADMIN_TOKEN_KEY,token);loadData('Acesso de administrador validado.');});});
-el('tacsLoginButton').addEventListener('click',function(){var pin=digits(el('tacsPinLogin').value);if(!/^\d{4,8}$/.test(pin)){loginStatus('Informe o PIN individual de 4 a 8 números.','err');return;}loginStatus('Validando o PIN individual…','warn');post('admin_territorio_login_pin',{pin:pin,dispositivo:device},'admin_territorio_result',function(r){el('tacsPinLogin').value='';if(!r||r.ok!==true||!r.token){loginStatus(text(r&&r.message||'Acesso recusado.'),'err');return;}clearSession();territorioToken=r.token;mode='tacs';sessionStorage.setItem(TACS_TOKEN_KEY,territorioToken);loadData('Acesso individual validado para '+text(r.areaNome||r.areaId)+'.');});});
-el('logoutButton').addEventListener('click',function(){var action=mode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout',result=mode==='tacs'?'admin_territorio_result':'admin_result';post(action,session(),result,function(){clearSession();loginStatus('Sessão encerrada.','ok');});});
+el('workAreaSelect').addEventListener('change',function(){changeWorkArea(this.value);});
 document.querySelectorAll('.sectionTab').forEach(function(b){b.addEventListener('click',function(){switchSection(b.dataset.section);});});
 el('newTacsButton').addEventListener('click',function(){openTacs(null);});el('cancelTacsButton').addEventListener('click',function(){el('tacsForm').classList.add('hidden');});el('tacsForm').addEventListener('submit',saveTacs);el('tacsProfile').addEventListener('change',syncAccessProfileUi);el('tacsActive').addEventListener('change',syncTacsActiveUi);
 el('newAreaButton').addEventListener('click',function(){openArea(null);});el('cancelAreaButton').addEventListener('click',function(){el('areaForm').classList.add('hidden');areaEditSnapshot=null;});el('areaForm').addEventListener('submit',saveArea);
 ['areaId','areaName','areaUnitId','areaUnitName','areaTacsId','areaMicroarea','areaTeam','areaSpreadsheet','areaCreateSource','areaDocumentLookup','areaActive'].forEach(function(id){var n=el(id);if(n){n.addEventListener('input',syncAreaLinkState);n.addEventListener('change',syncAreaLinkState);}});
 el('tacsList').addEventListener('click',function(e){var b=e.target.closest('.editTacs');if(b)openTacs(data.tacs.find(function(t){return t.tacsId===b.dataset.id;})||null);});
-el('areasList').addEventListener('click',function(e){var edit=e.target.closest('.editArea'),validate=e.target.closest('.validateArea');if(edit)openArea(data.areas.find(function(a){return a.areaId===edit.dataset.id;})||null);if(validate)validateArea(validate.dataset.id);});
-el('csvFile').addEventListener('change',function(){prepareFile(this.files&&this.files[0]);});el('previewCsvButton').addEventListener('click',previewCsv);el('importCsvButton').addEventListener('click',importCsv);el('csvArea').addEventListener('change',loadBatches);el('batchList').addEventListener('click',function(e){var b=e.target.closest('.undoBatch');if(b)undoBatch(b.dataset.id);});
+el('areasList').addEventListener('click',function(e){var edit=e.target.closest('.editArea'),validate=e.target.closest('.validateArea');if(edit)openArea(data.areas.find(function(a){return normArea(a.areaId)===normArea(edit.dataset.id);})||null);if(validate)validateArea(validate.dataset.id);});
+el('csvFile').addEventListener('change',function(){prepareFile(this.files&&this.files[0]);});el('previewCsvButton').addEventListener('click',previewCsv);el('importCsvButton').addEventListener('click',importCsv);el('batchList').addEventListener('click',function(e){var b=e.target.closest('.undoBatch');if(b)undoBatch(b.dataset.id);});
 bindMask('tacsBirth',birthText);
 bindMask('tacsCpf',cpfText);
 bindMask('tacsCns',cnsText);
 bindMask('tacsPhone',phoneText);
 
-if(mode)loadData('Conferindo a sessão existente…');else{showLogin('admin');loginStatus('Escolha o tipo de acesso.','ok');}
+/* TERRITORIO_HERDA_SESSAO_CENTRAL_V1:
+   Nenhum segundo login é permitido neste módulo. A Central autentica o perfil;
+   aqui apenas reutilizamos a sessão e o contexto já confirmados. */
+var hydrated=hydrateFromCentralCache();
+if(syncSessionFromStorage()){
+  loadData(hydrated?'Área exibida do contexto confirmado. Atualizando em segundo plano…':'Conferindo a sessão da Central…');
+}else{
+  workspaceStatus('Este painel usa o acesso já feito na Central. Retornando para concluir a sessão, sem pedir outro PIN…','warn');
+  setTimeout(function(){location.assign('/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260911-area-trabalho-v1');},500);
+}
+window.addEventListener('pageshow',function(){
+  if(syncSessionFromStorage()&&!active){
+    if(!cacheRendered)hydrateFromCentralCache();
+    if(!cacheRendered)loadData('Conferindo a sessão da Central…');
+  }
+});
 }());
