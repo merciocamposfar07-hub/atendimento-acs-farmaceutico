@@ -20,7 +20,7 @@
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6",
-  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_01_PERFIL_UBS_2026_09_12.md",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_TAREFA_02_COMBINACOES_PERFIS_UBS_2026_09_12.md",
   "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-device",
   "notes": [
@@ -84,7 +84,9 @@
     "panelLevelAdminTacsLoginSelectorRemoved": true,
     "ubsFirstAccessProfile": true,
     "ubsRegistrationInAdminTacsAccess": true,
-    "ubsDeviceRecognitionDeferred": true
+    "ubsDeviceRecognitionDeferred": true,
+    "ubsProfileCombinationsTask2": true,
+    "ubsStandaloneProfilePreserved": true
   },
   "firstAccessProfiles": [
     "ADMIN",
@@ -93,7 +95,7 @@
     "UBS"
   ],
   "task1ProfileUbs": {
-    "status": "validated-internal-deployed",
+    "status": "validated",
     "authorizedOn": "2026-09-12",
     "standaloneOnly": true,
     "registrationFields": [
@@ -122,12 +124,45 @@
     "pagesDeploymentRun": 34710674013,
     "pagesDeploymentHead": "266319d8153802fad8b893638264bf176b67cfae",
     "pagesDeploymentSuccess": true,
-    "userDeviceValidation": "pending",
+    "userDeviceValidation": "validated-by-user-2026-09-12",
     "appsScriptVersion": 198,
     "appsScriptWorkflowRun": 34711600074,
     "pagesWorkflowRuns": [
       34711593498,
       34711695935
     ]
+  },
+  "task2ProfileCombinationsUbs": {
+    "status": "implemented-awaiting-full-validation",
+    "authorizedOn": "2026-09-12",
+    "firstAccessDoors": [
+      "ADMIN",
+      "TACS",
+      "MORADOR",
+      "UBS"
+    ],
+    "validRegistrationProfiles": [
+      "ADMIN_TACS_UBS_MORADOR",
+      "ADMIN_TACS_UBS",
+      "ADMIN_UBS_MORADOR",
+      "TACS_UBS_MORADOR",
+      "ADMIN_UBS",
+      "TACS_UBS",
+      "UBS_MORADOR",
+      "ADMIN_TACS_MORADOR",
+      "ADMIN_TACS",
+      "ADMIN_MORADOR",
+      "TACS_MORADOR",
+      "TACS",
+      "ADMIN",
+      "UBS"
+    ],
+    "standaloneUbsPreserved": true,
+    "combinationsCreateNewEntryDoors": false,
+    "tacsRequirementsPreserved": true,
+    "ubsRequirementsPreserved": true,
+    "persistentDeviceRecognition": false,
+    "secondAccessBehaviorDeferred": true,
+    "diagnosticModeDeferred": true
   }
 }
