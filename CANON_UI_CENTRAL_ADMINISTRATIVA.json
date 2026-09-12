@@ -20,8 +20,8 @@
   "firstPanelRecommended": "Agendas e vagas",
   "supersededOnlyByExplicitUserApproval": true,
   "implementationRevision": "CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6",
-  "lastCorrectionRecord": "REGISTRO_CORRECOES_UI_DIAGNOSTICO_PERFIL_AGENDAS_2026_09_10.md",
-  "lastCorrectionDate": "2026-09-10",
+  "lastCorrectionRecord": "REGISTRO_CANONICO_PIN_LOCAL_V2_2026_09_11.md",
+  "lastCorrectionDate": "2026-09-12",
   "visualValidation": "pending-user-iphone",
   "notes": [
     "Tela administrativa usa uma única base #071827; cabeçalho, corpo, rodapé e dock não criam faixas cromáticas estruturais.",
@@ -29,10 +29,10 @@
     "Ícones dos módulos ampliados e com contraste institucional consistente.",
     "Textos secundários usam contraste mínimo visual reforçado na camada R6.",
     "Retorno pelo histórico/BFCache restaura o contexto visual imediatamente antes da releitura do servidor.",
-    "Sessão administrativa global e PIN individual do TACS permanecem preservados conforme regras anteriores.",
     "Correção aprovada em 10/09/2026: detalhes do diagnóstico ficam recolhidos e só aparecem após toque no indicador correspondente.",
     "Correção aprovada em 10/09/2026: o rodapé não usa mais a faixa estática 2026/2027.",
-    "Correção aprovada em 10/09/2026: o seletor de área e seus contêineres permanecem na família azul-petróleo, sem balão branco."
+    "Correção aprovada em 10/09/2026: o seletor de área e seus contêineres permanecem na família azul-petróleo, sem balão branco.",
+    "Regra de acesso 12/09/2026: o PIN é digitado somente na entrada da plataforma. Painéis administrativos não exibem novo login por PIN nem seletor Administrador geral/TACS da área; usam o perfil e as permissões já autenticados na Central."
   ],
   "presentationContract": {
     "reference": "4 • App institucional",
@@ -78,6 +78,9 @@
     "diagnosticFilterSource": "status oficial ATIVO/INATIVO/REPARO/SEM_CONFIRMACAO",
     "areaControlWhiteBalloonRemoved": true,
     "profileAdminNamesOnClick": true,
-    "agendaFreezeMitigation": "navegacao direta + limpeza DOM limitada"
+    "agendaFreezeMitigation": "navegacao direta + limpeza DOM limitada",
+    "singlePinAtPlatformEntry": true,
+    "panelLevelPinLoginRemoved": true,
+    "panelLevelAdminTacsLoginSelectorRemoved": true
   }
 }
