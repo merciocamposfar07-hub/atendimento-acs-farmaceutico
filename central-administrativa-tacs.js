@@ -196,6 +196,17 @@ function resumePendingModule(){
   setTimeout(function(){openModule(proximo.name,proximo.title,proximo.options)},0);
   return true;
 }
+function priorizarSincronizacaoTerritorioPendente(){
+  if(active&&/^(?:admin_login|admin_territorio_login_pin)$/.test(text(active.action))){
+    schedulePoll(0);
+    return true;
+  }
+  if(remoteAuthScope&&remoteAuthPin){
+    scheduleRemoteAuthSync(remoteAuthSeq,0);
+    return true;
+  }
+  return false;
+}
 function remoteAuthSuccess(scope,r,pin,hadLocal){
   if(scope==='tacs'){
     token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=text(r&&r.token);mode='tacs';
@@ -1203,6 +1214,7 @@ function openModule(name,title,options){
     /* UBS/TACS e áreas não exibe uma tela provisória diferente da tela real.
        Mantém a Central visível até a sessão remota estar pronta e então abre o painel verdadeiro. */
     if(name==='territorio'){
+      priorizarSincronizacaoTerritorioPendente();
       setStatus('Central disponível. Confirmando a sessão para abrir TACS e áreas…','warn');
       return;
     }
