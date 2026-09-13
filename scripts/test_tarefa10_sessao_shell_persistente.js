@@ -13,9 +13,10 @@ new Function(quick);
 new Function(core);
 
 // Shell único e persistente na Central.
-assert.match(central,/var shellFrames=\{\},shellActiveModule='',shellActiveRoute='',shellScopeKey=''/);
+assert.match(central,/var shellFrames=\{\},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey=''/);
 assert.match(central,/TAREFA_10_SHELL_PERSISTENTE_V1/);
 assert.match(central,/TAREFA_15_NAVEGACAO_INTERNA_V1/);
+assert.match(central,/TAREFA_16_AGENDAS_NATIVAS_V1/);
 assert.match(central,/voltar:closeViewer/);
 assert.match(central,/function ensureShellFrame\(name,url,title,routeId\)/);
 assert.match(central,/if\(frame\)return frame/,'Módulo já carregado deve reutilizar o mesmo iframe.');
@@ -24,12 +25,13 @@ assert.match(central,/function resetModuleShell\(\)/);
 assert.match(central,/window\.ConectaCentralShellV1=\{/);
 assert.match(central,/contagemFrames:function\(\)\{return Object\.keys\(shellFrames\)\.length\}/);
 
-// Agendas deixa de abandonar a Central e passa pelo mesmo shell.
+// Tarefa 16: Agendas passa a usar o host nativo; os demais módulos continuam no shell de frames da Tarefa 10.
 const openStart=central.indexOf('function openModule(name,title,options)');
 const closeStart=central.indexOf('function closeViewer()',openStart);
 const openBlock=central.slice(openStart,closeStart);
 assert.ok(openStart>=0&&closeStart>openStart,'Bloco openModule ausente.');
 assert.doesNotMatch(openBlock,/location\.(?:assign|href)/,'Módulo não pode abandonar a Central.');
+assert.match(openBlock,/if\(name==='agendas'\)\{showNativeAgenda\(title\|\|'Agendas e vagas',routeId\);return\}/);
 assert.match(openBlock,/ensureShellFrame\(name,url,title\|\|'Painel',routeId\)/);
 assert.match(openBlock,/showShellFrame\(name,frame,title\|\|'Painel',routeId\)/);
 
