@@ -1,0 +1,61 @@
+name: Hotfix cirúrgico toque TACS e confirmação UBS v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/hotfix-cirurgico-toque-releitura-ubs-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir-testar-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Aplicar somente as duas correções autorizadas
+        shell: python
+        run: |
+          from pathlib import Path
+          central=Path('central-administrativa-tacs.js')
+          c=central.read_text(encoding='utf-8')
+          old="active.pollTimer=setTimeout(poll,Math.max(0,Number(delay||active.nextWait||1600)));"
+          new="active.pollTimer=setTimeout(poll,Math.max(0,Number(delay==null?(active.nextWait||1600):delay)));"
+          if c.count(old)!=1: raise SystemExit('Gate schedulePoll: esperado exatamente uma vez.')
+          central.write_text(c.replace(old,new),encoding='utf-8')
+
+          territorio=Path('teste-v1/painel-tacs-areas-v1.js')
+          t=territorio.read_text(encoding='utf-8')
+          old2="el('tacsForm').classList.add('hidden');loadData('',text(r.message||'Cadastro salvo e conferido.'));"
+          new2="var salvo=r.tacs||body,encontrado=false;data.tacs=data.tacs.map(function(t){if(text(t.tacsId)===text(salvo.tacsId)){encontrado=true;return salvo;}return t;});if(!encontrado)data.tacs.push(salvo);el('tacsForm').classList.add('hidden');render();status(text(r.message||'Cadastro salvo e conferido.'),'ok');setTimeout(function(){if(!active)loadData('Dados territoriais atualizados.');},1200);"
+          if t.count(old2)!=1: raise SystemExit('Gate cadastro UBS: fechamento esperado exatamente uma vez.')
+          territorio.write_text(t.replace(old2,new2),encoding='utf-8')
+      - name: Instalar e testar
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          node --check central-administrativa-tacs.js
+          node --check teste-v1/painel-tacs-areas-v1.js
+          node scripts/test_primeiro_toque_paineis_v1.js
+          node scripts/test_tarefa1_perfil_ubs.js
+          node scripts/test_territorio_dom.js
+          npm test
+          test "$(git diff --name-only | sort)" = $'central-administrativa-tacs.js\nteste-v1/painel-tacs-areas-v1.js'
+      - name: Canonizar na main somente após testes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add central-administrativa-tacs.js teste-v1/painel-tacs-areas-v1.js
+          git commit -m 'Corrige resposta imediata de TACS e confirmação do cadastro UBS'
+          git push origin HEAD:main
