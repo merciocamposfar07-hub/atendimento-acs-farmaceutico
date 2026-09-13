@@ -467,3 +467,29 @@ Validação:
 - Apps Script permanece `208`.
 
 Registro: `REGISTRO_CORRECAO_RESTAURACAO_VISUAL_APP4_PAINÉIS_2026_09_12.md`.
+
+
+### Correção canônica — Apresentação dos painéis e WhatsApp
+Data: 12/09/2026
+
+Regras obrigatórias de apresentação:
+- referência visual: **4 • App institucional**;
+- tela única, sem faixa estrutural superior e sem divisão estrutural de cor;
+- cabeçalho faz parte do fluxo da página e sobe junto com o conteúdo;
+- cabeçalho nunca é sticky/fixed;
+- ícone oficial do Conecta + marca + descrição específica do painel em todos os painéis;
+- rodapé institucional obrigatório em todos os painéis;
+- proibido botão flutuante `Atualizar página` na Central;
+- Agendas mantém publicação por dia e agenda completa no Status do WhatsApp;
+- Recados e Campanhas mantêm publicação no Status do WhatsApp;
+- todos os cards compartilháveis usam o ícone oficial canônico do Conecta;
+- alterações desta correção são exclusivamente de apresentação/compartilhamento e não mexem em sessão, PIN, permissões, áreas, vagas, gravações ou backend.
+
+Validação:
+- gate `APRESENTACAO_PAINEIS_WHATSAPP_OK`;
+- workflow `34735145289` — success;
+- Pages do código `34735139837` — success;
+- Apps Script permanece `208`.
+
+Registro:
+`REGISTRO_CORRECAO_APRESENTACAO_PAINEIS_WHATSAPP_2026_09_12.md`.
