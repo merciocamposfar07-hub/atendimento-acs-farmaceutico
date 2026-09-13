@@ -50,6 +50,9 @@ on:
       - 'scripts/test_tarefa18_profissionais_nativos.js'
       - 'scripts/test_restauracao_app4_paineis_v1.js'
       - 'scripts/test_primeiro_toque_paineis_v1.js'
+      - 'scripts/test_auditoria_funcional_tarefas_1_18_v1.js'
+      - 'scripts/test_pin_local_v2.js'
+      - 'scripts/test_central_admin_territorial.js'
       - 'scripts/test_central_admin_performance_v1.js'
       - 'scripts/test_safari_bfcache_central_v1.js'
       - 'scripts/test_tarefa10_sessao_shell_persistente.js'
@@ -106,6 +109,8 @@ jobs:
           node --check scripts/test_restauracao_app4_paineis_v1.js
           node --check scripts/test_primeiro_toque_paineis_v1.js
           node --check scripts/test_auditoria_funcional_tarefas_1_18_v1.js
+          node --check scripts/test_pin_local_v2.js
+          node --check scripts/test_central_admin_territorial.js
           node --check central-tacs-login-rapido-v1.js
           node --check conecta-morador-session-v1.js
           node --check scripts/build_apps_script_release.js
