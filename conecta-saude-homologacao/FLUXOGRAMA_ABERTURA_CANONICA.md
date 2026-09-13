@@ -315,3 +315,19 @@ Gate `TAREFA_13_DEDUP_REQUISICOES_OK`, suíte integral, `QUALITY_GATE_V101_OK` e
 A Tarefa 13 é de frontend/core; Apps Script permanece na versão **208**.
 
 **Sequência canônica:** Tarefa 13 encerrada tecnicamente; Tarefa 14 liberada.
+
+
+### Registro canônico — Tarefa 14 / Timeout não destrói sessão
+No shell autenticado:
+
+`consulta remota → timeout/falha temporária → preservar sessão + contexto + módulo → manter último estado confirmado somente para leitura → nova sincronização em segundo plano`.
+
+Apenas uma recusa explícita de autenticação pode autorizar invalidação. Erro de rede, ausência momentânea de resposta ou processamento lento não retornam o usuário ao PIN e não limpam o painel.
+
+O núcleo comum publica `ConectaModuleCoreV1.sessionPolicy`, que normaliza falhas não autenticatórias como temporárias e preserváveis. Dados críticos continuam bloqueados para escrita enquanto a confirmação remota não chega.
+
+A Tarefa 14 não altera o backend Apps Script e não inicia a navegação histórica da Tarefa 15.
+
+### Status da Tarefa 14: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_14_TIMEOUT_SESSAO_OK`.
+
