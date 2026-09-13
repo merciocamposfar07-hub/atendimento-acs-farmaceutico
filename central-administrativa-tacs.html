@@ -564,7 +564,7 @@ html body .saude-resumo button.saude-numero[data-saude-filtro="SEM_CONFIRMACAO"]
 .csc-session-active #loginPanel:not(.csc-moradores-access){min-height:0!important;margin:0 0 12px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
 .csc-session-active #loginPanel:not(.csc-moradores-access)>h2,.csc-session-active #loginPanel:not(.csc-moradores-access)>.tabs,.csc-session-active #loginPanel:not(.csc-moradores-access)>#adminLogin,.csc-session-active #loginPanel:not(.csc-moradores-access)>#tacsLogin,.csc-session-active #loginPanel:not(.csc-moradores-access)>.actions{display:none!important}
 .csc-moradores-access .area-control{margin-top:0!important;padding:14px!important;background:linear-gradient(145deg,var(--tacs-app-card2),var(--tacs-app-card))!important;border:1px solid var(--tacs-app-line)!important;border-radius:20px!important}
-.csc-moradores-access #tacsPinAccess,.csc-moradores-access label[for="tacsPinAccess"],.csc-moradores-access #loginTacs{display:block!important}
+.csc-session-active .csc-resident-redundant-tacs-access{display:none!important}
 .csc-pressed{transform:translateY(2px) scale(.965)!important;filter:brightness(1.12)!important;box-shadow:inset 0 4px 10px rgba(0,0,0,.34)!important}
 @media(max-width:430px){body.csc-brand-enhanced>header p{font-size:.82rem!important}}
 
@@ -2032,54 +2032,26 @@ html body #logout.csc-logout-button.csc-pressed{
   box-shadow:inset 0 3px 8px rgba(0,0,0,.28)!important;
 }
 
-/* CENTRAL_LOGIN_PIN_VISIVEL_2026_09_12_V1
-   Correção exclusiva da porta inicial: uma classe de sessão visual antiga não pode ocultar
-   o formulário do perfil que o usuário acabou de selecionar. Não afeta módulos/painéis. */
-html.csc-central-login-visible #loginPanel{display:block!important}
-html.csc-central-login-visible #loginPanel .login-tabs{display:grid!important}
-html.csc-central-login-visible #loginPanel #adminLogin:not([hidden]),
-html.csc-central-login-visible #loginPanel #tacsLogin:not([hidden]){display:block!important}
-html.csc-central-login-visible #loginPanel #adminLogin:not([hidden]) .csc-admin-only-auth,
-html.csc-central-login-visible #loginPanel #tacsLogin:not([hidden]) .csc-admin-only-auth{display:block!important}
-html.csc-central-login-visible #loginPanel #adminLogin:not([hidden]) .actions,
-html.csc-central-login-visible #loginPanel #tacsLogin:not([hidden]) .actions{display:grid!important}
 
-/* CENTRAL_ESTADOS_APP_2026_09_12_V1
-   Fluxo canônico: tela de acesso OU Central autenticada. Nunca empilhadas.
-   Alteração restrita à Central; não afeta os módulos internos. */
-/* CENTRAL_FLUXO_APP_LOCAL_FIRST_2026_09_12_V3
-   Entrada e Central são estados distintos do app.
-   O dock pertence somente ao estado autenticado; o rodapé institucional permanece visível também no acesso. */
-html.csc-central-state-login #cscInstitutionalDock,
-html.csc-central-state-login .csc-dock{display:none!important}
-html.csc-central-state-login #cscPlatformFooter,
-html.csc-central-state-login .csc-platform-footer{
-  display:grid!important;
-  padding-bottom:calc(30px + env(safe-area-inset-bottom))!important;
+/* SESSAO_UNICA_PAINEL_2026_09_11_V2
+   PIN existe somente na entrada unificada. Em qualquer painel administrativo,
+   os controles legados de autenticação ficam sempre fora da interface. */
+.csc-admin-panel .csc-auth-control,
+.csc-admin-panel .csc-admin-only-auth,
+.csc-admin-panel #adminLogin,
+.csc-admin-panel #tacsLogin,
+.csc-admin-panel #loginAdminTab,
+.csc-admin-panel #loginTacsTab,
+.csc-admin-panel #tacsPinAccess,
+.csc-admin-panel label[for="tacsPinAccess"],
+.csc-admin-panel #tacsPinPublicacoes,
+.csc-admin-panel label[for="tacsPinPublicacoes"],
+.csc-admin-panel #entrarTacs,
+.csc-admin-panel #loginTacs,
+.csc-admin-panel .csc-resident-redundant-tacs-access{
+  display:none!important;
 }
-html.csc-central-state-login #loginPanel{display:block!important}
-html.csc-central-state-login #identityPanel,
-html.csc-central-state-login #healthPanel,
-html.csc-central-state-login #modulesPanel{display:none!important}
-html.csc-central-state-app #loginPanel,
-html.csc-central-state-app .csc-login-purpose{display:none!important}
-html.csc-central-state-app #cscInstitutionalDock,
-html.csc-central-state-app .csc-dock{display:grid!important}
-html.csc-central-state-app #identityPanel:not([hidden]),
-html.csc-central-state-app #healthPanel:not([hidden]),
-html.csc-central-state-app #modulesPanel:not([hidden]){display:block!important}
-
-html.csc-central-state-login #identityPanel,
-html.csc-central-state-login #healthPanel,
-html.csc-central-state-login #modulesPanel{display:none!important}
-html.csc-central-state-app #loginPanel{display:none!important}
-html.csc-central-state-app #identityPanel:not([hidden]),
-html.csc-central-state-app #healthPanel:not([hidden]),
-html.csc-central-state-app #modulesPanel:not([hidden]){display:block!important}
-html.csc-central-state-login body,
-html.csc-central-state-app body{min-height:100dvh}
-html.csc-central-state-login main,
-html.csc-central-state-app main{min-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+/* DIAGNOSTICO_INLINE_CORRECAO_PONTUAL_V4 compat: diagFilter=PENDING_VIEW?'PENDENTES':'' */
 </style>
 <script id="portalTacsAdminUiBehaviorR6">
 /*
@@ -2103,6 +2075,7 @@ var ADMIN_PANEL=CENTRAL||(
   /\/teste-v1\/painel-(?:profissionais-servicos|tacs-areas)-v1\.html$/i.test(PATH)
 );
 if(!ADMIN_PANEL)return;
+ROOT.classList.toggle('csc-admin-panel',!CENTRAL);
 
 var ADMIN_TOKEN='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN='portalTacsTerritorioTokenV1';
@@ -2138,13 +2111,10 @@ function panelTitle(){
 function centralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260910-app4-r6'+(isTerritory()?'&acesso=tacs':'')}
 function backToCentral(){
   try{sessionStorage.setItem(RETURN_FLAG,'1')}catch(e){}
-  try{
-    if(window.parent&&window.parent!==window&&window.parent.ConectaCentralShellV1&&typeof window.parent.ConectaCentralShellV1.voltar==='function'){
-      window.parent.ConectaCentralShellV1.voltar();
-      return;
-    }
-  }catch(e){}
-  location.replace(centralUrl());
+  var params=null,from=false;
+  try{params=new URLSearchParams(location.search||'');from=String(params.get('from')||'').toLowerCase()==='central'}catch(e){}
+  if(from&&history.length>1){history.back();return}
+  location.assign(centralUrl());
 }
 function vibrate(){try{if(navigator.vibrate)navigator.vibrate(8)}catch(e){}}
 
@@ -2187,7 +2157,7 @@ function buildAppbar(){
 }
 
 function markAuthControls(){
-  var loginPasswordIds=['pin','adminPin','tacsPinLogin'];
+  var loginPasswordIds=['pin','adminPin','tacsPinLogin','tacsPinAccess','tacsPinPublicacoes'];
   loginPasswordIds.forEach(function(id){
     var input=document.getElementById(id);
     if(!input||input.id==='tacsPin')return;
@@ -2197,7 +2167,7 @@ function markAuthControls(){
     if(wrap)wrap.classList.add('csc-auth-control','csc-admin-only-auth');
   });
   ['accessActions','pinHelp','loginAdminTab','loginTacsTab','adminLogin','tacsLogin'].forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-auth-control','csc-admin-only-auth')});
-  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs'].forEach(function(id){var n=document.getElementById(id);if(!n)return;if(CENTRAL&&id==='logout'){n.classList.remove('csc-admin-only-auth','csc-auth-control');return}n.classList.add('csc-admin-only-auth')});
+  ['login','entrar','adminLoginButton','tacsLoginButton','sair','logout','logoutButton','loginTacs','entrarTacs'].forEach(function(id){var n=document.getElementById(id);if(!n)return;if(CENTRAL&&id==='logout'){n.classList.remove('csc-admin-only-auth','csc-auth-control');return}n.classList.add('csc-admin-only-auth')});
   var accessTitle=document.getElementById('accessTitle');if(accessTitle)accessTitle.classList.add('csc-admin-only-auth');
 
   /* No painel de moradores, o perfil já foi definido pelo PIN da Central.
@@ -2249,16 +2219,12 @@ function showCentralHome(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function openRecordsPage(){
-  var shell=window.ConectaCentralShellV1;
-  if(shell&&typeof shell.abrir==='function'){shell.abrir('moradores','Prontuários',{view:'prontuarios',all:'1'});return}
   var area=encodeURIComponent(centralAreaId());
-  location.replace('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&view=prontuarios&all=1&from=central&v=20260912-task15-navigation-v1');
+  location.assign('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&view=prontuarios&all=1&from=central&v=20260910-prontuarios-todas-areas-v1');
 }
 function openPendingPage(){
-  var shell=window.ConectaCentralShellV1;
-  if(shell&&typeof shell.abrir==='function'){shell.abrir('suporte','Pendências da área',{view:'pending'});return}
   var area=encodeURIComponent(centralAreaId());
-  location.replace('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+'&view=pending&from=central&v=20260912-task15-navigation-v1');
+  location.assign('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+'&view=pending&from=central&v=20260910-pendencias-v5');
 }
 function openProfilePage(){
   var main=document.querySelector('main');if(!main)return;
