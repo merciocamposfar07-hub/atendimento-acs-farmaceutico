@@ -33,7 +33,7 @@ assert.match(core,/out\.authRecusada=true;out\.preservarSessao=false/);
 assert.match(core,/function finish\(result\)\{if\(done\)return;done=true;resolve\(sessionFailureNormalize\(result\)\)\}/);
 
 // Central: falha temporária preserva contexto/sessão e somente recusa explícita limpa.
-assert.match(central,/var authInvalida=Boolean\(r&&r\.temporario!==true&&/);
+assert.match(central,/var authInvalida=Boolean\(r&&r\.authRecusada===true\)/);
 assert.match(central,/if\(!authInvalida\)[\s\S]*Sessão preservada\. Sincronizando os dados em segundo plano/);
 assert.match(central,/if\(acessoLocalAberto\)\{bloquearAcessoLocal/);
 assert.match(central,/resetModuleShell\(\);token='';territoryToken='';mode='';sessionStorage\.removeItem\(TOKEN_KEY\)/);
