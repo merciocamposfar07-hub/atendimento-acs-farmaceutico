@@ -55,7 +55,8 @@ assert.match(access,/guardar\('ubs',pin/);
 
 // Perfis combinados continuam preservados após autenticação.
 assert.ok(backend.includes("perfil:conectaAcessoV1Texto_(ubs.perfil)||'UBS'"));
-assert.ok(access.includes("identityHeadline(r.nome||'Responsável UBS',r.perfil||'UBS')"));
+assert.ok(access.includes("identityHeadline(r.nome||'Acesso UBS',r.perfil||'UBS')"));
+assert.ok(access.includes("institucional=text(r&&r.perfil).toUpperCase()==='UBS'"));
 
 // A Tarefa 4 continua responsável apenas pelo reconhecimento de aparelho/perfil.
  // Tarefas posteriores podem acrescentar diagnóstico sem invalidar este contrato histórico.
