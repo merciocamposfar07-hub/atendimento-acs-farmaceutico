@@ -402,3 +402,39 @@ As execuções `34729087312`, `34729147803` e `34729263597` foram interrompidas 
 Nenhuma mudança de backend Apps Script foi feita; a produção permanece na versão **208**.
 
 **Regra de sequência:** Tarefa 15 encerrada tecnicamente e canonizada. Tarefa 16 permanece a próxima etapa e não foi iniciada.
+
+
+## Tarefa 16 autorizada — Migração definitiva de Agendas e vagas
+Primeiro bloco da migração definitiva painel a painel.
+
+Escopo desta tarefa:
+- migrar **somente Agendas e vagas** para o host nativo da Central;
+- preservar os demais painéis no shell existente até suas próprias etapas;
+- não alterar backend Apps Script.
+
+Fluxo canônico:
+`Central autenticada → Agendas e vagas → host nativo da Central → cache/snapshot válido → sincronização remota → edição → gravação → releitura real → confirmação → Voltar → mesma Central`
+
+Regras:
+- Agendas não usa `viewerFrame` como arquitetura normal;
+- `#nativeModuleHost` é a superfície nativa;
+- a página antiga de Agendas permanece apenas como fallback/histórico;
+- sessão, perfil, área, cache, deduplicação e timeout vêm do `ConectaModuleCoreV1`;
+- não existe PIN/login próprio no módulo nativo;
+- gravação só é declarada concluída depois de POST + releitura real + comparação dos campos;
+- divergência mantém o estado não confirmado;
+- desfazer também exige releitura confirmada;
+- alterações não salvas continuam protegidas pelo Voltar;
+- falha temporária preserva sessão e último dado válido;
+- demais painéis não foram migrados nesta tarefa.
+
+### Status final da Tarefa 16: VALIDADA INTERNAMENTE, PUBLICADA E CANONIZADA — 12/09/2026
+Gate `TAREFA_16_AGENDAS_NATIVAS_OK`, suíte integral, `QUALITY_GATE_V101_OK` e homologação interna aprovados no workflow `34730284225`.
+
+GitHub Pages do código validado: run `34730279163` — `success`.
+
+Backend Apps Script não foi alterado; produção permanece na versão **208**.
+
+As execuções `34730194156` e `34730225064` foram interrompidas apenas por contratos históricos das Tarefas 15/desempenho que ainda esperavam o shell sem o novo estado nativo; os gates foram alinhados sem remover proteções anteriores.
+
+**Sequência canônica:** Tarefa 16 encerrada no escopo Agendas e vagas. Os demais painéis permanecem inalterados e aguardam suas etapas próprias de migração.
