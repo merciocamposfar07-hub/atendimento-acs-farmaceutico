@@ -1208,19 +1208,18 @@ function shellHasUnsaved(frame){
   }
   try{return Boolean(frame&&frame.contentDocument&&frame.contentDocument.documentElement.dataset.tacsDirty==='1')}catch(e){return false}
 }
+function showPortalTacs(title,routeId,url){
+  /* RETORNO_CENTRAL_PORTAL_V3:
+     Portal TACS permanece dentro do shell persistente da Central.
+     O botão interno Voltar à Central chama o shell pai e apenas fecha o viewer. */
+  publishModuleCore();
+  var portalFrame=ensureShellFrame('portal',url,title||'Portal TACS',routeId);
+  showShellFrame('portal',portalFrame,title||'Portal TACS',routeId);
+}
 function openModule(name,title,options){
   if(name==='ubs'){if(mode==='admin')showAdminUbs(title||'UBS');return}
   var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
-  if(name==='portal'){
-    /* RETORNO_CENTRAL_PORTAL_V2:
-       Portal TACS permanece dentro do shell da Central.
-       O botão interno Voltar à Central chama ConectaCentralShellV1.voltar(),
-       fechando somente o viewer e preservando a sessão administrativa. */
-    publishModuleCore();
-    var portalFrame=ensureShellFrame(name,url,title||'Portal TACS',routeId);
-    showShellFrame(name,portalFrame,title||'Portal TACS',routeId);
-    return;
-  }
+  if(name==='portal'){showPortalTacs(title||'Portal TACS',routeId,url);return}
   var remoteReady=Boolean(token||territoryToken),localReady=localPanelAccessReady();
   if(!remoteReady&&!localReady){
     moduloPendente={name:name,title:title||'Painel',options:moduleRouteOptions(options)};
