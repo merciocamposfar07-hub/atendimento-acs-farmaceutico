@@ -1237,6 +1237,7 @@ window.PortalTacsMoradoresTransportV2={
   changeArea:changeArea,
   maybeActivateSituation:maybeActivateSituation,
   rebindNativeContext:rebindNativeContext,
-  version:'3.7.0-native-task17'
+  nativeCompat:'task17-moradores-native-v1',
+  version:'3.6.1'
 };
 }());
