@@ -587,7 +587,7 @@ function ensureShellOpening(){
   node=document.createElement('div');node.id='cscModuleOpening';
   node.setAttribute('role','status');node.setAttribute('aria-live','polite');
   node.style.cssText='padding:10px 14px;background:#102d46;color:#adc4d2;border-bottom:1px solid #2b5a76;font-weight:800;font-size:.86rem';
-  var frame=el('viewerFrame');viewer.insertBefore(node,frame||null);return node;
+  var nativeHost=el('nativeModuleHost'),frame=el('viewerFrame');viewer.insertBefore(node,nativeHost||frame||null);return node;
 }
 function setShellOpening(title,visible){
   var node=ensureShellOpening();if(!node)return;
