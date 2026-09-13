@@ -88,7 +88,7 @@ function create(host,options){
 
   function setDirty(v){dirty=Boolean(v);host.dataset.tacsDirty=dirty?'1':'0'}
   function remoteReady(){return Boolean(core&&typeof core.ready==='function'&&core.ready())}
-  function showWaitingSession(){var status=host.querySelector('#loginStatus');if(status){status.textContent='Painel pronto. Confirmando a sessão para carregar a base de moradores…';status.className='status warn'}}
+  function showWaitingSession(){var status=host.querySelector('#loginStatus');if(status){status.textContent='Aguarde enquanto os dados carregam…';status.className='status warn'}}
   function notify(type){
     if(type==='write-confirmed')setDirty(false);
   }
