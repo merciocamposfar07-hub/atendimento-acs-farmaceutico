@@ -102,6 +102,16 @@ test('local-first sem token remoto abre painéis reais',async({page})=>{
   await expect(page.locator('#modulesPanel')).toBeVisible();
   expect(await page.evaluate(()=>sessionStorage.getItem('portalTacsAdminTokenV1'))).toBeFalsy();
 
+  for(const name of ['moradores','agendas','profissionais','ubs']){
+    const button=page.locator('#moduleGrid .module[data-module="'+name+'"]');
+    await button.click();
+    await expect(page.locator('#viewer')).toBeVisible();
+    await expect(page.locator('.csc-pending-preview')).toHaveCount(0);
+    await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.ativo())).toBe(name);
+    await page.locator('#viewerBack').click();
+    await expect(page.locator('#viewer')).toBeHidden();
+  }
+
   for(const name of ['suporte','recados','territorio','municipios']){
     const button=page.locator('#moduleGrid .module[data-module="'+name+'"]');
     await button.click();
