@@ -221,13 +221,13 @@ function renderResidentDocumentEntry(){
  if(diagnostic)try{sessionStorage.removeItem(RESIDENT_TOKEN_KEY)}catch(e){}
  if(diagnostic){
   stage.innerHTML=
-   '<div class="csc-access-note"><strong>Diagnóstico administrativo do Morador</strong><br>Busque por CPF, Cartão SUS (CNS), nome + data de nascimento ou número de cadastro na área. Ao localizar o morador, o Conecta identifica também os integrantes da mesma família pelo vínculo já existente no CSV. Nenhum vínculo residencial será assumido por este aparelho.</div>'+
+   '<div class="csc-access-note"><strong>Diagnóstico administrativo do Morador</strong><br>Busque por CPF, Cartão SUS (CNS), nome, data de nascimento ou número de cadastro na área. Você pode preencher um, vários ou todos os campos. Ao localizar o morador, o Conecta identifica também os integrantes da mesma família pelo vínculo já existente no CSV. Nenhum vínculo residencial será assumido por este aparelho.</div>'+
    field('cscResidentCpf','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"')+
    field('cscResidentCns','Cartão SUS (CNS)','type="text" inputmode="numeric" maxlength="18" autocomplete="off" placeholder="000 0000 0000 0000"')+
    field('cscResidentNameDiagnostic','Nome completo','type="text" autocomplete="name" placeholder="Nome completo do morador"')+
    field('cscResidentBirthDiagnostic','Data de nascimento','type="text" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="DD/MM/AAAA"')+
    field('cscResidentAreaRegistration','Número de cadastro na área','type="text" inputmode="text" maxlength="12" autocomplete="off" placeholder="Ex.: 002"')+
-   '<p class="muted">Preencha apenas uma forma de busca. Para busca por nome, informe também a data de nascimento.</p>'+
+   '<p class="muted">Cada campo funciona de forma independente. Se mais de um campo for preenchido, o Conecta usa todos os dados informados para localizar o cadastro.</p>'+
    '<div class="csc-inline-actions"><button class="btn green" id="cscResidentDocumentNext" type="button">Continuar</button></div>';
  }else{
   var note='<p class="muted">Se o CPF ainda não estiver no cadastro territorial, o Conecta localizará seu registro por data de nascimento e, quando necessário, nome completo.</p>';
@@ -267,13 +267,20 @@ function startResidentDocument(){
 function renderResidentCoreResult(r){
  var stage=el('residentStage');if(!stage)return;
  if(state.coreMode===RESIDENT_CORE_DIAGNOSTIC){
-  var family=Array.isArray(r.familia)?r.familia:[],familyId=text(r.familiaId||r.cadastroArea),familyHtml='';
-  if(family.length){
+  var family=Array.isArray(r.familia)?r.familia:[],familyId=text(r.familiaId||r.cadastroArea),familyHtml='',familias=Array.isArray(r.familias)?r.familias:[];
+  if(familias.length){
+   familyHtml=familias.map(function(g){
+    var membros=Array.isArray(g.membros)?g.membros:[];
+    return '<div class="csc-access-note"><strong>Família'+(g.familiaId?' • cadastro '+esc(g.familiaId):'')+'</strong><br>'+
+     membros.map(function(m){return '<span style="display:block;margin-top:8px">'+(m.selecionado?'✓ ':'• ')+esc(m.nome||'Morador')+(m.nascimento?' — '+esc(m.nascimento):'')+'</span>'}).join('')+
+     '</div>';
+   }).join('');
+  }else if(family.length){
    familyHtml='<div class="csc-access-note"><strong>Família'+(familyId?' • cadastro '+esc(familyId):'')+'</strong><br>'+
     family.map(function(m){return '<span style="display:block;margin-top:8px">'+(m.selecionado?'✓ ':'• ')+esc(m.nome||'Morador')+(m.nascimento?' — '+esc(m.nascimento):'')+'</span>'}).join('')+
     '</div>';
   }
-  var foundTitle=r.consultaFamilia===true?'Cadastro familiar localizado':'Cadastro localizado';
+  var foundTitle=r.consultaMultipla===true?'Cadastros localizados':(r.consultaFamilia===true?'Cadastro familiar localizado':'Cadastro localizado');
   var person=r.nome?'<br><span class="csc-first-name">'+esc(r.nome)+'</span>':'';
   stage.innerHTML='<div class="csc-access-note"><strong>'+foundTitle+'</strong>'+person+
    '<br>'+esc(r.areaNome||r.areaId||'Área não informada')+(r.unidadeId?' • '+esc(r.unidadeId):'')+
@@ -288,13 +295,10 @@ function diagnoseResidentAdmin(){
  var proof=trustKey('ADMIN'),cpf=digits(el('cscResidentCpf')&&el('cscResidentCpf').value),cns=digits(el('cscResidentCns')&&el('cscResidentCns').value);
  var nome=text(el('cscResidentNameDiagnostic')&&el('cscResidentNameDiagnostic').value),nascimento=text(el('cscResidentBirthDiagnostic')&&el('cscResidentBirthDiagnostic').value);
  var cadastro=text(el('cscResidentAreaRegistration')&&el('cscResidentAreaRegistration').value),areaId=diagnosticAreaId();
- var metodos=(cpf?1:0)+(cns?1:0)+((nome||nascimento)?1:0)+(cadastro?1:0);
- if(!metodos){setStatus('Informe CPF, Cartão SUS, nome + data de nascimento ou número de cadastro na área.','err');return}
- if(metodos>1){setStatus('Preencha apenas uma forma de busca por vez.','err');return}
- if(cpf&&cpf.length!==11){setStatus('Informe o CPF no padrão 000.000.000-00.','err');return}
- if(cns&&cns.length!==15){setStatus('Informe os 15 números do Cartão SUS (CNS).','err');return}
- if((nome&&!nascimento)||(!nome&&nascimento)){setStatus('Para buscar por nome, informe também a data de nascimento.','err');return}
- if(nome&&digits(nascimento).length!==8){setStatus('Informe a data de nascimento no padrão DD/MM/AAAA.','err');return}
+ if(!cpf&&!cns&&!nome&&!nascimento&&!cadastro){setStatus('Informe ao menos um dado para pesquisar o morador.','warn');return}
+ if(cpf&&cpf.length!==11){setStatus('Confira o CPF informado.','warn');return}
+ if(cns&&cns.length!==15){setStatus('Confira o Cartão SUS (CNS) informado.','warn');return}
+ if(nascimento&&digits(nascimento).length!==8){setStatus('Confira a data de nascimento informada.','warn');return}
  if(!proof){setStatus('Este aparelho não possui reconhecimento administrativo seguro. Entre como Administrador primeiro.','err');return}
  setStatus('Consultando o cadastro sem criar vínculo…','warn');
  post('conecta_morador_diagnostico_admin',{
@@ -302,6 +306,7 @@ function diagnoseResidentAdmin(){
   coreMode:state.coreMode,dispositivo:device(),chaveConfianca:proof
  }).then(function(r){
   if(text(r.coreMode||r.modo)!==RESIDENT_CORE_DIAGNOSTIC)throw new Error('O servidor não confirmou o modo de diagnóstico administrativo.');
+  if(r.encontrado===false){setStatus(r.message||'Nenhum cadastro localizado com os dados informados.','warn');return}
   renderResidentCoreResult(r);
  }).catch(function(e){setStatus(e.message,'err')});
 }
