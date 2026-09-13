@@ -36,6 +36,9 @@ for(const cfg of modules){
     await page.setViewportSize({width:390,height:844});
     await prepareCentral(page,cfg.name);
     await expect(page.locator('#portalTacsAdminPreloadPoolV1')).toHaveCount(0);
+    if(cfg.name==='agendas'){
+      await page.evaluate(()=>sessionStorage.setItem('portalConectaModulePerfV1:admin:JAPARANDUBA:agendas',JSON.stringify({schemaVersion:2,module:'agendas',mode:'admin',areaId:'JAPARANDUBA',confirmedAt:Date.now(),checkedAt:Date.now(),cacheVersionReference:'teste-cache-corrompido',fingerprint:'teste-cache-corrompido',data:{ok:true,profissionais:[null],agendas:[null]}})));
+    }
     const centralPath=new URL(page.url()).pathname;
 
     const ms=await page.evaluate(moduleName=>{
@@ -53,6 +56,10 @@ for(const cfg of modules){
     if(cfg.native){
       await expect(page.locator('#viewer')).toHaveClass(/csc-native-viewer/);
       await expect(page.locator('#viewerFrame')).toBeHidden();
+      if(cfg.name==='agendas'){
+        await expect(page.locator('#nativeModuleHost .csc-ag-native')).toBeVisible();
+        await expect(page.locator('#nativeModuleHost')).not.toContainText('não pôde ser iniciado sem perder a sessão');
+      }
     }else{
       await expect(page.locator('#viewer')).toHaveClass(/csc-frame-viewer/);
       const frame=page.locator('iframe[data-shell-module="'+cfg.name+'"]').first();
