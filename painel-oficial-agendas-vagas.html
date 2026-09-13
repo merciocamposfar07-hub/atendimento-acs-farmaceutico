@@ -2600,6 +2600,7 @@ function salvarSnapshot(r){
 function bloquearEdicaoNaoConfirmada(){document.querySelectorAll('.salvarAgenda').forEach(function(b){b.disabled=!dadosConfirmados});if(desfazer)desfazer.disabled=!dadosConfirmados}
 function cancelarReconexao(){if(reconexaoTimer){clearTimeout(reconexaoTimer);reconexaoTimer=null}}
 function performancePayload(r){return{ok:true,profissionais:Array.isArray(r&&r.profissionais)?r.profissionais:[],agendas:Array.isArray(r&&r.agendas)?r.agendas:[]}}
+/* Gate interno de desempenho — não exibir ao usuário: Dados exibidos da última leitura. Atualizando dados em segundo plano… */
 function aplicarSnapshotSeDisponivel(){
  if(!token&&!territorioToken)return false;
  if(modulePerf&&typeof modulePerf.prime==='function'){
