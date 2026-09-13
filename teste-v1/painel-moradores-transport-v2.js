@@ -520,7 +520,6 @@ function renderBase(r,message,confirmed){
   ensureSituationUi();setBaseLoading(false);updateNote();syncControls();
   if(remoteConfirmed){
     hideStatus('loginStatus');
-    if(el('loginStatus'))el('loginStatus').textContent=message||'Base de moradores conferida.';
     hideLoadingStatus('operationStatus');
   }else{
     setStatus('loginStatus',message||'Aguarde enquanto os dados carregam…','warn');
