@@ -268,6 +268,22 @@ function openTacs(t){
   el('tacsForm').classList.remove('hidden');el('tacsForm').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
+function applyConfirmedTacsWrite(r){
+  var saved=r&&r.tacs,found=false;
+  if(saved&&text(saved.tacsId)){
+    data.tacs=data.tacs.map(function(item){
+      if(text(item&&item.tacsId)!==text(saved.tacsId))return item;
+      found=true;return saved;
+    });
+    if(!found)data.tacs.push(saved);
+  }
+  territoryConfirmed=true;
+  if(modulePerf&&typeof modulePerf.commit==='function')modulePerf.commit('territorio',territoryPerformancePayload(data));
+  render();
+  el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;
+  loginStatus('Dados territoriais confirmados.','ok');
+}
+
 function saveTacs(event){if(!territoryConfirmed){status('Aguarde a confirmação do servidor antes de alterar cadastros.','warn');return;}
   event.preventDefault();
   var profile=normalizeAccessProfile(el('tacsProfile').value),isTacs=profileHasTacs(profile),isUbs=profileHasUbs(profile),ubsInstitucional=isInstitutionalUbsProfile(profile),hasUnit=isTacs||isUbs,birth=birthText(el('tacsBirth').value),cns=digits(el('tacsCns').value),cpf=digits(el('tacsCpf').value),phone=digits(el('tacsPhone').value),pin=digits(el('tacsPin').value),isNew=!text(el('tacsId').value);
@@ -286,7 +302,7 @@ function saveTacs(event){if(!territoryConfirmed){status('Aguarde a confirmação
     if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar.'),'err');return;}
     var divergente=validarRetornoCadastro(r,body);
     if(divergente){status('Falha de integridade: o '+divergente+' retornou diferente do valor enviado. O formulário foi mantido aberto para impedir uma alteração silenciosa.','err');return;}
-    var salvo=r.tacs||body,encontrado=false;data.tacs=data.tacs.map(function(t){if(text(t.tacsId)===text(salvo.tacsId)){encontrado=true;return salvo;}return t;});if(!encontrado)data.tacs.push(salvo);el('tacsForm').classList.add('hidden');render();status(text(r.message||'Cadastro salvo e conferido.'),'ok');setTimeout(function(){if(!active)loadData('Dados territoriais atualizados.');},1200);
+    el('tacsForm').classList.add('hidden');applyConfirmedTacsWrite(r);status(text(r.message||'Cadastro salvo e conferido.'),'ok');
   });
 }
 
