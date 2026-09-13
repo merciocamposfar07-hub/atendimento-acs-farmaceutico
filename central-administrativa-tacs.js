@@ -1067,7 +1067,7 @@ function normalizeEmbeddedPanelFrame(frame){
       style=doc.createElement('style');style.id='cscEmbeddedApp4SingleHeaderV1';
       style.textContent=[
         '#cscInstitutionalAppbar{display:flex!important;position:static!important;top:auto!important;inset:auto!important;background:#071827!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}',
-        '#portalTacsBackCentralV1{display:none!important}',
+        (frame&&frame.dataset&&frame.dataset.shellModule==='portal')?'#portalTacsBackCentralV1{display:block!important}':'#portalTacsBackCentralV1{display:none!important}',
         'html,body,main,footer,.footer{background:#071827!important;background-image:none!important;border-top:0!important}',
         '#cscPlatformFooter{display:flex!important;position:static!important;background:#071827!important;border:0!important;box-shadow:none!important}'
       ].join('');
@@ -1212,15 +1212,13 @@ function openModule(name,title,options){
   if(name==='ubs'){if(mode==='admin')showAdminUbs(title||'UBS');return}
   var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
   if(name==='portal'){
-    /* RETORNO_CENTRAL_PORTAL_V1:
-       mantém o Portal TACS no mesmo contexto de navegação da Central.
-       Assim, a sessão administrativa em sessionStorage continua disponível
-       quando o usuário toca em Voltar à Central. */
-    try{
-      sessionStorage.setItem('portalTacsCentralReturnUrlV1',location.href);
-      sessionStorage.setItem('portalTacsRetornoCentralV1','1');
-    }catch(e){}
-    location.assign(url);
+    /* RETORNO_CENTRAL_PORTAL_V2:
+       Portal TACS permanece dentro do shell da Central.
+       O botão interno Voltar à Central chama ConectaCentralShellV1.voltar(),
+       fechando somente o viewer e preservando a sessão administrativa. */
+    publishModuleCore();
+    var portalFrame=ensureShellFrame(name,url,title||'Portal TACS',routeId);
+    showShellFrame(name,portalFrame,title||'Portal TACS',routeId);
     return;
   }
   var remoteReady=Boolean(token||territoryToken),localReady=localPanelAccessReady();
