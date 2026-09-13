@@ -1088,6 +1088,7 @@ function showShellFrame(name,frame,title,routeId){
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer','csc-frame-viewer');viewer.classList.remove('csc-native-viewer');viewer.hidden=false;
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   frame.hidden=false;document.body.classList.add('viewer-open');
+  if(frame.dataset.shellReady==='1')applyAdminUbsRemoteToFrame(frame);
   /* TAREFA_11_RESPOSTA_VISUAL_IMEDIATA_V1:
      o shell responde no mesmo toque; o módulo pode então pintar seu último dado confirmado
      enquanto a consulta remota continua em paralelo. */
