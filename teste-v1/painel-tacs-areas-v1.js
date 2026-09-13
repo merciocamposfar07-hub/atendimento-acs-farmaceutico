@@ -185,7 +185,7 @@ function territoryPerformancePayload(r){return{ok:true,tacs:Array.isArray(r&&r.t
 /* HOTFIX_TERRITORIO_CONTEXTO_LOCAL_V4:
    no acesso local-first, pinta imediatamente o último contexto territorial já confirmado
    pela Central. A escrita permanece bloqueada até existir sessão remota real. */
-var localFirstSyncTimer=null;
+var localFirstSyncTimer=null,territoryReconnectTimer=null,territoryReconnectAttempt=0;
 function localFirstWithoutRemote(){
   if(!moduleCore||typeof moduleCore.ready!=='function'||moduleCore.ready())return false;
   try{return new URLSearchParams(location.search||'').get('localfirst')==='1'&&Boolean(mode)}catch(e){return false}
@@ -208,6 +208,20 @@ function primeTerritoryFromCentralContext(){
     return true;
   }catch(e){return false}
 }
+function cancelTerritoryReconnect(){
+  if(territoryReconnectTimer){clearTimeout(territoryReconnectTimer);territoryReconnectTimer=null;}
+  territoryReconnectAttempt=0;
+}
+function scheduleTerritoryReconnect(message){
+  if(territoryReconnectTimer||!mode)return;
+  var waits=[700,1400,2600,4500,7000,10000],delay=waits[Math.min(territoryReconnectAttempt,waits.length-1)];
+  territoryReconnectAttempt++;
+  territoryReconnectTimer=setTimeout(function(){
+    territoryReconnectTimer=null;
+    if(!mode)return;
+    loadData(message||'Dados territoriais confirmados.',null,true);
+  },delay);
+}
 function scheduleLocalFirstRemoteSync(){
   if(localFirstSyncTimer)return;
   function check(){
@@ -225,9 +239,9 @@ function scheduleLocalFirstRemoteSync(){
 function syncTerritoryWriteState(){
   document.querySelectorAll('#newTacsButton,#newAreaButton,#previewCsvButton,#importCsvButton,#saveAreaButton,.editTacs,.editArea,.validateArea,.undoBatch,#tacsForm button[type="submit"],#areaForm button[type="submit"]').forEach(function(n){n.disabled=!territoryConfirmed});
 }
-function loadData(message,operationMessage){
-  var localFirst=localFirstWithoutRemote(),cached=null;
-  if(modulePerf&&typeof modulePerf.prime==='function'){
+function loadData(message,operationMessage,backgroundRetry){
+  var localFirst=localFirstWithoutRemote(),cached=null,wasConfirmed=territoryConfirmed;
+  if(!backgroundRetry&&modulePerf&&typeof modulePerf.prime==='function'){
     cached=modulePerf.prime('territorio',function(saved){
       data=territoryPerformancePayload(saved);territoryConfirmed=false;render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;
       loginStatus(localFirst?'Dados locais disponíveis. Confirmando a sessão em segundo plano…':'Aguarde enquanto os dados carregam…','warn');
@@ -239,9 +253,9 @@ function loadData(message,operationMessage){
     return;
   }
   var leituraPayload=payload({});coreRead('admin_territorio_dados',leituraPayload,function(done){post('admin_territorio_dados',leituraPayload,'admin_territorio_result',done)},function(r){
-    if(!r||r.ok!==true){var falha=moduleSessionPolicy&&typeof moduleSessionPolicy.classify==='function'?moduleSessionPolicy.classify(r):{explicitAuthRefusal:Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(text(r&&r.message)))};territoryConfirmed=false;syncTerritoryWriteState();if(!falha.explicitAuthRefusal){loginStatus(cached?'Última confirmação territorial permanece disponível somente para consulta; a atualização ainda não foi confirmada.':'Servidor temporariamente indisponível. A sessão territorial foi preservada; tente novamente sem redigitar o PIN.','warn');if(operationMessage)status('A alteração foi enviada, mas a releitura ainda não foi confirmada. A sessão permanece ativa.','warn');return}clearSession();loginStatus(text(r&&r.message||'A sessão foi recusada explicitamente pelo servidor.'),'err');if(operationMessage)status('A alteração foi salva, mas a autenticação foi recusada na releitura. Volte à Central.','err');return;}
+    if(!r||r.ok!==true){var falha=moduleSessionPolicy&&typeof moduleSessionPolicy.classify==='function'?moduleSessionPolicy.classify(r):{explicitAuthRefusal:Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(text(r&&r.message)))};if(!falha.explicitAuthRefusal){territoryConfirmed=wasConfirmed;if(!cached&&!wasConfirmed)cached=primeTerritoryFromCentralContext();syncTerritoryWriteState();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;loginStatus('Sessão ativa.','ok');if(operationMessage)status('A alteração foi enviada; a confirmação será refeita automaticamente em segundo plano.','warn');scheduleTerritoryReconnect(message);return}cancelTerritoryReconnect();clearSession();loginStatus(text(r&&r.message||'A sessão foi recusada explicitamente pelo servidor.'),'err');if(operationMessage)status('A alteração foi salva, mas a autenticação foi recusada na releitura. Volte à Central.','err');return;}
     var payload=territoryPerformancePayload(r),diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('territorio',payload):{changed:true};
-    territoryConfirmed=true;data=payload;
+    cancelTerritoryReconnect();territoryConfirmed=true;data=payload;
     if(diff.changed||!cached)render();else syncTerritoryWriteState();
     el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;
     loginStatus(diff.changed?(message||'Sessão validada.'):'Dados territoriais atuais confirmados; nenhuma mudança nova encontrada.','ok');
@@ -250,6 +264,7 @@ function loadData(message,operationMessage){
 }
 
 function clearSession(){
+  cancelTerritoryReconnect();
   token='';territorioToken='';mode='';sessionStorage.removeItem(ADMIN_TOKEN_KEY);sessionStorage.removeItem(TACS_TOKEN_KEY);
   el('dashboard').classList.add('hidden');el('logoutButton').disabled=true;
 }
