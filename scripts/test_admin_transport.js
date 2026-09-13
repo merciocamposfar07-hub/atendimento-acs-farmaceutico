@@ -549,22 +549,27 @@ async function testExpiredStoredSession(config) {
   const {window} = dom;
   await waitFor(() => {
     const status = window.document.getElementById('loginStatus');
-    return status && /sessão anterior não pôde ser reutilizada/i.test(status.textContent);
-  }, `A sessão antiga não foi tratada silenciosamente em ${config.file}.`);
+    if (!status) return false;
+    if (config.coreSession) {
+      return /sessão inválida|sessão.*expirada|sessão.*recusada|volte à central/i.test(status.textContent);
+    }
+    return /sessão anterior não pôde ser reutilizada/i.test(status.textContent);
+  }, `A recusa explícita da sessão antiga não foi tratada corretamente em ${config.file}.`);
 
   const status = window.document.getElementById('loginStatus');
   const expectedStoredSessionAction = config.file === 'teste-v1/painel-recados-campanhas-v1.html'
     ? 'admin_publicacoes_dados'
     : 'admin_dados';
   assert.deepEqual(actions, [expectedStoredSessionAction], `${config.file} fez consultas extras ao validar a sessão antiga.`);
-  assert.equal(status.classList.contains('erro'), false, `${config.file} exibiu alerta vermelho antes do PIN.`);
-  assert.equal(status.classList.contains('ok'), true, `${config.file} não voltou ao estado pronto para novo PIN.`);
   if (config.coreSession) {
-    // TAREFA_9: o módulo reporta a recusa, mas não pode apagar a sessão global.
-    // A invalidação pertence exclusivamente à Central.
+    // TAREFAS 9 + 14: recusa explícita pode ser sinalizada pelo módulo,
+    // mas a sessão global continua pertencendo à Central e não pode ser apagada pelo consumidor.
+    assert.equal(status.classList.contains('erro'), true, `${config.file} não sinalizou a recusa explícita de autenticação.`);
     assert.equal(window.sessionStorage.getItem('portalTacsAdminTokenV1'), 'token-antigo');
     assert.ok(window.sessionStorage.getItem('portalConectaModuleAuthIssueV1'), `${config.file} não reportou a tentativa de invalidar a sessão global.`);
   } else {
+    assert.equal(status.classList.contains('erro'), false, `${config.file} exibiu alerta vermelho antes do PIN.`);
+    assert.equal(status.classList.contains('ok'), true, `${config.file} não voltou ao estado pronto para novo PIN.`);
     assert.equal(window.sessionStorage.getItem('portalTacsAdminTokenV1'), null);
   }
   assert.equal(window.document.getElementById('entrar').disabled, false);
