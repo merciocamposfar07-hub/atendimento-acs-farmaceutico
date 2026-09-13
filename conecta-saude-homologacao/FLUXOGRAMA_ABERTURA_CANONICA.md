@@ -438,3 +438,32 @@ GitHub Pages do HEAD validado: `34731696614` — success.
 Apps Script permanece na versão **208**.
 
 **Encerramento canônico:** sequência original de Tarefas **1 a 18 concluída**. Nenhuma Tarefa 19 é criada.
+
+
+### Correção canônica — Restauração visual App4 dos painéis
+Data: 12/09/2026
+
+Correção pós-migração funcional das Tarefas 16–18.
+
+Fluxo visual canônico dos painéis:
+`Central → painel → cabeçalho App4 único → conteúdo do painel → seta única à direita → mesma Central`
+
+Regras:
+- referência visual continua sendo **4 • App institucional**;
+- ícone oficial canônico obrigatório no cabeçalho dos painéis;
+- marca `CONECTA SAÚDE COMUNITÁRIA` + título específico do painel;
+- uma única seta de retorno à direita;
+- proibido exibir botão textual `← Central` junto do cabeçalho App4;
+- proibido duplicar o cabeçalho interno de painéis embutidos;
+- fundo contínuo `#071827`, sem faixa/borda estrutural superior ou inferior;
+- painéis nativos não exibem textos técnicos de migração;
+- Agendas, Moradores e Profissionais permanecem nativos e funcionais;
+- backend não foi alterado.
+
+Validação:
+- gate `RESTAURACAO_APP4_PAINEIS_OK`;
+- workflow `34733744289` — success;
+- Pages `34733739185` — success;
+- Apps Script permanece `208`.
+
+Registro: `REGISTRO_CORRECAO_RESTAURACAO_VISUAL_APP4_PAINÉIS_2026_09_12.md`.
