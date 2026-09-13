@@ -160,7 +160,13 @@ function field(id,label,attrs){
 }
 function renderUbsAuthenticated(r){
  var out=el('cscUbsIdentity');if(!out)return;
- out.hidden=false;out.innerHTML='<strong>Identidade autenticada</strong><br><span class="csc-first-name">'+esc(identityHeadline(r.nome||'Responsável UBS',r.perfil||'UBS'))+'</span><br>'+esc(r.funcaoUbs||'Função não informada')+' • '+esc(r.unidadeId||'Unidade não informada');
+ var institucional=text(r&&r.perfil).toUpperCase()==='UBS';
+ out.hidden=false;
+ if(institucional){
+  out.innerHTML='<strong>UBS autenticada</strong><br><span class="csc-first-name">'+esc(r.unidadeId||'Unidade de saúde')+'</span><br>Perfil UBS';
+  return;
+ }
+ out.innerHTML='<strong>Identidade autenticada</strong><br><span class="csc-first-name">'+esc(identityHeadline(r.nome||'Acesso UBS',r.perfil||'UBS'))+'</span><br>'+esc(r.funcaoUbs||'Função não informada')+' • '+esc(r.unidadeId||'Unidade não informada');
 }
 function guardarUbsLocal(pin,r){
  var v=window.ConectaPinLocalV2;if(!v||typeof v.guardar!=='function'||!r)return Promise.resolve(false);

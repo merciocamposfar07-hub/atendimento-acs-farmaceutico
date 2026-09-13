@@ -711,20 +711,9 @@ function conectaAcessoV1RespostaUbs_(ubs,dispositivo,chave,mensagem){
 }
 
 function conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p){
-  var cpf=conectaAcessoV1Cpf_(p.cpf),pin=conectaAcessoV1Texto_(p.pin).replace(/\D/g,''),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
-  if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
-  if(!/^\d{4,8}$/.test(pin))throw new Error('Informe o PIN de acesso com 4 a 8 números.');
-  if(typeof tacsTerritorioV1LerTacs_!=='function'||typeof tacsTerritorioV1PerfilTem_!=='function')throw new Error('O cadastro de perfis da UBS não está disponível.');
-  var lista=tacsTerritorioV1LerTacs_().filter(function(item){
-    return item&&item.ativo===true&&tacsTerritorioV1PerfilTem_(item.perfil,'UBS')&&conectaAcessoV1Texto_(item.cpf).replace(/\D/g,'')===cpf;
-  });
-  if(lista.length!==1)throw new Error(lista.length>1?'Há mais de um cadastro UBS para este CPF. O administrador precisa corrigir a duplicidade.':'CPF não localizado em um perfil UBS ativo.');
-  var ubs=lista[0];
-  if(!ubs.pinSalt||!ubs.pinHash||!tacsTerritorioV1CompararSeguro_(ubs.pinHash,tacsTerritorioV1HashPin_(pin,ubs.pinSalt)))throw new Error('CPF ou PIN do perfil UBS incorreto.');
-  if(!conectaAcessoV1Texto_(ubs.unidadeId))throw new Error('O perfil UBS ainda não possui unidade vinculada.');
-  if(!conectaAcessoV1Texto_(ubs.funcaoUbs))throw new Error('O perfil UBS ainda não possui função cadastrada.');
-  var chave=conectaAcessoV1RegistrarUbsConfiavel_(ubs,dispositivo);
-  return conectaAcessoV1RespostaUbs_(ubs,dispositivo,chave,'Responsável UBS identificado. Este aparelho foi reconhecido para os próximos acessos por PIN.');
+  // Compatibilidade com versões antigas em cache: CPF deixa de identificar a UBS.
+  // O cadastro institucional e o computador da unidade usam somente o PIN.
+  return conectaAcessoV1LoginUbs_(p||{});
 }
 
 function conectaAcessoV1UbsPorPin_(pin){
@@ -753,7 +742,7 @@ function conectaAcessoV1LoginUbs_(p){
     ubs=conectaAcessoV1UbsPorPin_(pin);
     novaChave=conectaAcessoV1RegistrarUbsConfiavel_(ubs,dispositivo);
   }
-  if(!conectaAcessoV1Texto_(ubs.unidadeId)||!conectaAcessoV1Texto_(ubs.funcaoUbs))throw new Error('O cadastro UBS precisa de unidade e função válidas.');
+  if(!conectaAcessoV1Texto_(ubs.unidadeId))throw new Error('O cadastro UBS precisa de uma unidade de saúde válida.');
   return conectaAcessoV1RespostaUbs_(ubs,dispositivo,novaChave,novaChave?'UBS identificada pelo PIN. Este computador foi reconhecido para os próximos acessos.':'Acesso UBS validado neste computador.');
 }
 

@@ -9,6 +9,10 @@ async function blockExternal(page){
 }
 async function prepareCentral(page,name){
   await blockExternal(page);
+  await page.addInitScript(()=>{
+    sessionStorage.setItem('portalTacsAdminTokenV1','sessao-homologacao-interface-shell');
+    localStorage.setItem('portalTacsDispositivoV1','device-homologacao-interface-shell');
+  });
   await page.goto('central-administrativa-tacs.html',{waitUntil:'domcontentloaded'});
   await page.evaluate(moduleName=>{
     const modules=document.getElementById('modulesPanel');if(modules)modules.hidden=false;
@@ -18,36 +22,49 @@ async function prepareCentral(page,name){
 }
 
 const modules=[
-  {name:'moradores',path:'/teste-v1/painel-moradores-v2.html'},
-  {name:'recados',path:'/painel-oficial-recados-campanhas.html'},
-  {name:'profissionais',path:'/painel-oficial-profissionais-servicos.html'},
-  {name:'suporte',path:'/painel-suporte-moradores-v2.html'},
-  {name:'territorio',path:'/painel-oficial-tacs-areas.html'},
-  {name:'municipios',path:'/painel-oficial-organizacoes-municipios.html'},
-  {name:'agendas',path:'/painel-oficial-agendas-vagas.html'}
+  {name:'moradores',path:'/teste-v1/painel-moradores-v2.html',native:true},
+  {name:'recados',path:'/painel-oficial-recados-campanhas.html',native:false},
+  {name:'profissionais',path:'/painel-oficial-profissionais-servicos.html',native:true},
+  {name:'suporte',path:'/painel-suporte-moradores-v2.html',native:false},
+  {name:'territorio',path:'/painel-oficial-tacs-areas.html',native:false},
+  {name:'municipios',path:'/painel-oficial-organizacoes-municipios.html',native:false},
+  {name:'agendas',path:'/painel-oficial-agendas-vagas.html',native:true}
 ];
 
 for(const cfg of modules){
-  test('cartão '+cfg.name+' navega diretamente no primeiro toque',async({page,browserName})=>{
+  test('cartão '+cfg.name+' abre no shell no primeiro toque',async({page,browserName})=>{
     await page.setViewportSize({width:390,height:844});
     await prepareCentral(page,cfg.name);
     await expect(page.locator('#portalTacsAdminPreloadPoolV1')).toHaveCount(0);
+    const centralPath=new URL(page.url()).pathname;
 
-    await page.evaluate(moduleName=>{
+    const ms=await page.evaluate(moduleName=>{
       const b=document.querySelector('#moduleGrid .module[data-module="'+moduleName+'"]');
-      const t=performance.now();
-      b.click();
-      sessionStorage.setItem('homologacaoNavHandlerMs',String(performance.now()-t));
+      const t=performance.now();b.click();return performance.now()-t;
     },cfg.name);
 
-    await page.waitForURL(url=>{
-      const u=new URL(url);
-      return u.pathname.endsWith(cfg.path)&&u.searchParams.get('from')==='central';
-    },{waitUntil:'domcontentloaded'});
-
-    const ms=Number(await page.evaluate(()=>sessionStorage.getItem('homologacaoNavHandlerMs')||'9999'));
     expect(ms,cfg.name+': despacho do clique deve ficar abaixo de 100 ms').toBeLessThan(100);
+    await expect(page.locator('#viewer')).toBeVisible();
+    await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.ativo())).toBe(cfg.name);
+    await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.tipoAtivo())).toBe(cfg.native?'native':'frame');
+    expect(new URL(page.url()).pathname).toBe(centralPath);
     expect(new URL(page.url()).searchParams.get('preload')).toBeNull();
-    console.log(JSON.stringify({kind:'central-interface-action-direct',browserName,module:cfg.name,ms:Math.round(ms*100)/100}));
+
+    if(cfg.native){
+      await expect(page.locator('#viewer')).toHaveClass(/csc-native-viewer/);
+      await expect(page.locator('#viewerFrame')).toBeHidden();
+    }else{
+      await expect(page.locator('#viewer')).toHaveClass(/csc-frame-viewer/);
+      const frame=page.locator('iframe[data-shell-module="'+cfg.name+'"]').first();
+      await expect(frame).toBeVisible();
+      await expect.poll(()=>frame.getAttribute('src')).toContain(cfg.path);
+      const frameUrl=await page.evaluate(moduleName=>{
+        const f=document.querySelector('iframe[data-shell-module="'+moduleName+'"]');
+        return new URL((f&&f.getAttribute('src'))||'',location.href).href;
+      },cfg.name);
+      const u=new URL(frameUrl);expect(u.pathname.endsWith(cfg.path)).toBe(true);expect(u.searchParams.get('from')).toBe('central');expect(u.searchParams.get('preload')).toBeNull();
+    }
+
+    console.log(JSON.stringify({kind:'central-interface-action-shell',browserName,module:cfg.name,mode:cfg.native?'native':'frame',ms:Math.round(ms*100)/100}));
   });
 }

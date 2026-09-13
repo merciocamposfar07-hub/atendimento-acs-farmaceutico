@@ -226,6 +226,8 @@ async function testTerritoryPanel() {
   assert.match(html, /id="batchList"/);
   assert.match(js, /confirmarTodosImportaveis/);
   assert.match(js, /Desfazer este lote sem excluir linhas/);
+  assert.match(js, /if\(ubsInstitucional\)\{birth='';cpf='';phone='';\}/,
+    'UBS institucional deve limpar os campos pessoais antes de montar o payload.');
   assert.match(js, /dataNascimento:birth/);
   assert.match(js, /if\(operationMessage\)status\(operationMessage,'ok'\)/,
     'Uma gravação concluída deve substituir a mensagem de validação pela confirmação final.');
@@ -302,8 +304,14 @@ async function testTerritoryPanel() {
   assert.equal(window.document.getElementById('tacsCns').required,false,'UBS não deve exigir CNS de TACS.');
   assert.equal(window.document.getElementById('tacsMicroarea').required,false,'UBS não deve exigir microárea de TACS.');
   assert.equal(window.document.getElementById('tacsUnit').required,true,'UBS deve exigir unidade vinculada.');
-  assert.equal(window.document.getElementById('tacsUbsRole').required,true,'UBS deve exigir função do responsável.');
-  assert.equal(window.document.getElementById('tacsUbsRoleWrap').classList.contains('hidden'),false,'Campo de função UBS deve aparecer.');
+  assert.equal(window.document.getElementById('tacsUbsRole').required,false,'UBS institucional não deve exigir função de pessoa responsável.');
+  assert.equal(window.document.getElementById('tacsUbsRoleWrap').classList.contains('hidden'),true,'Campo de função pessoal não deve aparecer no perfil UBS institucional.');
+  for (const id of ['tacsName','tacsBirth','tacsCpf','tacsPhone','tacsEmail']) {
+    const field=window.document.getElementById(id);
+    assert.equal(field.required,false,'UBS institucional não deve exigir dado de pessoa física: '+id);
+    assert.equal(field.closest('.csc-person-field').classList.contains('hidden'),true,'Campo pessoal deve ficar oculto no perfil UBS: '+id);
+  }
+  assert.equal(window.document.getElementById('tacsFormTitle').textContent,'Nova UBS','Título deve identificar cadastro institucional da unidade.');
   assert.equal(window.document.getElementById('tacsPermissionsBlock').classList.contains('hidden'),false,'UBS deve permitir configuração explícita de permissões.');
   for (const id of ['permRead','permEdit','permStatus','permCsv','permPublish','permAgenda','permProfessionals']) {
     assert.equal(window.document.getElementById(id).checked,false,'Novo perfil UBS não deve receber permissão automática: '+id);

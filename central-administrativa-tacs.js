@@ -928,20 +928,22 @@ function renderAdminUbsList(host){
   }
   host.innerHTML='<div class="csc-admin-ubs"><div class="csc-admin-ubs-intro"><h2>UBS cadastradas</h2><p>Selecione a unidade. O Administrador não precisa informar PIN ou outra credencial da UBS.</p></div>'+
     groups.map(function(g){
-      var ativos=g.profiles.filter(function(p){return p.ativo!==false}),responsaveis=g.profiles.map(function(p){return text(p.nomeCompleto)||text(p.tacsId)}).filter(Boolean);
+      var ativos=g.profiles.filter(function(p){return p.ativo!==false});
+      var responsaveis=g.profiles.filter(function(p){return text(p.perfil).toUpperCase()!=='UBS'}).map(function(p){return text(p.nomeCompleto)}).filter(Boolean);
       return '<div class="csc-admin-ubs-card" data-ubs-unit="'+esc(g.unitId)+'"><h3>'+esc(adminUbsUnitName(g.unitId))+'</h3>'+
-        '<p>ID da unidade: '+esc(g.unitId)+'</p><p>Responsável(is): '+esc(responsaveis.join(', ')||'não informado')+'</p>'+
+        '<p>ID da unidade: '+esc(g.unitId)+'</p>'+(responsaveis.length?'<p>Responsável(is) vinculado(s): '+esc(responsaveis.join(', '))+'</p>':'')+
         '<span class="csc-admin-ubs-status">'+(ativos.length?'Ativa':'Inativa')+'</span>'+
         '<div class="csc-admin-ubs-actions"><button class="csc-admin-ubs-btn view" type="button" data-ubs-open="view" data-unit="'+esc(g.unitId)+'">Apenas visualizar</button>'+
         '<button class="csc-admin-ubs-btn edit" type="button" data-ubs-open="edit" data-unit="'+esc(g.unitId)+'">Editar</button></div></div>';
     }).join('')+'</div>';
 }
+
 function renderAdminUbsDetail(host){
   var g=adminUbsCurrentGroup();if(!g){renderAdminUbsList(host);return}
   var areas=g.areas||[],areaId=text(adminUbsContext.areaId);
   if(!areaId&&areas.length)areaId=normArea(areas[0].areaId);
   adminUbsContext.areaId=areaId;
-  var responsaveis=g.profiles.map(function(p){return text(p.nomeCompleto)||text(p.tacsId)}).filter(Boolean);
+  var responsaveis=g.profiles.filter(function(p){return text(p.perfil).toUpperCase()!=='UBS'}).map(function(p){return text(p.nomeCompleto)}).filter(Boolean);
   var edit=adminUbsContext.mode==='edit',semArea=!areas.length;
   var panels=[
     ['moradores','Moradores','Cadastros e situação dos moradores'],
@@ -951,16 +953,17 @@ function renderAdminUbsDetail(host){
     ['profissionais','Profissionais e serviços','Equipe e serviços da unidade']
   ];
   host.innerHTML='<div class="csc-admin-ubs"><div class="csc-admin-ubs-detail"><h2>'+esc(adminUbsUnitName(g.unitId))+'</h2>'+
-    '<p>'+esc(responsaveis.join(', ')||'Responsável não informado')+'</p>'+
+    (responsaveis.length?'<p>'+esc(responsaveis.join(', '))+'</p>':'')+
     '<div class="csc-admin-ubs-actions"><button type="button" class="csc-admin-ubs-btn view '+(!edit?'active':'')+'" data-ubs-mode="view">Apenas visualizar</button>'+
     '<button type="button" class="csc-admin-ubs-btn edit '+(edit?'active':'')+'" data-ubs-mode="edit">Editar</button></div>'+
     '<p><strong>Modo atual:</strong> '+(edit?'Editar — o Administrador pode corrigir os painéis da UBS.':'Apenas visualizar — alterações ficam bloqueadas.')+'</p>'+
     (areas.length?'<label for="cscAdminUbsArea">Área vinculada à UBS</label><select id="cscAdminUbsArea">'+areas.map(function(a){return '<option value="'+esc(normArea(a.areaId))+'" '+(normArea(a.areaId)===areaId?'selected':'')+'>'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('')+'</select>':
       '<p>Esta UBS ainda não possui área vinculada. O cadastro pode ser corrigido no modo Editar.</p>')+
     '<div class="csc-admin-ubs-panels">'+panels.map(function(p){return '<button type="button" class="csc-admin-ubs-panel" data-ubs-panel="'+p[0]+'" '+(semArea?'disabled':'')+'>'+p[1]+'<small>'+p[2]+'</small></button>'}).join('')+
-    (edit?'<button type="button" class="csc-admin-ubs-panel" data-ubs-panel="territorio">Cadastro da UBS<small>Responsável, unidade, PIN, perfil e permissões</small></button>':'')+
+    (edit?'<button type="button" class="csc-admin-ubs-panel" data-ubs-panel="territorio">Cadastro da UBS<small>Unidade de saúde, PIN, perfil e permissões</small></button>':'')+
     '</div></div><button type="button" class="csc-admin-ubs-btn csc-admin-ubs-back" data-ubs-back="1">Voltar à lista de UBS</button></div>';
 }
+
 function applyAdminUbsRemoteMode(root){
   if(!root)return;
   var doc=root.ownerDocument||document,view=Boolean(adminUbsContext&&adminUbsContext.mode==='view'&&shellActiveModule!=='ubs');

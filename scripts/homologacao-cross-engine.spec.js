@@ -18,8 +18,42 @@ async function blockExternal(page){
   await page.route('https://cdn.onesignal.com/**',route=>route.abort());
   await page.route('https://api.onesignal.com/**',route=>route.abort());
 }
+async function primeCentralSession(page){
+  await page.addInitScript(()=>{
+    sessionStorage.setItem('portalTacsAdminTokenV1','sessao-homologacao-shell-cross-engine');
+    localStorage.setItem('portalTacsDispositivoV1','device-homologacao-shell-cross-engine');
+  });
+}
 async function metrics(page){return page.evaluate(()=>{const h=document.documentElement,n=performance.getEntriesByType('navigation')[0];return{viewport:{width:innerWidth,height:innerHeight},scrollWidth:h.scrollWidth,clientWidth:h.clientWidth,overflowPx:Math.max(0,h.scrollWidth-h.clientWidth),domContentLoadedMs:n?Math.round(n.domContentLoadedEventEnd):null,loadMs:n?Math.round(n.loadEventEnd):null}})}
 async function expose(page,name){await page.evaluate(moduleName=>{const modules=document.getElementById('modulesPanel');if(modules)modules.hidden=false;const b=document.querySelector('#moduleGrid .module[data-module="'+moduleName+'"]');if(b){b.hidden=false;b.disabled=false}},name)}
+async function openShellModule(page,cfg,browserName){
+  const centralPath=new URL(page.url()).pathname;
+  const handlerMs=await page.evaluate(moduleName=>{
+    const b=document.querySelector('#moduleGrid .module[data-module="'+moduleName+'"]');
+    const t=performance.now();b.click();return performance.now()-t;
+  },cfg.name);
+  expect(handlerMs,browserName+'/'+cfg.name+': clique deve despachar o shell em menos de 100 ms').toBeLessThan(100);
+  await expect(page.locator('#viewer')).toBeVisible();
+  await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.ativo())).toBe(cfg.name);
+  await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.tipoAtivo())).toBe(cfg.native?'native':'frame');
+  expect(new URL(page.url()).pathname).toBe(centralPath);
+  expect(new URL(page.url()).searchParams.get('preload')).toBeNull();
+  if(cfg.native){
+    await expect(page.locator('#viewer')).toHaveClass(/csc-native-viewer/);
+    await expect(page.locator('#viewerFrame')).toBeHidden();
+  }else{
+    await expect(page.locator('#viewer')).toHaveClass(/csc-frame-viewer/);
+    const frame=page.locator('iframe[data-shell-module="'+cfg.name+'"]').first();
+    await expect(frame).toBeVisible();
+    await expect.poll(()=>frame.getAttribute('src')).toContain(cfg.path);
+    const frameUrl=await page.evaluate(moduleName=>{
+      const f=document.querySelector('iframe[data-shell-module="'+moduleName+'"]');
+      return new URL((f&&f.getAttribute('src'))||'',location.href).href;
+    },cfg.name);
+    const u=new URL(frameUrl);expect(u.pathname.endsWith(cfg.path)).toBe(true);expect(u.searchParams.get('from')).toBe('central');expect(u.searchParams.get('preload')).toBeNull();
+  }
+  return handlerMs;
+}
 
 for(const vp of portalViewports){
   test('Portal responsivo '+vp.name,async({page,browserName})=>{
@@ -71,22 +105,15 @@ test('PIN local V3 funciona nos navegadores reais sem persistir token remoto',as
 });
 
 for(const cfg of [
-  {name:'suporte',path:'/painel-suporte-moradores-v2.html'},
-  {name:'agendas',path:'/painel-oficial-agendas-vagas.html'}
+  {name:'suporte',path:'/painel-suporte-moradores-v2.html',native:false},
+  {name:'agendas',path:'/painel-oficial-agendas-vagas.html',native:true}
 ]){
-  test('Central navega diretamente para '+cfg.name+' sem iframe oculto',async({page,browserName})=>{
-    await page.setViewportSize({width:390,height:844});await blockExternal(page);
+  test('Central abre '+cfg.name+' no shell persistente no primeiro toque',async({page,browserName})=>{
+    await page.setViewportSize({width:390,height:844});await blockExternal(page);await primeCentralSession(page);
     await page.goto('central-administrativa-tacs.html',{waitUntil:'domcontentloaded'});await expose(page,cfg.name);
     await expect(page.locator('#portalTacsAdminPreloadPoolV1')).toHaveCount(0);
-    await page.evaluate(moduleName=>{
-      const b=document.querySelector('#moduleGrid .module[data-module="'+moduleName+'"]');
-      const t=performance.now();b.click();sessionStorage.setItem('homologacaoNavHandlerMs',String(performance.now()-t));
-    },cfg.name);
-    await page.waitForURL(url=>{const u=new URL(url);return u.pathname.endsWith(cfg.path)&&u.searchParams.get('from')==='central'},{waitUntil:'domcontentloaded'});
-    const handlerMs=Number(await page.evaluate(()=>sessionStorage.getItem('homologacaoNavHandlerMs')||'9999'));
-    expect(handlerMs,browserName+'/'+cfg.name+': clique deve despachar navegação em menos de 100 ms').toBeLessThan(100);
-    const u=new URL(page.url());expect(u.searchParams.get('preload')).toBeNull();
-    writeResult({kind:'central-direct-nav',browserName,module:cfg.name,handlerMs:Math.round(handlerMs*100)/100});
+    const handlerMs=await openShellModule(page,cfg,browserName);
+    writeResult({kind:'central-shell-nav',browserName,module:cfg.name,mode:cfg.native?'native':'frame',handlerMs:Math.round(handlerMs*100)/100});
   });
 }
 

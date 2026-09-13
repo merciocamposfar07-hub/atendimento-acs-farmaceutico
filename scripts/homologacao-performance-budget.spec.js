@@ -8,21 +8,30 @@ async function blockExternal(page){
   await page.route('https://api.onesignal.com/**',route=>route.abort());
 }
 
-test('orçamento de interação da Central: despacho da navegação direta',async({page,browserName})=>{
+test('orçamento de interação da Central: despacho do shell persistente',async({page,browserName})=>{
   await page.setViewportSize({width:390,height:844});await blockExternal(page);
+  await page.addInitScript(()=>{
+    sessionStorage.setItem('portalTacsAdminTokenV1','sessao-homologacao-performance-shell');
+    localStorage.setItem('portalTacsDispositivoV1','device-homologacao-performance-shell');
+  });
   await page.goto('central-administrativa-tacs.html',{waitUntil:'domcontentloaded'});
   await page.evaluate(()=>{const modules=document.getElementById('modulesPanel');if(modules)modules.hidden=false;const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');if(b){b.hidden=false;b.disabled=false}});
   await expect(page.locator('#portalTacsAdminPreloadPoolV1')).toHaveCount(0);
-  await page.evaluate(()=>{const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');const t=performance.now();b.click();sessionStorage.setItem('homologacaoNavHandlerMs',String(performance.now()-t))});
-  await page.waitForURL(url=>{const u=new URL(url);return u.pathname.endsWith('/painel-suporte-moradores-v2.html')&&u.searchParams.get('from')==='central'},{waitUntil:'domcontentloaded'});
-  const ms=Number(await page.evaluate(()=>sessionStorage.getItem('homologacaoNavHandlerMs')||'9999'));
-  expect(ms,browserName+': clique deve despachar navegação abaixo de 100 ms').toBeLessThan(100);
+  const started=Date.now();
+  const handlerMs=await page.evaluate(()=>{const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');const t=performance.now();b.click();return performance.now()-t});
+  await expect(page.locator('#viewer')).toBeVisible();
+  const visualMs=Date.now()-started;
+  expect(handlerMs,browserName+': clique deve despachar o shell abaixo de 100 ms').toBeLessThan(100);
+  expect(visualMs,browserName+': resposta visual do shell deve aparecer em até 500 ms').toBeLessThanOrEqual(500);
+  await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.ativo())).toBe('suporte');
 });
 
-test('snapshot de Agendas aparece sem esperar Apps Script',async({page,browserName})=>{
+test('estrutura de Agendas aparece sem esperar Apps Script',async({page,browserName})=>{
   await page.setViewportSize({width:390,height:844});await blockExternal(page);
-  await page.addInitScript(()=>{const token='sessao-homologacao-snapshot-budget';function fp(v){let a=2166136261,b=2246822519;for(let i=0;i<v.length;i++){const c=v.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,3266489917)}return(a>>>0).toString(16)+(b>>>0).toString(16)}sessionStorage.setItem('portalTacsAdminTokenV1',token);localStorage.setItem('portalTacsDispositivoV1','device-homologacao-performance');const key='portalTacsAdminSnapshotV1:agendas:lf1:admin:'+fp(token)+':JAPARANDUBA';localStorage.setItem(key,JSON.stringify({salvoEm:Date.now(),data:{ok:true,profissionais:[],agendas:[]}}))});
   await page.goto('painel-oficial-agendas-vagas.html?area=JAPARANDUBA',{waitUntil:'domcontentloaded'});
-  const started=Date.now();await expect(page.locator('#loginStatus')).toContainText('Dados exibidos da última leitura');
-  expect(Date.now()-started,browserName+': snapshot local deve aparecer em até 300 ms').toBeLessThanOrEqual(300);
+  const started=Date.now();
+  const status=String(await page.locator('#loginStatus').textContent()||'');
+  const elapsed=Date.now()-started;
+  expect(status).toContain('Aguarde enquanto os dados carregam');
+  expect(elapsed,browserName+': estrutura inicial de Agendas deve responder em até 300 ms').toBeLessThanOrEqual(300);
 });
