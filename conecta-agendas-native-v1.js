@@ -47,6 +47,45 @@ function create(host){
 
   function q(role){return host.querySelector('[data-role="'+role+'"]')}
 
+  function shareContext(){
+    var s=core&&typeof core.state==='function'?core.state():{},area=s&&s.area||{};
+    return{
+      areaName:text(area.areaNome)||((areaId==='JAPARANDUBA')?'Sítio Japaranduba':areaId.replace(/_/g,' ')),
+      unitName:text(area.unidadeNome)||text(area.unidadeId)||'Unidade de Saúde',
+      cityName:'Chã Grande - PE'
+    };
+  }
+  function agendaShareData(a,p){
+    var ctx=shareContext();
+    return{
+      module:text(a&&a.MODULO),title:text(p&&p.TITULO_PUBLICO)||text(p&&p.NOME)||text(a&&a.MODULO)||'Atendimento',
+      day:text(a&&a.DIA),date:dataInput(a&&a.DATA),time:text(a&&a.HORARIO),status:text(a&&a.SITUACAO),
+      message:text(a&&a.MENSAGEM),common:num(a&&a.VAGAS_COMUNS),emergency:num(a&&a.VAGAS_EMERGENCIAIS),
+      active:bool(a&&a.ATIVO),extra:bool(a&&a.DIA_EXTRA),areaName:ctx.areaName,unitName:ctx.unitName,cityName:ctx.cityName
+    };
+  }
+  function agendaGroupShareData(group){
+    var ctx=shareContext(),p=group&&group.p||{},items=group&&group.items||[];
+    return{
+      title:text(p.TITULO_PUBLICO)||text(p.NOME)||text(items[0]&&items[0].MODULO)||'Agenda do profissional',
+      days:items.map(function(a){return agendaShareData(a,p)}),
+      areaName:ctx.areaName,unitName:ctx.unitName,cityName:ctx.cityName
+    };
+  }
+  function shareApi(){return window.PortalTacsAgendaWhatsAppV2API||null}
+  function shareDay(button,card){
+    var api=shareApi();if(!api||typeof api.shareData!=='function'){setStatus('O compartilhamento da agenda ainda não ficou disponível.','aviso');return}
+    var key=card&&card.dataset.key||'',a=state.agendas.find(function(item){return chave(item)===key});
+    if(!a)return;
+    api.shareData(agendaShareData(a,prof(a.MODULO)||{}),button);
+  }
+  function shareGroup(button){
+    var api=shareApi();if(!api||typeof api.shareGroupData!=='function'){setStatus('O compartilhamento da agenda ainda não ficou disponível.','aviso');return}
+    var moduleKey=text(button&&button.dataset.module),items=state.agendas.filter(function(a){return normalId(a.MODULO)===moduleKey});
+    if(!items.length)return;
+    api.shareGroupData(agendaGroupShareData({p:prof(items[0].MODULO)||{},items:items}),button);
+  }
+
   function setStatus(message,type){var n=q('status');n.textContent=message;n.className='status'+(type?' '+type:'')}
   function setDirty(v){dirty=Boolean(v);host.dataset.tacsDirty=dirty?'1':'0'}
   function session(){return core.session({areaId:areaId,escopo:'agendas'})}
@@ -120,7 +159,7 @@ function create(host){
       '<div class="checks"><label class="check"><input name="ativo" type="checkbox" '+(active?'checked':'')+'> Agenda ativa</label>'+
       '<label>Hora de expiração<input name="encerraHorario" type="time" value="'+esc(text(a.ENCERRA_HORARIO)||(bool(a.ENCERRA_12H)?'12:00':''))+'"></label>'+
       '<label class="check"><input name="diaExtra" type="checkbox" '+(bool(a.DIA_EXTRA)?'checked':'')+'> Dia extra</label></div>'+
-      '<button class="save csc-ag-save" type="button">Salvar agenda</button></div></details>';
+      '<div class="card-actions"><button class="save csc-ag-save" type="button">Salvar agenda</button><button class="share csc-ag-share-day" type="button">📲 Postar no Status do WhatsApp</button></div></div></details>';
   }
   function render(){
     var filterProf=q('filtroProf').value,filterDay=q('filtroDia').value;
@@ -133,7 +172,7 @@ function create(host){
     var html='';
     order.forEach(function(m){
       var g=groups[m],p=g.p,total=g.items.reduce(function(t,a){return t+num(a.VAGAS_COMUNS)+num(a.VAGAS_EMERGENCIAIS)},0),activeCount=g.items.filter(function(a){return bool(a.ATIVO)}).length;
-      html+='<details class="group"><summary><div class="group-name"><span>'+esc(p.ICONE||'📅')+'</span><div><strong>'+esc(p.TITULO_PUBLICO||p.NOME||g.items[0].MODULO)+'</strong><span class="group-meta">'+g.items.length+' dia(s) • '+activeCount+' ativo(s) • '+total+' vaga(s)</span></div></div><span>▾</span></summary><div class="group-body">';
+      html+='<details class="group"><summary><div class="group-name"><span>'+esc(p.ICONE||'📅')+'</span><div><strong>'+esc(p.TITULO_PUBLICO||p.NOME||g.items[0].MODULO)+'</strong><span class="group-meta">'+g.items.length+' dia(s) • '+activeCount+' ativo(s) • '+total+' vaga(s)</span></div></div><span>▾</span></summary><div class="group-body"><button type="button" class="share csc-ag-share-group" data-module="'+esc(m)+'">📲 Postar agenda completa no Status do WhatsApp</button>';
       g.items.forEach(function(a){html+=cardHtml(a)});html+='</div></details>';
     });
     q('lista').innerHTML=html||'<div class="empty">Nenhuma agenda encontrada para este filtro.</div>';
@@ -223,7 +262,11 @@ function create(host){
     });
   }
 
-  q('lista').addEventListener('click',function(e){var b=e.target.closest('.csc-ag-save');if(b)save(b.closest('.card'))});
+  q('lista').addEventListener('click',function(e){
+    var shareGroupButton=e.target.closest('.csc-ag-share-group');if(shareGroupButton){e.preventDefault();e.stopPropagation();shareGroup(shareGroupButton);return}
+    var shareDayButton=e.target.closest('.csc-ag-share-day');if(shareDayButton){e.preventDefault();e.stopPropagation();shareDay(shareDayButton,shareDayButton.closest('.card'));return}
+    var b=e.target.closest('.csc-ag-save');if(b)save(b.closest('.card'));
+  });
   ['input','change'].forEach(function(kind){q('lista').addEventListener(kind,function(e){var n=e.target;if(n&&n.matches&&n.matches('input,select,textarea')&&!n.readOnly)setDirty(true)})});
   q('filtroProf').addEventListener('change',render);
   q('filtroDia').addEventListener('change',render);
