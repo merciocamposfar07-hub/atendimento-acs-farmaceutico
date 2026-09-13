@@ -193,20 +193,6 @@ function resumePendingModule(){
   if(!moduloPendente||!(token||territoryToken))return false;
   var proximo=moduloPendente;moduloPendente=null;
   publishModuleCore();
-  /* Se um painel em frame já foi pintado pelo acesso local, apenas renova o mesmo
-     documento quando o token remoto chega. O usuário não volta para uma tela de espera. */
-  try{
-    var rid=moduleRouteId(proximo.name,proximo.options),frame=shellFrames[shellFrameKey(rid)];
-    if(frame&&frame.dataset.shellLocalFirst==='1'){
-      delete frame.dataset.shellLocalFirst;
-      var syncUrl=frame.dataset.shellUrl||'';
-      if(syncUrl){
-        var sep=syncUrl.indexOf('?')>=0?'&':'?';
-        frame.src=syncUrl+sep+'sync='+Date.now();
-        frame.dataset.shellLoaded='1';
-      }
-    }
-  }catch(e){}
   setTimeout(function(){openModule(proximo.name,proximo.title,proximo.options)},0);
   return true;
 }
@@ -951,18 +937,60 @@ function showShellFrame(name,frame,title,routeId){
 function localPanelAccessReady(){
   return Boolean(acessoLocalAberto&&mode&&context);
 }
+function ensurePendingPreviewStyle(){
+  if(document.getElementById('cscPendingPanelPreviewStyle'))return;
+  var style=document.createElement('style');style.id='cscPendingPanelPreviewStyle';
+  style.textContent=''
+    +'.csc-pending-preview{width:min(720px,100%);margin:0 auto;padding:8px 16px 34px;color:#f7fcff;background:#071827}'
+    +'.csc-pending-status{margin:4px 0 14px;padding:8px 11px;border-radius:12px;background:#102d46;color:#adc4d2;font-size:.82rem;font-weight:750;line-height:1.35}'
+    +'.csc-pending-card{margin:0 0 14px;padding:16px;border:1px solid #2b5a76;border-radius:22px;background:linear-gradient(145deg,#153b58,#102d46)}'
+    +'.csc-pending-card h2{margin:0 0 7px;color:#fff;font-size:1.16rem;line-height:1.2}'
+    +'.csc-pending-card p{margin:0;color:#c6d8e2;font-size:.9rem;line-height:1.45}'
+    +'.csc-pending-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:14px}'
+    +'.csc-pending-tab{padding:13px 9px;border:1px solid #365f78;border-radius:17px;background:#153b58;color:#d8e6ee;text-align:center;font-weight:850}'
+    +'.csc-pending-tab.active{border-color:#6bd3c4;background:#176c94;color:#fff}'
+    +'.csc-pending-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}'
+    +'.csc-pending-metric{min-height:88px;padding:13px;border-radius:18px;background:#153b58;display:flex;flex-direction:column;justify-content:center;text-align:center}'
+    +'.csc-pending-metric strong{color:#83efa9;font-size:1.38rem}.csc-pending-metric span{margin-top:5px;color:#adc4d2;font-size:.82rem}'
+    +'.csc-pending-field{min-height:50px;padding:13px;border:1px solid #416f89;border-radius:15px;background:#071827;color:#adc4d2}'
+    +'.csc-pending-section{margin-top:12px;color:#fff;font-weight:850;font-size:1rem}';
+  document.head.appendChild(style);
+}
+function pendingPreviewHtml(name,routeId){
+  var wait='<div class="csc-pending-status">Aguarde enquanto os dados carregam…</div>';
+  var metrics=function(labels){return '<div class="csc-pending-metrics">'+labels.map(function(label){return '<div class="csc-pending-metric"><strong>—</strong><span>'+label+'</span></div>'}).join('')+'</div>'};
+  if(name==='suporte')return wait
+    +'<div class="csc-pending-card"><h2>Vínculos protegidos</h2><p>Chamados e diagnóstico permanecem no próprio módulo.</p></div>'
+    +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Chamados dos moradores</div><div class="csc-pending-tab">Diagnóstico dos aparelhos</div></div>'
+    +'<div class="csc-pending-card">'+metrics(['Novos','Em análise','Respondidos','Resolvidos'])+'</div>';
+  if(name==='recados')return wait
+    +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Recados</div><div class="csc-pending-tab">Campanhas</div></div>'
+    +'<div class="csc-pending-card">'+metrics(['Recados','Recados ativos','Campanhas','Campanhas ativas'])+'</div>';
+  if(name==='territorio')return wait
+    +'<div class="csc-pending-card"><h2>Administrador / TACS / UBS</h2><p>Cadastro, perfis e permissões da área.</p></div>'
+    +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Cadastros</div><div class="csc-pending-tab">Áreas</div></div>'
+    +'<div class="csc-pending-card"><div class="csc-pending-section">Importação de moradores</div><p>Estrutura do painel disponível; dados confirmados entram em seguida.</p></div>';
+  if(name==='municipios')return wait
+    +'<div class="csc-pending-card"><h2>Estrutura atual</h2>'+metrics(['Organizações','Municípios','Áreas','Pendências'])+'</div>'
+    +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Organizações</div><div class="csc-pending-tab">Municípios</div></div>';
+  if(name==='moradores'&&String(routeId||'').indexOf('view=prontuarios')>=0)return wait
+    +'<div class="csc-pending-card">'+metrics(['Moradores ativos','Schema','Novo/Editar','Consolidação'])+'</div>'
+    +'<div class="csc-pending-card"><h2>Buscar morador</h2><div class="csc-pending-field">Nome, CPF, CNS, ID Portal, endereço ou telefone</div></div>';
+  return wait+'<div class="csc-pending-card"><h2>Conteúdo do painel</h2><p>A estrutura já está disponível enquanto os dados confirmados são carregados.</p></div>';
+}
 function showPendingModuleShell(name,title,routeId){
   hideAllNativeExcept('');
   Object.keys(shellFrames).forEach(function(key){var item=shellFrames[key];if(item)item.hidden=true});
   var base=el('viewerFrame');if(base)base.hidden=true;
-  var viewer=el('viewer');if(!viewer)return false;
+  var viewer=el('viewer'),host=el('nativeModuleHost');if(!viewer||!host)return false;
+  ensurePendingPreviewStyle();
   shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
   el('viewerTitle').textContent=title||'Painel';
-  viewer.classList.add('csc-shell-viewer','csc-frame-viewer');viewer.classList.remove('csc-native-viewer');viewer.hidden=false;
-  var footer=el('viewerFooter');if(footer)footer.hidden=true;
+  viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;
+  host.hidden=false;host.innerHTML='<div class="csc-pending-preview">'+pendingPreviewHtml(name,routeId)+'</div>';
+  var footer=el('viewerFooter');if(footer)footer.hidden=false;
   document.body.classList.add('viewer-open');
-  var node=ensureShellOpening();
-  if(node){node.hidden=true;node.textContent='';}
+  var node=ensureShellOpening();if(node){node.hidden=true;node.textContent='';}
   return true;
 }
 function shellHasUnsaved(frame){
@@ -994,11 +1022,9 @@ function openModule(name,title,options){
     if(name==='agendas'){showNativeAgenda(title||'Agendas e vagas',routeId);return}
     if(name==='moradores'&&moduleRouteOptions(options).view!=='prontuarios'){showNativeMoradores(title||'Moradores',routeId);return}
     if(name==='profissionais'){showNativeProfissionais(title||'Profissionais e serviços',routeId);return}
-    /* O painel legado também abre imediatamente após o PIN local.
-       A sessão remota continua sendo confirmada em segundo plano pelo núcleo compartilhado. */
-    var localFrame=ensureShellFrame(name,url,title||'Painel',routeId);
-    localFrame.dataset.shellLocalFirst='1';
-    showShellFrame(name,localFrame,title||'Painel',routeId);
+    /* Painéis ainda em frame exibem imediatamente a estrutura interna do módulo,
+       sem tela lisa e sem iniciar conteúdo protegido antes da sessão remota. */
+    showPendingModuleShell(name,title||'Painel',routeId);
     return;
   }
   moduloPendente=null;
@@ -1190,8 +1216,7 @@ window.ConectaCentralShellV1={
   rotaAtiva:function(){return shellActiveRoute},
   tipoAtivo:function(){return shellActiveNative?'native':'frame'},
   escopo:function(){return shellCurrentScope()},
-  contagemFrames:function(){return Object.keys(shellFrames).length},
-  localReadOnlyReady:function(){return localPanelAccessReady()}
+  contagemFrames:function(){return Object.keys(shellFrames).length}
 };
 window.PortalTacsCentralPinLocalV2={
   abrir:function(scope,pin){return abrirAcessoLocal(scope,pin)},
