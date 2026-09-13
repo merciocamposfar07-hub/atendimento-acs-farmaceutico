@@ -1472,6 +1472,25 @@ function entrarPaineisUbs(r){
   try{resetModuleShell()}catch(e){}
   token='';territoryToken='';ubsToken=novoToken;mode='ubs';context=null;selectedAreaId='';
   try{sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);sessionStorage.setItem(UBS_TOKEN_KEY,ubsToken)}catch(e){}
+  var areas=Array.isArray(r&&r.areas)?r.areas.filter(function(area){return area&&area.ativa!==false&&normArea(area.areaId)}):[];
+  if(areas.length){
+    var ubsAtual=r&&r.ubsAtual&&typeof r.ubsAtual==='object'?r.ubsAtual:{
+      tacsId:text(r&&r.cadastroId),nomeCompleto:text(r&&r.nome),perfil:text(r&&r.perfil)||'UBS',
+      funcaoUbs:text(r&&r.funcaoUbs),unidadeId:text(r&&r.unidadeId),
+      permissoes:Array.isArray(r&&r.permissoes)?r.permissoes.slice():[]
+    };
+    context={
+      ok:true,perfil:'UBS',podeAdministrar:false,tacs:[],ubsAtual:ubsAtual,
+      administradores:[],administradorAtual:null,areas:areas,isolamento:'UMA_UBS_SOMENTE_SUAS_AREAS'
+    };
+    selectedAreaId=normArea(areas[0].areaId);
+    saveContextCache();
+    syncAppState();
+    renderContext(true);
+    setStatus('Acesso UBS validado.','ok');
+    setTimeout(function(){if(!active&&ubsToken)loadContext('Acesso UBS sincronizado.')},0);
+    return true;
+  }
   syncAppState();
   setStatus('Abrindo os painéis da UBS…','warn');
   loadContext('Acesso UBS validado.');
