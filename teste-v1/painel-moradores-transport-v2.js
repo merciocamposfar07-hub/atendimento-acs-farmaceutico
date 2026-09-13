@@ -5,6 +5,7 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var TOKEN_KEY='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
+var nativeConfig=window.ConectaMoradoresNativeConfigV1&&typeof window.ConectaMoradoresNativeConfigV1==='object'?window.ConectaMoradoresNativeConfigV1:null;
 var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'moradores'}):null,modulePerf=moduleCore&&moduleCore.performance,moduleRequests=moduleCore&&moduleCore.requests;
 var token=moduleSession&&moduleSession.token||'';
 var territoryToken=moduleSession&&moduleSession.territorioToken||'';
@@ -19,11 +20,11 @@ var currentSituation='ATIVO';
 var duplicateLock=false;
 var duplicateEditMode=false;
 var lastSearchQuery='';
-var selectedAreaId='';
+var selectedAreaId=nativeConfig&&nativeConfig.areaId?String(nativeConfig.areaId):'';
 var availableAreas=[];
 var statusActivationAttempted=false;
 var backendVersion='';
-var PRONTUARIOS_VIEW=(function(){try{return String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='prontuarios'}catch(e){return false}})();
+var PRONTUARIOS_VIEW=(function(){if(nativeConfig&&nativeConfig.view)return String(nativeConfig.view).toLowerCase()==='prontuarios';try{return String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='prontuarios'}catch(e){return false}})();
 
 var COMPARISON_FIELDS=[
   ['idPortal','ID Portal'],['id','ID original'],['cpf','CPF'],['cns','CNS'],
@@ -41,7 +42,9 @@ if(!device){
 }
 
 function el(id){return document.getElementById(id)}
+function rootQuery(selector){var root=nativeConfig&&nativeConfig.hostId?document.getElementById(nativeConfig.hostId):null;return(root&&root.querySelector(selector))||document.querySelector(selector)}
 function text(v){return String(v==null?'':v).trim()}
+function nativeNotify(type,payload){try{if(nativeConfig&&typeof nativeConfig.onState==='function')nativeConfig.onState(type,payload||{})}catch(e){}}
 function setStatus(id,msg,type){
   var node=el(id);
   if(!node)return;
@@ -52,7 +55,7 @@ function requestId(action){
   return 'morv2_'+String(action||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
 }
 function session(){
-  if(moduleCore&&typeof moduleCore.session==='function')return moduleCore.session({areaId:selectedAreaId||undefined,escopo:'moradores'});
+  if(moduleCore&&typeof moduleCore.session==='function'){var extra={escopo:'moradores'};if(selectedAreaId)extra.areaId=selectedAreaId;return moduleCore.session(extra)}
   var out={dispositivo:device};
   if(accessMode==='tacs'&&territoryToken)out.territorioToken=territoryToken;
   else out.token=token;
@@ -332,7 +335,7 @@ function maybeActivateSituation(r){
 }
 
 function updateNote(){
-  var note=document.querySelector('main > .note');
+  var note=rootQuery('.csc-mor-native-note,main > .note');
   if(!note)return;
   if(writesEnabled&&situationEnabled){
     note.textContent='PAINEL DE MORADORES: cadastro, edição, situação e consolidação de duplicidades estão liberados. Todas as alterações permanecem registradas em auditoria.';
@@ -376,7 +379,7 @@ function showAuthenticatedShell(message){
   ensureSituationUi();
   setBaseLoading(true);
   syncControls();
-  var note=document.querySelector('main > .note');
+  var note=rootQuery('.csc-mor-native-note,main > .note');
   if(note){
     note.textContent='Acesso validado. O painel já foi aberto; dados da base e permissões estão sendo conferidos em segundo plano.';
     note.style.background='#e7f3f7';
@@ -425,7 +428,7 @@ function syncControls(){
         ?'Salvar correção e atualizar comparação'
         :(writesEnabled?(isEdit?'Salvar alterações':'Salvar novo morador'):(isEdit?'Salvar alterações — bloqueado':'Salvar morador — bloqueado')));
   }
-  var lock=document.querySelector('#residentForm .lock');
+  var lock=rootQuery('#residentForm .lock');
   if(lock){
     lock.textContent=baseCheckPending
       ?'Conferindo permissões em segundo plano…'
@@ -495,7 +498,7 @@ function renderBase(r,message,confirmed){
   ensureSituationUi();setBaseLoading(false);updateNote();syncControls();
   setStatus('loginStatus',message||(remoteConfirmed?'Sessão validada e base conferida.':'Última confirmação exibida. Conferindo a base em segundo plano…'),remoteConfirmed?'ok':'warn');
   if(PRONTUARIOS_VIEW&&accessMode==='admin'){
-    var searchHelp=document.querySelector('#searchArea .muted');
+    var searchHelp=rootQuery('#searchArea .muted');
     if(searchHelp)searchHelp.textContent='Busque por nome, CPF, CNS ou cadastro familiar. A consulta percorre todas as áreas cadastradas.';
     var searchButton=el('search');if(searchButton)searchButton.textContent='Buscar em todas as áreas';
   }
@@ -819,6 +822,7 @@ function consolidateGroup(principal,redundantes){
     setStatus('operationStatus','Consolidando '+itemLabel(redundante)+' em '+itemLabel(principal)+'…','warn');
     post('admin_morador_consolidar',cloneSession({payload:JSON.stringify(consolidationPayload(principal,redundante))}),'admin_moradores_result',function(r){
       if(!r||r.ok!==true){duplicateLock=false;syncControls();setStatus('operationStatus',text(r&&r.message||'O servidor recusou a consolidação.'),'err');return}
+      nativeNotify('write-confirmed',{action:'admin_morador_consolidar'});
       if(r.principal&&typeof r.principal==='object')principal=r.principal;
       totalFilled=totalFilled.concat(Array.isArray(r.camposPreenchidos)?r.camposPreenchidos:[]);
       totalConflicts=totalConflicts.concat(Array.isArray(r.conflitosPreservadosNoPrincipal)?r.conflitosPreservadosNoPrincipal:[]);
@@ -1026,6 +1030,7 @@ function saveResident(){
       if(el('residentSituation'))el('residentSituation').value=currentSituation;
     }
     var message=text(r.message||(isEdit?'Cadastro atualizado.':'Morador cadastrado.'));
+    nativeNotify('write-confirmed',{action:'admin_morador_salvar',morador:r.morador||null});
     setStatus('operationStatus',message,'ok');
     if(wasDuplicateEdit){
       var refreshQuery=lastSearchQuery||payload.nome||payload.cpf||payload.cns;
@@ -1064,6 +1069,7 @@ function saveSituation(){
   post('admin_morador_situacao',cloneSession({payload:JSON.stringify(payload)}),'admin_moradores_result',function(r){
     if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'O servidor recusou a alteração de situação.'),'err');return}
     currentSituation=situacao;
+    nativeNotify('write-confirmed',{action:'admin_morador_situacao'});
     setStatus('operationStatus',text(r.message||'Situação cadastral atualizada.'),'ok');
     loadBase();
   });
@@ -1200,6 +1206,18 @@ if(token||territoryToken){
   },100);
 }
 
+function rebindNativeContext(config){
+  nativeConfig=config&&typeof config==='object'?config:nativeConfig;
+  var s=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'moradores'}):null;
+  token=s&&s.token||sessionStorage.getItem(TOKEN_KEY)||token||'';
+  territoryToken=s&&s.territorioToken||sessionStorage.getItem(TERRITORY_TOKEN_KEY)||territoryToken||'';
+  accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':accessMode));
+  if(nativeConfig&&nativeConfig.areaId)selectedAreaId=String(nativeConfig.areaId);
+  PRONTUARIOS_VIEW=Boolean(nativeConfig&&String(nativeConfig.view||'').toLowerCase()==='prontuarios');
+  showAuthenticatedShell(accessMode==='tacs'?'Sessão individual encontrada. Conferindo moradores da própria área…':'Sessão administrativa encontrada. Conferindo a base de moradores…');
+  setTimeout(function(){if(!active)loadBase('Base de moradores conferida no módulo nativo.')},0);
+}
+
 window.PortalTacsMoradoresTransportV2={
   post:post,
   loadBase:loadBase,
@@ -1218,6 +1236,7 @@ window.PortalTacsMoradoresTransportV2={
   consolidateGroup:consolidateGroup,
   changeArea:changeArea,
   maybeActivateSituation:maybeActivateSituation,
-  version:'3.6.1'
+  rebindNativeContext:rebindNativeContext,
+  version:'3.7.0-native-task17'
 };
 }());
