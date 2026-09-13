@@ -94,7 +94,7 @@ function aquecerPinMorador(){
 function ensureStyle(){
  if(el('cscUnifiedAccessStyle'))return;
  var s=document.createElement('style');s.id='cscUnifiedAccessStyle';s.textContent=
- '.login-tabs.csc-four{grid-template-columns:repeat(4,minmax(0,1fr))!important}.csc-access-panel{margin-top:4px}.csc-access-panel[hidden]{display:none!important}.csc-access-note{margin:10px 0;padding:12px 13px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:15px;background:rgba(255,255,255,.04);color:var(--tacs-app-muted,#adc4d2)}.csc-access-note strong{color:#fff}.csc-forgot{width:100%;min-height:48px;margin-top:11px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:15px;background:transparent;color:var(--tacs-app-accent2,#62c8e8);font-weight:850}.csc-inline-actions{display:grid;gap:9px;margin-top:13px}.csc-recovery{position:fixed;inset:0;z-index:60000;display:grid;place-items:end center;padding:16px;background:rgba(2,12,20,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}.csc-recovery[hidden]{display:none!important}.csc-recovery-card{width:min(520px,100%);max-height:88svh;overflow:auto;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:24px;background:var(--tacs-app-card,#102d46);padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.45);color:#fff}.csc-recovery-card h3{margin:0 0 8px;font-size:1.35rem}.csc-recovery-close{float:right;width:44px;height:44px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:14px;background:var(--tacs-app-top,#0b263d);color:#fff;font-size:1.4rem}.csc-first-name{font-weight:900;color:var(--tacs-app-accent,#83efa9)}@media(max-width:430px){.login-tabs.csc-four{gap:5px}.login-tabs.csc-four .tab{font-size:.78rem;padding:8px 3px}}';
+ '.login-tabs.csc-four{grid-template-columns:repeat(4,minmax(0,1fr))!important}.csc-access-panel{margin-top:4px}.csc-access-panel[hidden]{display:none!important}.csc-access-note{margin:10px 0;padding:12px 13px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:15px;background:rgba(255,255,255,.04);color:var(--tacs-app-muted,#adc4d2)}.csc-access-note strong{color:#fff}.csc-ubs-auth-link{display:block;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}.csc-ubs-auth-link .csc-ubs-open-copy{display:block;margin-top:10px;color:var(--tacs-app-accent2,#62c8e8);font-weight:850}.csc-ubs-auth-link:active{transform:scale(.995)}.csc-ubs-auth-link:focus-visible{outline:4px solid #ffd54f;outline-offset:5px;border-radius:10px}.csc-forgot{width:100%;min-height:48px;margin-top:11px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:15px;background:transparent;color:var(--tacs-app-accent2,#62c8e8);font-weight:850}.csc-inline-actions{display:grid;gap:9px;margin-top:13px}.csc-recovery{position:fixed;inset:0;z-index:60000;display:grid;place-items:end center;padding:16px;background:rgba(2,12,20,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}.csc-recovery[hidden]{display:none!important}.csc-recovery-card{width:min(520px,100%);max-height:88svh;overflow:auto;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:24px;background:var(--tacs-app-card,#102d46);padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.45);color:#fff}.csc-recovery-card h3{margin:0 0 8px;font-size:1.35rem}.csc-recovery-close{float:right;width:44px;height:44px;border:1px solid var(--tacs-app-line,#2b5a76);border-radius:14px;background:var(--tacs-app-top,#0b263d);color:#fff;font-size:1.4rem}.csc-first-name{font-weight:900;color:var(--tacs-app-accent,#83efa9)}@media(max-width:430px){.login-tabs.csc-four{gap:5px}.login-tabs.csc-four .tab{font-size:.78rem;padding:8px 3px}}';
  document.head.appendChild(s);
 }
 function addResidentTab(){
@@ -159,15 +159,26 @@ function selectRoleFromTap(role,event){
 function field(id,label,attrs){
  return '<label for="'+id+'">'+label+'</label><input class="field" id="'+id+'" '+(attrs||'')+'>';
 }
+function openUbsPanels(r){
+ var token=text(r&&r.token);try{token=token||text(sessionStorage.getItem(UBS_TOKEN_KEY)||'')}catch(e){}
+ if(!/^cus1\./.test(token)){setStatus('A sessão da UBS não está disponível. Digite o PIN novamente.','err');return false}
+ var payload={token:token,cadastroId:text(r&&r.cadastroId),perfil:text(r&&r.perfil)||'UBS',nome:text(r&&r.nome),funcaoUbs:text(r&&r.funcaoUbs),unidadeId:text(r&&r.unidadeId),permissoes:Array.isArray(r&&r.permissoes)?r.permissoes.slice():[]};
+ if(window.ConectaCentralUbsV1&&typeof window.ConectaCentralUbsV1.entrar==='function')return window.ConectaCentralUbsV1.entrar(payload)!==false;
+ location.assign('/atendimento-acs-farmaceutico/central-administrativa-tacs.html?acesso=ubs');return true;
+}
+function bindUbsAuthenticatedOpen(r){
+ var open=el('cscUbsOpenPanels');if(!open)return;
+ open.onclick=function(){openUbsPanels(r)};
+ open.onkeydown=function(e){if(e&&(e.key==='Enter'||e.key===' ')){e.preventDefault();openUbsPanels(r)}};
+}
 function renderUbsAuthenticated(r){
  var out=el('cscUbsIdentity');if(!out)return;
- var institucional=text(r&&r.perfil).toUpperCase()==='UBS';
+ var institucional=text(r&&r.perfil).toUpperCase()==='UBS',titulo=institucional?'UBS autenticada':'Identidade autenticada';
+ var nome=institucional?(r.unidadeId||'Unidade de saúde'):identityHeadline(r.nome||'Acesso UBS',r.perfil||'UBS');
+ var detalhe=institucional?'Perfil UBS':((r.funcaoUbs||'Função não informada')+' • '+(r.unidadeId||'Unidade não informada'));
  out.hidden=false;
- if(institucional){
-  out.innerHTML='<strong>UBS autenticada</strong><br><span class="csc-first-name">'+esc(r.unidadeId||'Unidade de saúde')+'</span><br>Perfil UBS';
-  return;
- }
- out.innerHTML='<strong>Identidade autenticada</strong><br><span class="csc-first-name">'+esc(identityHeadline(r.nome||'Acesso UBS',r.perfil||'UBS'))+'</span><br>'+esc(r.funcaoUbs||'Função não informada')+' • '+esc(r.unidadeId||'Unidade não informada');
+ out.innerHTML='<button type="button" id="cscUbsOpenPanels" class="csc-ubs-auth-link" aria-label="Acessar painéis da UBS '+esc(nome)+'"><strong>'+esc(titulo)+'</strong><br><span class="csc-first-name">'+esc(nome)+'</span><br>'+esc(detalhe)+'<span class="csc-ubs-open-copy">Acessar painéis da UBS</span></button>';
+ bindUbsAuthenticatedOpen(r);
 }
 function guardarUbsLocal(pin,r){
  var v=window.ConectaPinLocalV2;if(!v||typeof v.guardar!=='function'||!r)return Promise.resolve(false);
@@ -180,7 +191,7 @@ function loginUbsAccess(){
  post('conecta_ubs_login_pin',{pin:pin,dispositivo:device(),chaveConfianca:proof}).then(function(r){
   saveUbsProfile(r);saveUbsSession(r);renderUbsAuthenticated(r);
   if(el('cscUbsPin'))el('cscUbsPin').value='';
-  setStatus('Acesso UBS validado.','ok');
+  setStatus('UBS localizada. Toque na unidade para acessar os painéis.','ok');
   return guardarUbsLocal(pin,r);
  }).catch(function(e){if(out)out.hidden=true;setStatus(e.message,'err')});
 }
