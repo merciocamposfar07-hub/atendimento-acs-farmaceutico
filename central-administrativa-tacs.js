@@ -570,8 +570,10 @@ function resetModuleShell(){
   });
   try{if(window.ConectaAgendasNativeV1&&typeof window.ConectaAgendasNativeV1.reset==='function')window.ConectaAgendasNativeV1.reset()}catch(e){}
   try{if(window.ConectaMoradoresNativeV1&&typeof window.ConectaMoradoresNativeV1.reset==='function')window.ConectaMoradoresNativeV1.reset()}catch(e){}
+  try{if(window.ConectaProfissionaisNativeV1&&typeof window.ConectaProfissionaisNativeV1.reset==='function')window.ConectaProfissionaisNativeV1.reset()}catch(e){}
   var nativeHost=el('nativeModuleHost');if(nativeHost){nativeHost.hidden=true;nativeHost.innerHTML='';nativeHost.dataset.tacsDirty='0'}
   var moradoresHost=el('nativeMoradoresHost');if(moradoresHost&&moradoresHost.parentNode)moradoresHost.remove()
+  var profissionaisHost=el('nativeProfissionaisHost');if(profissionaisHost&&profissionaisHost.parentNode)profissionaisHost.remove()
   shellFrames={};shellActiveModule='';shellActiveRoute='';shellActiveNative='';shellScopeKey='';
   if(base){base.hidden=false;base.removeAttribute('data-shell-key');base.removeAttribute('data-shell-module');base.removeAttribute('data-shell-route');base.removeAttribute('data-shell-url');base.removeAttribute('data-shell-loaded');if(base.src!=='about:blank')base.src='about:blank'}
   if(viewer)viewer.hidden=true;
@@ -718,6 +720,66 @@ function showNativeMoradores(title,routeId){
   });
   return true;
 }
+/* TAREFA_18_PROFISSIONAIS_NATIVOS_V1:
+   Profissionais e serviços é o terceiro painel da migração definitiva.
+   A rota normal usa superfície nativa própria; o painel legado existe somente como ponte oculta/fallback. */
+var task18ProfissionaisAssetsLoading=false,task18ProfissionaisAssetWaiters=[];
+function ensureTask18ProfissionaisHost(){
+  var host=el('nativeProfissionaisHost');if(host)return host;
+  var viewer=el('viewer'),frame=el('viewerFrame');if(!viewer)return null;
+  host=document.createElement('div');host.id='nativeProfissionaisHost';host.className='csc-native-module-host';host.hidden=true;
+  viewer.insertBefore(host,frame||null);return host;
+}
+function task18LoadStyle(){
+  if(document.getElementById('cscProfissionaisNativeCssV1'))return;
+  var link=document.createElement('link');link.id='cscProfissionaisNativeCssV1';link.rel='stylesheet';
+  link.href='/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.css?v=20260912-task18-profissionais-native-v1';
+  document.head.appendChild(link);
+}
+function ensureTask18ProfissionaisAssets(callback){
+  task18LoadStyle();
+  if(window.ConectaModuleCoreV1&&window.ConectaProfissionaisNativeV1){callback(true);return}
+  task18ProfissionaisAssetWaiters.push(callback);
+  if(task18ProfissionaisAssetsLoading)return;
+  task18ProfissionaisAssetsLoading=true;
+  function finish(ok){
+    task18ProfissionaisAssetsLoading=false;
+    var list=task18ProfissionaisAssetWaiters.slice();task18ProfissionaisAssetWaiters=[];
+    list.forEach(function(cb){try{cb(ok)}catch(e){}});
+  }
+  task16LoadScript('cscModuleCoreTask18','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task18-profissionais-native-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
+    if(!ok){finish(false);return}
+    task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260912-task18-profissionais-native-v1',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
+  });
+}
+function hideAllNativeExcept(kind){
+  if(kind!=='agendas'){try{if(window.ConectaAgendasNativeV1&&window.ConectaAgendasNativeV1.hide)window.ConectaAgendasNativeV1.hide()}catch(e){}var a=el('nativeModuleHost');if(a)a.hidden=true}
+  if(kind!=='moradores'){try{if(window.ConectaMoradoresNativeV1&&window.ConectaMoradoresNativeV1.hide)window.ConectaMoradoresNativeV1.hide()}catch(e){}var m=el('nativeMoradoresHost');if(m)m.hidden=true}
+  if(kind!=='profissionais'){try{if(window.ConectaProfissionaisNativeV1&&window.ConectaProfissionaisNativeV1.hide)window.ConectaProfissionaisNativeV1.hide()}catch(e){}var p=el('nativeProfissionaisHost');if(p)p.hidden=true}
+}
+function showNativeProfissionais(title,routeId){
+  prepareShellScope();publishModuleCore();hideAllNativeExcept('profissionais');
+  Object.keys(shellFrames).forEach(function(key){var frame=shellFrames[key];if(frame)frame.hidden=true});
+  var host=ensureTask18ProfissionaisHost(),viewer=el('viewer');
+  if(!host||!viewer)return false;
+  shellActiveModule='profissionais';shellActiveRoute=routeId;shellActiveNative='profissionais';
+  el('viewerTitle').textContent=title||'Profissionais e serviços';
+  viewer.classList.add('csc-shell-viewer');viewer.hidden=false;host.hidden=false;
+  document.body.classList.add('viewer-open');setShellOpening(title||'Profissionais e serviços',true);
+  ensureTask18ProfissionaisAssets(function(ok){
+    if(shellActiveNative!=='profissionais'||shellActiveRoute!==routeId)return;
+    if(!ok){
+      host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">Não foi possível carregar o módulo nativo de Profissionais e serviços. Volte à Central e tente novamente.</div>';
+      setShellOpening('',false);return;
+    }
+    try{window.ConectaProfissionaisNativeV1.mount(host,{areaId:selectedAreaId});setShellOpening('',false)}
+    catch(e){
+      host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">O módulo de Profissionais e serviços não pôde ser iniciado sem perder a sessão. Volte à Central e tente novamente.</div>';
+      setShellOpening('',false);
+    }
+  });
+  return true;
+}
 function enhanceShellFrame(frame){
   if(!frame||frame.dataset.shellEnhanced==='1')return;
   frame.dataset.shellEnhanced='1';
@@ -745,10 +807,10 @@ function ensureShellFrame(name,url,title,routeId){
   return frame;
 }
 function showShellFrame(name,frame,title,routeId){
-  try{if(window.ConectaAgendasNativeV1&&typeof window.ConectaAgendasNativeV1.hide==='function')window.ConectaAgendasNativeV1.hide()}catch(e){}
-  try{if(window.ConectaMoradoresNativeV1&&typeof window.ConectaMoradoresNativeV1.hide==='function')window.ConectaMoradoresNativeV1.hide()}catch(e){}
+  hideAllNativeExcept('');
   var nativeHost=el('nativeModuleHost');if(nativeHost)nativeHost.hidden=true;
   var moradoresHost=el('nativeMoradoresHost');if(moradoresHost)moradoresHost.hidden=true;
+  var profissionaisHost=el('nativeProfissionaisHost');if(profissionaisHost)profissionaisHost.hidden=true;
   Object.keys(shellFrames).forEach(function(key){var item=shellFrames[key];if(item)item.hidden=item!==frame});
   shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
   el('viewerTitle').textContent=title||'Painel';
@@ -773,6 +835,9 @@ function shellHasUnsaved(frame){
   if(shellActiveNative==='moradores'){
     try{return Boolean(window.ConectaMoradoresNativeV1&&window.ConectaMoradoresNativeV1.hasUnsaved&&window.ConectaMoradoresNativeV1.hasUnsaved())}catch(e){return false}
   }
+  if(shellActiveNative==='profissionais'){
+    try{return Boolean(window.ConectaProfissionaisNativeV1&&window.ConectaProfissionaisNativeV1.hasUnsaved&&window.ConectaProfissionaisNativeV1.hasUnsaved())}catch(e){return false}
+  }
   try{return Boolean(frame&&frame.contentDocument&&frame.contentDocument.documentElement.dataset.tacsDirty==='1')}catch(e){return false}
 }
 function openModule(name,title,options){
@@ -786,6 +851,7 @@ function openModule(name,title,options){
   moduloPendente=null;publishModuleCore();
   if(name==='agendas'){showNativeAgenda(title||'Agendas e vagas',routeId);return}
   if(name==='moradores'&&moduleRouteOptions(options).view!=='prontuarios'){showNativeMoradores(title||'Moradores',routeId);return}
+  if(name==='profissionais'){showNativeProfissionais(title||'Profissionais e serviços',routeId);return}
   var frame=ensureShellFrame(name,url,title||'Painel',routeId);
   showShellFrame(name,frame,title||'Painel',routeId);
 }
@@ -799,6 +865,10 @@ function closeViewer(){
   if(shellActiveNative==='moradores'){
     try{if(window.ConectaMoradoresNativeV1&&window.ConectaMoradoresNativeV1.hide)window.ConectaMoradoresNativeV1.hide()}catch(e){}
     var moradoresHost=el('nativeMoradoresHost');if(moradoresHost)moradoresHost.hidden=true;
+  }
+  if(shellActiveNative==='profissionais'){
+    try{if(window.ConectaProfissionaisNativeV1&&window.ConectaProfissionaisNativeV1.hide)window.ConectaProfissionaisNativeV1.hide()}catch(e){}
+    var profissionaisHost=el('nativeProfissionaisHost');if(profissionaisHost)profissionaisHost.hidden=true;
   }
   el('viewer').hidden=true;setShellOpening('',false);document.body.classList.remove('viewer-open');
   shellActiveModule='';shellActiveRoute='';shellActiveNative='';
