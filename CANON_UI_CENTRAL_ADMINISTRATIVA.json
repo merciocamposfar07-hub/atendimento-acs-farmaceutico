@@ -875,6 +875,72 @@
       "internalGate": "V101_INTERNO_APROVADO=SIM"
     },
     "nextCanonicalPanel": "Profissionais e serviços",
-    "nextPanelStarted": false
+    "nextPanelStarted": true,
+    "nextCanonicalPanelStatus": "completed-in-task18"
+  },
+  "task18NativeProfessionals": {
+    "status": "validated-internal-deployed-pages-passed-canonical",
+    "authorizedOn": "2026-09-12",
+    "validatedOn": "2026-09-12",
+    "scope": "Profissionais e serviços",
+    "migrationOrderPosition": 3,
+    "finalOriginalTask": true,
+    "originalSequenceRange": "1-18",
+    "nativeHostId": "nativeProfissionaisHost",
+    "normalRouteUsesIframe": false,
+    "hiddenLegacyBridgeOnly": true,
+    "hiddenLegacyBridgePath": "teste-v1/painel-profissionais-servicos-v1.html",
+    "ownPinOrLogin": false,
+    "core": "ConectaModuleCoreV1",
+    "preservedActions": [
+      "admin_salvar_profissional",
+      "admin_salvar_servico",
+      "admin_criar_profissional"
+    ],
+    "writeConfirmation": "gravação + releitura real + comparação antes de sucesso",
+    "integratedCreation": "profissional + primeiro serviço + cinco dias úteis de agenda",
+    "redundantDentalEmergencyServiceHidden": true,
+    "undoPreserved": true,
+    "unsavedChangesGuardPreserved": true,
+    "nativeHostsIndependent": [
+      "nativeModuleHost",
+      "nativeMoradoresHost",
+      "nativeProfissionaisHost"
+    ],
+    "onlyActiveNativeHostVisible": true,
+    "backendChanged": false,
+    "appsScriptVersionExpectedUnchanged": 208,
+    "specificGate": "TAREFA_18_PROFISSIONAIS_NATIVOS_OK",
+    "canonicalRecord": "REGISTRO_CANONICO_TAREFA_18_PROFISSIONAIS_NATIVOS_2026_09_12.md",
+    "filesCreated": [
+      "conecta-profissionais-native-v1.js",
+      "conecta-profissionais-native-v1.css"
+    ],
+    "filesAltered": [
+      "teste-v1/painel-profissionais-servicos-v1.html",
+      "central-administrativa-tacs.js"
+    ],
+    "validation": {
+      "task14Gate": "TAREFA_14_TIMEOUT_SESSAO_OK",
+      "task15Gate": "TAREFA_15_NAVEGACAO_INTERNA_OK",
+      "task16Gate": "TAREFA_16_AGENDAS_NATIVAS_OK",
+      "task17Gate": "TAREFA_17_MORADORES_NATIVOS_OK",
+      "task18Gate": "TAREFA_18_PROFISSIONAIS_NATIVOS_OK",
+      "qualityGate": "QUALITY_GATE_V101_OK",
+      "internalGate": "V101_INTERNO_APROVADO=SIM",
+      "finalWorkflowRun": 34731693675,
+      "pagesCodeWorkflowRun": 34731696614,
+      "pagesCodeDeploymentSuccess": true,
+      "backendChanged": false,
+      "appsScriptVersionUnchanged": 208
+    },
+    "task19ExistsInOriginalSequence": false,
+    "sequenceClosed": true
+  },
+  "originalApprovedTaskSequence": {
+    "range": "1-18",
+    "status": "completed",
+    "task19Exists": false,
+    "completedOn": "2026-09-12"
   }
 }
