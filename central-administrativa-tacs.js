@@ -624,7 +624,7 @@ function moduleRouteId(name,options){
   return id;
 }
 function moduleUrl(name,options){
-  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260913-apresentacao-paineis-v2',territoryRevision='20260913-territorio-contexto-local-v4',loadingRevision='20260913-loading-standard-v1',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
+  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260913-apresentacao-paineis-v2',territoryRevision='20260913-territorio-loading-fast-v1',loadingRevision='20260913-loading-standard-v1',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
   if(opts.view)extra+='&view='+encodeURIComponent(opts.view);
   if(opts.all)extra+='&all='+encodeURIComponent(opts.all);
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
