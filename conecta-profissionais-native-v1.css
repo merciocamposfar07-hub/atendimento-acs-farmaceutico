@@ -21,6 +21,6 @@
 .csc-prof-native .check input{width:auto;margin:0}
 .csc-prof-native .actions{display:grid;gap:8px;margin-top:11px}
 .csc-prof-native .save{background:#176a48}
-.csc-prof-native .undo{position:sticky;bottom:8px;width:100%;margin-top:12px;border:1px solid #62c8e8}
+.csc-prof-native .undo{position:static;width:100%;margin-top:12px;border:1px solid #62c8e8}
 .csc-prof-native .hidden{display:none!important}
 @media(min-width:700px){.csc-prof-native .metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
