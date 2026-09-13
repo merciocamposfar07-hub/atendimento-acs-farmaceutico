@@ -28,6 +28,14 @@ assert.doesNotMatch(access,/field\('cscUbsCpf'/);
 assert.doesNotMatch(access,/Primeiro acesso da UBS/);
 assert.match(access,/function loginUbsAccess\(\)/);
 assert.match(access,/post\('conecta_ubs_login_pin'/);
+assert.match(access,/id="cscUbsOpenPanels"/);
+assert.match(access,/function openUbsPanels\(r\)/);
+assert.match(access,/ConectaCentralUbsV1\.entrar/);
+assert.match(centralJs,/UBS_TOKEN_KEY='portalConectaUbsTokenV1'/);
+assert.match(centralJs,/window\.ConectaCentralUbsV1=\{entrar:entrarPaineisUbs\}/);
+assert.match(backend,/function conectaAcessoV1ValidarSessaoUbs_\(/);
+assert.match(territory,/var ubs=conectaAcessoV1ValidarSessaoUbs_\(p,true\)/);
+assert.match(territory,/ubsAtual:ubsAtual\?tacsTerritorioV1PublicarTacs_\(ubsAtual\):null/);
 
 // Compatibilidade de cache e backend também usam PIN; a unidade é o único vínculo obrigatório.
 assert.match(backend,/function conectaAcessoV1UbsPorPin_/);
