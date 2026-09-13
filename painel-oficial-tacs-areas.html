@@ -2456,12 +2456,12 @@ try{visualObserver=new MutationObserver(function(){if(!window.__cscVisualGuardTi
 <!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->
 </head>
 <body>
-<div class="loading"><div class="box"><h1>Painel administrativo</h1><p id="message">Carregando TACS, áreas e importações…</p></div></div>
+<div class="loading"><div class="box"><p id="message">Aguarde enquanto os dados carregam…</p></div></div>
 <script>
 (function(){
 'use strict';
 var source='/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?v=20260912-tarefa11-performance-v1';
-fetch(source,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text();}).then(function(html){
+fetch(source,{cache:'force-cache'}).then(function(r){if(!r.ok)throw new Error('Não foi possível carregar o painel.');return r.text();}).then(function(html){
   html=html.replace('<head>','<head><base href="/atendimento-acs-farmaceutico/teste-v1/">');
   try{delete window.PortalTacsAdminApp4ShellR6}catch(e){window.PortalTacsAdminApp4ShellR6=false}
   document.open();document.write(html);document.close();
