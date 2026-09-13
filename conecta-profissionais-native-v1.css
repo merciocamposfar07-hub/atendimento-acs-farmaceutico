@@ -24,3 +24,15 @@
 .csc-prof-native .undo{position:static;width:100%;margin-top:12px;border:1px solid #62c8e8}
 .csc-prof-native .hidden{display:none!important}
 @media(min-width:700px){.csc-prof-native .metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* CORRECAO_CIRURGICA_ABAS_PROFISSIONAIS_2026_09_13 */
+.csc-prof-native .tabs button{
+  background:#102d46!important;
+  padding:10px 6px!important;
+  font-size:clamp(.82rem,3.7vw,.95rem)!important;
+  white-space:normal!important;
+  overflow-wrap:normal!important;
+  word-break:keep-all!important;
+  -webkit-hyphens:none!important;
+  hyphens:none!important;
+}
