@@ -634,7 +634,7 @@ function moduleUrl(name,options){
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
   if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;
-  if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;
+  if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area+'&from=central';
   return ''
 }
 
