@@ -30,11 +30,16 @@ assert.match(block,/showPendingModuleShell\(name,title\|\|'Painel',routeId\)/);
 assert.doesNotMatch(block,/localFrame\.dataset\.shellLocalFirst/);
 
 // Painéis ainda em frame exibem estrutura interna segura enquanto a sessão remota sincroniza.
-const pendingStart=central.indexOf('function showPendingModuleShell');
+const previewStart=central.indexOf('function ensurePendingPreviewStyle');
+const pendingStart=central.indexOf('function showPendingModuleShell',previewStart);
 const pendingEnd=central.indexOf('function shellHasUnsaved',pendingStart);
+const previewBlock=central.slice(previewStart,pendingEnd);
 const pendingBlock=central.slice(pendingStart,pendingEnd);
-assert.match(pendingBlock,/csc-pending-preview/);
-assert.match(pendingBlock,/Aguarde enquanto os dados carregam…/);
+assert.match(previewBlock,/csc-pending-preview/);
+assert.match(previewBlock,/Aguarde enquanto os dados carregam…/);
+assert.match(previewBlock,/Chamados dos moradores/);
+assert.match(previewBlock,/Administrador \/ TACS \/ UBS/);
+assert.match(previewBlock,/Buscar morador/);
 assert.match(pendingBlock,/viewer\.classList\.add\('csc-shell-viewer','csc-native-viewer'\)/);
 assert.match(pendingBlock,/host\.hidden=false/);
 assert.doesNotMatch(pendingBlock,/\.src\s*=/,'Prévia imediata não pode iniciar iframe protegido antes da sessão remota.');
