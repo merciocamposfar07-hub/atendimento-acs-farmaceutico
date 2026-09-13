@@ -57,8 +57,10 @@ assert.match(form,/id="tacsPermissionsBlock"/);
 assert.match(formJs,/function isInstitutionalUbsProfile\(v\)\{return normalizeAccessProfile\(v\)==='UBS';\}/);
 assert.match(formJs,/querySelectorAll\('#tacsForm \.csc-person-field'\)/);
 assert.match(formJs,/ubsInstitucional\?'':el\('tacsName'\)\.value/);
-assert.match(formJs,/cpf:ubsInstitucional\?'':cpf/);
-assert.match(formJs,/telefone:ubsInstitucional\?'':phone/);
+assert.match(formJs,/if\(ubsInstitucional\)\{birth='';cpf='';phone='';\}/);
+assert.match(formJs,/dataNascimento:birth/);
+assert.match(formJs,/cpf:cpf/);
+assert.match(formJs,/telefone:phone/);
 assert.match(formJs,/funcaoUbs:\(isUbs&&!ubsInstitucional\)\?/);
 
 // Persistência: UBS puro dispensa e limpa dados pessoais, mantendo unidade, PIN e permissões.
