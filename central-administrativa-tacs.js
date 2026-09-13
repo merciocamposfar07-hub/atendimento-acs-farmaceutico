@@ -209,6 +209,7 @@ function priorizarSincronizacaoTerritorioPendente(){
   return false;
 }
 function remoteAuthSuccess(scope,r,pin,hadLocal){
+  ubsToken='';sessionStorage.removeItem(UBS_TOKEN_KEY);
   if(scope==='tacs'){
     token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=text(r&&r.token);mode='tacs';
     if(r&&r.areaId)selectedAreaId=normArea(r.areaId);
@@ -284,8 +285,8 @@ function aplicarAcessoLocal(scope,saved){
   if(!saved||!saved.context)return false;
   /* PIN_LOCAL_SEM_TOKEN_V3: o PIN libera somente o último contexto confirmado.
      Credenciais do servidor nunca são restauradas do armazenamento persistente. */
-  token='';territoryToken='';
-  sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
+  token='';territoryToken='';ubsToken='';
+  sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);sessionStorage.removeItem(UBS_TOKEN_KEY);
   mode=scope;context=saved.context;selectedAreaId=normArea(saved.selectedAreaId||'');
   saveContextCache();
   acessoLocalAberto=scope;
@@ -301,8 +302,8 @@ function bloquearAcessoLocal(scope,message){
   cancelRemoteAuthSync();
   removerAcessoLocal(scope);
   resetModuleShell();
-  token='';territoryToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
-  sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
+  token='';territoryToken='';ubsToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
+  sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);sessionStorage.removeItem(UBS_TOKEN_KEY);
   el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;el('loginPanel').hidden=false;
   showLogin(scope==='tacs'?'tacs':'admin');
   setStatus(message||'O acesso deste perfil precisa ser validado novamente.','err');
@@ -1291,7 +1292,7 @@ function closeViewer(){
   var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-native-viewer','csc-frame-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   shellActiveModule='';shellActiveRoute='';shellActiveNative='';moduloPendente=null;
-  refreshHealth(false);return true;
+  if(mode!=='ubs')refreshHealth(false);return true;
 }
 function loadContext(message){
   post('admin_territorio_dados',session(),'admin_territorio_result',function(r){
@@ -1495,6 +1496,7 @@ window.PortalTacsCentralPinLocalV2={
   guardar:function(scope,pin){return guardarAcessoLocal(scope,pin)},
   bloquear:function(scope,msg){bloquearAcessoLocal(scope,msg)},
   sincronizar:function(scope,newToken,pin,areaId,message){
+    ubsToken='';sessionStorage.removeItem(UBS_TOKEN_KEY);
     if(scope==='tacs'){
       token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=text(newToken);mode='tacs';
       if(areaId)selectedAreaId=normArea(areaId);
