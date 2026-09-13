@@ -2490,6 +2490,11 @@ try{visualObserver=new MutationObserver(function(){if(!window.__cscVisualGuardTi
       var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt>'+protecaoDuplicidade+protecaoAutonomia;
       html=substituir(html,'<head>',bootstrap);
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
+      /* CORRECAO_CIRURGICA_SERVICOS_BALOES_ESCUROS_V1
+         Somente os balões da lista de Serviços: usa o tom escuro canônico do App 4,
+         sem alterar navegação, dados, edição, botões ou demais painéis. */
+      var corBaloesServicos='<style id="cscServicosBaloesEscurosV1">html body #listaServicos>details.cartao{background:#102d46!important;background-image:none!important}</style>';
+      html=substituir(html,'</head>',corBaloesServicos+'</head>');
       try{delete window.PortalTacsAdminApp4ShellR6}catch(e){window.PortalTacsAdminApp4ShellR6=false}
       document.open();document.write(html);document.close();
     }).catch(function(erro){
