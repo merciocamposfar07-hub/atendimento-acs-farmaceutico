@@ -2487,7 +2487,7 @@ try{visualObserver=new MutationObserver(function(){if(!window.__cscVisualGuardTi
 </section>
 </main>
 
-<script src="/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task14-timeout-session-v1"></script>
+<script src="/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260913-municipios-instant-v1"></script>
 <script>
 (function(){
 'use strict';
@@ -2496,6 +2496,34 @@ var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorio
 var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'municipios'}):null,modulePerf=moduleCore&&moduleCore.performance,moduleRequests=moduleCore&&moduleCore.requests;
 var token=moduleSession&&moduleSession.token||'',territoryToken=moduleSession&&moduleSession.territorioToken||'',device=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
 var data=null,active=null,counter=0,dataConfirmed=false;
+var MUNICIPIOS_FAST_CACHE_PREFIX='portalConectaMunicipiosFastV1:';
+function municipiosFastCacheKey(){return MUNICIPIOS_FAST_CACHE_PREFIX+(device||'sem-dispositivo')}
+function municipiosSafeData(r){
+ var cat=r&&r.catalogo||{},orgs=Array.isArray(cat.organizacoes)?cat.organizacoes:[],muns=Array.isArray(cat.municipios)?cat.municipios:[],areas=Array.isArray(r&&r.areas)?r.areas:[];
+ return{ok:true,catalogo:{
+  organizacoes:orgs.map(function(o){return{organizacaoId:txt(o&&o.organizacaoId),nome:txt(o&&o.nome),ativa:o&&o.ativa!==false}}),
+  municipios:muns.map(function(m){return{municipioId:txt(m&&m.municipioId),nome:txt(m&&m.nome),uf:txt(m&&m.uf),organizacaoId:txt(m&&m.organizacaoId),ativo:m&&m.ativo!==false}})
+ },areas:areas.map(function(a){var x=a&&a.contexto||{};return{areaId:txt(a&&a.areaId),areaNome:txt(a&&a.areaNome),erro:txt(a&&a.erro),ativa:a&&a.ativa!==false,contexto:{municipioId:txt(x.municipioId),municipioNome:txt(x.municipioNome||x.municipio),municipioUf:txt(x.municipioUf||x.uf),organizacaoId:txt(x.organizacaoId),organizacaoNome:txt(x.organizacaoNome)}}})}
+}
+function readMunicipiosFastCache(){
+ try{var saved=JSON.parse(localStorage.getItem(municipiosFastCacheKey())||'null');return saved&&saved.schemaVersion===1&&saved.data?saved.data:null}catch(e){return null}
+}
+function writeMunicipiosFastCache(r){
+ try{var safe=municipiosSafeData(r),cat=safe.catalogo||{};if(!(safe.areas.length||cat.organizacoes.length||cat.municipios.length))return;localStorage.setItem(municipiosFastCacheKey(),JSON.stringify({schemaVersion:1,confirmedAt:Date.now(),data:safe}))}catch(e){}
+}
+function primeMunicipiosFromCentralContext(){
+ try{
+  var saved=JSON.parse(sessionStorage.getItem('portalTacsCentralContextCacheV3:admin')||'null'),ctx=saved&&saved.context;
+  if(!ctx||!Array.isArray(ctx.areas)||!ctx.areas.length)return null;
+  var orgMap={},munMap={};
+  ctx.areas.forEach(function(a){
+   var x=a&&a.contexto||{},orgId=id(x.organizacaoId||''),munId=id(x.municipioId||'');
+   if(orgId&&!orgMap[orgId])orgMap[orgId]={organizacaoId:orgId,nome:txt(x.organizacaoNome||orgId),ativa:true};
+   if(munId&&!munMap[munId])munMap[munId]={municipioId:munId,nome:txt(x.municipioNome||x.municipio||munId),uf:id(x.municipioUf||x.uf||'').slice(0,2),organizacaoId:orgId,ativo:true};
+  });
+  return municipiosSafeData({catalogo:{organizacoes:Object.keys(orgMap).map(function(k){return orgMap[k]}),municipios:Object.keys(munMap).map(function(k){return munMap[k]})},areas:ctx.areas});
+ }catch(e){return null}
+}
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function txt(v){return String(v==null?'':v).trim()}
@@ -2523,18 +2551,26 @@ function render(){
  el('summaryPanel').hidden=false;el('contentPanel').hidden=false;syncMunicipioWriteState();
 }
 function syncMunicipioWriteState(){document.querySelectorAll('#addOrg,#addMun,.saveOrg,.saveMun,.saveArea').forEach(function(n){n.disabled=!dataConfirmed})}
-function apply(r,message){if(!r||r.ok!==true){status(txt(r&&r.message)||'A operação não foi confirmada.','err');return false}var diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('municipios',r):{changed:true};data=r;dataConfirmed=true;if(diff.changed)render();else syncMunicipioWriteState();status(diff.changed?(message||txt(r.message)||'Dados confirmados.'):'Dados atuais confirmados; nenhuma mudança nova encontrada.','ok');return true}
+function apply(r,message){if(!r||r.ok!==true){status(txt(r&&r.message)||'A operação não foi confirmada.','err');return false}var diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('municipios',r):{changed:true};writeMunicipiosFastCache(r);data=r;dataConfirmed=true;if(diff.changed)render();else syncMunicipioWriteState();status(diff.changed?(message||txt(r.message)||'Dados confirmados.'):'Dados atuais confirmados; nenhuma mudança nova encontrada.','ok');return true}
 function load(){
  if(territoryToken&&!token){status('Este painel é exclusivo do Administrador geral. Volte à Central.','err');return}
  if(!token){status('Sessão administrativa ausente. Volte à Central e entre como Administrador geral.','err');return}
  var cached=null;
  if(modulePerf&&typeof modulePerf.prime==='function'){
-  cached=modulePerf.prime('municipios',function(saved){data=saved;dataConfirmed=false;render();status('Aguarde enquanto os dados carregam…','warn')});
+  cached=modulePerf.prime('municipios',function(saved){data=saved;dataConfirmed=false;render();status('Estrutura disponível. Confirmando atualização em segundo plano…','warn')});
+ }
+ /* CORRECAO_CIRURGICA_MUNICIPIOS_INSTANT_V1:
+    primeiro pinta a última estrutura administrativa confirmada neste aparelho.
+    Se ainda não houver cache próprio, usa o contexto já confirmado da Central.
+    Toda escrita permanece bloqueada até a confirmação remota desta abertura. */
+ if(!cached){
+  var fast=readMunicipiosFastCache()||primeMunicipiosFromCentralContext();
+  if(fast){data=fast;dataConfirmed=false;render();syncMunicipioWriteState();cached={source:'fast-readonly'};status('Estrutura disponível. Confirmando atualização em segundo plano…','warn')}
  }
  if(!cached)status('Aguarde enquanto os dados carregam…','warn');
  var leituraPayload=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'municipios'}):{token:token,dispositivo:device};coreRead('admin_multimunicipio_dados',leituraPayload,function(done){post('admin_multimunicipio_dados',{},done)},function(r){
   if(!r||r.ok!==true){if(cached){dataConfirmed=false;syncMunicipioWriteState();status('Última confirmação permanece disponível somente para consulta; a atualização ainda não foi confirmada.','warn');return}apply(r);return}
-  var diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('municipios',r):{changed:true};data=r;dataConfirmed=true;if(diff.changed||!cached)render();else syncMunicipioWriteState();status(diff.changed?'Estrutura multi-município carregada e validada.':'Estrutura atual confirmada; nenhuma mudança nova encontrada.','ok')
+  var diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('municipios',r):{changed:true};writeMunicipiosFastCache(r);data=r;dataConfirmed=true;if(diff.changed||!cached)render();else syncMunicipioWriteState();status(diff.changed?'Estrutura multi-município carregada e validada.':'Estrutura atual confirmada; nenhuma mudança nova encontrada.','ok')
  })
 }
 function saveOrg(box,isNew){if(!dataConfirmed){status('Aguarde a confirmação do servidor antes de salvar organizações.','warn');return;}var obj={organizacaoId:id(isNew?el('newOrgId').value:box.querySelector('[name="orgId"]').value),nome:txt(isNew?el('newOrgName').value:box.querySelector('[name="orgName"]').value),ativa:isNew?el('newOrgActive').checked:box.querySelector('[name="orgActive"]').checked};if(!obj.organizacaoId||!obj.nome){status('Informe identificador e nome da organização.','err');return}status('Salvando organização e conferindo vínculos…','warn');post('admin_multimunicipio_salvar_organizacao',payload(obj),function(r){if(apply(r,'Organização salva e vínculos conferidos.')&&isNew){el('newOrgId').value='';el('newOrgName').value='';el('newOrgActive').checked=true}})}
