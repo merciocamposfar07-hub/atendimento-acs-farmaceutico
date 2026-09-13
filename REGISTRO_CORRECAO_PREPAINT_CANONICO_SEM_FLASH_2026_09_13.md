@@ -129,3 +129,25 @@ Validação estática do código:
 - nenhum arquivo de backend alterado.
 
 **Status:** código funcional publicado em `main`; validação da publicação e teste visual no dispositivo permanecem requisitos antes de declarar a correção encerrada.
+
+
+## Consolidação na fonte canônica App4
+
+Após o primeiro ajuste, o workflow canônico App4 regenerou `central-administrativa-tacs.html` a partir de `admin-ui-behavior.inline.js` e demonstrou que alterações feitas somente no HTML gerado podem ser sobrescritas.
+
+A correção foi então levada para a fonte canônica:
+
+- arquivo: `admin-ui-behavior.inline.js`;
+- commit: `7ea70c998842ebe1e960fea8b6d7b26e42e241dc`;
+- efeito: o reconhecedor visual de sessão passa a considerar ADMIN, TACS e UBS na própria fonte usada pelo gerador;
+- workflow canônico App4: `34790372078` — **success**.
+
+O HTML regenerado foi conferido depois do workflow e manteve simultaneamente:
+
+- prepaint antes do `<body>`;
+- cabeçalho canônico estático;
+- sessão UBS;
+- guarda contra `about:blank`;
+- ocultação do frame até a rota real estar pronta.
+
+Isso impede que uma execução futura do gerador App4 remova novamente essa parte da correção.
