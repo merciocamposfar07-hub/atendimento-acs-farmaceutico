@@ -49,8 +49,25 @@ function nativeNotify(type,payload){try{if(nativeConfig&&typeof nativeConfig.onS
 function setStatus(id,msg,type){
   var node=el(id);
   if(!node)return;
+  node.hidden=false;
   node.textContent=msg;
   node.className='status'+(type?' '+type:'');
+}
+/* CORRECAO_CIRURGICA_LOADER_MORADORES_20260913_V1
+   Os dois avisos de carregamento existem somente durante a leitura da base.
+   Quando a confirmação termina, o aviso some sem alterar dados, permissões ou ações do painel. */
+function hideStatus(id){
+  var node=el(id);
+  if(!node)return;
+  node.textContent='';
+  node.className='status';
+  node.hidden=true;
+}
+function hideLoadingStatus(id){
+  var node=el(id);
+  if(!node)return;
+  var value=text(node.textContent);
+  if(value==='Aguarde enquanto os dados carregam…')hideStatus(id);
 }
 function requestId(action){
   return 'morv2_'+String(action||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
@@ -477,9 +494,8 @@ function confirmBaseState(r,message){
   if(el('write'))el('write').textContent=writesEnabled?'LIBERADO':'BLOQ.';
   if(el('consolidation'))el('consolidation').textContent=consolidationEnabled?'LIBERADA':'BLOQ.';
   if(el('situation'))el('situation').textContent=situationEnabled?'LIBERADA':'PROTEGIDA';
-  setStatus('loginStatus',message||'Sessão validada e base conferida.','ok');
-  var operation=el('operationStatus');
-  if(operation&&text(operation.textContent).indexOf('conferência das permissões')!==-1)setStatus('operationStatus','Base conferida. O painel está pronto para uso.','ok');
+  hideStatus('loginStatus');
+  hideLoadingStatus('operationStatus');
   setTimeout(function(){maybeActivateSituation(r)},0);
 }
 function renderBase(r,message,confirmed){
@@ -502,7 +518,12 @@ function renderBase(r,message,confirmed){
   if(el('content'))el('content').classList.remove('hidden');
   if(el('logout'))el('logout').disabled=false;
   ensureSituationUi();setBaseLoading(false);updateNote();syncControls();
-  setStatus('loginStatus',message||(remoteConfirmed?'Sessão validada e base conferida.':'Aguarde enquanto os dados carregam…'),remoteConfirmed?'ok':'warn');
+  if(remoteConfirmed){
+    hideStatus('loginStatus');
+    hideLoadingStatus('operationStatus');
+  }else{
+    setStatus('loginStatus',message||'Aguarde enquanto os dados carregam…','warn');
+  }
   if(PRONTUARIOS_VIEW&&accessMode==='admin'){
     var searchHelp=rootQuery('#searchArea .muted');
     if(searchHelp)searchHelp.textContent='Busque por nome, CPF, CNS ou cadastro familiar. A consulta percorre todas as áreas cadastradas.';
