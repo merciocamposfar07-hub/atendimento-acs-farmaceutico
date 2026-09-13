@@ -70,7 +70,7 @@ function loadTransport(done){
     return;
   }
   var s=document.createElement('script');s.id=id;s.async=false;
-  s.src='/atendimento-acs-farmaceutico/teste-v1/painel-moradores-transport-v2.js?v=20260912-task17-moradores-native-v1';
+  s.src='/atendimento-acs-farmaceutico/teste-v1/painel-moradores-transport-v2.js?v=20260913-loader-lifecycle-v1';
   s.onload=function(){done(Boolean(window.PortalTacsMoradoresTransportV2))};
   s.onerror=function(){done(false)};
   document.head.appendChild(s);
