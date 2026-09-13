@@ -975,5 +975,40 @@
     "workflowRun": 34733744289,
     "pagesRun": 34733739185,
     "record": "REGISTRO_CORRECAO_RESTAURACAO_VISUAL_APP4_PAINÉIS_2026_09_12.md"
+  },
+  "panelPresentationWhatsappCorrection": {
+    "status": "validated-published-canonical",
+    "date": "2026-09-12",
+    "reference": "4 • App institucional",
+    "structuralBackground": "#071827",
+    "structuralColorSplit": false,
+    "floatingPageRefreshButton": false,
+    "header": {
+      "officialIconRequired": true,
+      "brandRequired": "CONECTA SAÚDE COMUNITÁRIA",
+      "panelDescriptionRequired": true,
+      "sticky": false,
+      "fixed": false,
+      "scrollsWithContent": true
+    },
+    "footer": {
+      "requiredAllPanels": true,
+      "line1": "Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.",
+      "line2": "Plataforma institucional de saúde comunitária."
+    },
+    "whatsapp": {
+      "agendasDayStatusButton": true,
+      "agendasFullProfessionalStatusButton": true,
+      "recadosStatusButton": true,
+      "campanhasStatusButton": true,
+      "officialIconInGeneratedCards": true
+    },
+    "functionalLogicChanged": false,
+    "backendChanged": false,
+    "appsScriptVersionUnchanged": 208,
+    "gate": "APRESENTACAO_PAINEIS_WHATSAPP_OK",
+    "workflowRun": 34735145289,
+    "pagesCodeRun": 34735139837,
+    "record": "REGISTRO_CORRECAO_APRESENTACAO_PAINEIS_WHATSAPP_2026_09_12.md"
   }
 }
