@@ -12,9 +12,8 @@ function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').sli
 
 function template(areaId){
   return '<section class="csc-mor-native" data-role="root">'+
-    '<p class="native-note">Módulo nativo do Conecta • moradores • área <strong>'+areaId+'</strong></p>'+
     '<p id="areaHeading" class="native-note">Cadastro individual de cidadãos • '+areaId+'.</p>'+
-    '<div class="csc-mor-native-note">PAINEL DE MORADORES: busca, cadastro, edição, situação e consolidação continuam controlados pelas permissões reais do servidor.</div>'+
+    '<div class="csc-mor-native-note">PAINEL DE MORADORES: as permissões e a consolidação de duplicidades são controladas pelo servidor após o login.</div>'+
     '<section class="panel">'+
       '<div id="loginStatus" class="status">Conferindo sessão e base de moradores…</div>'+
       '<div id="areaControl" class="area-control hidden"><label for="areaSelect">Área de moradores</label><select id="areaSelect" class="field"></select></div>'+
@@ -31,14 +30,14 @@ function template(areaId){
       '<div class="tabs"><button id="tabSearch" class="tab active" type="button">Buscar / editar</button><button id="tabNew" class="tab" type="button">Novo morador</button></div>'+
       '<div id="operationStatus" class="status">Nenhuma alteração realizada.</div>'+
       '<div id="searchArea">'+
-        '<h2>Buscar morador</h2><p class="muted">Busque por nome, CPF, CNS, ID Portal, endereço, telefone ou referência familiar registrada.</p>'+
+        '<h2>Buscar morador</h2><p class="muted">Busque por nome, CPF, CNS, ID Portal, endereço ou telefone.</p>'+
         '<label for="query">Busca</label><input id="query" class="field" placeholder="Ex.: Maria Adriana">'+
         '<div class="actions"><button id="search" class="btn" type="button">Buscar na base real</button></div>'+
         '<div id="results" class="list"></div>'+
       '</div>'+
       '<div id="formArea" class="hidden">'+
         '<h2 id="formTitle">Novo morador</h2>'+
-        '<p class="muted">Uma pessoa por cadastro. CPF/CNS podem ficar vazios quando ainda não existirem.</p>'+
+        '<p class="muted">Uma pessoa por cadastro. CPF/CNS podem ficar vazios quando ainda não existirem, como em recém-nascido.</p>'+
         '<form id="residentForm" autocomplete="off">'+
           '<input id="residentId" type="hidden"><input id="originSheet" type="hidden"><input id="originRow" type="hidden">'+
           '<div class="grid">'+
