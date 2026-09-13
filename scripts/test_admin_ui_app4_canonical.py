@@ -77,10 +77,9 @@ for token in ['APP4_PALETA_OFICIAL_SEM_AZUL_CLARO_2026_09_13_V1', 'CORRECAO_VISU
 if "button.textContent='↻ Atualizar página'" in visual_guard:
     raise SystemExit('Botão flutuante Atualizar página voltou ao código da Central.')
 
-for forbidden in ['>← Central</button>', 'position:sticky!important', 'position:fixed!important']:
-    if forbidden in central_html:
-        raise SystemExit(f'Central voltou a exibir regra visual rejeitada: {forbidden}')
-for token in ['viewerFooter', 'CONECTA SAÚDE COMUNITÁRIA', 'conecta-saude-central-canonico-2026-09-09.png', 'Plataforma institucional de saúde comunitária']:
+if '>← Central</button>' in central_html:
+    raise SystemExit('Central voltou a exibir botão textual ← Central.')
+for token in ['id="cscPanelVisualConsistencyV2"', '.viewer.csc-native-viewer>.viewer-bar', 'position:static!important', 'viewerFooter', 'CONECTA SAÚDE COMUNITÁRIA', 'conecta-saude-central-canonico-2026-09-09.png', 'Plataforma institucional de saúde comunitária']:
     if token not in central_html:
         raise SystemExit(f'Cabeçalho/rodapé App4 incompleto na Central: {token}')
 
