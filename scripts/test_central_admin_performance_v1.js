@@ -24,10 +24,12 @@ assert(base.includes('TAREFA_10_SHELL_PERSISTENTE_V1'),
   'Shell persistente canônico da Tarefa 10 ausente.');
 assert(base.includes('function ensureShellFrame(name,url,title,routeId)')&&base.includes('function showShellFrame(name,frame,title,routeId)'),
   'Central deve manter host persistente por rota interna do módulo.');
-assert(base.includes("var shellFrames={},shellActiveModule='',shellActiveRoute='',shellScopeKey=''"),
+assert(base.includes("var shellFrames={},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey=''"),
   'Pool de módulos/rotas persistentes não foi criado.');
 assert(base.includes('TAREFA_15_NAVEGACAO_INTERNA_V1')&&base.includes('voltar:closeViewer'),
   'Extensão de navegação interna da Tarefa 15 deve preservar o shell da Tarefa 10.');
+assert(base.includes('TAREFA_16_AGENDAS_NATIVAS_V1')&&base.includes("if(name==='agendas'){showNativeAgenda"),
+  'Tarefa 16 deve migrar somente Agendas para o host nativo sem desmontar o shell.');
 ['moradores','suporte','recados','agendas','profissionais','territorio','municipios','portal'].forEach((modulo)=>{
   assert(base.includes("name==='"+modulo+"'"),
     'Roteador canônico não cobre módulo obrigatório: '+modulo);
