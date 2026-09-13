@@ -181,16 +181,38 @@
 
   function installCentralReturnUI(){
     if(!document.body||isAdminPage()||!cameFromCentral()||!hasCentralSession())return;
+
+    /* RETORNO_CENTRAL_ESTAVEL_V2:
+       central-back-button-v1.js é o único dono visual do retorno.
+       Se ele já instalou a barra estável, o auto-update não cria um segundo botão. */
+    if(document.getElementById('portalTacsBackCentralV1')){
+      var duplicate=document.getElementById(CENTRAL_RETURN_ID);
+      if(duplicate&&duplicate.parentNode)duplicate.parentNode.removeChild(duplicate);
+      return;
+    }
+
     if(document.getElementById(CENTRAL_RETURN_ID))return;
     ensureStyle();
     var button=document.createElement('button');
     button.id=CENTRAL_RETURN_ID;
     button.type='button';
-    button.textContent='← Central';
+    button.textContent='← Voltar à Central';
     button.setAttribute('aria-label','Voltar à Central Administrativa mantendo a sessão atual');
     button.title='Voltar à Central Administrativa';
     button.addEventListener('click',function(){
       button.disabled=true;
+
+      /* Mesmo na pequena janela antes de central-back-button-v1.js assumir o controle,
+         o clique volta primeiro ao shell persistente e não recarrega a Central. */
+      try{
+        if(window.parent&&window.parent!==window&&
+           window.parent.ConectaCentralShellV1&&
+           typeof window.parent.ConectaCentralShellV1.voltar==='function'){
+          window.parent.ConectaCentralShellV1.voltar();
+          return;
+        }
+      }catch(e){}
+
       button.textContent='← Voltando…';
       window.location.href='/atendimento-acs-farmaceutico/central-administrativa-tacs.html?retorno=portal';
     });
