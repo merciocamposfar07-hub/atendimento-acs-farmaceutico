@@ -64,6 +64,7 @@ assert.match(backend,/function conectaAcessoV1RespostaDiagnosticoLista_/);
 
 assert.match(backend,/var somenteCadastro=Boolean\(filtros\.cadastro&&!filtros\.cpf&&!filtros\.cns&&!filtros\.nome&&!filtros\.nascimento\)/);
 assert.match(backend,/if\(somenteCadastro\)\{[\s\S]*?conectaAcessoV1BuscarCadastroAreaDiagnostico_\(filtros\.cadastro,filtros\.areaId\)[\s\S]*?if\(porCadastro&&porCadastro\.resposta\)return porCadastro\.resposta/,'Busca somente pelo número de cadastro deve usar o caminho familiar direto, sem releituras genéricas repetidas.');
+assert.match(backend,/porCadastro&&porCadastro\.pessoas\|\|\[\]/,'Fallback da busca por cadastro deve preservar os resultados pessoais retornados pelo helper.');
 assert.match(backend,/if\(filtros\.cpf&&/);
 assert.match(backend,/if\(filtros\.cns&&/);
 assert.match(backend,/if\(filtros\.nomeNormalizado\)/);
