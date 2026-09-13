@@ -199,8 +199,8 @@ async function testTerritoryPanel() {
   assert.match(html, /id="tacsProfile"/);
   assert.match(html, /id="tacsActiveText"/);
   assert.doesNotMatch(html, /<\/script>\\n<script/,'O HTML não pode expor \\n literal entre scripts.');
-  assert.match(html, /painel-tacs-areas-v1\.js\?v=20260913-territorio-reconexao-v6/,'HTML e JS da UBS devem compartilhar a revisão atual.');
-  assert.match(official, /painel-tacs-areas-v1\.html\?v=20260913-territorio-reconexao-v6/,'Wrapper oficial deve buscar o HTML atual da UBS.');
+  assert.match(html, /painel-tacs-areas-v1\.js\?v=20260913-territorio-loading-fast-v1/,'HTML e JS da UBS devem compartilhar a revisão atual.');
+  assert.match(official, /painel-tacs-areas-v1\.html\?v=20260913-territorio-loading-fast-v1/,'Wrapper oficial deve buscar o HTML atual da UBS.');
   assert.match(official, /fetch\(source,\{cache:'no-store'\}\)/,'Wrapper oficial não pode reutilizar HTML antigo em cache.');
   assert.doesNotMatch(official, /force-cache/,'Wrapper oficial não pode usar force-cache no cadastro UBS.');
   assert.match(html, /id="accessStateControlV1"/);
