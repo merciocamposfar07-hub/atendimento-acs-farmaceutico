@@ -13,7 +13,7 @@ function adminDeviceRecognized(){
 var TACS_ONLY=String(URL_PARAMS.get('acesso')||'').toLowerCase()==='tacs'&&!adminDeviceRecognized();
 var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
 var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
-var shellFrames={},shellActiveModule='',shellScopeKey='';
+var shellFrames={},shellActiveModule='',shellActiveRoute='',shellScopeKey='';
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
@@ -525,14 +525,42 @@ function refreshHealth(force){
   el('healthUpdated').textContent='Atualizando dados validados • área '+(text(area&&area.areaNome)||areaId);
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
-function moduleUrl(name){var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260912-task12-cache-version-v1',from='&from=central';if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+from+'&v='+revision;if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+from+'&v='+revision;if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+from+'&v='+revision;if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+from+'&v='+revision;if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+from+'&v='+revision;if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v=20260912-task12-cache-version-v1';if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;return ''}
+/* TAREFA_15_NAVEGACAO_INTERNA_V1:
+   a seta Voltar usa o shell interno do Conecta e não o histórico imprevisível do Safari.
+   Rotas variantes mantêm frames próprios para preservar filtros, posição e estado já carregado. */
+function moduleRouteOptions(options){
+  var src=options&&typeof options==='object'?options:{};
+  var view=text(src.view).toLowerCase().replace(/[^a-z0-9_-]/g,'');
+  var all=String(src.all==null?'':src.all)==='1'?'1':'';
+  return{view:view,all:all};
+}
+function moduleRouteId(name,options){
+  var opts=moduleRouteOptions(options),id=text(name).toLowerCase();
+  if(opts.view)id+='|view='+opts.view;
+  if(opts.all)id+='|all='+opts.all;
+  return id;
+}
+function moduleUrl(name,options){
+  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260912-task15-navigation-v1',from='&from=central',opts=moduleRouteOptions(options),extra='';
+  if(opts.view)extra+='&view='+encodeURIComponent(opts.view);
+  if(opts.all)extra+='&all='+encodeURIComponent(opts.all);
+  if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
+  if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
+  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision;
+  if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
+  if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
+  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v='+revision;
+  if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;
+  if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;
+  return ''
+}
 
 /* TAREFA_10_SHELL_PERSISTENTE_V1:
    a Central permanece montada e é a única dona da navegação interna.
    Cada módulo é carregado uma vez por perfil/área e preservado ao voltar à Central. */
 function shellCurrentScope(){return (mode||'')+'|'+normArea(selectedAreaId)}
-function shellFrameKey(name){return shellCurrentScope()+'|'+text(name).toLowerCase()}
-function shellActiveFrame(){return shellActiveModule&&shellFrames[shellFrameKey(shellActiveModule)]||null}
+function shellFrameKey(routeId){return shellCurrentScope()+'|'+text(routeId).toLowerCase()}
+function shellActiveFrame(){return shellActiveRoute&&shellFrames[shellFrameKey(shellActiveRoute)]||null}
 function resetModuleShell(){
   var viewer=el('viewer'),base=el('viewerFrame');
   Object.keys(shellFrames).forEach(function(key){
@@ -540,8 +568,8 @@ function resetModuleShell(){
     try{frame.src='about:blank'}catch(e){}
     if(frame!==base&&frame.parentNode)frame.remove();
   });
-  shellFrames={};shellActiveModule='';shellScopeKey='';
-  if(base){base.hidden=false;base.removeAttribute('data-shell-key');base.removeAttribute('data-shell-module');base.removeAttribute('data-shell-url');base.removeAttribute('data-shell-loaded');if(base.src!=='about:blank')base.src='about:blank'}
+  shellFrames={};shellActiveModule='';shellActiveRoute='';shellScopeKey='';
+  if(base){base.hidden=false;base.removeAttribute('data-shell-key');base.removeAttribute('data-shell-module');base.removeAttribute('data-shell-route');base.removeAttribute('data-shell-url');base.removeAttribute('data-shell-loaded');if(base.src!=='about:blank')base.src='about:blank'}
   if(viewer)viewer.hidden=true;
   setShellOpening('',false);
   document.body.classList.remove('viewer-open');
@@ -572,9 +600,9 @@ function enhanceShellFrame(frame){
     if(shellActiveFrame()===frame)setShellOpening('',false);
   });
 }
-function ensureShellFrame(name,url,title){
+function ensureShellFrame(name,url,title,routeId){
   prepareShellScope();
-  var key=shellFrameKey(name),frame=shellFrames[key],base=el('viewerFrame'),viewer=el('viewer');
+  var key=shellFrameKey(routeId),frame=shellFrames[key],base=el('viewerFrame'),viewer=el('viewer');
   if(frame)return frame;
   if(base&&!base.dataset.shellKey){
     frame=base;
@@ -585,13 +613,13 @@ function ensureShellFrame(name,url,title){
     frame.src='about:blank';
     viewer.appendChild(frame);
   }
-  frame.dataset.shellKey=key;frame.dataset.shellModule=name;frame.dataset.shellUrl=url;frame.hidden=true;
+  frame.dataset.shellKey=key;frame.dataset.shellModule=name;frame.dataset.shellRoute=routeId;frame.dataset.shellUrl=url;frame.hidden=true;
   enhanceShellFrame(frame);shellFrames[key]=frame;
   return frame;
 }
-function showShellFrame(name,frame,title){
+function showShellFrame(name,frame,title,routeId){
   Object.keys(shellFrames).forEach(function(key){var item=shellFrames[key];if(item)item.hidden=item!==frame});
-  shellActiveModule=name;
+  shellActiveModule=name;shellActiveRoute=routeId;
   el('viewerTitle').textContent=title||'Painel';
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer');viewer.hidden=false;
   frame.hidden=false;document.body.classList.add('viewer-open');
@@ -611,22 +639,22 @@ function showShellFrame(name,frame,title){
 function shellHasUnsaved(frame){
   try{return Boolean(frame&&frame.contentDocument&&frame.contentDocument.documentElement.dataset.tacsDirty==='1')}catch(e){return false}
 }
-function openModule(name,title){
-  var url=moduleUrl(name);if(!url)return;
+function openModule(name,title,options){
+  var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
   if(name==='portal'){window.open(url,'_blank','noopener');return}
   if(!(token||territoryToken)){
-    moduloPendente={name:name,title:title||'Painel'};
+    moduloPendente={name:name,title:title||'Painel',options:moduleRouteOptions(options)};
     setStatus('Central pronta. Confirmando a sessão para carregar os dados deste painel…','warn');
     return;
   }
   moduloPendente=null;publishModuleCore();
-  var frame=ensureShellFrame(name,url,title||'Painel');
-  showShellFrame(name,frame,title||'Painel');
+  var frame=ensureShellFrame(name,url,title||'Painel',routeId);
+  showShellFrame(name,frame,title||'Painel',routeId);
 }
 function closeViewer(){
   var frame=shellActiveFrame();
   if(shellHasUnsaved(frame)&&!window.confirm('Há alterações que podem não ter sido salvas. Deseja voltar à Central mesmo assim?'))return false;
-  el('viewer').hidden=true;setShellOpening('',false);document.body.classList.remove('viewer-open');shellActiveModule='';
+  el('viewer').hidden=true;setShellOpening('',false);document.body.classList.remove('viewer-open');shellActiveModule='';shellActiveRoute='';
   refreshHealth(false);return true;
 }
 function loadContext(message){
@@ -652,7 +680,7 @@ function loadContext(message){
     setStatus(message||'Acesso validado.','ok');renderContext(false);
     if(moduloPendente){
       var proximo=moduloPendente;moduloPendente=null;
-      setTimeout(function(){openModule(proximo.name,proximo.title)},0);
+      setTimeout(function(){openModule(proximo.name,proximo.title,proximo.options)},0);
     }
   });
 }
@@ -809,8 +837,10 @@ window.ConectaCentralModuleCoreV1={publicar:publishModuleCore,chave:MODULE_CORE_
 window.ConectaCentralShellV1={
   abrir:openModule,
   fechar:closeViewer,
+  voltar:closeViewer,
   resetar:resetModuleShell,
   ativo:function(){return shellActiveModule},
+  rotaAtiva:function(){return shellActiveRoute},
   escopo:function(){return shellCurrentScope()},
   contagemFrames:function(){return Object.keys(shellFrames).length}
 };
