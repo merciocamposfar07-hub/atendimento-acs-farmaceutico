@@ -33,6 +33,7 @@ function hasSession(){
   try{return Boolean(text(sessionStorage.getItem(ADMIN_TOKEN)||'')||text(sessionStorage.getItem(TERRITORY_TOKEN)||'')||text(sessionStorage.getItem(UBS_TOKEN)||''))}catch(e){return false}
 }
 function isTerritory(){try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}}
+function isUbsSession(){try{return Boolean(text(sessionStorage.getItem(UBS_TOKEN)||''))}catch(e){return false}}
 function syncSessionClass(){
   var active=hasSession();
   ROOT.classList.toggle('csc-session-active',active);
@@ -53,9 +54,16 @@ function panelTitle(){
   var t=text(document.title).split('|')[0].split('•')[0];
   return t||'Painel administrativo';
 }
-function centralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260910-app4-r6'+(isTerritory()?'&acesso=tacs':'')}
+function centralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260913-ubs-return-v1'+(isTerritory()?'&acesso=tacs':(isUbsSession()?'&acesso=ubs':''))}
 function backToCentral(){
   try{sessionStorage.setItem(RETURN_FLAG,'1')}catch(e){}
+  /* CORRECAO_CIRURGICA_RETORNO_SESSAO_UBS_V1
+     Em sessão UBS incorporada, a seta deve fechar o painel no shell pai.
+     Não altera o retorno de Administrador/TACS. */
+  if(isUbsSession()){
+    try{if(window.parent&&window.parent!==window&&window.parent.ConectaCentralShellV1&&typeof window.parent.ConectaCentralShellV1.voltar==='function'){window.parent.ConectaCentralShellV1.voltar();return}}catch(e){}
+    location.replace(centralUrl());return
+  }
   var params=null,from=false;
   try{params=new URLSearchParams(location.search||'');from=String(params.get('from')||'').toLowerCase()==='central'}catch(e){}
   if(from&&history.length>1){history.back();return}
