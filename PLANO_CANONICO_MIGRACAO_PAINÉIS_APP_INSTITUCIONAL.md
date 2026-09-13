@@ -348,3 +348,24 @@ Gate específico `TAREFA_13_DEDUP_REQUISICOES_OK`, suíte integral, `QUALITY_GAT
 Nenhuma mudança de backend Apps Script foi necessária; a produção permanece na versão **208**.
 
 **Regra de sequência:** Tarefa 13 encerrada tecnicamente; Tarefa 14 liberada.
+
+
+## Tarefa 14 autorizada — Timeout não destrói sessão
+Falha temporária de rede, lentidão do Apps Script ou timeout não pode apagar a autenticação nem desmontar o estado já confirmado.
+
+Fluxo:
+`falha temporária → manter sessão/contexto/shell → manter último dado confirmado em somente leitura → tentar sincronizar novamente`.
+
+Regras:
+- `ConectaModuleCoreV1.sessionPolicy` classifica e normaliza as falhas;
+- falha não explicitamente autenticatória recebe `temporario:true` e `preservarSessao:true`;
+- somente recusa explícita de sessão/token/acesso pode invalidar;
+- módulos não retornam ao PIN por timeout;
+- painéis já carregados não são esvaziados por falha temporária;
+- escrita permanece bloqueada até confirmação remota atual;
+- nenhuma alteração de backend Apps Script nesta tarefa;
+- comportamento de Back fica reservado à Tarefa 15.
+
+### Status da Tarefa 14: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
+Gate específico: `TAREFA_14_TIMEOUT_SESSAO_OK`.
+
