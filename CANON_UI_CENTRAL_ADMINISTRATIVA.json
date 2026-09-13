@@ -696,7 +696,7 @@
     "validatedOn": "2026-09-12"
   },
   "task14TimeoutSession": {
-    "status": "implemented-awaiting-validation",
+    "status": "validated-internal-pages-passed",
     "authorizedOn": "2026-09-12",
     "temporaryFailurePreservesSession": true,
     "timeoutPreservesSession": true,
@@ -724,11 +724,18 @@
     "task15BackNavigationDeferred": true,
     "specificGate": "TAREFA_14_TIMEOUT_SESSAO_OK",
     "validation": {
-      "specificGate": "pending",
-      "fullSuite": "pending",
-      "qualityGate": "pending",
-      "internalGate": "pending",
-      "pagesDeployment": "pending"
-    }
+      "specificGate": "TAREFA_14_TIMEOUT_SESSAO_OK",
+      "fullSuite": "passed",
+      "qualityGate": "QUALITY_GATE_V101_OK",
+      "internalGate": "V101_INTERNO_APROVADO=SIM",
+      "performanceWorkflowRun": 34728200204,
+      "pagesWorkflowRun": 34728194735,
+      "pagesDeploymentSuccess": true,
+      "backendChanged": false,
+      "appsScriptVersionUnchanged": 208,
+      "appsScriptDeployStatusRun": 34724133585,
+      "validationNotes": "Gates legados de transporte/cache-busting foram alinhados ao contrato atual sem alterar a lógica funcional; versionamento automático por hash permanece aceito."
+    },
+    "validatedOn": "2026-09-12"
   }
 }
