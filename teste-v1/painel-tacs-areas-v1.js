@@ -267,6 +267,21 @@ function openTacs(t){
   if(t&&!isInstitutionalUbsProfile(perfilAtual)&&digits(t.cpf).length!==11)status('Atenção: este cadastro possui CPF incompleto na base. Corrija os 11 números antes de salvar novamente.','err');
   el('tacsForm').classList.remove('hidden');el('tacsForm').scrollIntoView({behavior:'smooth',block:'start'});
 }
+function applyConfirmedTacsWrite(r){
+  var saved=r&&r.tacs,found=false;
+  if(saved&&text(saved.tacsId)){
+    data.tacs=data.tacs.map(function(item){
+      if(text(item&&item.tacsId)!==text(saved.tacsId))return item;
+      found=true;return saved;
+    });
+    if(!found)data.tacs.push(saved);
+  }
+  territoryConfirmed=true;
+  if(modulePerf&&typeof modulePerf.commit==='function')modulePerf.commit('territorio',territoryPerformancePayload(data));
+  render();
+  el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;
+  loginStatus('Dados territoriais confirmados.','ok');
+}
 
 function saveTacs(event){if(!territoryConfirmed){status('Aguarde a confirmação do servidor antes de alterar cadastros.','warn');return;}
   event.preventDefault();
@@ -286,7 +301,7 @@ function saveTacs(event){if(!territoryConfirmed){status('Aguarde a confirmação
     if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar.'),'err');return;}
     var divergente=validarRetornoCadastro(r,body);
     if(divergente){status('Falha de integridade: o '+divergente+' retornou diferente do valor enviado. O formulário foi mantido aberto para impedir uma alteração silenciosa.','err');return;}
-    el('tacsForm').classList.add('hidden');loadData('',text(r.message||'Cadastro salvo e conferido.'));
+    el('tacsForm').classList.add('hidden');applyConfirmedTacsWrite(r);status(text(r.message||'Cadastro salvo e conferido.'),'ok');
   });
 }
 
