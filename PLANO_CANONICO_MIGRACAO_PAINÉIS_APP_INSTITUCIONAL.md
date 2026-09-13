@@ -342,7 +342,9 @@ Regras:
 - cache/frescor da Tarefa 12 permanece não autoritativo;
 - timeout e preservação de sessão continuam reservados à Tarefa 14.
 
-### Status da Tarefa 13: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_13_DEDUP_REQUISICOES_OK`.
+### Status final da Tarefa 13: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate específico `TAREFA_13_DEDUP_REQUISICOES_OK`, suíte integral, `QUALITY_GATE_V101_OK` e homologação interna 100% aprovados no workflow `34726702055`. GitHub Pages passou no run `34726715749`.
 
-Nenhuma mudança de backend Apps Script foi necessária; a versão de produção deve permanecer em **208**.
+Nenhuma mudança de backend Apps Script foi necessária; a produção permanece na versão **208**.
+
+**Regra de sequência:** Tarefa 13 encerrada tecnicamente; Tarefa 14 liberada.
