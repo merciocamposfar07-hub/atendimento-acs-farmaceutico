@@ -34,6 +34,7 @@ on:
       - 'teste-v1/painel-tacs-areas-v1.js'
       - 'teste-v1/painel-tacs-areas-v1.html'
       - 'teste-v1/painel-profissionais-servicos-v1.html'
+      - 'scripts/test_tarefa12_cache_frescor.js'
       - 'scripts/test_tarefa13_dedup_requisicoes.js'
       - 'scripts/test_tarefa14_timeout_sessao.js'
       - 'scripts/test_tarefa15_navegacao_interna.js'
