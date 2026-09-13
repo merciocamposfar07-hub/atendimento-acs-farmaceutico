@@ -378,6 +378,24 @@ function install(){
         return;
       }
     }catch(e){}
+
+    /* RETORNO_CENTRAL_POPUP_V1:
+       versões anteriores da Central abriam o Portal em nova aba com _blank + noopener.
+       Essa nova aba não herda sessionStorage. Se esse fluxo ainda estiver aberto no
+       Safari/iPhone, fechar a aba do Portal devolve o usuário à Central original,
+       que continua autenticada. Se o navegador bloquear window.close(), usamos a
+       navegação direta como fallback. */
+    if(fromCentral&&window.parent===window){
+      try{
+        window.close();
+        if(window.closed)return;
+      }catch(e){}
+      setTimeout(function(){
+        try{location.assign(centralUrl())}catch(e){}
+      },180);
+      return;
+    }
+
     location.assign(centralUrl());
   });
   bar.appendChild(btn);
