@@ -493,3 +493,28 @@ Validação:
 
 Registro:
 `REGISTRO_CORRECAO_APRESENTACAO_PAINEIS_WHATSAPP_2026_09_12.md`.
+
+
+### Correção isolada — Retorno estável do Portal TACS à Central
+Data: 13/09/2026
+
+Fluxo:
+`Central autenticada → Portal TACS no shell → ← Voltar à Central → fechar somente o viewer → mesmos painéis administrativos autenticados`
+
+Regras:
+- um único controle visual de retorno no Portal TACS;
+- proibida disputa entre `portal-auto-update.js` e `central-back-button-v1.js`;
+- retorno pelo `ConectaCentralShellV1.voltar()` sempre que o Portal estiver dentro da Central;
+- navegação direta para a URL da Central apenas como fallback fora do shell;
+- o bloco de retorno não manipula o botão circular de atualização;
+- nenhuma alteração em sessão, PIN, permissões, dados, UBS, TACS, moradores, agendas, vagas ou backend.
+
+Validação interna:
+- sintaxe JS: OK;
+- teste simulado de clique pré/pós-instalação: retorno pelo shell sem redirecionamento;
+- duplicidade do controle legado: eliminada;
+- release publicada para teste: `1297ed43fcf5`.
+
+Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente.**
+
+Registro: `REGISTRO_CORRECAO_RETORNO_PORTAL_TACS_ESTAVEL_2026_09_13.md`.
