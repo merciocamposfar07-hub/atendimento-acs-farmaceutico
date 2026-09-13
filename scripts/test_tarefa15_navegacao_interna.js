@@ -50,14 +50,16 @@ assert.doesNotMatch(closeBlock,/about:blank/);
 
 // Prontuários e Pendências entram como rotas do mesmo shell.
 const dockGuarded=/CORRECAO_VISUAL_CONTRATO_APP4_2026_09_13_V3/.test(centralHtml)&&/function installDockNavigationGuard\(\)/.test(centralHtml);
-assert.match(centralHtml,/shell\.abrir\('moradores','Prontuários',\{view:'prontuarios',all:'1'\}\)/);
-assert.match(centralHtml,/shell\.abrir\('suporte','Pendências da área',\{view:'pending'\}\)/);
-if(!dockGuarded){
-  assert.doesNotMatch(centralHtml,/function openRecordsPage\(\)\{[\s\S]*?location\.assign\(/);
-  assert.doesNotMatch(centralHtml,/function openPendingPage\(\)\{[\s\S]*?location\.assign\(/);
-}else{
+if(dockGuarded){
+  assert.match(centralHtml,/\.abrir\('moradores','Prontuários',\{view:'prontuarios',all:'1'\}\)/);
+  assert.match(centralHtml,/\.abrir\('suporte','Pendências da área',\{view:'pending'\}\)/);
   assert.match(centralHtml,/e\.stopImmediatePropagation\(\)/);
   assert.match(centralHtml,/location\.replace\(fallback\)/);
+}else{
+  assert.match(centralHtml,/shell\.abrir\('moradores','Prontuários',\{view:'prontuarios',all:'1'\}\)/);
+  assert.match(centralHtml,/shell\.abrir\('suporte','Pendências da área',\{view:'pending'\}\)/);
+  assert.doesNotMatch(centralHtml,/function openRecordsPage\(\)\{[\s\S]*?location\.assign\(/);
+  assert.doesNotMatch(centralHtml,/function openPendingPage\(\)\{[\s\S]*?location\.assign\(/);
 }
 
 // Toda seta Voltar usa o shell pai quando incorporada e replace seguro fora dele.
