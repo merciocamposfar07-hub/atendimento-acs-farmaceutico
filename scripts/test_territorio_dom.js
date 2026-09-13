@@ -235,8 +235,17 @@ async function testTerritoryPanel() {
   assert.match(js, /if\(ubsInstitucional\)\{birth='';cpf='';phone='';\}/,
     'UBS institucional deve limpar os campos pessoais antes de montar o payload.');
   assert.match(js, /dataNascimento:birth/);
-  assert.match(js, /if\(operationMessage\)status\(operationMessage,'ok'\)/,
-    'Uma gravação concluída deve substituir a mensagem de validação pela confirmação final.');
+  assert.match(js, /function applyConfirmedTacsWrite\(r\)/,
+    'Cadastro confirmado pelo servidor deve ser aplicado imediatamente na lista local.');
+  assert.match(js, /territoryConfirmed=true;/,
+    'Cadastro confirmado não pode desabilitar novamente os botões aguardando uma segunda releitura.');
+  assert.match(js, /applyConfirmedTacsWrite\(r\);status\(text\(r\.message\|\|'Cadastro salvo e conferido\.'\),'ok'\)/,
+    'Após salvar Administrador\/TACS\/UBS, a confirmação do próprio POST deve encerrar a operação com sucesso.');
+  const saveTacsStart=js.indexOf('function saveTacs(event)');
+  const areaBodyStart=js.indexOf('function areaFormBody()',saveTacsStart);
+  const saveTacsBlock=js.slice(saveTacsStart,areaBodyStart);
+  assert.doesNotMatch(saveTacsBlock,/loadData\(/,
+    'Salvar UBS não deve iniciar releitura bloqueante nem exibir aviso de releitura não confirmada.');
   assert.match(html, /id="areaLinkState"/,
     'O formulário deve reservar uma área de estado para o vínculo confirmado.');
   assert.match(html, /id="saveAreaButton"/,
