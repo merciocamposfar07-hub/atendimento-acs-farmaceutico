@@ -86,16 +86,18 @@ jobs:
           live=Path(os.environ['LIVE_DIR'])
           source=Path('apps-script/ZZZZ_17_TacsAreasAdminV1.gs')
           candidates=[]
+          declaration='var TACS_TERRITORIO_V1 = Object.freeze('
           for p in live.rglob('*'):
               if p.is_file() and p.suffix.lower() in {'.js','.gs'}:
                   try:
                       text=p.read_text(encoding='utf-8')
                   except Exception:
                       continue
-                  if 'TACS_TERRITORIO_V1' in text:
+                  if declaration in text:
                       candidates.append(p)
           if len(candidates)!=1:
-              raise SystemExit(f'Esperado exatamente 1 módulo TACS_TERRITORIO_V1; encontrados {len(candidates)}')
+              names=[str(p.relative_to(live)) for p in candidates]
+              raise SystemExit(f'Esperado exatamente 1 módulo que DECLARA TACS_TERRITORIO_V1; encontrados {len(candidates)}: {names}')
           target=candidates[0]
 
           def digest_tree():
@@ -112,9 +114,12 @@ jobs:
           expected=str(target.relative_to(live))
           if changed!=[expected]:
               raise SystemExit(f'Escopo violado. Arquivos alterados: {changed}; esperado somente {expected}')
+          Path(os.environ['RUNNER_TEMP']).joinpath('ubs-territorio-target.txt').write_text(str(target),encoding='utf-8')
           print(json.dumps({'ok':True,'arquivo_alterado':expected},ensure_ascii=False))
           PY
-          node --check --input-type=commonjs < "$(grep -rl --include='*.js' --include='*.gs' 'TACS_TERRITORIO_V1' "$LIVE_DIR")"
+          TARGET="$(cat "$RUNNER_TEMP/ubs-territorio-target.txt")"
+          test -f "$TARGET"
+          node --check --input-type=commonjs < "$TARGET"
 
       - name: Publicar mesma implantação e validar
         shell: bash
