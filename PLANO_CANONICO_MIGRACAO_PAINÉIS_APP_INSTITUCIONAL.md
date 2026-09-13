@@ -456,3 +456,42 @@ Segundo painel da migração definitiva, após Agendas e vagas.
 Gate `TAREFA_17_MORADORES_NATIVOS_OK`, regressão integral, `QUALITY_GATE_V101_OK` e `V101_INTERNO_APROVADO=SIM` passaram no workflow `34730914731`. GitHub Pages do código validado: `34730907935` — success.
 
 **Sequência canônica:** Tarefa 17 encerrada. Profissionais e serviços é o próximo painel da ordem, mas não foi iniciado.
+
+
+## Tarefa 18 autorizada — Migração definitiva de Profissionais e serviços
+Última tarefa da sequência original aprovada de 1 a 18.
+
+Escopo:
+- migrar **Profissionais e serviços** para superfície nativa da Central;
+- preservar Agendas e vagas nativa;
+- preservar Moradores nativo;
+- manter Prontuários fora deste escopo;
+- não criar Tarefa 19;
+- não alterar backend Apps Script.
+
+Fluxo canônico:
+`Central autenticada → Profissionais e serviços → host nativo próprio → ponte invisível de lógica validada → leitura/cache → edição/criação → gravação real → releitura → confirmação → Voltar → mesma Central`
+
+Regras:
+- rota normal `profissionais` usa `showNativeProfissionais()`;
+- superfície viva: `#nativeProfissionaisHost`;
+- UI nativa sem PIN/login/logout próprios;
+- página antiga preservada apenas como fallback e ponte invisível;
+- ações reais preservadas: `admin_salvar_profissional`, `admin_salvar_servico`, `admin_criar_profissional`;
+- salvar profissional/serviço só é confirmado após releitura e comparação;
+- criação integrada só é confirmada após releitura e presença real do profissional;
+- criação integrada mantém primeiro serviço e cinco dias úteis da agenda;
+- serviço redundante de odontologia emergencial permanece omitido da superfície;
+- desfazer e proteção de alterações não salvas permanecem;
+- Agendas, Moradores e Profissionais mantêm hosts nativos independentes;
+- somente o host ativo fica visível;
+- nenhuma Tarefa 19 é criada.
+
+### Status final da Tarefa 18: VALIDADA INTERNAMENTE, PUBLICADA E CANONIZADA — 12/09/2026
+Gate `TAREFA_18_PROFISSIONAIS_NATIVOS_OK`, regressão integral, `QUALITY_GATE_V101_OK` e `V101_INTERNO_APROVADO=SIM` passaram no workflow `34731693675`.
+
+GitHub Pages do HEAD validado: run `34731696614` — `success`.
+
+Backend Apps Script não foi alterado; produção permanece na versão **208**.
+
+**ENCERRAMENTO DA SEQUÊNCIA:** as Tarefas **1 a 18** da sequência original aprovada ficam concluídas. Não existe Tarefa 19 nessa sequência.
