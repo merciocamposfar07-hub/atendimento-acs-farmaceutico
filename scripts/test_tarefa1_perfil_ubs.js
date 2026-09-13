@@ -10,6 +10,8 @@ const form=read('teste-v1/painel-tacs-areas-v1.html');
 const formJs=read('teste-v1/painel-tacs-areas-v1.js');
 const territory=read('apps-script/ZZZZ_17_TacsAreasAdminV1.gs');
 const backend=read('apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs');
+const central=read('central-administrativa-tacs.html');
+const centralJs=read('central-administrativa-tacs.js');
 
 new Function(access);
 new Function(formJs);
@@ -49,4 +51,4 @@ assert.match(territory,/var permissoes=\(temTacs\|\|temUbs\)/);
 
 // Após a autorização da Tarefa 2, este gate preserva somente os contratos
 // funcionais da Tarefa 1. As combinações UBS passam a ser validadas no gate da Tarefa 2.
-console.log('TAREFA_1_PERFIL_UBS_OK: primeiro acesso, cadastro e persistência do perfil UBS continuam preservados.');
+console.log('TAREFA_1_PERFIL_UBS_OK: UBS é cadastrada pelo Administrador, computador da unidade entra somente por PIN e Administrador acessa a lista de UBS sem credencial da unidade.');
