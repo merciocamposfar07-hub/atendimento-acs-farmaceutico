@@ -181,16 +181,62 @@ function showLogin(which){
 }
 
 function territoryPerformancePayload(r){return{ok:true,tacs:Array.isArray(r&&r.tacs)?r.tacs:[],areas:Array.isArray(r&&r.areas)?r.areas:[],podeAdministrar:r&&r.podeAdministrar===true,perfil:text(r&&r.perfil)}}
+
+/* HOTFIX_TERRITORIO_CONTEXTO_LOCAL_V4:
+   no acesso local-first, pinta imediatamente o último contexto territorial já confirmado
+   pela Central. A escrita permanece bloqueada até existir sessão remota real. */
+var localFirstSyncTimer=null;
+function localFirstWithoutRemote(){
+  if(!moduleCore||typeof moduleCore.ready!=='function'||moduleCore.ready())return false;
+  try{return new URLSearchParams(location.search||'').get('localfirst')==='1'&&Boolean(mode)}catch(e){return false}
+}
+function primeTerritoryFromCentralContext(){
+  if(!moduleCore||typeof moduleCore.state!=='function')return false;
+  try{
+    var state=moduleCore.state(),key=text(state&&state.cache&&state.cache.contextKey);
+    if(!key)return false;
+    var saved=JSON.parse(sessionStorage.getItem(key)||'null'),ctx=saved&&saved.context;
+    if(!ctx||!Array.isArray(ctx.areas)||!ctx.areas.length)return false;
+    data=territoryPerformancePayload(ctx);
+    if(mode==='admin')data.podeAdministrar=true;
+    territoryConfirmed=false;
+    render();
+    el('dashboard').classList.remove('hidden');
+    el('logoutButton').disabled=false;
+    syncTerritoryWriteState();
+    loginStatus('Dados locais disponíveis. Confirmando a sessão em segundo plano…','warn');
+    return true;
+  }catch(e){return false}
+}
+function scheduleLocalFirstRemoteSync(){
+  if(localFirstSyncTimer)return;
+  function check(){
+    localFirstSyncTimer=null;
+    if(moduleCore&&typeof moduleCore.ready==='function'&&moduleCore.ready()){
+      var current=typeof moduleCore.session==='function'?moduleCore.session({escopo:'territorio'}):{};
+      token=text(current&&current.token);territorioToken=text(current&&current.territorioToken);
+      loadData('Dados territoriais confirmados.');
+      return;
+    }
+    if(localFirstWithoutRemote())localFirstSyncTimer=setTimeout(check,180);
+  }
+  localFirstSyncTimer=setTimeout(check,120);
+}
 function syncTerritoryWriteState(){
   document.querySelectorAll('#newTacsButton,#newAreaButton,#previewCsvButton,#importCsvButton,#saveAreaButton,.editTacs,.editArea,.validateArea,.undoBatch,#tacsForm button[type="submit"],#areaForm button[type="submit"]').forEach(function(n){n.disabled=!territoryConfirmed});
 }
 function loadData(message,operationMessage){
-  var cached=null;
+  var localFirst=localFirstWithoutRemote(),cached=null;
   if(modulePerf&&typeof modulePerf.prime==='function'){
     cached=modulePerf.prime('territorio',function(saved){
       data=territoryPerformancePayload(saved);territoryConfirmed=false;render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;
-      loginStatus('Aguarde enquanto os dados carregam…','warn');
+      loginStatus(localFirst?'Dados locais disponíveis. Confirmando a sessão em segundo plano…':'Aguarde enquanto os dados carregam…','warn');
     });
+  }
+  if(localFirst){
+    if(!cached)primeTerritoryFromCentralContext();
+    scheduleLocalFirstRemoteSync();
+    return;
   }
   var leituraPayload=payload({});coreRead('admin_territorio_dados',leituraPayload,function(done){post('admin_territorio_dados',leituraPayload,'admin_territorio_result',done)},function(r){
     if(!r||r.ok!==true){var falha=moduleSessionPolicy&&typeof moduleSessionPolicy.classify==='function'?moduleSessionPolicy.classify(r):{explicitAuthRefusal:Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(text(r&&r.message)))};territoryConfirmed=false;syncTerritoryWriteState();if(!falha.explicitAuthRefusal){loginStatus(cached?'Última confirmação territorial permanece disponível somente para consulta; a atualização ainda não foi confirmada.':'Servidor temporariamente indisponível. A sessão territorial foi preservada; tente novamente sem redigitar o PIN.','warn');if(operationMessage)status('A alteração foi enviada, mas a releitura ainda não foi confirmada. A sessão permanece ativa.','warn');return}clearSession();loginStatus(text(r&&r.message||'A sessão foi recusada explicitamente pelo servidor.'),'err');if(operationMessage)status('A alteração foi salva, mas a autenticação foi recusada na releitura. Volte à Central.','err');return;}
