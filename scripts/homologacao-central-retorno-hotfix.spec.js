@@ -115,7 +115,7 @@ test('Portal TACS usa o shell e Voltar revela a Central autenticada', async ({ p
 test('Portal TACS legado em nova aba fecha e revela a Central autenticada', async ({ page, context }) => {
   const backSource = fs.readFileSync('central-back-button-v1.js', 'utf8');
 
-  await page.route('http://conecta.test/**', async route => {
+  await context.route('http://conecta.test/**', async route => {
     const u = new URL(route.request().url());
     await route.fulfill({
       status: 200,
