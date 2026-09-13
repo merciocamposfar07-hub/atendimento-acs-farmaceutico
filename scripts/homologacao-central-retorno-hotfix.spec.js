@@ -110,3 +110,39 @@ test('Portal TACS usa o shell e Voltar revela a Central autenticada', async ({ p
   expect(await page.locator('#viewer').isHidden()).toBe(true);
   expect(await page.evaluate(() => sessionStorage.getItem('portalTacsAdminTokenV1'))).toBe('token-teste');
 });
+
+
+test('Portal TACS legado em nova aba fecha e revela a Central autenticada', async ({ page, context }) => {
+  const backSource = fs.readFileSync('central-back-button-v1.js', 'utf8');
+
+  await page.route('http://conecta.test/**', async route => {
+    const u = new URL(route.request().url());
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: u.pathname === '/portal'
+        ? '<!doctype html><html><body><main>Portal TACS legado</main></body></html>'
+        : '<!doctype html><html><body><main id="central">Central autenticada</main><button id="abrir">Abrir Portal</button><script>sessionStorage.setItem("portalTacsAdminTokenV1","token-central");document.getElementById("abrir").onclick=function(){window.open("http://conecta.test/portal?from=central","_blank","noopener")}<\/script></body></html>'
+    });
+  });
+
+  await page.goto('http://conecta.test/central');
+  expect(await page.evaluate(() => sessionStorage.getItem('portalTacsAdminTokenV1'))).toBe('token-central');
+
+  const popupPromise = context.waitForEvent('page');
+  await page.locator('#abrir').click();
+  const popup = await popupPromise;
+  await popup.waitForLoadState('domcontentloaded');
+
+  expect(await popup.evaluate(() => sessionStorage.getItem('portalTacsAdminTokenV1'))).toBeNull();
+  await popup.addScriptTag({content: backSource});
+  await expect(popup.locator('#portalTacsBackCentralV1 button')).toBeVisible();
+
+  const closed = popup.waitForEvent('close');
+  await popup.locator('#portalTacsBackCentralV1 button').click();
+  await closed;
+
+  expect(page.isClosed()).toBe(false);
+  expect(await page.evaluate(() => sessionStorage.getItem('portalTacsAdminTokenV1'))).toBe('token-central');
+  await expect(page.locator('#central')).toHaveText('Central autenticada');
+});
