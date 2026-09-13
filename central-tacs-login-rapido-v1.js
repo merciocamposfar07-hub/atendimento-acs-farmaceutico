@@ -332,13 +332,10 @@ function enhanceViewerDocument(){
   }catch(e){}
 }
 function installCentralPageRefresh(){
-  if(document.getElementById('portalTacsCentralRefreshV1'))return;
-  var style=document.createElement('style');
-  style.textContent='#portalTacsCentralRefreshV1{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:20000;min-height:46px;border:2px solid rgba(255,255,255,.92);border-radius:999px;padding:10px 15px;background:#073a55;color:#fff;font:900 15px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer}@media(max-width:430px){#portalTacsCentralRefreshV1{right:10px;bottom:calc(10px + env(safe-area-inset-bottom));min-height:44px;padding:9px 13px;font-size:14px}}';
-  document.head.appendChild(style);
-  var button=document.createElement('button');button.id='portalTacsCentralRefreshV1';button.type='button';button.textContent='↻ Atualizar página';
-  button.addEventListener('click',function(){button.disabled=true;button.textContent='↻ Atualizando…';location.reload()});
-  document.body.appendChild(button);
+  /* CORRECAO_VISUAL_SEM_ATUALIZAR_FLUTUANTE_V1:
+     o botão flutuante não faz parte do padrão visual aprovado da Central. */
+  var button=document.getElementById('portalTacsCentralRefreshV1');
+  if(button)button.remove();
 }
 function installInstitutionalNavigation(){
   /* TAREFA_10_ROUTER_UNICO_V1: a Central canônica é a única dona da navegação.
