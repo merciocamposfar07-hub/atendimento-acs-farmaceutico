@@ -2569,6 +2569,95 @@ document.getElementById('novaOrdem').addEventListener('input',function(){this.da
 novoForm.addEventListener('submit',function(e){e.preventDefault();criarNovoProfissional()});
 
 function iniciarPainel(){entrar.disabled=false;if(tacsMode){document.getElementById('accessTitle').textContent='Acesso territorial';document.getElementById('pinLabel').classList.add('oculto');document.getElementById('pin').classList.add('oculto');document.getElementById('accessActions').classList.add('oculto');document.getElementById('pinHelp').classList.add('oculto');carregarDados('Sessão de TACS validada. Profissionais e serviços da própria área carregados.',true);return}if(token){carregarDados('Sessão existente validada e dados desta área carregados.',true);return}status('loginStatus','Digite o PIN para carregar os dados. A conexão já está sendo preparada em segundo plano.','ok');var aquecimento=window.PortalTacsAdminWarmup;if(aquecimento&&typeof aquecimento.iniciar==='function')aquecimento.iniciar()}
+/* TAREFA_18_PROFISSIONAIS_NATIVOS_V1:
+   API de ponte invisível para a superfície nativa da Central.
+   A página legada continua preservada como fallback, mas a Central não a exibe como painel. */
+function bridgeClone(v){try{return JSON.parse(JSON.stringify(v))}catch(e){return v}}
+function bridgeSnapshot(){
+  return{
+    ok:true,
+    confirmado:dadosConfirmados===true,
+    areaId:areaId,
+    tacsMode:tacsMode===true,
+    profissionais:bridgeClone(dados.profissionais||[]),
+    servicos:bridgeClone(dados.servicos||[])
+  };
+}
+function bridgeReload(callback){
+  carregarDados('Profissionais e serviços atualizados.',true,function(ok,r){
+    if(typeof callback==='function')callback({ok:ok===true,result:r||null,snapshot:bridgeSnapshot()});
+  });
+}
+function bridgeProfEqual(a,p){
+  return !!a&&txt(a.ID)===txt(p.id)&&txt(a.NOME)===txt(p.nome)&&txt(a.TITULO_PUBLICO)===txt(p.tituloPublico)&&txt(a.ICONE)===txt(p.icone)&&num(a.ORDEM)===num(p.ordem)&&bool(a.ATIVO)===bool(p.ativo);
+}
+function bridgeServEqual(a,p){
+  return !!a&&txt(a.ID)===txt(p.id)&&txt(a.PROFISSIONAL_ID)===txt(p.profissionalId)&&txt(a.NOME)===txt(p.nome)&&txt(a.DESCRICAO_AUTOMATICA)===txt(p.descricaoAutomatica)&&num(a.ORDEM)===num(p.ordem)&&bool(a.ATIVO)===bool(p.ativo)&&bool(a.PERMITE_VAGA_COMUM)===bool(p.permiteVagaComum)&&bool(a.PERMITE_EMERGENCIA)===bool(p.permiteEmergencia);
+}
+function bridgeSaveProfessional(fields,callback){
+  if(!dadosConfirmados){callback&&callback({ok:false,message:'Dados ainda não confirmados pelo servidor.'});return}
+  var anterior=encontrarProf(fields&&fields.id);
+  if(!anterior){callback&&callback({ok:false,message:'Profissional não encontrado na leitura atual.'});return}
+  var payload=Object.assign(sessao(),{
+    id:txt(fields.id),nome:txt(fields.nome).trim(),tituloPublico:txt(fields.tituloPublico).trim(),
+    icone:txt(fields.icone).trim(),ordem:fields.ordem,ativo:bool(fields.ativo)?'true':'false'
+  });
+  if(!payload.nome||!payload.tituloPublico){callback&&callback({ok:false,message:'Nome e título público são obrigatórios.'});return}
+  post('admin_salvar_profissional',payload,function(r){
+    if(!r||r.ok!==true){callback&&callback({ok:false,message:txt(r&&r.message||'Não foi possível salvar o profissional.'),snapshot:bridgeSnapshot()});return}
+    carregarDados('Profissional salvo. Conferindo releitura.',false,function(ok){
+      var atual=encontrarProf(payload.id),confirmado=ok===true&&bridgeProfEqual(atual,payload);
+      callback&&callback({ok:confirmado,serverOk:true,message:confirmado?'Profissional gravado e confirmado pela releitura.':'A releitura não coincidiu integralmente.',snapshot:bridgeSnapshot(),anterior:bridgeClone(anterior)});
+    });
+  });
+}
+function bridgeSaveService(fields,callback){
+  if(!dadosConfirmados){callback&&callback({ok:false,message:'Dados ainda não confirmados pelo servidor.'});return}
+  var anterior=encontrarServ(fields&&fields.id);
+  if(!anterior){callback&&callback({ok:false,message:'Serviço não encontrado na leitura atual.'});return}
+  var payload=Object.assign(sessao(),{
+    id:txt(fields.id),profissionalId:txt(fields.profissionalId),nome:txt(fields.nome).trim(),
+    descricaoAutomatica:txt(fields.descricaoAutomatica).trim(),ordem:fields.ordem,
+    ativo:bool(fields.ativo)?'true':'false',permiteVagaComum:bool(fields.permiteVagaComum)?'true':'false',
+    permiteEmergencia:bool(fields.permiteEmergencia)?'true':'false'
+  });
+  if(!payload.nome||!payload.descricaoAutomatica){callback&&callback({ok:false,message:'Nome e descrição automática são obrigatórios.'});return}
+  post('admin_salvar_servico',payload,function(r){
+    if(!r||r.ok!==true){callback&&callback({ok:false,message:txt(r&&r.message||'Não foi possível salvar o serviço.'),snapshot:bridgeSnapshot()});return}
+    carregarDados('Serviço salvo. Conferindo releitura.',false,function(ok){
+      var atual=encontrarServ(payload.id),confirmado=ok===true&&bridgeServEqual(atual,payload);
+      callback&&callback({ok:confirmado,serverOk:true,message:confirmado?'Serviço gravado e confirmado pela releitura.':'A releitura não coincidiu integralmente.',snapshot:bridgeSnapshot(),anterior:bridgeClone(anterior)});
+    });
+  });
+}
+function bridgeCreateProfessional(fields,callback){
+  if(!dadosConfirmados){callback&&callback({ok:false,message:'Dados ainda não confirmados pelo servidor.'});return}
+  var nome=txt(fields&&fields.nome).trim(),titulo=txt(fields&&fields.tituloPublico).trim(),servico=txt(fields&&fields.servicoNome).trim(),descricao=txt(fields&&fields.descricaoAutomatica).trim(),id=idAutomatico(nome||titulo);
+  if(!nome||!titulo||!servico||!descricao||!id){callback&&callback({ok:false,message:'Preencha nome, título público, serviço e descrição automática.'});return}
+  var payload=Object.assign(sessao(),{
+    id:id,nome:nome,tituloPublico:titulo,icone:txt(fields.icone).trim()||'👤',
+    ordem:fields.ordem,servicoNome:servico,descricaoAutomatica:descricao,
+    ativo:bool(fields.ativo)?'true':'false',permiteVagaComum:bool(fields.permiteVagaComum)?'true':'false',
+    permiteEmergencia:bool(fields.permiteEmergencia)?'true':'false'
+  });
+  post('admin_criar_profissional',payload,function(r){
+    if(!r||r.ok!==true){callback&&callback({ok:false,message:txt(r&&r.message||'Não foi possível criar o profissional.'),snapshot:bridgeSnapshot()});return}
+    carregarDados('Cadastro integrado enviado. Conferindo releitura.',false,function(ok){
+      var atual=dados.profissionais.find(function(p){return idAutomatico(p.ID)===id});
+      var confirmado=ok===true&&!!atual;
+      callback&&callback({ok:confirmado,serverOk:true,jaExistia:!!r.jaExistia,message:confirmado?(r.jaExistia?'Cadastro existente reconhecido e conferido.':'Profissional, serviço e agenda criados e confirmados.'):'O profissional não apareceu na releitura.',snapshot:bridgeSnapshot(),id:id});
+    });
+  });
+}
+window.ConectaProfissionaisBridgeV1={
+  snapshot:bridgeSnapshot,
+  reload:bridgeReload,
+  saveProfessional:bridgeSaveProfessional,
+  saveService:bridgeSaveService,
+  createProfessional:bridgeCreateProfessional,
+  nativeCompat:'task18-profissionais-native-v1',
+  version:'1.0.0'
+};
 iniciarPainel();
 }());
 </script>
