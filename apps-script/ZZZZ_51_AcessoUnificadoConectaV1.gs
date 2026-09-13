@@ -79,7 +79,7 @@ function conectaAcessoV1TratarPost_(e){
     'conecta_morador_login_pin','conecta_morador_sessao','conecta_morador_notificacao_confirmar',
     'conecta_morador_preferencia_notificacao','conecta_morador_membro_salvar_cpf','conecta_morador_encerrar',
     'conecta_pin_recuperar_iniciar','conecta_pin_recuperar_salvar','conecta_recuperacao_registrar_aparelho',
-    'conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_morador_diagnostico_admin','conecta_pendencias_contagem'
+    'conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_ubs_encerrar','conecta_morador_diagnostico_admin','conecta_pendencias_contagem'
   ];
   if(aceitas.indexOf(action)===-1)return null;
   var id=conectaAcessoV1Texto_(p.requestId),resultado;
@@ -99,6 +99,7 @@ function conectaAcessoV1TratarPost_(e){
     else if(action==='conecta_recuperacao_registrar_aparelho')resultado=conectaAcessoV1RegistrarAparelhoConfiavel_(p);
     else if(action==='conecta_ubs_identificar_primeiro_acesso')resultado=conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p);
     else if(action==='conecta_ubs_login_pin')resultado=conectaAcessoV1LoginUbs_(p);
+    else if(action==='conecta_ubs_encerrar')resultado=conectaAcessoV1EncerrarUbs_(p);
     else if(action==='conecta_morador_diagnostico_admin')resultado=conectaAcessoV1DiagnosticoMoradorAdmin_(p);
     else resultado=conectaAcessoV1PendenciasContagem_(p);
   }catch(erro){
@@ -731,6 +732,54 @@ function conectaAcessoV1RespostaUbs_(ubs,dispositivo,chave,mensagem){
     unidadeId:ubs.unidadeId,permissoes:Array.isArray(ubs.permissoes)?ubs.permissoes.slice():[],
     chaveConfianca:chave||'',vinculoAparelhoCriado:true,message:mensagem||'Acesso UBS validado.'
   };
+}
+
+function conectaAcessoV1ValidarSessaoUbs_(p,silencioso){
+  p=p&&typeof p==='object'?p:{};
+  var explicito=conectaAcessoV1Texto_(p.ubsToken),token=explicito||conectaAcessoV1Texto_(p.token);
+  if(token.indexOf('cus1.')!==0){
+    if(silencioso&&!explicito)return null;
+    if(!token)return silencioso?null:null;
+    if(explicito)throw new Error('Sessão da UBS inválida.');
+    return null;
+  }
+  var dispositivo=conectaAcessoV1Texto_(p.dispositivo);
+  if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
+  var raw='';
+  try{raw=CacheService.getScriptCache().get(TACS_CONECTA_ACESSO_V1.UBS_SESSION_PREFIX+conectaAcessoV1Hash_(token))||'';}catch(erroCache){}
+  if(!raw)throw new Error('A sessão da UBS expirou. Entre novamente com o PIN.');
+  var sessao;
+  try{sessao=JSON.parse(raw);}catch(erroJson){throw new Error('A sessão da UBS é inválida.');}
+  if(!sessao||sessao.dispositivoHash!==conectaAcessoV1Hash_(dispositivo))throw new Error('A sessão da UBS pertence a outro aparelho.');
+  if(typeof tacsTerritorioV1EncontrarTacs_!=='function'||typeof tacsTerritorioV1PerfilTem_!=='function'||typeof tacsTerritorioV1LerAreas_!=='function')throw new Error('O contexto territorial da UBS não está disponível.');
+  var ubs=tacsTerritorioV1EncontrarTacs_(sessao.cadastroId);
+  if(!ubs||ubs.ativo!==true||!tacsTerritorioV1PerfilTem_(ubs.perfil,'UBS'))throw new Error('O acesso desta UBS foi desativado ou alterado.');
+  var unidadeId=conectaAcessoV1Id_(ubs.unidadeId);
+  if(!unidadeId)throw new Error('A UBS não possui unidade de saúde vinculada.');
+  var areas=tacsTerritorioV1LerAreas_().filter(function(area){return area&&area.ativa===true&&conectaAcessoV1Id_(area.unidadeId)===unidadeId;});
+  if(!areas.length)throw new Error('A UBS não possui área ativa vinculada.');
+  var pedida=conectaAcessoV1Id_(p.areaId||p.area),area=null;
+  if(pedida){
+    for(var i=0;i<areas.length;i++)if(conectaAcessoV1Id_(areas[i].areaId)===pedida){area=areas[i];break;}
+    if(!area)throw new Error('Esta área não pertence à UBS autenticada.');
+  }
+  if(!area)area=areas[0];
+  return {
+    ok:true,perfil:'UBS',perfilCadastro:conectaAcessoV1Texto_(ubs.perfil)||'UBS',
+    operadorId:'UBS:'+conectaAcessoV1Id_(ubs.tacsId),agenteId:conectaAcessoV1Id_(area.tacsId),
+    tacsId:conectaAcessoV1Id_(ubs.tacsId),cadastroId:conectaAcessoV1Id_(ubs.tacsId),
+    areaId:conectaAcessoV1Id_(area.areaId),areaNome:conectaAcessoV1Texto_(area.areaNome)||conectaAcessoV1Id_(area.areaId),
+    unidadeId:unidadeId,planilhaId:conectaAcessoV1Texto_(area.planilhaId),
+    permissoes:Array.isArray(ubs.permissoes)?ubs.permissoes.slice():[],ubsToken:token
+  };
+}
+
+function conectaAcessoV1EncerrarUbs_(p){
+  var token=conectaAcessoV1Texto_(p&&p.ubsToken||p&&p.token);
+  if(token.indexOf('cus1.')===0){
+    try{CacheService.getScriptCache().remove(TACS_CONECTA_ACESSO_V1.UBS_SESSION_PREFIX+conectaAcessoV1Hash_(token));}catch(erro){}
+  }
+  return {ok:true,message:'Sessão da UBS encerrada.'};
 }
 
 function conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p){
