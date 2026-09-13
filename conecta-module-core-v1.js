@@ -117,8 +117,16 @@ function hideLegacyAuthUi(){
   LEGACY_AUTH_IDS.forEach(function(id){var n=document.getElementById(id);if(n)n.classList.add('csc-task9-auth-legacy')});
   Array.prototype.forEach.call(document.querySelectorAll('.csc-auth-control,.csc-admin-only-auth'),function(n){n.classList.add('csc-task9-auth-legacy')});
 }
+function localFirstContextAllowed(){
+  if(!isModulePage())return false;
+  try{
+    var params=new URLSearchParams(location.search||'');
+    var ctx=context();
+    return params.get('localfirst')==='1'&&Boolean(ctx&&text(ctx.mode));
+  }catch(e){return false}
+}
 function showCentralGate(){
-  if(!isModulePage()||ready()||document.getElementById('conectaTask9AuthGate'))return;
+  if(!isModulePage()||ready()||localFirstContextAllowed()||document.getElementById('conectaTask9AuthGate'))return;
   ensureTask9Style();
   var gate=document.createElement('div');gate.id='conectaTask9AuthGate';gate.className='csc-task9-gate';
   gate.innerHTML='<div class="csc-task9-gate-card"><h2>Acesso pelo Conecta Saúde</h2><p>Este módulo não possui login próprio. Entre pelo PIN na tela inicial do Conecta Saúde Comunitária e abra o painel pela Central.</p><a href="'+centralUrl()+'">Voltar à Central</a></div>';
@@ -170,7 +178,7 @@ function blockLegacyAuthActions(){
 function installTask9ModuleGate(){
   if(!isModulePage())return;
   protectGlobalSession();blockLegacyAuthActions();
-  function apply(){hideLegacyAuthUi();if(!ready())showCentralGate();else{var g=document.getElementById('conectaTask9AuthGate');if(g)g.remove()}}
+  function apply(){hideLegacyAuthUi();if(!ready()&&!localFirstContextAllowed())showCentralGate();else{var g=document.getElementById('conectaTask9AuthGate');if(g)g.remove()}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true});else apply();
   var observer=new MutationObserver(function(){hideLegacyAuthUi()});
   if(document.documentElement)observer.observe(document.documentElement,{subtree:true,childList:true});
