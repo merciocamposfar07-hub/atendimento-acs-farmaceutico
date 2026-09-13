@@ -1211,7 +1211,18 @@ function shellHasUnsaved(frame){
 function openModule(name,title,options){
   if(name==='ubs'){if(mode==='admin')showAdminUbs(title||'UBS');return}
   var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
-  if(name==='portal'){window.open(url,'_blank','noopener');return}
+  if(name==='portal'){
+    /* RETORNO_CENTRAL_PORTAL_V1:
+       mantém o Portal TACS no mesmo contexto de navegação da Central.
+       Assim, a sessão administrativa em sessionStorage continua disponível
+       quando o usuário toca em Voltar à Central. */
+    try{
+      sessionStorage.setItem('portalTacsCentralReturnUrlV1',location.href);
+      sessionStorage.setItem('portalTacsRetornoCentralV1','1');
+    }catch(e){}
+    location.assign(url);
+    return;
+  }
   var remoteReady=Boolean(token||territoryToken),localReady=localPanelAccessReady();
   if(!remoteReady&&!localReady){
     moduloPendente={name:name,title:title||'Painel',options:moduleRouteOptions(options)};
