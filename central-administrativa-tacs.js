@@ -624,7 +624,7 @@ function moduleRouteId(name,options){
   return id;
 }
 function moduleUrl(name,options){
-  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260913-apresentacao-paineis-v2',territoryRevision='20260913-territorio-loading-fast-v1',loadingRevision='20260913-loading-standard-v1',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
+  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260913-apresentacao-paineis-v2',territoryRevision='20260913-territorio-instant-v2',municipiosRevision='20260913-municipios-instant-v1',loadingRevision='20260913-loading-standard-v1',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
   if(opts.view)extra+='&view='+encodeURIComponent(opts.view);
   if(opts.all)extra+='&all='+encodeURIComponent(opts.all);
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
@@ -633,7 +633,7 @@ function moduleUrl(name,options){
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
-  if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;
+  if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+municipiosRevision;
   if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area+'&from=central';
   return ''
 }
