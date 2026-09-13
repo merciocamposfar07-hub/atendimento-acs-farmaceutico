@@ -1085,17 +1085,52 @@ function normalizeEmbeddedPanelFrame(frame){
     var internal=doc.getElementById('cscInstitutionalAppbar');if(internal)internal.removeAttribute('aria-hidden');
   }catch(e){}
 }
+/* CORRECAO_FRAME_PREPAINT_CANONICO_V1
+   O iframe legado só se torna visível depois de carregar a rota real e receber
+   a normalização canônica. about:blank nunca conta como painel pronto. */
+function shellFrameAtTarget(frame){
+  if(!frame)return false;
+  var expected=text(frame.dataset.shellUrl||'');if(!expected)return false;
+  try{
+    var current=text(frame.contentWindow&&frame.contentWindow.location&&frame.contentWindow.location.href);
+    if(!current||current==='about:blank')return false;
+    var a=new URL(current,location.href),b=new URL(expected,location.href);
+    return a.pathname===b.pathname&&a.search===b.search;
+  }catch(e){
+    var src=text(frame.getAttribute('src')||'');
+    return Boolean(src&&src!=='about:blank'&&src.indexOf(expected.split('?')[0])!==-1);
+  }
+}
+function setLegacyFrameOpening(frame,visible){
+  var node=ensureShellOpening();
+  if(frame)frame.style.visibility=visible?'hidden':'visible';
+  if(!node)return;
+  if(visible){
+    node.hidden=false;
+    node.textContent='Aguarde enquanto os dados carregam…';
+  }else{
+    node.hidden=true;
+    node.textContent='';
+  }
+}
 function enhanceShellFrame(frame){
   if(!frame||frame.dataset.shellEnhanced==='1')return;
   frame.dataset.shellEnhanced='1';
   frame.addEventListener('load',function(){
+    if(!shellFrameAtTarget(frame)){
+      frame.dataset.shellReady='0';
+      return;
+    }
     frame.dataset.shellReady='1';
     try{applyUiStandard(frame.contentDocument)}catch(e){}
     normalizeEmbeddedPanelFrame(frame);
     applyAdminUbsRemoteToFrame(frame);
     setTimeout(function(){normalizeEmbeddedPanelFrame(frame);applyAdminUbsRemoteToFrame(frame)},0);
     setTimeout(function(){normalizeEmbeddedPanelFrame(frame);applyAdminUbsRemoteToFrame(frame)},300);
-    if(shellActiveFrame()===frame)setShellOpening('',false);
+    if(shellActiveFrame()===frame){
+      setLegacyFrameOpening(frame,false);
+      setShellOpening('',false);
+    }
   });
 }
 function ensureShellFrame(name,url,title,routeId){
@@ -1126,11 +1161,12 @@ function showShellFrame(name,frame,title,routeId){
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer','csc-frame-viewer');viewer.classList.remove('csc-native-viewer');viewer.hidden=false;
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   frame.hidden=false;document.body.classList.add('viewer-open');
-  if(frame.dataset.shellReady==='1')applyAdminUbsRemoteToFrame(frame);
-  /* TAREFA_11_RESPOSTA_VISUAL_IMEDIATA_V1:
-     o shell responde no mesmo toque; o módulo pode então pintar seu último dado confirmado
-     enquanto a consulta remota continua em paralelo. */
-  setShellOpening(title||'Painel',frame.dataset.shellReady!=='1');
+  var shellReady=frame.dataset.shellReady==='1'&&shellFrameAtTarget(frame);
+  if(shellReady)applyAdminUbsRemoteToFrame(frame);
+  /* TAREFA_11_RESPOSTA_VISUAL_IMEDIATA_V1 + PREPAINT_CANONICO_V1:
+     o shell responde no mesmo toque, mas a rota HTML antiga não é exibida durante
+     a hidratação. Enquanto a rota real carrega, aparece somente o status canônico. */
+  setLegacyFrameOpening(frame,!shellReady);
   /* TAREFA_10_AGENDA_LAZY_VISIBLE_V1:
      módulos ainda não migrados continuam carregando somente depois que o shell está visível. */
   if(frame.dataset.shellLoaded!=='1'){
