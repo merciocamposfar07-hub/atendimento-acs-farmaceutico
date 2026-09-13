@@ -438,3 +438,21 @@ Backend Apps Script não foi alterado; produção permanece na versão **208**.
 As execuções `34730194156` e `34730225064` foram interrompidas apenas por contratos históricos das Tarefas 15/desempenho que ainda esperavam o shell sem o novo estado nativo; os gates foram alinhados sem remover proteções anteriores.
 
 **Sequência canônica:** Tarefa 16 encerrada no escopo Agendas e vagas. Os demais painéis permanecem inalterados e aguardam suas etapas próprias de migração.
+
+
+## Tarefa 17 autorizada — Migração definitiva de Moradores
+Segundo painel da migração definitiva, após Agendas e vagas.
+
+- A rota normal de **Moradores** usa superfície nativa própria `#nativeMoradoresHost`.
+- **Prontuários** (`view=prontuarios`) permanece no shell/frame legado nesta etapa.
+- O módulo nativo não possui PIN/login próprio.
+- Sessão, perfil, área, cache e requisições continuam sob `ConectaModuleCoreV1`.
+- Busca, cadastro/edição, situação, consolidação, CPF/CNS, CPF legado e isolamento territorial permanecem preservados.
+- O transporte mantém versão pública `3.6.1` e `nativeCompat: task17-moradores-native-v1`.
+- Agendas nativas e os demais painéis não foram alterados nesta tarefa.
+- Backend Apps Script não foi alterado; permanece versão **208**.
+
+### Status final da Tarefa 17: VALIDADA INTERNAMENTE, PUBLICADA E CANONIZADA — 12/09/2026
+Gate `TAREFA_17_MORADORES_NATIVOS_OK`, regressão integral, `QUALITY_GATE_V101_OK` e `V101_INTERNO_APROVADO=SIM` passaram no workflow `34730914731`. GitHub Pages do código validado: `34730907935` — success.
+
+**Sequência canônica:** Tarefa 17 encerrada. Profissionais e serviços é o próximo painel da ordem, mas não foi iniciado.
