@@ -335,3 +335,22 @@ Apps Script permaneceu na versão **208**, sem alteração de backend.
 
 **Sequência canônica:** Tarefa 14 encerrada tecnicamente; Tarefa 15 permanece a próxima etapa.
 
+
+
+### Registro canônico — Tarefa 15 / Navegação interna e Voltar
+No shell autenticado:
+
+`Central → abrir módulo/rota → Voltar interno → mesma Central permanece montada → reabrir rota preservada sem novo PIN nem reconstrução desnecessária.`
+
+A navegação de retorno deixa de depender de `history.back()` do Safari. Quando o painel está dentro da Central, a seta Voltar delega ao `ConectaCentralShellV1.voltar()`. Em execução standalone, o fallback usa `location.replace(centralUrl())`.
+
+O shell passa a identificar variantes por `routeId`, permitindo separar a rota normal de Moradores da rota Prontuários e a rota normal de Suporte da rota Pendências. Voltar apenas oculta a superfície ativa: os frames continuam montados, preservando o estado já carregado. A proteção contra alterações não salvas continua obrigatória.
+
+Prontuários e Pendências deixam de desmontar a Central por navegação superior e passam a abrir como rotas do próprio shell.
+
+### Status final da Tarefa 15: VALIDADA INTERNAMENTE, PUBLICADA E CANONIZADA — 12/09/2026
+Gate `TAREFA_15_NAVEGACAO_INTERNA_OK`, regressão completa, sintaxe, regras críticas e homologação interna passaram no workflow `34729325418`. GitHub Pages do código validado passou no run `34729320071`.
+
+Apps Script permanece na versão **208**, sem alteração de backend.
+
+**Sequência canônica:** Tarefa 15 encerrada. Tarefa 16 permanece a próxima etapa e não foi iniciada.
