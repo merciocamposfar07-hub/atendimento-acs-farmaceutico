@@ -90,8 +90,8 @@ function installBackGuard(){
 }
 function run(){removeRefreshButtons();ensurePlatformFooter();normalizeHeader();installDockNavigationGuard();installBackGuard()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
-setTimeout(run,120);setTimeout(run,500);setTimeout(run,1500);setInterval(run,2500);
-try{new MutationObserver(run).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden','style']})}catch(e){}
+setTimeout(run,120);setTimeout(run,500);setTimeout(run,1500);
+try{new MutationObserver(function(){clearTimeout(window.__cscVisualGuardTimerV3);window.__cscVisualGuardTimerV3=setTimeout(run,40)}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden','style']})}catch(e){}
 }());
 </script>
 '''.strip()
