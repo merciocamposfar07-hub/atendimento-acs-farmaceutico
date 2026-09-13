@@ -30,7 +30,6 @@ function create(host){
 
   host.innerHTML=
     '<section class="csc-ag-native" data-role="root">'+
-      '<p class="native-note">Módulo nativo do Conecta • área <strong data-role="area"></strong></p>'+
       '<div class="status aviso" data-role="status">Preparando agendas e vagas…</div>'+
       '<div class="metrics">'+
         '<div class="metric"><strong data-role="qAgendas">0</strong><span>agendas</span></div>'+
@@ -47,7 +46,6 @@ function create(host){
     '</section>';
 
   function q(role){return host.querySelector('[data-role="'+role+'"]')}
-  q('area').textContent=areaId;
 
   function setStatus(message,type){var n=q('status');n.textContent=message;n.className='status'+(type?' '+type:'')}
   function setDirty(v){dirty=Boolean(v);host.dataset.tacsDirty=dirty?'1':'0'}
