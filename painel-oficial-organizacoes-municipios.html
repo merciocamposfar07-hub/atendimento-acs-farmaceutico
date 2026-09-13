@@ -2495,7 +2495,7 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1';
 var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'municipios'}):null,modulePerf=moduleCore&&moduleCore.performance,moduleRequests=moduleCore&&moduleCore.requests;
 var token=moduleSession&&moduleSession.token||'',territoryToken=moduleSession&&moduleSession.territorioToken||'',device=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
-var data=null,active=null,counter=0,dataConfirmed=false;
+var data=null,active=null,counter=0,dataConfirmed=false;var LOCAL_FIRST=(function(){try{return new URLSearchParams(location.search||'').get('localfirst')==='1'}catch(e){return false}})(),localFirstSessionTimer=null;
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function txt(v){return String(v==null?'':v).trim()}
@@ -2511,6 +2511,8 @@ function post(action,payload,cb){noteRequestAction(action);if(active){cb({ok:fal
 function coreRead(action,payloadData,runner,cb){if(moduleRequests&&typeof moduleRequests.read==='function'){moduleRequests.read(action,payloadData,function(done){runner(done)},function(result,meta){cb(result,meta)}).catch(function(e){cb({ok:false,temporario:true,message:txt(e&&e.message)||'Falha na leitura compartilhada.'},{shared:false,source:'broker-error'})});return}runner(function(result){cb(result,{shared:false,source:'legacy'})})}
 function noteRequestAction(action){if(moduleRequests&&typeof moduleRequests.noteAction==='function')moduleRequests.noteAction(action)}
 function payload(obj){return{payload:JSON.stringify(obj)}}
+function atualizarSessaoCentralLocalFirst(){if(!moduleCore||typeof moduleCore.session!=='function')return false;var s=moduleCore.session({escopo:'municipios'});token=txt(s&&s.token);territoryToken=txt(s&&s.territorioToken);return Boolean(token||territoryToken)}
+function aguardarSessaoCentralLocalFirst(){if(localFirstSessionTimer)return;function check(){localFirstSessionTimer=null;if(atualizarSessaoCentralLocalFirst()){load();return}if(LOCAL_FIRST)localFirstSessionTimer=setTimeout(check,180)}localFirstSessionTimer=setTimeout(check,120)}
 function orgOptions(selected){var list=data&&data.catalogo&&Array.isArray(data.catalogo.organizacoes)?data.catalogo.organizacoes:[];return list.map(function(o){return'<option value="'+esc(o.organizacaoId)+'" '+(o.organizacaoId===selected?'selected':'')+'>'+esc(o.nome||o.organizacaoId)+'</option>'}).join('')}
 function munOptions(selected){var list=data&&data.catalogo&&Array.isArray(data.catalogo.municipios)?data.catalogo.municipios:[];return list.filter(function(m){return m.ativo!==false}).map(function(m){return'<option value="'+esc(m.municipioId)+'" '+(m.municipioId===selected?'selected':'')+'>'+esc(m.nome||m.municipioId)+(m.uf?' • '+esc(m.uf):'')+'</option>'}).join('')}
 function municipality(mid){var list=data&&data.catalogo&&Array.isArray(data.catalogo.municipios)?data.catalogo.municipios:[];return list.find(function(m){return id(m.municipioId)===id(mid)})||null}
@@ -2525,12 +2527,16 @@ function render(){
 function syncMunicipioWriteState(){document.querySelectorAll('#addOrg,#addMun,.saveOrg,.saveMun,.saveArea').forEach(function(n){n.disabled=!dataConfirmed})}
 function apply(r,message){if(!r||r.ok!==true){status(txt(r&&r.message)||'A operação não foi confirmada.','err');return false}var diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('municipios',r):{changed:true};data=r;dataConfirmed=true;if(diff.changed)render();else syncMunicipioWriteState();status(diff.changed?(message||txt(r.message)||'Dados confirmados.'):'Dados atuais confirmados; nenhuma mudança nova encontrada.','ok');return true}
 function load(){
+ var localOnly=LOCAL_FIRST&&!atualizarSessaoCentralLocalFirst(),cached=null;
+ if(modulePerf&&typeof modulePerf.prime==='function'){
+  cached=modulePerf.prime('municipios',function(saved){data=saved;dataConfirmed=false;render();status(localOnly?'Últimos dados disponíveis. Confirmando a sessão em segundo plano…':'Aguarde enquanto os dados carregam…','warn')});
+ }
+ if(localOnly){
+  if(!cached){data={ok:true,catalogo:{organizacoes:[],municipios:[]},areas:[]};dataConfirmed=false;render();status('Painel disponível. Confirmando a sessão em segundo plano…','warn')}
+  syncMunicipioWriteState();aguardarSessaoCentralLocalFirst();return
+ }
  if(territoryToken&&!token){status('Este painel é exclusivo do Administrador geral. Volte à Central.','err');return}
  if(!token){status('Sessão administrativa ausente. Volte à Central e entre como Administrador geral.','err');return}
- var cached=null;
- if(modulePerf&&typeof modulePerf.prime==='function'){
-  cached=modulePerf.prime('municipios',function(saved){data=saved;dataConfirmed=false;render();status('Aguarde enquanto os dados carregam…','warn')});
- }
  if(!cached)status('Aguarde enquanto os dados carregam…','warn');
  var leituraPayload=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'municipios'}):{token:token,dispositivo:device};coreRead('admin_multimunicipio_dados',leituraPayload,function(done){post('admin_multimunicipio_dados',{},done)},function(r){
   if(!r||r.ok!==true){if(cached){dataConfirmed=false;syncMunicipioWriteState();status('Última confirmação permanece disponível somente para consulta; a atualização ainda não foi confirmada.','warn');return}apply(r);return}
