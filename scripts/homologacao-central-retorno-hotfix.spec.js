@@ -65,7 +65,9 @@ test('Portal TACS usa o shell e Voltar revela a Central autenticada', async ({ p
   const backSource = fs.readFileSync('central-back-button-v1.js', 'utf8');
 
   expect(openModule).not.toMatch(/window\.open\(|location\.(?:assign|href)/);
-  expect(openModule).toMatch(/if\(name==='portal'\)\{showPortalTacs\(title\|\|'Portal TACS',routeId,url\);return\}/);\n  const portalShell = source.slice(source.indexOf('function showPortalTacs(title,routeId,url){'), source.indexOf('function openModule(name,title,options){'));\n  expect(portalShell).toMatch(/ensureShellFrame\('portal',url,title\|\|'Portal TACS',routeId\)[\s\S]*showShellFrame\('portal',portalFrame,title\|\|'Portal TACS',routeId\)/);
+  expect(openModule).toMatch(/if\(name==='portal'\)\{showPortalTacs\(title\|\|'Portal TACS',routeId,url\);return\}/);
+  const portalShell = source.slice(source.indexOf('function showPortalTacs(title,routeId,url){'), source.indexOf('function openModule(name,title,options){'));
+  expect(portalShell).toMatch(/ensureShellFrame\('portal',url,title\|\|'Portal TACS',routeId\)[\s\S]*showShellFrame\('portal',portalFrame,title\|\|'Portal TACS',routeId\)/);
   expect(normalizeFrame).toMatch(/shellModule==='portal'[\s\S]*portalTacsBackCentralV1\{display:block!important\}/);
 
   await page.setContent('<!doctype html><html><body><main id="central">Central autenticada</main><div id="viewer"><iframe id="portal"></iframe></div></body></html>');
