@@ -58,7 +58,6 @@ for (const viewport of [{width:390,height:844},{width:412,height:915},{width:136
   });
 }
 
-
 test('Portal TACS usa o shell e Voltar revela a Central autenticada', async ({ page }) => {
   const openModule = source.slice(source.indexOf('function openModule(name,title,options){'), source.indexOf('function closeViewer(){'));
   const normalizeFrame = source.slice(source.indexOf('function normalizeEmbeddedPanelFrame(frame){'), source.indexOf('function enhanceShellFrame(frame){'));
@@ -70,7 +69,24 @@ test('Portal TACS usa o shell e Voltar revela a Central autenticada', async ({ p
   expect(portalShell).toMatch(/ensureShellFrame\('portal',url,title\|\|'Portal TACS',routeId\)[\s\S]*showShellFrame\('portal',portalFrame,title\|\|'Portal TACS',routeId\)/);
   expect(normalizeFrame).toMatch(/shellModule==='portal'[\s\S]*portalTacsBackCentralV1\{display:block!important\}/);
 
-  await page.setContent('<!doctype html><html><body><main id="central">Central autenticada</main><div id="viewer"><iframe id="portal"></iframe></div></body></html>');
+  await page.route('http://conecta.test/**', async route => {
+    const u = new URL(route.request().url());
+    if (u.pathname === '/portal') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: '<!doctype html><html><body><main>Portal TACS</main></body></html>'
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<!doctype html><html><body><main id="central">Central autenticada</main><div id="viewer"><iframe id="portal"></iframe></div></body></html>'
+    });
+  });
+
+  await page.goto('http://conecta.test/central');
   await page.evaluate(() => {
     sessionStorage.setItem('portalTacsAdminTokenV1','token-teste');
     window.__voltas=0;
@@ -80,14 +96,14 @@ test('Portal TACS usa o shell e Voltar revela a Central autenticada', async ({ p
         document.getElementById('viewer').hidden=true;
       }
     };
+    document.getElementById('portal').src='http://conecta.test/portal?from=central';
   });
 
-  const frameHandle = await page.locator('#portal').elementHandle();
-  const frame = await frameHandle.contentFrame();
-  await frame.setContent('<!doctype html><html><body><main>Portal TACS</main></body></html>');
-  await frame.evaluate(() => sessionStorage.setItem('portalTacsRetornoCentralV1','1'));
-  await frame.addScriptTag({content: backSource});
-  await frame.locator('#portalTacsBackCentralV1 button').click();
+  await expect.poll(() => page.frames().some(f => /\/portal\?from=central$/.test(f.url()))).toBe(true);
+  const portalFrame = page.frames().find(f => /\/portal\?from=central$/.test(f.url()));
+  expect(portalFrame).toBeTruthy();
+  await portalFrame.addScriptTag({content: backSource});
+  await portalFrame.locator('#portalTacsBackCentralV1 button').click();
 
   expect(await page.evaluate(() => window.__voltas)).toBe(1);
   expect(await page.locator('#viewer').isHidden()).toBe(true);
