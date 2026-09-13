@@ -36,7 +36,7 @@ assert.match(html,/html body \.viewer \.viewer-bar\{[\s\S]*background:#071827!im
 assert.match(html,/html body #cscModuleOpening\{[\s\S]*border:0!important/);
 
 // Guarda final de 13/09: rodapé garantido, botão flutuante removido e cabeçalho não fixo.
-assert.match(html,/CORRECAO_VISUAL_CONTRATO_APP4_2026_09_13_V2/);
+assert.match(html,/CORRECAO_VISUAL_CONTRATO_APP4_2026_09_13_V3/);
 assert.match(html,/#portalTacsCentralRefreshV1,#portalTacsAtualizarPaginaV1,#portalTacsAdminRefreshV1,#atualizarPaginaAgendas,#atualizarPaginaAgendasFlutuante,\.agendaAtualizarPaginaFlutuanteV2\{display:none!important/);
 assert.match(html,/function ensurePlatformFooter\(\)/);
 assert.match(html,/Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível/);
@@ -44,6 +44,10 @@ assert.match(html,/Plataforma institucional de saúde comunitária/);
 assert.match(html,/function imp\(n,p,v\)/);
 assert.match(html,/style\.setProperty\(p,v,'important'\)/);
 assert.match(html,/html body \.viewer\.csc-native-viewer>\.viewer-bar\{[\s\S]*position:static!important/);
+assert.match(html,/function installDockNavigationGuard\(\)/);
+assert.match(html,/function installBackGuard\(\)/);
+assert.match(html,/new MutationObserver\(function\(\)\{clearTimeout\(window\.__cscVisualGuardTimerV3\)/);
+assert.doesNotMatch(html,/setInterval\(run,2500\)/);
 assert.doesNotMatch(html,/Atualizar página<\/button>/);
 
 // Painéis antigos usam o próprio cabeçalho App4 no fluxo da página; o shell externo fica oculto.
