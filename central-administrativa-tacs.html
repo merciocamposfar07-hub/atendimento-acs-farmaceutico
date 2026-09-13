@@ -12,6 +12,31 @@
 <link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <title>Conecta Saúde Comunitária</title>
+<script id="cscCanonicalPrepaintBootV1">
+/* CORRECAO_CIRURGICA_PREPAINT_CANONICO_V1
+   Define o estado canônico antes do primeiro paint. Não autentica, não consulta backend
+   e não altera PIN, permissões, áreas, dados ou ações dos painéis. */
+(function(){
+'use strict';
+var root=document.documentElement,active=false;
+try{
+  active=Boolean(
+    String(sessionStorage.getItem('portalTacsAdminTokenV1')||'').trim()||
+    String(sessionStorage.getItem('portalTacsTerritorioTokenV1')||'').trim()||
+    String(sessionStorage.getItem('portalConectaUbsTokenV1')||'').trim()
+  );
+}catch(e){}
+root.classList.add('csc-canonical-prepaint');
+root.classList.add(active?'csc-prepaint-auth':'csc-prepaint-login');
+root.classList.add(active?'csc-session-active':'csc-session-missing');
+root.classList.add(active?'csc-central-state-app':'csc-central-state-login');
+}());
+</script>
+<style id="cscCanonicalPrepaintBootStyleV1">
+html.csc-canonical-prepaint,html.csc-canonical-prepaint body{background:#071827!important}
+html.csc-prepaint-auth.csc-central-state-app #loginPanel{display:none!important}
+html.csc-canonical-prepaint body>header{display:none!important}
+</style>
 <style>
 :root{--p:#073a55;--p2:#0b5878;--green:#148a46;--greenbg:#e8f7ee;--bg:#dfeef3;--text:#102d40;--muted:#536b78;--border:#8fb4c2;--white:#fff;--warn:#805300;--warnbg:#fff6dd;--err:#a52d2d;--errbg:#fff0f0;--blue:#69c7e7}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!important}
@@ -2647,7 +2672,8 @@ html body .viewer.csc-frame-viewer>iframe{
 }
 </style>
 </head>
-<body>
+<body class="csc-brand-enhanced csc-central">
+<div id="cscInstitutionalAppbar" class="csc-appbar" role="banner"><img class="csc-appbar-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="csc-appbar-title"><small>CONECTA SAÚDE COMUNITÁRIA</small><strong>Central Administrativa</strong></div></div>
 <header><span class="badge">CENTRAL ADMINISTRATIVA TACS</span><h1>Seus painéis em um só lugar</h1><p>Um único acesso para administrar a área, sem misturar a lógica interna dos módulos.</p></header>
 <main>
 <section id="loginPanel" class="panel">
@@ -2698,7 +2724,7 @@ html body .viewer.csc-frame-viewer>iframe{
 <div id="viewer" class="viewer" hidden><div class="viewer-bar" role="banner"><img class="viewer-official-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=2644ae5e7c9f" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="viewer-heading"><small>CONECTA SAÚDE COMUNITÁRIA</small><div id="viewerTitle" class="viewer-title">Painel</div></div><button id="viewerBack" class="viewer-back" type="button" aria-label="Voltar à Central">‹</button></div><div id="nativeModuleHost" class="csc-native-module-host" hidden></div><iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe><footer id="viewerFooter" class="viewer-platform-footer" hidden><strong>Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</strong><small>Plataforma institucional de saúde comunitária.</small></footer></div>
 <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=2644ae5e7c9f"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=2644ae5e7c9f"></script>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=2644ae5e7c9f"></script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260913-prepaint-canonico-v1"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=2644ae5e7c9f"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=2644ae5e7c9f"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=2644ae5e7c9f"></script>
