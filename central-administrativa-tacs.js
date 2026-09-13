@@ -15,7 +15,7 @@ var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=se
 var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
 /* SINCRONIZACAO_REMOTA_CONTINUA_V1: PIN local abre a Central; a sessão remota continua tentando em memória até confirmar ou receber recusa explícita. */
 var remoteAuthTimer=null,remoteAuthSeq=0,remoteAuthAttempt=0,remoteAuthScope='',remoteAuthPin='',remoteAuthHadLocal=false;
-var shellFrames={},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey='';
+var shellFrames={},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey='',adminUbsContext=null;
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
@@ -733,7 +733,7 @@ function showNativeAgenda(title,routeId){
       host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">Não foi possível carregar o módulo nativo de Agendas. Volte à Central e tente novamente.</div>';
       setShellOpening('',false);return;
     }
-    try{window.ConectaAgendasNativeV1.mount(host);setShellOpening('',false)}
+    try{window.ConectaAgendasNativeV1.mount(host);applyAdminUbsRemoteMode(host);setShellOpening('',false)}
     catch(e){
       host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">O módulo de Agendas não pôde ser iniciado sem perder a sessão. Volte à Central e tente novamente.</div>';
       setShellOpening('',false);
@@ -792,6 +792,7 @@ function showNativeMoradores(title,routeId){
     }
     try{
       window.ConectaMoradoresNativeV1.mount(host,{areaId:selectedAreaId});
+      applyAdminUbsRemoteMode(host);
       setShellOpening('',false);
     }catch(e){
       host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">O módulo de Moradores não pôde ser iniciado sem perder a sessão. Volte à Central e tente novamente.</div>';
@@ -853,12 +854,165 @@ function showNativeProfissionais(title,routeId){
       host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">Não foi possível carregar o módulo nativo de Profissionais e serviços. Volte à Central e tente novamente.</div>';
       setShellOpening('',false);return;
     }
-    try{window.ConectaProfissionaisNativeV1.mount(host,{areaId:selectedAreaId});setShellOpening('',false)}
+    try{window.ConectaProfissionaisNativeV1.mount(host,{areaId:selectedAreaId});applyAdminUbsRemoteMode(host);setShellOpening('',false)}
     catch(e){
       host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">O módulo de Profissionais e serviços não pôde ser iniciado sem perder a sessão. Volte à Central e tente novamente.</div>';
       setShellOpening('',false);
     }
   });
+  return true;
+}
+/* ADMIN_UBS_REMOTO_20260913_V1:
+   Administrador autenticado acessa a lista das UBS já cadastradas sem usar credencial da UBS.
+   Cada unidade possui dois modos distintos: Apenas visualizar e Editar. */
+function centralProfileHasUbs(value){
+  var p=text(value).toUpperCase().replace(/[+\s-]+/g,'_');
+  return p.split('_').indexOf('UBS')!==-1;
+}
+function adminUbsProfiles(){
+  return context&&Array.isArray(context.tacs)?context.tacs.filter(function(item){return item&&centralProfileHasUbs(item.perfil)}):[];
+}
+function adminUbsAreas(unitId){
+  var id=text(unitId);
+  return context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&text(a.unidadeId)===id}):[];
+}
+function adminUbsUnitName(unitId){
+  var areas=adminUbsAreas(unitId),name='';
+  for(var i=0;i<areas.length;i++){name=text(areas[i].unidadeNome);if(name)return name}
+  return text(unitId)||'Unidade não informada';
+}
+function adminUbsGroups(){
+  var groups={},order=[];
+  adminUbsProfiles().forEach(function(item){
+    var unit=text(item.unidadeId)||'SEM_UNIDADE';
+    if(!groups[unit]){groups[unit]={unitId:unit,profiles:[],areas:adminUbsAreas(unit)};order.push(unit)}
+    groups[unit].profiles.push(item);
+  });
+  return order.map(function(key){return groups[key]});
+}
+function ensureAdminUbsStyle(){
+  if(document.getElementById('cscAdminUbsRemoteStyle'))return;
+  var style=document.createElement('style');style.id='cscAdminUbsRemoteStyle';
+  style.textContent=''
+    +'.csc-admin-ubs{width:min(720px,100%);margin:0 auto;padding:8px 16px 34px;color:#f7fcff;background:#071827}'
+    +'.csc-admin-ubs-intro,.csc-admin-ubs-card,.csc-admin-ubs-detail{margin:0 0 14px;padding:16px;border:1px solid #2b5a76;border-radius:22px;background:linear-gradient(145deg,#153b58,#102d46)}'
+    +'.csc-admin-ubs-intro h2,.csc-admin-ubs-card h3,.csc-admin-ubs-detail h2{margin:0 0 7px;color:#fff}'
+    +'.csc-admin-ubs-intro p,.csc-admin-ubs-card p,.csc-admin-ubs-detail p{margin:5px 0;color:#adc4d2;line-height:1.42}'
+    +'.csc-admin-ubs-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}'
+    +'.csc-admin-ubs-btn{min-height:50px;border:1px solid #416f89;border-radius:16px;background:#153b58;color:#fff;font-weight:850;padding:10px 12px}'
+    +'.csc-admin-ubs-btn.active,.csc-admin-ubs-btn.edit{background:#176c94;border-color:#6bd3c4}'
+    +'.csc-admin-ubs-btn.view{background:#153b58;border-color:#62c8e8}'
+    +'.csc-admin-ubs-btn:disabled{opacity:.45}'
+    +'.csc-admin-ubs-status{display:inline-block;margin-top:7px;padding:5px 9px;border-radius:999px;background:#0b263d;color:#83efa9;font-size:.78rem;font-weight:850}'
+    +'.csc-admin-ubs-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}'
+    +'.csc-admin-ubs-panel{min-height:92px;border:1px solid #2b5a76;border-radius:19px;background:#153b58;color:#fff;padding:13px;text-align:left;font-weight:850}'
+    +'.csc-admin-ubs-panel small{display:block;margin-top:5px;color:#adc4d2;font-weight:650}'
+    +'.csc-admin-ubs-back{width:100%;margin-top:2px}'
+    +'.csc-admin-ubs select{width:100%;min-height:50px;margin-top:7px;padding:10px 12px;border:1px solid #416f89;border-radius:15px;background:#091e30;color:#fff}'
+    +'.csc-ubs-remote-notice{margin:0 0 12px;padding:10px 13px;border-radius:14px;background:#102d46;color:#adc4d2;border:1px solid #2b5a76;font-weight:800}'
+    +'@media(max-width:430px){.csc-admin-ubs-panels{grid-template-columns:1fr}.csc-admin-ubs-actions{grid-template-columns:1fr 1fr}}';
+  document.head.appendChild(style);
+}
+function adminUbsCurrentGroup(){
+  if(!adminUbsContext)return null;
+  var list=adminUbsGroups();
+  for(var i=0;i<list.length;i++)if(text(list[i].unitId)===text(adminUbsContext.unitId))return list[i];
+  return null;
+}
+function renderAdminUbsList(host){
+  var groups=adminUbsGroups();
+  adminUbsContext=null;
+  if(!groups.length){
+    host.innerHTML='<div class="csc-admin-ubs"><div class="csc-admin-ubs-intro"><h2>UBS cadastradas</h2><p>Nenhuma UBS cadastrada foi encontrada.</p></div></div>';
+    return;
+  }
+  host.innerHTML='<div class="csc-admin-ubs"><div class="csc-admin-ubs-intro"><h2>UBS cadastradas</h2><p>Selecione a unidade. O Administrador não precisa informar PIN ou outra credencial da UBS.</p></div>'+
+    groups.map(function(g){
+      var ativos=g.profiles.filter(function(p){return p.ativo!==false}),responsaveis=g.profiles.map(function(p){return text(p.nomeCompleto)||text(p.tacsId)}).filter(Boolean);
+      return '<div class="csc-admin-ubs-card" data-ubs-unit="'+esc(g.unitId)+'"><h3>'+esc(adminUbsUnitName(g.unitId))+'</h3>'+
+        '<p>ID da unidade: '+esc(g.unitId)+'</p><p>Responsável(is): '+esc(responsaveis.join(', ')||'não informado')+'</p>'+
+        '<span class="csc-admin-ubs-status">'+(ativos.length?'Ativa':'Inativa')+'</span>'+
+        '<div class="csc-admin-ubs-actions"><button class="csc-admin-ubs-btn view" type="button" data-ubs-open="view" data-unit="'+esc(g.unitId)+'">Apenas visualizar</button>'+
+        '<button class="csc-admin-ubs-btn edit" type="button" data-ubs-open="edit" data-unit="'+esc(g.unitId)+'">Editar</button></div></div>';
+    }).join('')+'</div>';
+}
+function renderAdminUbsDetail(host){
+  var g=adminUbsCurrentGroup();if(!g){renderAdminUbsList(host);return}
+  var areas=g.areas||[],areaId=text(adminUbsContext.areaId);
+  if(!areaId&&areas.length)areaId=normArea(areas[0].areaId);
+  adminUbsContext.areaId=areaId;
+  var responsaveis=g.profiles.map(function(p){return text(p.nomeCompleto)||text(p.tacsId)}).filter(Boolean);
+  var edit=adminUbsContext.mode==='edit',semArea=!areas.length;
+  var panels=[
+    ['moradores','Moradores','Cadastros e situação dos moradores'],
+    ['suporte','Suporte aos moradores','Chamados e diagnóstico dos aparelhos'],
+    ['recados','Recados e campanhas','Publicações da unidade/área'],
+    ['agendas','Agendas e vagas','Agendas e disponibilidade'],
+    ['profissionais','Profissionais e serviços','Equipe e serviços da unidade']
+  ];
+  host.innerHTML='<div class="csc-admin-ubs"><div class="csc-admin-ubs-detail"><h2>'+esc(adminUbsUnitName(g.unitId))+'</h2>'+
+    '<p>'+esc(responsaveis.join(', ')||'Responsável não informado')+'</p>'+
+    '<div class="csc-admin-ubs-actions"><button type="button" class="csc-admin-ubs-btn view '+(!edit?'active':'')+'" data-ubs-mode="view">Apenas visualizar</button>'+
+    '<button type="button" class="csc-admin-ubs-btn edit '+(edit?'active':'')+'" data-ubs-mode="edit">Editar</button></div>'+
+    '<p><strong>Modo atual:</strong> '+(edit?'Editar — o Administrador pode corrigir os painéis da UBS.':'Apenas visualizar — alterações ficam bloqueadas.')+'</p>'+
+    (areas.length?'<label for="cscAdminUbsArea">Área vinculada à UBS</label><select id="cscAdminUbsArea">'+areas.map(function(a){return '<option value="'+esc(normArea(a.areaId))+'" '+(normArea(a.areaId)===areaId?'selected':'')+'>'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('')+'</select>':
+      '<p>Esta UBS ainda não possui área vinculada. O cadastro pode ser corrigido no modo Editar.</p>')+
+    '<div class="csc-admin-ubs-panels">'+panels.map(function(p){return '<button type="button" class="csc-admin-ubs-panel" data-ubs-panel="'+p[0]+'" '+(semArea?'disabled':'')+'>'+p[1]+'<small>'+p[2]+'</small></button>'}).join('')+
+    (edit?'<button type="button" class="csc-admin-ubs-panel" data-ubs-panel="territorio">Cadastro da UBS<small>Responsável, unidade, PIN, perfil e permissões</small></button>':'')+
+    '</div></div><button type="button" class="csc-admin-ubs-btn csc-admin-ubs-back" data-ubs-back="1">Voltar à lista de UBS</button></div>';
+}
+function applyAdminUbsRemoteMode(root){
+  if(!root)return;
+  var doc=root.ownerDocument||document,view=Boolean(adminUbsContext&&adminUbsContext.mode==='view'&&shellActiveModule!=='ubs');
+  try{
+    root.querySelectorAll('[data-csc-ubs-readonly-disabled="1"]').forEach(function(n){n.disabled=false;n.removeAttribute('data-csc-ubs-readonly-disabled')});
+    var old=doc.getElementById('cscUbsRemoteModeNotice');if(old)old.remove();
+    if(!view)return;
+    var notice=doc.createElement('div');notice.id='cscUbsRemoteModeNotice';notice.className='csc-ubs-remote-notice';notice.textContent='Modo apenas visualizar — alterações estão bloqueadas.';
+    if(root.firstChild)root.insertBefore(notice,root.firstChild);else root.appendChild(notice);
+    root.querySelectorAll('input,select,textarea,button').forEach(function(n){
+      if(n.matches&&n.matches('.tab,.sectionTab,[data-section],[data-diag-filter],[aria-controls]'))return;
+      if(!n.disabled){n.disabled=true;n.setAttribute('data-csc-ubs-readonly-disabled','1')}
+    });
+  }catch(e){}
+}
+function applyAdminUbsRemoteToFrame(frame){
+  try{if(frame&&frame.contentDocument&&frame.contentDocument.body)applyAdminUbsRemoteMode(frame.contentDocument.body)}catch(e){}
+}
+function openAdminUbsRemotePanel(name,title){
+  if(!adminUbsContext||mode!=='admin')return;
+  if(name!=='territorio'){
+    if(!adminUbsContext.areaId){var s=el('cscAdminUbsArea');if(s)adminUbsContext.areaId=normArea(s.value)}
+    if(!adminUbsContext.areaId)return;
+    selectedAreaId=normArea(adminUbsContext.areaId);
+    publishModuleCore();
+  }
+  openModule(name,title,{});
+}
+function showAdminUbs(title){
+  if(mode!=='admin')return false;
+  prepareShellScope();hideAllNativeExcept('ubs');
+  Object.keys(shellFrames).forEach(function(key){var frame=shellFrames[key];if(frame)frame.hidden=true});
+  var host=el('nativeModuleHost'),viewer=el('viewer');if(!host||!viewer)return false;
+  ensureAdminUbsStyle();
+  shellActiveModule='ubs';shellActiveRoute='ubs';shellActiveNative='ubs';
+  el('viewerTitle').textContent=title||'UBS';
+  viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;
+  host.hidden=false;var footer=el('viewerFooter');if(footer)footer.hidden=false;
+  document.body.classList.add('viewer-open');setShellOpening('',false);
+  if(adminUbsContext)renderAdminUbsDetail(host);else renderAdminUbsList(host);
+  if(host.dataset.cscUbsBound!=='1'){
+    host.dataset.cscUbsBound='1';
+    host.addEventListener('click',function(e){
+      if(shellActiveModule!=='ubs')return;
+      var open=e.target.closest('[data-ubs-open]');
+      if(open){var unit=text(open.getAttribute('data-unit')),groups=adminUbsGroups(),g=groups.find(function(x){return text(x.unitId)===unit});adminUbsContext={unitId:unit,mode:open.getAttribute('data-ubs-open')==='edit'?'edit':'view',areaId:g&&g.areas&&g.areas.length?normArea(g.areas[0].areaId):''};renderAdminUbsDetail(host);return}
+      var modeBtn=e.target.closest('[data-ubs-mode]');if(modeBtn&&adminUbsContext){adminUbsContext.mode=modeBtn.getAttribute('data-ubs-mode')==='edit'?'edit':'view';renderAdminUbsDetail(host);return}
+      var back=e.target.closest('[data-ubs-back]');if(back){renderAdminUbsList(host);return}
+      var panel=e.target.closest('[data-ubs-panel]');if(panel&&!panel.disabled){var names={moradores:'Moradores',suporte:'Suporte aos moradores',recados:'Recados e campanhas',agendas:'Agendas e vagas',profissionais:'Profissionais e serviços',territorio:'TACS e áreas'};openAdminUbsRemotePanel(panel.getAttribute('data-ubs-panel'),names[panel.getAttribute('data-ubs-panel')]||'Painel');return}
+    });
+    host.addEventListener('change',function(e){if(e.target&&e.target.id==='cscAdminUbsArea'&&adminUbsContext)adminUbsContext.areaId=normArea(e.target.value)});
+  }
   return true;
 }
 function normalizeEmbeddedPanelFrame(frame){
@@ -885,8 +1039,9 @@ function enhanceShellFrame(frame){
     frame.dataset.shellReady='1';
     try{applyUiStandard(frame.contentDocument)}catch(e){}
     normalizeEmbeddedPanelFrame(frame);
-    setTimeout(function(){normalizeEmbeddedPanelFrame(frame)},0);
-    setTimeout(function(){normalizeEmbeddedPanelFrame(frame)},300);
+    applyAdminUbsRemoteToFrame(frame);
+    setTimeout(function(){normalizeEmbeddedPanelFrame(frame);applyAdminUbsRemoteToFrame(frame)},0);
+    setTimeout(function(){normalizeEmbeddedPanelFrame(frame);applyAdminUbsRemoteToFrame(frame)},300);
     if(shellActiveFrame()===frame)setShellOpening('',false);
   });
 }
@@ -1009,6 +1164,7 @@ function shellHasUnsaved(frame){
   try{return Boolean(frame&&frame.contentDocument&&frame.contentDocument.documentElement.dataset.tacsDirty==='1')}catch(e){return false}
 }
 function openModule(name,title,options){
+  if(name==='ubs'){if(mode==='admin')showAdminUbs(title||'UBS');return}
   var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
   if(name==='portal'){window.open(url,'_blank','noopener');return}
   var remoteReady=Boolean(token||territoryToken),localReady=localPanelAccessReady();
@@ -1039,7 +1195,9 @@ function openModule(name,title,options){
 }
 function closeViewer(){
   var frame=shellActiveFrame();
-  if(shellHasUnsaved(frame)&&!window.confirm('Há alterações que podem não ter sido salvas. Deseja voltar à Central mesmo assim?'))return false;
+  if(shellHasUnsaved(frame)&&!window.confirm('Há alterações que podem não ter sido salvas. Deseja voltar mesmo assim?'))return false;
+  if(adminUbsContext&&shellActiveModule&&shellActiveModule!=='ubs'){showAdminUbs('UBS');return true}
+  if(shellActiveModule==='ubs')adminUbsContext=null;
   if(shellActiveNative==='agendas'){
     try{if(window.ConectaAgendasNativeV1&&window.ConectaAgendasNativeV1.hide)window.ConectaAgendasNativeV1.hide()}catch(e){}
     var nativeHost=el('nativeModuleHost');if(nativeHost)nativeHost.hidden=true;
@@ -1194,7 +1352,7 @@ el('loginTacs').addEventListener('click',function(){
 });
 el('adminArea').addEventListener('change',function(){if(mode!=='admin')return;resetModuleShell();selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}publishModuleCore();renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
 el('viewerFrame').addEventListener('load',function(){try{applyUiStandard(el('viewerFrame').contentDocument)}catch(e){}});
-el('moduleGrid').addEventListener('click',function(e){var btn=e.target.closest('.module');if(!btn||btn.disabled||btn.hidden)return;openModule(btn.dataset.module,btn.querySelector('strong').textContent)});
+el('moduleGrid').addEventListener('click',function(e){var btn=e.target.closest('.module');if(!btn||btn.disabled||btn.hidden)return;if(btn.dataset.module!=='ubs')adminUbsContext=null;openModule(btn.dataset.module,btn.querySelector('strong').textContent)});
 /* CENTRAL_RETURN_R6: restaura imediatamente o conteúdo ao voltar pelo histórico/BFCache do iPhone. */
 window.addEventListener('pageshow',function(){
   token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||'');
