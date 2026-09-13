@@ -2529,7 +2529,7 @@ function load(){
  if(!token){status('Sessão administrativa ausente. Volte à Central e entre como Administrador geral.','err');return}
  var cached=null;
  if(modulePerf&&typeof modulePerf.prime==='function'){
-  cached=modulePerf.prime('municipios',function(saved){data=saved;dataConfirmed=false;render();status('Última confirmação da estrutura exibida. Atualizando em segundo plano…','warn')});
+  cached=modulePerf.prime('municipios',function(saved){data=saved;dataConfirmed=false;render();status('Aguarde enquanto os dados carregam…','warn')});
  }
  if(!cached)status('Aguarde enquanto os dados carregam…','warn');
  var leituraPayload=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'municipios'}):{token:token,dispositivo:device};coreRead('admin_multimunicipio_dados',leituraPayload,function(done){post('admin_multimunicipio_dados',{},done)},function(r){
