@@ -42,6 +42,11 @@ assert.match(centralJs,/function showAdminUbs\(/);
 assert.match(centralJs,/Apenas visualizar/);
 assert.match(centralJs,/data-ubs-mode="edit"/);
 assert.match(centralJs,/Unidade de saúde, PIN, perfil e permissões/);
+// Modo somente leitura bloqueia gravação, mas não pode bloquear navegação, busca, filtros ou voltar.
+assert.match(centralJs,/function adminUbsReadonlyNavigationControl\(/);
+assert.match(centralJs,/\.csc-appbar-back/);
+assert.match(centralJs,/input\[type="search"\]/);
+assert.match(centralJs,/adminUbsReadonlyNavigationControl\(n\)/);
 
 // Cadastro UBS institucional: ao selecionar PERFIL UBS puro, não é cadastro de pessoa física.
 assert.match(form,/Administrador \/ TACS \/ UBS/);
