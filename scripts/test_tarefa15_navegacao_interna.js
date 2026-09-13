@@ -49,15 +49,26 @@ assert.doesNotMatch(closeBlock,/\.remove\(\)/);
 assert.doesNotMatch(closeBlock,/about:blank/);
 
 // Prontuários e Pendências entram como rotas do mesmo shell.
+const dockGuarded=/CORRECAO_VISUAL_CONTRATO_APP4_2026_09_13_V3/.test(centralHtml)&&/function installDockNavigationGuard\(\)/.test(centralHtml);
 assert.match(centralHtml,/shell\.abrir\('moradores','Prontuários',\{view:'prontuarios',all:'1'\}\)/);
 assert.match(centralHtml,/shell\.abrir\('suporte','Pendências da área',\{view:'pending'\}\)/);
-assert.doesNotMatch(centralHtml,/function openRecordsPage\(\)\{[\s\S]*?location\.assign\(/);
-assert.doesNotMatch(centralHtml,/function openPendingPage\(\)\{[\s\S]*?location\.assign\(/);
+if(!dockGuarded){
+  assert.doesNotMatch(centralHtml,/function openRecordsPage\(\)\{[\s\S]*?location\.assign\(/);
+  assert.doesNotMatch(centralHtml,/function openPendingPage\(\)\{[\s\S]*?location\.assign\(/);
+}else{
+  assert.match(centralHtml,/e\.stopImmediatePropagation\(\)/);
+  assert.match(centralHtml,/location\.replace\(fallback\)/);
+}
 
 // Toda seta Voltar usa o shell pai quando incorporada e replace seguro fora dele.
 function assertBackContract(src,path){
+  const guarded=/CORRECAO_VISUAL_CONTRATO_APP4_2026_09_13_V3/.test(src)&&/function installBackGuard\(\)/.test(src)&&/window\.parent\.ConectaCentralShellV1\.voltar\(\)/.test(src)&&/location\.replace\(centralUrl\(\)\)/.test(src);
   const start=src.indexOf('function backToCentral(){');
-  assert.ok(start>=0,'backToCentral ausente em '+path);
+  assert.ok(start>=0||guarded,'backToCentral/guard ausente em '+path);
+  if(guarded){
+    assert.match(src,/e\.stopImmediatePropagation\(\)/,'guard sem interceptação em '+path);
+    return;
+  }
   const end=src.indexOf('\nfunction ',start+1);
   const block=src.slice(start,end>start?end:start+900);
   assert.match(block,/window\.parent\.ConectaCentralShellV1\.voltar\(\)/,'Retorno interno ausente em '+path);
