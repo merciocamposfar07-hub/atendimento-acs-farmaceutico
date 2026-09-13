@@ -2138,10 +2138,13 @@ function panelTitle(){
 function centralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260910-app4-r6'+(isTerritory()?'&acesso=tacs':'')}
 function backToCentral(){
   try{sessionStorage.setItem(RETURN_FLAG,'1')}catch(e){}
-  var params=null,from=false;
-  try{params=new URLSearchParams(location.search||'');from=String(params.get('from')||'').toLowerCase()==='central'}catch(e){}
-  if(from&&history.length>1){history.back();return}
-  location.assign(centralUrl());
+  try{
+    if(window.parent&&window.parent!==window&&window.parent.ConectaCentralShellV1&&typeof window.parent.ConectaCentralShellV1.voltar==='function'){
+      window.parent.ConectaCentralShellV1.voltar();
+      return;
+    }
+  }catch(e){}
+  location.replace(centralUrl());
 }
 function vibrate(){try{if(navigator.vibrate)navigator.vibrate(8)}catch(e){}}
 
@@ -2246,12 +2249,16 @@ function showCentralHome(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function openRecordsPage(){
+  var shell=window.ConectaCentralShellV1;
+  if(shell&&typeof shell.abrir==='function'){shell.abrir('moradores','Prontuários',{view:'prontuarios',all:'1'});return}
   var area=encodeURIComponent(centralAreaId());
-  location.assign('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&view=prontuarios&all=1&from=central&v=20260910-prontuarios-todas-areas-v1');
+  location.replace('/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+'&view=prontuarios&all=1&from=central&v=20260912-task15-navigation-v1');
 }
 function openPendingPage(){
+  var shell=window.ConectaCentralShellV1;
+  if(shell&&typeof shell.abrir==='function'){shell.abrir('suporte','Pendências da área',{view:'pending'});return}
   var area=encodeURIComponent(centralAreaId());
-  location.assign('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+'&view=pending&from=central&v=20260910-pendencias-v5');
+  location.replace('/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+'&view=pending&from=central&v=20260912-task15-navigation-v1');
 }
 function openProfilePage(){
   var main=document.querySelector('main');if(!main)return;
