@@ -513,7 +513,7 @@ function conectaAcessoV1RespostaDiagnosticoItem_(item,tipo){
     documentoTipo:tipo,nome:conectaAcessoV1Texto_(m.nome),nascimento:conectaAcessoV1Texto_(m.nascimento),
     areaId:conectaAcessoV1Id_(a.areaId),areaNome:conectaAcessoV1Texto_(a.areaNome||a.areaId),
     unidadeId:conectaAcessoV1Texto_(a.unidadeId),cadastroArea:familia.familiaId,familiaId:familia.familiaId,
-    familia:familia.membros,familiaTotal:familia.membros.length,consultaFamilia:false,
+    encontrado:true,familia:familia.membros,familiaTotal:familia.membros.length,consultaFamilia:false,
     vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,notificacoesAlteradas:false,sessaoMoradorCriada:false,
     message:'Diagnóstico administrativo concluído sem criar ou alterar vínculo residencial.'
   };
@@ -567,34 +567,105 @@ function conectaAcessoV1BuscarCadastroAreaDiagnostico_(cadastro,areaId){
   return {familia:false,pessoas:pessoais};
 }
 
+function conectaAcessoV1FiltrosDiagnostico_(p){
+  var cpf=moradoresAdminV1Digitos_(p.cpf||''),cns=moradoresAdminV1Digitos_(p.cns||'');
+  var nome=conectaAcessoV1Texto_(p.nome),nascimentoBruto=conectaAcessoV1Texto_(p.nascimento);
+  var cadastro=conectaAcessoV1Texto_(p.cadastroArea||p.cadastro||''),areaId=conectaAcessoV1Id_(p.areaId);
+  var legado=moradoresAdminV1Digitos_(p.documento||'');
+  if(!cpf&&!cns&&legado){if(/^\d{11}$/.test(legado))cpf=legado;else if(/^\d{15}$/.test(legado))cns=legado;}
+  if(!cpf&&!cns&&!nome&&!nascimentoBruto&&!cadastro)throw new Error('Informe ao menos um dado para pesquisar o morador.');
+  if(cpf)cpf=conectaAcessoV1Cpf_(cpf);
+  if(cns&&!/^\d{15}$/.test(cns))throw new Error('Confira o Cartão SUS (CNS) informado.');
+  var nascimento='';
+  if(nascimentoBruto){
+    nascimento=conectaAcessoV1Nascimento_(nascimentoBruto);
+    if(!nascimento)throw new Error('Confira a data de nascimento informada.');
+  }
+  return {
+    areaId:areaId,cpf:cpf,cns:cns,nome:nome,nomeNormalizado:nome?conectaAcessoV1Nome_(nome):'',
+    nascimento:nascimento,cadastro:cadastro,cadastroNormalizado:conectaAcessoV1Texto_(cadastro).toUpperCase(),
+    familiaNormalizada:cadastro?conectaAcessoV1NormalizarFamiliaDiagnostico_(cadastro):''
+  };
+}
+
+function conectaAcessoV1BuscarDiagnostico_(filtros){
+  var areas=conectaAcessoV1Areas_(),out=[];
+  if(filtros.areaId)areas=areas.filter(function(a){return conectaAcessoV1Id_(a.areaId)===filtros.areaId;});
+  areas.forEach(function(area){
+    conectaAcessoV1RegistrosArea_(area).forEach(function(x){
+      var m=x.morador||{};
+      if(filtros.cpf&&conectaAcessoV1Texto_(m.cpf)!==filtros.cpf)return;
+      if(filtros.cns&&moradoresAdminV1Digitos_(m.cns)!==filtros.cns)return;
+      if(filtros.nomeNormalizado){
+        var nomeMorador=conectaAcessoV1Nome_(m.nome);
+        if(nomeMorador!==filtros.nomeNormalizado&&nomeMorador.indexOf(filtros.nomeNormalizado)===-1)return;
+      }
+      if(filtros.nascimento&&conectaAcessoV1Texto_(m.nascimento)!==filtros.nascimento)return;
+      if(filtros.cadastro){
+        var familia=conectaAcessoV1CodigoFamiliaItem_(x);
+        var idPortal=conectaAcessoV1Texto_(m.idPortal).toUpperCase(),id=conectaAcessoV1Texto_(m.id).toUpperCase();
+        var cadastroOk=(filtros.familiaNormalizada&&familia===filtros.familiaNormalizada)||
+          filtros.cadastroNormalizado===idPortal||filtros.cadastroNormalizado===id;
+        if(!cadastroOk)return;
+      }
+      out.push(x);
+    });
+  });
+  return out;
+}
+
+function conectaAcessoV1FamiliasDiagnosticoLista_(lista){
+  var grupos={},ordem=[];
+  (lista||[]).forEach(function(item){
+    var familia=conectaAcessoV1FamiliaDiagnostico_(item),a=item.area||{},familiaId=familia.familiaId||'';
+    var chave=conectaAcessoV1Id_(a.areaId)+'|'+(familiaId||conectaAcessoV1Texto_(item.chave));
+    if(!grupos[chave]){
+      grupos[chave]={
+        familiaId:familiaId,areaId:conectaAcessoV1Id_(a.areaId),areaNome:conectaAcessoV1Texto_(a.areaNome||a.areaId),
+        unidadeId:conectaAcessoV1Texto_(a.unidadeId),membros:familia.membros||[],selecionados:{}
+      };
+      ordem.push(chave);
+    }
+    var m=item.morador||{},id=conectaAcessoV1Texto_(m.idPortal||m.id);
+    if(id)grupos[chave].selecionados[id]=true;
+    grupos[chave].selecionados[conectaAcessoV1Nome_(m.nome)+'|'+conectaAcessoV1Texto_(m.nascimento)]=true;
+  });
+  return ordem.map(function(chave){
+    var g=grupos[chave];
+    g.membros=(g.membros||[]).map(function(m){
+      var id=conectaAcessoV1Texto_(m.idPortal),ident=conectaAcessoV1Nome_(m.nome)+'|'+conectaAcessoV1Texto_(m.nascimento);
+      return {nome:m.nome||'',nascimento:m.nascimento||'',idPortal:id,selecionado:Boolean(g.selecionados[id]||g.selecionados[ident])};
+    });
+    delete g.selecionados;
+    return g;
+  });
+}
+
+function conectaAcessoV1RespostaDiagnosticoLista_(lista,filtros){
+  if(!lista.length){
+    return {
+      ok:true,encontrado:false,modo:'DIAGNOSTICO_ADMINISTRATIVO',coreMode:'DIAGNOSTICO_ADMINISTRATIVO',somenteLeitura:true,
+      vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,notificacoesAlteradas:false,sessaoMoradorCriada:false,
+      message:'Nenhum cadastro localizado com os dados informados.'
+    };
+  }
+  if(lista.length===1)return conectaAcessoV1RespostaDiagnosticoItem_(lista[0],'BUSCA_COMBINADA');
+  var familias=conectaAcessoV1FamiliasDiagnosticoLista_(lista),primeira=familias[0]||{},somenteCadastro=Boolean(filtros.cadastro&&!filtros.cpf&&!filtros.cns&&!filtros.nome&&!filtros.nascimento);
+  return {
+    ok:true,encontrado:true,modo:'DIAGNOSTICO_ADMINISTRATIVO',coreMode:'DIAGNOSTICO_ADMINISTRATIVO',somenteLeitura:true,
+    documentoTipo:'BUSCA_COMBINADA',consultaMultipla:familias.length>1,consultaFamilia:somenteCadastro&&familias.length===1,
+    nome:'',nascimento:'',areaId:primeira.areaId||'',areaNome:familias.length===1?(primeira.areaNome||primeira.areaId||''):'Mais de uma área',
+    unidadeId:familias.length===1?(primeira.unidadeId||''):'',familias:familias,familiaTotal:familias.reduce(function(total,g){return total+(g.membros||[]).length;},0),
+    vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,notificacoesAlteradas:false,sessaoMoradorCriada:false,
+    message:familias.length===1?'Cadastro e família localizados.':'Cadastros compatíveis e respectivas famílias localizados.'
+  };
+}
+
 function conectaAcessoV1DiagnosticoMoradorAdmin_(p){
   var dispositivo=conectaAcessoV1Texto_(p.dispositivo),chave=conectaAcessoV1Texto_(p.chaveConfianca);
   if(!dispositivo||!conectaAcessoV1ConfiancaValida_('ADMIN','ADMIN_GERAL',dispositivo,chave))throw new Error('Aparelho administrativo não reconhecido para diagnóstico.');
-
-  var areaId=conectaAcessoV1Id_(p.areaId),cpf=moradoresAdminV1Digitos_(p.cpf||''),cns=moradoresAdminV1Digitos_(p.cns||'');
-  var nome=conectaAcessoV1Texto_(p.nome),nascimento=conectaAcessoV1Texto_(p.nascimento),cadastro=conectaAcessoV1Texto_(p.cadastroArea||p.cadastro||'');
-  var legado=moradoresAdminV1Digitos_(p.documento||'');
-  if(!cpf&&!cns&&legado){if(/^\d{11}$/.test(legado))cpf=legado;else if(/^\d{15}$/.test(legado))cns=legado;}
-  var metodos=(cpf?1:0)+(cns?1:0)+((nome||nascimento)?1:0)+(cadastro?1:0);
-  if(!metodos)throw new Error('Informe CPF, Cartão SUS, nome + data de nascimento ou número de cadastro na área.');
-  if(metodos>1)throw new Error('Use apenas uma forma de busca por vez.');
-
-  var lista=[],tipo='';
-  if(cpf){
-    conectaAcessoV1Cpf_(cpf);lista=conectaAcessoV1FiltrarAreaDiagnostico_(conectaAcessoV1BuscarCpf_(cpf),areaId);tipo='CPF';
-  }else if(cns){
-    if(!/^\d{15}$/.test(cns))throw new Error('O Cartão SUS (CNS) deve conter 15 números.');
-    lista=conectaAcessoV1FiltrarAreaDiagnostico_(conectaAcessoV1BuscarCns_(cns),areaId);tipo='CNS';
-  }else if(nome||nascimento){
-    if(!nome||!nascimento)throw new Error('Para buscar por nome, informe também a data de nascimento.');
-    lista=conectaAcessoV1BuscarNomeNascimentoDiagnostico_(nome,nascimento,areaId);tipo='NOME_NASCIMENTO';
-  }else{
-    var buscaCadastro=conectaAcessoV1BuscarCadastroAreaDiagnostico_(cadastro,areaId);
-    if(buscaCadastro.familia)return buscaCadastro.resposta;
-    lista=buscaCadastro.pessoas||[];tipo='CADASTRO_AREA';
-  }
-  if(lista.length!==1)throw new Error(lista.length>1?'Há mais de um cadastro compatível. Use outro identificador para confirmar o morador.':'Morador não localizado com os dados informados.');
-  return conectaAcessoV1RespostaDiagnosticoItem_(lista[0],tipo);
+  var filtros=conectaAcessoV1FiltrosDiagnostico_(p),lista=conectaAcessoV1BuscarDiagnostico_(filtros);
+  return conectaAcessoV1RespostaDiagnosticoLista_(lista,filtros);
 }
 
 function conectaAcessoV1RegistrarUbsConfiavel_(ubs,dispositivo){
