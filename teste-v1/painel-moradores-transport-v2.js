@@ -311,7 +311,7 @@ function changeArea(areaId){
   duplicateEditMode=false;
   if(el('results'))el('results').innerHTML='';
   showSearch();
-  showAuthenticatedShell('Área selecionada. Conferindo a fonte de moradores em segundo plano…');
+  showAuthenticatedShell('Aguarde enquanto os dados carregam…');
   loadBase('Área de moradores alterada e fonte conferida.');
 }
 
@@ -390,8 +390,8 @@ function showAuthenticatedShell(message){
     note.style.borderColor='#4f8da3';
     note.style.color='#073a55';
   }
-  setStatus('loginStatus',message||'Acesso validado. Painel liberado; conferindo a base em segundo plano…','ok');
-  setStatus('operationStatus','Painel disponível. Aguarde apenas a conferência das permissões para gravar ou pesquisar.','warn');
+  setStatus('loginStatus',message||'Aguarde enquanto os dados carregam…','warn');
+  setStatus('operationStatus','Aguarde enquanto os dados carregam…','warn');
 }
 
 function ensureSituationUi(){
@@ -502,7 +502,7 @@ function renderBase(r,message,confirmed){
   if(el('content'))el('content').classList.remove('hidden');
   if(el('logout'))el('logout').disabled=false;
   ensureSituationUi();setBaseLoading(false);updateNote();syncControls();
-  setStatus('loginStatus',message||(remoteConfirmed?'Sessão validada e base conferida.':'Última confirmação exibida. Conferindo a base em segundo plano…'),remoteConfirmed?'ok':'warn');
+  setStatus('loginStatus',message||(remoteConfirmed?'Sessão validada e base conferida.':'Aguarde enquanto os dados carregam…'),remoteConfirmed?'ok':'warn');
   if(PRONTUARIOS_VIEW&&accessMode==='admin'){
     var searchHelp=rootQuery('#searchArea .muted');
     if(searchHelp)searchHelp.textContent='Busque por nome, CPF, CNS ou cadastro familiar. A consulta percorre todas as áreas cadastradas.';
@@ -515,7 +515,7 @@ function renderBase(r,message,confirmed){
 function loadBase(message,done){
   var cached=null;
   if(modulePerf&&typeof modulePerf.prime==='function'){
-    cached=modulePerf.prime('moradores-base',function(data){renderBase(data,'Última confirmação exibida. Conferindo moradores em segundo plano…',false)});
+    cached=modulePerf.prime('moradores-base',function(data){renderBase(data,'Aguarde enquanto os dados carregam…',false)});
   }
   var leituraPayload=session();coreRead('admin_moradores_status',leituraPayload,function(next){post('admin_moradores_status',leituraPayload,'admin_moradores_result',next)},function(r){
     if(!r||r.ok!==true){var ok=renderBase(r,message,true);if(typeof done==='function')done(r,ok);return}
