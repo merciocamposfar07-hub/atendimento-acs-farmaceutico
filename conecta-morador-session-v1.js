@@ -5,6 +5,12 @@ var TOKEN_KEY='portalConectaMoradorTokenV1',PROFILE_KEY='portalConectaMoradorQui
 var token='',resident=null,oneSignal=null,busy=false;
 
 function text(v){return String(v==null?'':v).trim()}
+var MORADOR_SESSION_AUTH_REFUSAL_RE=/(sess[aã]o|token|autentica[cç][aã]o|acesso).*(inv[aá]lid|expir|recus|revog|desativ|n[aã]o autoriz)|n[aã]o autorizado|unauthor|forbidden|pertence a outro aparelho/i;
+function remoteError(message,result){
+ var e=new Error(text(message)||'Falha de comunicação.'),r=result&&typeof result==='object'?result:{};
+ e.refused=Boolean(r.temporario!==true&&MORADOR_SESSION_AUTH_REFUSAL_RE.test(e.message));
+ e.temporary=!e.refused;e.preserveSession=!e.refused;return e;
+}
 function digits(v){return text(v).replace(/\D/g,'')}
 function esc(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function el(id){return document.getElementById(id)}
@@ -14,7 +20,7 @@ function onboardingFlag(){try{return String(new URLSearchParams(location.search)
 function areaId(){try{return text(new URLSearchParams(location.search).get('area')||new URLSearchParams(location.search).get('areaId')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA'}catch(e){return'JAPARANDUBA'}}
 function requestId(prefix){return 'conecta_portal_'+prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
 function jsonp(params){return new Promise(function(resolve,reject){var cb='__conectaPortal_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false,t=setTimeout(function(){finish(null,new Error('A confirmação demorou demais.'))},14000);function finish(data,err){if(done)return;done=true;clearTimeout(t);try{delete window[cb]}catch(e){window[cb]=undefined}if(s.parentNode)s.remove();err?reject(err):resolve(data)}window[cb]=function(d){finish(d,null)};s.onerror=function(){finish(null,new Error('Falha de comunicação.'))};params.callback=cb;params._=Date.now();s.src=API+'?'+Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k])}).join('&');document.head.appendChild(s)})}
-function post(action,payload){if(busy)return Promise.reject(new Error('Aguarde a operação em andamento.'));busy=true;var id=requestId(action),body=new URLSearchParams();body.set('action',action);body.set('requestId',id);Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});var started=Date.now();return fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){}).then(function poll(){return jsonp({action:'conecta_result',requestId:id}).then(function(r){if(r&&r.ok===true&&r.pendente===false&&r.result){if(r.result.ok===true)return r.result;throw new Error(r.result.message||'Não foi possível concluir a operação.')}if(Date.now()-started>30000)throw new Error('A operação demorou demais.');return new Promise(function(resolve){setTimeout(resolve,650)}).then(poll)})}).finally(function(){busy=false})}
+function post(action,payload){if(busy)return Promise.reject(remoteError('Aguarde a operação em andamento.',{temporario:true}));busy=true;var id=requestId(action),body=new URLSearchParams();body.set('action',action);body.set('requestId',id);Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});var started=Date.now();return fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){}).then(function poll(){return jsonp({action:'conecta_result',requestId:id}).then(function(r){if(r&&r.ok===true&&r.pendente===false&&r.result){if(r.result.ok===true)return r.result;throw remoteError(r.result.message||'Não foi possível concluir a operação.',r.result)}if(Date.now()-started>30000)throw remoteError('A operação demorou demais.',{temporario:true});return new Promise(function(resolve){setTimeout(resolve,650)}).then(poll)}).catch(function(e){if(e&&typeof e.refused==='boolean')throw e;throw remoteError(e&&e.message||'Falha de comunicação.',{temporario:true})})}).finally(function(){busy=false})}
 function getSession(){return post('conecta_morador_sessao',{token:token,dispositivo:device()})}
 function clearSession(){try{sessionStorage.removeItem(TOKEN_KEY)}catch(e){}token=''}
 
@@ -32,7 +38,7 @@ function waitBackgroundLogin(){
     if(r&&r.ok===true&&r.pendente===false&&r.result){
      clearBackgroundRequest();
      if(r.result.ok===true&&r.result.token){resolve(r.result);return}
-     var err=new Error(r.result.message||'O acesso do morador não foi confirmado.');err.refused=true;reject(err);return;
+     reject(remoteError(r.result.message||'O acesso do morador não foi confirmado.',r.result));return;
     }
     if(Date.now()-started>50000){reject(new Error('A sincronização do acesso ainda não terminou.'));return}
     setTimeout(poll,900);
@@ -179,11 +185,14 @@ function install(){
    return fresh();
   });
  }
- var sync=token?fresh().catch(function(){return pending?confirmBackground():Promise.reject(new Error('Sessão remota indisponível.'))}):confirmBackground();
+ var sync=token?fresh().catch(function(err){
+  if(err&&err.refused)return Promise.reject(err);
+  return pending?confirmBackground():Promise.reject(err||remoteError('Sessão remota indisponível.',{temporario:true}));
+ }):confirmBackground();
  sync.catch(function(err){
   if(err&&err.refused){removeResidentVault();clearSession();clearBackgroundRequest();if(queryFlag())location.replace('/atendimento-acs-farmaceutico/central-administrativa-tacs.html');return}
-  if(!local){clearSession();if(queryFlag())location.replace('/atendimento-acs-farmaceutico/central-administrativa-tacs.html')}
-  else showPortalToast('Portal aberto com os dados locais. A confirmação do servidor continua em segundo plano.');
+  if(local)showPortalToast('Portal aberto com os dados locais. A confirmação do servidor continua em segundo plano.');
+  else showPortalToast('Sua sessão foi preservada. O servidor ainda não confirmou os dados; tente novamente sem refazer o PIN.');
  });
 }
 window.OneSignalDeferred=window.OneSignalDeferred||[];
