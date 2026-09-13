@@ -35,6 +35,9 @@ on:
       - 'teste-v1/painel-tacs-areas-v1.html'
       - 'teste-v1/painel-profissionais-servicos-v1.html'
       - 'scripts/test_tarefa13_dedup_requisicoes.js'
+      - 'scripts/test_tarefa14_timeout_sessao.js'
+      - 'central-tacs-login-rapido-v1.js'
+      - 'conecta-morador-session-v1.js'
 
 permissions:
   contents: read
@@ -74,6 +77,9 @@ jobs:
           node --check scripts/test_quality_gate_v101.js
           node --check scripts/test_admin_transport.js
           node --check scripts/test_campanhas_periodo_v1.js
+          node --check scripts/test_tarefa14_timeout_sessao.js
+          node --check central-tacs-login-rapido-v1.js
+          node --check conecta-morador-session-v1.js
           node --check scripts/build_apps_script_release.js
           node --check --input-type=commonjs < apps-script/ZZZZ_21_PerformanceCacheV101.gs
           node --check --input-type=commonjs < apps-script/ZZZZ_34_CampanhasPeriodoV1.gs
