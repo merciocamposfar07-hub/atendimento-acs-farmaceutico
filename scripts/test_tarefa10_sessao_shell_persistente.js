@@ -58,7 +58,10 @@ assert.match(closeBlock,/(?:viewer|el\('viewer'\))\.hidden=true/);
 assert.match(closeBlock,/shellActiveModule='';shellActiveRoute=''/);
 
 // A sessão só destrói os frames em eventos realmente estruturais.
-assert.match(central,/cancelarOperacaoAtivaSemCallback\(\);\s*resetModuleShell\(\);\s*token='';territoryToken='';mode=''/,'Logoff explícito deve limpar módulos protegidos.');
+const logoutStart=central.indexOf('function logout()');
+const logoutEnd=central.indexOf('/* LOGIN_PREFETCH_ESTATICO_V2',logoutStart);
+const logoutBlock=central.slice(logoutStart,logoutEnd);
+assert(logoutBlock.includes('cancelarOperacaoAtivaSemCallback()')&&logoutBlock.includes('resetModuleShell()')&&logoutBlock.includes("token='';territoryToken='';mode=''"),'Logoff explícito deve limpar módulos protegidos, mesmo com cleanup assíncrono após o retorno visual.');
 assert.match(central,/resetModuleShell\(\);selectedAreaId=normArea\(this\.value\)/,'Troca de área deve invalidar frames do escopo antigo.');
 
 // BFCache/pageshow não pode destruir frames ou voltar ao PIN.
