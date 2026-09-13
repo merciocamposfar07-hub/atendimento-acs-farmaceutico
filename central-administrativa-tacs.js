@@ -355,19 +355,22 @@ function currentAdministrator(){
 function publishModuleCore(){
   try{
     if(!context||!mode)return false;
-    var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator();
-    var principal=mode==='tacs'?tacs:admin;
-    var permissions=mode==='admin'?['*']:(tacs&&Array.isArray(tacs.permissoes)?tacs.permissoes.slice():[]);
+    var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();
+    var principal=mode==='tacs'?tacs:(mode==='ubs'?ubs:admin);
+    var permissions=mode==='admin'?['*']:(principal&&Array.isArray(principal.permissoes)?principal.permissoes.slice():[]);
+    var nomePrincipal=mode==='ubs'
+      ?(text(area&&area.unidadeNome)||text(principal&&principal.unidadeId)||'UBS')
+      :text(principal&&principal.nomeCompleto);
     var payload={
       schemaVersion:1,
       source:'CENTRAL_CONECTA',
       mode:mode,
       authenticated:Boolean(token||territoryToken||ubsToken),
       identity:{
-        nome:text(principal&&principal.nomeCompleto),
-        perfil:text(principal&&principal.perfil||(mode==='tacs'?'TACS':'ADMIN')),
+        nome:nomePrincipal,
+        perfil:text(principal&&principal.perfil||(mode==='tacs'?'TACS':(mode==='ubs'?'UBS':'ADMIN'))),
         funcao:text(principal&&principal.funcaoUbs),
-        unidadeId:text(area&&area.unidadeId)
+        unidadeId:text(area&&area.unidadeId||principal&&principal.unidadeId)
       },
       area:{
         areaId:normArea(area&&area.areaId||selectedAreaId),
@@ -395,17 +398,20 @@ function updateCentralWelcome(area,tacs){
   var node=ensureCentralWelcome();if(!node)return;
   if(mode==='tacs'){
     var nome=text(tacs&&tacs.nomeCompleto)||'TACS';
-    var perfil=accessProfileLabel(tacs&&tacs.perfil||'TACS');
     var areaNome=text(area&&area.areaNome)||selectedAreaId||'sua área';
     node.innerHTML='<small>Identidade autenticada</small><h1>'+esc(identityHeadline(nome,tacs&&tacs.perfil||'TACS'))+'</h1><p>Acesso atual: TACS da área • '+esc(areaNome)+'.</p>';
     return;
   }
+  if(mode==='ubs'){
+    var ubs=currentUbs(),unidade=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||text(ubs&&ubs.unidadeId)||'UBS';
+    node.innerHTML='<small>UBS autenticada</small><h1>'+esc(unidade)+'</h1><p>Acesso aos painéis da UBS • '+esc(text(area&&area.areaNome)||selectedAreaId||'área vinculada')+'.</p>';
+    return;
+  }
   var admin=currentAdministrator();
   var adminNome=text(admin&&admin.nomeCompleto)||'Administrador';
-  var adminPerfil=accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');
   node.innerHTML='<small>Identidade autenticada</small><h1>'+esc(identityHeadline(adminNome,admin&&admin.perfil||context&&context.perfil||'ADMIN'))+'</h1><p>Gestão administrativa da área selecionada.</p>';
 }
-function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(text(admin&&admin.nomeCompleto)||'Administrador');el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=false;el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=mode!=='admin'||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;renderModules();renderHealthInstant(selectedAreaId);if(!skipHealth)refreshHealth()}
+function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId})){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(mode==='admin'&&areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):(mode==='ubs'?accessProfileLabel(ubs&&ubs.perfil||'UBS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN'));el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(mode==='ubs'?(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'UBS'):(text(admin&&admin.nomeCompleto)||'Administrador'));el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=mode==='ubs';el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=(mode!=='admin'&&mode!=='ubs')||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;renderModules();if(mode!=='ubs'){renderHealthInstant(selectedAreaId);if(!skipHealth)refreshHealth()}}
 function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
 function markHealth(id,label,state){var n=el(id),s=n.querySelector('span');n.className='health-card'+(state?' '+state:'');s.textContent=label}
 function updatePendingBadge(result){
