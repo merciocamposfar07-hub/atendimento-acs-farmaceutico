@@ -215,13 +215,17 @@
     installTerritorialIdentityGuard();
     installCentralReturnUI();
     var button=document.getElementById(BUTTON_ID);
-    if(button)return;
+    if(button){
+      button.style.setProperty('display','inline-flex','important');
+      return;
+    }
     button=document.createElement('button');
     button.id=BUTTON_ID;
     button.type='button';
     button.setAttribute('aria-label','Atualizar esta página e refazer a conexão');
     button.title='Atualizar esta página e refazer a conexão';
     button.textContent='↻ Atualizar página';
+    button.style.setProperty('display','inline-flex','important');
     button.addEventListener('click',function(){smartRefresh(button)});
     document.body.appendChild(button);
   }
