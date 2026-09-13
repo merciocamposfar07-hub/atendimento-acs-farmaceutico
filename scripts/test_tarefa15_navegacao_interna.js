@@ -24,7 +24,7 @@ assert.match(central,/TAREFA_15_NAVEGACAO_INTERNA_V1/);
 assert.match(central,/var shellFrames=\{\},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey=''/);
 assert.match(central,/function moduleRouteOptions\(options\)/);
 assert.match(central,/function moduleRouteId\(name,options\)/);
-assert.match(central,/revision='20260912-task15-navigation-v1'/);
+assert.match(central,/revision='20260913-apresentacao-paineis-v2'/);
 assert.match(central,/function shellFrameKey\(routeId\)/);
 assert.match(central,/function shellActiveFrame\(\)\{return shellActiveRoute&&shellFrames\[shellFrameKey\(shellActiveRoute\)\]\|\|null\}/);
 assert.match(central,/function ensureShellFrame\(name,url,title,routeId\)/);
