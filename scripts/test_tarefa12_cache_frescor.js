@@ -77,7 +77,7 @@ assert.match(territorio,/n\.disabled=!territoryConfirmed/);
 assert.match(municipios,/n\.disabled=!dataConfirmed/);
 
 // Cache busting publica a revisão nova em vez da revisão da Tarefa 11.
-assert.match(central,/revision='20260912-task(?:12-cache-version|13-request-dedup)-v1'/);
+assert.match(central,/revision='20260912-task(?:12-cache-version|13-request-dedup|15-navigation)-v1'/);
 for(const [moduleName,src] of [
   ['agendas',agendas],['profissionais',profissionais],['recados',recados],['suporte',suporte],
   ['territorio',territorioHtml],['municipios',municipios],['moradores',read('teste-v1/painel-moradores-v2.html')]
