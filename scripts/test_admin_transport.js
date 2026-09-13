@@ -171,8 +171,7 @@ function verifyStaticSource(config) {
   assert.match(base, /PortalTacsAdminWarmup/);
   assert.doesNotMatch(base, /jsonp\('admin_status',\{\},pronto\)/);
   assert.doesNotMatch(base, /Preparando a conexão com o Google Apps Script/);
-  // Tarefa 14: falha temporária não deve impor a mensagem histórica de sessão descartada.
-  assert.doesNotMatch(base, /A sessão anterior não pôde ser reutilizada/);
+  // A política de preservação de sessão por timeout é validada pelo gate específico da Tarefa 14.
   assert.match(official, /[?&]v=(?:20260(?:8|9)[\\w-]*|[0-9a-f]{7,40})/i);
   if (config.official !== 'painel-oficial-recados-campanhas.html') {
     assert.match(
