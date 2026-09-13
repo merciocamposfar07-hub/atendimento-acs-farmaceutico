@@ -26,12 +26,18 @@ assert.match(
 );
 assert.match(
   central,
-  /function ensureShellFrame\(name,url,title\)/,
-  'Cada módulo deve ser preservado no shell após o primeiro carregamento'
+  /function ensureShellFrame\(name,url,title,routeId\)/,
+  'Cada rota interna do módulo deve ser preservada no shell após o primeiro carregamento'
+);
+assert.match(
+  central,
+  /TAREFA_15_NAVEGACAO_INTERNA_V1[\s\S]*voltar:closeViewer/,
+  'A navegação da Tarefa 15 deve permanecer dentro do shell sem depender do histórico do Safari'
 );
 assert.match(
   central,
   /TAREFA_10_AGENDA_LAZY_VISIBLE_V1/,
+
   'Agenda deve iniciar somente depois de o shell estar visível'
 );
 const closeStart=central.indexOf('function closeViewer()');
