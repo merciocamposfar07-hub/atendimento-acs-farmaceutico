@@ -17,6 +17,16 @@ var shellFrames={},shellActiveModule='',shellScopeKey='';
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
+var CENTRAL_SESSION_AUTH_REFUSAL_RE=/(sess[aã]o|token|autentica[cç][aã]o|acesso).*(inv[aá]lid|expir|recus|revog|desativ|n[aã]o autoriz)|n[aã]o autorizado|unauthor|forbidden|pertence a outro aparelho/i;
+function normalizeSessionFailure(result){
+  var r=result&&typeof result==='object'?result:{ok:false,message:'Resposta vazia.'};
+  if(r.ok===true)return r;
+  var message=text(r.message),explicit=Boolean(r.temporario!==true&&CENTRAL_SESSION_AUTH_REFUSAL_RE.test(message)),out={};
+  Object.keys(r).forEach(function(k){out[k]=r[k]});
+  if(explicit){out.authRecusada=true;out.preservarSessao=false}
+  else{out.temporario=true;out.preservarSessao=true}
+  return out;
+}
 function esc(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
 function digits(v){return text(v).replace(/\D/g,'')}
@@ -77,7 +87,7 @@ function finishPost(result){
   clearTimeout(op.timeout);clearTimeout(op.pollTimer);clearTimeout(op.submitTimer);
   if(op.form&&op.form.parentNode)op.form.remove();
   if(op.frame&&op.frame.parentNode)setTimeout(function(){if(op.frame.parentNode)op.frame.remove()},180);
-  var finalResult=result||{ok:false,message:'Resposta vazia.'};
+  var finalResult=normalizeSessionFailure(result||{ok:false,message:'Resposta vazia.'});
   if(finalResult&&finalResult.ok===true)marcarConexaoRecente();
   op.cb(finalResult);
 }
@@ -110,7 +120,7 @@ function poll(){
   });
 }
 function post(action,payload,resultAction,cb){
-  if(active){cb({ok:false,message:'Aguarde a operação anterior.'});return}
+  if(active){cb(normalizeSessionFailure({ok:false,message:'Aguarde a operação anterior.'}));return}
   var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form');
   var frameName='centralFrame'+Date.now()+'_'+Math.floor(Math.random()*1000),fields={};
   Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});
@@ -623,7 +633,7 @@ function loadContext(message){
   post('admin_territorio_dados',session(),'admin_territorio_result',function(r){
     if(!r||r.ok!==true){
       var falhaMsg=text(r&&r.message)||'A leitura do contexto ainda não foi confirmada.';
-      var authInvalida=Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(falhaMsg));
+      var authInvalida=Boolean(r&&r.authRecusada===true);
       if(!authInvalida){
         if(!context)restoreContextCache();
         setStatus('Sessão preservada. Sincronizando os dados em segundo plano…','warn');
