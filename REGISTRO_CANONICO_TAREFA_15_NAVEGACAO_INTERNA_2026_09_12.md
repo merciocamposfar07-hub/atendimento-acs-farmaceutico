@@ -97,3 +97,7 @@ Backend:
 **TAREFA 15 VALIDADA INTERNAMENTE, PUBLICADA E CANONIZADA.**
 
 A Tarefa 16 não foi iniciada neste registro.
+
+## Correção emergencial de 13/09/2026 — Central inoperante
+
+O fechamento lógico da Tarefa 15 não bastava: CSS e guarda visual impediam o viewer de desaparecer e expunham hosts ocultos. O fluxo passa a ser validado também por execução do DOM/CSS, conforme `REGISTRO_CORRECAO_CENTRAL_INOPERANTE_2026_09_13.md`. Abrir → um host visível; voltar → viewer oculto imediatamente; reabrir → mesmo host/dados. A guarda visual não pode manter display inline nem observar as próprias escritas. Não constitui homologação física dos perfis/aparelhos nem encerramento das outras pendências.

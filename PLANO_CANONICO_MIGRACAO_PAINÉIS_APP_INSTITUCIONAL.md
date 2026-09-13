@@ -495,3 +495,7 @@ GitHub Pages do HEAD validado: run `34731696614` — `success`.
 Backend Apps Script não foi alterado; produção permanece na versão **208**.
 
 **ENCERRAMENTO DA SEQUÊNCIA:** as Tarefas **1 a 18** da sequência original aprovada ficam concluídas. Não existe Tarefa 19 nessa sequência.
+
+## Correção emergencial de 13/09/2026 — Central inoperante
+
+O fechamento lógico da Tarefa 15 não bastava: CSS e guarda visual impediam o viewer de desaparecer e expunham hosts ocultos. O fluxo passa a ser validado também por execução do DOM/CSS, conforme `REGISTRO_CORRECAO_CENTRAL_INOPERANTE_2026_09_13.md`. Abrir → um host visível; voltar → viewer oculto imediatamente; reabrir → mesmo host/dados. A guarda visual não pode manter display inline nem observar as próprias escritas. Não constitui homologação física dos perfis/aparelhos nem encerramento das outras pendências.

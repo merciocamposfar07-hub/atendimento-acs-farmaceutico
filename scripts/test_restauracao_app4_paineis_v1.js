@@ -46,7 +46,10 @@ assert.match(html,/style\.setProperty\(p,v,'important'\)/);
 assert.match(html,/html body \.viewer\.csc-native-viewer>\.viewer-bar\{[\s\S]*position:static!important/);
 assert.match(html,/function installDockNavigationGuard\(\)/);
 assert.match(html,/function installBackGuard\(\)/);
-assert.match(html,/new MutationObserver\(function\(\)\{clearTimeout\(window\.__cscVisualGuardTimerV3\)/);
+// O observador agrupa eventos, sem adiar indefinidamente e sem observar suas próprias escritas.
+assert.match(html,/new MutationObserver\(function\(\)\{if\(!window\.__cscVisualGuardTimerV3\)/);
+assert.match(html,/if\(visualObserver\)visualObserver\.disconnect\(\)/);
+assert.match(html,/finally\{observeVisual\(\)\}/);
 assert.doesNotMatch(html,/setInterval\(run,2500\)/);
 assert.doesNotMatch(html,/Atualizar página<\/button>/);
 

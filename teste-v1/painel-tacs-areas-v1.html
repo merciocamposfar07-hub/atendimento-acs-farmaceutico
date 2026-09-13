@@ -2376,18 +2376,20 @@ html body #cscPlatformFooter strong,html body .csc-platform-footer strong,html b
 html body #cscPlatformFooter small,html body .csc-platform-footer small,html body .viewer-platform-footer small{color:#adc4d2!important;font-size:.78rem!important;line-height:1.3!important;font-weight:650!important}
 html body .viewer.csc-native-viewer:not([hidden]){display:block!important;position:fixed!important;inset:0!important;z-index:30000!important;overflow-x:hidden!important;overflow-y:auto!important;background:#071827!important;background-image:none!important;border:0!important;box-shadow:none!important}
 html body .viewer.csc-native-viewer>.viewer-bar{position:static!important;top:auto!important;inset:auto!important;width:min(720px,100%)!important;margin:0 auto!important;background:#071827!important;background-image:none!important;border:0!important;box-shadow:none!important}
-html body .viewer.csc-native-viewer>.csc-native-module-host{display:block!important;width:100%!important;min-height:0!important;overflow:visible!important;background:#071827!important;background-image:none!important;border:0!important;box-shadow:none!important}
+html body .viewer.csc-native-viewer>.csc-native-module-host:not([hidden]){display:block!important;width:100%!important;min-height:0!important;overflow:visible!important;background:#071827!important;background-image:none!important;border:0!important;box-shadow:none!important}
 html body .viewer.csc-native-viewer>.viewer-platform-footer{display:grid!important;position:static!important;width:min(720px,100%)!important;margin:0 auto!important;padding:24px 16px calc(32px + env(safe-area-inset-bottom))!important;gap:7px!important;text-align:center!important;background:#071827!important;background-image:none!important;color:#adc4d2!important;border:0!important;box-shadow:none!important}
 html body .viewer.csc-frame-viewer:not([hidden]){display:block!important;position:fixed!important;inset:0!important;z-index:30000!important;overflow:hidden!important;background:#071827!important;background-image:none!important;border:0!important;box-shadow:none!important}
 html body .viewer.csc-frame-viewer>.viewer-bar,html body .viewer.csc-frame-viewer>.viewer-platform-footer{display:none!important}
-html body .viewer.csc-frame-viewer>iframe{display:block!important;width:100%!important;height:100dvh!important;min-height:100dvh!important;border:0!important;background:#071827!important}
+html body .viewer.csc-frame-viewer>iframe:not([hidden]){display:block!important;width:100%!important;height:100dvh!important;min-height:100dvh!important;border:0!important;background:#071827!important}
+/* HOTFIX_CENTRAL_VISIBILIDADE_20260913: um módulo visível; voltar libera os toques. */
+html body #viewer[hidden],html body #viewer>[hidden]{display:none!important;pointer-events:none!important}
 </style>
 <script id="cscVisualContractGuardJs20260913">
 (function(){
 'use strict';
 var FOOTER_HTML='<strong>Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</strong><small>Plataforma institucional de saúde comunitária.</small>';
 function trim(v){return String(v==null?'':v).replace(/\s+/g,' ').trim()}
-function imp(n,p,v){try{if(n)n.style.setProperty(p,v,'important')}catch(e){}}
+function imp(n,p,v){try{if(n&&(n.style.getPropertyValue(p)!==v||n.style.getPropertyPriority(p)!=='important'))n.style.setProperty(p,v,'important')}catch(e){}}
 function isTerritory(){try{return !!trim(sessionStorage.getItem('portalTacsTerritorioTokenV1')||'')}catch(e){return false}}
 function centralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260913-app4-visual-v3'+(isTerritory()?'&acesso=tacs':'')}
 function currentArea(){try{return trim(localStorage.getItem('portalTacsCentralAreaV1')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA'}catch(e){return'JAPARANDUBA'}}
@@ -2411,15 +2413,17 @@ function ensurePlatformFooter(){
   if(!document.body)return;
   var viewer=document.getElementById('viewer'),existing=document.getElementById('cscPlatformFooter');
   if(!existing&&!viewer){existing=document.createElement('footer');existing.id='cscPlatformFooter';existing.className='csc-platform-footer';document.body.appendChild(existing)}
-  if(existing){existing.innerHTML=FOOTER_HTML;existing.hidden=false;imp(existing,'display','grid');imp(existing,'position','static');imp(existing,'background','#071827');imp(existing,'border','0');imp(existing,'box-shadow','none')}
-  var vf=document.getElementById('viewerFooter');if(vf){vf.innerHTML=FOOTER_HTML;if(document.getElementById('viewer')&&document.getElementById('viewer').classList.contains('csc-native-viewer'))vf.hidden=false}
+  if(existing){if(existing.innerHTML!==FOOTER_HTML)existing.innerHTML=FOOTER_HTML;if(existing.hidden)existing.hidden=false;imp(existing,'display','grid');imp(existing,'position','static');imp(existing,'background','#071827');imp(existing,'border','0');imp(existing,'box-shadow','none')}
+  var vf=document.getElementById('viewerFooter');if(vf){if(vf.innerHTML!==FOOTER_HTML)vf.innerHTML=FOOTER_HTML;var visible=viewer&&!viewer.hidden&&viewer.classList.contains('csc-native-viewer');if(vf.hidden===Boolean(visible))vf.hidden=!visible}
 }
 function normalizeHeader(){
   var bar=document.getElementById('cscInstitutionalAppbar');
   if(bar){imp(bar,'position','static');imp(bar,'top','auto');imp(bar,'inset','auto');imp(bar,'background','#071827');imp(bar,'border','0');imp(bar,'box-shadow','none');imp(bar,'backdrop-filter','none');imp(bar,'-webkit-backdrop-filter','none')}
   var viewer=document.getElementById('viewer');
-  if(viewer&&viewer.classList.contains('csc-native-viewer')){imp(viewer,'display','block');imp(viewer,'overflow-y','auto');imp(viewer,'overflow-x','hidden');var vbar=viewer.querySelector('.viewer-bar');imp(vbar,'position','static');imp(vbar,'top','auto');imp(vbar,'inset','auto');imp(vbar,'background','#071827');imp(vbar,'border','0');imp(vbar,'box-shadow','none')}
-  if(viewer&&viewer.classList.contains('csc-frame-viewer')){var f=viewer.querySelector('.viewer-platform-footer');if(f)f.hidden=true}
+  /* Visibilidade pertence ao shell. Nunca fixar display inline sobre [hidden]. */
+  if(viewer&&viewer.style.getPropertyValue('display'))viewer.style.removeProperty('display');
+  if(viewer&&viewer.classList.contains('csc-native-viewer')){var vbar=viewer.querySelector('.viewer-bar');imp(vbar,'position','static');imp(vbar,'top','auto');imp(vbar,'inset','auto');imp(vbar,'background','#071827');imp(vbar,'border','0');imp(vbar,'box-shadow','none')}
+  if(viewer&&viewer.classList.contains('csc-frame-viewer')){var f=viewer.querySelector('.viewer-platform-footer');if(f&&!f.hidden)f.hidden=true}
 }
 function installDockNavigationGuard(){
   if(document.documentElement.dataset.cscDockGuardV3==='1')return;
@@ -2441,10 +2445,16 @@ function installBackGuard(){
     location.replace(centralUrl());
   },true);
 }
-function run(){removeRefreshButtons();ensurePlatformFooter();normalizeHeader();installDockNavigationGuard();installBackGuard()}
+var visualObserver=null;
+function observeVisual(){if(visualObserver)visualObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden','style']})}
+function run(){
+  clearTimeout(window.__cscVisualGuardTimerV3);window.__cscVisualGuardTimerV3=0;
+  if(visualObserver)visualObserver.disconnect();
+  try{removeRefreshButtons();ensurePlatformFooter();normalizeHeader();installDockNavigationGuard();installBackGuard()}finally{observeVisual()}
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 setTimeout(run,120);setTimeout(run,500);setTimeout(run,1500);
-try{new MutationObserver(function(){clearTimeout(window.__cscVisualGuardTimerV3);window.__cscVisualGuardTimerV3=setTimeout(run,40)}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden','style']})}catch(e){}
+try{visualObserver=new MutationObserver(function(){if(!window.__cscVisualGuardTimerV3)window.__cscVisualGuardTimerV3=setTimeout(run,40)});observeVisual()}catch(e){}
 }());
 </script>
 <!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->
