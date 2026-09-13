@@ -62,8 +62,11 @@ jobs:
       - name: Instalar dependências reproduzíveis
         run: npm ci
 
+      - name: Validar gate específico da Tarefa 14
+        run: node scripts/test_tarefa14_timeout_sessao.js
+
       - name: Rodar regressão completa + desempenho + gate percentual
-        run: npm test
+        run: timeout 180s npm test
 
       - name: Validar sintaxe dos componentes de desempenho e expansão
         run: |
