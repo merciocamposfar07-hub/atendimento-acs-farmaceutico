@@ -17,9 +17,9 @@ new Function(access);
 new Function(formJs);
 new Function(territory);
 new Function(backend);
+new Function(centralJs);
 
-// Tarefa 1: o perfil UBS continua disponível na entrada, mas a UBS é cadastrada pelo Administrador.
-// O computador da unidade usa somente o PIN já criado no cadastro.
+// Entrada da UBS: somente PIN, sem CPF.
 assert.match(access,/b\.id='tabUbs'/);
 assert.match(access,/b\.textContent='UBS'/);
 assert.match(access,/\.login-tabs\.csc-four\{grid-template-columns:repeat\(4/);
@@ -28,34 +28,49 @@ assert.doesNotMatch(access,/field\('cscUbsCpf'/);
 assert.doesNotMatch(access,/Primeiro acesso da UBS/);
 assert.match(access,/function loginUbsAccess\(\)/);
 assert.match(access,/post\('conecta_ubs_login_pin'/);
+
+// Compatibilidade de cache e backend também usam PIN; a unidade é o único vínculo obrigatório.
 assert.match(backend,/function conectaAcessoV1UbsPorPin_/);
 assert.match(backend,/function conectaAcessoV1LoginUbs_/);
-assert.match(backend,/novaChave=conectaAcessoV1RegistrarUbsConfiavel_/);
+assert.match(backend,/function conectaAcessoV1IdentificarUbsPrimeiroAcesso_\(p\)[\s\S]*return conectaAcessoV1LoginUbs_\(p\|\|\{\}\)/);
+assert.match(backend,/O cadastro UBS precisa de uma unidade de saúde válida/);
+assert.doesNotMatch(backend,/O cadastro UBS precisa de unidade e função válidas/);
 
-// Administrador autenticado acessa todas as UBS cadastradas sem PIN/CPF da unidade,
-// com modos separados de apenas visualizar e editar.
+// Administrador autenticado acessa a lista de UBS sem credencial da unidade.
 assert.match(central,/data-module="ubs" data-admin-only="true"/);
 assert.match(centralJs,/function showAdminUbs\(/);
 assert.match(centralJs,/Apenas visualizar/);
 assert.match(centralJs,/data-ubs-mode="edit"/);
+assert.match(centralJs,/Unidade de saúde, PIN, perfil e permissões/);
 
-// Cadastro administrativo passa a contemplar UBS isolado.
+// Cadastro UBS institucional: ao selecionar PERFIL UBS puro, não é cadastro de pessoa física.
 assert.match(form,/Administrador \/ TACS \/ UBS/);
 assert.match(form,/value="UBS">UBS<\/option>/);
-assert.match(form,/id="tacsUbsRole"/);
+assert.match(form,/class="wide csc-person-field"><label for="tacsName">Nome completo/);
+assert.match(form,/class="csc-person-field"><label for="tacsBirth">Data de nascimento/);
+assert.match(form,/class="csc-person-field"><label for="tacsCpf">CPF/);
+assert.match(form,/class="csc-person-field"><label for="tacsPhone">Celular/);
+assert.match(form,/class="csc-person-field"><label for="tacsEmail">E-mail/);
 assert.match(form,/id="tacsUnit"/);
 assert.match(form,/PIN de acesso à plataforma/);
-assert.match(formJs,/profileHasUbs/);
-assert.match(formJs,/funcaoUbs:isUbs\?/);
-assert.match(formJs,/unidadeId:hasUnit\?/);
+assert.match(form,/id="tacsPermissionsBlock"/);
+assert.match(formJs,/function isInstitutionalUbsProfile\(v\)\{return normalizeAccessProfile\(v\)==='UBS';\}/);
+assert.match(formJs,/querySelectorAll\('#tacsForm \.csc-person-field'\)/);
+assert.match(formJs,/ubsInstitucional\?'':el\('tacsName'\)\.value/);
+assert.match(formJs,/cpf:ubsInstitucional\?'':cpf/);
+assert.match(formJs,/telefone:ubsInstitucional\?'':phone/);
+assert.match(formJs,/funcaoUbs:\(isUbs&&!ubsInstitucional\)\?/);
 
-// Persistência no backend: perfil, função, unidade, PIN e permissões.
-assert.match(territory,/'UBS'/);
-assert.match(territory,/'FUNCAO_UBS'/);
-assert.match(territory,/var temUbs=tacsTerritorioV1PerfilTem_\(perfil,'UBS'\)/);
-assert.match(territory,/Informe a função do responsável na UBS/);
+// Persistência: UBS puro dispensa e limpa dados pessoais, mantendo unidade, PIN e permissões.
+assert.match(territory,/var ubsInstitucional=perfil==='UBS';/);
+assert.match(territory,/var nome=ubsInstitucional\?'':/);
+assert.match(territory,/var cpf=ubsInstitucional\?'':/);
+assert.match(territory,/var dataNascimento=ubsInstitucional\?'':/);
+assert.match(territory,/var telefone=ubsInstitucional\?'':/);
+assert.match(territory,/if\(!ubsInstitucional\)\{[\s\S]*Informe o nome completo/);
+assert.match(territory,/if\(temUbs\)\{[\s\S]*Informe a unidade de saúde do perfil UBS/);
+assert.match(territory,/if\(!ubsInstitucional&&!funcaoUbs\)throw new Error\('Informe a função do responsável na UBS\.'/);
 assert.match(territory,/var permissoes=\(temTacs\|\|temUbs\)/);
 
-// Após a autorização da Tarefa 2, este gate preserva somente os contratos
-// funcionais da Tarefa 1. As combinações UBS passam a ser validadas no gate da Tarefa 2.
-console.log('TAREFA_1_PERFIL_UBS_OK: UBS é cadastrada pelo Administrador, computador da unidade entra somente por PIN e Administrador acessa a lista de UBS sem credencial da unidade.');
+// Contrato pedido: perfil UBS + unidade + PIN + permissões; o controle ativo/inativo existente é preservado.
+console.log('TAREFA_1_PERFIL_UBS_OK: UBS é cadastro institucional, sem dados de pessoa física; computador entra somente por PIN e Administrador pode usar PIN administrativo ou PIN da UBS.');
