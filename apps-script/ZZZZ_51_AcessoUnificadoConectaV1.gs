@@ -463,22 +463,138 @@ function conectaAcessoV1BuscarCns_(cns){
   return out;
 }
 
-function conectaAcessoV1DiagnosticoMoradorAdmin_(p){
-  var dispositivo=conectaAcessoV1Texto_(p.dispositivo),chave=conectaAcessoV1Texto_(p.chaveConfianca),doc=conectaAcessoV1Texto_(p.documento).replace(/\D/g,'');
-  if(!dispositivo||!conectaAcessoV1ConfiancaValida_('ADMIN','ADMIN_GERAL',dispositivo,chave))throw new Error('Aparelho administrativo não reconhecido para diagnóstico.');
-  var lista=[],tipo='';
-  if(/^\d{11}$/.test(doc)){conectaAcessoV1Cpf_(doc);lista=conectaAcessoV1BuscarCpf_(doc);tipo='CPF';}
-  else if(/^\d{15}$/.test(doc)){lista=conectaAcessoV1BuscarCns_(doc);tipo='CNS';}
-  else throw new Error('Informe um CPF com 11 números ou CNS com 15 números.');
-  if(lista.length!==1)throw new Error(lista.length>1?'Há mais de um cadastro para este documento. Corrija a duplicidade antes do diagnóstico.':'Morador não localizado para este documento.');
-  var item=lista[0],m=item.morador||{},a=item.area||{};
+function conectaAcessoV1FiltrarAreaDiagnostico_(lista,areaId){
+  areaId=conectaAcessoV1Id_(areaId);
+  if(!areaId)return lista||[];
+  return (lista||[]).filter(function(item){return conectaAcessoV1Id_(item&&item.area&&item.area.areaId)===areaId;});
+}
+
+function conectaAcessoV1NormalizarFamiliaDiagnostico_(valor){
+  if(typeof buscaEnvioFamiliaV1NormalizarFamilia_==='function')return buscaEnvioFamiliaV1NormalizarFamilia_(valor);
+  var s=conectaAcessoV1Texto_(valor).toUpperCase().replace(/\s+/g,''),m=s.match(/^(\d{1,4})([A-Z])?$/);
+  if(!m)return'';
+  var numero=m[1];if(numero.length<=3)numero=('000'+numero).slice(-3);
+  return numero+(m[2]||'');
+}
+
+function conectaAcessoV1CodigoFamiliaItem_(item){
+  if(!item||!item.morador||typeof vinculoFamiliarNotifV1CodigoEndereco_!=='function')return'';
+  return conectaAcessoV1NormalizarFamiliaDiagnostico_(vinculoFamiliarNotifV1CodigoEndereco_(item.morador.endereco||''));
+}
+
+function conectaAcessoV1FamiliaDiagnostico_(item){
+  if(!item||!item.area)return {familiaId:'',membros:[]};
+  var familia=conectaAcessoV1CodigoFamiliaItem_(item);
+  if(!familia){
+    return {familiaId:'',membros:[{
+      nome:conectaAcessoV1Texto_(item.morador&&item.morador.nome),
+      nascimento:conectaAcessoV1Texto_(item.morador&&item.morador.nascimento),
+      idPortal:conectaAcessoV1Texto_(item.morador&&item.morador.idPortal),
+      selecionado:true
+    }]};
+  }
+  var membros=conectaAcessoV1RegistrosArea_(item.area).filter(function(x){
+    return conectaAcessoV1CodigoFamiliaItem_(x)===familia;
+  }).map(function(x){
+    return {
+      nome:conectaAcessoV1Texto_(x.morador.nome),
+      nascimento:conectaAcessoV1Texto_(x.morador.nascimento),
+      idPortal:conectaAcessoV1Texto_(x.morador.idPortal||x.morador.id),
+      selecionado:conectaAcessoV1Texto_(x.chave)===conectaAcessoV1Texto_(item.chave)
+    };
+  });
+  return {familiaId:familia,membros:membros};
+}
+
+function conectaAcessoV1RespostaDiagnosticoItem_(item,tipo){
+  var m=item.morador||{},a=item.area||{},familia=conectaAcessoV1FamiliaDiagnostico_(item);
   return {
     ok:true,modo:'DIAGNOSTICO_ADMINISTRATIVO',coreMode:'DIAGNOSTICO_ADMINISTRATIVO',somenteLeitura:true,
-    documentoTipo:tipo,nome:conectaAcessoV1Texto_(m.nome),areaId:conectaAcessoV1Id_(a.areaId),
-    areaNome:conectaAcessoV1Texto_(a.areaNome||a.areaId),unidadeId:conectaAcessoV1Texto_(a.unidadeId),
+    documentoTipo:tipo,nome:conectaAcessoV1Texto_(m.nome),nascimento:conectaAcessoV1Texto_(m.nascimento),
+    areaId:conectaAcessoV1Id_(a.areaId),areaNome:conectaAcessoV1Texto_(a.areaNome||a.areaId),
+    unidadeId:conectaAcessoV1Texto_(a.unidadeId),cadastroArea:familia.familiaId,familiaId:familia.familiaId,
+    familia:familia.membros,familiaTotal:familia.membros.length,consultaFamilia:false,
     vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,notificacoesAlteradas:false,sessaoMoradorCriada:false,
     message:'Diagnóstico administrativo concluído sem criar ou alterar vínculo residencial.'
   };
+}
+
+function conectaAcessoV1BuscarNomeNascimentoDiagnostico_(nome,nascimento,areaId){
+  nome=conectaAcessoV1Nome_(nome);nascimento=conectaAcessoV1Nascimento_(nascimento);
+  var out=[];
+  conectaAcessoV1Areas_().forEach(function(area){
+    if(areaId&&conectaAcessoV1Id_(area.areaId)!==conectaAcessoV1Id_(areaId))return;
+    conectaAcessoV1RegistrosArea_(area).forEach(function(x){
+      if(conectaAcessoV1Nome_(x.morador.nome)===nome&&conectaAcessoV1Texto_(x.morador.nascimento)===nascimento)out.push(x);
+    });
+  });
+  return out;
+}
+
+function conectaAcessoV1BuscarCadastroAreaDiagnostico_(cadastro,areaId){
+  var valor=conectaAcessoV1Texto_(cadastro).toUpperCase(),familia=conectaAcessoV1NormalizarFamiliaDiagnostico_(valor),areas=conectaAcessoV1Areas_();
+  if(areaId)areas=areas.filter(function(a){return conectaAcessoV1Id_(a.areaId)===conectaAcessoV1Id_(areaId);});
+  var grupos=[];
+  if(familia){
+    areas.forEach(function(area){
+      var membros=conectaAcessoV1RegistrosArea_(area).filter(function(x){return conectaAcessoV1CodigoFamiliaItem_(x)===familia;});
+      if(membros.length)grupos.push({area:area,membros:membros});
+    });
+    if(grupos.length>1)throw new Error('Este número de cadastro existe em mais de uma área. Selecione a área correta na Central e pesquise novamente.');
+    if(grupos.length===1){
+      var g=grupos[0];
+      return {
+        familia:true,
+        resposta:{
+          ok:true,modo:'DIAGNOSTICO_ADMINISTRATIVO',coreMode:'DIAGNOSTICO_ADMINISTRATIVO',somenteLeitura:true,
+          documentoTipo:'CADASTRO_AREA',consultaFamilia:true,nome:'',nascimento:'',
+          areaId:conectaAcessoV1Id_(g.area.areaId),areaNome:conectaAcessoV1Texto_(g.area.areaNome||g.area.areaId),
+          unidadeId:conectaAcessoV1Texto_(g.area.unidadeId),cadastroArea:familia,familiaId:familia,
+          familia:g.membros.map(function(x){return {nome:conectaAcessoV1Texto_(x.morador.nome),nascimento:conectaAcessoV1Texto_(x.morador.nascimento),idPortal:conectaAcessoV1Texto_(x.morador.idPortal||x.morador.id),selecionado:false};}),
+          familiaTotal:g.membros.length,vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,notificacoesAlteradas:false,sessaoMoradorCriada:false,
+          message:'Cadastro familiar localizado pelo vínculo interno da área.'
+        }
+      };
+    }
+  }
+  var pessoais=[];
+  areas.forEach(function(area){
+    conectaAcessoV1RegistrosArea_(area).forEach(function(x){
+      var idPortal=conectaAcessoV1Texto_(x.morador.idPortal).toUpperCase(),id=conectaAcessoV1Texto_(x.morador.id).toUpperCase();
+      if(valor&&(valor===idPortal||valor===id))pessoais.push(x);
+    });
+  });
+  return {familia:false,pessoas:pessoais};
+}
+
+function conectaAcessoV1DiagnosticoMoradorAdmin_(p){
+  var dispositivo=conectaAcessoV1Texto_(p.dispositivo),chave=conectaAcessoV1Texto_(p.chaveConfianca);
+  if(!dispositivo||!conectaAcessoV1ConfiancaValida_('ADMIN','ADMIN_GERAL',dispositivo,chave))throw new Error('Aparelho administrativo não reconhecido para diagnóstico.');
+
+  var areaId=conectaAcessoV1Id_(p.areaId),cpf=moradoresAdminV1Digitos_(p.cpf||''),cns=moradoresAdminV1Digitos_(p.cns||'');
+  var nome=conectaAcessoV1Texto_(p.nome),nascimento=conectaAcessoV1Texto_(p.nascimento),cadastro=conectaAcessoV1Texto_(p.cadastroArea||p.cadastro||'');
+  var legado=moradoresAdminV1Digitos_(p.documento||'');
+  if(!cpf&&!cns&&legado){if(/^\d{11}$/.test(legado))cpf=legado;else if(/^\d{15}$/.test(legado))cns=legado;}
+  var metodos=(cpf?1:0)+(cns?1:0)+((nome||nascimento)?1:0)+(cadastro?1:0);
+  if(!metodos)throw new Error('Informe CPF, Cartão SUS, nome + data de nascimento ou número de cadastro na área.');
+  if(metodos>1)throw new Error('Use apenas uma forma de busca por vez.');
+
+  var lista=[],tipo='';
+  if(cpf){
+    conectaAcessoV1Cpf_(cpf);lista=conectaAcessoV1FiltrarAreaDiagnostico_(conectaAcessoV1BuscarCpf_(cpf),areaId);tipo='CPF';
+  }else if(cns){
+    if(!/^\d{15}$/.test(cns))throw new Error('O Cartão SUS (CNS) deve conter 15 números.');
+    lista=conectaAcessoV1FiltrarAreaDiagnostico_(conectaAcessoV1BuscarCns_(cns),areaId);tipo='CNS';
+  }else if(nome||nascimento){
+    if(!nome||!nascimento)throw new Error('Para buscar por nome, informe também a data de nascimento.');
+    lista=conectaAcessoV1BuscarNomeNascimentoDiagnostico_(nome,nascimento,areaId);tipo='NOME_NASCIMENTO';
+  }else{
+    var buscaCadastro=conectaAcessoV1BuscarCadastroAreaDiagnostico_(cadastro,areaId);
+    if(buscaCadastro.familia)return buscaCadastro.resposta;
+    lista=buscaCadastro.pessoas||[];tipo='CADASTRO_AREA';
+  }
+  if(lista.length!==1)throw new Error(lista.length>1?'Há mais de um cadastro compatível. Use outro identificador para confirmar o morador.':'Morador não localizado com os dados informados.');
+  return conectaAcessoV1RespostaDiagnosticoItem_(lista[0],tipo);
 }
 
 function conectaAcessoV1RegistrarUbsConfiavel_(ubs,dispositivo){
