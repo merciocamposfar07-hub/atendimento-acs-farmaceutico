@@ -354,3 +354,32 @@ Gate `TAREFA_15_NAVEGACAO_INTERNA_OK`, regressão completa, sintaxe, regras crí
 Apps Script permanece na versão **208**, sem alteração de backend.
 
 **Sequência canônica:** Tarefa 15 encerrada. Tarefa 16 permanece a próxima etapa e não foi iniciada.
+
+
+### Registro canônico — Tarefa 16 / Agendas e vagas nativas
+Primeiro painel da migração definitiva painel a painel.
+
+Fluxo:
+`Central autenticada → tocar Agendas e vagas → host nativo da Central → cache/snapshot válido → sincronização remota → edição → POST → releitura real → confirmação → Voltar → mesma Central`
+
+Regras:
+- Agendas e vagas deixa de ser hospedado em iframe no fluxo normal;
+- a superfície viva passa a ser `#nativeModuleHost`;
+- `viewerFrame` continua existindo apenas para módulos ainda não migrados;
+- a página antiga de Agendas permanece como fallback/histórico;
+- o módulo nativo usa `ConectaModuleCoreV1` para sessão, contexto territorial, cache, deduplicação e política de falha;
+- não há PIN/login próprio no módulo;
+- falha temporária não destrói sessão;
+- gravação só é confirmada após releitura real e comparação dos campos;
+- desfazer também exige confirmação por releitura;
+- Voltar mantém a proteção contra alterações não salvas;
+- os demais painéis não foram migrados nesta tarefa.
+
+### Status final da Tarefa 16: VALIDADA INTERNAMENTE, PUBLICADA E CANONIZADA — 12/09/2026
+Gate `TAREFA_16_AGENDAS_NATIVAS_OK`, regressão integral, `QUALITY_GATE_V101_OK` e homologação interna passaram no workflow `34730284225`.
+
+GitHub Pages do código validado passou no run `34730279163`.
+
+Apps Script permanece na versão **208**, sem alteração de backend.
+
+**Sequência canônica:** Tarefa 16 encerrada no escopo Agendas e vagas. Próximos painéis continuam aguardando suas próprias etapas.
