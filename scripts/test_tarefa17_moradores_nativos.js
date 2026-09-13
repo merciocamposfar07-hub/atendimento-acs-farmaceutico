@@ -91,8 +91,9 @@ assert.match(central,/Há alterações que podem não ter sido salvas/);
 assert.match(css,/\.csc-mor-native/);
 assert.match(css,/#071827/);
 
-// Nenhum outro painel é migrado pela Tarefa 17.
-assert.doesNotMatch(central,/TAREFA_18/);
+// A Tarefa 17 continua isolada em Moradores. A Central pode avançar para a Tarefa 18,
+// mas os arquivos próprios de Moradores não podem incorporar a lógica de Profissionais.
+assert.match(central,/TAREFA_18_PROFISSIONAIS_NATIVOS_V1/);
 assert.doesNotMatch(native,/TAREFA_18/);
 
 console.log('TAREFA_17_MORADORES_NATIVOS_OK: Moradores roda no host nativo da Central; busca, cadastro/edição, CPF/CNS, duplicidades, situação e isolamento territorial permanecem preservados; Prontuários continua fora do escopo desta etapa.');
