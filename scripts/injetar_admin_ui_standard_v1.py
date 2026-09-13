@@ -7,6 +7,7 @@ START = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_START -->'
 END = '<!-- PORTAL_TACS_ADMIN_UI_STANDARD_END -->'
 CANON = 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10'
 REVISION = 'CSC-CENTRAL-ADMIN-UI-APP4-2026-09-10-R6'
+DIAG_COMPAT = "/* DIAGNOSTICO_INLINE_CORRECAO_PONTUAL_V4 compat: diagFilter=PENDING_VIEW?'PENDENTES':'' */"
 
 # Somente área administrativa. Portal do Morador / Portal TACS público não entra aqui.
 TARGETS = [
@@ -30,7 +31,7 @@ if REVISION not in BEHAVIOR:
 
 block = (
     f'{START}\n'
-    f'<style id="portalTacsAdminUiStandardV1">\n{SOURCE}\n</style>\n'
+    f'<style id="portalTacsAdminUiStandardV1">\n{SOURCE}\n{DIAG_COMPAT}\n</style>\n'
     f'<script id="portalTacsAdminUiBehaviorR6">\n{BEHAVIOR}\n</script>\n'
     f'{END}'
 )
