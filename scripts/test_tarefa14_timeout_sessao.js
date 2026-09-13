@@ -65,9 +65,11 @@ assert.match(moradores,/if\(!r\|\|r\.ok!==true\)\{var ok=renderBase\(r,message,t
 assert.match(suporte,/Últimos chamados confirmados permanecem visíveis/);
 assert.match(municipios,/Última confirmação permanece disponível somente para consulta/);
 
-// Cache-busting obrigatório para o core novo nos sete módulos.
+// Cache-busting obrigatório para o core nos sete módulos. O versionador integral
+// pode substituir o sufixo pelo hash do commit, então o gate valida a referência
+// versionada ao core, não um texto fixo de versão.
 for(const src of [agendas,profissionais,moradoresHtml,recados,suporte,territorioHtml,municipios]){
-  assert.match(src,/conecta-module-core-v1\.js\?v=20260912-task14-timeout-session-v1/);
+  assert.match(src,/conecta-module-core-v1\.js\?v=[A-Za-z0-9._-]+/);
 }
 
 // TACS rápido: rede/timeout genérico não pode bloquear o cofre local.
