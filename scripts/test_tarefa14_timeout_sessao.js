@@ -14,6 +14,10 @@ const territorio=read('teste-v1/painel-tacs-areas-v1.js');
 const territorioHtml=read('teste-v1/painel-tacs-areas-v1.html');
 const municipios=read('painel-oficial-organizacoes-municipios.html');
 const moradoresHtml=read('teste-v1/painel-moradores-v2.html');
+const moradorSession=read('conecta-morador-session-v1.js');
+const tacsQuick=read('central-tacs-login-rapido-v1.js');
+const centralHtml=read('central-administrativa-tacs.html');
+const publicIndex=read('index.html');
 
 new Function(core);
 
@@ -33,6 +37,10 @@ assert.match(central,/var authInvalida=Boolean\(r&&r\.temporario!==true&&/);
 assert.match(central,/if\(!authInvalida\)[\s\S]*Sessão preservada\. Sincronizando os dados em segundo plano/);
 assert.match(central,/if\(acessoLocalAberto\)\{bloquearAcessoLocal/);
 assert.match(central,/resetModuleShell\(\);token='';territoryToken='';mode='';sessionStorage\.removeItem\(TOKEN_KEY\)/);
+assert.match(central,/CENTRAL_SESSION_AUTH_REFUSAL_RE/);
+assert.match(central,/function normalizeSessionFailure\(result\)/);
+assert.match(central,/if\(explicit\)\{out\.authRecusada=true;out\.preservarSessao=false\}[\s\S]*out\.temporario=true;out\.preservarSessao=true/);
+assert.match(central,/var finalResult=normalizeSessionFailure\(/);
 
 // Profissionais: timeout/genérica não esconde painel nem remove token.
 assert.match(profissionais,/moduleSessionPolicy=moduleCore&&moduleCore\.sessionPolicy/);
@@ -61,6 +69,25 @@ assert.match(municipios,/Última confirmação permanece disponível somente par
 for(const src of [agendas,profissionais,moradoresHtml,recados,suporte,territorioHtml,municipios]){
   assert.match(src,/conecta-module-core-v1\.js\?v=20260912-task14-timeout-session-v1/);
 }
+
+// TACS rápido: rede/timeout genérico não pode bloquear o cofre local.
+assert.match(tacsQuick,/TACS_SESSION_AUTH_REFUSAL_RE/);
+assert.match(tacsQuick,/function normalizeSessionFailure\(result\)/);
+assert.match(tacsQuick,/cb\(normalizeSessionFailure\(r\|\|\{ok:false,message:'Resposta vazia\.'\}\)\)/);
+assert.match(tacsQuick,/if\(saved&&r&&r\.temporario===true\)\{setStatus\('Área aberta com os dados locais/);
+
+// Morador: somente recusa explícita remove vault/token e redireciona.
+assert.match(moradorSession,/MORADOR_SESSION_AUTH_REFUSAL_RE/);
+assert.match(moradorSession,/function remoteError\(message,result\)/);
+assert.match(moradorSession,/e\.refused=Boolean\(r\.temporario!==true&&MORADOR_SESSION_AUTH_REFUSAL_RE\.test\(e\.message\)\)/);
+assert.match(moradorSession,/if\(err&&err\.refused\)\{removeResidentVault\(\);clearSession\(\);clearBackgroundRequest\(\)/);
+assert.doesNotMatch(moradorSession,/if\(!local\)\{clearSession\(\);if\(queryFlag\(\)\)location\.replace/);
+assert.match(moradorSession,/Sua sessão foi preservada\. O servidor ainda não confirmou os dados/);
+
+// Cache-busting das correções de Central/TACS/Morador.
+assert.match(centralHtml,/central-administrativa-tacs\.js\?v=20260912-task14-timeout-session-v2/);
+assert.match(centralHtml,/central-tacs-login-rapido-v1\.js\?v=20260912-task14-timeout-session-v2/);
+assert.match(publicIndex,/conecta-morador-session-v1\.js\?v=20260912-task14-timeout-session-v2/);
 
 // Tarefa 14 não altera backend Apps Script nem inicia a navegação/back da Tarefa 15.
 const backendFiles=fs.readdirSync('apps-script').filter(x=>x.endsWith('.gs')).join('\n');
