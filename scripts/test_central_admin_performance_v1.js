@@ -47,8 +47,11 @@ assert(base.includes('function resetModuleShell()')&&base.includes("frame.src='a
   'Shell deve descarregar módulos somente em reset explícito.');
 assert(base.includes("resetModuleShell();selectedAreaId=normArea(this.value)"),
   'Troca de área deve eliminar módulos do escopo anterior.');
-assert(base.includes('cancelarOperacaoAtivaSemCallback();\n  resetModuleShell();'),
-  'Logoff deve descarregar o shell autenticado.');
+const logoutStart=base.indexOf('function logout()');
+const logoutEnd=base.indexOf('/* LOGIN_PREFETCH_ESTATICO_V2',logoutStart);
+const logoutBlock=base.slice(logoutStart,logoutEnd);
+assert(logoutBlock.includes('cancelarOperacaoAtivaSemCallback()')&&logoutBlock.includes('resetModuleShell()'),
+  'Logoff deve cancelar a operação ativa e descarregar o shell autenticado, ainda que a limpeza seja assíncrona.');
 assert(base.includes('TAREFA_10_AGENDA_LAZY_VISIBLE_V1'),
   'Agenda precisa iniciar o carregamento somente depois que o shell estiver visível.');
 assert(central.includes('cscTask10PersistentShellStyle')&&central.includes('.viewer.csc-shell-viewer:not([hidden])'),
