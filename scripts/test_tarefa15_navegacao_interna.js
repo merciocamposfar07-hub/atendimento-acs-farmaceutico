@@ -21,7 +21,7 @@ new Function(central);
 
 // Contrato principal: navegação interna do Conecta, sem histórico imprevisível do Safari.
 assert.match(central,/TAREFA_15_NAVEGACAO_INTERNA_V1/);
-assert.match(central,/var shellFrames=\{\},shellActiveModule='',shellActiveRoute='',shellScopeKey=''/);
+assert.match(central,/var shellFrames=\{\},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey=''/);
 assert.match(central,/function moduleRouteOptions\(options\)/);
 assert.match(central,/function moduleRouteId\(name,options\)/);
 assert.match(central,/revision='20260912-task15-navigation-v1'/);
