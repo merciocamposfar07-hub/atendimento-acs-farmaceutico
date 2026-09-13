@@ -68,7 +68,7 @@ test('Portal TACS usa o shell e Voltar revela a Central autenticada', async ({ p
   expect(openModule).toMatch(/if\(name==='portal'\)\{showPortalTacs\(title\|\|'Portal TACS',routeId,url\);return\}/);
   const portalShell = source.slice(source.indexOf('function showPortalTacs(title,routeId,url){'), source.indexOf('function openModule(name,title,options){'));
   expect(portalShell).toMatch(/ensureShellFrame\('portal',url,title\|\|'Portal TACS',routeId\)[\s\S]*showShellFrame\('portal',portalFrame,title\|\|'Portal TACS',routeId\)/);
-  expect(normalizeFrame).toMatch(/shellModule==='portal'[\s\S]*portalTacsBackCentralV1\{display:block!important\}/);
+  expect(normalizeFrame).toMatch(/shellModule==='portal'[\s\S]*portalTacsBackCentralV1\{display:none!important\}[\s\S]*portalTacsAtualizarPaginaV1\{display:inline-flex!important\}/);
 
   await page.route('http://conecta.test/**', async route => {
     const u = new URL(route.request().url());
@@ -76,7 +76,7 @@ test('Portal TACS usa o shell e Voltar revela a Central autenticada', async ({ p
       await route.fulfill({
         status: 200,
         contentType: 'text/html',
-        body: '<!doctype html><html><body><main>Portal TACS</main></body></html>'
+        body: '<!doctype html><html><body><main><button id="portalTacsVoltarCentralV1" type="button">← Central</button><button id="portalTacsAtualizarPaginaV1" type="button">↻ Atualizar página</button><div>Portal TACS</div></main></body></html>'
       });
       return;
     }
@@ -104,7 +104,10 @@ test('Portal TACS usa o shell e Voltar revela a Central autenticada', async ({ p
   const portalFrame = page.frames().find(f => /\/portal\?from=central$/.test(f.url()));
   expect(portalFrame).toBeTruthy();
   await portalFrame.addScriptTag({content: backSource});
-  await portalFrame.locator('#portalTacsBackCentralV1 button').click();
+  await expect(portalFrame.locator('#portalTacsVoltarCentralV1')).toBeVisible();
+  expect(await portalFrame.locator('#portalTacsBackCentralV1').count()).toBe(0);
+  expect(await portalFrame.getByRole('button',{name:/Central/}).count()).toBe(1);
+  await portalFrame.locator('#portalTacsVoltarCentralV1').click();
 
   expect(await page.evaluate(() => window.__voltas)).toBe(1);
   expect(await page.locator('#viewer').isHidden()).toBe(true);
