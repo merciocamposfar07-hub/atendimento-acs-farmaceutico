@@ -1,0 +1,28 @@
+name: Validar retorno e estado da Central
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  central-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm install --no-save @playwright/test@1.62.1
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Validar retorno com CSS real em três motores e três tamanhos
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          fs.writeFileSync('playwright.hotfix.config.cjs', `module.exports={testDir:'./scripts',testMatch:'homologacao-central-retorno-hotfix.spec.js',workers:1,timeout:30000,projects:[{name:'chromium',use:{browserName:'chromium'}},{name:'firefox',use:{browserName:'firefox'}},{name:'webkit',use:{browserName:'webkit'}}]};`);
+          NODE
+          npx playwright test -c playwright.hotfix.config.cjs
