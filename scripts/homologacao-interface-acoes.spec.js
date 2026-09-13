@@ -26,7 +26,7 @@ const modules=[
   {name:'recados',path:'/painel-oficial-recados-campanhas.html',native:false},
   {name:'profissionais',path:'/painel-oficial-profissionais-servicos.html',native:true},
   {name:'suporte',path:'/painel-suporte-moradores-v2.html',native:false},
-  {name:'territorio',path:'/painel-oficial-tacs-areas.html',native:false},
+  {name:'territorio',path:'/teste-v1/painel-tacs-areas-v1.html',native:false},
   {name:'municipios',path:'/painel-oficial-organizacoes-municipios.html',native:false},
   {name:'agendas',path:'/painel-oficial-agendas-vagas.html',native:true}
 ];
