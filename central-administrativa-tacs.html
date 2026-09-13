@@ -2414,6 +2414,118 @@ html body.viewer-open{overflow:hidden!important}
 html body .viewer.csc-shell-viewer iframe{display:block;width:100%;min-width:0;min-height:0;flex:1 1 auto;border:0;background:#071827}
 html body .viewer.csc-shell-viewer iframe[hidden]{display:none!important}
 </style>
+<style id="cscApp4PanelShellRestoreV1">
+/* RESTAURACAO_APP4_PAINEL_2026_09_12_V1
+   Corrige somente a regressão visual do shell dos painéis.
+   Referência canônica: 4 • App institucional / R6 tela única. */
+html body .viewer.csc-shell-viewer:not([hidden]){
+  display:flex!important;
+  position:fixed!important;
+  inset:0!important;
+  z-index:30000!important;
+  overflow:hidden!important;
+  background:#071827!important;
+  background-image:none!important;
+  flex-direction:column!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html body .viewer .viewer-bar{
+  flex:0 0 auto!important;
+  width:min(720px,100%)!important;
+  min-height:108px!important;
+  margin:0 auto!important;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:14px!important;
+  background:#071827!important;
+  background-image:none!important;
+  color:#f7fcff!important;
+  border:0!important;
+  border-top:0!important;
+  border-bottom:0!important;
+  box-shadow:none!important;
+}
+html body .viewer .viewer-official-icon{
+  width:80px!important;
+  height:80px!important;
+  flex:0 0 80px!important;
+  display:block!important;
+  object-fit:contain!important;
+  filter:none!important;
+  transform:none!important;
+}
+html body .viewer .viewer-heading{min-width:0!important;flex:1 1 auto!important}
+html body .viewer .viewer-heading small{
+  display:block!important;
+  color:#83efa9!important;
+  font-size:.82rem!important;
+  line-height:1.14!important;
+  font-weight:900!important;
+  letter-spacing:.115em!important;
+  text-transform:uppercase!important;
+}
+html body .viewer .viewer-title{
+  display:block!important;
+  margin-top:5px!important;
+  color:#fff!important;
+  font-size:1.20rem!important;
+  line-height:1.14!important;
+  font-weight:850!important;
+  letter-spacing:-.02em!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:normal!important;
+}
+html body .viewer .viewer-back{
+  width:48px!important;
+  min-width:48px!important;
+  height:48px!important;
+  min-height:48px!important;
+  flex:0 0 48px!important;
+  padding:0!important;
+  display:grid!important;
+  place-items:center!important;
+  border:1px solid #2b5a76!important;
+  border-radius:17px!important;
+  background:#102d46!important;
+  color:#62c8e8!important;
+  box-shadow:0 9px 20px rgba(0,0,0,.22)!important;
+  font-size:2rem!important;
+  line-height:1!important;
+}
+html body .viewer .csc-native-module-host{
+  width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  flex:1 1 auto!important;
+  overflow:auto!important;
+  background:#071827!important;
+  border:0!important;
+}
+html body .viewer .csc-native-module-host>*{
+  width:min(720px,100%)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+html body #cscModuleOpening{
+  width:min(720px,100%)!important;
+  margin:0 auto!important;
+  border:0!important;
+  border-bottom:0!important;
+  box-shadow:none!important;
+  background:#071827!important;
+  color:#adc4d2!important;
+}
+@media(max-width:420px){
+  html body .viewer .viewer-bar{min-height:96px!important;padding-left:14px!important;padding-right:14px!important;gap:11px!important}
+  html body .viewer .viewer-official-icon{width:66px!important;height:66px!important;flex-basis:66px!important}
+  html body .viewer .viewer-heading small{font-size:.72rem!important}
+  html body .viewer .viewer-title{font-size:1.05rem!important}
+  html body .viewer .viewer-back{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;flex-basis:44px!important}
+}
+</style>
 </head>
 <body>
 <header><span class="badge">CENTRAL ADMINISTRATIVA TACS</span><h1>Seus painéis em um só lugar</h1><p>Um único acesso para administrar a área, sem misturar a lógica interna dos módulos.</p></header>
@@ -2462,7 +2574,7 @@ html body .viewer.csc-shell-viewer iframe[hidden]{display:none!important}
 </section>
 </main>
 <footer>Portal TACS • Central Administrativa</footer>
-<div id="viewer" class="viewer" hidden><div class="viewer-bar"><button id="viewerBack" class="viewer-back" type="button">← Central</button><div id="viewerTitle" class="viewer-title">Painel</div></div><div id="nativeModuleHost" class="csc-native-module-host" hidden></div><iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe></div>
+<div id="viewer" class="viewer" hidden><div class="viewer-bar" role="banner"><img class="viewer-official-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="viewer-heading"><small>CONECTA SAÚDE COMUNITÁRIA</small><div id="viewerTitle" class="viewer-title">Painel</div></div><button id="viewerBack" class="viewer-back" type="button" aria-label="Voltar à Central">‹</button></div><div id="nativeModuleHost" class="csc-native-module-host" hidden></div><iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe></div>
 <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=c9a450bf7023"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=c9a450bf7023"></script>
 <script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=c9a450bf7023"></script>
