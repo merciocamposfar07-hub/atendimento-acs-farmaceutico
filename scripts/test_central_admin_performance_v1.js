@@ -22,10 +22,12 @@ assert(/central-suporte-moradores-v1\.js\?v=[^"']+/.test(central),
   'Central deve preservar a camada de compatibilidade Safari.');
 assert(base.includes('TAREFA_10_SHELL_PERSISTENTE_V1'),
   'Shell persistente canônico da Tarefa 10 ausente.');
-assert(base.includes('function ensureShellFrame(name,url,title)')&&base.includes('function showShellFrame(name,frame,title)'),
-  'Central deve manter host persistente por módulo.');
-assert(base.includes("var shellFrames={},shellActiveModule='',shellScopeKey=''"),
-  'Pool de módulos persistentes não foi criado.');
+assert(base.includes('function ensureShellFrame(name,url,title,routeId)')&&base.includes('function showShellFrame(name,frame,title,routeId)'),
+  'Central deve manter host persistente por rota interna do módulo.');
+assert(base.includes("var shellFrames={},shellActiveModule='',shellActiveRoute='',shellScopeKey=''"),
+  'Pool de módulos/rotas persistentes não foi criado.');
+assert(base.includes('TAREFA_15_NAVEGACAO_INTERNA_V1')&&base.includes('voltar:closeViewer'),
+  'Extensão de navegação interna da Tarefa 15 deve preservar o shell da Tarefa 10.');
 ['moradores','suporte','recados','agendas','profissionais','territorio','municipios','portal'].forEach((modulo)=>{
   assert(base.includes("name==='"+modulo+"'"),
     'Roteador canônico não cobre módulo obrigatório: '+modulo);
