@@ -148,7 +148,7 @@ function post(action,payload,resultAction,cb){
     try{form.submit()}catch(e){finishPost({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});return}
     /* LOGIN_TRANSPORTE_R8: postMessage é a via principal no Safari/iPhone.
        O polling do PIN permanece somente como contingência tardia para não saturar o Apps Script. */
-    schedulePoll(fastPin?1200:1800);
+    schedulePoll(fastPin?8000:1800);
   }
   function sendAfterRegistration(){
     if(typeof window.requestAnimationFrame==='function'){
