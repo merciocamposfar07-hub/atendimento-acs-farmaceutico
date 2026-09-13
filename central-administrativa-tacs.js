@@ -645,7 +645,8 @@ function showNativeAgenda(title,routeId){
   if(!host||!viewer)return false;
   shellActiveModule='agendas';shellActiveRoute=routeId;shellActiveNative='agendas';
   el('viewerTitle').textContent=title||'Agendas e vagas';
-  viewer.classList.add('csc-shell-viewer');viewer.hidden=false;host.hidden=false;
+  viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;host.hidden=false;
+  var footer=el('viewerFooter');if(footer)footer.hidden=false;
   document.body.classList.add('viewer-open');setShellOpening(title||'Agendas e vagas',true);
   ensureTask16AgendaAssets(function(ok){
     if(shellActiveNative!=='agendas'||shellActiveRoute!==routeId)return;
@@ -701,7 +702,8 @@ function showNativeMoradores(title,routeId){
   if(!host||!viewer)return false;
   shellActiveModule='moradores';shellActiveRoute=routeId;shellActiveNative='moradores';
   el('viewerTitle').textContent=title||'Moradores';
-  viewer.classList.add('csc-shell-viewer');viewer.hidden=false;host.hidden=false;
+  viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;host.hidden=false;
+  var footer=el('viewerFooter');if(footer)footer.hidden=false;
   document.body.classList.add('viewer-open');setShellOpening(title||'Moradores',true);
   ensureTask17MoradoresAssets(function(ok){
     if(shellActiveNative!=='moradores'||shellActiveRoute!==routeId)return;
@@ -763,7 +765,8 @@ function showNativeProfissionais(title,routeId){
   if(!host||!viewer)return false;
   shellActiveModule='profissionais';shellActiveRoute=routeId;shellActiveNative='profissionais';
   el('viewerTitle').textContent=title||'Profissionais e serviços';
-  viewer.classList.add('csc-shell-viewer');viewer.hidden=false;host.hidden=false;
+  viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;host.hidden=false;
+  var footer=el('viewerFooter');if(footer)footer.hidden=false;
   document.body.classList.add('viewer-open');setShellOpening(title||'Profissionais e serviços',true);
   ensureTask18ProfissionaisAssets(function(ok){
     if(shellActiveNative!=='profissionais'||shellActiveRoute!==routeId)return;
@@ -785,10 +788,15 @@ function normalizeEmbeddedPanelFrame(frame){
     var style=doc.getElementById('cscEmbeddedApp4SingleHeaderV1');
     if(!style){
       style=doc.createElement('style');style.id='cscEmbeddedApp4SingleHeaderV1';
-      style.textContent='#cscInstitutionalAppbar{display:none!important}#portalTacsBackCentralV1{display:none!important}html,body{border-top:0!important}';
+      style.textContent=[
+        '#cscInstitutionalAppbar{display:flex!important;position:static!important;top:auto!important;inset:auto!important;background:#071827!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}',
+        '#portalTacsBackCentralV1{display:none!important}',
+        'html,body,main,footer,.footer{background:#071827!important;background-image:none!important;border-top:0!important}',
+        '#cscPlatformFooter{display:flex!important;position:static!important;background:#071827!important;border:0!important;box-shadow:none!important}'
+      ].join('');
       (doc.head||doc.documentElement).appendChild(style);
     }
-    var internal=doc.getElementById('cscInstitutionalAppbar');if(internal)internal.setAttribute('aria-hidden','true');
+    var internal=doc.getElementById('cscInstitutionalAppbar');if(internal)internal.removeAttribute('aria-hidden');
   }catch(e){}
 }
 function enhanceShellFrame(frame){
@@ -828,7 +836,8 @@ function showShellFrame(name,frame,title,routeId){
   Object.keys(shellFrames).forEach(function(key){var item=shellFrames[key];if(item)item.hidden=item!==frame});
   shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
   el('viewerTitle').textContent=title||'Painel';
-  var viewer=el('viewer');viewer.classList.add('csc-shell-viewer');viewer.hidden=false;
+  var viewer=el('viewer');viewer.classList.add('csc-shell-viewer','csc-frame-viewer');viewer.classList.remove('csc-native-viewer');viewer.hidden=false;
+  var footer=el('viewerFooter');if(footer)footer.hidden=true;
   frame.hidden=false;document.body.classList.add('viewer-open');
   /* TAREFA_11_RESPOSTA_VISUAL_IMEDIATA_V1:
      o shell responde no mesmo toque; o módulo pode então pintar seu último dado confirmado
@@ -856,7 +865,8 @@ function showPendingModuleShell(name,title,routeId){
   var viewer=el('viewer');if(!viewer)return false;
   shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
   el('viewerTitle').textContent=title||'Painel';
-  viewer.classList.add('csc-shell-viewer');viewer.hidden=false;
+  viewer.classList.add('csc-shell-viewer','csc-frame-viewer');viewer.classList.remove('csc-native-viewer');viewer.hidden=false;
+  var footer=el('viewerFooter');if(footer)footer.hidden=true;
   document.body.classList.add('viewer-open');
   var node=ensureShellOpening();
   if(node){
@@ -919,7 +929,8 @@ function closeViewer(){
     try{if(window.ConectaProfissionaisNativeV1&&window.ConectaProfissionaisNativeV1.hide)window.ConectaProfissionaisNativeV1.hide()}catch(e){}
     var profissionaisHost=el('nativeProfissionaisHost');if(profissionaisHost)profissionaisHost.hidden=true;
   }
-  el('viewer').hidden=true;setShellOpening('',false);document.body.classList.remove('viewer-open');
+  var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-native-viewer','csc-frame-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
+  var footer=el('viewerFooter');if(footer)footer.hidden=true;
   shellActiveModule='';shellActiveRoute='';shellActiveNative='';moduloPendente=null;
   refreshHealth(false);return true;
 }
