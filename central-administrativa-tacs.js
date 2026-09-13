@@ -193,6 +193,20 @@ function resumePendingModule(){
   if(!moduloPendente||!(token||territoryToken))return false;
   var proximo=moduloPendente;moduloPendente=null;
   publishModuleCore();
+  /* Se um painel em frame já foi pintado pelo acesso local, apenas renova o mesmo
+     documento quando o token remoto chega. O usuário não volta para uma tela de espera. */
+  try{
+    var rid=moduleRouteId(proximo.name,proximo.options),frame=shellFrames[shellFrameKey(rid)];
+    if(frame&&frame.dataset.shellLocalFirst==='1'){
+      delete frame.dataset.shellLocalFirst;
+      var syncUrl=frame.dataset.shellUrl||'';
+      if(syncUrl){
+        var sep=syncUrl.indexOf('?')>=0?'&':'?';
+        frame.src=syncUrl+sep+'sync='+Date.now();
+        frame.dataset.shellLoaded='1';
+      }
+    }
+  }catch(e){}
   setTimeout(function(){openModule(proximo.name,proximo.title,proximo.options)},0);
   return true;
 }
@@ -983,6 +997,7 @@ function openModule(name,title,options){
     /* O painel legado também abre imediatamente após o PIN local.
        A sessão remota continua sendo confirmada em segundo plano pelo núcleo compartilhado. */
     var localFrame=ensureShellFrame(name,url,title||'Painel',routeId);
+    localFrame.dataset.shellLocalFirst='1';
     showShellFrame(name,localFrame,title||'Painel',routeId);
     return;
   }
@@ -1113,7 +1128,20 @@ function prefetchStaticPanels(){
   });
 }
 ['adminPin','tacsPin'].forEach(function(id){var input=el(id);if(!input)return;input.addEventListener('focus',aquecerValidacaoPin,{once:true});input.addEventListener('input',aquecerValidacaoPin,{once:true})});
-window.addEventListener('load',function(){if('requestIdleCallback' in window)requestIdleCallback(prefetchStaticPanels,{timeout:3000});else setTimeout(prefetchStaticPanels,2500)},{once:true});
+function prewarmNativePanelAssets(){
+  try{ensureTask16AgendaAssets(function(){})}catch(e){}
+  try{ensureTask17MoradoresAssets(function(){})}catch(e){}
+  try{ensureTask18ProfissionaisAssets(function(){})}catch(e){}
+}
+window.addEventListener('load',function(){
+  if('requestIdleCallback' in window){
+    requestIdleCallback(prefetchStaticPanels,{timeout:3000});
+    requestIdleCallback(prewarmNativePanelAssets,{timeout:3500});
+  }else{
+    setTimeout(prefetchStaticPanels,2200);
+    setTimeout(prewarmNativePanelAssets,2600);
+  }
+},{once:true});
 el('tabAdmin').addEventListener('click',function(){if(!TACS_ONLY)showLogin('admin')});el('tabTacs').addEventListener('click',function(){showLogin('tacs')});
 el('loginAdmin').addEventListener('click',function(){
   var pin=digits(el('adminPin').value);
