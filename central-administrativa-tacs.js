@@ -842,6 +842,29 @@ function showShellFrame(name,frame,title,routeId){
     if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(carregar);else setTimeout(carregar,0);
   }
 }
+/* CORRECAO_PRIMEIRO_TOQUE_PAINEIS_V1
+   A Central pode estar legitimamente aberta pelo PIN/local-first antes de existir token remoto.
+   Nesse intervalo, o toque precisa responder imediatamente. Escritas continuam protegidas
+   porque os módulos só liberam gravação quando a sessão remota estiver confirmada. */
+function localPanelAccessReady(){
+  return Boolean(acessoLocalAberto&&mode&&context);
+}
+function showPendingModuleShell(name,title,routeId){
+  hideAllNativeExcept('');
+  Object.keys(shellFrames).forEach(function(key){var item=shellFrames[key];if(item)item.hidden=true});
+  var base=el('viewerFrame');if(base)base.hidden=true;
+  var viewer=el('viewer');if(!viewer)return false;
+  shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
+  el('viewerTitle').textContent=title||'Painel';
+  viewer.classList.add('csc-shell-viewer');viewer.hidden=false;
+  document.body.classList.add('viewer-open');
+  var node=ensureShellOpening();
+  if(node){
+    node.hidden=false;
+    node.textContent='Abrindo '+text(title||'painel')+' • confirmando a sessão em segundo plano';
+  }
+  return true;
+}
 function shellHasUnsaved(frame){
   if(shellActiveNative==='agendas'){
     try{return Boolean(window.ConectaAgendasNativeV1&&window.ConectaAgendasNativeV1.hasUnsaved&&window.ConectaAgendasNativeV1.hasUnsaved())}catch(e){return false}
@@ -857,12 +880,24 @@ function shellHasUnsaved(frame){
 function openModule(name,title,options){
   var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
   if(name==='portal'){window.open(url,'_blank','noopener');return}
-  if(!(token||territoryToken)){
+  var remoteReady=Boolean(token||territoryToken),localReady=localPanelAccessReady();
+  if(!remoteReady&&!localReady){
     moduloPendente={name:name,title:title||'Painel',options:moduleRouteOptions(options)};
     setStatus('Central pronta. Confirmando a sessão para carregar os dados deste painel…','warn');
     return;
   }
-  moduloPendente=null;publishModuleCore();
+  publishModuleCore();
+  if(!remoteReady){
+    /* O PIN já destravou o contexto confirmado. O painel responde no primeiro toque,
+       mas fica registrado para receber a sessão remota assim que ela chegar. */
+    moduloPendente={name:name,title:title||'Painel',options:moduleRouteOptions(options)};
+    if(name==='agendas'){showNativeAgenda(title||'Agendas e vagas',routeId);return}
+    if(name==='moradores'&&moduleRouteOptions(options).view!=='prontuarios'){showNativeMoradores(title||'Moradores',routeId);return}
+    if(name==='profissionais'){showNativeProfissionais(title||'Profissionais e serviços',routeId);return}
+    showPendingModuleShell(name,title||'Painel',routeId);
+    return;
+  }
+  moduloPendente=null;
   if(name==='agendas'){showNativeAgenda(title||'Agendas e vagas',routeId);return}
   if(name==='moradores'&&moduleRouteOptions(options).view!=='prontuarios'){showNativeMoradores(title||'Moradores',routeId);return}
   if(name==='profissionais'){showNativeProfissionais(title||'Profissionais e serviços',routeId);return}
@@ -885,7 +920,7 @@ function closeViewer(){
     var profissionaisHost=el('nativeProfissionaisHost');if(profissionaisHost)profissionaisHost.hidden=true;
   }
   el('viewer').hidden=true;setShellOpening('',false);document.body.classList.remove('viewer-open');
-  shellActiveModule='';shellActiveRoute='';shellActiveNative='';
+  shellActiveModule='';shellActiveRoute='';shellActiveNative='';moduloPendente=null;
   refreshHealth(false);return true;
 }
 function loadContext(message){
