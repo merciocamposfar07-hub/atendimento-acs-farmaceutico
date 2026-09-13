@@ -2486,7 +2486,7 @@ try{visualObserver=new MutationObserver(function(){if(!window.__cscVisualGuardTi
 <div id="formArea" class="hidden"><h2 id="formTitle">Novo morador</h2><p class="muted">Uma pessoa por cadastro. CPF/CNS podem ficar vazios quando ainda não existirem, como em recém-nascido.</p><form id="residentForm" autocomplete="off"><input id="residentId" type="hidden"><input id="originSheet" type="hidden"><input id="originRow" type="hidden"><div class="grid"><div class="wide"><label for="name">Nome completo</label><input id="name" class="field" maxlength="160" required></div><div><label for="birth">Data de nascimento</label><input id="birth" class="field" type="text" placeholder="DD/MM/AAAA" inputmode="numeric" autocomplete="bday" maxlength="10" aria-describedby="birthHint birthAge" required><small id="birthHint" class="muted">Digite somente os números; as barras serão colocadas automaticamente.</small><div id="birthAge" class="age-readout" aria-live="polite">Idade: —</div></div><div><label for="sex">Sexo</label><select id="sex" class="field" required><option value="">Selecione</option><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div><div><label for="cpf">CPF</label><input id="cpf" class="field" inputmode="numeric" maxlength="14"></div><div><label for="cns">CNS</label><input id="cns" class="field" inputmode="numeric" maxlength="18"></div><div class="wide"><label for="address">Endereço</label><input id="address" class="field" maxlength="260"></div><div><label for="cell">Celular</label><input id="cell" class="field" inputmode="tel"></div><div><label for="contact">Telefone de contato</label><input id="contact" class="field" inputmode="tel"></div><div><label for="microarea">Microárea</label><input id="microarea" class="field" value="1"></div><div><label for="team">Equipe</label><input id="team" class="field" value="USF MATIAS CDS"></div><div class="wide"><label for="notes">Observações</label><textarea id="notes" class="field" maxlength="1000"></textarea></div></div><div class="lock">Aguardando confirmação das permissões do servidor.</div><div class="actions"><button id="save" class="btn green" type="submit" disabled>Salvar morador</button></div></form></div>
 </section>
 </main>
-<footer>Portal TACS • Portal Administrativo de Moradores</footer>
+
 <style id="tacs-only-moradores-style">
 html.tacs-only-ui label[for="pin"],html.tacs-only-ui #pin,html.tacs-only-ui #login{display:none!important}
 html.tacs-only-ui a[href*="painel-oficial-tacs-areas"]{display:none!important}
@@ -2516,7 +2516,8 @@ html.tacs-only-ui a[href*="painel-oficial-tacs-areas"]{display:none!important}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',aplicar,{once:true});else aplicar();
 }());
 </script>
-<script src="/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task14-timeout-session-v1"></script>\n<script src="../admin-warmup.js?v=20260813-admin-v103"></script>
+<script src="/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task14-timeout-session-v1"></script>
+<script src="../admin-warmup.js?v=20260813-admin-v103"></script>
 <script src="painel-moradores-transport-v2.js?v=20260910-prontuarios-todas-areas-v1"></script>
 <script src="mensagem-individual-morador-v1.js?v=20260911-app4-sem-bordas-v2"></script>
 <script src="mensagem-individual-morador-integracao-v1.js?v=20260911-app4-sem-bordas-v2"></script>
