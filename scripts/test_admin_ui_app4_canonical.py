@@ -27,6 +27,8 @@ behavior = read('admin-ui-behavior.inline.js')
 central_html = read('central-administrativa-tacs.html')
 central_js = read('central-administrativa-tacs.js')
 nav_guard = read('central-suporte-moradores-v1.js')
+refresh_guard = read('central-tacs-login-rapido-v1.js')
+visual_guard = nav_guard + refresh_guard
 agenda_native = read('conecta-agendas-native-v1.js')
 moradores_native = read('conecta-moradores-native-v1.js')
 prof_native = read('conecta-profissionais-native-v1.js')
@@ -70,9 +72,9 @@ for token in ['TAREFA_18_PROFISSIONAIS_NATIVOS_V1', 'showNativeProfissionais']:
 
 # Correção solicitada pelo usuário: apresentação apenas, sem trocar backend/ações.
 for token in ['APP4_PALETA_OFICIAL_SEM_AZUL_CLARO_2026_09_13_V1', 'CORRECAO_VISUAL_SEM_ATUALIZAR_FLUTUANTE_V1', '#portalTacsCentralRefreshV1,#portalTacsAtualizarPaginaV1,#portalTacsAdminRefreshV1', '.csc-appbar,.viewer .viewer-bar,#cscInstitutionalAppbar{position:static!important']:
-    if token not in nav_guard:
+    if token not in visual_guard:
         raise SystemExit(f'Guard visual App4 incompleto: {token}')
-if "button.textContent='↻ Atualizar página'" in nav_guard:
+if "button.textContent='↻ Atualizar página'" in visual_guard:
     raise SystemExit('Botão flutuante Atualizar página voltou ao código da Central.')
 
 for forbidden in ['>← Central</button>', 'position:sticky!important', 'position:fixed!important']:
