@@ -162,7 +162,7 @@ function create(host,options){
     if(booting||bridgeReady)return;
     if(!remoteReady()){
       confirmed=false;disableWrites();
-      setStatus('Painel pronto. Confirmando a sessão para carregar profissionais e serviços…','warn');
+      setStatus('Aguarde enquanto os dados carregam…','warn');
       return;
     }
     booting=true;
@@ -257,7 +257,7 @@ function create(host,options){
     scope:scope,
     mount:function(){
       visible=true;host.hidden=false;
-      if(!remoteReady()){confirmed=false;disableWrites();setStatus('Painel pronto. Confirmando a sessão para carregar profissionais e serviços…','warn');return}
+      if(!remoteReady()){confirmed=false;disableWrites();setStatus('Aguarde enquanto os dados carregam…','warn');return}
       if(!bridgeReady)ensureBridge();
       else{var api=bridge();if(api)api.reload(function(r){if(r&&r.snapshot)useSnapshot(r.snapshot,'Profissionais e serviços atualizados.')})}
     },
