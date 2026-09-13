@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 14 — Timeout não destrói sessão
 
 Data: 12/09/2026  
-Status: IMPLEMENTADA EM CÓDIGO; AGUARDANDO VALIDAÇÃO INTEGRAL
+Status: VALIDADA INTERNAMENTE E PUBLICADA
 
 ## Objetivo exclusivo
 Lentidão, timeout, falha de rede ou resposta remota não conclusiva não podem apagar a sessão do Conecta, devolver o usuário ao PIN nem esvaziar um painel que já possua último estado confirmado.
@@ -27,4 +27,20 @@ Fluxo:
 Saída esperada:
 `TAREFA_14_TIMEOUT_SESSAO_OK`
 
-Esta tarefa é de frontend/core. Nenhum arquivo `apps-script/` deve ser alterado e a produção deve permanecer no Apps Script **208** se a validação passar.
+Esta tarefa é de frontend/core. Nenhum arquivo `apps-script/` foi alterado e a produção permaneceu no Apps Script **208**.
+
+## Resultado técnico verificado
+- gate específico `TAREFA_14_TIMEOUT_SESSAO_OK`: **aprovado**;
+- suíte integral: **aprovada**;
+- `QUALITY_GATE_V101_OK`: **aprovado**;
+- homologação interna `V101_INTERNO_APROVADO=SIM`: **aprovada**;
+- workflow de validação: **success**, run `34728200204`;
+- GitHub Pages: **success**, run `34728194735`;
+- backend Apps Script: **não alterado**;
+- versão de produção Apps Script: **208**, preservada;
+- último deployment Apps Script continua sendo o run `34724133585`, da Tarefa 10.
+
+Durante a validação, expectativas legadas de testes sobre descarte de sessão e sufixos fixos de cache foram alinhadas ao contrato atual. Nenhuma dessas correções alterou a lógica funcional da Tarefa 14.
+
+## Fechamento
+A **Tarefa 14 está validada internamente, publicada e registrada canonicamente**. A Tarefa 15 permanece separada e não foi iniciada.
