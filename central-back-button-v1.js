@@ -366,9 +366,18 @@ function install(){
   btn.addEventListener('click',function(){
     btn.disabled=true;
     try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
-    /* RETORNO_CENTRAL_SESSAO_V1:
-       nunca usa history.back(), pois o histórico do Safari pode apontar para a tela de PIN.
-       Retorna explicitamente para a Central e preserva a sessão já existente em sessionStorage. */
+    /* RETORNO_CENTRAL_SHELL_V2:
+       quando o Portal TACS foi aberto pelo viewer da Central, fecha somente o viewer
+       e revela novamente os painéis administrativos já autenticados.
+       A URL direta fica apenas como fallback para acesso fora do shell. */
+    try{
+      if(window.parent&&window.parent!==window&&
+         window.parent.ConectaCentralShellV1&&
+         typeof window.parent.ConectaCentralShellV1.voltar==='function'){
+        window.parent.ConectaCentralShellV1.voltar();
+        return;
+      }
+    }catch(e){}
     location.assign(centralUrl());
   });
   bar.appendChild(btn);
