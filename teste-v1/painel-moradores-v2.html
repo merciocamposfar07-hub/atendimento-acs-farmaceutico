@@ -2046,10 +2046,13 @@ function panelTitle(){
 function centralUrl(){return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html?v=20260910-app4-r6'+(isTerritory()?'&acesso=tacs':'')}
 function backToCentral(){
   try{sessionStorage.setItem(RETURN_FLAG,'1')}catch(e){}
-  var params=null,from=false;
-  try{params=new URLSearchParams(location.search||'');from=String(params.get('from')||'').toLowerCase()==='central'}catch(e){}
-  if(from&&history.length>1){history.back();return}
-  location.assign(centralUrl());
+  try{
+    if(window.parent&&window.parent!==window&&window.parent.ConectaCentralShellV1&&typeof window.parent.ConectaCentralShellV1.voltar==='function'){
+      window.parent.ConectaCentralShellV1.voltar();
+      return;
+    }
+  }catch(e){}
+  location.replace(centralUrl());
 }
 function vibrate(){try{if(navigator.vibrate)navigator.vibrate(8)}catch(e){}}
 
