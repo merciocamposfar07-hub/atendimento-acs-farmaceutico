@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1',AREA_KEY='portalTacsCentralAreaV1',CONTEXT_CACHE_KEY='portalTacsCentralContextCacheV3',MODULE_CORE_KEY='portalConectaModuleCoreV1';
+var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1',DEVICE_KEY='portalTacsDispositivoV1',AREA_KEY='portalTacsCentralAreaV1',CONTEXT_CACHE_KEY='portalTacsCentralContextCacheV3',MODULE_CORE_KEY='portalConectaModuleCoreV1';
 var SHARED_WARM_KEY='portalTacsAppsScriptWarmAtV1';
 var HEALTH_REFRESH_TTL=30000,HEALTH_CACHE_TTL=300000,HEALTH_DISPLAY_CACHE_TTL=86400000,HEALTH_CACHE_PREFIX='portalTacsHealthConfirmedV1:',healthRefreshInFlight=false,lastHealthRefreshAt=0,lastHealthRefreshArea='';
 var NOTIFICATION_CONFIRMED_CACHE_PREFIX='portalTacsNotificationConfirmedV1:',notificationRemoteSeq=0,notificationRemoteArea='',notificationLatestStarted={};
@@ -11,8 +11,8 @@ function adminDeviceRecognized(){
   try{return Boolean(localStorage.getItem(ADMIN_TRUST_KEY)||localStorage.getItem(ADMIN_LOCAL_VAULT_KEY))}catch(e){return false}
 }
 var TACS_ONLY=String(URL_PARAMS.get('acesso')||'').toLowerCase()==='tacs'&&!adminDeviceRecognized();
-var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
-var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
+var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',ubsToken=sessionStorage.getItem(UBS_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
+var mode=territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':'')),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
 /* SINCRONIZACAO_REMOTA_CONTINUA_V1: PIN local abre a Central; a sessão remota continua tentando em memória até confirmar ou receber recusa explícita. */
 var remoteAuthTimer=null,remoteAuthSeq=0,remoteAuthAttempt=0,remoteAuthScope='',remoteAuthPin='',remoteAuthHadLocal=false;
 var shellFrames={},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey='',adminUbsContext=null,adminUbsPreviousAreaId='';
@@ -38,7 +38,7 @@ function syncAppState(){
      segundo acesso entra no app assim que o PIN destrava o contexto local confirmado.
      O token remoto sincroniza depois e não controla a troca visual Login -> Central. */
   var localUnlocked=Boolean(acessoLocalAberto&&mode&&context);
-  var authenticated=Boolean(token||territoryToken||localUnlocked);
+  var authenticated=Boolean(token||territoryToken||ubsToken||localUnlocked);
   document.documentElement.classList.toggle('csc-central-state-app',authenticated);
   document.documentElement.classList.toggle('csc-central-state-login',!authenticated);
   if(authenticated)document.documentElement.classList.remove('csc-central-login-visible');
@@ -55,7 +55,7 @@ function aquecerValidacaoPin(){
     return;
   }
 }
-function session(extra){var out={dispositivo:device};if(mode==='tacs'&&territoryToken)out.territorioToken=territoryToken;else if(token)out.token=token;if(selectedAreaId)out.areaId=selectedAreaId;Object.keys(extra||{}).forEach(function(k){out[k]=extra[k]});return out}
+function session(extra){var out={dispositivo:device};if(mode==='tacs'&&territoryToken)out.territorioToken=territoryToken;else if(mode==='ubs'&&ubsToken)out.ubsToken=ubsToken;else if(token)out.token=token;if(selectedAreaId)out.areaId=selectedAreaId;Object.keys(extra||{}).forEach(function(k){out[k]=extra[k]});return out}
 
 function applyUiStandard(doc){
   try{
@@ -162,9 +162,10 @@ function post(action,payload,resultAction,cb){
   active.submitTimer=setTimeout(sendOnce,180);
 }
 function showLogin(kind){var admin=!TACS_ONLY&&kind==='admin';document.documentElement.classList.add('csc-central-login-visible');syncAppState();el('loginPanel').hidden=false;el('adminLogin').hidden=!admin;el('tacsLogin').hidden=admin;el('tabAdmin').hidden=TACS_ONLY;el('tabAdmin').classList.toggle('active',admin);el('tabTacs').classList.toggle('active',!admin);el('tabTacs').parentNode.style.gridTemplateColumns=TACS_ONLY?'1fr':'1fr 1fr';if(TACS_ONLY)setStatus('Entre como TACS da sua área.','')}
-function permission(name){if(mode==='admin')return true;var tacs=context&&Array.isArray(context.tacs)?context.tacs[0]:null;var list=tacs&&Array.isArray(tacs.permissoes)?tacs.permissoes:[];return list.indexOf(name)!==-1}
+function currentUbs(){if(context&&context.ubsAtual)return context.ubsAtual;var list=context&&Array.isArray(context.tacs)?context.tacs:[];for(var i=0;i<list.length;i++)if(list[i]&&centralProfileHasUbs(list[i].perfil)&&text(list[i].unidadeId)===text(selectedArea()&&selectedArea().unidadeId))return list[i];return null}
+function permission(name){if(mode==='admin')return true;var perfil=mode==='ubs'?currentUbs():(context&&Array.isArray(context.tacs)?context.tacs[0]:null);var list=perfil&&Array.isArray(perfil.permissoes)?perfil.permissoes:[];return list.indexOf(name)!==-1}
 function selectedArea(){var list=context&&Array.isArray(context.areas)?context.areas:[];for(var i=0;i<list.length;i++)if(normArea(list[i].areaId)===selectedAreaId)return list[i];return list[0]||null}
-function contextCacheKey(kind){return CONTEXT_CACHE_KEY+':'+(kind==='tacs'?'tacs':'admin')}
+function contextCacheKey(kind){return CONTEXT_CACHE_KEY+':'+(kind==='tacs'?'tacs':(kind==='ubs'?'ubs':'admin'))}
 function saveContextCache(){
   try{
     if(!context||!mode)return;
@@ -190,7 +191,7 @@ function scheduleRemoteAuthSync(seq,delay){
   remoteAuthTimer=setTimeout(function(){remoteAuthTimer=null;runRemoteAuthSync(seq)},Math.max(150,Number(delay||0)));
 }
 function resumePendingModule(){
-  if(!moduloPendente||!(token||territoryToken))return false;
+  if(!moduloPendente||!(token||territoryToken||ubsToken))return false;
   var proximo=moduloPendente;moduloPendente=null;
   publishModuleCore();
   setTimeout(function(){openModule(proximo.name,proximo.title,proximo.options)},0);
@@ -308,7 +309,7 @@ function bloquearAcessoLocal(scope,message){
 }
 function restoreContextCache(){
   try{
-    if(!(token||territoryToken)||!mode)return false;
+    if(!(token||territoryToken||ubsToken)||!mode)return false;
     var raw=sessionStorage.getItem(contextCacheKey(mode));
     if(!raw)return false;
     var saved=JSON.parse(raw);
@@ -361,7 +362,7 @@ function publishModuleCore(){
       schemaVersion:1,
       source:'CENTRAL_CONECTA',
       mode:mode,
-      authenticated:Boolean(token||territoryToken),
+      authenticated:Boolean(token||territoryToken||ubsToken),
       identity:{
         nome:text(principal&&principal.nomeCompleto),
         perfil:text(principal&&principal.perfil||(mode==='tacs'?'TACS':'ADMIN')),
@@ -716,7 +717,7 @@ function ensureTask16AgendaAssets(callback){
     var list=task16AgendaAssetWaiters.slice();task16AgendaAssetWaiters=[];
     list.forEach(function(cb){try{cb(ok)}catch(e){}});
   }
-  task16LoadScript('cscModuleCoreTask16','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260913-agendas-ios-mount-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
+  task16LoadScript('cscModuleCoreTask16','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260913-ubs-panels-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
     task16LoadScript('cscAgendaTransportTask16','/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js?v=20260913-agendas-ios-mount-v1',function(){return Boolean(window.ConectaAgendasTransportV1)},function(ok2){
       if(!ok2){finish(false);return}
@@ -779,7 +780,7 @@ function ensureTask17MoradoresAssets(callback){
     var list=task17MoradoresAssetWaiters.slice();task17MoradoresAssetWaiters=[];
     list.forEach(function(cb){try{cb(ok)}catch(e){}});
   }
-  task16LoadScript('cscModuleCoreTask17','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task17-moradores-native-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
+  task16LoadScript('cscModuleCoreTask17','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260913-ubs-panels-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
     task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260913-apresentacao-paineis-v2&load=20260913-loading-standard-v1',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
   });
@@ -839,7 +840,7 @@ function ensureTask18ProfissionaisAssets(callback){
     var list=task18ProfissionaisAssetWaiters.slice();task18ProfissionaisAssetWaiters=[];
     list.forEach(function(cb){try{cb(ok)}catch(e){}});
   }
-  task16LoadScript('cscModuleCoreTask18','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task18-profissionais-native-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
+  task16LoadScript('cscModuleCoreTask18','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260913-ubs-panels-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
     task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260913-apresentacao-paineis-v2&load=20260913-loading-standard-v1',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
   });
@@ -1220,7 +1221,7 @@ function openModule(name,title,options){
   if(name==='ubs'){if(mode==='admin')showAdminUbs(title||'UBS');return}
   var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
   if(name==='portal'){showPortalTacs(title||'Portal TACS',routeId,url);return}
-  var remoteReady=Boolean(token||territoryToken),localReady=localPanelAccessReady();
+  var remoteReady=Boolean(token||territoryToken||ubsToken),localReady=localPanelAccessReady();
   if(!remoteReady&&!localReady){
     moduloPendente={name:name,title:title||'Painel',options:moduleRouteOptions(options)};
     setStatus('Central pronta. Confirmando a sessão para carregar os dados deste painel…','warn');
@@ -1294,7 +1295,7 @@ function loadContext(message){
       if(!authInvalida){
         if(!context)restoreContextCache();
         setStatus('Sessão preservada. Sincronizando os dados em segundo plano…','warn');
-        setTimeout(function(){if(!active&&(token||territoryToken))loadContext(message)},1800);
+        setTimeout(function(){if(!active&&(token||territoryToken||ubsToken))loadContext(message)},1800);
         return;
       }
       if(acessoLocalAberto){bloquearAcessoLocal(acessoLocalAberto,falhaMsg);return}
@@ -1336,7 +1337,7 @@ function invalidarSessaoServidorEmSegundoPlano(action,payload){
 function logout(){
   if(logoutEmCurso)return;
   logoutEmCurso=true;
-  var lastMode=mode||'admin',hasSession=Boolean(token||territoryToken);
+  var lastMode=mode||'admin',hasSession=Boolean(token||territoryToken||ubsToken);
   var action=lastMode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout';
   var payload=null;
   try{if(hasSession)payload=session()}catch(e){}
