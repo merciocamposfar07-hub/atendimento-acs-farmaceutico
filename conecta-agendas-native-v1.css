@@ -32,8 +32,10 @@
 .csc-ag-native .check input{width:auto;margin:0}
 .csc-ag-native button{min-height:44px;border-radius:13px;padding:10px 14px;font-weight:900;font:inherit;cursor:pointer}
 .csc-ag-native .save{border:0;background:#176c94;color:#fff}
-.csc-ag-native .undo{position:sticky;bottom:8px;width:100%;margin-top:13px;background:#153b58;color:#fff;border:1px solid #62c8e8}
+.csc-ag-native .undo{position:static;width:100%;margin-top:13px;background:#153b58;color:#fff;border:1px solid #62c8e8}
 .csc-ag-native button:disabled{opacity:.45;cursor:not-allowed}
 .csc-ag-native .empty{padding:18px;text-align:center;color:#adc4d2}
 .csc-ag-native .native-note{font-size:.78rem;color:#8eb2c6;margin:0 0 10px}
 @media(min-width:700px){.csc-ag-native .metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.csc-ag-native .filters{max-width:720px}}
+
+.csc-ag-native .card-actions{display:grid;gap:8px}.csc-ag-native .share{width:100%;border:1px solid #416f89;background:#135272;color:#fff}.csc-ag-native .csc-ag-share-group{margin:0 0 10px;background:#102d46;border-color:#416f89}
