@@ -373,3 +373,32 @@ Nenhuma mudança de backend Apps Script foi feita; a produção permanece na ver
 
 **Regra de sequência:** Tarefa 14 encerrada tecnicamente; Tarefa 15 permanece a próxima etapa.
 
+
+
+## Tarefa 15 autorizada — Navegação interna e Voltar
+O retorno dos módulos para a Central passa a usar exclusivamente o shell interno do Conecta quando o painel está incorporado, sem depender do histórico do Safari/iPhone.
+
+Fluxo:
+`Central autenticada → abrir módulo/rota no shell → Voltar → mesma Central permanece montada → reabrir rota já visitada com o estado carregado preservado.`
+
+Regras:
+- `backToCentral()` dos módulos não usa `history.back()`;
+- no shell, a seta Voltar chama `ConectaCentralShellV1.voltar()`;
+- fora do shell, o fallback usa `location.replace(centralUrl())`;
+- voltar não executa `resetModuleShell()`, não descarrega frame e não encerra sessão;
+- a proteção contra alterações não salvas permanece;
+- o shell distingue rota normal e variantes por `routeId`;
+- Prontuários passa a abrir dentro do shell como `moradores + view=prontuarios + all=1`;
+- Pendências passa a abrir dentro do shell como `suporte + view=pending`;
+- frames de rotas variantes permanecem independentes e reutilizáveis;
+- nenhuma alteração de backend Apps Script é necessária;
+- migração definitiva painel a painel continua reservada à Tarefa 16.
+
+### Status final da Tarefa 15: VALIDADA INTERNAMENTE, PUBLICADA E CANONIZADA — 12/09/2026
+Gate específico `TAREFA_15_NAVEGACAO_INTERNA_OK`, suíte integral, sintaxe, regras críticas e homologação interna aprovados no workflow final `34729325418`. GitHub Pages do código validado passou no run `34729320071`.
+
+As execuções `34729087312`, `34729147803` e `34729263597` foram interrompidas por contratos históricos de testes das Tarefas 10/12 e Safari/BFCache que ainda esperavam a assinatura/versionamento anteriores; esses gates foram compatibilizados sem ampliar a lógica de produção.
+
+Nenhuma mudança de backend Apps Script foi feita; a produção permanece na versão **208**.
+
+**Regra de sequência:** Tarefa 15 encerrada tecnicamente e canonizada. Tarefa 16 permanece a próxima etapa e não foi iniciada.
