@@ -59,49 +59,35 @@ for (const viewport of [{width:390,height:844},{width:412,height:915},{width:136
 }
 
 
-test('Portal TACS volta para a Central sem perder a sessão', async ({ page }) => {
-  const central = 'http://conecta.test/atendimento-acs-farmaceutico/central-administrativa-tacs.html';
-  const portal = 'http://conecta.test/atendimento-acs-farmaceutico/?area=JAPARANDUBA&from=central';
+test('Portal TACS usa o shell e Voltar revela a Central autenticada', async ({ page }) => {
   const openModule = source.slice(source.indexOf('function openModule(name,title,options){'), source.indexOf('function closeViewer(){'));
+  const normalizeFrame = source.slice(source.indexOf('function normalizeEmbeddedPanelFrame(frame){'), source.indexOf('function enhanceShellFrame(frame){'));
   const backSource = fs.readFileSync('central-back-button-v1.js', 'utf8');
 
-  await page.route('http://conecta.test/**', async route => {
-    const url = new URL(route.request().url());
-    if (url.pathname.endsWith('/central-administrativa-tacs.html')) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'text/html',
-        body: '<!doctype html><html><body><main id="central">Central</main><script>document.documentElement.dataset.hasSession=sessionStorage.getItem("portalTacsAdminTokenV1")?"1":"0";<\/script></body></html>'
-      });
-      return;
-    }
-    await route.fulfill({
-      status: 200,
-      contentType: 'text/html',
-      body: '<!doctype html><html><body><main>Portal TACS</main></body></html>'
-    });
+  expect(openModule).not.toMatch(/window\.open\(|location\.(?:assign|href)/);
+  expect(openModule).toMatch(/if\(name==='portal'\)\{[\s\S]*ensureShellFrame\(name,url,title\|\|'Portal TACS',routeId\)[\s\S]*showShellFrame\(name,portalFrame,title\|\|'Portal TACS',routeId\)/);
+  expect(normalizeFrame).toMatch(/shellModule==='portal'[\s\S]*portalTacsBackCentralV1\{display:block!important\}/);
+
+  await page.setContent('<!doctype html><html><body><main id="central">Central autenticada</main><div id="viewer"><iframe id="portal"></iframe></div></body></html>');
+  await page.evaluate(() => {
+    sessionStorage.setItem('portalTacsAdminTokenV1','token-teste');
+    window.__voltas=0;
+    window.ConectaCentralShellV1={
+      voltar:function(){
+        window.__voltas++;
+        document.getElementById('viewer').hidden=true;
+      }
+    };
   });
 
-  await page.goto(central);
-  await page.evaluate(() => sessionStorage.setItem('portalTacsAdminTokenV1', 'token-teste'));
-  await page.addScriptTag({content: `
-    function moduleRouteId(){return 'portal'}
-    function moduleUrl(){return '${portal}'}
-    ${openModule}
-    var b=document.createElement('button');
-    b.id='abrirPortal';
-    b.onclick=function(){openModule('portal','Portal TACS')};
-    document.body.appendChild(b);
-  `});
+  const frameHandle = await page.locator('#portal').elementHandle();
+  const frame = await frameHandle.contentFrame();
+  await frame.setContent('<!doctype html><html><body><main>Portal TACS</main></body></html>');
+  await frame.evaluate(() => sessionStorage.setItem('portalTacsRetornoCentralV1','1'));
+  await frame.addScriptTag({content: backSource});
+  await frame.locator('#portalTacsBackCentralV1 button').click();
 
-  await page.locator('#abrirPortal').click();
-  await page.waitForURL(/from=central/);
+  expect(await page.evaluate(() => window.__voltas)).toBe(1);
+  expect(await page.locator('#viewer').isHidden()).toBe(true);
   expect(await page.evaluate(() => sessionStorage.getItem('portalTacsAdminTokenV1'))).toBe('token-teste');
-
-  await page.addScriptTag({content: backSource});
-  await page.locator('#portalTacsBackCentralV1 button').click();
-  await page.waitForURL(/central-administrativa-tacs\.html$/);
-
-  expect(await page.evaluate(() => sessionStorage.getItem('portalTacsAdminTokenV1'))).toBe('token-teste');
-  expect(await page.evaluate(() => document.documentElement.dataset.hasSession)).toBe('1');
 });
