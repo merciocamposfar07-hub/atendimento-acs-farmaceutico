@@ -1076,7 +1076,7 @@ function normalizeEmbeddedPanelFrame(frame){
       style=doc.createElement('style');style.id='cscEmbeddedApp4SingleHeaderV1';
       style.textContent=[
         '#cscInstitutionalAppbar{display:flex!important;position:static!important;top:auto!important;inset:auto!important;background:#071827!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}',
-        (frame&&frame.dataset&&frame.dataset.shellModule==='portal')?'#portalTacsBackCentralV1{display:block!important}':'#portalTacsBackCentralV1{display:none!important}',
+        (frame&&frame.dataset&&frame.dataset.shellModule==='portal')?'#portalTacsBackCentralV1{display:none!important}#portalTacsAtualizarPaginaV1{display:inline-flex!important}':'#portalTacsBackCentralV1{display:none!important}',
         'html,body,main,footer,.footer{background:#071827!important;background-image:none!important;border-top:0!important}',
         '#cscPlatformFooter{display:flex!important;position:static!important;background:#071827!important;border:0!important;box-shadow:none!important}'
       ].join('');
