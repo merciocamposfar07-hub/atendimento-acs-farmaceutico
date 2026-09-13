@@ -99,31 +99,30 @@ function agendasProfissionaisTerritoriaisV1TratarPost_(e){
   return agendasProfissionaisTerritoriaisV1ResponderPost_(requestId,resultado);
 }
 
-function agendasProfissionaisTerritoriaisV1ExigirPermissaoRestrita_(acesso,p,action){
-  var escopo=agendasProfissionaisTerritoriaisV1Texto_(p.escopo).toLowerCase();
-  var permissao=action==='admin_salvar_agenda'||(action==='admin_dados'&&escopo==='agendas')
-    ?TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.PERMISSAO_AGENDAS
-    :TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.PERMISSAO_PROFISSIONAIS;
-  if(action==='admin_dados'&&!escopo){
-    var alguma=(acesso.permissoes||[]).indexOf(TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.PERMISSAO_AGENDAS)!==-1||
-      (acesso.permissoes||[]).indexOf(TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.PERMISSAO_PROFISSIONAIS)!==-1;
-    if(!alguma)throw new Error('Seu cadastro não possui permissão para administrar agendas ou profissionais.');
-  }else if((acesso.permissoes||[]).indexOf(permissao)===-1){
-    throw new Error(permissao===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.PERMISSAO_AGENDAS
-      ?'Seu cadastro não possui permissão para administrar agendas e vagas.'
-      :'Seu cadastro não possui permissão para administrar profissionais e serviços.');
-  }
-}
-
 function agendasProfissionaisTerritoriaisV1Contexto_(p,action){
   var acesso=tacsTerritorioV1ValidarAcesso_(p,false);
   var areaId;
+  function exigirPermissaoRestrita_(){
+    var escopo=agendasProfissionaisTerritoriaisV1Texto_(p.escopo).toLowerCase();
+    var permissao=action==='admin_salvar_agenda'||(action==='admin_dados'&&escopo==='agendas')
+      ?TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.PERMISSAO_AGENDAS
+      :TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.PERMISSAO_PROFISSIONAIS;
+    if(action==='admin_dados'&&!escopo){
+      var alguma=(acesso.permissoes||[]).indexOf(TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.PERMISSAO_AGENDAS)!==-1||
+        (acesso.permissoes||[]).indexOf(TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.PERMISSAO_PROFISSIONAIS)!==-1;
+      if(!alguma)throw new Error('Seu cadastro não possui permissão para administrar agendas ou profissionais.');
+    }else if((acesso.permissoes||[]).indexOf(permissao)===-1){
+      throw new Error(permissao===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.PERMISSAO_AGENDAS
+        ?'Seu cadastro não possui permissão para administrar agendas e vagas.'
+        :'Seu cadastro não possui permissão para administrar profissionais e serviços.');
+    }
+  }
   if(acesso.perfil==='TACS'){
     areaId=agendasProfissionaisTerritoriaisV1AreaId_(acesso.areaId);
-    agendasProfissionaisTerritoriaisV1ExigirPermissaoRestrita_(acesso,p,action);
+    exigirPermissaoRestrita_();
   }else if(acesso.perfil==='UBS'){
     areaId=agendasProfissionaisTerritoriaisV1AreaId_(acesso.areaId);
-    agendasProfissionaisTerritoriaisV1ExigirPermissaoRestrita_(acesso,p,action);
+    exigirPermissaoRestrita_();
   }else{
     tacsTerritorioV1ExigirAdmin_(acesso);
     areaId=agendasProfissionaisTerritoriaisV1AreaId_(p.areaId||p.area||acesso.areaId)||TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.AREA_PADRAO;
