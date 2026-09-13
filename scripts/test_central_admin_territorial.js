@@ -111,9 +111,8 @@ assert.match(professionalsPage,/portalTacsTerritorioTokenV1/,
   'Profissionais deve reutilizar a sessão territorial do TACS.');
 assert.match(professionalsPage,/escopo:'profissionais'/,
   'Profissionais deve solicitar somente dados da própria área.');
-const territorioVersionado=/teste-v1\/painel-tacs-areas-v1\.html\?[^'"]*\bv=/.test(js)||/teste-v1\/painel-tacs-areas-v1\.html\?[^'"]*['"]\+territoryRevision/.test(js);
-assert.ok(territorioVersionado,
-  'A Central deve carregar o painel de TACS com revisão explícita para invalidar cache.');
+assert.match(js,/teste-v1\/painel-tacs-areas-v1\.html\?from=central&localfirst=1&v=/,
+  'A Central deve carregar diretamente o painel real de TACS/áreas, em local-first e com revisão explícita de cache.');
 assert.match(js,/painel-oficial-organizacoes-municipios\.html\?[^'"]*\bv=/,
   'A Central deve abrir o painel global de organizações e municípios com revisão explícita.');
 assert.match(multiPage,/ADMINISTRADOR GERAL/);
