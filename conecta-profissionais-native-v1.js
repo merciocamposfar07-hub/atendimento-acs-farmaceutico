@@ -65,6 +65,7 @@ function create(host,options){
   host.dataset.tacsDirty='0';
 
   function q(role){return host.querySelector('[data-role="'+role+'"]')}
+  function remoteReady(){return Boolean(core&&typeof core.ready==='function'&&core.ready())}
   function setDirty(v){dirty=Boolean(v);host.dataset.tacsDirty=dirty?'1':'0'}
   function setStatus(msg,type){var n=q('status');n.textContent=msg;n.className='status'+(type?' '+type:'')}
   function bridge(){var f=q('bridge');try{return f&&f.contentWindow&&f.contentWindow.ConectaProfissionaisBridgeV1||null}catch(e){return null}}
@@ -159,6 +160,11 @@ function create(host,options){
 
   function ensureBridge(){
     if(booting||bridgeReady)return;
+    if(!remoteReady()){
+      confirmed=false;disableWrites();
+      setStatus('Painel pronto. Confirmando a sessão para carregar profissionais e serviços…','warn');
+      return;
+    }
     booting=true;
     var frame=q('bridge'),mode=core.mode&&core.mode(),access=mode==='tacs'?'&acesso=tacs':'';
     frame.onload=function(){booting=false;waitBridge(0)};
@@ -249,7 +255,12 @@ function create(host,options){
 
   return{
     scope:scope,
-    mount:function(){visible=true;host.hidden=false;if(!bridgeReady)ensureBridge();else{var api=bridge();if(api)api.reload(function(r){if(r&&r.snapshot)useSnapshot(r.snapshot,'Profissionais e serviços atualizados.')})}},
+    mount:function(){
+      visible=true;host.hidden=false;
+      if(!remoteReady()){confirmed=false;disableWrites();setStatus('Painel pronto. Confirmando a sessão para carregar profissionais e serviços…','warn');return}
+      if(!bridgeReady)ensureBridge();
+      else{var api=bridge();if(api)api.reload(function(r){if(r&&r.snapshot)useSnapshot(r.snapshot,'Profissionais e serviços atualizados.')})}
+    },
     hide:function(){visible=false;host.hidden=true},
     hasUnsaved:function(){return dirty},
     reset:function(){visible=false;dirty=false;host.dataset.tacsDirty='0';var f=q('bridge');if(f)f.src='about:blank';host.innerHTML='';host.hidden=true}
