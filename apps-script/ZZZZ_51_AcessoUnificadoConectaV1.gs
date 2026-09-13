@@ -664,17 +664,30 @@ function conectaAcessoV1RespostaDiagnosticoLista_(lista,filtros){
 function conectaAcessoV1DiagnosticoMoradorAdmin_(p){
   var dispositivo=conectaAcessoV1Texto_(p.dispositivo),chave=conectaAcessoV1Texto_(p.chaveConfianca);
   if(!dispositivo||!conectaAcessoV1ConfiancaValida_('ADMIN','ADMIN_GERAL',dispositivo,chave))throw new Error('Aparelho administrativo não reconhecido para diagnóstico.');
-  var filtros=conectaAcessoV1FiltrosDiagnostico_(p);
-  /* HOTFIX_DIAGNOSTICO_CADASTRO_AREA_V1:
-     quando o número de cadastro é o único filtro, usa a busca familiar já existente
-     e evita reler a mesma planilha várias vezes para montar a resposta. */
+  var filtros=conectaAcessoV1FiltrosDiagnostico_(p),areaOriginal=filtros.areaId;
+  /* HOTFIX_DIAGNOSTICO_AREA_RESILIENTE_V2:
+     a área lembrada pela Central é apenas a primeira tentativa. Se esse contexto local
+     estiver desatualizado e não houver resultado, repete a mesma busca em todas as áreas,
+     evitando o falso "Nenhum cadastro localizado" sem alterar vínculos do Morador. */
   var somenteCadastro=Boolean(filtros.cadastro&&!filtros.cpf&&!filtros.cns&&!filtros.nome&&!filtros.nascimento);
   if(somenteCadastro){
     var porCadastro=conectaAcessoV1BuscarCadastroAreaDiagnostico_(filtros.cadastro,filtros.areaId);
     if(porCadastro&&porCadastro.resposta)return porCadastro.resposta;
+    if(porCadastro&&porCadastro.pessoais&&porCadastro.pessoais.length){
+      return conectaAcessoV1RespostaDiagnosticoLista_(porCadastro.pessoais,filtros);
+    }
+    if(areaOriginal){
+      filtros.areaId='';
+      porCadastro=conectaAcessoV1BuscarCadastroAreaDiagnostico_(filtros.cadastro,'');
+      if(porCadastro&&porCadastro.resposta)return porCadastro.resposta;
+    }
     return conectaAcessoV1RespostaDiagnosticoLista_(porCadastro&&porCadastro.pessoais||[],filtros);
   }
   var lista=conectaAcessoV1BuscarDiagnostico_(filtros);
+  if(!lista.length&&areaOriginal){
+    filtros.areaId='';
+    lista=conectaAcessoV1BuscarDiagnostico_(filtros);
+  }
   return conectaAcessoV1RespostaDiagnosticoLista_(lista,filtros);
 }
 
