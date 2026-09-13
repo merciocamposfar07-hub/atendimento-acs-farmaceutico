@@ -42,8 +42,13 @@ assert.match(core,/Este módulo não possui login próprio/);
 assert.match(core,/Entre pelo PIN na tela inicial do Conecta Saúde Comunitária/);
 
 // A Central permanece a autoridade de autenticação; não precisa consumir o bridge dos módulos.
-assert.match(central,/post\('admin_login'/);
-assert.match(central,/post\('admin_territorio_login_pin'/);
+// Após a sincronização contínua, os handlers chamam startRemoteAuthSync() e as ações PIN
+// continuam exclusivamente dentro desse sincronizador central.
+assert.match(central,/function startRemoteAuthSync\(scope,pin,hadLocal\)/);
+assert.match(central,/var action=scope==='tacs'\?'admin_territorio_login_pin':'admin_login'/);
+assert.match(central,/post\(action,\{pin:pin,dispositivo:device\},resultAction/);
+assert.match(central,/startRemoteAuthSync\('admin',pin,Boolean\(saved\)\)/);
+assert.match(central,/startRemoteAuthSync\('tacs',pin,Boolean\(saved\)\)/);
 assert.match(central,/function logout\(\)/);
 assert.doesNotMatch(centralHtml,/conecta-module-core-v1\.js/,'Central é a origem do contexto e não deve depender do bridge consumidor.');
 assert.match(core,/if\(!isModulePage\(\)\)return;/,'Gate não pode bloquear a Central.');
