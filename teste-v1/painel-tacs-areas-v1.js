@@ -212,14 +212,14 @@ function cancelTerritoryReconnect(){
   if(territoryReconnectTimer){clearTimeout(territoryReconnectTimer);territoryReconnectTimer=null;}
   territoryReconnectAttempt=0;
 }
-function scheduleTerritoryReconnect(message){
+function scheduleTerritoryReconnect(message,operationMessage){
   if(territoryReconnectTimer||!mode)return;
   var waits=[700,1400,2600,4500,7000,10000],delay=waits[Math.min(territoryReconnectAttempt,waits.length-1)];
   territoryReconnectAttempt++;
   territoryReconnectTimer=setTimeout(function(){
     territoryReconnectTimer=null;
     if(!mode)return;
-    loadData(message||'Dados territoriais confirmados.',null,true);
+    loadData(message||'Dados territoriais confirmados.',operationMessage,true);
   },delay);
 }
 function scheduleLocalFirstRemoteSync(){
@@ -253,7 +253,7 @@ function loadData(message,operationMessage,backgroundRetry){
     return;
   }
   var leituraPayload=payload({});coreRead('admin_territorio_dados',leituraPayload,function(done){post('admin_territorio_dados',leituraPayload,'admin_territorio_result',done)},function(r){
-    if(!r||r.ok!==true){var falha=moduleSessionPolicy&&typeof moduleSessionPolicy.classify==='function'?moduleSessionPolicy.classify(r):{explicitAuthRefusal:Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(text(r&&r.message)))};if(!falha.explicitAuthRefusal){territoryConfirmed=wasConfirmed;if(!cached&&!wasConfirmed)cached=primeTerritoryFromCentralContext();syncTerritoryWriteState();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;loginStatus('Sessão ativa.','ok');if(operationMessage)status('A alteração foi enviada; a confirmação será refeita automaticamente em segundo plano.','warn');scheduleTerritoryReconnect(message);return}cancelTerritoryReconnect();clearSession();loginStatus(text(r&&r.message||'A sessão foi recusada explicitamente pelo servidor.'),'err');if(operationMessage)status('A alteração foi salva, mas a autenticação foi recusada na releitura. Volte à Central.','err');return;}
+    if(!r||r.ok!==true){var falha=moduleSessionPolicy&&typeof moduleSessionPolicy.classify==='function'?moduleSessionPolicy.classify(r):{explicitAuthRefusal:Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(text(r&&r.message)))};if(!falha.explicitAuthRefusal){territoryConfirmed=wasConfirmed;if(!cached&&!wasConfirmed)cached=primeTerritoryFromCentralContext();syncTerritoryWriteState();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;loginStatus('Sessão ativa.','ok');if(operationMessage)status('A alteração foi enviada; a confirmação será refeita automaticamente em segundo plano.','warn');scheduleTerritoryReconnect(message,operationMessage);return}cancelTerritoryReconnect();clearSession();loginStatus(text(r&&r.message||'A sessão foi recusada explicitamente pelo servidor.'),'err');if(operationMessage)status('A alteração foi salva, mas a autenticação foi recusada na releitura. Volte à Central.','err');return;}
     var payload=territoryPerformancePayload(r),diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('territorio',payload):{changed:true};
     cancelTerritoryReconnect();territoryConfirmed=true;data=payload;
     if(diff.changed||!cached)render();else syncTerritoryWriteState();
