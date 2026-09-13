@@ -54,7 +54,7 @@ assert.ok(profText.indexOf("if(!falha.explicitAuthRefusal)") < profText.indexOf(
 // Território: clearSession apenas após recusa explícita.
 assert.match(territorio,/moduleSessionPolicy=moduleCore&&moduleCore\.sessionPolicy/);
 assert.match(territorio,/if\(!falha\.explicitAuthRefusal\)[\s\S]*loginStatus\('Sessão ativa\.'[\s\S]*scheduleTerritoryReconnect/,'Falha temporária territorial deve preservar a sessão ativa e reconectar em segundo plano.');
-assert.match(territorio,/if\(!falha\.explicitAuthRefusal\)[\s\S]*return\}clearSession\(\)/);
+assert.match(territorio,/if\(!falha\.explicitAuthRefusal\)[\s\S]*return\}cancelTerritoryReconnect\(\);clearSession\(\)/,'Território só deve limpar a sessão após recusa explícita, cancelando antes a reconexão pendente.');
 
 // Módulos já seguros mantêm último estado em falha de leitura.
 assert.match(agendas,/authInvalida=Boolean\(r&&r\.temporario!==true/);
