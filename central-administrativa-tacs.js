@@ -13,7 +13,7 @@ function adminDeviceRecognized(){
 var TACS_ONLY=String(URL_PARAMS.get('acesso')||'').toLowerCase()==='tacs'&&!adminDeviceRecognized();
 var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
 var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
-var shellFrames={},shellActiveModule='',shellActiveRoute='',shellScopeKey='';
+var shellFrames={},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey='';
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
@@ -568,7 +568,9 @@ function resetModuleShell(){
     try{frame.src='about:blank'}catch(e){}
     if(frame!==base&&frame.parentNode)frame.remove();
   });
-  shellFrames={};shellActiveModule='';shellActiveRoute='';shellScopeKey='';
+  try{if(window.ConectaAgendasNativeV1&&typeof window.ConectaAgendasNativeV1.reset==='function')window.ConectaAgendasNativeV1.reset()}catch(e){}
+  var nativeHost=el('nativeModuleHost');if(nativeHost){nativeHost.hidden=true;nativeHost.innerHTML='';nativeHost.dataset.tacsDirty='0'}
+  shellFrames={};shellActiveModule='';shellActiveRoute='';shellActiveNative='';shellScopeKey='';
   if(base){base.hidden=false;base.removeAttribute('data-shell-key');base.removeAttribute('data-shell-module');base.removeAttribute('data-shell-route');base.removeAttribute('data-shell-url');base.removeAttribute('data-shell-loaded');if(base.src!=='about:blank')base.src='about:blank'}
   if(viewer)viewer.hidden=true;
   setShellOpening('',false);
@@ -590,6 +592,70 @@ function ensureShellOpening(){
 function setShellOpening(title,visible){
   var node=ensureShellOpening();if(!node)return;
   node.hidden=!visible;if(visible)node.textContent='Abrindo '+text(title||'painel')+' • exibindo a última confirmação disponível enquanto sincroniza';
+}
+/* TAREFA_16_AGENDAS_NATIVAS_V1:
+   Agendas e vagas é o primeiro painel migrado definitivamente para o shell.
+   O caminho normal não usa viewerFrame/iframe; os demais módulos permanecem inalterados. */
+var task16AgendaAssetsLoading=false,task16AgendaAssetWaiters=[];
+function task16LoadStyle(){
+  if(document.getElementById('cscAgendaNativeCssV1'))return;
+  var link=document.createElement('link');link.id='cscAgendaNativeCssV1';link.rel='stylesheet';
+  link.href='/atendimento-acs-farmaceutico/conecta-agendas-native-v1.css?v=20260912-task16-agendas-native-v1';
+  document.head.appendChild(link);
+}
+function task16LoadScript(id,src,ready,done){
+  if(ready()){done(true);return}
+  var existing=document.getElementById(id);
+  if(existing){
+    existing.addEventListener('load',function(){done(ready())},{once:true});
+    existing.addEventListener('error',function(){done(false)},{once:true});
+    return;
+  }
+  var s=document.createElement('script');s.id=id;s.src=src;s.async=false;
+  s.onload=function(){done(ready())};s.onerror=function(){done(false)};document.head.appendChild(s);
+}
+function ensureTask16AgendaAssets(callback){
+  task16LoadStyle();
+  if(window.ConectaModuleCoreV1&&window.ConectaAgendasTransportV1&&window.ConectaAgendasNativeV1){callback(true);return}
+  task16AgendaAssetWaiters.push(callback);
+  if(task16AgendaAssetsLoading)return;
+  task16AgendaAssetsLoading=true;
+  function finish(ok){
+    task16AgendaAssetsLoading=false;
+    var list=task16AgendaAssetWaiters.slice();task16AgendaAssetWaiters=[];
+    list.forEach(function(cb){try{cb(ok)}catch(e){}});
+  }
+  task16LoadScript('cscModuleCoreTask16','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task16-agendas-native-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
+    if(!ok){finish(false);return}
+    task16LoadScript('cscAgendaTransportTask16','/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js?v=20260912-task16-agendas-native-v1',function(){return Boolean(window.ConectaAgendasTransportV1)},function(ok2){
+      if(!ok2){finish(false);return}
+      task16LoadScript('cscAgendaNativeTask16','/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260912-task16-agendas-native-v1',function(){return Boolean(window.ConectaAgendasNativeV1)},finish);
+    });
+  });
+}
+function showNativeAgenda(title,routeId){
+  prepareShellScope();publishModuleCore();
+  Object.keys(shellFrames).forEach(function(key){var frame=shellFrames[key];if(frame)frame.hidden=true});
+  var base=el('viewerFrame');if(base)base.hidden=true;
+  var host=el('nativeModuleHost'),viewer=el('viewer');
+  if(!host||!viewer)return false;
+  shellActiveModule='agendas';shellActiveRoute=routeId;shellActiveNative='agendas';
+  el('viewerTitle').textContent=title||'Agendas e vagas';
+  viewer.classList.add('csc-shell-viewer');viewer.hidden=false;host.hidden=false;
+  document.body.classList.add('viewer-open');setShellOpening(title||'Agendas e vagas',true);
+  ensureTask16AgendaAssets(function(ok){
+    if(shellActiveNative!=='agendas'||shellActiveRoute!==routeId)return;
+    if(!ok){
+      host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">Não foi possível carregar o módulo nativo de Agendas. Volte à Central e tente novamente.</div>';
+      setShellOpening('',false);return;
+    }
+    try{window.ConectaAgendasNativeV1.mount(host);setShellOpening('',false)}
+    catch(e){
+      host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">O módulo de Agendas não pôde ser iniciado sem perder a sessão. Volte à Central e tente novamente.</div>';
+      setShellOpening('',false);
+    }
+  });
+  return true;
 }
 function enhanceShellFrame(frame){
   if(!frame||frame.dataset.shellEnhanced==='1')return;
