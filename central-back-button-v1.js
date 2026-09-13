@@ -350,8 +350,45 @@ function centralUrl(){
   return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html'+(tacs?'?acesso=tacs':'');
 }
 
+function restorePortalTopControlsV1(){
+  if(isAdminPanel)return;
+  try{
+    if(window.PortalTacsAtualizacao&&typeof window.PortalTacsAtualizacao.instalarUI==='function'){
+      window.PortalTacsAtualizacao.instalarUI();
+    }
+  }catch(e){}
+
+  var refresh=document.getElementById('portalTacsAtualizarPaginaV1');
+  if(refresh){
+    refresh.style.setProperty('display','inline-flex','important');
+    refresh.style.setProperty('top','calc(10px + env(safe-area-inset-top))','important');
+    refresh.style.setProperty('right','10px','important');
+    refresh.style.setProperty('bottom','auto','important');
+    refresh.style.setProperty('width','50px','important');
+    refresh.style.setProperty('height','50px','important');
+    refresh.style.setProperty('min-width','50px','important');
+    refresh.style.setProperty('min-height','50px','important');
+    refresh.style.setProperty('padding','0','important');
+    refresh.style.setProperty('border','2px solid rgba(255,255,255,.9)','important');
+    refresh.style.setProperty('border-radius','50%','important');
+    refresh.style.setProperty('background','#073a55','important');
+    refresh.style.setProperty('color','#fff','important');
+    refresh.style.setProperty('font-size','0','important');
+    refresh.style.setProperty('box-shadow','0 2px 8px rgba(0,0,0,.2)','important');
+  }
+
+  var central=document.getElementById('portalTacsVoltarCentralV1');
+  if(central){
+    central.style.setProperty('border','2px solid #69c7e7','important');
+    central.style.setProperty('background','#073a55','important');
+    central.style.setProperty('color','#fff','important');
+    central.style.setProperty('box-shadow','0 8px 24px rgba(0,0,0,.28)','important');
+  }
+}
+
 function install(){
   removeRedundantPinAccess();
+  restorePortalTopControlsV1();
   if(document.getElementById('portalTacsBackCentralV1'))return;
   if(!document.body){setTimeout(install,0);return;}
 
