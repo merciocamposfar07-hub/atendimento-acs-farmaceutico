@@ -48,6 +48,7 @@ on:
       - 'scripts/test_tarefa16_agendas_nativas.js'
       - 'scripts/test_tarefa17_moradores_nativos.js'
       - 'scripts/test_tarefa18_profissionais_nativos.js'
+      - 'scripts/test_restauracao_app4_paineis_v1.js'
       - 'scripts/test_central_admin_performance_v1.js'
       - 'scripts/test_safari_bfcache_central_v1.js'
       - 'scripts/test_tarefa10_sessao_shell_persistente.js'
@@ -101,6 +102,7 @@ jobs:
           node --check scripts/test_campanhas_periodo_v1.js
           node --check scripts/test_tarefa14_timeout_sessao.js
           node --check scripts/test_tarefa15_navegacao_interna.js
+          node --check scripts/test_restauracao_app4_paineis_v1.js
           node --check central-tacs-login-rapido-v1.js
           node --check conecta-morador-session-v1.js
           node --check scripts/build_apps_script_release.js
