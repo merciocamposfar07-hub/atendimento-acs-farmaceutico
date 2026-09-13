@@ -199,8 +199,8 @@ async function testTerritoryPanel() {
   assert.match(html, /id="tacsProfile"/);
   assert.match(html, /id="tacsActiveText"/);
   assert.doesNotMatch(html, /<\/script>\\n<script/,'O HTML não pode expor \\n literal entre scripts.');
-  assert.match(html, /painel-tacs-areas-v1\.js\?v=20260913-ubs-institucional-cache-v1/,'HTML e JS da UBS devem compartilhar a revisão atual.');
-  assert.match(official, /painel-tacs-areas-v1\.html\?v=20260913-ubs-institucional-cache-v1/,'Wrapper oficial deve buscar o HTML atual da UBS.');
+  assert.match(html, /painel-tacs-areas-v1\.js\?v=20260913-territorio-first-touch-ubs-cache-v3/,'HTML e JS da UBS devem compartilhar a revisão atual.');
+  assert.match(official, /painel-tacs-areas-v1\.html\?v=20260913-territorio-first-touch-ubs-cache-v3/,'Wrapper oficial deve buscar o HTML atual da UBS.');
   assert.match(official, /fetch\(source,\{cache:'no-store'\}\)/,'Wrapper oficial não pode reutilizar HTML antigo em cache.');
   assert.doesNotMatch(official, /force-cache/,'Wrapper oficial não pode usar force-cache no cadastro UBS.');
   assert.match(html, /id="accessStateControlV1"/);
@@ -235,8 +235,17 @@ async function testTerritoryPanel() {
   assert.match(js, /if\(ubsInstitucional\)\{birth='';cpf='';phone='';\}/,
     'UBS institucional deve limpar os campos pessoais antes de montar o payload.');
   assert.match(js, /dataNascimento:birth/);
-  assert.match(js, /if\(operationMessage\)status\(operationMessage,'ok'\)/,
-    'Uma gravação concluída deve substituir a mensagem de validação pela confirmação final.');
+  assert.match(js, /function applyConfirmedTacsWrite\(r\)/,
+    'O cadastro confirmado pelo servidor deve ser aplicado imediatamente sem releitura bloqueante.');
+  assert.match(js, /territoryConfirmed=true;/,
+    'O retorno confirmado do cadastro deve manter o painel habilitado.');
+  assert.match(js, /applyConfirmedTacsWrite\(r\);status\(text\(r\.message\|\|'Cadastro salvo e conferido\.'\),'ok'\)/,
+    'Após salvar Administrador/TACS/UBS, a confirmação do próprio POST deve encerrar a operação.');
+  const saveTacsStart=js.indexOf('function saveTacs(event)');
+  const areaBodyStart=js.indexOf('function areaFormBody()',saveTacsStart);
+  const saveTacsBlock=js.slice(saveTacsStart,areaBodyStart);
+  assert.doesNotMatch(saveTacsBlock,/loadData\(/,
+    'Salvar UBS não deve iniciar releitura bloqueante nem exibir aviso de releitura não confirmada.');
   assert.match(html, /id="areaLinkState"/,
     'O formulário deve reservar uma área de estado para o vínculo confirmado.');
   assert.match(html, /id="saveAreaButton"/,

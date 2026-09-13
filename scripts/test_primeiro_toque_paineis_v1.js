@@ -29,12 +29,13 @@ assert.match(block,/if\(name==='agendas'\)\{showNativeAgenda/);
 assert.match(block,/if\(name==='moradores'/);
 assert.match(block,/if\(name==='profissionais'\)\{showNativeProfissionais/);
 
-// Correção cirúrgica: TACS/áreas não pode exibir uma tela provisória diferente da tela real.
-assert.match(block,/if\(name==='territorio'\)\{[\s\S]*?priorizarSincronizacaoTerritorioPendente\(\)[\s\S]*?Confirmando a sessão para abrir TACS e áreas[\s\S]*?return;\s*\}/);
+// Correção cirúrgica: TACS/áreas abre a tela real no primeiro toque, em leitura local.
+assert.match(block,/if\(name==='territorio'\)\{[\s\S]*?priorizarSincronizacaoTerritorioPendente\(\)[\s\S]*?ensureShellFrame\(name,url,title\|\|'TACS e áreas',routeId\)[\s\S]*?localFrame\.dataset\.shellLocalFirst='1'[\s\S]*?showShellFrame\(name,localFrame,title\|\|'TACS e áreas',routeId\)[\s\S]*?return;\s*\}/);
 const territoryGuard=block.match(/if\(name==='territorio'\)\{[\s\S]*?return;\s*\}/);
 assert.ok(territoryGuard,'Guard cirúrgico de TACS/áreas ausente.');
 assert.doesNotMatch(territoryGuard[0],/showPendingModuleShell/);
-assert.doesNotMatch(block,/localFrame\.dataset\.shellLocalFirst/);
+assert.match(block,/if\(name==='territorio'&&frame\.dataset\.shellLocalFirst==='1'\)[\s\S]*?frame\.dataset\.shellLoaded=''[\s\S]*?frame\.src='about:blank'/);
+assert.match(central,/painel-oficial-tacs-areas\.html\?from=central&localfirst=1&v=/);
 
 // Os demais painéis em frame preservam a prévia segura já existente.
 const previewStart=central.indexOf('function ensurePendingPreviewStyle');
@@ -64,8 +65,17 @@ const closeEnd=central.indexOf('function loadContext(message)',closeStart);
 const closeBlock=central.slice(closeStart,closeEnd);
 assert.match(closeBlock,/moduloPendente=null/);
 
-// Escrita continua protegida pela sessão remota no core.
+// Escrita continua protegida pela sessão remota; local-first libera apenas a tela real para leitura.
 const core=fs.readFileSync('conecta-module-core-v1.js','utf8');
 assert.match(core,/function ready\(\)[\s\S]*Boolean\(s\.adminToken\|\|s\.territoryToken\)/);
+assert.match(core,/function localFirstContextAllowed\(\)/);
+assert.match(core,/params\.get\('localfirst'\)==='1'&&Boolean\(ctx&&text\(ctx\.mode\)\)/);
+assert.match(core,/if\(!ready\(\)&&!localFirstContextAllowed\(\)\)showCentralGate\(\)/);
 
-console.log('PRIMEIRO_TOQUE_PAINEIS_OK: TACS/áreas prioriza imediatamente a confirmação remota ao toque e abre automaticamente assim que o token chega, sem tela provisória; demais painéis preservam o comportamento anterior.');
+const territorioHtml=fs.readFileSync('teste-v1/painel-tacs-areas-v1.html','utf8');
+const wrapper=fs.readFileSync('painel-oficial-tacs-areas.html','utf8');
+assert.match(territorioHtml,/conecta-module-core-v1\.js\?v=20260913-territorio-first-touch-v3/);
+assert.match(territorioHtml,/painel-tacs-areas-v1\.js\?v=20260913-territorio-first-touch-ubs-cache-v3/);
+assert.match(wrapper,/painel-tacs-areas-v1\.html\?v=20260913-territorio-first-touch-ubs-cache-v3/);
+
+console.log('PRIMEIRO_TOQUE_PAINEIS_OK: TACS/áreas abre a tela real no primeiro toque em modo somente leitura e atualiza com a sessão remota; cache da correção UBS foi invalidado.');
