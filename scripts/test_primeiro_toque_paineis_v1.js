@@ -9,6 +9,10 @@ assert.match(central,/CORRECAO_PRIMEIRO_TOQUE_PAINEIS_V1/);
 assert.match(central,/function localPanelAccessReady\(\)/);
 assert.match(central,/Boolean\(acessoLocalAberto&&mode&&context\)/);
 assert.match(central,/function showPendingModuleShell\(name,title,routeId\)/);
+assert.match(central,/function priorizarSincronizacaoTerritorioPendente\(\)/);
+assert.match(central,/active&&\/\^\(\?:admin_login\|admin_territorio_login_pin\)\$\//);
+assert.match(central,/schedulePoll\(0\)/);
+assert.match(central,/scheduleRemoteAuthSync\(remoteAuthSeq,0\)/);
 
 const openStart=central.indexOf('function openModule(name,title,options)');
 const closeStart=central.indexOf('function closeViewer()',openStart);
@@ -26,7 +30,7 @@ assert.match(block,/if\(name==='moradores'/);
 assert.match(block,/if\(name==='profissionais'\)\{showNativeProfissionais/);
 
 // Correção cirúrgica: TACS/áreas não pode exibir uma tela provisória diferente da tela real.
-assert.match(block,/if\(name==='territorio'\)\{[\s\S]*?Confirmando a sessão para abrir TACS e áreas[\s\S]*?return;\s*\}/);
+assert.match(block,/if\(name==='territorio'\)\{[\s\S]*?priorizarSincronizacaoTerritorioPendente\(\)[\s\S]*?Confirmando a sessão para abrir TACS e áreas[\s\S]*?return;\s*\}/);
 const territoryGuard=block.match(/if\(name==='territorio'\)\{[\s\S]*?return;\s*\}/);
 assert.ok(territoryGuard,'Guard cirúrgico de TACS/áreas ausente.');
 assert.doesNotMatch(territoryGuard[0],/showPendingModuleShell/);
@@ -64,4 +68,4 @@ assert.match(closeBlock,/moduloPendente=null/);
 const core=fs.readFileSync('conecta-module-core-v1.js','utf8');
 assert.match(core,/function ready\(\)[\s\S]*Boolean\(s\.adminToken\|\|s\.territoryToken\)/);
 
-console.log('PRIMEIRO_TOQUE_PAINEIS_OK: TACS/áreas espera a sessão mantendo a Central visível, sem tela provisória; demais painéis preservam o comportamento anterior.');
+console.log('PRIMEIRO_TOQUE_PAINEIS_OK: TACS/áreas prioriza imediatamente a confirmação remota ao toque e abre automaticamente assim que o token chega, sem tela provisória; demais painéis preservam o comportamento anterior.');
