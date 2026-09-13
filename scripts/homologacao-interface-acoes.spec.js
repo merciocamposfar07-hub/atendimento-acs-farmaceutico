@@ -108,7 +108,7 @@ test('local-first sem token remoto abre painéis reais',async({page})=>{
     await expect(page.locator('#viewer')).toBeVisible();
     await expect(page.locator('.csc-pending-preview')).toHaveCount(0);
     await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.ativo())).toBe(name);
-    await page.locator('#viewerBack').click();
+    await page.evaluate(()=>window.ConectaCentralShellV1.voltar());
     await expect(page.locator('#viewer')).toBeHidden();
   }
 
@@ -120,7 +120,7 @@ test('local-first sem token remoto abre painéis reais',async({page})=>{
     const frame=page.locator('iframe[data-shell-module="'+name+'"]').first();
     await expect(frame).toBeVisible();
     await expect.poll(()=>frame.getAttribute('src')).toContain('localfirst=1');
-    await page.locator('#viewerBack').click();
+    await page.evaluate(()=>window.ConectaCentralShellV1.voltar());
     await expect(page.locator('#viewer')).toBeHidden();
   }
 });
