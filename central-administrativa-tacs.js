@@ -975,6 +975,21 @@ function renderAdminUbsDetail(host){
     '</div></div><button type="button" class="csc-admin-ubs-btn csc-admin-ubs-back" data-ubs-back="1">Voltar à lista de UBS</button></div>';
 }
 
+function adminUbsReadonlyNavigationControl(n){
+  if(!n||!n.matches)return false;
+  if(n.matches('.tab,.sectionTab,[data-section],[data-diag-filter],[aria-controls],[role="tab"],.csc-appbar-back,.viewer-back,[data-nav],[data-view],[data-tab],[data-filter],input[type="search"]'))return true;
+  var hint=[
+    text(n.id),text(n.getAttribute&&n.getAttribute('name')),
+    text(n.className),text(n.getAttribute&&n.getAttribute('placeholder')),
+    text(n.getAttribute&&n.getAttribute('aria-label'))
+  ].join(' ').toLowerCase();
+  if(/busca|buscar|pesquisa|search|filtro|filter|consulta|navega|navigation|voltar|back|anterior|proximo|próximo/.test(hint))return true;
+  if(n.tagName==='BUTTON'){
+    var label=text(n.textContent).toLowerCase();
+    if(/^(voltar|fechar|anterior|pr[oó]ximo|abrir|visualizar|ver\b|detalhes|filtrar|buscar|pesquisar|atualizar|recarregar)/.test(label))return true;
+  }
+  return false;
+}
 function applyAdminUbsRemoteMode(root){
   if(!root)return;
   var doc=root.ownerDocument||document,view=Boolean(adminUbsContext&&adminUbsContext.mode==='view'&&shellActiveModule!=='ubs');
@@ -985,7 +1000,7 @@ function applyAdminUbsRemoteMode(root){
     var notice=doc.createElement('div');notice.id='cscUbsRemoteModeNotice';notice.className='csc-ubs-remote-notice';notice.textContent='Modo apenas visualizar — alterações estão bloqueadas.';
     if(root.firstChild)root.insertBefore(notice,root.firstChild);else root.appendChild(notice);
     root.querySelectorAll('input,select,textarea,button').forEach(function(n){
-      if(n.matches&&n.matches('.tab,.sectionTab,[data-section],[data-diag-filter],[aria-controls]'))return;
+      if(adminUbsReadonlyNavigationControl(n))return;
       if(!n.disabled){n.disabled=true;n.setAttribute('data-csc-ubs-readonly-disabled','1')}
     });
   }catch(e){}
