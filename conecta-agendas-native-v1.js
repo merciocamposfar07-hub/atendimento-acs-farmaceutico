@@ -119,8 +119,13 @@ function create(host){
   }
   function load(message,done,options){
     options=options||{};
-    if(!ready()){setStatus('A sessão da Central não está disponível. Volte à Central.','erro');if(done)done(false,{ok:false});return}
     var had=options.skipPrime?false:prime();
+    if(!ready()){
+      confirmed=false;lockWrites();
+      setStatus(had?'Últimos dados confirmados disponíveis. Sincronizando a sessão em segundo plano…':'Painel pronto. Confirmando a sessão para carregar agendas e vagas…','aviso');
+      if(done)done(false,{ok:false,aguardandoSessao:true});
+      return;
+    }
     if(!had&&!options.silent)setStatus('Carregando agendas e vagas…','aviso');
     var payload=session();
     transport.read('admin_dados',payload,function(r){
