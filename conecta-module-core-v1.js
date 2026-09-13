@@ -5,6 +5,7 @@ if(window.ConectaModuleCoreV1)return;
 var CONTEXT_KEY='portalConectaModuleCoreV1';
 var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
+var UBS_TOKEN_KEY='portalConectaUbsTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
 var AREA_KEY='portalTacsCentralAreaV1';
 var AUTH_ISSUE_KEY='portalConectaModuleAuthIssueV1';
@@ -27,18 +28,20 @@ function context(){
   return ctx&&ctx.schemaVersion===1?ctx:null;
 }
 function canonicalSession(){
-  var admin='',territory='',device='';
+  var admin='',territory='',ubs='',device='';
   try{
     admin=text(sessionStorage.getItem(ADMIN_TOKEN_KEY)||'');
     territory=text(sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'');
+    ubs=text(sessionStorage.getItem(UBS_TOKEN_KEY)||'');
     device=text(localStorage.getItem(DEVICE_KEY)||'');
   }catch(e){}
-  return {adminToken:admin,territoryToken:territory,device:device};
+  return {adminToken:admin,territoryToken:territory,ubsToken:ubs,device:device};
 }
 function mode(){
   var ctx=context(),s=canonicalSession();
   if(s.territoryToken)return'tacs';
   if(s.adminToken)return'admin';
+  if(s.ubsToken)return'ubs';
   return text(ctx&&ctx.mode).toLowerCase();
 }
 function areaId(){
@@ -52,6 +55,7 @@ function areaId(){
 function session(extra){
   var s=canonicalSession(),out={dispositivo:s.device,areaId:areaId()};
   if(mode()==='tacs'&&s.territoryToken)out.territorioToken=s.territoryToken;
+  else if(mode()==='ubs'&&s.ubsToken)out.ubsToken=s.ubsToken;
   else if(s.adminToken)out.token=s.adminToken;
   Object.keys(extra||{}).forEach(function(k){out[k]=extra[k]});
   return out;
@@ -76,7 +80,7 @@ function identity(){
 }
 function ready(){
   var s=canonicalSession();
-  return Boolean(s.adminToken||s.territoryToken);
+  return Boolean(s.adminToken||s.territoryToken||s.ubsToken);
 }
 function state(){
   var ctx=context()||{};
@@ -97,8 +101,8 @@ function reportAuthIssue(message){
   try{sessionStorage.setItem(AUTH_ISSUE_KEY,JSON.stringify({message:text(message),areaId:areaId(),at:Date.now()}))}catch(e){}
 }
 function centralUrl(){
-  var area=encodeURIComponent(areaId());
-  return CENTRAL_URL+'?from=module&area='+area;
+  var area=encodeURIComponent(areaId()),kind=mode()==='ubs'?'&acesso=ubs':'';
+  return CENTRAL_URL+'?from=module&area='+area+kind;
 }
 function legacyAuthTarget(target){
   if(!target)return false;
@@ -138,7 +142,7 @@ function protectGlobalSession(){
   Object.defineProperty(Storage.prototype,'__conectaTask9Protected',{value:true,configurable:false,enumerable:false,writable:false});
   Storage.prototype.setItem=function(key,value){
     key=String(key||'');
-    if(this===window.sessionStorage&&(key===ADMIN_TOKEN_KEY||key===TERRITORY_TOKEN_KEY)){
+    if(this===window.sessionStorage&&(key===ADMIN_TOKEN_KEY||key===TERRITORY_TOKEN_KEY||key===UBS_TOKEN_KEY)){
       reportAuthIssue('Módulo tentou substituir a sessão global; operação bloqueada pelo núcleo.');
       return;
     }
@@ -146,7 +150,7 @@ function protectGlobalSession(){
   };
   Storage.prototype.removeItem=function(key){
     key=String(key||'');
-    if(this===window.sessionStorage&&(key===ADMIN_TOKEN_KEY||key===TERRITORY_TOKEN_KEY)){
+    if(this===window.sessionStorage&&(key===ADMIN_TOKEN_KEY||key===TERRITORY_TOKEN_KEY||key===UBS_TOKEN_KEY)){
       reportAuthIssue('Módulo tentou encerrar a sessão global; operação bloqueada pelo núcleo.');
       return;
     }
@@ -197,7 +201,7 @@ var PERFORMANCE_SCHEMA_VERSION=2;
 var PERFORMANCE_STALE_MS=60000;
 var PERFORMANCE_VERSION_KEYS=['serverVersion','remoteVersion','version','versao','revision','updatedAt','atualizadoEm','ultimaAtualizacao','lastUpdated','timestamp'];
 var PERFORMANCE_SECRET_KEYS={
-  token:1,admintoken:1,territoriotoken:1,sessiontoken:1,bearer:1,authorization:1,
+  token:1,admintoken:1,territoriotoken:1,ubstoken:1,sessiontoken:1,bearer:1,authorization:1,
   accesstoken:1,refreshtoken:1,quickkey:1,chaveconfianca:1,pin:1,pinhash:1,pinsalt:1
 };
 function performanceModuleName(name){
@@ -345,7 +349,7 @@ var REQUEST_READ_ACTIONS={
   admin_portal_manutencao_status:1
 };
 var REQUEST_SECRET_KEYS={
-  token:1,territoriotoken:1,dispositivo:1,requestid:1,callback:1,pin:1,
+  token:1,territoriotoken:1,ubstoken:1,dispositivo:1,requestid:1,callback:1,pin:1,
   quickkey:1,chaveconfianca:1,authorization:1,bearer:1,
   /* metadado somente do cliente; não altera a leitura remota */
   escopo:1
@@ -367,7 +371,7 @@ function requestHash(value){
   return (h>>>0).toString(16);
 }
 function requestScope(){
-  var s=canonicalSession(),credential=s.territoryToken||s.adminToken||'';
+  var s=canonicalSession(),credential=s.territoryToken||s.adminToken||s.ubsToken||'';
   return (mode()||'anon')+'|'+areaId()+'|'+requestHash(credential+'|'+s.device);
 }
 function requestPayloadSafe(payload){
