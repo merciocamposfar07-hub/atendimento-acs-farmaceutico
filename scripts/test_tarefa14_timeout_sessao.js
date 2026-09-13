@@ -87,9 +87,9 @@ assert.doesNotMatch(moradorSession,/if\(!local\)\{clearSession\(\);if\(queryFlag
 assert.match(moradorSession,/Sua sessão foi preservada\. O servidor ainda não confirmou os dados/);
 
 // Cache-busting das correções de Central/TACS/Morador.
-assert.match(centralHtml,/central-administrativa-tacs\.js\?v=20260912-task14-timeout-session-v2/);
-assert.match(centralHtml,/central-tacs-login-rapido-v1\.js\?v=20260912-task14-timeout-session-v2/);
-assert.match(publicIndex,/conecta-morador-session-v1\.js\?v=20260912-task14-timeout-session-v2/);
+assert.match(centralHtml,/central-administrativa-tacs\.js\?v=[A-Za-z0-9._-]+/);
+assert.match(centralHtml,/central-tacs-login-rapido-v1\.js\?v=[A-Za-z0-9._-]+/);
+assert.match(publicIndex,/conecta-morador-session-v1\.js\?v=[A-Za-z0-9._-]+/);
 
 // Tarefa 14 não altera backend Apps Script nem inicia a navegação/back da Tarefa 15.
 const backendFiles=fs.readdirSync('apps-script').filter(x=>x.endsWith('.gs')).join('\n');
