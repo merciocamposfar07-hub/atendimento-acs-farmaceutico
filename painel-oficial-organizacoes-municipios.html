@@ -2477,7 +2477,7 @@ try{visualObserver=new MutationObserver(function(){if(!window.__cscVisualGuardTi
 <body>
 <header><span class="badge">ADMINISTRADOR GERAL</span><h1>Municípios e organizações</h1><p>Estrutura global do Portal TACS. TACS de área não têm acesso a estas alterações.</p></header>
 <main>
-<section class="panel"><div id="status" class="status warn">Validando sua sessão administrativa…</div></section>
+<section class="panel"><div id="status" class="status warn">Aguarde enquanto os dados carregam…</div></section>
 <section id="summaryPanel" class="panel" hidden><h2>Estrutura atual</h2><div class="summary"><div class="number"><strong id="qOrg">0</strong><span>Organizações</span></div><div class="number"><strong id="qMun">0</strong><span>Municípios</span></div><div class="number"><strong id="qAreas">0</strong><span>Áreas</span></div><div class="number"><strong id="qProblems">0</strong><span>Pendências</span></div></div></section>
 <section id="contentPanel" class="panel" hidden>
 <div class="tabs" role="tablist" aria-label="Escolha o conteúdo"><button class="tab" data-tab="org" type="button" aria-expanded="false" aria-controls="viewOrg">Organizações</button><button class="tab" data-tab="mun" type="button" aria-expanded="false" aria-controls="viewMun">Municípios</button><button class="tab" data-tab="areas" type="button" aria-expanded="false" aria-controls="viewAreas">Áreas</button></div>
@@ -2531,7 +2531,7 @@ function load(){
  if(modulePerf&&typeof modulePerf.prime==='function'){
   cached=modulePerf.prime('municipios',function(saved){data=saved;dataConfirmed=false;render();status('Última confirmação da estrutura exibida. Atualizando em segundo plano…','warn')});
  }
- if(!cached)status('Atualizando estrutura multi-município…','warn');
+ if(!cached)status('Aguarde enquanto os dados carregam…','warn');
  var leituraPayload=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'municipios'}):{token:token,dispositivo:device};coreRead('admin_multimunicipio_dados',leituraPayload,function(done){post('admin_multimunicipio_dados',{},done)},function(r){
   if(!r||r.ok!==true){if(cached){dataConfirmed=false;syncMunicipioWriteState();status('Última confirmação permanece disponível somente para consulta; a atualização ainda não foi confirmada.','warn');return}apply(r);return}
   var diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('municipios',r):{changed:true};data=r;dataConfirmed=true;if(diff.changed||!cached)render();else syncMunicipioWriteState();status(diff.changed?'Estrutura multi-município carregada e validada.':'Estrutura atual confirmada; nenhuma mudança nova encontrada.','ok')
