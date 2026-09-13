@@ -2070,13 +2070,14 @@ ROOT.classList.toggle('csc-admin-panel',!CENTRAL);
 
 var ADMIN_TOKEN='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN='portalTacsTerritorioTokenV1';
+var UBS_TOKEN='portalConectaUbsTokenV1';
 var RETURN_FLAG='portalTacsRetornoCentralV1';
 var ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3';
 var sessionTimer=0;
 
 function text(v){return String(v==null?'':v).trim()}
 function hasSession(){
-  try{return Boolean(text(sessionStorage.getItem(ADMIN_TOKEN)||'')||text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}
+  try{return Boolean(text(sessionStorage.getItem(ADMIN_TOKEN)||'')||text(sessionStorage.getItem(TERRITORY_TOKEN)||'')||text(sessionStorage.getItem(UBS_TOKEN)||''))}catch(e){return false}
 }
 function isTerritory(){try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}}
 function syncSessionClass(){
