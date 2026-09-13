@@ -105,7 +105,8 @@ window.addEventListener('message',function(event){
 function schedulePoll(delay){
   if(!active)return;
   clearTimeout(active.pollTimer);
-  active.pollTimer=setTimeout(poll,Math.max(0,Number(delay||active.nextWait||1600)));
+  var wait=delay==null?active.nextWait:delay;
+  active.pollTimer=setTimeout(poll,Math.max(0,Number(wait==null?1600:wait)));
 }
 function poll(){
   if(!active)return;
@@ -117,7 +118,11 @@ function poll(){
       finishPost({ok:false,temporario:true,message:'A conexão com o servidor não foi confirmada. Toque em Entrar novamente.'});
       return;
     }
-    op.nextWait=Math.min(2200,Math.max(1400,op.nextWait+200));
+    if(op.territorioUrgente===true){
+      op.nextWait=Math.min(650,Math.max(300,Number(op.nextWait||300)+100));
+    }else{
+      op.nextWait=Math.min(2200,Math.max(1400,op.nextWait+200));
+    }
     schedulePoll(op.nextWait);
   });
 }
@@ -198,7 +203,11 @@ function resumePendingModule(){
 }
 function priorizarSincronizacaoTerritorioPendente(){
   if(active&&/^(?:admin_login|admin_territorio_login_pin)$/.test(text(active.action))){
-    schedulePoll(0);
+    active.territorioUrgente=true;
+    active.nextWait=300;
+    clearTimeout(active.pollTimer);
+    active.pollTimer=null;
+    poll();
     return true;
   }
   if(remoteAuthScope&&remoteAuthPin){
