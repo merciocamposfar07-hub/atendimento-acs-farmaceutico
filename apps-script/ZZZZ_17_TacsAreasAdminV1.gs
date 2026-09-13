@@ -501,24 +501,27 @@ function tacsTerritorioV1SalvarTacs_(p,acesso){
     var perfil=tacsTerritorioV1PerfilCadastro_(body.perfil||(anterior&&anterior.perfil)||'TACS');
     var temTacs=tacsTerritorioV1PerfilTem_(perfil,'TACS');
     var temUbs=tacsTerritorioV1PerfilTem_(perfil,'UBS');
-    var nome=tacsTerritorioV1Texto_(body.nomeCompleto||body.nome);
+    var ubsInstitucional=perfil==='UBS';
+    var nome=ubsInstitucional?'':tacsTerritorioV1Texto_(body.nomeCompleto||body.nome);
     var cns=temTacs?tacsTerritorioV1Digitos_(body.cnsProfissional||body.cns):'';
-    var cpf=tacsTerritorioV1Digitos_(body.cpf);
-    var email=tacsTerritorioV1Texto_(body.email).toLowerCase();
-    var dataNascimento=tacsTerritorioV1DataNascimento_(body.dataNascimento||body.nascimento);
-    var telefone=tacsTerritorioV1Digitos_(body.telefone||body.celular);
+    var cpf=ubsInstitucional?'':tacsTerritorioV1Digitos_(body.cpf);
+    var email=ubsInstitucional?'':tacsTerritorioV1Texto_(body.email).toLowerCase();
+    var dataNascimento=ubsInstitucional?'':tacsTerritorioV1DataNascimento_(body.dataNascimento||body.nascimento);
+    var telefone=ubsInstitucional?'':tacsTerritorioV1Digitos_(body.telefone||body.celular);
     var unidadeId=(temTacs||temUbs)?tacsTerritorioV1Id_(body.unidadeId||body.unidadeSaude):'';
     var microarea=temTacs?tacsTerritorioV1Texto_(body.microarea):'';
     var areaId=temTacs?tacsTerritorioV1Id_(body.areaId):'';
-    var funcaoUbs=temUbs?tacsTerritorioV1Texto_(body.funcaoUbs||body.funcao||body.cargo):'';
+    var funcaoUbs=temUbs&&!ubsInstitucional?tacsTerritorioV1Texto_(body.funcaoUbs||body.funcao||body.cargo):'';
     var ativo=tacsTerritorioV1Booleano_(body.ativo);
     var pin=tacsTerritorioV1Texto_(body.pin);
 
-    if(!nome)throw new Error('Informe o nome completo.');
-    if(!dataNascimento)throw new Error('Informe a data de nascimento.');
-    if(!/^[0-9]{11}$/.test(cpf)||(typeof moradoresAdminV1CpfValido_==='function'&&!moradoresAdminV1CpfValido_(cpf)))throw new Error('Informe um CPF válido.');
-    if(!/^[0-9]{10,11}$/.test(telefone))throw new Error('Informe um celular com DDD.');
-    if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error('Informe um e-mail válido.');
+    if(!ubsInstitucional){
+      if(!nome)throw new Error('Informe o nome completo.');
+      if(!dataNascimento)throw new Error('Informe a data de nascimento.');
+      if(!/^[0-9]{11}$/.test(cpf)||(typeof moradoresAdminV1CpfValido_==='function'&&!moradoresAdminV1CpfValido_(cpf)))throw new Error('Informe um CPF válido.');
+      if(!/^[0-9]{10,11}$/.test(telefone))throw new Error('Informe um celular com DDD.');
+      if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error('Informe um e-mail válido.');
+    }
     if(temTacs){
       if(!/^[0-9]{15}$/.test(cns)||/^(\d)\1{14}$/.test(cns))throw new Error('O CNS profissional deve conter 15 números válidos.');
       if(!microarea)throw new Error('Informe a microárea do TACS.');
@@ -526,7 +529,7 @@ function tacsTerritorioV1SalvarTacs_(p,acesso){
     }
     if(temUbs){
       if(!unidadeId)throw new Error('Informe a unidade de saúde do perfil UBS.');
-      if(!funcaoUbs)throw new Error('Informe a função do responsável na UBS.');
+      if(!ubsInstitucional&&!funcaoUbs)throw new Error('Informe a função do responsável na UBS.');
     }
     if(pin&&!/^[0-9]{4,8}$/.test(pin))throw new Error('O PIN individual deve conter de 4 a 8 números.');
     if(!existente&&!pin)throw new Error('Defina um PIN de acesso para o novo cadastro.');
@@ -540,8 +543,10 @@ function tacsTerritorioV1SalvarTacs_(p,acesso){
       var repetido=tacsTerritorioV1LinhaPor_(tabela,'CNS_PROFISSIONAL',cns);
       if(repetido&&repetido.row!==(existente&&existente.row))throw new Error('Este CNS profissional já pertence a outro TACS.');
     }
-    var repetidoCpf=tacsTerritorioV1LinhaPor_(tabela,'CPF',cpf);
-    if(repetidoCpf&&repetidoCpf.row!==(existente&&existente.row))throw new Error('Este CPF já pertence a outro cadastro de Administrador/TACS/UBS.');
+    if(cpf){
+      var repetidoCpf=tacsTerritorioV1LinhaPor_(tabela,'CPF',cpf);
+      if(repetidoCpf&&repetidoCpf.row!==(existente&&existente.row))throw new Error('Este CPF já pertence a outro cadastro de Administrador/TACS/UBS.');
+    }
 
     var agora=new Date();
     var salt=anterior&&anterior.pinSalt||'';
@@ -565,14 +570,14 @@ function tacsTerritorioV1SalvarTacs_(p,acesso){
       ATIVO:ativo,
       PIN_SALT:salt,PIN_HASH:hash,CRIADO_EM:anterior&&anterior.criadoEm||agora,
       ATUALIZADO_EM:agora,OPERADOR_ATUALIZACAO:acesso.operadorId,
-      DATA_NASCIMENTO:dataNascimento||(anterior&&anterior.dataNascimento||''),
+      DATA_NASCIMENTO:ubsInstitucional?'':(dataNascimento||(anterior&&anterior.dataNascimento||'')),
       FUNCAO_UBS:funcaoUbs
     };
     tacsTerritorioV1Gravar_(tabela,existente,dados);
     var depois=tacsTerritorioV1EncontrarTacs_(id);
     tacsTerritorioV1Auditar_('SALVAR_ACESSO',id,depois&&depois.areaId||'',acesso,anterior,depois);
     SpreadsheetApp.flush();
-    return {ok:true,message:existente?'Cadastro de acesso atualizado.':'Administrador/TACS/UBS cadastrado.',tacs:tacsTerritorioV1PublicarTacs_(depois)};
+    return {ok:true,message:existente?(ubsInstitucional?'Cadastro da UBS atualizado.':'Cadastro de acesso atualizado.'):(ubsInstitucional?'UBS cadastrada.':'Administrador/TACS/UBS cadastrado.'),tacs:tacsTerritorioV1PublicarTacs_(depois)};
   }finally{lock.releaseLock();}
 }
 
