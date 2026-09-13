@@ -672,7 +672,7 @@ function conectaAcessoV1DiagnosticoMoradorAdmin_(p){
   if(somenteCadastro){
     var porCadastro=conectaAcessoV1BuscarCadastroAreaDiagnostico_(filtros.cadastro,filtros.areaId);
     if(porCadastro&&porCadastro.resposta)return porCadastro.resposta;
-    return conectaAcessoV1RespostaDiagnosticoLista_(porCadastro&&porCadastro.pessoais||[],filtros);
+    return conectaAcessoV1RespostaDiagnosticoLista_(porCadastro&&porCadastro.pessoas||[],filtros);
   }
   var lista=conectaAcessoV1BuscarDiagnostico_(filtros);
   return conectaAcessoV1RespostaDiagnosticoLista_(lista,filtros);
