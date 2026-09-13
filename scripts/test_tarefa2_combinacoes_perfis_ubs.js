@@ -50,7 +50,7 @@ assert.ok(formJs.includes("UBS:'UBS'"),'UBS pura foi removida do mapa do formul�
 // Combinações mantêm exigências por vínculo.
 assert.match(formJs,/function profileHasTacs\(v\)/);
 assert.match(formJs,/function profileHasUbs\(v\)/);
-assert.match(formJs,/isTacs=profileHasTacs\(profile\),isUbs=profileHasUbs\(profile\),hasUnit=isTacs\|\|isUbs/);
+assert.match(formJs,/isTacs=profileHasTacs\(profile\),isUbs=profileHasUbs\(profile\),ubsInstitucional=isInstitutionalUbsProfile\(profile\),hasUnit=isTacs\|\|isUbs/);
 assert.match(territory,/var temTacs=tacsTerritorioV1PerfilTem_\(perfil,'TACS'\)/);
 assert.match(territory,/var temUbs=tacsTerritorioV1PerfilTem_\(perfil,'UBS'\)/);
 assert.match(territory,/if\(temTacs\)[\s\S]*CNS profissional[\s\S]*microárea do TACS/);
