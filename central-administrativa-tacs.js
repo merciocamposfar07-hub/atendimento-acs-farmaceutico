@@ -684,8 +684,10 @@ function ensureShellFrame(name,url,title,routeId){
   return frame;
 }
 function showShellFrame(name,frame,title,routeId){
+  try{if(window.ConectaAgendasNativeV1&&typeof window.ConectaAgendasNativeV1.hide==='function')window.ConectaAgendasNativeV1.hide()}catch(e){}
+  var nativeHost=el('nativeModuleHost');if(nativeHost)nativeHost.hidden=true;
   Object.keys(shellFrames).forEach(function(key){var item=shellFrames[key];if(item)item.hidden=item!==frame});
-  shellActiveModule=name;shellActiveRoute=routeId;
+  shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
   el('viewerTitle').textContent=title||'Painel';
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer');viewer.hidden=false;
   frame.hidden=false;document.body.classList.add('viewer-open');
@@ -694,8 +696,7 @@ function showShellFrame(name,frame,title,routeId){
      enquanto a consulta remota continua em paralelo. */
   setShellOpening(title||'Painel',frame.dataset.shellReady!=='1');
   /* TAREFA_10_AGENDA_LAZY_VISIBLE_V1:
-     o documento só começa a carregar depois que shell e frame já estão visíveis.
-     No Safari/iPhone isso evita voltar ao padrão antigo de agenda em iframe oculto. */
+     módulos ainda não migrados continuam carregando somente depois que o shell está visível. */
   if(frame.dataset.shellLoaded!=='1'){
     frame.dataset.shellLoaded='1';
     var carregar=function(){var url=frame.dataset.shellUrl||'about:blank';if(frame.src!==url)frame.src=url};
@@ -703,6 +704,9 @@ function showShellFrame(name,frame,title,routeId){
   }
 }
 function shellHasUnsaved(frame){
+  if(shellActiveNative==='agendas'){
+    try{return Boolean(window.ConectaAgendasNativeV1&&window.ConectaAgendasNativeV1.hasUnsaved&&window.ConectaAgendasNativeV1.hasUnsaved())}catch(e){return false}
+  }
   try{return Boolean(frame&&frame.contentDocument&&frame.contentDocument.documentElement.dataset.tacsDirty==='1')}catch(e){return false}
 }
 function openModule(name,title,options){
@@ -714,13 +718,19 @@ function openModule(name,title,options){
     return;
   }
   moduloPendente=null;publishModuleCore();
+  if(name==='agendas'){showNativeAgenda(title||'Agendas e vagas',routeId);return}
   var frame=ensureShellFrame(name,url,title||'Painel',routeId);
   showShellFrame(name,frame,title||'Painel',routeId);
 }
 function closeViewer(){
   var frame=shellActiveFrame();
   if(shellHasUnsaved(frame)&&!window.confirm('Há alterações que podem não ter sido salvas. Deseja voltar à Central mesmo assim?'))return false;
-  el('viewer').hidden=true;setShellOpening('',false);document.body.classList.remove('viewer-open');shellActiveModule='';shellActiveRoute='';
+  if(shellActiveNative==='agendas'){
+    try{if(window.ConectaAgendasNativeV1&&window.ConectaAgendasNativeV1.hide)window.ConectaAgendasNativeV1.hide()}catch(e){}
+    var nativeHost=el('nativeModuleHost');if(nativeHost)nativeHost.hidden=true;
+  }
+  el('viewer').hidden=true;setShellOpening('',false);document.body.classList.remove('viewer-open');
+  shellActiveModule='';shellActiveRoute='';shellActiveNative='';
   refreshHealth(false);return true;
 }
 function loadContext(message){
@@ -907,6 +917,7 @@ window.ConectaCentralShellV1={
   resetar:resetModuleShell,
   ativo:function(){return shellActiveModule},
   rotaAtiva:function(){return shellActiveRoute},
+  tipoAtivo:function(){return shellActiveNative?'native':'frame'},
   escopo:function(){return shellCurrentScope()},
   contagemFrames:function(){return Object.keys(shellFrames).length}
 };
