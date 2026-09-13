@@ -1067,7 +1067,7 @@ function normalizeEmbeddedPanelFrame(frame){
       style=doc.createElement('style');style.id='cscEmbeddedApp4SingleHeaderV1';
       style.textContent=[
         '#cscInstitutionalAppbar{display:flex!important;position:static!important;top:auto!important;inset:auto!important;background:#071827!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}',
-        '#portalTacsBackCentralV1{display:none!important}',
+        (frame&&frame.dataset&&frame.dataset.shellModule==='portal')?'#portalTacsBackCentralV1{display:block!important}':'#portalTacsBackCentralV1{display:none!important}',
         'html,body,main,footer,.footer{background:#071827!important;background-image:none!important;border-top:0!important}',
         '#cscPlatformFooter{display:flex!important;position:static!important;background:#071827!important;border:0!important;box-shadow:none!important}'
       ].join('');
@@ -1208,10 +1208,18 @@ function shellHasUnsaved(frame){
   }
   try{return Boolean(frame&&frame.contentDocument&&frame.contentDocument.documentElement.dataset.tacsDirty==='1')}catch(e){return false}
 }
+function showPortalTacs(title,routeId,url){
+  /* RETORNO_CENTRAL_PORTAL_V3:
+     Portal TACS permanece dentro do shell persistente da Central.
+     O botão interno Voltar à Central chama o shell pai e apenas fecha o viewer. */
+  publishModuleCore();
+  var portalFrame=ensureShellFrame('portal',url,title||'Portal TACS',routeId);
+  showShellFrame('portal',portalFrame,title||'Portal TACS',routeId);
+}
 function openModule(name,title,options){
   if(name==='ubs'){if(mode==='admin')showAdminUbs(title||'UBS');return}
   var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
-  if(name==='portal'){window.open(url,'_blank','noopener');return}
+  if(name==='portal'){showPortalTacs(title||'Portal TACS',routeId,url);return}
   var remoteReady=Boolean(token||territoryToken),localReady=localPanelAccessReady();
   if(!remoteReady&&!localReady){
     moduloPendente={name:name,title:title||'Painel',options:moduleRouteOptions(options)};
