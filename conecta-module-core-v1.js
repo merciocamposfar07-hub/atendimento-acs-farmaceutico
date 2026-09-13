@@ -386,10 +386,39 @@ function requestInvalidate(){
 function requestNoteAction(action){
   if(!requestIsRead(action))requestInvalidate();
 }
+/* TAREFA_14_TIMEOUT_SESSAO_V1:
+   falha temporária nunca invalida sessão nem transforma o módulo em tela de PIN.
+   somente uma recusa explícita de autenticação pode autorizar invalidação. */
+var SESSION_AUTH_REFUSAL_RE=/(sess[aã]o|token|autentica[cç][aã]o|acesso).*(inv[aá]lid|expir|recus|revog|desativ|n[aã]o autoriz)|n[aã]o autorizado|unauthor|forbidden|pertence a outro aparelho/i;
+function sessionFailureClassify(result){
+  var r=result&&typeof result==='object'?result:{ok:false,message:'Resposta vazia.'};
+  if(r.ok===true)return{ok:true,explicitAuthRefusal:false,temporary:false,preserveSession:true,message:text(r.message)};
+  var message=text(r.message),explicit=Boolean(r.temporario!==true&&SESSION_AUTH_REFUSAL_RE.test(message));
+  return{ok:false,explicitAuthRefusal:explicit,temporary:!explicit,preserveSession:!explicit,message:message};
+}
+function sessionFailureNormalize(result){
+  var base=result&&typeof result==='object'?result:{ok:false,message:'Resposta vazia.'},classification=sessionFailureClassify(base);
+  if(classification.ok)return base;
+  var out={};Object.keys(base).forEach(function(k){out[k]=base[k]});
+  if(classification.explicitAuthRefusal){
+    out.authRecusada=true;out.preservarSessao=false;
+  }else{
+    out.temporario=true;out.preservarSessao=true;
+  }
+  return out;
+}
+function sessionShouldInvalidate(result){return sessionFailureClassify(result).explicitAuthRefusal===true}
+var sessionPolicyApi={
+  classify:sessionFailureClassify,
+  normalize:sessionFailureNormalize,
+  shouldInvalidate:sessionShouldInvalidate,
+  authRefusalPattern:SESSION_AUTH_REFUSAL_RE
+};
+
 function requestExecute(executor){
   return new Promise(function(resolve){
     var done=false;
-    function finish(result){if(done)return;done=true;resolve(result||{ok:false,message:'Resposta vazia.'})}
+    function finish(result){if(done)return;done=true;resolve(sessionFailureNormalize(result))}
     try{
       var returned=executor(finish);
       if(returned&&typeof returned.then==='function')returned.then(finish).catch(function(e){finish({ok:false,message:text(e&&e.message)||'Falha na leitura.'})});
@@ -451,6 +480,7 @@ window.ConectaModuleCoreV1={
   centralUrl:centralUrl,
   performance:performanceApi,
   requests:requestApi,
+  sessionPolicy:sessionPolicyApi,
   task9ModuleGate:installTask9ModuleGate
 };
 try{document.documentElement.dataset.conectaModuleCore='1'}catch(e){}
