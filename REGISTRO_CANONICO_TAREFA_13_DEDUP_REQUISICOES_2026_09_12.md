@@ -1,7 +1,7 @@
 # Registro canônico — Tarefa 13 — Deduplicação de requisições ao servidor
 
 Data: 12/09/2026  
-Status: IMPLEMENTADA EM CÓDIGO; AGUARDANDO VALIDAÇÃO INTEGRAL
+Status: VALIDADA INTERNAMENTE E PUBLICADA
 
 ## Objetivo exclusivo
 Uma leitura idêntica não deve gerar várias chamadas ao Apps Script quando módulos do shell precisam da mesma informação. A Central permanece a origem do contexto e não depende do bridge consumidor.
@@ -43,3 +43,18 @@ Saída esperada:
 `TAREFA_13_DEDUP_REQUISICOES_OK`
 
 Esta tarefa é de frontend/core. Nenhuma alteração de backend Apps Script foi necessária; a versão de produção deve permanecer em **208** se a validação passar.
+
+
+## Resultado técnico verificado
+- gate `TAREFA_13_DEDUP_REQUISICOES_OK`: **aprovado**;
+- gates anteriores de desempenho e frescor: **aprovados**;
+- suíte integral: **aprovada**;
+- `QUALITY_GATE_V101_OK`: **aprovado**;
+- homologação interna: `V101_INTERNO_APROVADO=SIM`, exigência 100%;
+- workflow de validação: **success**, run `34726702055`;
+- GitHub Pages: **success**, run `34726715749`;
+- comparação desde a Tarefa 12: **nenhum arquivo `apps-script/` alterado**;
+- Apps Script permanece na versão **208**.
+
+## Fechamento
+A **Tarefa 13 está validada internamente, publicada e registrada canonicamente**. A deduplicação permanece restrita a leituras; qualquer escrita invalida o compartilhamento. As regras de timeout e preservação de sessão continuam reservadas à Tarefa 14.
