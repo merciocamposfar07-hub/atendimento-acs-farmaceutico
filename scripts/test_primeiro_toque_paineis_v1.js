@@ -34,8 +34,12 @@ assert.match(block,/if\(name==='territorio'\)\{[\s\S]*?priorizarSincronizacaoTer
 const territoryGuard=block.match(/if\(name==='territorio'\)\{[\s\S]*?return;\s*\}/);
 assert.ok(territoryGuard,'Guard cirúrgico de TACS/áreas ausente.');
 assert.doesNotMatch(territoryGuard[0],/showPendingModuleShell/);
-assert.match(block,/if\(name==='territorio'&&frame\.dataset\.shellLocalFirst==='1'\)[\s\S]*?frame\.dataset\.shellLoaded=''[\s\S]*?frame\.src='about:blank'/);
-assert.match(central,/painel-oficial-tacs-areas\.html\?from=central&localfirst=1&v=/);
+assert.match(block,/if\(name==='territorio'&&frame\.dataset\.shellLocalFirst==='1'\)[\s\S]*?delete frame\.dataset\.shellLocalFirst/);
+const remoteTerritoryGuard=block.match(/if\(name==='territorio'&&frame\.dataset\.shellLocalFirst==='1'\)\{[\s\S]*?\n  \}/);
+assert.ok(remoteTerritoryGuard,'Guard de promoção local→remoto ausente.');
+assert.doesNotMatch(remoteTerritoryGuard[0],/about:blank|shellLoaded=''|shellReady=''/,'A confirmação remota não pode apagar o painel territorial já visível.');
+assert.match(central,/teste-v1\/painel-tacs-areas-v1\.html\?from=central&localfirst=1&v=/);
+assert.doesNotMatch(central,/if\(name==='territorio'\)return '\/atendimento-acs-farmaceutico\/painel-oficial-tacs-areas\.html\?from=central&localfirst=1/);
 
 // Os demais painéis em frame preservam a prévia segura já existente.
 const previewStart=central.indexOf('function ensurePendingPreviewStyle');
@@ -73,9 +77,17 @@ assert.match(core,/params\.get\('localfirst'\)==='1'&&Boolean\(ctx&&text\(ctx\.m
 assert.match(core,/if\(!ready\(\)&&!localFirstContextAllowed\(\)\)showCentralGate\(\)/);
 
 const territorioHtml=fs.readFileSync('teste-v1/painel-tacs-areas-v1.html','utf8');
+const territorioJs=fs.readFileSync('teste-v1/painel-tacs-areas-v1.js','utf8');
 const wrapper=fs.readFileSync('painel-oficial-tacs-areas.html','utf8');
 assert.match(territorioHtml,/conecta-module-core-v1\.js\?v=20260913-territorio-first-touch-v3/);
-assert.match(territorioHtml,/painel-tacs-areas-v1\.js\?v=20260913-territorio-first-touch-ubs-cache-v3/);
-assert.match(wrapper,/painel-tacs-areas-v1\.html\?v=20260913-territorio-first-touch-ubs-cache-v3/);
+assert.match(territorioHtml,/painel-tacs-areas-v1\.js\?v=20260913-territorio-contexto-local-v4/);
+assert.match(wrapper,/painel-tacs-areas-v1\.html\?v=20260913-territorio-contexto-local-v4/);
+assert.match(territorioJs,/function localFirstWithoutRemote\(\)/);
+assert.match(territorioJs,/function primeTerritoryFromCentralContext\(\)/);
+assert.match(territorioJs,/state&&state\.cache&&state\.cache\.contextKey/);
+assert.match(territorioJs,/sessionStorage\.getItem\(key\)/);
+assert.match(territorioJs,/territoryConfirmed=false;[\s\S]*?syncTerritoryWriteState\(\)/);
+assert.match(territorioJs,/if\(localFirst\)\{[\s\S]*?primeTerritoryFromCentralContext\(\)[\s\S]*?scheduleLocalFirstRemoteSync\(\);[\s\S]*?return;/);
+assert.match(territorioJs,/moduleCore\.ready\(\)[\s\S]*?loadData\('Dados territoriais confirmados\.'\)/);
 
-console.log('PRIMEIRO_TOQUE_PAINEIS_OK: TACS/áreas abre a tela real no primeiro toque em modo somente leitura e atualiza com a sessão remota; cache da correção UBS foi invalidado.');
+console.log('PRIMEIRO_TOQUE_PAINEIS_OK: TACS/áreas abre diretamente com o contexto territorial local já confirmado, sem tela vazia; escrita continua bloqueada até a sessão remota e a sincronização ocorre no mesmo painel.');
