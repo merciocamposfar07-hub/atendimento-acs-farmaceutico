@@ -246,8 +246,14 @@ function loadData(message,operationMessage,backgroundRetry){
   if(!backgroundRetry&&modulePerf&&typeof modulePerf.prime==='function'){
     cached=modulePerf.prime('territorio',function(saved){
       data=territoryPerformancePayload(saved);territoryConfirmed=false;render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;panelLoading(false);
-      loginStatus(localFirst?'Dados locais disponíveis. Confirmando a sessão em segundo plano…':'Aguarde enquanto os dados carregam…','warn');
+      loginStatus('Dados locais disponíveis. Confirmando a atualização em segundo plano…','warn');
     });
+  }
+  /* CORRECAO_CIRURGICA_TERRITORIO_INSTANT_V2:
+     mesmo com a sessão remota já pronta, reutiliza imediatamente o contexto territorial
+     confirmado pela Central. Escritas seguem bloqueadas até a releitura remota confirmar. */
+  if(!backgroundRetry&&!cached&&el('dashboard').classList.contains('hidden')){
+    cached=primeTerritoryFromCentralContext()?{source:'central-context'}:null;
   }
   if(localFirst){
     if(!cached)primeTerritoryFromCentralContext();
