@@ -13,7 +13,16 @@ new Function(backend);
 // unificação do núcleo de Morador feita pela Tarefa 7.
 assert.match(access,/function adminResidentDiagnostic\(\)\{return roleRecognized\('ADMIN'\)\}/);
 assert.match(access,/Diagnóstico administrativo do Morador/);
-assert.match(access,/CPF ou CNS/);
+assert.match(access,/Cartão SUS \(CNS\)/);
+assert.match(access,/cscResidentCpf/);
+assert.match(access,/cscResidentCns/);
+assert.match(access,/cscResidentNameDiagnostic/);
+assert.match(access,/cscResidentBirthDiagnostic/);
+assert.match(access,/cscResidentAreaRegistration/);
+assert.match(access,/function formatCpfResident\(/);
+assert.match(access,/function formatCnsResident\(/);
+assert.match(access,/Número de cadastro na área/);
+assert.match(access,/Ao localizar o morador, o Conecta identifica também os integrantes da mesma família pelo vínculo já existente no CSV/);
 assert.match(access,/post\('conecta_morador_diagnostico_admin'/);
 
 const diagStart=access.indexOf('function diagnoseResidentAdmin(');
@@ -30,6 +39,11 @@ assert.match(backend,/conecta_morador_diagnostico_admin/);
 assert.match(backend,/function conectaAcessoV1AparelhoAdministrativo_/);
 assert.match(backend,/function conectaAcessoV1BuscarCns_/);
 assert.match(backend,/function conectaAcessoV1DiagnosticoMoradorAdmin_/);
+assert.match(backend,/function conectaAcessoV1BuscarNomeNascimentoDiagnostico_/);
+assert.match(backend,/function conectaAcessoV1BuscarCadastroAreaDiagnostico_/);
+assert.match(backend,/function conectaAcessoV1FamiliaDiagnostico_/);
+assert.match(backend,/familiaTotal:/);
+assert.match(backend,/consultaFamilia:true/);
 assert.match(backend,/conectaAcessoV1ConfiancaValida_\('ADMIN','ADMIN_GERAL',dispositivo,chave\)/);
 assert.match(backend,/modo:'DIAGNOSTICO_ADMINISTRATIVO',[\s\S]*coreMode:'DIAGNOSTICO_ADMINISTRATIVO',[\s\S]*somenteLeitura:true/);
 assert.match(backend,/vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,notificacoesAlteradas:false,sessaoMoradorCriada:false/);
@@ -51,4 +65,4 @@ assert.match(backend,/function conectaAcessoV1ConfirmarNotificacao_[\s\S]*Aparel
 assert.match(access,/RESIDENT_CORE_DIAGNOSTIC='DIAGNOSTICO_ADMINISTRATIVO'/);
 assert.match(access,/function residentCoreMode\(\)/);
 
-console.log('TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK: CPF/CNS em aparelho Administrador permanecem em diagnóstico somente leitura; PIN, sessão, vínculo residencial e notificações continuam bloqueados.');
+console.log('TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK: diagnóstico administrativo aceita CPF/CNS padronizados, nome+nascimento e cadastro da área, retorna a família vinculada e permanece somente leitura.');
