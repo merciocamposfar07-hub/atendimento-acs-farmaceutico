@@ -29,6 +29,18 @@ assert.doesNotMatch(access,/Preencha apenas uma forma de busca por vez/);
 assert.doesNotMatch(access,/Para buscar por nome, informe também a data de nascimento/);
 assert.match(access,/post\('conecta_morador_diagnostico_admin'/);
 
+assert.match(access,/function transientConfirmationError\(message\)\{var e=new Error\(message\);e\.conectaTransient=true;return e\}/);
+const jsonpStart=access.indexOf('function jsonp(params)');
+const postStart=access.indexOf('function post(action,payload)',jsonpStart);
+assert(jsonpStart>=0&&postStart>jsonpStart,'Transporte JSONP do Conecta não localizado.');
+const jsonpBlock=access.slice(jsonpStart,postStart);
+assert.doesNotMatch(jsonpBlock,/A confirmação demorou demais\. Tente novamente\./,'Um timeout isolado da consulta de resultado não pode virar erro vermelho definitivo.');
+assert.match(jsonpBlock,/transientConfirmationError\('A confirmação ainda está em processamento\.'\)/);
+const postEnd=access.indexOf('function aquecerPinMorador',postStart);
+const postBlock=access.slice(postStart,postEnd);
+assert.match(postBlock,/e\.conectaTransient!==true/);
+assert.match(postBlock,/setTimeout\(resolve,wait\)\}\)\.then\(poll\)/,'Falha transitória da confirmação deve repetir a consulta do mesmo requestId.');
+
 const diagStart=access.indexOf('function diagnoseResidentAdmin(');
 const diagEnd=access.indexOf('function startCpf(',diagStart);
 assert(diagStart>=0&&diagEnd>diagStart,'Função de diagnóstico administrativo não localizada.');
@@ -49,6 +61,9 @@ assert.match(backend,/function conectaAcessoV1FamiliaDiagnostico_/);
 assert.match(backend,/function conectaAcessoV1FiltrosDiagnostico_/);
 assert.match(backend,/function conectaAcessoV1BuscarDiagnostico_/);
 assert.match(backend,/function conectaAcessoV1RespostaDiagnosticoLista_/);
+
+assert.match(backend,/var somenteCadastro=Boolean\(filtros\.cadastro&&!filtros\.cpf&&!filtros\.cns&&!filtros\.nome&&!filtros\.nascimento\)/);
+assert.match(backend,/if\(somenteCadastro\)\{[\s\S]*?conectaAcessoV1BuscarCadastroAreaDiagnostico_\(filtros\.cadastro,filtros\.areaId\)[\s\S]*?if\(porCadastro&&porCadastro\.resposta\)return porCadastro\.resposta/,'Busca somente pelo número de cadastro deve usar o caminho familiar direto, sem releituras genéricas repetidas.');
 assert.match(backend,/if\(filtros\.cpf&&/);
 assert.match(backend,/if\(filtros\.cns&&/);
 assert.match(backend,/if\(filtros\.nomeNormalizado\)/);

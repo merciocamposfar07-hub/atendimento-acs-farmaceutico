@@ -664,7 +664,17 @@ function conectaAcessoV1RespostaDiagnosticoLista_(lista,filtros){
 function conectaAcessoV1DiagnosticoMoradorAdmin_(p){
   var dispositivo=conectaAcessoV1Texto_(p.dispositivo),chave=conectaAcessoV1Texto_(p.chaveConfianca);
   if(!dispositivo||!conectaAcessoV1ConfiancaValida_('ADMIN','ADMIN_GERAL',dispositivo,chave))throw new Error('Aparelho administrativo não reconhecido para diagnóstico.');
-  var filtros=conectaAcessoV1FiltrosDiagnostico_(p),lista=conectaAcessoV1BuscarDiagnostico_(filtros);
+  var filtros=conectaAcessoV1FiltrosDiagnostico_(p);
+  /* HOTFIX_DIAGNOSTICO_CADASTRO_AREA_V1:
+     quando o número de cadastro é o único filtro, usa a busca familiar já existente
+     e evita reler a mesma planilha várias vezes para montar a resposta. */
+  var somenteCadastro=Boolean(filtros.cadastro&&!filtros.cpf&&!filtros.cns&&!filtros.nome&&!filtros.nascimento);
+  if(somenteCadastro){
+    var porCadastro=conectaAcessoV1BuscarCadastroAreaDiagnostico_(filtros.cadastro,filtros.areaId);
+    if(porCadastro&&porCadastro.resposta)return porCadastro.resposta;
+    return conectaAcessoV1RespostaDiagnosticoLista_(porCadastro&&porCadastro.pessoais||[],filtros);
+  }
+  var lista=conectaAcessoV1BuscarDiagnostico_(filtros);
   return conectaAcessoV1RespostaDiagnosticoLista_(lista,filtros);
 }
 

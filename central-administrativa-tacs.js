@@ -624,7 +624,7 @@ function moduleRouteId(name,options){
   return id;
 }
 function moduleUrl(name,options){
-  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260913-apresentacao-paineis-v2',territoryRevision='20260913-territorio-first-touch-ubs-cache-v3',loadingRevision='20260913-loading-standard-v1',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
+  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260913-apresentacao-paineis-v2',territoryRevision='20260913-territorio-contexto-local-v4',loadingRevision='20260913-loading-standard-v1',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
   if(opts.view)extra+='&view='+encodeURIComponent(opts.view);
   if(opts.all)extra+='&all='+encodeURIComponent(opts.all);
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
@@ -632,7 +632,7 @@ function moduleUrl(name,options){
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
-  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&localfirst=1&v='+territoryRevision;
+  if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
   if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;
   if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;
   return ''
@@ -1230,10 +1230,9 @@ function openModule(name,title,options){
   if(name==='profissionais'){showNativeProfissionais(title||'Profissionais e serviços',routeId);return}
   var frame=ensureShellFrame(name,url,title||'Painel',routeId);
   if(name==='territorio'&&frame.dataset.shellLocalFirst==='1'){
+    /* O mesmo painel local permanece visível; ele observa a chegada da sessão remota
+       e sincroniza os dados sem voltar para about:blank. */
     delete frame.dataset.shellLocalFirst;
-    frame.dataset.shellLoaded='';
-    frame.dataset.shellReady='';
-    try{frame.src='about:blank'}catch(e){}
   }
   showShellFrame(name,frame,title||'Painel',routeId);
 }
