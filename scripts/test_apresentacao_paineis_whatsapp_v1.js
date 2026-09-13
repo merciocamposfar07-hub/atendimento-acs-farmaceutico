@@ -37,6 +37,9 @@ assert.match(centralHtml,/cscPanelVisualConsistencyV2/);
 assert.match(centralHtml,/\.viewer\.csc-native-viewer>\.viewer-bar\{[\s\S]*position:static!important/);
 assert.match(central,/csc-frame-viewer/);
 assert.match(central,/#cscInstitutionalAppbar\{display:flex!important;position:static!important/);
+assert.match(centralHtml,/\.viewer\.csc-native-viewer:not\(\[hidden\]\)\{[\s\S]*background:#071827!important/);
+assert.match(centralHtml,/\.viewer\.csc-native-viewer>\.viewer-platform-footer\{[\s\S]*background:#071827!important/);
+assert.match(central,/html,body,main,footer,\.footer\{background:#071827!important/);
 
 // Ícone oficial + título no cabeçalho e rodapé institucional nos painéis nativos.
 assert.match(centralHtml,official);
@@ -60,11 +63,18 @@ assert.match(agenda,/PortalTacsAgendaWhatsAppV2API/);
 assert.match(agenda,/admin_salvar_agenda/);
 assert.match(central,/agenda-whatsapp-card-v1\.js/);
 assert.match(agendaWa,official);
+assert.match(central,/agenda-whatsapp-card-v1\.js\?v=20260913-apresentacao-paineis-v2/);
+assert.match(central,/conecta-agendas-native-v1\.js\?v=20260913-apresentacao-paineis-v2/);
+assert.match(central,/revision='20260913-apresentacao-paineis-v2'/);
+assert.match(centralHtml,/central-administrativa-tacs\.js\?v=20260913-apresentacao-paineis-v2/);
+assert.match(centralHtml,/central-tacs-login-rapido-v1\.js\?v=20260913-apresentacao-paineis-v2/);
 assert.match(agendaWa,/officialIcon:CONECTA_OFFICIAL_ICON/);
 
 // Recados e campanhas continuam oferecendo Status do WhatsApp e agora usam o ícone oficial.
 assert.match(recadosLegacy,/recados-campanhas-whatsapp-card-v9\.js/);
 assert.match(recadosLegacy,/recados-campanhas-whatsapp-mensal-v12\.js/);
+assert.match(recadosLegacy,/recados-campanhas-whatsapp-card-v9\.js\?v=20260913-apresentacao-paineis-v2/);
+assert.match(recadosLegacy,/recados-campanhas-whatsapp-mensal-v12\.js\?v=20260913-apresentacao-paineis-v2/);
 assert.match(recadosWa,/Postar recado no Status do WhatsApp/);
 assert.match(recadosWa,/Postar no status do WhatsApp/);
 assert.match(recadosWa,official);
