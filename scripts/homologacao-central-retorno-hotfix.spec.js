@@ -14,7 +14,7 @@ for (const viewport of [{width:390,height:844},{width:412,height:915},{width:136
     // Fixture isolada: nenhum login, credencial ou requisição ao servidor real.
     await page.setContent('<!doctype html><html><head>'+styles+'</head><body class="csc-central"><main><button id="openAgenda">Agendas</button><button id="openResidents">Moradores</button></main><footer id="cscPlatformFooter"></footer><div id="viewer" class="viewer csc-shell-viewer" hidden><div class="viewer-bar"><button id="viewerBack">Voltar</button></div><div id="nativeModuleHost" class="csc-native-module-host" hidden><input value="Agenda confirmada"><div style="height:1200px"></div></div><div id="nativeMoradoresHost" class="csc-native-module-host" hidden>Moradores confirmados</div><iframe id="viewerFrame" hidden></iframe><footer id="viewerFooter" class="viewer-platform-footer" hidden></footer></div></body></html>');
     await page.addScriptTag({content: `
-      var shellActiveNative='',shellActiveModule='',shellActiveRoute='',moduloPendente=null;
+      var shellActiveNative='',shellActiveModule='',shellActiveRoute='',moduloPendente=null,adminUbsContext=null,adminUbsPreviousAreaId='',selectedAreaId='';
       function el(id){return document.getElementById(id)}
       function shellActiveFrame(){return null}
       function shellHasUnsaved(){return false}
