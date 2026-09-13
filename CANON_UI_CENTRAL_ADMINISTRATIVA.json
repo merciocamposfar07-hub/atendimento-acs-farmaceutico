@@ -795,5 +795,57 @@
       "appsScriptVersionUnchanged": 208,
       "validationNotes": "Gates históricos de shell/BFCache/cache-busting foram alinhados à assinatura e revisão da Tarefa 15 sem alterar a lógica de produção."
     }
+  },
+  "task16NativeAgendas": {
+    "status": "validated-internal-deployed-pages-passed-canonical",
+    "authorizedOn": "2026-09-12",
+    "validatedOn": "2026-09-12",
+    "scope": "Agendas e vagas apenas",
+    "firstDefinitivePanelMigration": true,
+    "nativeHostId": "nativeModuleHost",
+    "normalRouteUsesIframe": false,
+    "legacyAgendaPagePreservedAsFallback": true,
+    "core": "ConectaModuleCoreV1",
+    "ownPinOrLogin": false,
+    "readAction": "admin_dados",
+    "writeAction": "admin_salvar_agenda",
+    "cache": {
+      "prime": "performance.prime('agendas')",
+      "commit": "performance.commit('agendas')"
+    },
+    "writeConfirmation": "POST + releitura real + comparação dos campos",
+    "temporaryFailurePreservesSession": true,
+    "unsavedChangesGuardPreserved": true,
+    "transportIframeRole": "ponte POST invisível; não hospeda/renderiza o painel",
+    "otherPanelsMigratedInTask16": false,
+    "backendChanged": false,
+    "appsScriptVersionExpectedUnchanged": 208,
+    "specificGate": "TAREFA_16_AGENDAS_NATIVAS_OK",
+    "canonicalRecord": "REGISTRO_CANONICO_TAREFA_16_AGENDAS_NATIVAS_2026_09_12.md",
+    "filesCreated": [
+      "conecta-agendas-native-v1.js",
+      "conecta-agendas-transport-v1.js",
+      "conecta-agendas-native-v1.css"
+    ],
+    "filesAltered": [
+      "central-administrativa-tacs.html",
+      "central-administrativa-tacs.js"
+    ],
+    "validation": {
+      "task14Gate": "TAREFA_14_TIMEOUT_SESSAO_OK",
+      "task15Gate": "TAREFA_15_NAVEGACAO_INTERNA_OK",
+      "task16Gate": "TAREFA_16_AGENDAS_NATIVAS_OK",
+      "qualityGate": "QUALITY_GATE_V101_OK",
+      "internalGate": "V101_INTERNO_APROVADO=SIM",
+      "blockedRuns": [
+        34730194156,
+        34730225064
+      ],
+      "finalWorkflowRun": 34730284225,
+      "pagesCodeWorkflowRun": 34730279163,
+      "pagesCodeDeploymentSuccess": true,
+      "backendChanged": false,
+      "appsScriptVersionUnchanged": 208
+    }
   }
 }
