@@ -23,6 +23,10 @@ assert.match(access,/function formatCpfResident\(/);
 assert.match(access,/function formatCnsResident\(/);
 assert.match(access,/Número de cadastro na área/);
 assert.match(access,/Ao localizar o morador, o Conecta identifica também os integrantes da mesma família pelo vínculo já existente no CSV/);
+assert.match(access,/Cada campo funciona de forma independente/);
+assert.match(access,/Você pode preencher um, vários ou todos os campos/);
+assert.doesNotMatch(access,/Preencha apenas uma forma de busca por vez/);
+assert.doesNotMatch(access,/Para buscar por nome, informe também a data de nascimento/);
 assert.match(access,/post\('conecta_morador_diagnostico_admin'/);
 
 const diagStart=access.indexOf('function diagnoseResidentAdmin(');
@@ -42,6 +46,16 @@ assert.match(backend,/function conectaAcessoV1DiagnosticoMoradorAdmin_/);
 assert.match(backend,/function conectaAcessoV1BuscarNomeNascimentoDiagnostico_/);
 assert.match(backend,/function conectaAcessoV1BuscarCadastroAreaDiagnostico_/);
 assert.match(backend,/function conectaAcessoV1FamiliaDiagnostico_/);
+assert.match(backend,/function conectaAcessoV1FiltrosDiagnostico_/);
+assert.match(backend,/function conectaAcessoV1BuscarDiagnostico_/);
+assert.match(backend,/function conectaAcessoV1RespostaDiagnosticoLista_/);
+assert.match(backend,/if\(filtros\.cpf&&/);
+assert.match(backend,/if\(filtros\.cns&&/);
+assert.match(backend,/if\(filtros\.nomeNormalizado\)/);
+assert.match(backend,/if\(filtros\.nascimento&&/);
+assert.match(backend,/if\(filtros\.cadastro\)/);
+assert.doesNotMatch(backend,/Use apenas uma forma de busca por vez/);
+assert.doesNotMatch(backend,/Para buscar por nome, informe também a data de nascimento/);
 assert.match(backend,/familiaTotal:/);
 assert.match(backend,/consultaFamilia:true/);
 assert.match(backend,/conectaAcessoV1ConfiancaValida_\('ADMIN','ADMIN_GERAL',dispositivo,chave\)/);
@@ -65,4 +79,4 @@ assert.match(backend,/function conectaAcessoV1ConfirmarNotificacao_[\s\S]*Aparel
 assert.match(access,/RESIDENT_CORE_DIAGNOSTIC='DIAGNOSTICO_ADMINISTRATIVO'/);
 assert.match(access,/function residentCoreMode\(\)/);
 
-console.log('TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK: diagnóstico administrativo aceita CPF/CNS padronizados, nome+nascimento e cadastro da área, retorna a família vinculada e permanece somente leitura.');
+console.log('TAREFA_6_ADMIN_MORADOR_SEM_VINCULO_OK: cada campo do diagnóstico funciona sozinho ou combinado; resultados retornam as famílias vinculadas sem assumir sessão residencial.');
