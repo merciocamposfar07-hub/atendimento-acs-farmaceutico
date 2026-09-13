@@ -309,7 +309,9 @@ O broker fica somente na memória do shell. Não guarda tokens, PIN, quickKey ou
 
 O cache versionado da Tarefa 12 continua sendo apenas continuidade visual e não se transforma em fonte autoritativa por causa do broker.
 
-### Status da Tarefa 13: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate: `TAREFA_13_DEDUP_REQUISICOES_OK`.
+### Status final da Tarefa 13: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate `TAREFA_13_DEDUP_REQUISICOES_OK`, suíte integral, `QUALITY_GATE_V101_OK` e homologação interna passaram no workflow `34726702055`. GitHub Pages passou no run `34726715749`.
 
-A Tarefa 13 é de frontend/core; Apps Script deve permanecer na versão **208**. A regra de timeout/sessão permanece exclusiva da Tarefa 14.
+A Tarefa 13 é de frontend/core; Apps Script permanece na versão **208**.
+
+**Sequência canônica:** Tarefa 13 encerrada tecnicamente; Tarefa 14 liberada.
