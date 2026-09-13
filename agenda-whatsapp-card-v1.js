@@ -6,7 +6,8 @@ window.PortalTacsAgendaWhatsAppV2=true;
 var CARD_UNIT='Unidade de Saúde Posto Matias';
 var CARD_BRAND='Conecta Saúde Comunitária';
 var CARD_FOOTER='PORTAL TACS';
-var CARD_REVISION='20260823-card-institucional-v1';
+var CARD_REVISION='20260912-conecta-oficial-v1';
+var CONECTA_OFFICIAL_ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3';
 
 function txt(v){return String(v==null?'':v).trim()}
 function field(card,name){var e=card&&card.querySelector('[name="'+name+'"]');return e?txt(e.value):''}
@@ -18,7 +19,7 @@ function wrap(ctx,text,x,y,maxWidth,lineHeight,maxLines){var lines=wrapLines(ctx
 function fitFont(ctx,text,weight,start,min,maxWidth){var size=start;while(size>min){ctx.font=weight+' '+size+'px -apple-system,BlinkMacSystemFont,Arial';if(ctx.measureText(text).width<=maxWidth)return size;size--}ctx.font=weight+' '+min+'px -apple-system,BlinkMacSystemFont,Arial';return min}
 function assetUrl(path){try{return new URL(path,document.baseURI).href}catch(e){return path}}
 function loadImage(src){return new Promise(function(resolve,reject){var img=new Image();img.onload=function(){resolve(img)};img.onerror=function(){reject(new Error('Falha ao carregar imagem: '+src))};img.src=src})}
-function loadConectaLogo(){return loadImage(assetUrl('icons/conecta-saude-comunitaria-card.svg?v='+CARD_REVISION)).catch(function(){return null})}
+function loadConectaLogo(){return loadImage(assetUrl(CONECTA_OFFICIAL_ICON)).catch(function(){return null})}
 function norm(v){return txt(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()}
 function titleCase(v){return txt(v).toLowerCase().replace(/(^|[\s/-])([a-záàâãéêíóôõúç])/g,function(_,a,b){return a+b.toUpperCase()})}
 function professionalHeading(data){
@@ -175,5 +176,16 @@ function snapshotAgenda(card){return card?{modulo:normalTexto(field(card,'modulo
 function agendaAtualIgual(s){if(!s)return false;var cards=Array.from(document.querySelectorAll('#listaAgendas details.cartao')),card=cards.find(function(c){return normalTexto(field(c,'modulo'))===s.modulo&&normalTexto(field(c,'dia'))===s.dia});if(!card)return false;var a=snapshotAgenda(card);return a.data===s.data&&a.horario===s.horario&&a.situacao===s.situacao&&a.mensagem===s.mensagem&&a.encerraHorario===s.encerraHorario&&a.vagasComuns===s.vagasComuns&&a.vagasEmergenciais===s.vagasEmergenciais&&a.diaExtra===s.diaExtra&&a.ativo===s.ativo}
 document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.salvarAgenda');if(b)ultimaAgendaSalva=snapshotAgenda(b.closest('details.cartao'))},true);
 function corrigirFalsoAlerta(){var s=document.getElementById('statusOperacao');if(!s||!ultimaAgendaSalva)return;var msg=txt(s.textContent);if(msg.indexOf('releitura não coincidiu integralmente')===-1)return;if(agendaAtualIgual(ultimaAgendaSalva)){s.textContent='Agenda gravada e confirmada pela releitura da planilha.';s.className='status ok';ultimaAgendaSalva=null}}
+window.PortalTacsAgendaWhatsAppV2API={
+  shareData:function(data,button){
+    if(!button)return;
+    shareBlob(draw(data||{}),data||{},button,false);
+  },
+  shareGroupData:function(data,button){
+    if(!button)return;
+    shareBlob(drawGroup(data||{}),data||{},button,true);
+  },
+  officialIcon:CONECTA_OFFICIAL_ICON
+};
 var observer=new MutationObserver(function(){inject();corrigirFalsoAlerta()});observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});document.addEventListener('DOMContentLoaded',inject);inject();
 }());
