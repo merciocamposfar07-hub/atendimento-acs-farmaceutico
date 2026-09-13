@@ -1190,7 +1190,8 @@ window.ConectaCentralShellV1={
   rotaAtiva:function(){return shellActiveRoute},
   tipoAtivo:function(){return shellActiveNative?'native':'frame'},
   escopo:function(){return shellCurrentScope()},
-  contagemFrames:function(){return Object.keys(shellFrames).length}
+  contagemFrames:function(){return Object.keys(shellFrames).length},
+  localReadOnlyReady:function(){return localPanelAccessReady()}
 };
 window.PortalTacsCentralPinLocalV2={
   abrir:function(scope,pin){return abrirAcessoLocal(scope,pin)},
