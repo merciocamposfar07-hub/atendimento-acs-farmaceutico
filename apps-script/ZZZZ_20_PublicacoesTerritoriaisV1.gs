@@ -69,7 +69,7 @@ function publicacoesTerritoriaisV1TratarPost_(e){
 
 function publicacoesTerritoriaisV1ExigirPermissao_(acesso){
   if(!acesso)throw new Error('Acesso inválido.');
-  if(acesso.perfil==='TACS'){
+  if(acesso.perfil==='TACS'||acesso.perfil==='UBS'){
     if((acesso.permissoes||[]).indexOf(TACS_PUBLICACOES_TERRITORIAIS_V1.PERMISSAO)===-1){
       throw new Error('Seu cadastro não possui permissão para publicar recados e campanhas.');
     }
@@ -83,7 +83,7 @@ function publicacoesTerritoriaisV1Dados_(contexto,acesso){
   var ss=publicacoesTerritoriaisV1Planilha_();
   var recados=publicacoesTerritoriaisV1Ler_(ss,TACS_PUBLICACOES_TERRITORIAIS_V1.ABA_RECADOS,contexto.areaId);
   var campanhas=publicacoesTerritoriaisV1Ler_(ss,TACS_PUBLICACOES_TERRITORIAIS_V1.ABA_CAMPANHAS,contexto.areaId);
-  var admin=acesso.perfil!=='TACS';
+  var admin=['ADMIN_GERAL','ADMIN_MUNICIPAL'].indexOf(acesso.perfil)!==-1;
   var areas=[];
   if(admin){
     if(typeof tacsTerritorioV1LerAreas_==='function')areas=tacsTerritorioV1LerAreas_().filter(function(a){return a&&a.ativa===true;}).map(function(a){return{areaId:a.areaId,areaNome:a.areaNome||a.areaId};});
