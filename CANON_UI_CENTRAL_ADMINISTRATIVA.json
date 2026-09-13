@@ -847,5 +847,34 @@
       "backendChanged": false,
       "appsScriptVersionUnchanged": 208
     }
+  },
+  "task17NativeResidents": {
+    "status": "validated-internal-deployed-pages-passed-canonical",
+    "validatedOn": "2026-09-12",
+    "scope": "Moradores — rota normal",
+    "nativeHostId": "nativeMoradoresHost",
+    "normalRouteUsesIframe": false,
+    "recordsRouteStillLegacyFrame": true,
+    "recordsRoute": "view=prontuarios",
+    "core": "ConectaModuleCoreV1",
+    "ownPinOrLogin": false,
+    "publicTransportVersion": "3.6.1",
+    "nativeCompat": "task17-moradores-native-v1",
+    "safeAreaRule": "areaId só é injetada quando existe",
+    "unsavedChangesGuardPreserved": true,
+    "agendasNativePreserved": true,
+    "otherPanelsMigratedInTask17": false,
+    "backendChanged": false,
+    "appsScriptVersionExpectedUnchanged": 208,
+    "specificGate": "TAREFA_17_MORADORES_NATIVOS_OK",
+    "canonicalRecord": "REGISTRO_CANONICO_TAREFA_17_MORADORES_NATIVOS_2026_09_12.md",
+    "validation": {
+      "finalWorkflowRun": 34730914731,
+      "pagesCodeWorkflowRun": 34730907935,
+      "qualityGate": "QUALITY_GATE_V101_OK",
+      "internalGate": "V101_INTERNO_APROVADO=SIM"
+    },
+    "nextCanonicalPanel": "Profissionais e serviços",
+    "nextPanelStarted": false
   }
 }
