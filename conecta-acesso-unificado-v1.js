@@ -108,12 +108,8 @@ function addUbsTab(){
 }
 function ubsMarkup(){
  if(el('ubsLogin'))return;
- var box=document.createElement('div');box.id='ubsLogin';box.className='csc-access-panel';box.hidden=true;var p=ubsProfile();
- if(p){
-  box.innerHTML='<div class="csc-access-note"><strong>Aparelho reconhecido para UBS</strong><br>Digite somente o seu PIN para confirmar este acesso.</div>'+field('cscUbsPin','PIN de acesso','type="password" inputmode="numeric" maxlength="8" autocomplete="off"')+'<div class="csc-inline-actions"><button class="btn green" id="cscUbsLogin" type="button">Entrar como UBS</button><button class="btn gray" id="cscUbsOther" type="button">Primeiro acesso de outra UBS</button></div><div id="cscUbsIdentity" class="csc-access-note" hidden></div>';
- }else{
-  box.innerHTML='<div class="csc-access-note"><strong>Primeiro acesso da UBS</strong><br>O responsável precisa estar previamente cadastrado em Administrador / TACS / UBS. Informe CPF e PIN para confirmar sua identificação.</div>'+field('cscUbsCpf','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"')+field('cscUbsPin','PIN de acesso','type="password" inputmode="numeric" maxlength="8" autocomplete="off"')+'<div class="csc-inline-actions"><button class="btn green" id="cscUbsIdentify" type="button">Identificar responsável da UBS</button></div><div id="cscUbsIdentity" class="csc-access-note" hidden></div>';
- }
+ var box=document.createElement('div');box.id='ubsLogin';box.className='csc-access-panel';box.hidden=true;
+ box.innerHTML='<div class="csc-access-note"><strong>Acesso da UBS</strong><br>A UBS já foi cadastrada pelo Administrador. Neste computador, informe somente o PIN de acesso da unidade.</div>'+field('cscUbsPin','PIN de acesso','type="password" inputmode="numeric" maxlength="8" autocomplete="off"')+'<div class="csc-inline-actions"><button class="btn green" id="cscUbsLogin" type="button">Entrar na UBS</button></div><div id="cscUbsIdentity" class="csc-access-note" hidden></div>';
  var anchor=el('moradorLogin')||el('tacsLogin');if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(box,anchor.nextSibling);
 }
 function residentMarkup(){
@@ -145,12 +141,12 @@ function showRole(role){
   renderResidentStart();
   setStatus(residentCoreMode()===RESIDENT_CORE_DIAGNOSTIC?'Modo diagnóstico administrativo: use o fluxo do Morador sem assumir identidade/aparelho.':(profile()?'Aparelho reconhecido para Morador. Digite seu PIN de 4 números.':'Primeiro acesso: informe seu CPF.'),'');
  }
- if(role==='ubs')setStatus(ubsProfile()?'Aparelho reconhecido para UBS. Digite somente o seu PIN.':'Primeiro acesso UBS: confirme o cadastro do responsável.','');
+ if(role==='ubs')setStatus('Digite somente o PIN de acesso da UBS.','');
  if(role==='admin'&&roleRecognized('ADMIN'))setStatus('Aparelho reconhecido para Administrador. Digite seu PIN.','');
  if(role==='tacs'&&roleRecognized('TACS'))setStatus('Aparelho reconhecido para TACS. Digite seu PIN individual.','');
 }
 function focusRoleField(role){
- var n=role==='admin'?el('adminPin'):role==='tacs'?el('tacsPin'):role==='ubs'?(el('cscUbsCpf')||el('cscUbsPin')):(el('cscResidentPin')||el('cscResidentDocument'));
+ var n=role==='admin'?el('adminPin'):role==='tacs'?el('tacsPin'):role==='ubs'?el('cscUbsPin'):(el('cscResidentPin')||el('cscResidentDocument'));
  if(!n||n.disabled||n.hidden)return;
  try{n.focus({preventScroll:true})}catch(e){try{n.focus()}catch(_e){}}
 }
@@ -170,21 +166,8 @@ function guardarUbsLocal(pin,r){
  var v=window.ConectaPinLocalV2;if(!v||typeof v.guardar!=='function'||!r)return Promise.resolve(false);
  return Promise.resolve(v.guardar('ubs',pin,{device:device(),cadastroId:r.cadastroId||'',snapshot:{nome:r.nome||'',perfil:r.perfil||'UBS',funcaoUbs:r.funcaoUbs||'',unidadeId:r.unidadeId||'',permissoes:Array.isArray(r.permissoes)?r.permissoes.slice():[]},salvoRemotoEm:Date.now()})).catch(function(){return false});
 }
-function identifyUbsFirstAccess(){
- var cpf=digits(el('cscUbsCpf')&&el('cscUbsCpf').value),pin=digits(el('cscUbsPin')&&el('cscUbsPin').value),out=el('cscUbsIdentity');
- if(cpf.length!==11){setStatus('Informe um CPF válido com 11 números.','err');return}
- if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN de acesso com 4 a 8 números.','err');return}
- setStatus('Confirmando o cadastro UBS…','warn');
- post('conecta_ubs_identificar_primeiro_acesso',{cpf:cpf,pin:pin,dispositivo:device()}).then(function(r){
-  saveUbsProfile(r);saveUbsSession(r);renderUbsAuthenticated(r);
-  if(el('cscUbsPin'))el('cscUbsPin').value='';
-  setStatus(r.message||'Responsável UBS identificado e aparelho reconhecido.','ok');
-  return guardarUbsLocal(pin,r);
- }).catch(function(e){if(out)out.hidden=true;setStatus(e.message,'err')});
-}
-function loginUbsSecondAccess(){
- var p=ubsProfile(),pin=digits(el('cscUbsPin')&&el('cscUbsPin').value),proof=trustKey('UBS'),out=el('cscUbsIdentity');
- if(!p||!proof){try{localStorage.removeItem(UBS_PROFILE_KEY);localStorage.removeItem(TRUST_UBS_KEY)}catch(e){};setStatus('Faça o primeiro acesso da UBS neste aparelho.','warn');setTimeout(function(){location.reload()},0);return}
+function loginUbsAccess(){
+ var pin=digits(el('cscUbsPin')&&el('cscUbsPin').value),proof=trustKey('UBS'),out=el('cscUbsIdentity');
  if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN de acesso com 4 a 8 números.','err');return}
  setStatus('Validando o PIN da UBS…','warn');
  post('conecta_ubs_login_pin',{pin:pin,dispositivo:device(),chaveConfianca:proof}).then(function(r){
@@ -400,9 +383,7 @@ function install(){
  if(t)t.addEventListener('click',function(e){selectRoleFromTap('tacs',e)});
  if(m)m.addEventListener('click',function(e){selectRoleFromTap('morador',e)});
  if(u)u.addEventListener('click',function(e){selectRoleFromTap('ubs',e)});
- var ubsIdentify=el('cscUbsIdentify');if(ubsIdentify)ubsIdentify.addEventListener('click',identifyUbsFirstAccess);
- var ubsLogin=el('cscUbsLogin');if(ubsLogin)ubsLogin.addEventListener('click',loginUbsSecondAccess);
- var ubsOther=el('cscUbsOther');if(ubsOther)ubsOther.addEventListener('click',function(){try{localStorage.removeItem(UBS_PROFILE_KEY);localStorage.removeItem(TRUST_UBS_KEY)}catch(e){}location.reload()});
+ var ubsLogin=el('cscUbsLogin');if(ubsLogin)ubsLogin.addEventListener('click',loginUbsAccess);
  var forgot=el('cscForgotPin');if(forgot)forgot.addEventListener('click',openRecovery);
  var close=el('cscRecoveryClose');if(close)close.addEventListener('click',closeRecovery);
  if(el('loginPanel')&&!el('loginPanel').hidden)showRole(tacsOnly?'tacs':recognizedRole());
