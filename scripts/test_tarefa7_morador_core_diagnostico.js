@@ -15,18 +15,26 @@ assert.match(access,/RESIDENT_CORE_DIAGNOSTIC='DIAGNOSTICO_ADMINISTRATIVO'/);
 assert.match(access,/function residentCoreMode\(\)\{return adminResidentDiagnostic\(\)\?RESIDENT_CORE_DIAGNOSTIC:RESIDENT_CORE_REAL\}/);
 assert.match(access,/coreMode:residentCoreMode\(\)/);
 
-// O primeiro formulário é compartilhado pelos dois modos.
+// O mesmo residentStage atende os dois modos. No diagnóstico, as formas de busca
+// ficam no próprio núcleo do Morador, sem criar uma página/login paralelo.
 assert.match(access,/function renderResidentDocumentEntry\(\)/);
-assert.match(access,/field\('cscResidentDocument',label,attrs\)/);
+assert.match(access,/field\('cscResidentDocument','CPF'/);
+assert.match(access,/cscResidentCpf/);
+assert.match(access,/cscResidentCns/);
+assert.match(access,/cscResidentNameDiagnostic/);
+assert.match(access,/cscResidentBirthDiagnostic/);
+assert.match(access,/cscResidentAreaRegistration/);
 assert.match(access,/id="cscResidentDocumentNext"/);
 assert.match(access,/function startResidentDocument\(\)/);
-assert.match(access,/state\.coreMode===RESIDENT_CORE_DIAGNOSTIC\)\{diagnoseResidentAdmin\(doc\);return\}/);
-assert.doesNotMatch(access,/cscResidentDiagnosticDoc|cscResidentDiagnosticGo/,'Não deve restar formulário paralelo exclusivo do diagnóstico.');
+assert.match(access,/state\.coreMode===RESIDENT_CORE_DIAGNOSTIC\)\{diagnoseResidentAdmin\(\);return\}/);
+assert.doesNotMatch(access,/cscResidentDiagnosticDoc|cscResidentDiagnosticGo/,'Não deve existir página paralela exclusiva do diagnóstico.');
 
-// O resultado usa o mesmo residentStage, mas o modo diagnóstico nunca avança para PIN.
+// O resultado usa o mesmo residentStage, mostra a família e nunca avança para PIN.
 assert.match(access,/function renderResidentCoreResult\(r\)/);
 assert.match(access,/state\.coreMode===RESIDENT_CORE_DIAGNOSTIC/);
 assert.match(access,/Modo: diagnóstico administrativo\. Nenhum PIN, sessão, aparelho ou notificação do Morador foi assumido/);
+assert.match(access,/familiaId/);
+assert.match(access,/family\.map/);
 assert.match(access,/renderIdentityFound\(r\)/);
 
 // O modo acompanha a requisição e é confirmado pelo backend.
@@ -45,4 +53,4 @@ const diagEnd=access.indexOf('function startCpf(',diagStart);
 const diagBlock=access.slice(diagStart,diagEnd);
 assert.doesNotMatch(diagBlock,/saveProfile\(|saveSession\(|openResidentPortal\(|localStorage\.setItem|ConectaMoradorPinLocalV2/);
 
-console.log('TAREFA_7_MORADOR_CORE_DIAGNOSTICO_OK: Morador real e diagnóstico administrativo compartilham o mesmo núcleo/formulário; o modo diagnóstico não assume identidade, sessão, aparelho ou notificações.');
+console.log('TAREFA_7_MORADOR_CORE_DIAGNOSTICO_OK: núcleo do Morador mantém diagnóstico administrativo no mesmo residentStage, com múltiplas formas de busca e família, sem assumir identidade, sessão, aparelho ou notificações.');
