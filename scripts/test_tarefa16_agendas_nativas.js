@@ -75,8 +75,9 @@ assert.match(css,/\.csc-ag-native/);
 assert.match(legacy,/Agendas e vagas/);
 assert.match(central,/moduleUrl\(name,options\)/);
 
-// Tarefa 16, neste bloco, não inicia a migração dos demais painéis nem a Tarefa 17.
-assert.doesNotMatch(central,/TAREFA_17/);
+// A Tarefa 16 continua isolada em Agendas. A Central pode avançar para tarefas posteriores,
+// mas os arquivos próprios de Agendas não podem absorver a lógica de outros painéis.
+assert.match(central,/TAREFA_17_MORADORES_NATIVOS_V1/);
 assert.doesNotMatch(native,/TAREFA_17/);
 assert.doesNotMatch(transport,/TAREFA_17/);
 
