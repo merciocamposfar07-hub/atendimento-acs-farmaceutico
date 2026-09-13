@@ -185,7 +185,7 @@ function loadData(message,operationMessage){
   if(modulePerf&&typeof modulePerf.prime==='function'){
     cached=modulePerf.prime('territorio',function(saved){
       data=territoryPerformancePayload(saved);territoryConfirmed=false;render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;
-      loginStatus('Última confirmação territorial exibida. Atualizando em segundo plano…','warn');
+      loginStatus('Aguarde enquanto os dados carregam…','warn');
     });
   }
   var leituraPayload=payload({});coreRead('admin_territorio_dados',leituraPayload,function(done){post('admin_territorio_dados',leituraPayload,'admin_territorio_result',done)},function(r){
