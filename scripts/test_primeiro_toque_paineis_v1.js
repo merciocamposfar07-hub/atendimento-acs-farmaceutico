@@ -29,32 +29,38 @@ assert.match(block,/if\(name==='agendas'\)\{showNativeAgenda/);
 assert.match(block,/if\(name==='moradores'/);
 assert.match(block,/if\(name==='profissionais'\)\{showNativeProfissionais/);
 
-// Correção cirúrgica: TACS/áreas abre a tela real no primeiro toque, em leitura local.
-assert.match(block,/if\(name==='territorio'\)\{[\s\S]*?priorizarSincronizacaoTerritorioPendente\(\)[\s\S]*?ensureShellFrame\(name,url,title\|\|'TACS e áreas',routeId\)[\s\S]*?localFrame\.dataset\.shellLocalFirst='1'[\s\S]*?showShellFrame\(name,localFrame,title\|\|'TACS e áreas',routeId\)[\s\S]*?return;\s*\}/);
-const territoryGuard=block.match(/if\(name==='territorio'\)\{[\s\S]*?return;\s*\}/);
-assert.ok(territoryGuard,'Guard cirúrgico de TACS/áreas ausente.');
-assert.doesNotMatch(territoryGuard[0],/showPendingModuleShell/);
-assert.match(block,/if\(name==='territorio'&&frame\.dataset\.shellLocalFirst==='1'\)[\s\S]*?delete frame\.dataset\.shellLocalFirst/);
-const remoteTerritoryGuard=block.match(/if\(name==='territorio'&&frame\.dataset\.shellLocalFirst==='1'\)\{[\s\S]*?\n  \}/);
-assert.ok(remoteTerritoryGuard,'Guard de promoção local→remoto ausente.');
-assert.doesNotMatch(remoteTerritoryGuard[0],/frame\.src='about:blank'|frame\.dataset\.shellLoaded=''|frame\.dataset\.shellReady=''/,'A confirmação remota não pode apagar o painel territorial já visível.');
-assert.match(central,/teste-v1\/painel-tacs-areas-v1\.html\?from=central&localfirst=1&v=/);
-assert.doesNotMatch(central,/if\(name==='territorio'\)return '\/atendimento-acs-farmaceutico\/painel-oficial-tacs-areas\.html\?from=central&localfirst=1/);
+// Correção cirúrgica: os painéis em frame do menu principal abrem a tela real
+// no primeiro toque durante o local-first; não exibem uma prévia sem navegação.
+assert.match(block,/if\(name==='territorio'\|\|name==='suporte'\|\|name==='recados'\|\|name==='municipios'\)\{/);
+assert.match(block,/ensureShellFrame\(name,localFirstFrameUrl\(url\),title\|\|'Painel',routeId\)/);
+assert.match(block,/localFrame\.dataset\.shellLocalFirst='1'/);
+assert.match(block,/showShellFrame\(name,localFrame,title\|\|'Painel',routeId\)/);
+assert.match(central,/function localFirstFrameUrl\(url\)/);
+assert.match(central,/searchParams\.set\('localfirst','1'\)/);
 
-// Os demais painéis em frame preservam a prévia segura já existente.
+const frameLocalGuard=block.match(/if\(name==='territorio'\|\|name==='suporte'\|\|name==='recados'\|\|name==='municipios'\)\{[\s\S]*?return;\s*\}/);
+assert.ok(frameLocalGuard,'Guard local-first dos painéis em frame ausente.');
+assert.doesNotMatch(frameLocalGuard[0],/showPendingModuleShell/);
+
+assert.match(block,/if\(frame\.dataset\.shellLocalFirst==='1'\)[\s\S]*?delete frame\.dataset\.shellLocalFirst/);
+const promoteGuard=block.match(/if\(frame\.dataset\.shellLocalFirst==='1'\)\{[\s\S]*?\n  \}/);
+assert.ok(promoteGuard,'Promoção local→remoto ausente.');
+assert.doesNotMatch(promoteGuard[0],/about:blank|shellLoaded=''|shellReady=''/,'A confirmação remota não pode apagar o painel já visível.');
+
+assert.match(central,/teste-v1\/painel-tacs-areas-v1\.html\?from=central&localfirst=1&v=/);
+assert.match(central,/painel-suporte-moradores-v2\.html\?area=[\s\S]*?localFirstRevision/);
+assert.match(central,/painel-oficial-recados-campanhas\.html\?area=[\s\S]*?localFirstRevision/);
+assert.match(central,/painel-oficial-organizacoes-municipios\.html\?from=central&v='\+localFirstRevision/);
+
+// A prévia continua existindo apenas como contingência para rotas fora do menu principal.
 const previewStart=central.indexOf('function ensurePendingPreviewStyle');
 const pendingStart=central.indexOf('function showPendingModuleShell',previewStart);
-const pendingEnd=central.indexOf('function shellHasUnsaved',pendingStart);
+const pendingEnd=central.indexOf('function localFirstFrameUrl',pendingStart);
 const previewBlock=central.slice(previewStart,pendingEnd);
 const pendingBlock=central.slice(pendingStart,pendingEnd);
 assert.match(previewBlock,/csc-pending-preview/);
-assert.match(previewBlock,/Aguarde enquanto os dados carregam…/);
-assert.match(previewBlock,/Chamados dos moradores/);
-assert.match(previewBlock,/Administrador \/ TACS \/ UBS/);
-assert.match(previewBlock,/Buscar morador/);
 assert.match(pendingBlock,/viewer\.classList\.add\('csc-shell-viewer','csc-native-viewer'\)/);
-assert.match(pendingBlock,/host\.hidden=false/);
-assert.doesNotMatch(pendingBlock,/\.src\s*=/,'Prévia imediata não pode iniciar iframe protegido antes da sessão remota.');
+assert.doesNotMatch(frameLocalGuard[0],/csc-pending-preview|Aguarde enquanto os dados carregam/);
 
 // A mensagem superior do shell não pode substituir o painel por uma tela lisa.
 const openingStart=central.indexOf('function setShellOpening(title,visible)');
@@ -90,4 +96,17 @@ assert.match(territorioJs,/territoryConfirmed=false;[\s\S]*?syncTerritoryWriteSt
 assert.match(territorioJs,/if\(localFirst\)\{[\s\S]*?primeTerritoryFromCentralContext\(\)[\s\S]*?scheduleLocalFirstRemoteSync\(\);[\s\S]*?return;/);
 assert.match(territorioJs,/moduleCore\.ready\(\)[\s\S]*?loadData\('Dados territoriais confirmados\.'\)/);
 
-console.log('PRIMEIRO_TOQUE_PAINEIS_OK: TACS/áreas abre diretamente com o contexto territorial local já confirmado, sem tela vazia; escrita continua bloqueada até a sessão remota e a sincronização ocorre no mesmo painel.');
+const suporteHtml=fs.readFileSync('painel-suporte-moradores-v2.html','utf8');
+const recadosHtml=fs.readFileSync('painel-oficial-recados-campanhas.html','utf8');
+const municipiosHtml=fs.readFileSync('painel-oficial-organizacoes-municipios.html','utf8');
+assert.match(suporteHtml,/LOCAL_FIRST=/);
+assert.match(suporteHtml,/function scheduleSupportRemoteSync\(\)/);
+assert.match(suporteHtml,/if\(localOnly\)\{[\s\S]*?scheduleSupportRemoteSync\(\);return/);
+assert.match(recadosHtml,/LOCAL_FIRST=/);
+assert.match(recadosHtml,/function aguardarSessaoCentralLocalFirst\(\)/);
+assert.match(recadosHtml,/if\(LOCAL_FIRST\)\{[\s\S]*?aplicarSnapshotSeDisponivel\(\)[\s\S]*?aguardarSessaoCentralLocalFirst\(\);return/);
+assert.match(municipiosHtml,/LOCAL_FIRST=/);
+assert.match(municipiosHtml,/function aguardarSessaoCentralLocalFirst\(\)/);
+assert.match(municipiosHtml,/if\(localOnly\)\{[\s\S]*?syncMunicipioWriteState\(\);aguardarSessaoCentralLocalFirst\(\);return/);
+
+console.log('PRIMEIRO_TOQUE_PAINEIS_OK: painéis do menu principal abrem a tela real no primeiro toque durante local-first; escrita permanece bloqueada até a sessão remota e a sincronização ocorre sem apagar o painel.');

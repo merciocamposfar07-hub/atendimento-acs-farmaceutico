@@ -75,3 +75,52 @@ for(const cfg of modules){
     console.log(JSON.stringify({kind:'central-interface-action-shell',browserName,module:cfg.name,mode:cfg.native?'native':'frame',ms:Math.round(ms*100)/100}));
   });
 }
+
+
+test('local-first sem token remoto abre painéis reais',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await blockExternal(page);
+  await page.goto('central-administrativa-tacs.html',{waitUntil:'domcontentloaded'});
+  await page.evaluate(async()=>{
+    const api=window.ConectaPinLocalV2;
+    const device=localStorage.getItem('portalTacsDispositivoV1');
+    await api.guardar('admin','2468',{
+      device,
+      mode:'admin',
+      selectedAreaId:'JAPARANDUBA',
+      context:{
+        perfil:'ADMIN_GERAL',
+        administradorAtual:{nomeCompleto:'Administrador Teste',perfil:'ADMIN_GERAL'},
+        administradores:[{nomeCompleto:'Administrador Teste',perfil:'ADMIN_GERAL',ativo:true}],
+        areas:[{areaId:'JAPARANDUBA',areaNome:'Sítio Japaranduba',unidadeId:'POSTO_MATIAS',unidadeNome:'USF Matias',ativa:true}],
+        tacs:[]
+      }
+    });
+  });
+  await page.locator('#adminPin').fill('2468');
+  await page.locator('#loginAdmin').click();
+  await expect(page.locator('#modulesPanel')).toBeVisible();
+  expect(await page.evaluate(()=>sessionStorage.getItem('portalTacsAdminTokenV1'))).toBeFalsy();
+
+  for(const name of ['moradores','agendas','profissionais','ubs']){
+    const button=page.locator('#moduleGrid .module[data-module="'+name+'"]');
+    await button.click();
+    await expect(page.locator('#viewer')).toBeVisible();
+    await expect(page.locator('.csc-pending-preview')).toHaveCount(0);
+    await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.ativo())).toBe(name);
+    await page.evaluate(()=>window.ConectaCentralShellV1.voltar());
+    await expect(page.locator('#viewer')).toBeHidden();
+  }
+
+  for(const name of ['suporte','recados','territorio','municipios']){
+    const button=page.locator('#moduleGrid .module[data-module="'+name+'"]');
+    await button.click();
+    await expect(page.locator('#viewer')).toBeVisible();
+    await expect(page.locator('.csc-pending-preview')).toHaveCount(0);
+    const frame=page.locator('iframe[data-shell-module="'+name+'"]').first();
+    await expect(frame).toBeVisible();
+    await expect.poll(()=>frame.getAttribute('src')).toContain('localfirst=1');
+    await page.evaluate(()=>window.ConectaCentralShellV1.voltar());
+    await expect(page.locator('#viewer')).toBeHidden();
+  }
+});

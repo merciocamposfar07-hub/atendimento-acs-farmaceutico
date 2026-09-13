@@ -63,9 +63,13 @@ assert.doesNotMatch(agendas,/Dados confirmados pela leitura compartilhada desta 
 assert.doesNotMatch(profissionais,/Dados confirmados pela leitura compartilhada desta sessão\./);
 
 // No caminho do core, snapshots antigos sem referência de versão não são usados como fallback.
-for(const src of [agendas,profissionais,recados]){
+for(const src of [agendas,profissionais]){
   assert.match(src,/if\(coreItem\)\{[^\n]*return true\}\s*return false;/);
 }
+assert.match(recados,/if\(coreItem\)\{[^\n]*return true\}/,
+  'Recados deve usar o snapshot versionado do core quando disponível.');
+assert.match(recados,/if\(!\(token\|\|territorioToken\)\)return false;/,
+  'Sem sessão remota e sem snapshot do core, Recados não pode tratar cache legado como confirmação.');
 
 // Dados críticos permanecem somente leitura até confirmação atual do servidor.
 assert.match(agendas,/dadosConfirmados=false/);
