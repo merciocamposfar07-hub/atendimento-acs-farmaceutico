@@ -554,4 +554,11 @@ Commits funcionais:
 
 Registro: `REGISTRO_CORRECAO_PREPAINT_CANONICO_SEM_FLASH_2026_09_13.md`.
 
-Status: **PUBLICADA EM MAIN; validação de publicação e teste visual no dispositivo pendentes antes do encerramento.**
+Status: **PUBLICADA EM MAIN; validação visual no dispositivo pendente antes do encerramento.**
+
+Consolidação canônica:
+- a primeira alteração direta do reconhecimento UBS foi normalizada pelo gerador App4;
+- a causa foi corrigida na fonte `admin-ui-behavior.inline.js`;
+- commit canônico: `7ea70c998842ebe1e960fea8b6d7b26e42e241dc`;
+- workflow `Aplicar UI App4 canônica aos painéis administrativos` run `34790372078`: **success**;
+- verificação após a regeneração confirmou prepaint, sessão UBS e guarda de `about:blank` preservados no HEAD.
