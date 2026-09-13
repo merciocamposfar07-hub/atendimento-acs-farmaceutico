@@ -518,3 +518,40 @@ Validação interna:
 Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente.**
 
 Registro: `REGISTRO_CORRECAO_RETORNO_PORTAL_TACS_ESTAVEL_2026_09_13.md`.
+
+
+### Correção isolada — Prepaint canônico sem lampejo legado
+Data: 13/09/2026
+
+Diagnóstico:
+
+`HTML legado visível → primeiro paint do Safari → execução do JavaScript → restauração da sessão/contexto → interface App4 atual`.
+
+A interface anterior não era uma nova consulta ao servidor. Ela já existia no HTML inicial e podia ser pintada antes da hidratação do shell. Nos painéis ainda legados, `about:blank` também podia ser tratado como frame pronto antes da rota real.
+
+Fluxo corrigido da Central:
+
+`URL → prepaint canônico síncrono → presença da sessão local ADMIN/TACS/UBS → primeiro paint correto → restauração do contexto → sincronização remota em segundo plano`.
+
+Fluxo corrigido dos painéis em frame:
+
+`Central → toque → shell → iframe visualmente oculto → about:blank NÃO pronto → rota real → normalização App4 → revelar o painel`.
+
+Regras:
+- o prepaint controla somente apresentação e não autentica;
+- tokens, PIN, permissões, áreas, UBS, moradores, agendas, vagas e gravações não são modificados;
+- o backend Apps Script não é alterado;
+- o cabeçalho institucional canônico existe já no HTML inicial da Central;
+- o shell visual reconhece ADMIN, TACS e UBS;
+- o frame legado só aparece depois que a rota correta foi carregada e normalizada;
+- enquanto o painel real carrega, a única transição permitida é `Aguarde enquanto os dados carregam…`;
+- rollback isolado preservado em `backup-pre-flash-canonical-20260913-2031`.
+
+Commits funcionais:
+- `9756b7f6e6ad0ca6f8242bd6c1d49f77fb94479e`;
+- `0ebede5a2a0a0f48f089ee356ffe962ae6a4caa6`;
+- `63db6e39a170949154671f507e55f2b275da815b`.
+
+Registro: `REGISTRO_CORRECAO_PREPAINT_CANONICO_SEM_FLASH_2026_09_13.md`.
+
+Status: **PUBLICADA EM MAIN; validação de publicação e teste visual no dispositivo pendentes antes do encerramento.**
