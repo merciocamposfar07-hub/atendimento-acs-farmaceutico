@@ -383,3 +383,28 @@ GitHub Pages do código validado passou no run `34730279163`.
 Apps Script permanece na versão **208**, sem alteração de backend.
 
 **Sequência canônica:** Tarefa 16 encerrada no escopo Agendas e vagas. Próximos painéis continuam aguardando suas próprias etapas.
+
+
+### Registro canônico — Tarefa 17 / Moradores nativos
+Segundo painel da migração definitiva.
+
+Fluxo:
+`Central autenticada → Moradores → host nativo próprio → estado/cache da base → sincronização → busca/cadastro/edição → gravação autorizada → Voltar → mesma Central`
+
+Regras:
+- rota normal de Moradores é nativa;
+- `#nativeMoradoresHost` é a superfície persistente;
+- Prontuários (`view=prontuarios`) permanece no frame legado;
+- não existe PIN/login próprio no módulo nativo;
+- sessão e área continuam sob `ConectaModuleCoreV1`;
+- busca, cadastro/edição, situação, consolidação, CPF/CNS, duplicidades e isolamento territorial permanecem preservados;
+- alterações não salvas continuam protegidas pelo Voltar;
+- Agendas nativas permanecem preservadas;
+- nenhum outro painel foi migrado nesta tarefa.
+
+### Status final da Tarefa 17: VALIDADA INTERNAMENTE, PUBLICADA E CANONIZADA — 12/09/2026
+Workflow final `34730914731` — success. Gate `TAREFA_17_MORADORES_NATIVOS_OK`, `QUALITY_GATE_V101_OK` e `V101_INTERNO_APROVADO=SIM`. Pages do código `34730907935` — success.
+
+Apps Script permanece na versão **208**.
+
+**Sequência:** Tarefa 17 encerrada. Profissionais e serviços permanece a próxima etapa e não foi iniciado.
