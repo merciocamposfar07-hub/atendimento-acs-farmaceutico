@@ -2540,6 +2540,7 @@ try{visualObserver=new MutationObserver(function(){if(!window.__cscVisualGuardTi
 <body>
 <header><span class="seal">GESTÃO TERRITORIAL • ACESSO PROTEGIDO</span><h1>Administração, TACs e UBS</h1><p>Cadastro de acessos, agentes, fontes isoladas e importação CSV.</p></header>
 <main>
+<div id="territoryLoading" class="status warn" role="status" aria-live="polite">Aguarde enquanto os dados carregam…</div>
 <section id="loginPanel" class="panel">
   <h2>Entrar</h2>
   <div class="tabs"><button id="loginAdminTab" class="tab active" type="button">Administrador geral</button><button id="loginTacsTab" class="tab" type="button">TACS da área</button></div>
@@ -2601,7 +2602,7 @@ try{visualObserver=new MutationObserver(function(){if(!window.__cscVisualGuardTi
 </main>
 
 <script src="/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260913-territorio-first-touch-v3"></script>
-<script src="painel-tacs-areas-v1.js?v=20260913-territorio-reconexao-v6"></script>
+<script src="painel-tacs-areas-v1.js?v=20260913-territorio-loading-fast-v1"></script>
 <script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=20260912-no-panel-pin-v4"></script>
 </body>
 </html>
