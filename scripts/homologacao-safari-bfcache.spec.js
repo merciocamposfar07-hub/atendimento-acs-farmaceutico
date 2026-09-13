@@ -16,12 +16,14 @@ test('Central retorna do painel interno com cartões tocáveis no Safari/WebKit'
     localStorage.setItem('portalTacsDispositivoV1','device-homologacao-retorno-shell');
   });
   await page.goto('central-administrativa-tacs.html',{waitUntil:'domcontentloaded'});
-  await page.evaluate(()=>{const modules=document.getElementById('modulesPanel');if(modules)modules.hidden=false;const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');if(b){b.hidden=false;b.disabled=false}});
-  const support=page.locator('#moduleGrid .module[data-module="suporte"]');
-  await expect(support).toBeVisible();
-  await support.click();
+  await page.evaluate(()=>{const modules=document.getElementById('modulesPanel');if(modules)modules.hidden=false;const b=document.querySelector('#moduleGrid .module[data-module="agendas"]');if(b){b.hidden=false;b.disabled=false}});
+  const agenda=page.locator('#moduleGrid .module[data-module="agendas"]');
+  await expect(agenda).toBeVisible();
+  await agenda.click();
   await expect(page.locator('#viewer')).toBeVisible();
-  await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.ativo())).toBe('suporte');
+  await expect(page.locator('#viewer')).toHaveClass(/csc-native-viewer/);
+  await expect(page.locator('#viewerBack')).toBeVisible();
+  await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.ativo())).toBe('agendas');
 
   await page.locator('#viewerBack').click();
   await expect(page.locator('#viewer')).toBeHidden();
@@ -29,19 +31,19 @@ test('Central retorna do painel interno com cartões tocáveis no Safari/WebKit'
 
   await page.evaluate(()=>{
     const modules=document.getElementById('modulesPanel');if(modules)modules.hidden=false;
-    const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');
+    const b=document.querySelector('#moduleGrid .module[data-module="agendas"]');
     if(b){b.hidden=false;b.disabled=false}
   });
-  await expect(support).toBeVisible();
+  await expect(agenda).toBeVisible();
   const state=await page.evaluate(()=>{
-    const b=document.querySelector('#moduleGrid .module[data-module="suporte"]');
+    const b=document.querySelector('#moduleGrid .module[data-module="agendas"]');
     return {pointerEvents:getComputedStyle(b).pointerEvents,ariaBusy:b.getAttribute('aria-busy')||'',disabled:Boolean(b.disabled)};
   });
   expect(state.pointerEvents).not.toBe('none');expect(state.ariaBusy).toBe('');expect(state.disabled).toBe(false);
 
-  await support.click();
+  await agenda.click();
   await expect(page.locator('#viewer')).toBeVisible();
-  await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.ativo())).toBe('suporte');
+  await expect.poll(()=>page.evaluate(()=>window.ConectaCentralShellV1&&window.ConectaCentralShellV1.ativo())).toBe('agendas');
   expect(pageErrors).toEqual([]);
   console.log(JSON.stringify({kind:'safari-retorno-shell',browserName,retouch:true,poolOculto:false}));
 });
