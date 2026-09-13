@@ -1305,11 +1305,11 @@ function loadContext(message){
         return;
       }
       if(acessoLocalAberto){bloquearAcessoLocal(acessoLocalAberto,falhaMsg);return}
-      resetModuleShell();token='';territoryToken='';mode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);syncAppState();
+      resetModuleShell();token='';territoryToken='';ubsToken='';mode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);sessionStorage.removeItem(UBS_TOKEN_KEY);syncAppState();
       el('loginPanel').hidden=false;el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;
       setStatus(falhaMsg||'A sessão foi recusada pelo servidor. Entre novamente.','warn');return;
     }
-    context=r;mode=r.perfil==='TACS'?'tacs':'admin';saveContextCache();
+    context=r;mode=r.perfil==='TACS'?'tacs':(r.perfil==='UBS'?'ubs':'admin');saveContextCache();
     var pin=pinLocalPendente,scope=pinLocalPerfil||mode;
     pinLocalPendente='';pinLocalPerfil='';acessoLocalAberto='';
     if(pin)guardarAcessoLocal(scope,pin);
@@ -1344,7 +1344,7 @@ function logout(){
   if(logoutEmCurso)return;
   logoutEmCurso=true;
   var lastMode=mode||'admin',hasSession=Boolean(token||territoryToken||ubsToken);
-  var action=lastMode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout';
+  var action=lastMode==='tacs'?'admin_territorio_encerrar_sessao':(lastMode==='ubs'?'conecta_ubs_encerrar':'admin_logout');
   var payload=null;
   try{if(hasSession)payload=session()}catch(e){}
 
@@ -1354,8 +1354,8 @@ function logout(){
   try{cancelRemoteAuthSync()}catch(e){}
   try{cancelarOperacaoAtivaSemCallback()}catch(e){}
 
-  token='';territoryToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
-  try{sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY)}catch(e){}
+  token='';territoryToken='';ubsToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
+  try{sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);sessionStorage.removeItem(UBS_TOKEN_KEY)}catch(e){}
   try{syncAppState()}catch(e){}
 
   /* Sincroniza imediatamente o estado visual App4; não depende do timer de 700 ms,
@@ -1374,7 +1374,7 @@ function logout(){
   if(health)health.hidden=true;
   if(modules)modules.hidden=true;
   if(login)login.hidden=false;
-  try{showLogin(lastMode==='tacs'?'tacs':'admin')}catch(e){}
+  try{if(lastMode==='ubs'&&window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.showRole==='function')window.ConectaAcessoUnificado.showRole('ubs');else showLogin(lastMode==='tacs'?'tacs':'admin')}catch(e){}
   try{setStatus('Sessão encerrada. Seus dados locais foram preservados para o próximo acesso.','ok')}catch(e){}
   try{window.scrollTo({top:0,behavior:'auto'})}catch(e){}
 
@@ -1446,23 +1446,36 @@ el('loginTacs').addEventListener('click',function(){
     startRemoteAuthSync('tacs',pin,Boolean(saved));
   });
 });
-el('adminArea').addEventListener('change',function(){if(mode!=='admin')return;resetModuleShell();selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}publishModuleCore();renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
+el('adminArea').addEventListener('change',function(){if(mode!=='admin'&&mode!=='ubs')return;resetModuleShell();selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}publishModuleCore();if(mode==='ubs')loadContext('Área da UBS selecionada.');else renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
 el('viewerFrame').addEventListener('load',function(){try{applyUiStandard(el('viewerFrame').contentDocument)}catch(e){}});
 el('moduleGrid').addEventListener('click',function(e){var btn=e.target.closest('.module');if(!btn||btn.disabled||btn.hidden)return;if(btn.dataset.module!=='ubs'){adminUbsContext=null;adminUbsPreviousAreaId=''}openModule(btn.dataset.module,btn.querySelector('strong').textContent)});
 /* CENTRAL_RETURN_R6: restaura imediatamente o conteúdo ao voltar pelo histórico/BFCache do iPhone. */
 window.addEventListener('pageshow',function(){
   token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||'');
   territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'';
-  mode=territoryToken?'tacs':(token?'admin':'');
+  ubsToken=sessionStorage.getItem(UBS_TOKEN_KEY)||'';
+  mode=territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':''));
   document.body.classList.remove('viewer-open');
   var viewer=el('viewer');if(viewer)viewer.hidden=true;
   shellActiveModule='';
-  if(token||territoryToken){
-    if(context)renderContext(true);
+  if(token||territoryToken||ubsToken){
+    if(context&&mode!=='ubs')renderContext(true);
     else restoreContextCache();
     setTimeout(function(){if(!active)loadContext('Sessão existente validada.')},140);
   }
 });
+function entrarPaineisUbs(r){
+  var novoToken=text(r&&r.token);if(!/^cus1\./.test(novoToken))return false;
+  try{cancelRemoteAuthSync()}catch(e){}
+  try{resetModuleShell()}catch(e){}
+  token='';territoryToken='';ubsToken=novoToken;mode='ubs';context=null;selectedAreaId='';
+  try{sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);sessionStorage.setItem(UBS_TOKEN_KEY,ubsToken)}catch(e){}
+  syncAppState();
+  setStatus('Abrindo os painéis da UBS…','warn');
+  loadContext('Acesso UBS validado.');
+  return true;
+}
+window.ConectaCentralUbsV1={entrar:entrarPaineisUbs};
 window.ConectaCentralModuleCoreV1={publicar:publishModuleCore,chave:MODULE_CORE_KEY};
 window.ConectaCentralShellV1={
   abrir:openModule,
@@ -1496,7 +1509,7 @@ window.PortalTacsCentralPinLocalV2={
 };
 applyUiStandard(document);
 syncAppState();
-if(token||territoryToken){
+if(token||territoryToken||ubsToken){
   try{
     var pendingPin=sessionStorage.getItem('portalTacsPinLocalPendenteV2')||'';
     var pendingScope=sessionStorage.getItem('portalTacsPinLocalPerfilV2')||'';
