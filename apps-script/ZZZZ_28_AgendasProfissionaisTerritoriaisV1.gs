@@ -102,7 +102,7 @@ function agendasProfissionaisTerritoriaisV1TratarPost_(e){
 function agendasProfissionaisTerritoriaisV1Contexto_(p,action){
   var acesso=tacsTerritorioV1ValidarAcesso_(p,false);
   var areaId;
-  if(acesso.perfil==='TACS'){
+  if(acesso.perfil==='TACS'||acesso.perfil==='UBS'){
     areaId=agendasProfissionaisTerritoriaisV1AreaId_(acesso.areaId);
     var escopo=agendasProfissionaisTerritoriaisV1Texto_(p.escopo).toLowerCase();
     var permissao=action==='admin_salvar_agenda'||(action==='admin_dados'&&escopo==='agendas')
