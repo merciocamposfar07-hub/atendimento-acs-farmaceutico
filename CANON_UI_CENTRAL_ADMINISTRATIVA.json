@@ -737,5 +737,63 @@
       "validationNotes": "Gates legados de transporte/cache-busting foram alinhados ao contrato atual sem alterar a lógica funcional; versionamento automático por hash permanece aceito."
     },
     "validatedOn": "2026-09-12"
+  },
+  "task15InternalBackNavigation": {
+    "status": "validated-internal-deployed-pages-passed-canonical",
+    "authorizedOn": "2026-09-12",
+    "validatedOn": "2026-09-12",
+    "internalBackOwnsNavigation": true,
+    "safariHistoryBackDependency": false,
+    "embeddedBackTarget": "ConectaCentralShellV1.voltar",
+    "standaloneFallback": "location.replace(centralUrl())",
+    "returnDoesNotResetShell": true,
+    "returnPreservesModuleFrame": true,
+    "unsavedChangesGuardPreserved": true,
+    "routeIdentity": "routeId",
+    "routeVariantsSeparated": true,
+    "internalRoutes": {
+      "prontuarios": {
+        "module": "MORADORES",
+        "view": "prontuarios",
+        "all": "1"
+      },
+      "pendencias": {
+        "module": "SUPORTE_MORADORES",
+        "view": "pending"
+      }
+    },
+    "modulesWithInternalBack": [
+      "MORADORES",
+      "SUPORTE_MORADORES",
+      "RECADOS_CAMPANHAS",
+      "AGENDAS",
+      "PROFISSIONAIS",
+      "TACS_AREAS",
+      "MUNICIPIOS_ORGANIZACOES"
+    ],
+    "backendChanged": false,
+    "appsScriptVersionExpectedUnchanged": 208,
+    "task16DefinitivePanelMigrationStarted": false,
+    "specificGate": "TAREFA_15_NAVEGACAO_INTERNA_OK",
+    "canonicalRecord": "REGISTRO_CANONICO_TAREFA_15_NAVEGACAO_INTERNA_2026_09_12.md",
+    "validation": {
+      "specificGate": "TAREFA_15_NAVEGACAO_INTERNA_OK",
+      "task14Gate": "passed",
+      "fullSuite": "passed",
+      "syntax": "passed",
+      "criticalRules": "passed",
+      "internalGate": "V101_INTERNO_APROVADO=SIM",
+      "legacyContractBlockedRuns": [
+        34729087312,
+        34729147803,
+        34729263597
+      ],
+      "finalWorkflowRun": 34729325418,
+      "pagesCodeWorkflowRun": 34729320071,
+      "pagesCodeDeploymentSuccess": true,
+      "backendChanged": false,
+      "appsScriptVersionUnchanged": 208,
+      "validationNotes": "Gates históricos de shell/BFCache/cache-busting foram alinhados à assinatura e revisão da Tarefa 15 sem alterar a lógica de produção."
+    }
   }
 }
