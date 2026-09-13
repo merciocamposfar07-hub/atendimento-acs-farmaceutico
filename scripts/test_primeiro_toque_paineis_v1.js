@@ -80,8 +80,8 @@ const territorioHtml=fs.readFileSync('teste-v1/painel-tacs-areas-v1.html','utf8'
 const territorioJs=fs.readFileSync('teste-v1/painel-tacs-areas-v1.js','utf8');
 const wrapper=fs.readFileSync('painel-oficial-tacs-areas.html','utf8');
 assert.match(territorioHtml,/conecta-module-core-v1\.js\?v=20260913-territorio-first-touch-v3/);
-assert.match(territorioHtml,/painel-tacs-areas-v1\.js\?v=20260913-territorio-contexto-local-v4/);
-assert.match(wrapper,/painel-tacs-areas-v1\.html\?v=20260913-territorio-contexto-local-v4/);
+assert.match(territorioHtml,/painel-tacs-areas-v1\.js\?v=20260913-territorio-loading-fast-v1/);
+assert.match(wrapper,/painel-tacs-areas-v1\.html\?v=20260913-territorio-loading-fast-v1/);
 assert.match(territorioJs,/function localFirstWithoutRemote\(\)/);
 assert.match(territorioJs,/function primeTerritoryFromCentralContext\(\)/);
 assert.match(territorioJs,/state&&state\.cache&&state\.cache\.contextKey/);
