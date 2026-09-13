@@ -25,11 +25,14 @@ assert.match(block,/if\(name==='agendas'\)\{showNativeAgenda/);
 assert.match(block,/if\(name==='moradores'/);
 assert.match(block,/if\(name==='profissionais'\)\{showNativeProfissionais/);
 
-// Regra aprovada em 13/09/2026: todos os painéis respondem no primeiro toque sem tela lisa.
-assert.match(block,/showPendingModuleShell\(name,title\|\|'Painel',routeId\)/);
+// Correção cirúrgica: TACS/áreas não pode exibir uma tela provisória diferente da tela real.
+assert.match(block,/if\(name==='territorio'\)\{[\s\S]*?Confirmando a sessão para abrir TACS e áreas[\s\S]*?return;\s*\}/);
+const territoryGuard=block.match(/if\(name==='territorio'\)\{[\s\S]*?return;\s*\}/);
+assert.ok(territoryGuard,'Guard cirúrgico de TACS/áreas ausente.');
+assert.doesNotMatch(territoryGuard[0],/showPendingModuleShell/);
 assert.doesNotMatch(block,/localFrame\.dataset\.shellLocalFirst/);
 
-// Painéis ainda em frame exibem estrutura interna segura enquanto a sessão remota sincroniza.
+// Os demais painéis em frame preservam a prévia segura já existente.
 const previewStart=central.indexOf('function ensurePendingPreviewStyle');
 const pendingStart=central.indexOf('function showPendingModuleShell',previewStart);
 const pendingEnd=central.indexOf('function shellHasUnsaved',pendingStart);
@@ -61,4 +64,4 @@ assert.match(closeBlock,/moduloPendente=null/);
 const core=fs.readFileSync('conecta-module-core-v1.js','utf8');
 assert.match(core,/function ready\(\)[\s\S]*Boolean\(s\.adminToken\|\|s\.territoryToken\)/);
 
-console.log('PRIMEIRO_TOQUE_PAINEIS_OK: painéis nativos exibem conteúdo imediatamente e painéis em frame exibem prévia interna segura no primeiro toque, sem tela lisa; a sessão remota sincroniza em segundo plano.');
+console.log('PRIMEIRO_TOQUE_PAINEIS_OK: TACS/áreas espera a sessão mantendo a Central visível, sem tela provisória; demais painéis preservam o comportamento anterior.');

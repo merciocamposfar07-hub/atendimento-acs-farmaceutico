@@ -613,7 +613,7 @@ function moduleRouteId(name,options){
   return id;
 }
 function moduleUrl(name,options){
-  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260913-apresentacao-paineis-v2',loadingRevision='20260913-loading-standard-v1',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
+  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260913-apresentacao-paineis-v2',territoryRevision='20260913-ubs-institucional-cache-v1',loadingRevision='20260913-loading-standard-v1',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
   if(opts.view)extra+='&view='+encodeURIComponent(opts.view);
   if(opts.all)extra+='&all='+encodeURIComponent(opts.all);
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
@@ -621,7 +621,7 @@ function moduleUrl(name,options){
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
-  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v='+revision;
+  if(name==='territorio')return '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html?from=central&v='+territoryRevision;
   if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+revision;
   if(name==='portal')return '/atendimento-acs-farmaceutico/?area='+area;
   return ''
@@ -1200,8 +1200,13 @@ function openModule(name,title,options){
     if(name==='agendas'){showNativeAgenda(title||'Agendas e vagas',routeId);return}
     if(name==='moradores'&&moduleRouteOptions(options).view!=='prontuarios'){showNativeMoradores(title||'Moradores',routeId);return}
     if(name==='profissionais'){showNativeProfissionais(title||'Profissionais e serviços',routeId);return}
-    /* Painéis ainda em frame exibem imediatamente a estrutura interna do módulo,
-       sem tela lisa e sem iniciar conteúdo protegido antes da sessão remota. */
+    /* UBS/TACS e áreas não exibe uma tela provisória diferente da tela real.
+       Mantém a Central visível até a sessão remota estar pronta e então abre o painel verdadeiro. */
+    if(name==='territorio'){
+      setStatus('Central disponível. Confirmando a sessão para abrir TACS e áreas…','warn');
+      return;
+    }
+    /* Demais painéis em frame preservam a prévia já existente. */
     showPendingModuleShell(name,title||'Painel',routeId);
     return;
   }
