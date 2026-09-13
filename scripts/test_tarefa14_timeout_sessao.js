@@ -54,7 +54,12 @@ assert.ok(profText.indexOf("if(!falha.explicitAuthRefusal)") < profText.indexOf(
 // Território: clearSession apenas após recusa explícita.
 assert.match(territorio,/moduleSessionPolicy=moduleCore&&moduleCore\.sessionPolicy/);
 assert.match(territorio,/if\(!falha\.explicitAuthRefusal\)[\s\S]*loginStatus\('Sessão ativa\.'[\s\S]*scheduleTerritoryReconnect/,'Falha temporária territorial deve preservar a sessão ativa e reconectar em segundo plano.');
-assert.match(territorio,/if\(!falha\.explicitAuthRefusal\)[\s\S]*return\}cancelTerritoryReconnect\(\);clearSession\(\)/,'Território só deve limpar a sessão após recusa explícita, cancelando antes a reconexão pendente.');
+const territorioFailureStart=territorio.indexOf("if(!r||r.ok!==true)");
+const territorioFailureEnd=territorio.indexOf("var payload=territoryPerformancePayload",territorioFailureStart);
+const territorioFailureBlock=territorio.slice(territorioFailureStart,territorioFailureEnd);
+assert.ok(territorioFailureStart>=0&&territorioFailureEnd>territorioFailureStart,'Bloco de falha territorial não localizado.');
+assert.ok(territorioFailureBlock.indexOf("scheduleTerritoryReconnect(message,operationMessage);return")>=0,'Falha temporária territorial deve retornar após agendar reconexão.');
+assert.ok(territorioFailureBlock.indexOf("clearSession()")>territorioFailureBlock.indexOf("scheduleTerritoryReconnect(message,operationMessage);return"),'Território só deve limpar a sessão depois do retorno da ramificação temporária, isto é, em recusa explícita.');
 
 // Módulos já seguros mantêm último estado em falha de leitura.
 assert.match(agendas,/authInvalida=Boolean\(r&&r\.temporario!==true/);
