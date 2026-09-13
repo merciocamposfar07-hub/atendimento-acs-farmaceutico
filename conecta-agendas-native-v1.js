@@ -122,11 +122,11 @@ function create(host){
     var had=options.skipPrime?false:prime();
     if(!ready()){
       confirmed=false;lockWrites();
-      setStatus(had?'Últimos dados confirmados disponíveis. Sincronizando a sessão em segundo plano…':'Painel pronto. Confirmando a sessão para carregar agendas e vagas…','aviso');
+      setStatus('Aguarde enquanto os dados carregam…','aviso');
       if(done)done(false,{ok:false,aguardandoSessao:true});
       return;
     }
-    if(!had&&!options.silent)setStatus('Carregando agendas e vagas…','aviso');
+    if(!had&&!options.silent)setStatus('Aguarde enquanto os dados carregam…','aviso');
     var payload=session();
     transport.read('admin_dados',payload,function(r){
       if(!r||r.ok!==true){
