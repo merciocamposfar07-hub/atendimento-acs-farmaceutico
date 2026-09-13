@@ -19,7 +19,6 @@ function visibleService(s){return norm(s&&s.NOME)!=='ATENDIMENTO ODONTOLOGICO DE
 
 function template(areaId){
   return '<section class="csc-prof-native" data-role="root">'+
-    '<p style="margin:0 0 10px;color:#8eb2c6;font-size:.78rem">Módulo nativo do Conecta • profissionais e serviços • área <strong>'+esc(areaId)+'</strong></p>'+
     '<div class="status" data-role="status">Preparando profissionais e serviços…</div>'+
     '<div class="metrics">'+
       '<div class="metric"><strong data-role="qProf">0</strong><span>Profissionais</span></div>'+
