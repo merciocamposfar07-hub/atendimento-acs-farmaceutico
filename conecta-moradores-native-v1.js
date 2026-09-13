@@ -87,6 +87,8 @@ function create(host,options){
   host.dataset.tacsDirty='0';
 
   function setDirty(v){dirty=Boolean(v);host.dataset.tacsDirty=dirty?'1':'0'}
+  function remoteReady(){return Boolean(core&&typeof core.ready==='function'&&core.ready())}
+  function showWaitingSession(){var status=host.querySelector('#loginStatus');if(status){status.textContent='Painel pronto. Confirmando a sessão para carregar a base de moradores…';status.className='status warn'}}
   function notify(type){
     if(type==='write-confirmed')setDirty(false);
   }
@@ -118,9 +120,9 @@ function create(host,options){
         return;
       }
       loaded=true;
-      if(window.PortalTacsMoradoresTransportV2&&typeof window.PortalTacsMoradoresTransportV2.rebindNativeContext==='function'){
+      if(remoteReady()&&window.PortalTacsMoradoresTransportV2&&typeof window.PortalTacsMoradoresTransportV2.rebindNativeContext==='function'){
         window.PortalTacsMoradoresTransportV2.rebindNativeContext(config());
-      }
+      }else showWaitingSession();
     });
   }
 
@@ -133,9 +135,9 @@ function create(host,options){
       visible=true;host.hidden=false;
       if(next&&next.areaId&&normArea(next.areaId)!==areaId)return false;
       window.ConectaMoradoresNativeConfigV1=config();
-      if(loaded&&window.PortalTacsMoradoresTransportV2&&typeof window.PortalTacsMoradoresTransportV2.rebindNativeContext==='function'){
+      if(loaded&&remoteReady()&&window.PortalTacsMoradoresTransportV2&&typeof window.PortalTacsMoradoresTransportV2.rebindNativeContext==='function'){
         window.PortalTacsMoradoresTransportV2.rebindNativeContext(config());
-      }
+      }else if(!remoteReady())showWaitingSession();
       return true;
     },
     hide:function(){visible=false;host.hidden=true},
