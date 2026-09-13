@@ -1,89 +1,29 @@
-name: Aplicar patch cirúrgico clique e confirmação UBS
-
+name: Patch cirurgico UBS
 on:
   push:
-    branches: [fix/cirurgico-clique-releitura-ubs]
+    branches:
+      - 'fix/cirurgico-clique-releitura-ubs'
     paths:
       - '.github/workflows/patch-cirurgico-clique-releitura-ubs.yml'
-
 permissions:
   contents: write
-
 jobs:
   patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: fix/cirurgico-clique-releitura-ubs
+          ref: 'fix/cirurgico-clique-releitura-ubs'
           fetch-depth: 0
-      - name: Aplicar somente as duas correções
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          central=Path('central-administrativa-tacs.js')
-          c=central.read_text()
-          old="""    if(name==='territorio'){
-      priorizarSincronizacaoTerritorioPendente();
-      setStatus('Central disponível. Confirmando a sessão para abrir TACS e áreas…','warn');
-      return;
-    }"""
-          new="""    if(name==='territorio'){
-      priorizarSincronizacaoTerritorioPendente();
-      showPendingModuleShell(name,title||'Painel',routeId);
-      return;
-    }"""
-          if c.count(old)!=1:
-              raise SystemExit('Bloco exato do primeiro toque não encontrado uma única vez.')
-          central.write_text(c.replace(old,new))
-
-          panel=Path('teste-v1/painel-tacs-areas-v1.js')
-          p=panel.read_text()
-          old2="""    el('tacsForm').classList.add('hidden');loadData('',text(r.message||'Cadastro salvo e conferido.'));"""
-          new2="""    var salvo=r.tacs||body,found=false;
-    data.tacs=data.tacs.map(function(t){if(text(t.tacsId)===text(salvo.tacsId)){found=true;return salvo;}return t;});
-    if(!found)data.tacs.push(salvo);
-    if(modulePerf&&typeof modulePerf.commit==='function')modulePerf.commit('territorio',territoryPerformancePayload(data));
-    territoryConfirmed=true;render();el('tacsForm').classList.add('hidden');
-    status(text(r.message||'Cadastro salvo e conferido.'),'ok');"""
-          if p.count(old2)!=1:
-              raise SystemExit('Bloco exato de releitura pós-cadastro não encontrado uma única vez.')
-          panel.write_text(p.replace(old2,new2))
-
-          test=Path('scripts/test_primeiro_toque_paineis_v1.js')
-          t=test.read_text()
-          old3="""assert.match(block,/if\\(name==='territorio'\\)\\{[\\s\\S]*?priorizarSincronizacaoTerritorioPendente\\(\\)[\\s\\S]*?Confirmando a sessão para abrir TACS e áreas[\\s\\S]*?return;\\s*\\}/);
-const territoryGuard=block.match(/if\\(name==='territorio'\\)\\{[\\s\\S]*?return;\\s*\\}/);
-assert.ok(territoryGuard,'Guard cirúrgico de TACS/áreas ausente.');
-assert.doesNotMatch(territoryGuard[0],/showPendingModuleShell/);"""
-          new3="""assert.match(block,/if\\(name==='territorio'\\)\\{[\\s\\S]*?priorizarSincronizacaoTerritorioPendente\\(\\)[\\s\\S]*?showPendingModuleShell\\(name,title\\|\\|'Painel',routeId\\)[\\s\\S]*?return;\\s*\\}/);
-const territoryGuard=block.match(/if\\(name==='territorio'\\)\\{[\\s\\S]*?return;\\s*\\}/);
-assert.ok(territoryGuard,'Guard cirúrgico de TACS/áreas ausente.');
-assert.match(territoryGuard[0],/showPendingModuleShell/);"""
-          if t.count(old3)!=1:
-              raise SystemExit('Teste exato do primeiro toque não encontrado uma única vez.')
-          test.write_text(t.replace(old3,new3))
-
-          dom=Path('scripts/test_territorio_dom.js')
-          d=dom.read_text()
-          marker="assert.match(js, /if\\(operationMessage\\)status\\(operationMessage,'ok'\\)/,"
-          if marker in d:
-              d=d.replace(marker,"assert.doesNotMatch(js, /loadData\\('',text\\(r\\.message\\|\\|'Cadastro salvo e conferido\\.'\\)\\)/,\n    'Cadastro UBS confirmado pelo retorno da própria gravação não deve disparar releitura bloqueante.');\n  assert.match(js, /status\\(text\\(r\\.message\\|\\|'Cadastro salvo e conferido\\.'\\),'ok'\\)/,\n    'Cadastro UBS confirmado deve encerrar com sucesso imediato.');\n  "+marker,1)
-              dom.write_text(d)
-          PY
-          node --check central-administrativa-tacs.js
-          node --check teste-v1/painel-tacs-areas-v1.js
-          node scripts/test_primeiro_toque_paineis_v1.js
-          node scripts/test_tarefa1_perfil_ubs.js
-          node scripts/test_territorio_dom.js
-      - name: Registrar patch na branch
-        shell: bash
-        run: |
+      - run: python3 scripts/patch_cirurgico_clique_releitura_ubs.py
+      - run: node --check central-administrativa-tacs.js
+      - run: node --check teste-v1/painel-tacs-areas-v1.js
+      - run: node scripts/test_primeiro_toque_paineis_v1.js
+      - run: node scripts/test_tarefa1_perfil_ubs.js
+      - run: node scripts/test_territorio_dom.js
+      - run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add central-administrativa-tacs.js teste-v1/painel-tacs-areas-v1.js scripts/test_primeiro_toque_paineis_v1.js scripts/test_territorio_dom.js
-          git diff --cached --quiet && exit 1
-          git commit -m 'Corrige resposta do botão e confirmação do cadastro UBS'
+          git add central-administrativa-tacs.js teste-v1/painel-tacs-areas-v1.js scripts/test_primeiro_toque_paineis_v1.js
+          git commit -m 'Corrige resposta do botao e confirmacao do cadastro UBS'
           git push origin HEAD:fix/cirurgico-clique-releitura-ubs
