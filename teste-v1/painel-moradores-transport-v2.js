@@ -24,6 +24,7 @@ var selectedAreaId=nativeConfig&&nativeConfig.areaId?String(nativeConfig.areaId)
 var availableAreas=[];
 var statusActivationAttempted=false;
 var backendVersion='';
+var baseConfirmed=false;
 var PRONTUARIOS_VIEW=(function(){if(nativeConfig&&nativeConfig.view)return String(nativeConfig.view).toLowerCase()==='prontuarios';try{return String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='prontuarios'}catch(e){return false}})();
 
 var COMPARISON_FIELDS=[
@@ -304,6 +305,7 @@ function changeArea(areaId){
     return;
   }
   selectedAreaId=next;
+  baseConfirmed=false;
   lastSearchQuery='';
   duplicateLock=false;
   duplicateEditMode=false;
@@ -362,17 +364,19 @@ function setBaseLoading(loading){
 }
 
 function showAuthenticatedShell(message){
-  writesEnabled=false;
-  situationEnabled=false;
-  consolidationEnabled=false;
   duplicateLock=false;
   duplicateEditMode=false;
-  backendVersion='';
-  if(el('countResidents'))el('countResidents').textContent='…';
-  if(el('schema'))el('schema').textContent='…';
-  if(el('write'))el('write').textContent='AGUARDE';
-  if(el('consolidation'))el('consolidation').textContent='AGUARDE';
-  if(el('situation'))el('situation').textContent='AGUARDE';
+  if(!baseConfirmed){
+    writesEnabled=false;
+    situationEnabled=false;
+    consolidationEnabled=false;
+    backendVersion='';
+    if(el('countResidents'))el('countResidents').textContent='…';
+    if(el('schema'))el('schema').textContent='…';
+    if(el('write'))el('write').textContent='AGUARDE';
+    if(el('consolidation'))el('consolidation').textContent='AGUARDE';
+    if(el('situation'))el('situation').textContent='AGUARDE';
+  }
   if(el('summary'))el('summary').classList.remove('hidden');
   if(el('content'))el('content').classList.remove('hidden');
   if(el('logout'))el('logout').disabled=false;
@@ -464,6 +468,7 @@ function basePerformancePayload(r){
   };
 }
 function confirmBaseState(r,message){
+  baseConfirmed=true;
   writesEnabled=r.escritaHabilitada===true;
   situationEnabled=r.situacaoHabilitada===true;
   consolidationEnabled=r.consolidacaoHabilitada===true;
@@ -482,6 +487,7 @@ function renderBase(r,message,confirmed){
     setBaseLoading(false);syncControls();setStatus('loginStatus',text(r&&r.message||'Não foi possível carregar a base.'),'err');return false;
   }
   var remoteConfirmed=confirmed!==false;
+  if(remoteConfirmed)baseConfirmed=true;
   writesEnabled=remoteConfirmed&&r.escritaHabilitada===true;
   situationEnabled=remoteConfirmed&&r.situacaoHabilitada===true;
   consolidationEnabled=remoteConfirmed&&r.consolidacaoHabilitada===true;
@@ -569,7 +575,7 @@ function logoutCurrent(){
   var action=accessMode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout';
   var resultAction=accessMode==='tacs'?'admin_territorio_result':'admin_result';
   post(action,session(),resultAction,function(){
-    token='';territoryToken='';accessMode='';selectedAreaId='';
+    token='';territoryToken='';accessMode='';selectedAreaId='';baseConfirmed=false;
     sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
     if(el('content'))el('content').classList.add('hidden');
     if(el('summary'))el('summary').classList.add('hidden');
@@ -1214,7 +1220,11 @@ function rebindNativeContext(config){
   accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':accessMode));
   if(nativeConfig&&nativeConfig.areaId)selectedAreaId=String(nativeConfig.areaId);
   PRONTUARIOS_VIEW=Boolean(nativeConfig&&String(nativeConfig.view||'').toLowerCase()==='prontuarios');
-  showAuthenticatedShell(accessMode==='tacs'?'Sessão individual encontrada. Conferindo moradores da própria área…':'Sessão administrativa encontrada. Conferindo a base de moradores…');
+  if(!baseConfirmed){
+    showAuthenticatedShell(accessMode==='tacs'?'Sessão individual encontrada. Conferindo moradores da própria área…':'Sessão administrativa encontrada. Conferindo a base de moradores…');
+  }else{
+    setStatus('loginStatus','Base já confirmada. Conferindo somente se houve atualização…','ok');
+  }
   setTimeout(function(){if(!active)loadBase('Base de moradores conferida no módulo nativo.')},0);
 }
 
