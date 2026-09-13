@@ -17,6 +17,7 @@ function normalDia(v){var s=text(v).normalize('NFD').replace(/[\u0300-\u036f]/g,
 function ordemDia(v){var d=normalDia(v),m={SEGUNDA:1,TERCA:2,QUARTA:3,QUINTA:4,SEXTA:5};return Object.prototype.hasOwnProperty.call(m,d)?m[d]:99}
 function dataInput(v){var s=text(v).trim();if(!s)return'';var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];var d=new Date(s);if(isNaN(d.getTime()))return'';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function clone(v){try{return JSON.parse(JSON.stringify(v))}catch(e){return v}}
+function objectRows(v){return Array.isArray(v)?v.filter(function(x){return x&&typeof x==='object'}):[]}
 
 function create(host){
   var core=window.ConectaModuleCoreV1,transportFactory=window.ConectaAgendasTransportV1;
@@ -100,17 +101,21 @@ function create(host){
   function updateUndo(){q('undo').hidden=!readUndo()}
   function lockWrites(){host.querySelectorAll('.csc-ag-save').forEach(function(b){b.disabled=!confirmed});q('undo').disabled=!confirmed}
 
-  function performancePayload(r){return{ok:true,profissionais:Array.isArray(r&&r.profissionais)?r.profissionais:[],agendas:Array.isArray(r&&r.agendas)?r.agendas:[]}}
+  function performancePayload(r){return{ok:true,profissionais:objectRows(r&&r.profissionais),agendas:objectRows(r&&r.agendas)}}
   function prime(){
     if(!perf||typeof perf.prime!=='function')return false;
-    var item=perf.prime('agendas',function(data){applyData(data,false)});
-    if(item){setStatus('Aguarde enquanto os dados carregam…','aviso');return true}
+    try{
+      var item=perf.prime('agendas',function(data){applyData(data,false)});
+      if(item){setStatus('Aguarde enquanto os dados carregam…','aviso');return true}
+    }catch(e){
+      try{if(typeof perf.forget==='function')perf.forget('agendas')}catch(x){}
+    }
     return false;
   }
   function applyData(r,isConfirmed){
     confirmed=isConfirmed===true;
-    state.profissionais=Array.isArray(r&&r.profissionais)?r.profissionais:[];
-    state.agendas=Array.isArray(r&&r.agendas)?r.agendas:[];
+    state.profissionais=objectRows(r&&r.profissionais);
+    state.agendas=objectRows(r&&r.agendas);
     fillFilters();render();setDirty(false);
   }
   function classifyFailure(r){

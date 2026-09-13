@@ -51,6 +51,10 @@ assert.doesNotMatch(native,/admin_login|admin_logout|Digite um PIN|Validando o P
 
 // Leitura, cache/frescor, deduplicação e timeout continuam usando o core.
 assert.match(native,/perf\.prime\('agendas'/);
+assert.match(native,/perf\.forget\('agendas'\)/,'Cache inválido de Agendas deve ser descartado sem derrubar o painel.');
+assert.match(native,/function objectRows\(v\)/,'Linhas inválidas de cache não podem derrubar a montagem nativa.');
+assert.match(native,/state\.profissionais=objectRows/);
+assert.match(native,/state\.agendas=objectRows/);
 assert.match(native,/perf\.commit\('agendas'/);
 assert.match(native,/transport\.read\('admin_dados'/);
 assert.match(native,/policy\.classify/);
