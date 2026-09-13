@@ -2231,7 +2231,7 @@ function openProfilePage(){
   ['identityPanel','healthPanel','modulesPanel'].forEach(function(id){var n=document.getElementById(id);if(n)n.hidden=true});
   var page=document.getElementById('cscProfilePage');
   if(!page){page=document.createElement('section');page.id='cscProfilePage';page.className='csc-profile-page';main.appendChild(page)}
-  var ctx=centralContextFromCache()||{},areas=Array.isArray(ctx.areas)?ctx.areas:[],tacs=Array.isArray(ctx.tacs)?ctx.tacs:[],admins=Array.isArray(ctx.administradores)?ctx.administradores:[];
+  var ctx=centralContextFromCache()||{},areas=Array.isArray(ctx.areas)?ctx.areas:[],tacs=Array.isArray(ctx.tacs)?ctx.tacs.filter(function(item){return /(^|_)TACS($|_)/.test(text(item&&item.perfil).toUpperCase());}):[],admins=Array.isArray(ctx.administradores)?ctx.administradores:[];
   function areaName(id){for(var i=0;i<areas.length;i++)if(text(areas[i].areaId)===text(id))return text(areas[i].areaNome||areas[i].areaId);return text(id)||'Área não vinculada'}
   var html='<h2>Administradores e TACS</h2><p class="csc-profile-intro">Acesso rápido aos perfis cadastrados e às áreas administradas.</p><h3>Administradores</h3><div class="csc-profile-list">'+
     '<button type="button" class="csc-profile-card csc-profile-admin-toggle" aria-expanded="false" aria-controls="cscProfileAdminNames"><strong>Administrador geral</strong><span>Toque para ver os administradores cadastrados</span></button></div>'+
