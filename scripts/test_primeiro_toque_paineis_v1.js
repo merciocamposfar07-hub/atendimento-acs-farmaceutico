@@ -11,8 +11,13 @@ assert.match(central,/Boolean\(acessoLocalAberto&&mode&&context\)/);
 assert.match(central,/function showPendingModuleShell\(name,title,routeId\)/);
 assert.match(central,/function priorizarSincronizacaoTerritorioPendente\(\)/);
 assert.match(central,/active&&\/\^\(\?:admin_login\|admin_territorio_login_pin\)\$\//);
-assert.match(central,/schedulePoll\(0\)/);
+assert.match(central,/active\.territorioUrgente=true/);
+assert.match(central,/active\.nextWait=300/);
+assert.match(central,/clearTimeout\(active\.pollTimer\)/);
+assert.match(central,/\bpoll\(\);/);
 assert.match(central,/scheduleRemoteAuthSync\(remoteAuthSeq,0\)/);
+assert.match(central,/var wait=delay==null\?active\.nextWait:delay/);
+assert.match(central,/if\(op\.territorioUrgente===true\)/);
 
 const openStart=central.indexOf('function openModule(name,title,options)');
 const closeStart=central.indexOf('function closeViewer()',openStart);
