@@ -2493,12 +2493,12 @@ html body .viewer.csc-shell-viewer:not([hidden]){
 html body .viewer .viewer-bar{
   flex:0 0 auto!important;
   width:min(720px,100%)!important;
-  min-height:108px!important;
+  min-height:132px!important;
   margin:0 auto!important;
-  padding:calc(10px + env(safe-area-inset-top)) 16px 10px!important;
+  padding:calc(12px + env(safe-area-inset-top)) 16px 12px!important;
   display:flex!important;
   align-items:center!important;
-  gap:14px!important;
+  gap:16px!important;
   background:#071827!important;
   background-image:none!important;
   color:#f7fcff!important;
@@ -2508,9 +2508,10 @@ html body .viewer .viewer-bar{
   box-shadow:none!important;
 }
 html body .viewer .viewer-official-icon{
-  width:80px!important;
-  height:80px!important;
-  flex:0 0 80px!important;
+  width:104px!important;
+  height:104px!important;
+  min-width:104px!important;
+  flex:0 0 104px!important;
   display:block!important;
   object-fit:contain!important;
   filter:none!important;
@@ -2519,20 +2520,20 @@ html body .viewer .viewer-official-icon{
 html body .viewer .viewer-heading{min-width:0!important;flex:1 1 auto!important}
 html body .viewer .viewer-heading small{
   display:block!important;
-  color:#83efa9!important;
-  font-size:.82rem!important;
-  line-height:1.14!important;
-  font-weight:900!important;
-  letter-spacing:.115em!important;
+  color:#8ff0ae!important;
+  font-size:1.08rem!important;
+  line-height:1.16!important;
+  font-weight:950!important;
+  letter-spacing:.045em!important;
   text-transform:uppercase!important;
 }
 html body .viewer .viewer-title{
   display:block!important;
   margin-top:5px!important;
   color:#fff!important;
-  font-size:1.20rem!important;
-  line-height:1.14!important;
-  font-weight:850!important;
+  font-size:1.36rem!important;
+  line-height:1.12!important;
+  font-weight:900!important;
   letter-spacing:-.02em!important;
   overflow:hidden!important;
   text-overflow:ellipsis!important;
@@ -2578,11 +2579,11 @@ html body #cscModuleOpening{
   background:#071827!important;
   color:#adc4d2!important;
 }
-@media(max-width:420px){
-  html body .viewer .viewer-bar{min-height:96px!important;padding-left:14px!important;padding-right:14px!important;gap:11px!important}
-  html body .viewer .viewer-official-icon{width:66px!important;height:66px!important;flex-basis:66px!important}
-  html body .viewer .viewer-heading small{font-size:.72rem!important}
-  html body .viewer .viewer-title{font-size:1.05rem!important}
+@media(max-width:430px){
+  html body .viewer .viewer-bar{min-height:124px!important;padding-left:13px!important;padding-right:13px!important;gap:13px!important}
+  html body .viewer .viewer-official-icon{width:94px!important;height:94px!important;min-width:94px!important;flex-basis:94px!important}
+  html body .viewer .viewer-heading small{font-size:1.00rem!important;line-height:1.15!important;letter-spacing:.035em!important}
+  html body .viewer .viewer-title{font-size:1.25rem!important}
   html body .viewer .viewer-back{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;flex-basis:44px!important}
 }
 </style>
