@@ -59,7 +59,7 @@ assert.match(transport,/if\(p\.cns&&p\.cns\.length!==15\)/);
 assert.match(transport,/legacyCpfZeroInitial/);
 assert.match(transport,/COMPARISON_FIELDS/);
 
-// Isolamento territorial continua obrigatório.
+// Isolamento territorial continua obrigatório. A areaId só é injetada no core quando existe, sem sobrescrever o contexto canônico com undefined.
 assert.match(transport,/if\(text\(a&&a\._areaId\)&&text\(b&&b\._areaId\)&&text\(a\._areaId\)!==text\(b\._areaId\)\)return false/);
 assert.match(transport,/selectedAreaId=nativeConfig&&nativeConfig\.areaId/);
 assert.match(transport,/if\(selectedAreaId\)extra\.areaId=selectedAreaId/);
