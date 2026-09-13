@@ -33,8 +33,8 @@ assert.match(adminListener,/abrirAcessoLocal\('admin',pin\)/);
 assert.match(adminListener,/startRemoteAuthSync\('admin',pin,Boolean\(saved\)\)/);
 assert(adminListener.indexOf("abrirAcessoLocal('admin',pin)")<adminListener.indexOf("startRemoteAuthSync('admin',pin,Boolean(saved))"),
   'Administrador deve concluir a tentativa de desbloqueio local antes de iniciar a sincronização remota');
-assert.match(central,/LOGOFF_SEGURO_PIN_LOCAL_V3/);
-assert.match(central,/if\(hasSession&&payload\)invalidarSessaoServidorEmSegundoPlano\(action,payload\)/);
+assert.match(central,/LOGOFF_IMEDIATO_V4/);
+assert.match(central,/if\(hasSession&&payload\)[\s\S]{0,80}invalidarSessaoServidorEmSegundoPlano\(action,payload\)/);
 assert.match(central,/PIN_LOCAL_SEM_TOKEN_V3/);
 assert.match(central,/Acesso liberado\. Confirmando a sessão atual em segundo plano/);
 assert.doesNotMatch(central,/token:bearer/);
