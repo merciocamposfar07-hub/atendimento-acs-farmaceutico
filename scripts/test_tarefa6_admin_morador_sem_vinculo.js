@@ -64,6 +64,10 @@ assert.match(backend,/function conectaAcessoV1RespostaDiagnosticoLista_/);
 
 assert.match(backend,/var somenteCadastro=Boolean\(filtros\.cadastro&&!filtros\.cpf&&!filtros\.cns&&!filtros\.nome&&!filtros\.nascimento\)/);
 assert.match(backend,/if\(somenteCadastro\)\{[\s\S]*?conectaAcessoV1BuscarCadastroAreaDiagnostico_\(filtros\.cadastro,filtros\.areaId\)[\s\S]*?if\(porCadastro&&porCadastro\.resposta\)return porCadastro\.resposta/,'Busca somente pelo número de cadastro deve usar o caminho familiar direto, sem releituras genéricas repetidas.');
+assert.match(backend,/HOTFIX_DIAGNOSTICO_AREA_RESILIENTE_V2/,'Diagnóstico deve proteger a busca contra área local desatualizada.');
+assert.match(backend,/var filtros=conectaAcessoV1FiltrosDiagnostico_\(p\),areaOriginal=filtros\.areaId/);
+assert.match(backend,/if\(areaOriginal\)\{[\s\S]*?filtros\.areaId=''[\s\S]*?conectaAcessoV1BuscarCadastroAreaDiagnostico_\(filtros\.cadastro,''\)/,'Cadastro não encontrado na área lembrada deve repetir a busca global antes de responder como inexistente.');
+assert.match(backend,/var lista=conectaAcessoV1BuscarDiagnostico_\(filtros\);[\s\S]*?if\(!lista\.length&&areaOriginal\)\{[\s\S]*?filtros\.areaId=''[\s\S]*?lista=conectaAcessoV1BuscarDiagnostico_\(filtros\)/,'CPF, CNS, nome e data também devem ter fallback global quando a área local estiver desatualizada.');
 assert.match(backend,/if\(filtros\.cpf&&/);
 assert.match(backend,/if\(filtros\.cns&&/);
 assert.match(backend,/if\(filtros\.nomeNormalizado\)/);
