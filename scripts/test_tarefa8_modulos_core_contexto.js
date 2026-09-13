@@ -66,7 +66,7 @@ assert.match(suporte,/moduleCore\.session\(Object\.assign\(\{areaId:area\(\),esc
 assert.match(municipios,/moduleCore=window\.ConectaModuleCoreV1/);
 assert.match(municipios,/moduleCore\.session\(\{escopo:'municipios'\}\)/);
 assert.match(moradores,/moduleCore=window\.ConectaModuleCoreV1/);
-assert.match(moradores,/moduleCore\.session\(\{areaId:selectedAreaId\|\|undefined,escopo:'moradores'\}\)/);
+assert.match(moradores,/function session\(\)\{[\s\S]*var extra=\{escopo:'moradores'\};if\(selectedAreaId\)extra\.areaId=selectedAreaId;return moduleCore\.session\(extra\)/);
 assert.match(profissionais,/moduleCore=window\.ConectaModuleCoreV1/);
 assert.match(profissionais,/moduleCore\.session\(\{areaId:areaId,escopo:'profissionais'\}\)/);
 assert.match(territorio,/moduleCore=window\.ConectaModuleCoreV1/);
