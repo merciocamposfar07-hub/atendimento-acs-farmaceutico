@@ -88,7 +88,7 @@ function suporteMoradoresV1TratarPost_(e){
 }
 
 function suporteMoradoresV1ExigirAcesso_(acesso){
-  if(acesso&&acesso.perfil==='TACS'){
+  if(acesso&&(acesso.perfil==='TACS'||acesso.perfil==='UBS')){
     var permissoes=Array.isArray(acesso.permissoes)?acesso.permissoes:[];
     if(permissoes.indexOf('MORADORES_LER')===-1&&permissoes.indexOf('PUBLICACOES_GERENCIAR')===-1){
       throw new Error('Seu cadastro não possui permissão para acessar o suporte aos moradores.');
@@ -101,7 +101,7 @@ function suporteMoradoresV1ExigirAcesso_(acesso){
 
 function suporteMoradoresV1PodeReparar_(acesso){
   if(!acesso)return false;
-  if(acesso.perfil!=='TACS')return true;
+  if(['ADMIN_GERAL','ADMIN_MUNICIPAL'].indexOf(acesso.perfil)!==-1)return true;
   var permissoes=Array.isArray(acesso.permissoes)?acesso.permissoes:[];
   return permissoes.indexOf('PUBLICACOES_GERENCIAR')!==-1;
 }
