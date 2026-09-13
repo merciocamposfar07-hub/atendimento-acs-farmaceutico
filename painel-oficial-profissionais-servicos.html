@@ -2498,11 +2498,14 @@ try{visualObserver=new MutationObserver(function(){if(!window.__cscVisualGuardTi
       var bootstrap='<head><base href="/atendimento-acs-farmaceutico/teste-v1/"><scr'+'ipt>window.PortalTacsAdminPreload='+conexaoSegura+';</scr'+'ipt>'+protecaoDuplicidade+protecaoAutonomia;
       html=substituir(html,'<head>',bootstrap);
       trocas.forEach(function(par){html=substituir(html,par[0],par[1])});
-      /* CORRECAO_CIRURGICA_SERVICOS_BALOES_ESCUROS_V1
-         Somente os balões da lista de Serviços: usa o tom escuro canônico do App 4,
-         sem alterar navegação, dados, edição, botões ou demais painéis. */
-      var corBaloesServicos='<style id="cscServicosBaloesEscurosV1">html body #listaServicos>details.cartao{background:#102d46!important;background-image:none!important}</style>';
-      html=substituir(html,'</head>',corBaloesServicos+'</head>');
+      /* CORRECAO_CIRURGICA_PROFISSIONAIS_SERVICOS_MOLDURAS_V1
+         Somente os balões internos das listas Profissionais e Serviços deste painel.
+         Mantém o azul escuro e adiciona moldura no padrão cromático do Conecta.
+         Não altera navegação, dados, edição, botões nem qualquer outro painel. */
+      var molduraBaloesProfServ='<style id="cscProfissionaisServicosMoldurasV1">'+
+        'html body #listaProfissionais>details.cartao,html body #listaServicos>details.cartao{background:#102d46!important;background-image:none!important;border:1.5px solid #2b5a76!important;border-radius:20px!important;box-shadow:none!important}'+
+        '</style>';
+      html=substituir(html,'</head>',molduraBaloesProfServ+'</head>');
       try{delete window.PortalTacsAdminApp4ShellR6}catch(e){window.PortalTacsAdminApp4ShellR6=false}
       document.open();document.write(html);document.close();
     }).catch(function(erro){
