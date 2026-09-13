@@ -942,5 +942,38 @@
     "status": "completed",
     "task19Exists": false,
     "completedOn": "2026-09-12"
+  },
+  "panelShellApp4Restoration": {
+    "status": "validated-published-canonical",
+    "date": "2026-09-12",
+    "reference": "4 • App institucional",
+    "officialIconRequired": true,
+    "officialIcon": "/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png",
+    "panelHeader": {
+      "single": true,
+      "brand": "CONECTA SAÚDE COMUNITÁRIA",
+      "titleSpecificToPanel": true,
+      "backControl": "single-right-chevron",
+      "textualLeftBackRemoved": true,
+      "continuousBackground": "#071827",
+      "structuralTopBottomBorder": false
+    },
+    "embeddedLegacyPanels": {
+      "internalAppbarHiddenInsideShell": true,
+      "standaloneAppbarPreserved": true,
+      "duplicateBackControlForbidden": true
+    },
+    "nativePanels": {
+      "agendasPreserved": true,
+      "moradoresPreserved": true,
+      "profissionaisPreserved": true,
+      "technicalMigrationTextVisible": false
+    },
+    "backendChanged": false,
+    "appsScriptVersionUnchanged": 208,
+    "gate": "RESTAURACAO_APP4_PAINEIS_OK",
+    "workflowRun": 34733744289,
+    "pagesRun": 34733739185,
+    "record": "REGISTRO_CORRECAO_RESTAURACAO_VISUAL_APP4_PAINÉIS_2026_09_12.md"
   }
 }
