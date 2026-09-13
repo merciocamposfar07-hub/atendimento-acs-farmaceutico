@@ -569,7 +569,9 @@ function resetModuleShell(){
     if(frame!==base&&frame.parentNode)frame.remove();
   });
   try{if(window.ConectaAgendasNativeV1&&typeof window.ConectaAgendasNativeV1.reset==='function')window.ConectaAgendasNativeV1.reset()}catch(e){}
+  try{if(window.ConectaMoradoresNativeV1&&typeof window.ConectaMoradoresNativeV1.reset==='function')window.ConectaMoradoresNativeV1.reset()}catch(e){}
   var nativeHost=el('nativeModuleHost');if(nativeHost){nativeHost.hidden=true;nativeHost.innerHTML='';nativeHost.dataset.tacsDirty='0'}
+  var moradoresHost=el('nativeMoradoresHost');if(moradoresHost&&moradoresHost.parentNode)moradoresHost.remove()
   shellFrames={};shellActiveModule='';shellActiveRoute='';shellActiveNative='';shellScopeKey='';
   if(base){base.hidden=false;base.removeAttribute('data-shell-key');base.removeAttribute('data-shell-module');base.removeAttribute('data-shell-route');base.removeAttribute('data-shell-url');base.removeAttribute('data-shell-loaded');if(base.src!=='about:blank')base.src='about:blank'}
   if(viewer)viewer.hidden=true;
@@ -657,6 +659,65 @@ function showNativeAgenda(title,routeId){
   });
   return true;
 }
+/* TAREFA_17_MORADORES_NATIVOS_V1:
+   Moradores é o segundo painel da migração definitiva.
+   A rota normal usa superfície nativa própria; Prontuários permanece no frame legado nesta tarefa. */
+var task17MoradoresAssetsLoading=false,task17MoradoresAssetWaiters=[];
+function ensureTask17MoradoresHost(){
+  var host=el('nativeMoradoresHost');if(host)return host;
+  var viewer=el('viewer'),frame=el('viewerFrame');if(!viewer)return null;
+  host=document.createElement('div');host.id='nativeMoradoresHost';host.className='csc-native-module-host';host.hidden=true;
+  viewer.insertBefore(host,frame||null);return host;
+}
+function task17LoadStyle(){
+  if(document.getElementById('cscMoradoresNativeCssV1'))return;
+  var link=document.createElement('link');link.id='cscMoradoresNativeCssV1';link.rel='stylesheet';
+  link.href='/atendimento-acs-farmaceutico/conecta-moradores-native-v1.css?v=20260912-task17-moradores-native-v1';
+  document.head.appendChild(link);
+}
+function ensureTask17MoradoresAssets(callback){
+  task17LoadStyle();
+  if(window.ConectaModuleCoreV1&&window.ConectaMoradoresNativeV1){callback(true);return}
+  task17MoradoresAssetWaiters.push(callback);
+  if(task17MoradoresAssetsLoading)return;
+  task17MoradoresAssetsLoading=true;
+  function finish(ok){
+    task17MoradoresAssetsLoading=false;
+    var list=task17MoradoresAssetWaiters.slice();task17MoradoresAssetWaiters=[];
+    list.forEach(function(cb){try{cb(ok)}catch(e){}});
+  }
+  task16LoadScript('cscModuleCoreTask17','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task17-moradores-native-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
+    if(!ok){finish(false);return}
+    task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260912-task17-moradores-native-v1',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
+  });
+}
+function showNativeMoradores(title,routeId){
+  prepareShellScope();publishModuleCore();
+  try{if(window.ConectaAgendasNativeV1&&typeof window.ConectaAgendasNativeV1.hide==='function')window.ConectaAgendasNativeV1.hide()}catch(e){}
+  Object.keys(shellFrames).forEach(function(key){var frame=shellFrames[key];if(frame)frame.hidden=true});
+  var agendaHost=el('nativeModuleHost');if(agendaHost)agendaHost.hidden=true;
+  var host=ensureTask17MoradoresHost(),viewer=el('viewer');
+  if(!host||!viewer)return false;
+  shellActiveModule='moradores';shellActiveRoute=routeId;shellActiveNative='moradores';
+  el('viewerTitle').textContent=title||'Moradores';
+  viewer.classList.add('csc-shell-viewer');viewer.hidden=false;host.hidden=false;
+  document.body.classList.add('viewer-open');setShellOpening(title||'Moradores',true);
+  ensureTask17MoradoresAssets(function(ok){
+    if(shellActiveNative!=='moradores'||shellActiveRoute!==routeId)return;
+    if(!ok){
+      host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">Não foi possível carregar o módulo nativo de Moradores. Volte à Central e tente novamente.</div>';
+      setShellOpening('',false);return;
+    }
+    try{
+      window.ConectaMoradoresNativeV1.mount(host,{areaId:selectedAreaId});
+      setShellOpening('',false);
+    }catch(e){
+      host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">O módulo de Moradores não pôde ser iniciado sem perder a sessão. Volte à Central e tente novamente.</div>';
+      setShellOpening('',false);
+    }
+  });
+  return true;
+}
 function enhanceShellFrame(frame){
   if(!frame||frame.dataset.shellEnhanced==='1')return;
   frame.dataset.shellEnhanced='1';
@@ -685,7 +746,9 @@ function ensureShellFrame(name,url,title,routeId){
 }
 function showShellFrame(name,frame,title,routeId){
   try{if(window.ConectaAgendasNativeV1&&typeof window.ConectaAgendasNativeV1.hide==='function')window.ConectaAgendasNativeV1.hide()}catch(e){}
+  try{if(window.ConectaMoradoresNativeV1&&typeof window.ConectaMoradoresNativeV1.hide==='function')window.ConectaMoradoresNativeV1.hide()}catch(e){}
   var nativeHost=el('nativeModuleHost');if(nativeHost)nativeHost.hidden=true;
+  var moradoresHost=el('nativeMoradoresHost');if(moradoresHost)moradoresHost.hidden=true;
   Object.keys(shellFrames).forEach(function(key){var item=shellFrames[key];if(item)item.hidden=item!==frame});
   shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
   el('viewerTitle').textContent=title||'Painel';
@@ -707,6 +770,9 @@ function shellHasUnsaved(frame){
   if(shellActiveNative==='agendas'){
     try{return Boolean(window.ConectaAgendasNativeV1&&window.ConectaAgendasNativeV1.hasUnsaved&&window.ConectaAgendasNativeV1.hasUnsaved())}catch(e){return false}
   }
+  if(shellActiveNative==='moradores'){
+    try{return Boolean(window.ConectaMoradoresNativeV1&&window.ConectaMoradoresNativeV1.hasUnsaved&&window.ConectaMoradoresNativeV1.hasUnsaved())}catch(e){return false}
+  }
   try{return Boolean(frame&&frame.contentDocument&&frame.contentDocument.documentElement.dataset.tacsDirty==='1')}catch(e){return false}
 }
 function openModule(name,title,options){
@@ -719,6 +785,7 @@ function openModule(name,title,options){
   }
   moduloPendente=null;publishModuleCore();
   if(name==='agendas'){showNativeAgenda(title||'Agendas e vagas',routeId);return}
+  if(name==='moradores'&&moduleRouteOptions(options).view!=='prontuarios'){showNativeMoradores(title||'Moradores',routeId);return}
   var frame=ensureShellFrame(name,url,title||'Painel',routeId);
   showShellFrame(name,frame,title||'Painel',routeId);
 }
@@ -728,6 +795,10 @@ function closeViewer(){
   if(shellActiveNative==='agendas'){
     try{if(window.ConectaAgendasNativeV1&&window.ConectaAgendasNativeV1.hide)window.ConectaAgendasNativeV1.hide()}catch(e){}
     var nativeHost=el('nativeModuleHost');if(nativeHost)nativeHost.hidden=true;
+  }
+  if(shellActiveNative==='moradores'){
+    try{if(window.ConectaMoradoresNativeV1&&window.ConectaMoradoresNativeV1.hide)window.ConectaMoradoresNativeV1.hide()}catch(e){}
+    var moradoresHost=el('nativeMoradoresHost');if(moradoresHost)moradoresHost.hidden=true;
   }
   el('viewer').hidden=true;setShellOpening('',false);document.body.classList.remove('viewer-open');
   shellActiveModule='';shellActiveRoute='';shellActiveNative='';
