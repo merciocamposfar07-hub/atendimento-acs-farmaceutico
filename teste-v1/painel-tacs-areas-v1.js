@@ -4,7 +4,7 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
 var TACS_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
-var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'territorio'}):null,modulePerf=moduleCore&&moduleCore.performance,moduleRequests=moduleCore&&moduleCore.requests;
+var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'territorio'}):null,modulePerf=moduleCore&&moduleCore.performance,moduleRequests=moduleCore&&moduleCore.requests,moduleSessionPolicy=moduleCore&&moduleCore.sessionPolicy;
 var token=moduleSession&&moduleSession.token||'';
 var territorioToken=moduleSession&&moduleSession.territorioToken||'';
 var device=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
@@ -189,7 +189,7 @@ function loadData(message,operationMessage){
     });
   }
   var leituraPayload=payload({});coreRead('admin_territorio_dados',leituraPayload,function(done){post('admin_territorio_dados',leituraPayload,'admin_territorio_result',done)},function(r){
-    if(!r||r.ok!==true){if(cached){territoryConfirmed=false;syncTerritoryWriteState();loginStatus('Última confirmação territorial permanece disponível somente para consulta; a atualização ainda não foi confirmada.','warn');if(operationMessage)status('A alteração foi salva, mas a releitura ainda não foi confirmada.','warn');return}clearSession();loginStatus(text(r&&r.message||'Sessão inválida ou expirada.'),'err');if(operationMessage)status('A alteração foi salva, mas não foi possível atualizar a tela. Reabra o painel.','err');return;}
+    if(!r||r.ok!==true){var falha=moduleSessionPolicy&&typeof moduleSessionPolicy.classify==='function'?moduleSessionPolicy.classify(r):{explicitAuthRefusal:Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(text(r&&r.message)))};territoryConfirmed=false;syncTerritoryWriteState();if(!falha.explicitAuthRefusal){loginStatus(cached?'Última confirmação territorial permanece disponível somente para consulta; a atualização ainda não foi confirmada.':'Servidor temporariamente indisponível. A sessão territorial foi preservada; tente novamente sem redigitar o PIN.','warn');if(operationMessage)status('A alteração foi enviada, mas a releitura ainda não foi confirmada. A sessão permanece ativa.','warn');return}clearSession();loginStatus(text(r&&r.message||'A sessão foi recusada explicitamente pelo servidor.'),'err');if(operationMessage)status('A alteração foi salva, mas a autenticação foi recusada na releitura. Volte à Central.','err');return;}
     var payload=territoryPerformancePayload(r),diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('territorio',payload):{changed:true};
     territoryConfirmed=true;data=payload;
     if(diff.changed||!cached)render();else syncTerritoryWriteState();
