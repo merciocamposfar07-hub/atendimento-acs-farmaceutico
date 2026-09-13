@@ -38,6 +38,8 @@ on:
       - 'scripts/test_tarefa14_timeout_sessao.js'
       - 'scripts/test_tarefa15_navegacao_interna.js'
       - 'scripts/test_central_admin_performance_v1.js'
+      - 'scripts/test_safari_bfcache_central_v1.js'
+      - 'scripts/test_tarefa10_sessao_shell_persistente.js'
       - 'painel-oficial-tacs-areas.html'
       - 'central-tacs-login-rapido-v1.js'
       - 'conecta-morador-session-v1.js'
