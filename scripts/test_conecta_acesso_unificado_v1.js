@@ -46,7 +46,7 @@ assert(backend.includes("function conectaAcessoV1ValidarSessaoUbs_"),'Backend de
 assert(backend.includes("'conecta_ubs_encerrar'"),'Sessão UBS deve poder ser encerrada sem afetar outros perfis');
 assert(territoryBackend.includes("var ubs=conectaAcessoV1ValidarSessaoUbs_(p,true)"),'Validador territorial deve aceitar sessão UBS no escopo da própria unidade');
 assert(territoryBackend.includes("ubsAtual:ubsAtual?tacsTerritorioV1PublicarTacs_(ubsAtual):null"),'Contexto da Central deve publicar a UBS autenticada');
-assert(agendasBackend.includes("acesso.perfil==='TACS'||acesso.perfil==='UBS'"),'Agendas e profissionais devem aceitar UBS sem elevar para Administrador');
+assert(agendasBackend.includes("if(acesso.perfil==='TACS'){")&&agendasBackend.includes("else if(acesso.perfil==='UBS'){"),'Agendas e profissionais devem aceitar UBS sem alterar a blindagem própria do TACS');
 assert(moradoresBackend.includes("var ubs=conectaAcessoV1ValidarSessaoUbs_(p,true)"),'Moradores deve validar sessão UBS');
 assert(publicacoesBackend.includes("acesso.perfil==='TACS'||acesso.perfil==='UBS'"),'Recados e campanhas devem respeitar permissões da UBS');
 assert(suporteBackend.includes("acesso.perfil==='TACS'||acesso.perfil==='UBS'"),'Suporte aos moradores deve respeitar permissões da UBS');
