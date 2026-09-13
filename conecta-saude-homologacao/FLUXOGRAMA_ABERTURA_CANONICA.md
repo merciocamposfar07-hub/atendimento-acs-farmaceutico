@@ -328,6 +328,10 @@ O núcleo comum publica `ConectaModuleCoreV1.sessionPolicy`, que normaliza falha
 
 A Tarefa 14 não altera o backend Apps Script e não inicia a navegação histórica da Tarefa 15.
 
-### Status da Tarefa 14: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_14_TIMEOUT_SESSAO_OK`.
+### Status final da Tarefa 14: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate específico `TAREFA_14_TIMEOUT_SESSAO_OK`, suíte integral, `QUALITY_GATE_V101_OK`, sintaxe, regras críticas e homologação interna passaram no workflow `34728200204`. GitHub Pages passou no run `34728194735`.
+
+Apps Script permaneceu na versão **208**, sem alteração de backend.
+
+**Sequência canônica:** Tarefa 14 encerrada tecnicamente; Tarefa 15 permanece a próxima etapa.
 
