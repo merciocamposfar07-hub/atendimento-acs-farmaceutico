@@ -10,7 +10,8 @@
     "test:tarefa11": "node scripts/test_tarefa11_desempenho_modulos.js",
     "test:tarefa12:retry": "node scripts/test_tarefa12_cache_frescor.js",
     "test:tarefa12:final": "node scripts/test_tarefa12_cache_frescor.js",
-    "test:task13": "node scripts/test_tarefa11_desempenho_modulos.js && node scripts/test_tarefa12_cache_frescor.js && node scripts/test_tarefa13_dedup_requisicoes.js",\n    "test:task14": "node scripts/test_tarefa12_cache_frescor.js && node scripts/test_tarefa13_dedup_requisicoes.js && node scripts/test_tarefa14_timeout_sessao.js"
+    "test:task13": "node scripts/test_tarefa11_desempenho_modulos.js && node scripts/test_tarefa12_cache_frescor.js && node scripts/test_tarefa13_dedup_requisicoes.js",
+    "test:task14": "node scripts/test_tarefa12_cache_frescor.js && node scripts/test_tarefa13_dedup_requisicoes.js && node scripts/test_tarefa14_timeout_sessao.js"
   },
   "devDependencies": {
     "jsdom": "27.0.1"
