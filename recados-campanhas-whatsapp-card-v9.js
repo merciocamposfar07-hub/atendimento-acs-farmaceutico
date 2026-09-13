@@ -65,7 +65,7 @@ function draw(data){
     ctx.fillStyle='#0f3046';ctx.font='800 39px -apple-system,BlinkMacSystemFont,Arial';wrap(ctx,data.message,120,y,840,55,11);
     var footerY=1690;
     if(portalIcon){ctx.save();roundRect(ctx,70,footerY,158,145,28);ctx.clip();ctx.drawImage(portalIcon,70,footerY,158,145);ctx.restore()}
-    ctx.fillStyle='#67e09b';ctx.font='900 48px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('PORTAL TACS',260,1750);
+    ctx.fillStyle='#72e3a0';fitFont(ctx,'PORTAL CONECTA SAÚDE COMUNITÁRIA',760,48,30,900);ctx.fillText('PORTAL CONECTA SAÚDE COMUNITÁRIA',260,1750);
     ctx.fillStyle='#fff';ctx.font='700 32px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.unitName,260,1800);ctx.fillText(data.areaName,260,1844);
     return c;
   });
@@ -97,7 +97,7 @@ function drawCampaign(data){
     if(referenceArt){var ax=data.theme==='lilas'?720:700,ay=data.theme==='lilas'?640:670,aw=data.theme==='lilas'?270:310,ah=data.theme==='lilas'?520:410;ctx.save();ctx.shadowColor='rgba(45,24,6,.23)';ctx.shadowBlur=18;ctx.shadowOffsetY=8;drawImageContain(ctx,referenceArt,ax,ay,aw,ah);ctx.restore()}
     else if(data.theme==='dourado')drawMotherBaby(ctx,735,690,225,330);else drawRibbon(ctx,735,690,225,330,p[3],p[1]);
     /* A validade continua disponível como dado interno, mas não é exibida no card da campanha. */
-    ctx.fillStyle='#79e5a6';ctx.font='900 35px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('PORTAL TACS',60,1710);ctx.fillStyle='#fff';ctx.font='700 32px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.unitName,60,1760);ctx.fillText(data.areaName,60,1805);
+    ctx.fillStyle='#72e3a0';fitFont(ctx,'PORTAL CONECTA SAÚDE COMUNITÁRIA',960,35,28,900);ctx.fillText('PORTAL CONECTA SAÚDE COMUNITÁRIA',60,1710);ctx.fillStyle='#fff';ctx.font='700 32px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.unitName,60,1760);ctx.fillText(data.areaName,60,1805);
     return c;
   });
 }
