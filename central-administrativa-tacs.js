@@ -590,7 +590,7 @@ function ensureShellOpening(){
   if(node)return node;
   node=document.createElement('div');node.id='cscModuleOpening';
   node.setAttribute('role','status');node.setAttribute('aria-live','polite');
-  node.style.cssText='padding:10px 14px;background:#102d46;color:#adc4d2;border-bottom:1px solid #2b5a76;font-weight:800;font-size:.86rem';
+  node.style.cssText='padding:10px 16px;background:#071827;color:#adc4d2;border:0;box-shadow:none;font-weight:800;font-size:.86rem';
   var nativeHost=el('nativeModuleHost'),frame=el('viewerFrame');viewer.insertBefore(node,nativeHost||frame||null);return node;
 }
 function setShellOpening(title,visible){
@@ -779,12 +779,27 @@ function showNativeProfissionais(title,routeId){
   });
   return true;
 }
+function normalizeEmbeddedPanelFrame(frame){
+  try{
+    var doc=frame&&frame.contentDocument;if(!doc)return;
+    var style=doc.getElementById('cscEmbeddedApp4SingleHeaderV1');
+    if(!style){
+      style=doc.createElement('style');style.id='cscEmbeddedApp4SingleHeaderV1';
+      style.textContent='#cscInstitutionalAppbar{display:none!important}#portalTacsBackCentralV1{display:none!important}html,body{border-top:0!important}';
+      (doc.head||doc.documentElement).appendChild(style);
+    }
+    var internal=doc.getElementById('cscInstitutionalAppbar');if(internal)internal.setAttribute('aria-hidden','true');
+  }catch(e){}
+}
 function enhanceShellFrame(frame){
   if(!frame||frame.dataset.shellEnhanced==='1')return;
   frame.dataset.shellEnhanced='1';
   frame.addEventListener('load',function(){
     frame.dataset.shellReady='1';
     try{applyUiStandard(frame.contentDocument)}catch(e){}
+    normalizeEmbeddedPanelFrame(frame);
+    setTimeout(function(){normalizeEmbeddedPanelFrame(frame)},0);
+    setTimeout(function(){normalizeEmbeddedPanelFrame(frame)},300);
     if(shellActiveFrame()===frame)setShellOpening('',false);
   });
 }
