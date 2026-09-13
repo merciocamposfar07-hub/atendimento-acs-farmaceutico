@@ -366,6 +366,10 @@ Regras:
 - nenhuma alteração de backend Apps Script nesta tarefa;
 - comportamento de Back fica reservado à Tarefa 15.
 
-### Status da Tarefa 14: IMPLEMENTADA EM CÓDIGO; VALIDAÇÃO INTEGRAL PENDENTE — 12/09/2026
-Gate específico: `TAREFA_14_TIMEOUT_SESSAO_OK`.
+### Status final da Tarefa 14: VALIDADA INTERNAMENTE E PUBLICADA — 12/09/2026
+Gate específico `TAREFA_14_TIMEOUT_SESSAO_OK`, suíte integral, `QUALITY_GATE_V101_OK`, sintaxe, regras críticas e homologação `V101_INTERNO_APROVADO=SIM` aprovados no workflow `34728200204`. GitHub Pages passou no run `34728194735`.
+
+Nenhuma mudança de backend Apps Script foi feita; a produção permanece na versão **208**.
+
+**Regra de sequência:** Tarefa 14 encerrada tecnicamente; Tarefa 15 permanece a próxima etapa.
 
