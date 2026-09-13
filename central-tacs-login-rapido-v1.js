@@ -24,6 +24,16 @@ function aquecerPinTacs(){
   }
 }
 function text(v){return String(v==null?'':v).trim()}
+var TACS_SESSION_AUTH_REFUSAL_RE=/(sess[aã]o|token|autentica[cç][aã]o|acesso).*(inv[aá]lid|expir|recus|revog|desativ|n[aã]o autoriz)|n[aã]o autorizado|unauthor|forbidden|pertence a outro aparelho|PIN.*incorret|CNS.*incorret/i;
+function normalizeSessionFailure(result){
+  var r=result&&typeof result==='object'?result:{ok:false,message:'Resposta vazia.'};
+  if(r.ok===true)return r;
+  var message=text(r.message),explicit=Boolean(r.temporario!==true&&TACS_SESSION_AUTH_REFUSAL_RE.test(message)),out={};
+  Object.keys(r).forEach(function(k){out[k]=r[k]});
+  if(explicit){out.authRecusada=true;out.preservarSessao=false}
+  else{out.temporario=true;out.preservarSessao=true}
+  return out;
+}
 function digits(v){return text(v).replace(/\D/g,'')}
 function setStatus(msg,type){if(!status)return;status.textContent=msg;status.className='status'+(type?' '+type:'')}
 function getDevice(){var d='';try{d=localStorage.getItem(DEVICE_KEY)||''}catch(e){}return d}
@@ -136,7 +146,7 @@ function jsonp(action,params,cb){
   s.src=API+'?'+q.join('&');document.head.appendChild(s);
 }
 function post(action,payload,cb){
-  if(busy){cb({ok:false,message:'Aguarde a operação anterior.'});return}
+  if(busy){cb(normalizeSessionFailure({ok:false,message:'Aguarde a operação anterior.'}));return}
   busy=true;
   var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form');
   var frameName='quickFrame'+Date.now()+'_'+Math.floor(Math.random()*1000),finished=false,pollTimer=null,submitTimer=null,nextWait=1600,deadline=Date.now()+45000;
@@ -151,7 +161,7 @@ function post(action,payload,cb){
     if(form.parentNode)form.remove();
     if(frame.parentNode)setTimeout(function(){if(frame.parentNode)frame.remove()},180);
   }
-  function finish(r){if(finished)return;finished=true;busy=false;cleanup();cb(r||{ok:false,message:'Resposta vazia.'})}
+  function finish(r){if(finished)return;finished=true;busy=false;cleanup();cb(normalizeSessionFailure(r||{ok:false,message:'Resposta vazia.'}))}
   function onMessage(event){
     if(event.source!==frame.contentWindow)return;
     var d=event.data;if(typeof d==='string'){try{d=JSON.parse(d)}catch(e){return}}
