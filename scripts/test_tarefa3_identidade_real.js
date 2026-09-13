@@ -44,10 +44,12 @@ assert.ok(central.includes("el('professionalName').textContent=mode==='tacs'"),'
 assert.ok(central.includes("el('profileLabel').textContent=perfilAtual"),'Perfil cadastrado deixou de ser publicado no painel de identidade.');
 
 assert.ok(ubsBackend.includes("perfil:conectaAcessoV1Texto_(ubs.perfil)||'UBS'"),'Backend UBS ainda reduz combinação ao perfil UBS simples.');
-assert.ok(access.includes("identityHeadline(r.nome||'Responsável UBS',r.perfil||'UBS')"),'Primeiro acesso UBS não exibe nome + perfil cadastrado.');
+assert.ok(access.includes("identityHeadline(r.nome||'Acesso UBS',r.perfil||'UBS')"),'Perfil combinado com UBS deixou de exibir nome + perfil cadastrado.');
+assert.ok(access.includes("institucional=text(r&&r.perfil).toUpperCase()==='UBS'"),'Perfil UBS puro deixou de ser reconhecido como unidade institucional.');
+assert.ok(access.includes("r.unidadeId||'Unidade de saúde'"),'UBS institucional não exibe a unidade após o PIN.');
 assert.ok(resident.includes("+' — Morador<small>"),'Morador autenticado não exibe nome + perfil.');
 
 // A identidade real da Tarefa 3 deve permanecer após a Tarefa 4.
 assert.ok(ubsBackend.includes("perfil:conectaAcessoV1Texto_(ubs.perfil)||'UBS'"),'A Tarefa 4 não pode reduzir o perfil real da UBS.');
 
-console.log('TAREFA_3_IDENTIDADE_REAL_OK: nome completo + perfil cadastrado preservados para Administrador, TACS, Morador, UBS e combinações; sem antecipar reconhecimento persistente do aparelho.');
+console.log('TAREFA_3_IDENTIDADE_REAL_OK: identidade pessoal preservada para perfis de pessoa e combinações; UBS pura é identificada pela unidade institucional após o PIN.');
