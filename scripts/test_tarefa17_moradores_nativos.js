@@ -76,7 +76,8 @@ assert.match(transport,/moduleRequests\.read\(action,payload/);
 // O transporte é compatível com página antiga e host nativo.
 assert.match(transport,/ConectaMoradoresNativeConfigV1/);
 assert.match(transport,/function rebindNativeContext\(config\)/);
-assert.match(transport,/version:'3\.7\.0-native-task17'/);
+assert.match(transport,/nativeCompat:'task17-moradores-native-v1'/);
+assert.match(transport,/version:'3\.6\.1'/);
 assert.match(legacy,/painel-moradores-transport-v2\.js/);
 
 // Alterações no formulário são protegidas pelo Voltar.
