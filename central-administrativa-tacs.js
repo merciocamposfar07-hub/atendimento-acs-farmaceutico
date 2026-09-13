@@ -937,6 +937,9 @@ function showShellFrame(name,frame,title,routeId){
 function localPanelAccessReady(){
   return Boolean(acessoLocalAberto&&mode&&context);
 }
+/* PADRAO_ABERTURA_PAINEIS_20260913_V1:
+   primeiro toque mostra o conteúdo/estrutura interna do painel; nunca uma tela lisa.
+   avisos de espera usam somente "Aguarde enquanto os dados carregam…" dentro do painel. */
 function ensurePendingPreviewStyle(){
   if(document.getElementById('cscPendingPanelPreviewStyle'))return;
   var style=document.createElement('style');style.id='cscPendingPanelPreviewStyle';
