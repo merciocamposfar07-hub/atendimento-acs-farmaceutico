@@ -351,6 +351,13 @@ function tacsTerritorioV1ValidarAcesso_(p,exigirAdmin){
     if(exigirAdmin)throw new Error('Esta operação exige acesso de administrador geral.');
     return individual;
   }
+  if(typeof conectaAcessoV1ValidarSessaoUbs_==='function'){
+    var ubs=conectaAcessoV1ValidarSessaoUbs_(p,true);
+    if(ubs){
+      if(exigirAdmin)throw new Error('Esta operação exige acesso de administrador geral.');
+      return ubs;
+    }
+  }
   if(typeof profissionaisDinamicosV1ValidarSessao_!=='function'){
     throw new Error('A validação administrativa principal não está disponível.');
   }
@@ -467,21 +474,29 @@ function tacsTerritorioV1AdministradorAtual_(acesso,todos,administradores){
 }
 
 function tacsTerritorioV1Dados_(acesso){
-  var admin=['ADMIN_GERAL','ADMIN_MUNICIPAL'].indexOf(acesso.perfil)!==-1;
+  var admin=['ADMIN_GERAL','ADMIN_MUNICIPAL'].indexOf(acesso.perfil)!==-1,ubs=acesso.perfil==='UBS';
   var todos=tacsTerritorioV1LerTacs_();
   var administradores=admin?tacsTerritorioV1AdministradoresContexto_(acesso,todos):[];
   var administradorAtual=admin?tacsTerritorioV1AdministradorAtual_(acesso,todos,administradores):null;
   var tacs=admin?todos:todos.filter(function(item){return tacsTerritorioV1PerfilTem_(item&&item.perfil,'TACS');});
   var areas=tacsTerritorioV1LerAreas_();
-  if(!admin){
+  var ubsAtual=null;
+  if(ubs){
+    ubsAtual=tacsTerritorioV1EncontrarTacs_(acesso.cadastroId||acesso.tacsId);
+    areas=areas.filter(function(item){return item&&item.ativa===true&&item.unidadeId===acesso.unidadeId;});
+    var responsaveis={};
+    areas.forEach(function(area){if(area&&area.tacsId)responsaveis[area.tacsId]=true;});
+    tacs=todos.filter(function(item){return item&&(item.tacsId===(ubsAtual&&ubsAtual.tacsId)||responsaveis[item.tacsId]);});
+  }else if(!admin){
     tacs=tacs.filter(function(item){return item.tacsId===acesso.tacsId;});
     areas=areas.filter(function(item){return item.areaId===acesso.areaId;});
   }
   return {
     ok:true,versao:TACS_TERRITORIO_V1.VERSAO,perfil:acesso.perfil,
     podeAdministrar:admin,tacs:tacs.map(tacsTerritorioV1PublicarTacs_),
+    ubsAtual:ubsAtual?tacsTerritorioV1PublicarTacs_(ubsAtual):null,
     administradores:administradores,administradorAtual:administradorAtual,
-    areas:areas,isolamento:'UMA_PLANILHA_DE_MORADORES_POR_AREA',
+    areas:areas,isolamento:ubs?'UMA_UBS_SOMENTE_SUAS_AREAS':'UMA_PLANILHA_DE_MORADORES_POR_AREA',
     idsTecnicosImutaveis:true,camposCadastraisReeditaveis:true
   };
 }
