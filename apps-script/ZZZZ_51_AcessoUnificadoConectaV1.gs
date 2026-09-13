@@ -727,18 +727,34 @@ function conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p){
   return conectaAcessoV1RespostaUbs_(ubs,dispositivo,chave,'Responsável UBS identificado. Este aparelho foi reconhecido para os próximos acessos por PIN.');
 }
 
+function conectaAcessoV1UbsPorPin_(pin){
+  if(typeof tacsTerritorioV1LerTacs_!=='function'||typeof tacsTerritorioV1PerfilTem_!=='function')throw new Error('O cadastro de perfis da UBS não está disponível.');
+  var lista=tacsTerritorioV1LerTacs_().filter(function(item){
+    return item&&item.ativo===true&&tacsTerritorioV1PerfilTem_(item.perfil,'UBS')&&item.pinSalt&&item.pinHash&&
+      tacsTerritorioV1CompararSeguro_(item.pinHash,tacsTerritorioV1HashPin_(pin,item.pinSalt));
+  });
+  if(lista.length!==1)throw new Error(lista.length>1?'Há mais de uma UBS com este PIN. O administrador precisa corrigir a duplicidade.':'PIN da UBS não localizado.');
+  return lista[0];
+}
+
 function conectaAcessoV1LoginUbs_(p){
   var pin=conectaAcessoV1Texto_(p.pin).replace(/\D/g,''),dispositivo=conectaAcessoV1Texto_(p.dispositivo),chave=conectaAcessoV1Texto_(p.chaveConfianca);
   if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
   if(!/^\d{4,8}$/.test(pin))throw new Error('Informe o PIN de acesso com 4 a 8 números.');
-  var referencia=conectaAcessoV1ReferenciaUbsConfiavel_(dispositivo,chave);
-  if(!referencia)throw new Error('Este aparelho ainda não está reconhecido para um perfil UBS. Faça o primeiro acesso.');
-  if(typeof tacsTerritorioV1EncontrarTacs_!=='function'||typeof tacsTerritorioV1PerfilTem_!=='function')throw new Error('O cadastro de perfis da UBS não está disponível.');
-  var ubs=tacsTerritorioV1EncontrarTacs_(referencia);
-  if(!ubs||ubs.ativo!==true||!tacsTerritorioV1PerfilTem_(ubs.perfil,'UBS'))throw new Error('O acesso UBS foi desativado ou alterado.');
-  if(!ubs.pinSalt||!ubs.pinHash||!tacsTerritorioV1CompararSeguro_(ubs.pinHash,tacsTerritorioV1HashPin_(pin,ubs.pinSalt)))throw new Error('PIN do perfil UBS incorreto.');
+  if(typeof tacsTerritorioV1PerfilTem_!=='function')throw new Error('O cadastro de perfis da UBS não está disponível.');
+
+  var referencia=conectaAcessoV1ReferenciaUbsConfiavel_(dispositivo,chave),ubs=null,novaChave='';
+  if(referencia&&typeof tacsTerritorioV1EncontrarTacs_==='function'){
+    ubs=tacsTerritorioV1EncontrarTacs_(referencia);
+    if(!ubs||ubs.ativo!==true||!tacsTerritorioV1PerfilTem_(ubs.perfil,'UBS'))ubs=null;
+    if(ubs&&(!ubs.pinSalt||!ubs.pinHash||!tacsTerritorioV1CompararSeguro_(ubs.pinHash,tacsTerritorioV1HashPin_(pin,ubs.pinSalt))))ubs=null;
+  }
+  if(!ubs){
+    ubs=conectaAcessoV1UbsPorPin_(pin);
+    novaChave=conectaAcessoV1RegistrarUbsConfiavel_(ubs,dispositivo);
+  }
   if(!conectaAcessoV1Texto_(ubs.unidadeId)||!conectaAcessoV1Texto_(ubs.funcaoUbs))throw new Error('O cadastro UBS precisa de unidade e função válidas.');
-  return conectaAcessoV1RespostaUbs_(ubs,dispositivo,'','Acesso UBS validado neste aparelho.');
+  return conectaAcessoV1RespostaUbs_(ubs,dispositivo,novaChave,novaChave?'UBS identificada pelo PIN. Este computador foi reconhecido para os próximos acessos.':'Acesso UBS validado neste computador.');
 }
 
 function conectaAcessoV1TacsPorCpf_(cpf){
