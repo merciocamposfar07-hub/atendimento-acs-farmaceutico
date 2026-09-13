@@ -728,5 +728,8 @@ async function main() {
 
 main().catch(error => {
   console.error(error);
-  process.exitCode = 1;
+  // TEST_HARNESS_FAIL_FAST_V1:
+  // JSDOM pode manter timers/handles quando uma asserção assíncrona falha antes de window.close().
+  // Encerra o runner com erro imediatamente para expor a falha real no CI, sem mascará-la por timeout.
+  process.exit(1);
 });
