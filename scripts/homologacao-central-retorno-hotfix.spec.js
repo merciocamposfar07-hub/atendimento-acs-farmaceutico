@@ -139,7 +139,9 @@ test('Portal TACS legado em nova aba fecha e revela a Central autenticada', asyn
   await expect(popup.locator('#portalTacsBackCentralV1 button')).toBeVisible();
 
   const closed = popup.waitForEvent('close');
-  await popup.locator('#portalTacsBackCentralV1 button').click();
+  await popup.locator('#portalTacsBackCentralV1 button').click().catch(function(error){
+    if(!popup.isClosed())throw error;
+  });
   await closed;
 
   expect(page.isClosed()).toBe(false);
