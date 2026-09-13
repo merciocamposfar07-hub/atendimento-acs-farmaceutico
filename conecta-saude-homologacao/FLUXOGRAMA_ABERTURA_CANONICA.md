@@ -408,3 +408,33 @@ Workflow final `34730914731` — success. Gate `TAREFA_17_MORADORES_NATIVOS_OK`,
 Apps Script permanece na versão **208**.
 
 **Sequência:** Tarefa 17 encerrada. Profissionais e serviços permanece a próxima etapa e não foi iniciado.
+
+
+### Registro canônico — Tarefa 18 / Profissionais e serviços nativos
+Última tarefa da sequência original aprovada de 1 a 18.
+
+Fluxo:
+`Central autenticada → Profissionais e serviços → host nativo próprio → ponte invisível → leitura/cache → edição/criação → gravação → releitura real → confirmação → Voltar → mesma Central`
+
+Regras:
+- rota normal de Profissionais e serviços é nativa;
+- host persistente: `#nativeProfissionaisHost`;
+- UI nativa sem PIN/login/logout próprios;
+- página antiga permanece apenas como fallback e ponte invisível;
+- salvar profissional, salvar serviço e criar profissional integrado mantêm as ações reais existentes;
+- nenhuma gravação é considerada concluída sem releitura e confirmação;
+- criação integrada preserva primeiro serviço e cinco dias úteis de agenda;
+- Agendas, Moradores e Profissionais mantêm superfícies independentes;
+- Voltar continua protegendo alterações não salvas;
+- backend permanece inalterado;
+- não existe Tarefa 19 nessa sequência.
+
+### Status final da Tarefa 18: VALIDADA INTERNAMENTE, PUBLICADA E CANONIZADA — 12/09/2026
+Workflow `34731693675` — success.
+Gate `TAREFA_18_PROFISSIONAIS_NATIVOS_OK`.
+`QUALITY_GATE_V101_OK`.
+`V101_INTERNO_APROVADO=SIM`.
+GitHub Pages do HEAD validado: `34731696614` — success.
+Apps Script permanece na versão **208**.
+
+**Encerramento canônico:** sequência original de Tarefas **1 a 18 concluída**. Nenhuma Tarefa 19 é criada.
