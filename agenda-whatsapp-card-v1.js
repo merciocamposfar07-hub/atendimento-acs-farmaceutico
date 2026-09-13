@@ -155,7 +155,7 @@ function safeName(v){return txt(v).toLowerCase().normalize('NFD').replace(/[\u03
 function filename(data){return'portal-tacs-agenda-'+safeName(data.title)+'-'+safeName(data.day)+'.png'}
 function filenameGroup(data){return'portal-tacs-agenda-completa-'+safeName(data.title)+'.png'}
 function openImage(b,button,resetText){var u=URL.createObjectURL(b),w=null;try{w=window.open(u,'_blank')}catch(e){}if(!w)location.href=u;button.textContent='Card aberto';setTimeout(function(){button.textContent=resetText;URL.revokeObjectURL(u)},2500)}
-function shareBlob(canvas,data,button,group){var resetText=group?'📲 Card da agenda completa':'📲 Card para WhatsApp';button.disabled=true;button.textContent='Criando card…';Promise.resolve(canvas).then(blob).then(function(b){var f=null,canFiles=false;try{f=new File([b],group?filenameGroup(data):filename(data),{type:'image/png'});canFiles=!!(navigator.share&&(!navigator.canShare||navigator.canShare({files:[f]})))}catch(e){canFiles=false}if(canFiles){return navigator.share({files:[f],title:data.title,text:'Portal TACS • '+data.areaName}).then(function(){button.textContent='Card compartilhado'}).catch(function(err){if(err&&err.name==='AbortError')return;openImage(b,button,resetText)})}openImage(b,button,resetText)}).catch(function(err){try{console.error('Portal TACS — erro ao criar card',err)}catch(e){}button.textContent='Erro ao criar card'}).finally(function(){setTimeout(function(){button.disabled=false;button.textContent=resetText},2200)})}
+function shareBlob(canvas,data,button,group){var resetText=button&&button.dataset&&button.dataset.whatsappResetText?button.dataset.whatsappResetText:(group?'📲 Card da agenda completa':'📲 Card para WhatsApp');button.disabled=true;button.textContent='Criando card…';Promise.resolve(canvas).then(blob).then(function(b){var f=null,canFiles=false;try{f=new File([b],group?filenameGroup(data):filename(data),{type:'image/png'});canFiles=!!(navigator.share&&(!navigator.canShare||navigator.canShare({files:[f]})))}catch(e){canFiles=false}if(canFiles){return navigator.share({files:[f],title:data.title,text:'Portal TACS • '+data.areaName}).then(function(){button.textContent='Card compartilhado'}).catch(function(err){if(err&&err.name==='AbortError')return;openImage(b,button,resetText)})}openImage(b,button,resetText)}).catch(function(err){try{console.error('Portal TACS — erro ao criar card',err)}catch(e){}button.textContent='Erro ao criar card'}).finally(function(){setTimeout(function(){button.disabled=false;button.textContent=resetText},2200)})}
 function share(card,button){var data=read(card);shareBlob(draw(data),data,button,false)}
 function shareGroup(group,button){var data=readGroup(group);shareBlob(drawGroup(data),data,button,true)}
 
@@ -179,10 +179,12 @@ function corrigirFalsoAlerta(){var s=document.getElementById('statusOperacao');i
 window.PortalTacsAgendaWhatsAppV2API={
   shareData:function(data,button){
     if(!button)return;
+    button.dataset.whatsappResetText=button.textContent||'📲 Postar no Status do WhatsApp';
     shareBlob(draw(data||{}),data||{},button,false);
   },
   shareGroupData:function(data,button){
     if(!button)return;
+    button.dataset.whatsappResetText=button.textContent||'📲 Postar agenda completa no Status do WhatsApp';
     shareBlob(drawGroup(data||{}),data||{},button,true);
   },
   officialIcon:CONECTA_OFFICIAL_ICON
