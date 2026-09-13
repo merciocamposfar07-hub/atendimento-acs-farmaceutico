@@ -29,8 +29,10 @@ assert.match(vaultSource,/ITERATIONS=180000/);
 assert.doesNotMatch(vaultSource,/localStorage\.setItem\([^\n]*pin/i);
 
 const adminListener=central.slice(central.indexOf("el('loginAdmin').addEventListener"),central.indexOf("el('loginTacs').addEventListener"));
-assert(adminListener.indexOf("abrirAcessoLocal('admin',pin)")<adminListener.indexOf("post('admin_login'"),
-  'Administrador deve tentar o desbloqueio local antes da validação remota');
+assert.match(adminListener,/abrirAcessoLocal\('admin',pin\)/);
+assert.match(adminListener,/startRemoteAuthSync\('admin',pin,Boolean\(saved\)\)/);
+assert(adminListener.indexOf("abrirAcessoLocal('admin',pin)")<adminListener.indexOf("startRemoteAuthSync('admin',pin,Boolean(saved))"),
+  'Administrador deve concluir a tentativa de desbloqueio local antes de iniciar a sincronização remota');
 assert.match(central,/LOGOFF_SEGURO_PIN_LOCAL_V3/);
 assert.match(central,/if\(hasSession&&payload\)invalidarSessaoServidorEmSegundoPlano\(action,payload\)/);
 assert.match(central,/PIN_LOCAL_SEM_TOKEN_V3/);
