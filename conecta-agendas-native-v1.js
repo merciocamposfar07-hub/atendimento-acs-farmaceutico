@@ -104,7 +104,7 @@ function create(host){
   function prime(){
     if(!perf||typeof perf.prime!=='function')return false;
     var item=perf.prime('agendas',function(data){applyData(data,false)});
-    if(item){setStatus('Última confirmação exibida. Sincronizando agendas em segundo plano…','aviso');return true}
+    if(item){setStatus('Aguarde enquanto os dados carregam…','aviso');return true}
     return false;
   }
   function applyData(r,isConfirmed){
