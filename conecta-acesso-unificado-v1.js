@@ -98,7 +98,7 @@ function ensureStyle(){
  /* CORRECAO_CIRURGICA_UBS_FUNDOS_ESCUROS_V1
     Somente os fundos visuais do acesso UBS: remove o azul claro e usa o azul escuro canônico do App 4.
     Não altera login, PIN, sessão, clique, navegação, permissões ou demais painéis. */
- s.textContent+='#ubsLogin .csc-access-note{background:#102d46!important;background-image:none!important}#ubsLogin #cscUbsLogin{background:#102d46!important;background-image:none!important}';
+ s.textContent+='#ubsLogin #cscUbsIdentity{background:#102d46!important;background-image:none!important}#ubsLogin #cscUbsIdentity #cscUbsOpenPanels{background:transparent!important;background-image:none!important;box-shadow:none!important;border:0!important}';
  document.head.appendChild(s);
 }
 function addResidentTab(){
