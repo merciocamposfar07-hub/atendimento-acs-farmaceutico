@@ -638,7 +638,7 @@ function ensureTask16AgendaAssets(callback){
   });
 }
 function showNativeAgenda(title,routeId){
-  prepareShellScope();publishModuleCore();
+  prepareShellScope();publishModuleCore();hideAllNativeExcept('agendas');
   Object.keys(shellFrames).forEach(function(key){var frame=shellFrames[key];if(frame)frame.hidden=true});
   var base=el('viewerFrame');if(base)base.hidden=true;
   var host=el('nativeModuleHost'),viewer=el('viewer');
@@ -694,8 +694,7 @@ function ensureTask17MoradoresAssets(callback){
   });
 }
 function showNativeMoradores(title,routeId){
-  prepareShellScope();publishModuleCore();
-  try{if(window.ConectaAgendasNativeV1&&typeof window.ConectaAgendasNativeV1.hide==='function')window.ConectaAgendasNativeV1.hide()}catch(e){}
+  prepareShellScope();publishModuleCore();hideAllNativeExcept('moradores');
   Object.keys(shellFrames).forEach(function(key){var frame=shellFrames[key];if(frame)frame.hidden=true});
   var agendaHost=el('nativeModuleHost');if(agendaHost)agendaHost.hidden=true;
   var host=ensureTask17MoradoresHost(),viewer=el('viewer');
