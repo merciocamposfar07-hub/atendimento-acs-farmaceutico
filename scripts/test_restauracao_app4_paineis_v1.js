@@ -31,11 +31,13 @@ assert.doesNotMatch(html,/>← Central<\/button>/);
 assert.match(html,/html body \.viewer \.viewer-bar\{[\s\S]*background:#071827!important[\s\S]*border:0!important[\s\S]*border-bottom:0!important/);
 assert.match(html,/html body #cscModuleOpening\{[\s\S]*border:0!important/);
 
-// Painéis antigos embutidos não exibem um segundo cabeçalho/seta.
+// Painéis antigos usam o próprio cabeçalho App4 no fluxo da página; o shell externo fica oculto.
 assert.match(central,/function normalizeEmbeddedPanelFrame\(frame\)/);
-assert.match(central,/#cscInstitutionalAppbar\{display:none!important\}/);
+assert.match(central,/#cscInstitutionalAppbar\{display:flex!important;position:static!important/);
 assert.match(central,/#portalTacsBackCentralV1\{display:none!important\}/);
 assert.match(central,/normalizeEmbeddedPanelFrame\(frame\)/);
+assert.match(html,/\.viewer\.csc-frame-viewer>\.viewer-bar,[\s\S]*\.viewer\.csc-frame-viewer>\.viewer-platform-footer\{display:none!important\}/);
+assert.match(html,/\.viewer\.csc-native-viewer>\.viewer-bar\{[\s\S]*position:static!important/);
 
 // Os módulos nativos não exibem texto técnico criado durante a migração.
 assert.doesNotMatch(agenda,/Módulo nativo do Conecta/);
