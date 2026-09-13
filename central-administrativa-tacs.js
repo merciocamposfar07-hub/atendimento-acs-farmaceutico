@@ -1328,29 +1328,47 @@ function invalidarSessaoServidorEmSegundoPlano(action,payload){
 function logout(){
   if(logoutEmCurso)return;
   logoutEmCurso=true;
-  cancelRemoteAuthSync();
   var lastMode=mode||'admin',hasSession=Boolean(token||territoryToken);
   var action=lastMode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout';
-  var payload=hasSession?session():null;
+  var payload=null;
+  try{if(hasSession)payload=session()}catch(e){}
 
-  /* LOGOFF_IMEDIATO_V1:
-     o primeiro toque encerra a autenticação local imediatamente.
-     A confirmação remota não bloqueia a interface nem exige segundo toque. */
-  cancelarOperacaoAtivaSemCallback();
-  resetModuleShell();
+  /* LOGOFF_IMEDIATO_V4:
+     o retorno visual ao Login acontece antes da limpeza pesada do shell.
+     Nenhuma falha de cleanup pode bloquear o primeiro toque no Safari/iPhone. */
+  try{cancelRemoteAuthSync()}catch(e){}
+  try{cancelarOperacaoAtivaSemCallback()}catch(e){}
+
   token='';territoryToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
-  sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);
-  syncAppState();
-  /* LOGOFF_PRESERVA_CACHE_V2: área, aparelho e caches por perfil permanecem intactos. */
-  el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;
-  el('loginPanel').hidden=false;showLogin(lastMode==='tacs'?'tacs':'admin');
-  setStatus('Sessão encerrada. Seus dados locais foram preservados para o próximo acesso.','ok');
-  window.scrollTo({top:0,behavior:'auto'});
+  try{sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY)}catch(e){}
+  try{syncAppState()}catch(e){}
 
-  /* LOGOFF_SEGURO_PIN_LOCAL_V3: preserva somente contexto local cifrado.
-     A sessão remota anterior é invalidada sem bloquear a interface. */
-  if(hasSession&&payload)invalidarSessaoServidorEmSegundoPlano(action,payload);
-  setTimeout(function(){logoutEmCurso=false},250);
+  /* Sincroniza imediatamente o estado visual App4; não depende do timer de 700 ms,
+     que pode estar parado depois de retorno por BFCache/pagehide no Safari. */
+  try{
+    document.documentElement.classList.remove('csc-session-active','csc-central-state-app');
+    document.documentElement.classList.add('csc-session-missing','csc-central-state-login','csc-central-login-visible');
+    if(document.body){
+      document.body.classList.remove('csc-session-active','viewer-open');
+      document.body.classList.add('csc-session-missing');
+    }
+  }catch(e){}
+
+  var identity=el('identityPanel'),health=el('healthPanel'),modules=el('modulesPanel'),login=el('loginPanel');
+  if(identity)identity.hidden=true;
+  if(health)health.hidden=true;
+  if(modules)modules.hidden=true;
+  if(login)login.hidden=false;
+  try{showLogin(lastMode==='tacs'?'tacs':'admin')}catch(e){}
+  try{setStatus('Sessão encerrada. Seus dados locais foram preservados para o próximo acesso.','ok')}catch(e){}
+  try{window.scrollTo({top:0,behavior:'auto'})}catch(e){}
+
+  /* A limpeza dos painéis e a invalidação remota ficam fora do caminho crítico do toque. */
+  setTimeout(function(){
+    try{resetModuleShell()}catch(e){}
+    if(hasSession&&payload)try{invalidarSessaoServidorEmSegundoPlano(action,payload)}catch(e){}
+    logoutEmCurso=false;
+  },0);
 }
 /* LOGIN_PREFETCH_ESTATICO_V2: a tela termina de carregar primeiro. Depois, fetch assíncrono aquece o cache sem iframe oculto e sem bloquear o evento load do Safari. */
 var staticPrefetchStarted=false;
