@@ -676,7 +676,7 @@ var task16AgendaAssetsLoading=false,task16AgendaAssetWaiters=[];
 function task16LoadStyle(){
   if(document.getElementById('cscAgendaNativeCssV1'))return;
   var link=document.createElement('link');link.id='cscAgendaNativeCssV1';link.rel='stylesheet';
-  link.href='/atendimento-acs-farmaceutico/conecta-agendas-native-v1.css?v=20260913-auditoria-funcional-v1';
+  link.href='/atendimento-acs-farmaceutico/conecta-agendas-native-v1.css?v=20260913-apresentacao-paineis-v2';
   document.head.appendChild(link);
 }
 function task16LoadScript(id,src,ready,done){
@@ -705,9 +705,9 @@ function ensureTask16AgendaAssets(callback){
     if(!ok){finish(false);return}
     task16LoadScript('cscAgendaTransportTask16','/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js?v=20260912-task16-agendas-native-v1',function(){return Boolean(window.ConectaAgendasTransportV1)},function(ok2){
       if(!ok2){finish(false);return}
-      task16LoadScript('cscAgendaNativeTask16','/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260913-auditoria-funcional-v1',function(){return Boolean(window.ConectaAgendasNativeV1)},function(ok3){
+      task16LoadScript('cscAgendaNativeTask16','/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260913-apresentacao-paineis-v2',function(){return Boolean(window.ConectaAgendasNativeV1)},function(ok3){
         if(!ok3){finish(false);return}
-        task16LoadScript('cscAgendaWhatsappTask16','/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260912-conecta-oficial-v1',function(){return Boolean(window.PortalTacsAgendaWhatsAppV2API)},finish);
+        task16LoadScript('cscAgendaWhatsappTask16','/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260913-apresentacao-paineis-v2',function(){return Boolean(window.PortalTacsAgendaWhatsAppV2API)},finish);
       });
     });
   });
@@ -750,7 +750,7 @@ function ensureTask17MoradoresHost(){
 function task17LoadStyle(){
   if(document.getElementById('cscMoradoresNativeCssV1'))return;
   var link=document.createElement('link');link.id='cscMoradoresNativeCssV1';link.rel='stylesheet';
-  link.href='/atendimento-acs-farmaceutico/conecta-moradores-native-v1.css?v=20260913-auditoria-funcional-v1';
+  link.href='/atendimento-acs-farmaceutico/conecta-moradores-native-v1.css?v=20260913-apresentacao-paineis-v2';
   document.head.appendChild(link);
 }
 function ensureTask17MoradoresAssets(callback){
@@ -766,7 +766,7 @@ function ensureTask17MoradoresAssets(callback){
   }
   task16LoadScript('cscModuleCoreTask17','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task17-moradores-native-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
-    task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260913-auditoria-funcional-v1',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
+    task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260913-apresentacao-paineis-v2',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
   });
 }
 function showNativeMoradores(title,routeId){
@@ -809,7 +809,7 @@ function ensureTask18ProfissionaisHost(){
 function task18LoadStyle(){
   if(document.getElementById('cscProfissionaisNativeCssV1'))return;
   var link=document.createElement('link');link.id='cscProfissionaisNativeCssV1';link.rel='stylesheet';
-  link.href='/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.css?v=20260913-auditoria-funcional-v1';
+  link.href='/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.css?v=20260913-apresentacao-paineis-v2';
   document.head.appendChild(link);
 }
 function ensureTask18ProfissionaisAssets(callback){
@@ -825,7 +825,7 @@ function ensureTask18ProfissionaisAssets(callback){
   }
   task16LoadScript('cscModuleCoreTask18','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task18-profissionais-native-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
-    task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260913-auditoria-funcional-v1',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
+    task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260913-apresentacao-paineis-v2',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
   });
 }
 function hideAllNativeExcept(kind){
