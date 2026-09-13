@@ -36,6 +36,32 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Corrigir somente toque TACS e confirmação do cadastro UBS
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          central=Path('central-administrativa-tacs.js')
+          c=central.read_text(encoding='utf-8')
+          old="active.pollTimer=setTimeout(poll,Math.max(0,Number(delay||active.nextWait||1600)));"
+          new="active.pollTimer=setTimeout(poll,Math.max(0,Number(delay==null?(active.nextWait||1600):delay)));"
+          if c.count(old)!=1: raise SystemExit('Gate schedulePoll: esperado exatamente uma vez.')
+          central.write_text(c.replace(old,new),encoding='utf-8')
+          territorio=Path('teste-v1/painel-tacs-areas-v1.js')
+          t=territorio.read_text(encoding='utf-8')
+          old2="el('tacsForm').classList.add('hidden');loadData('',text(r.message||'Cadastro salvo e conferido.'));"
+          new2="var salvo=r.tacs||body,encontrado=false;data.tacs=data.tacs.map(function(t){if(text(t.tacsId)===text(salvo.tacsId)){encontrado=true;return salvo;}return t;});if(!encontrado)data.tacs.push(salvo);el('tacsForm').classList.add('hidden');render();status(text(r.message||'Cadastro salvo e conferido.'),'ok');setTimeout(function(){if(!active)loadData('Dados territoriais atualizados.');},1200);"
+          if t.count(old2)!=1: raise SystemExit('Gate cadastro UBS: fechamento esperado exatamente uma vez.')
+          territorio.write_text(t.replace(old2,new2),encoding='utf-8')
+          PY
+          npm ci
+          node --check central-administrativa-tacs.js
+          node --check teste-v1/painel-tacs-areas-v1.js
+          node scripts/test_primeiro_toque_paineis_v1.js
+          node scripts/test_tarefa1_perfil_ubs.js
+          node scripts/test_territorio_dom.js
+          npm test
       - name: Registrar versão única e carimbar arquivos públicos
         shell: bash
         run: |
@@ -43,49 +69,32 @@ jobs:
           python3 - <<'PY'
           import json, os, datetime, re
           from pathlib import Path
-
           sha=(os.environ.get('GITHUB_SHA','')[:12] or 'manual')
           now=datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z')
-          entries=[
-              Path('index.html'),
-              Path('abrir.html'),
-              Path('central-administrativa-tacs.html'),
-              Path('painel-oficial-recados-campanhas.html'),
-          ]
+          entries=[Path('index.html'),Path('abrir.html'),Path('central-administrativa-tacs.html'),Path('painel-oficial-recados-campanhas.html')]
           allowed=('.js','.css','.webmanifest','.json','.svg','.png')
           asset=re.compile(r'(?P<attr>\b(?:src|href))=(?P<quote>["\'])(?P<url>[^"\']+)(?P=quote)',re.I)
-
           def stamp(path):
               text=path.read_text(encoding='utf-8')
               def replace(match):
                   url=match.group('url')
-                  if re.match(r'^(?:https?:)?//',url,re.I) or url.startswith(('#','data:')):
-                      return match.group(0)
+                  if re.match(r'^(?:https?:)?//',url,re.I) or url.startswith(('#','data:')): return match.group(0)
                   base=url.split('?',1)[0]
-                  if not base.lower().endswith(allowed):
-                      return match.group(0)
+                  if not base.lower().endswith(allowed): return match.group(0)
                   quote=match.group('quote')
                   return f"{match.group('attr')}={quote}{base}?v={sha}{quote}"
               text=asset.sub(replace,text)
-              text=re.sub(
-                  r'(<meta\s+name=["\']portal-release["\']\s+content=["\'])[^"\']*(["\']\s*/?>)',
-                  lambda m:m.group(1)+sha+m.group(2),
-                  text,
-                  flags=re.I
-              )
+              text=re.sub(r'(<meta\s+name=["\']portal-release["\']\s+content=["\'])[^"\']*(["\']\s*/?>)',lambda m:m.group(1)+sha+m.group(2),text,flags=re.I)
               path.write_text(text,encoding='utf-8')
-
-          for entry in entries:
-              stamp(entry)
-
+          for entry in entries: stamp(entry)
           data={'version':sha,'releasedAt':now,'scope':'Portal TACS e painéis administrativos'}
           Path('portal-version.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
           git config user.name 'Portal TACS'
           git config user.email 'actions@users.noreply.github.com'
-          git add index.html abrir.html central-administrativa-tacs.html painel-oficial-recados-campanhas.html portal-version.json
+          git add central-administrativa-tacs.js teste-v1/painel-tacs-areas-v1.js index.html abrir.html central-administrativa-tacs.html painel-oficial-recados-campanhas.html portal-version.json
           git diff --cached --quiet && exit 0
-          git commit -m 'Atualiza versão integral do Portal TACS'
+          git commit -m 'Corrige resposta imediata de TACS e confirmação do cadastro UBS'
           for tentativa in 1 2 3; do
             git pull --rebase origin main || true
             if git push origin HEAD:main; then exit 0; fi
