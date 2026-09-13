@@ -118,6 +118,7 @@ function bool(v){return v===true||v===1||['true','1','sim','yes','ativo','ativa'
 function esc(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
 function status(msg,type){var node=el('operationStatus')||el('loginStatus');node.textContent=msg;node.className='status'+(type?' '+type:'');}
 function loginStatus(msg,type){var node=el('loginStatus');node.textContent=msg;node.className='status'+(type?' '+type:'');}
+function panelLoading(show,msg){var node=el('territoryLoading');if(!node)return;if(msg)node.textContent=msg;node.classList.toggle('hidden',!show);}
 function requestId(prefix){return String(prefix||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);}
 function session(){if(moduleCore&&typeof moduleCore.session==='function')return moduleCore.session({escopo:'territorio'});var out={dispositivo:device};if(mode==='tacs'&&territorioToken)out.territorioToken=territorioToken;else if(token)out.token=token;return out;}
 function payload(extra){var out=session();Object.keys(extra||{}).forEach(function(k){out[k]=extra[k];});return out;}
@@ -191,11 +192,10 @@ function localFirstWithoutRemote(){
   try{return new URLSearchParams(location.search||'').get('localfirst')==='1'&&Boolean(mode)}catch(e){return false}
 }
 function primeTerritoryFromCentralContext(){
-  if(!moduleCore||typeof moduleCore.state!=='function')return false;
   try{
-    var state=moduleCore.state(),key=text(state&&state.cache&&state.cache.contextKey);
-    if(!key)return false;
-    var saved=JSON.parse(sessionStorage.getItem(key)||'null'),ctx=saved&&saved.context;
+    var state=moduleCore&&typeof moduleCore.state==='function'?moduleCore.state():null,key=text(state&&state.cache&&state.cache.contextKey),saved=null,ctx=null;
+    if(key){saved=JSON.parse(sessionStorage.getItem(key)||'null');ctx=saved&&saved.context;}
+    if(!ctx){saved=JSON.parse(sessionStorage.getItem('portalTacsCentralContextCacheV3:'+(mode==='tacs'?'tacs':'admin'))||'null');ctx=saved&&saved.context;}
     if(!ctx||!Array.isArray(ctx.areas)||!ctx.areas.length)return false;
     data=territoryPerformancePayload(ctx);
     if(mode==='admin')data.podeAdministrar=true;
@@ -204,6 +204,7 @@ function primeTerritoryFromCentralContext(){
     el('dashboard').classList.remove('hidden');
     el('logoutButton').disabled=false;
     syncTerritoryWriteState();
+    panelLoading(false);
     loginStatus('Dados locais disponíveis. Confirmando a sessão em segundo plano…','warn');
     return true;
   }catch(e){return false}
@@ -241,9 +242,10 @@ function syncTerritoryWriteState(){
 }
 function loadData(message,operationMessage,backgroundRetry){
   var localFirst=localFirstWithoutRemote(),cached=null,wasConfirmed=territoryConfirmed;
+  if(el('dashboard').classList.contains('hidden'))panelLoading(true,'Aguarde enquanto os dados carregam…');
   if(!backgroundRetry&&modulePerf&&typeof modulePerf.prime==='function'){
     cached=modulePerf.prime('territorio',function(saved){
-      data=territoryPerformancePayload(saved);territoryConfirmed=false;render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;
+      data=territoryPerformancePayload(saved);territoryConfirmed=false;render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;panelLoading(false);
       loginStatus(localFirst?'Dados locais disponíveis. Confirmando a sessão em segundo plano…':'Aguarde enquanto os dados carregam…','warn');
     });
   }
@@ -253,11 +255,11 @@ function loadData(message,operationMessage,backgroundRetry){
     return;
   }
   var leituraPayload=payload({});coreRead('admin_territorio_dados',leituraPayload,function(done){post('admin_territorio_dados',leituraPayload,'admin_territorio_result',done)},function(r){
-    if(!r||r.ok!==true){var falha=moduleSessionPolicy&&typeof moduleSessionPolicy.classify==='function'?moduleSessionPolicy.classify(r):{explicitAuthRefusal:Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(text(r&&r.message)))};if(!falha.explicitAuthRefusal){territoryConfirmed=wasConfirmed;if(!cached&&!wasConfirmed)cached=primeTerritoryFromCentralContext();syncTerritoryWriteState();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;loginStatus('Sessão ativa.','ok');if(operationMessage)status('A alteração foi enviada; a confirmação será refeita automaticamente em segundo plano.','warn');scheduleTerritoryReconnect(message,operationMessage);return}cancelTerritoryReconnect();clearSession();loginStatus(text(r&&r.message||'A sessão foi recusada explicitamente pelo servidor.'),'err');if(operationMessage)status('A alteração foi salva, mas a autenticação foi recusada na releitura. Volte à Central.','err');return;}
+    if(!r||r.ok!==true){var falha=moduleSessionPolicy&&typeof moduleSessionPolicy.classify==='function'?moduleSessionPolicy.classify(r):{explicitAuthRefusal:Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(text(r&&r.message)))};if(!falha.explicitAuthRefusal){territoryConfirmed=wasConfirmed;if(!cached&&!wasConfirmed)cached=primeTerritoryFromCentralContext();syncTerritoryWriteState();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;panelLoading(false);loginStatus('Sessão ativa.','ok');if(operationMessage)status('A alteração foi enviada; a confirmação será refeita automaticamente em segundo plano.','warn');scheduleTerritoryReconnect(message,operationMessage);return}cancelTerritoryReconnect();panelLoading(false);clearSession();loginStatus(text(r&&r.message||'A sessão foi recusada explicitamente pelo servidor.'),'err');if(operationMessage)status('A alteração foi salva, mas a autenticação foi recusada na releitura. Volte à Central.','err');return;}
     var payload=territoryPerformancePayload(r),diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('territorio',payload):{changed:true};
     cancelTerritoryReconnect();territoryConfirmed=true;data=payload;
     if(diff.changed||!cached)render();else syncTerritoryWriteState();
-    el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;
+    el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;panelLoading(false);
     loginStatus(diff.changed?(message||'Sessão validada.'):'Dados territoriais atuais confirmados; nenhuma mudança nova encontrada.','ok');
     if(operationMessage)status(operationMessage,'ok');
   });
@@ -538,5 +540,5 @@ bindMask('tacsCpf',cpfText);
 bindMask('tacsCns',cnsText);
 bindMask('tacsPhone',phoneText);
 
-if(mode)loadData('Conferindo a sessão existente…');else{showLogin('admin');loginStatus('Escolha o tipo de acesso.','ok');}
+if(mode){panelLoading(true,'Aguarde enquanto os dados carregam…');loadData('Conferindo a sessão existente…');}else{panelLoading(false);showLogin('admin');loginStatus('Escolha o tipo de acesso.','ok');}
 }());
