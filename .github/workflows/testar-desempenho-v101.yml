@@ -33,6 +33,9 @@ on:
       - 'conecta-moradores-native-v1.css'
       - 'conecta-profissionais-native-v1.js'
       - 'conecta-profissionais-native-v1.css'
+      - 'agenda-whatsapp-card-v1.js'
+      - 'recados-campanhas-whatsapp-card-v9.js'
+      - 'recados-campanhas-whatsapp-mensal-v12.js'
       - 'central-administrativa-tacs.js'
       - 'central-administrativa-tacs.html'
       - 'painel-suporte-moradores-v2.html'
@@ -49,6 +52,7 @@ on:
       - 'scripts/test_tarefa17_moradores_nativos.js'
       - 'scripts/test_tarefa18_profissionais_nativos.js'
       - 'scripts/test_restauracao_app4_paineis_v1.js'
+      - 'scripts/test_apresentacao_paineis_whatsapp_v1.js'
       - 'scripts/test_primeiro_toque_paineis_v1.js'
       - 'scripts/test_auditoria_funcional_tarefas_1_18_v1.js'
       - 'scripts/test_pin_local_v2.js'
@@ -109,6 +113,7 @@ jobs:
           node --check scripts/test_tarefa9_pin_somente_entrada.js
           node --check scripts/test_tarefa15_navegacao_interna.js
           node --check scripts/test_restauracao_app4_paineis_v1.js
+          node --check scripts/test_apresentacao_paineis_whatsapp_v1.js
           node --check scripts/test_primeiro_toque_paineis_v1.js
           node --check scripts/test_auditoria_funcional_tarefas_1_18_v1.js
           node --check scripts/test_pin_local_v2.js
