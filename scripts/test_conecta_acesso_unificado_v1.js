@@ -62,11 +62,11 @@ assert(resident.includes("portalConectaMoradorTokenV1"),'Próximos acessos devem
 assert(resident.includes('hasBackgroundRequest()'),'Morador deve poder abrir o snapshot local enquanto uma nova sessão é confirmada');
 assert(resident.includes("if(!token){showPortalToast('Acesso aberto. Aguarde a confirmação segura do servidor"),'Alterações do morador devem esperar token remoto novo');
 
-assert(centralJs.includes('LOGOFF_PRESERVA_CACHE_V2'),'Logoff deve preservar cache e dados locais');
-assert(centralJs.includes('LOGOFF_IMEDIATO_V1'),'Logoff deve responder no primeiro toque sem esperar o servidor');
+assert(centralJs.includes('LOGOFF_IMEDIATO_V4'),'Logoff atual deve preservar dados locais e retornar imediatamente ao login');
+assert(centralJs.includes('LOGOFF_IMEDIATO_V4'),'Logoff deve responder no primeiro toque sem esperar o servidor');
 assert(centralJs.includes('cancelarOperacaoAtivaSemCallback'),'Logoff deve cancelar transporte pendente para evitar disputa de interface');
-assert(centralJs.includes('LOGOFF_SEGURO_PIN_LOCAL_V3'),'Logoff deve preservar o cache local sem preservar credencial remota reutilizável');
-assert(centralJs.includes("if(hasSession&&payload)invalidarSessaoServidorEmSegundoPlano(action,payload);"),'Logoff deve invalidar a sessão remota em segundo plano sem bloquear a interface');
+assert(centralJs.includes("sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY)"),'Logoff deve preservar cache local removendo apenas credenciais remotas da sessão');
+assert(centralJs.includes("if(hasSession&&payload)try{invalidarSessaoServidorEmSegundoPlano(action,payload)}catch(e){}"),'Logoff deve invalidar a sessão remota em segundo plano sem bloquear a interface');
 assert(centralJs.includes('PIN_LOCAL_SEM_TOKEN_V3'),'PIN local deve abrir somente contexto confirmado, nunca um token remoto persistido');
 assert(!centralJs.includes('token:bearer'),'Cofre local administrativo não pode receber token do servidor');
 assert(centralJs.includes("abrirAcessoLocal('admin',pin)")&&centralJs.includes("abrirAcessoLocal('tacs',pin)"),'Administrador e TACS devem tentar o PIN local antes do servidor');
