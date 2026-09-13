@@ -18,17 +18,26 @@ const block=central.slice(openStart,closeStart);
 assert.match(block,/var remoteReady=Boolean\(token\|\|territoryToken\),localReady=localPanelAccessReady\(\)/);
 assert.match(block,/if\(!remoteReady&&!localReady\)/);
 assert.match(block,/if\(!remoteReady\)\{/);
-assert.doesNotMatch(block,/showPendingModuleShell\(name,title\|\|'Painel',routeId\)/);
+assert.match(block,/showPendingModuleShell\(name,title\|\|'Painel',routeId\)/);
 
 // Painéis nativos respondem imediatamente no modo local-first.
 assert.match(block,/if\(name==='agendas'\)\{showNativeAgenda/);
 assert.match(block,/if\(name==='moradores'/);
 assert.match(block,/if\(name==='profissionais'\)\{showNativeProfissionais/);
 
-// Regra aprovada em 13/09/2026: todos os painéis exibem sua estrutura interna no primeiro toque.
-assert.match(block,/var localFrame=ensureShellFrame\(name,url,title\|\|'Painel',routeId\)/);
-assert.match(block,/localFrame\.dataset\.shellLocalFirst='1'/);
-assert.match(block,/showShellFrame\(name,localFrame,title\|\|'Painel',routeId\)/);
+// Regra aprovada em 13/09/2026: todos os painéis respondem no primeiro toque sem tela lisa.
+assert.match(block,/showPendingModuleShell\(name,title\|\|'Painel',routeId\)/);
+assert.doesNotMatch(block,/localFrame\.dataset\.shellLocalFirst/);
+
+// Painéis ainda em frame exibem estrutura interna segura enquanto a sessão remota sincroniza.
+const pendingStart=central.indexOf('function showPendingModuleShell');
+const pendingEnd=central.indexOf('function shellHasUnsaved',pendingStart);
+const pendingBlock=central.slice(pendingStart,pendingEnd);
+assert.match(pendingBlock,/csc-pending-preview/);
+assert.match(pendingBlock,/Aguarde enquanto os dados carregam…/);
+assert.match(pendingBlock,/viewer\.classList\.add\('csc-shell-viewer','csc-native-viewer'\)/);
+assert.match(pendingBlock,/host\.hidden=false/);
+assert.doesNotMatch(pendingBlock,/\.src\s*=/,'Prévia imediata não pode iniciar iframe protegido antes da sessão remota.');
 
 // A mensagem superior do shell não pode substituir o painel por uma tela lisa.
 const openingStart=central.indexOf('function setShellOpening(title,visible)');
@@ -47,4 +56,4 @@ assert.match(closeBlock,/moduloPendente=null/);
 const core=fs.readFileSync('conecta-module-core-v1.js','utf8');
 assert.match(core,/function ready\(\)[\s\S]*Boolean\(s\.adminToken\|\|s\.territoryToken\)/);
 
-console.log('PRIMEIRO_TOQUE_PAINEIS_OK: todos os painéis exibem a estrutura interna no primeiro toque; a sessão remota sincroniza em segundo plano sem tela lisa de espera.');
+console.log('PRIMEIRO_TOQUE_PAINEIS_OK: painéis nativos exibem conteúdo imediatamente e painéis em frame exibem prévia interna segura no primeiro toque, sem tela lisa; a sessão remota sincroniza em segundo plano.');
