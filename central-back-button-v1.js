@@ -350,76 +350,34 @@ function centralUrl(){
   return '/atendimento-acs-farmaceutico/central-administrativa-tacs.html'+(tacs?'?acesso=tacs':'');
 }
 
-function restorePortalTopControlsV1(){
-  if(isAdminPanel)return;
-  try{
-    if(window.PortalTacsAtualizacao&&typeof window.PortalTacsAtualizacao.instalarUI==='function'){
-      window.PortalTacsAtualizacao.instalarUI();
-    }
-  }catch(e){}
-
-  var refresh=document.getElementById('portalTacsAtualizarPaginaV1');
-  if(refresh){
-    refresh.style.setProperty('display','inline-flex','important');
-    refresh.style.setProperty('top','calc(10px + env(safe-area-inset-top))','important');
-    refresh.style.setProperty('right','10px','important');
-    refresh.style.setProperty('bottom','auto','important');
-    refresh.style.setProperty('width','50px','important');
-    refresh.style.setProperty('height','50px','important');
-    refresh.style.setProperty('min-width','50px','important');
-    refresh.style.setProperty('min-height','50px','important');
-    refresh.style.setProperty('padding','0','important');
-    refresh.style.setProperty('border','2px solid rgba(255,255,255,.9)','important');
-    refresh.style.setProperty('border-radius','50%','important');
-    refresh.style.setProperty('background','#073a55','important');
-    refresh.style.setProperty('color','#fff','important');
-    refresh.style.setProperty('font-size','0','important');
-    refresh.style.setProperty('box-shadow','0 2px 8px rgba(0,0,0,.2)','important');
-  }
-
-  var central=document.getElementById('portalTacsVoltarCentralV1');
-  if(central){
-    central.style.setProperty('border','2px solid #69c7e7','important');
-    central.style.setProperty('background','#073a55','important');
-    central.style.setProperty('color','#fff','important');
-    central.style.setProperty('box-shadow','0 8px 24px rgba(0,0,0,.28)','important');
-  }
-}
-
 function install(){
   removeRedundantPinAccess();
-  restorePortalTopControlsV1();
   if(document.getElementById('portalTacsBackCentralV1'))return;
   if(!document.body){setTimeout(install,0);return;}
 
   /*
-   * RETORNO_CENTRAL_UNICO_V1:
-   * O Portal TACS já possui o botão interno "← Central".
-   * Quando ele existe, reaproveitamos exatamente esse botão e apenas substituímos
-   * o manipulador antigo pela rota segura abaixo. Assim não criamos um segundo
-   * botão visual e preservamos o retorno ao shell/aba já autenticado.
+   * RETORNO_CENTRAL_ESTAVEL_V2:
+   * Há um único controle de retorno no Portal TACS.
+   * O controle legado criado pelo auto-update é removido para não disputar
+   * aparência, estado ou manipulador de clique com o retorno ao shell.
    */
   var existingPortalButton=!isAdminPanel?document.getElementById('portalTacsVoltarCentralV1'):null;
-  var bar=null,btn=null;
-  if(existingPortalButton){
-    btn=existingPortalButton.cloneNode(true);
-    existingPortalButton.parentNode.replaceChild(btn,existingPortalButton);
-    btn.disabled=false;
-    btn.textContent='← Central';
-    btn.setAttribute('aria-label','Voltar à Central Administrativa');
-    btn.title='Voltar à Central Administrativa';
-  }else{
-    bar=document.createElement('div');
-    bar.id='portalTacsBackCentralV1';
-    bar.setAttribute('role','navigation');
-    bar.setAttribute('aria-label','Retorno à Central Administrativa');
-    bar.style.cssText='position:relative;z-index:10;background:#073a55;border-bottom:3px solid #69c7e7;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;box-sizing:border-box;width:100%;display:block;';
-    btn=document.createElement('button');
-    btn.type='button';
-    btn.textContent='← Voltar à Central';
-    btn.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-height:48px;border:2px solid #69c7e7;border-radius:16px;padding:9px 16px;background:#fff;color:#073a55;font:inherit;font-weight:900;line-height:1.15;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
+  if(existingPortalButton&&existingPortalButton.parentNode){
+    existingPortalButton.parentNode.removeChild(existingPortalButton);
   }
 
+  var bar=document.createElement('div');
+  bar.id='portalTacsBackCentralV1';
+  bar.setAttribute('role','navigation');
+  bar.setAttribute('aria-label','Retorno à Central Administrativa');
+  bar.style.cssText='position:relative;z-index:10;background:#073a55;border-bottom:3px solid #69c7e7;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;box-sizing:border-box;width:100%;display:block;';
+
+  var btn=document.createElement('button');
+  btn.type='button';
+  btn.textContent='← Voltar à Central';
+  btn.setAttribute('aria-label','Voltar à Central Administrativa');
+  btn.title='Voltar à Central Administrativa';
+  btn.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-height:48px;border:2px solid #69c7e7;border-radius:16px;padding:9px 16px;background:#fff;color:#073a55;font:inherit;font-weight:900;line-height:1.15;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
   btn.addEventListener('click',function(){
     btn.disabled=true;
     try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
@@ -456,10 +414,8 @@ function install(){
     location.assign(centralUrl());
   });
 
-  if(bar){
-    bar.appendChild(btn);
-    document.body.insertBefore(bar,document.body.firstChild);
-  }
+  bar.appendChild(btn);
+  document.body.insertBefore(bar,document.body.firstChild);
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
