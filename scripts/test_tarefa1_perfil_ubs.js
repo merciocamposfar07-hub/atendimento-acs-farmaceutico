@@ -18,19 +18,26 @@ new Function(formJs);
 new Function(territory);
 new Function(backend);
 
-// Tarefa 1: quarto perfil disponível no primeiro acesso.
+// Tarefa 1: o perfil UBS continua disponível na entrada, mas a UBS é cadastrada pelo Administrador.
+// O computador da unidade usa somente o PIN já criado no cadastro.
 assert.match(access,/b\.id='tabUbs'/);
 assert.match(access,/b\.textContent='UBS'/);
 assert.match(access,/\.login-tabs\.csc-four\{grid-template-columns:repeat\(4/);
-assert.match(access,/field\('cscUbsCpf'/);
 assert.match(access,/field\('cscUbsPin'/);
-assert.match(access,/conecta_ubs_identificar_primeiro_acesso/);
+assert.doesNotMatch(access,/field\('cscUbsCpf'/);
+assert.doesNotMatch(access,/Primeiro acesso da UBS/);
+assert.match(access,/function loginUbsAccess\(\)/);
+assert.match(access,/post\('conecta_ubs_login_pin'/);
+assert.match(backend,/function conectaAcessoV1UbsPorPin_/);
+assert.match(backend,/function conectaAcessoV1LoginUbs_/);
+assert.match(backend,/novaChave=conectaAcessoV1RegistrarUbsConfiavel_/);
 
-// O primeiro acesso UBS permanece identificável. O reconhecimento persistente,
- // originalmente adiado na Tarefa 1, pode ser acrescentado pela Tarefa 4 sem
- // descaracterizar este gate histórico.
-assert.match(backend,/function conectaAcessoV1IdentificarUbsPrimeiroAcesso_/);
-assert.match(access,/function identifyUbsFirstAccess\(\)/);
+// Administrador autenticado acessa todas as UBS cadastradas sem PIN/CPF da unidade,
+// com modos separados de apenas visualizar e editar.
+assert.match(central,/data-module="ubs" data-admin-only="true"/);
+assert.match(centralJs,/function showAdminUbs\(/);
+assert.match(centralJs,/Apenas visualizar/);
+assert.match(centralJs,/data-ubs-mode="edit"/);
 
 // Cadastro administrativo passa a contemplar UBS isolado.
 assert.match(form,/Administrador \/ TACS \/ UBS/);
