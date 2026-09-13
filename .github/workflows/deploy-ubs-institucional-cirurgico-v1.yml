@@ -1,0 +1,168 @@
+name: Implantar correção cirúrgica UBS institucional v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-ubs-institucional-cirurgico-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  testar-e-implantar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NO_COLOR: '1'
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Validar somente os dois problemas corrigidos
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          node scripts/test_tarefa1_perfil_ubs.js
+          node scripts/test_primeiro_toque_paineis_v1.js
+          node scripts/test_territorio_dom.js
+          node --check central-administrativa-tacs.js
+          node --check --input-type=commonjs < apps-script/ZZZZ_17_TacsAreasAdminV1.gs
+
+      - name: Validar credenciais sem exibi-las
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar Apps Script atual
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs');const path=require('path');
+          const config=JSON.parse(process.env.CLASP_JSON);
+          if(!config.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId)) throw new Error('scriptId inválido');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Substituir somente o módulo territorial UBS
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          export LIVE_DIR
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, os, shutil
+
+          live=Path(os.environ['LIVE_DIR'])
+          source=Path('apps-script/ZZZZ_17_TacsAreasAdminV1.gs')
+          candidates=[]
+          for p in live.rglob('*'):
+              if p.is_file() and p.suffix.lower() in {'.js','.gs'}:
+                  try:
+                      text=p.read_text(encoding='utf-8')
+                  except Exception:
+                      continue
+                  if 'TACS_TERRITORIO_V1' in text:
+                      candidates.append(p)
+          if len(candidates)!=1:
+              raise SystemExit(f'Esperado exatamente 1 módulo TACS_TERRITORIO_V1; encontrados {len(candidates)}')
+          target=candidates[0]
+
+          def digest_tree():
+              out={}
+              for p in live.rglob('*'):
+                  if p.is_file() and p.name!='.clasp.json':
+                      out[str(p.relative_to(live))]=hashlib.sha256(p.read_bytes()).hexdigest()
+              return out
+
+          before=digest_tree()
+          shutil.copyfile(source,target)
+          after=digest_tree()
+          changed=sorted(k for k in set(before)|set(after) if before.get(k)!=after.get(k))
+          expected=str(target.relative_to(live))
+          if changed!=[expected]:
+              raise SystemExit(f'Escopo violado. Arquivos alterados: {changed}; esperado somente {expected}')
+          print(json.dumps({'ok':True,'arquivo_alterado':expected},ensure_ascii=False))
+          PY
+          node --check --input-type=commonjs < "$(grep -rl --include='*.js' --include='*.gs' 'TACS_TERRITORIO_V1' "$LIVE_DIR")"
+
+      - name: Publicar mesma implantação e validar
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "UBS institucional sem pessoa física - ${GITHUB_SHA::7}")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+
+          DEPLOYED=0
+          rollback() {
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático UBS institucional" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "UBS institucional sem pessoa física" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          has_ok(){ printf '%s' "$1" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; }
+          ok=0
+          for tentativa in 1 2 3; do
+            territorio=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=admin_territorio_result&requestId=healthUbsInstitucionalV1") || true
+            publico=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 15 "$BASE?action=painel_publico&areaId=JAPARANDUBA") || true
+            if has_ok "$territorio" && has_ok "$publico"; then ok=1; break; fi
+            sleep 8
+          done
+          test "$ok" = '1'
+          trap - ERR
+          printf 'Correção UBS institucional implantada: versão %s\n' "$NEW_VERSION"
+
+      - name: Remover credenciais temporárias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/apps-script-live/.clasp.json"
