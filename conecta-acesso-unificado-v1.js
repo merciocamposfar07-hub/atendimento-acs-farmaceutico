@@ -162,7 +162,7 @@ function field(id,label,attrs){
 function openUbsPanels(r){
  var token=text(r&&r.token);try{token=token||text(sessionStorage.getItem(UBS_TOKEN_KEY)||'')}catch(e){}
  if(!/^cus1\./.test(token)){setStatus('A sessão da UBS não está disponível. Digite o PIN novamente.','err');return false}
- var payload={token:token,cadastroId:text(r&&r.cadastroId),perfil:text(r&&r.perfil)||'UBS',nome:text(r&&r.nome),funcaoUbs:text(r&&r.funcaoUbs),unidadeId:text(r&&r.unidadeId),permissoes:Array.isArray(r&&r.permissoes)?r.permissoes.slice():[]};
+ var payload={token:token,cadastroId:text(r&&r.cadastroId),perfil:text(r&&r.perfil)||'UBS',nome:text(r&&r.nome),funcaoUbs:text(r&&r.funcaoUbs),unidadeId:text(r&&r.unidadeId),permissoes:Array.isArray(r&&r.permissoes)?r.permissoes.slice():[],areas:Array.isArray(r&&r.areas)?r.areas.slice():[],ubsAtual:r&&r.ubsAtual&&typeof r.ubsAtual==='object'?r.ubsAtual:null};
  if(window.ConectaCentralUbsV1&&typeof window.ConectaCentralUbsV1.entrar==='function')return window.ConectaCentralUbsV1.entrar(payload)!==false;
  location.assign('/atendimento-acs-farmaceutico/central-administrativa-tacs.html?acesso=ubs');return true;
 }
@@ -177,7 +177,7 @@ function renderUbsAuthenticated(r){
  var nome=institucional?(r.unidadeId||'Unidade de saúde'):identityHeadline(r.nome||'Acesso UBS',r.perfil||'UBS');
  var detalhe=institucional?'Perfil UBS':((r.funcaoUbs||'Função não informada')+' • '+(r.unidadeId||'Unidade não informada'));
  out.hidden=false;
- out.innerHTML='<button type="button" id="cscUbsOpenPanels" class="csc-ubs-auth-link" aria-label="Acessar painéis da UBS '+esc(nome)+'"><strong>'+esc(titulo)+'</strong><br><span class="csc-first-name">'+esc(nome)+'</span><br>'+esc(detalhe)+'<span class="csc-ubs-open-copy">Acessar painéis da UBS</span></button>';
+ out.innerHTML='<button type="button" id="cscUbsOpenPanels" class="csc-ubs-auth-link" style="color:#fff!important" aria-label="Acessar painéis da UBS '+esc(nome)+'"><strong style="color:#fff!important">'+esc(titulo)+'</strong><br><span style="color:#fff!important;font-weight:900">'+esc(nome)+'</span><br><span style="color:#fff!important">'+esc(detalhe)+'</span><span class="csc-ubs-open-copy" style="color:#fff!important">Acessar painéis da UBS</span></button>';
  bindUbsAuthenticatedOpen(r);
 }
 function guardarUbsLocal(pin,r){
