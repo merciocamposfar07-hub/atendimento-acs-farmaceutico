@@ -46,7 +46,7 @@ assert.match(native,/id="cns"/);
 assert.match(native,/id="name"/);
 assert.match(native,/id="birth"/);
 assert.match(native,/id="residentForm"/);
-assert.match(native,/referência familiar registrada/);
+assert.match(native,/Busque por nome, CPF, CNS, ID Portal, endereço ou telefone\./);
 
 // Transporte validado preserva busca, criação/edição, situação e consolidação.
 assert.match(transport,/admin_moradores_buscar/);
