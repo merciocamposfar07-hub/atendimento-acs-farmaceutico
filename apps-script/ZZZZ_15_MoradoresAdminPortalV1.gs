@@ -1511,6 +1511,10 @@ function moradoresAdminV1ValidarSessao_(p){
     var territorial=tacsTerritorioV1ValidarSessaoToken_(p,true);
     if(territorial)return territorial;
   }
+  if(typeof conectaAcessoV1ValidarSessaoUbs_==='function'){
+    var ubs=conectaAcessoV1ValidarSessaoUbs_(p,true);
+    if(ubs)return ubs;
+  }
   if(typeof profissionaisDinamicosV1ValidarSessao_==='function')return profissionaisDinamicosV1ValidarSessao_(p);
   if(typeof tacsPushV1ValidarSessao_==='function')return tacsPushV1ValidarSessao_(p);
   throw new Error('Não foi possível validar a sessão administrativa. Entre novamente com o PIN.');
