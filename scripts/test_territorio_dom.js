@@ -227,7 +227,7 @@ async function testTerritoryPanel() {
   assert.match(js, /confirmarTodosImportaveis/);
   assert.match(js, /Desfazer este lote sem excluir linhas/);
   assert.match(js, /if\(ubsInstitucional\)\{birth='';cpf='';phone='';\}/,
-  assert.match(js, /if\(ubsInstitucional\)\{birth='';cpf='';phone='';\}/,
+    'UBS institucional deve limpar os campos pessoais antes de montar o payload.');
   assert.match(js, /dataNascimento:birth/);
   assert.match(js, /if\(operationMessage\)status\(operationMessage,'ok'\)/,
     'Uma gravação concluída deve substituir a mensagem de validação pela confirmação final.');
