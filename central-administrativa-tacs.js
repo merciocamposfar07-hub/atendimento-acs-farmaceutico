@@ -667,7 +667,11 @@ function ensureShellOpening(){
 }
 function setShellOpening(title,visible){
   var node=ensureShellOpening();if(!node)return;
-  node.hidden=!visible;if(visible)node.textContent='Abrindo '+text(title||'painel')+' • exibindo a última confirmação disponível enquanto sincroniza';
+  /* PADRAO_CARREGAMENTO_DISCRETO_20260913_V1:
+     o shell nunca substitui o conteúdo do painel por uma mensagem em tela lisa.
+     O aviso de espera pertence ao status interno de cada painel. */
+  node.hidden=true;
+  node.textContent='';
 }
 /* TAREFA_16_AGENDAS_NATIVAS_V1:
    Agendas e vagas é o primeiro painel migrado definitivamente para o shell.
@@ -705,7 +709,7 @@ function ensureTask16AgendaAssets(callback){
     if(!ok){finish(false);return}
     task16LoadScript('cscAgendaTransportTask16','/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js?v=20260912-task16-agendas-native-v1',function(){return Boolean(window.ConectaAgendasTransportV1)},function(ok2){
       if(!ok2){finish(false);return}
-      task16LoadScript('cscAgendaNativeTask16','/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260913-apresentacao-paineis-v2',function(){return Boolean(window.ConectaAgendasNativeV1)},function(ok3){
+      task16LoadScript('cscAgendaNativeTask16','/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260913-loading-standard-v1',function(){return Boolean(window.ConectaAgendasNativeV1)},function(ok3){
         if(!ok3){finish(false);return}
         task16LoadScript('cscAgendaWhatsappTask16','/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260913-apresentacao-paineis-v2',function(){return Boolean(window.PortalTacsAgendaWhatsAppV2API)},finish);
       });
@@ -766,7 +770,7 @@ function ensureTask17MoradoresAssets(callback){
   }
   task16LoadScript('cscModuleCoreTask17','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task17-moradores-native-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
-    task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260913-apresentacao-paineis-v2',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
+    task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260913-loading-standard-v1',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
   });
 }
 function showNativeMoradores(title,routeId){
@@ -825,7 +829,7 @@ function ensureTask18ProfissionaisAssets(callback){
   }
   task16LoadScript('cscModuleCoreTask18','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260912-task18-profissionais-native-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
-    task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260913-apresentacao-paineis-v2',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
+    task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260913-loading-standard-v1',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
   });
 }
 function hideAllNativeExcept(kind){
@@ -979,7 +983,10 @@ function openModule(name,title,options){
     if(name==='agendas'){showNativeAgenda(title||'Agendas e vagas',routeId);return}
     if(name==='moradores'&&moduleRouteOptions(options).view!=='prontuarios'){showNativeMoradores(title||'Moradores',routeId);return}
     if(name==='profissionais'){showNativeProfissionais(title||'Profissionais e serviços',routeId);return}
-    showPendingModuleShell(name,title||'Painel',routeId);
+    /* O painel legado também abre imediatamente após o PIN local.
+       A sessão remota continua sendo confirmada em segundo plano pelo núcleo compartilhado. */
+    var localFrame=ensureShellFrame(name,url,title||'Painel',routeId);
+    showShellFrame(name,localFrame,title||'Painel',routeId);
     return;
   }
   moduloPendente=null;
@@ -1094,7 +1101,15 @@ function prefetchStaticPanels(){
     '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html',
     '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html',
     '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html',
-    '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html'
+    '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html',
+    '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html',
+    '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html',
+    '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html',
+    '/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js',
+    '/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js',
+    '/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js',
+    '/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js',
+    '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-transport-v2.js'
   ].forEach(function(url){
     try{fetch(url+'?v=20260910-login-prefetch-v2',{method:'GET',cache:'force-cache',credentials:'same-origin',priority:'low'}).catch(function(){})}catch(e){}
   });
