@@ -13,6 +13,8 @@ function adminDeviceRecognized(){
 var TACS_ONLY=String(URL_PARAMS.get('acesso')||'').toLowerCase()==='tacs'&&!adminDeviceRecognized();
 var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',device=localStorage.getItem(DEVICE_KEY)||'';
 var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
+/* SINCRONIZACAO_REMOTA_CONTINUA_V1: PIN local abre a Central; a sessão remota continua tentando em memória até confirmar ou receber recusa explícita. */
+var remoteAuthTimer=null,remoteAuthSeq=0,remoteAuthAttempt=0,remoteAuthScope='',remoteAuthPin='',remoteAuthHadLocal=false;
 var shellFrames={},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey='';
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
@@ -126,7 +128,7 @@ function post(action,payload,resultAction,cb){
   Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});
   fields.action=action;fields.requestId=rid;
   var fastPin=/^(?:admin_login|admin_territorio_login_pin)$/.test(action);
-  var duration=fastPin?45000:60000;
+  var duration=fastPin?22000:60000;
   frame.name=frameName;frame.setAttribute('name',frameName);frame.src='about:blank';frame.setAttribute('aria-hidden','true');
   frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;visibility:hidden;pointer-events:none;z-index:-1';
   form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.setAttribute('target',frameName);form.style.display='none';
@@ -146,7 +148,7 @@ function post(action,payload,resultAction,cb){
     try{form.submit()}catch(e){finishPost({ok:false,message:'O navegador não conseguiu iniciar a comunicação com o servidor. Tente novamente.'});return}
     /* LOGIN_TRANSPORTE_R8: postMessage é a via principal no Safari/iPhone.
        O polling do PIN permanece somente como contingência tardia para não saturar o Apps Script. */
-    schedulePoll(fastPin?8000:1800);
+    schedulePoll(fastPin?1200:1800);
   }
   function sendAfterRegistration(){
     if(typeof window.requestAnimationFrame==='function'){
@@ -178,6 +180,75 @@ function pinLocalApi(){
   var api=window.ConectaPinLocalV2;
   return api&&typeof api.abrir==='function'&&typeof api.guardar==='function'?api:null;
 }
+function cancelRemoteAuthSync(){
+  remoteAuthSeq++;remoteAuthAttempt=0;remoteAuthScope='';remoteAuthPin='';remoteAuthHadLocal=false;
+  if(remoteAuthTimer){clearTimeout(remoteAuthTimer);remoteAuthTimer=null}
+}
+function scheduleRemoteAuthSync(seq,delay){
+  if(seq!==remoteAuthSeq)return;
+  if(remoteAuthTimer)clearTimeout(remoteAuthTimer);
+  remoteAuthTimer=setTimeout(function(){remoteAuthTimer=null;runRemoteAuthSync(seq)},Math.max(150,Number(delay||0)));
+}
+function resumePendingModule(){
+  if(!moduloPendente||!(token||territoryToken))return false;
+  var proximo=moduloPendente;moduloPendente=null;
+  publishModuleCore();
+  setTimeout(function(){openModule(proximo.name,proximo.title,proximo.options)},0);
+  return true;
+}
+function remoteAuthSuccess(scope,r,pin,hadLocal){
+  if(scope==='tacs'){
+    token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=text(r&&r.token);mode='tacs';
+    if(r&&r.areaId)selectedAreaId=normArea(r.areaId);
+    sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);
+  }else{
+    territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=text(r&&r.token);mode='admin';
+    sessionStorage.setItem(TOKEN_KEY,token);
+  }
+  syncAppState();
+  pinLocalPendente=pin;pinLocalPerfil=scope;
+  if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho(scope==='tacs'?'TACS':'ADMIN');
+  if(!hadLocal)restoreContextCache();
+  /* Token válido já basta para o painel pendente sincronizar. Não espera a segunda leitura de contexto. */
+  if(context)resumePendingModule();
+  loadContext(hadLocal?(scope==='tacs'?'Acesso TACS sincronizado.':'Administrador sincronizado.'):(scope==='tacs'?'Acesso individual validado para '+(text(r&&r.areaNome)||r.areaId)+'.':'Administrador validado.'));
+}
+function runRemoteAuthSync(seq){
+  if(seq!==remoteAuthSeq||!remoteAuthScope||!remoteAuthPin)return;
+  if((remoteAuthScope==='admin'&&token)||(remoteAuthScope==='tacs'&&territoryToken)){cancelRemoteAuthSync();return}
+  if(navigator&&navigator.onLine===false){scheduleRemoteAuthSync(seq,2500);return}
+  if(active){scheduleRemoteAuthSync(seq,300);return}
+  remoteAuthAttempt++;
+  var scope=remoteAuthScope,pin=remoteAuthPin,hadLocal=remoteAuthHadLocal;
+  var action=scope==='tacs'?'admin_territorio_login_pin':'admin_login';
+  var resultAction=scope==='tacs'?'admin_territorio_result':'admin_result';
+  post(action,{pin:pin,dispositivo:device},resultAction,function(r){
+    if(seq!==remoteAuthSeq)return;
+    if(r&&r.ok===true&&r.token){
+      var keepPin=pin,keepLocal=hadLocal;
+      cancelRemoteAuthSync();
+      remoteAuthSuccess(scope,r,keepPin,keepLocal);
+      return;
+    }
+    if(r&&r.authRecusada===true){
+      var msg=text(r.message)||(scope==='tacs'?'Acesso TACS recusado.':'Acesso administrativo recusado.');
+      cancelRemoteAuthSync();
+      if(hadLocal)bloquearAcessoLocal(scope,msg);else setStatus(msg,'err');
+      return;
+    }
+    /* Falha temporária nunca encerra a tentativa nem destrói o acesso local. */
+    var wait=Math.min(5000,500*Math.pow(1.55,Math.min(remoteAuthAttempt,6)));
+    setStatus(hadLocal?'Central disponível. Sincronizando dados em segundo plano…':'Conectando ao servidor…','warn');
+    scheduleRemoteAuthSync(seq,wait);
+  });
+}
+function startRemoteAuthSync(scope,pin,hadLocal){
+  cancelRemoteAuthSync();
+  remoteAuthScope=scope;remoteAuthPin=pin;remoteAuthHadLocal=Boolean(hadLocal);remoteAuthAttempt=0;
+  var seq=remoteAuthSeq;
+  scheduleRemoteAuthSync(seq,0);
+}
+window.addEventListener('online',function(){if(remoteAuthScope&&remoteAuthPin)scheduleRemoteAuthSync(remoteAuthSeq,0)});
 function guardarAcessoLocal(scope,pin){
   var api=pinLocalApi();
   if(!api||!context||!mode)return Promise.resolve(false);
@@ -215,6 +286,7 @@ function removerAcessoLocal(scope){
   var api=pinLocalApi();if(api&&typeof api.remover==='function')api.remover(scope);
 }
 function bloquearAcessoLocal(scope,message){
+  cancelRemoteAuthSync();
   removerAcessoLocal(scope);
   resetModuleShell();
   token='';territoryToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
@@ -958,10 +1030,7 @@ function loadContext(message){
     pinLocalPendente='';pinLocalPerfil='';acessoLocalAberto='';
     if(pin)guardarAcessoLocal(scope,pin);
     setStatus(message||'Acesso validado.','ok');renderContext(false);
-    if(moduloPendente){
-      var proximo=moduloPendente;moduloPendente=null;
-      setTimeout(function(){openModule(proximo.name,proximo.title,proximo.options)},0);
-    }
+    resumePendingModule();
   });
 }
 var logoutEmCurso=false;
@@ -990,6 +1059,7 @@ function invalidarSessaoServidorEmSegundoPlano(action,payload){
 function logout(){
   if(logoutEmCurso)return;
   logoutEmCurso=true;
+  cancelRemoteAuthSync();
   var lastMode=mode||'admin',hasSession=Boolean(token||territoryToken);
   var action=lastMode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout';
   var payload=hasSession?session():null;
@@ -1038,30 +1108,8 @@ el('loginAdmin').addEventListener('click',function(){
   setStatus('Liberando o acesso…','warn');
   abrirAcessoLocal('admin',pin).then(function(saved){
     if(saved)aplicarAcessoLocal('admin',saved);
-    var tentativa=0;
-    function sincronizar(){
-      tentativa++;
-      post('admin_login',{pin:pin,dispositivo:device},'admin_result',function(r){
-        if(!r||r.ok!==true||!r.token){
-          if(r&&r.temporario===true&&tentativa<2){
-            setStatus('Central aberta. Confirmando a sessão para carregar os painéis…','warn');
-            setTimeout(sincronizar,700);
-            return;
-          }
-          el('adminPin').value='';
-          if(saved&&r&&r.temporario===true){setStatus('Central aberta localmente. A sessão de dados ainda não foi confirmada; os painéis permanecem protegidos até a sincronização.','warn');return}
-          if(saved){bloquearAcessoLocal('admin',text(r&&r.message)||'Acesso administrativo recusado.');return}
-          setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
-        }
-        el('adminPin').value='';
-        territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=r.token;mode='admin';sessionStorage.setItem(TOKEN_KEY,token);syncAppState();
-        pinLocalPendente=pin;pinLocalPerfil='admin';
-        if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('ADMIN');
-        if(!saved)restoreContextCache();
-        loadContext(saved?'Administrador sincronizado.':'Administrador validado.');
-      });
-    }
-    sincronizar();
+    el('adminPin').value='';
+    startRemoteAuthSync('admin',pin,Boolean(saved));
   });
 });
 el('loginTacs').addEventListener('click',function(){
@@ -1070,30 +1118,8 @@ el('loginTacs').addEventListener('click',function(){
   setStatus('Liberando o acesso…','warn');
   abrirAcessoLocal('tacs',pin).then(function(saved){
     if(saved)aplicarAcessoLocal('tacs',saved);
-    var tentativa=0;
-    function sincronizar(){
-      tentativa++;
-      post('admin_territorio_login_pin',{pin:pin,dispositivo:device},'admin_territorio_result',function(r){
-        if(!r||r.ok!==true||!r.token){
-          if(r&&r.temporario===true&&tentativa<2){
-            setStatus('Área TACS aberta. Confirmando a sessão para carregar os painéis…','warn');
-            setTimeout(sincronizar,700);
-            return;
-          }
-          el('tacsPin').value='';
-          if(saved&&r&&r.temporario===true){setStatus('Área TACS aberta localmente. A sessão de dados ainda não foi confirmada; os painéis permanecem protegidos até a sincronização.','warn');return}
-          if(saved){bloquearAcessoLocal('tacs',text(r&&r.message)||'Acesso TACS recusado.');return}
-          setStatus(text(r&&r.message)||'Acesso recusado.','err');return;
-        }
-        el('tacsPin').value='';
-        token='';sessionStorage.removeItem(TOKEN_KEY);territoryToken=r.token;mode='tacs';selectedAreaId=normArea(r.areaId);sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);syncAppState();
-        pinLocalPendente=pin;pinLocalPerfil='tacs';
-        if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho('TACS');
-        if(!saved)restoreContextCache();
-        loadContext(saved?'Acesso TACS sincronizado.':'Acesso individual validado para '+(text(r.areaNome)||r.areaId)+'.');
-      });
-    }
-    sincronizar();
+    el('tacsPin').value='';
+    startRemoteAuthSync('tacs',pin,Boolean(saved));
   });
 });
 el('adminArea').addEventListener('change',function(){if(mode!=='admin')return;resetModuleShell();selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}publishModuleCore();renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
