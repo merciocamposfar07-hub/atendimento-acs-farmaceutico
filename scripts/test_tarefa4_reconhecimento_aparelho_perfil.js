@@ -34,19 +34,22 @@ assert.match(access,/Aparelho reconhecido para Morador/);
 assert.doesNotMatch(access,/Aparelho reconhecido neste aparelho<\/strong><br><span class="csc-first-name">\+'\+esc\(p\.nome/);
 assert.match(access,/conecta_morador_login_pin/);
 
-// UBS: primeiro acesso passa a criar vínculo seguro e o segundo acesso usa somente PIN + aparelho.
+// UBS: qualquer computador da unidade usa somente o PIN. Se ainda não estiver reconhecido,
+ // o próprio login por PIN cria o vínculo seguro do aparelho.
 assert.match(backend,/UBS_SESSION_PREFIX:'tacs_conecta_ubs_sessao_'/);
 assert.match(backend,/function conectaAcessoV1RegistrarUbsConfiavel_/);
 assert.match(backend,/function conectaAcessoV1ReferenciaUbsConfiavel_/);
+assert.match(backend,/function conectaAcessoV1UbsPorPin_/);
 assert.match(backend,/function conectaAcessoV1LoginUbs_/);
 assert.match(backend,/conecta_ubs_login_pin/);
-assert.match(backend,/vinculoAparelhoCriado:true/);
-assert.match(backend,/chaveConfianca:chave\|\|''/);
-assert.match(backend,/tacsTerritorioV1CompararSeguro_\(ubs\.pinHash,tacsTerritorioV1HashPin_\(pin,ubs\.pinSalt\)\)/);
+assert.match(backend,/novaChave=conectaAcessoV1RegistrarUbsConfiavel_/);
+assert.match(backend,/tacsTerritorioV1CompararSeguro_\(item\.pinHash,tacsTerritorioV1HashPin_\(pin,item\.pinSalt\)\)/);
 assert.match(access,/UBS_PROFILE_KEY='portalConectaUbsQuickV1'/);
 assert.match(access,/TRUST_UBS_KEY='portalConectaRecoveryTrustV1:ubs'/);
-assert.match(access,/Aparelho reconhecido para UBS/);
-assert.match(access,/function loginUbsSecondAccess\(\)/);
+assert.match(access,/Acesso da UBS/);
+assert.match(access,/function loginUbsAccess\(\)/);
+assert.doesNotMatch(access,/function loginUbsSecondAccess\(\)/);
+assert.doesNotMatch(access,/cscUbsCpf/);
 assert.match(access,/post\('conecta_ubs_login_pin'/);
 assert.match(access,/guardar\('ubs',pin/);
 
@@ -58,4 +61,4 @@ assert.ok(access.includes("identityHeadline(r.nome||'Responsável UBS',r.perfil|
  // Tarefas posteriores podem acrescentar diagnóstico sem invalidar este contrato histórico.
 assert.match(access,/function recognizedRole\(\)/);
 
-console.log('TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK: segundo acesso reconhece Administrador, TACS, Morador e UBS; UBS usa PIN + vínculo seguro do aparelho e nenhuma nova porta de combinação foi criada.');
+console.log('TAREFA_4_RECONHECIMENTO_APARELHO_PERFIL_OK: UBS entra somente por PIN em computador reconhecido ou novo; o login cria o vínculo seguro sem exigir CPF e mantém as quatro portas de perfil.');
