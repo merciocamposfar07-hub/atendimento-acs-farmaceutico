@@ -354,15 +354,35 @@ function install(){
   removeRedundantPinAccess();
   if(document.getElementById('portalTacsBackCentralV1'))return;
   if(!document.body){setTimeout(install,0);return;}
-  var bar=document.createElement('div');
-  bar.id='portalTacsBackCentralV1';
-  bar.setAttribute('role','navigation');
-  bar.setAttribute('aria-label','Retorno à Central Administrativa');
-  bar.style.cssText='position:relative;z-index:10;background:#073a55;border-bottom:3px solid #69c7e7;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;box-sizing:border-box;width:100%;display:block;';
-  var btn=document.createElement('button');
-  btn.type='button';
-  btn.textContent='← Voltar à Central';
-  btn.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-height:48px;border:2px solid #69c7e7;border-radius:16px;padding:9px 16px;background:#fff;color:#073a55;font:inherit;font-weight:900;line-height:1.15;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
+
+  /*
+   * RETORNO_CENTRAL_UNICO_V1:
+   * O Portal TACS já possui o botão interno "← Central".
+   * Quando ele existe, reaproveitamos exatamente esse botão e apenas substituímos
+   * o manipulador antigo pela rota segura abaixo. Assim não criamos um segundo
+   * botão visual e preservamos o retorno ao shell/aba já autenticado.
+   */
+  var existingPortalButton=!isAdminPanel?document.getElementById('portalTacsVoltarCentralV1'):null;
+  var bar=null,btn=null;
+  if(existingPortalButton){
+    btn=existingPortalButton.cloneNode(true);
+    existingPortalButton.parentNode.replaceChild(btn,existingPortalButton);
+    btn.disabled=false;
+    btn.textContent='← Central';
+    btn.setAttribute('aria-label','Voltar à Central Administrativa');
+    btn.title='Voltar à Central Administrativa';
+  }else{
+    bar=document.createElement('div');
+    bar.id='portalTacsBackCentralV1';
+    bar.setAttribute('role','navigation');
+    bar.setAttribute('aria-label','Retorno à Central Administrativa');
+    bar.style.cssText='position:relative;z-index:10;background:#073a55;border-bottom:3px solid #69c7e7;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;box-sizing:border-box;width:100%;display:block;';
+    btn=document.createElement('button');
+    btn.type='button';
+    btn.textContent='← Voltar à Central';
+    btn.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-height:48px;border:2px solid #69c7e7;border-radius:16px;padding:9px 16px;background:#fff;color:#073a55;font:inherit;font-weight:900;line-height:1.15;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
+  }
+
   btn.addEventListener('click',function(){
     btn.disabled=true;
     try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
@@ -398,8 +418,11 @@ function install(){
 
     location.assign(centralUrl());
   });
-  bar.appendChild(btn);
-  document.body.insertBefore(bar,document.body.firstChild);
+
+  if(bar){
+    bar.appendChild(btn);
+    document.body.insertBefore(bar,document.body.firstChild);
+  }
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
