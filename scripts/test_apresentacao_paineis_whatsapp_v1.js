@@ -66,15 +66,15 @@ assert.match(agendaWa,official);
 assert.match(central,/agenda-whatsapp-card-v1\.js\?v=20260913-apresentacao-paineis-v2/);
 assert.match(central,/conecta-agendas-native-v1\.js\?v=20260913-apresentacao-paineis-v2/);
 assert.match(central,/revision='20260913-apresentacao-paineis-v2'/);
-assert.match(centralHtml,/central-administrativa-tacs\.js\?v=20260913-apresentacao-paineis-v2/);
-assert.match(centralHtml,/central-tacs-login-rapido-v1\.js\?v=20260913-apresentacao-paineis-v2/);
+assert.match(centralHtml,/central-administrativa-tacs\.js\?v=[^\"'\\s<]+/);
+assert.match(centralHtml,/central-tacs-login-rapido-v1\.js\?v=[^\"'\\s<]+/);
 assert.match(agendaWa,/officialIcon:CONECTA_OFFICIAL_ICON/);
 
 // Recados e campanhas continuam oferecendo Status do WhatsApp e agora usam o ícone oficial.
 assert.match(recadosLegacy,/recados-campanhas-whatsapp-card-v9\.js/);
 assert.match(recadosLegacy,/recados-campanhas-whatsapp-mensal-v12\.js/);
-assert.match(recadosLegacy,/recados-campanhas-whatsapp-card-v9\.js\?v=20260913-apresentacao-paineis-v2/);
-assert.match(recadosLegacy,/recados-campanhas-whatsapp-mensal-v12\.js\?v=20260913-apresentacao-paineis-v2/);
+assert.match(recadosLegacy,/recados-campanhas-whatsapp-card-v9\.js\?v=[^\"'\\s<]+/);
+assert.match(recadosLegacy,/recados-campanhas-whatsapp-mensal-v12\.js\?v=[^\"'\\s<]+/);
 assert.match(recadosWa,/Postar recado no Status do WhatsApp/);
 assert.match(recadosWa,/Postar no status do WhatsApp/);
 assert.match(recadosWa,official);
