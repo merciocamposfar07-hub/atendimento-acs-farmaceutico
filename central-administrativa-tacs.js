@@ -15,7 +15,7 @@ var token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||''),territoryToken=se
 var mode=territoryToken?'tacs':(token?'admin':''),active=null,context=null,selectedAreaId='',pinLocalPendente='',pinLocalPerfil='',acessoLocalAberto='',moduloPendente=null;
 /* SINCRONIZACAO_REMOTA_CONTINUA_V1: PIN local abre a Central; a sessão remota continua tentando em memória até confirmar ou receber recusa explícita. */
 var remoteAuthTimer=null,remoteAuthSeq=0,remoteAuthAttempt=0,remoteAuthScope='',remoteAuthPin='',remoteAuthHadLocal=false;
-var shellFrames={},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey='',adminUbsContext=null;
+var shellFrames={},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey='',adminUbsContext=null,adminUbsPreviousAreaId='';
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
@@ -733,7 +733,7 @@ function showNativeAgenda(title,routeId){
       host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">Não foi possível carregar o módulo nativo de Agendas. Volte à Central e tente novamente.</div>';
       setShellOpening('',false);return;
     }
-    try{window.ConectaAgendasNativeV1.mount(host);applyAdminUbsRemoteMode(host);setShellOpening('',false)}
+    try{window.ConectaAgendasNativeV1.mount(host);watchAdminUbsRemoteMode(host);setShellOpening('',false)}
     catch(e){
       host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">O módulo de Agendas não pôde ser iniciado sem perder a sessão. Volte à Central e tente novamente.</div>';
       setShellOpening('',false);
@@ -792,7 +792,7 @@ function showNativeMoradores(title,routeId){
     }
     try{
       window.ConectaMoradoresNativeV1.mount(host,{areaId:selectedAreaId});
-      applyAdminUbsRemoteMode(host);
+      watchAdminUbsRemoteMode(host);
       setShellOpening('',false);
     }catch(e){
       host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">O módulo de Moradores não pôde ser iniciado sem perder a sessão. Volte à Central e tente novamente.</div>';
@@ -854,7 +854,7 @@ function showNativeProfissionais(title,routeId){
       host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">Não foi possível carregar o módulo nativo de Profissionais e serviços. Volte à Central e tente novamente.</div>';
       setShellOpening('',false);return;
     }
-    try{window.ConectaProfissionaisNativeV1.mount(host,{areaId:selectedAreaId});applyAdminUbsRemoteMode(host);setShellOpening('',false)}
+    try{window.ConectaProfissionaisNativeV1.mount(host,{areaId:selectedAreaId});watchAdminUbsRemoteMode(host);setShellOpening('',false)}
     catch(e){
       host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">O módulo de Profissionais e serviços não pôde ser iniciado sem perder a sessão. Volte à Central e tente novamente.</div>';
       setShellOpening('',false);
@@ -976,8 +976,22 @@ function applyAdminUbsRemoteMode(root){
     });
   }catch(e){}
 }
+function watchAdminUbsRemoteMode(root){
+  if(!root)return;
+  try{
+    if(root.__cscUbsRemoteObserver){root.__cscUbsRemoteObserver.disconnect();root.__cscUbsRemoteObserver=null}
+    applyAdminUbsRemoteMode(root);
+    if(adminUbsContext&&adminUbsContext.mode==='view'&&typeof MutationObserver==='function'){
+      var timer=0,observer=new MutationObserver(function(){
+        clearTimeout(timer);timer=setTimeout(function(){applyAdminUbsRemoteMode(root)},25);
+      });
+      observer.observe(root,{childList:true,subtree:true});
+      root.__cscUbsRemoteObserver=observer;
+    }
+  }catch(e){}
+}
 function applyAdminUbsRemoteToFrame(frame){
-  try{if(frame&&frame.contentDocument&&frame.contentDocument.body)applyAdminUbsRemoteMode(frame.contentDocument.body)}catch(e){}
+  try{if(frame&&frame.contentDocument&&frame.contentDocument.body)watchAdminUbsRemoteMode(frame.contentDocument.body)}catch(e){}
 }
 function openAdminUbsRemotePanel(name,title){
   if(!adminUbsContext||mode!=='admin')return;
@@ -991,6 +1005,7 @@ function openAdminUbsRemotePanel(name,title){
 }
 function showAdminUbs(title){
   if(mode!=='admin')return false;
+  if(!adminUbsPreviousAreaId)adminUbsPreviousAreaId=selectedAreaId;
   prepareShellScope();hideAllNativeExcept('ubs');
   Object.keys(shellFrames).forEach(function(key){var frame=shellFrames[key];if(frame)frame.hidden=true});
   var host=el('nativeModuleHost'),viewer=el('viewer');if(!host||!viewer)return false;
@@ -1197,7 +1212,12 @@ function closeViewer(){
   var frame=shellActiveFrame();
   if(shellHasUnsaved(frame)&&!window.confirm('Há alterações que podem não ter sido salvas. Deseja voltar mesmo assim?'))return false;
   if(adminUbsContext&&shellActiveModule&&shellActiveModule!=='ubs'){showAdminUbs('UBS');return true}
-  if(shellActiveModule==='ubs')adminUbsContext=null;
+  if(shellActiveModule==='ubs'){
+    adminUbsContext=null;
+    if(adminUbsPreviousAreaId)selectedAreaId=normArea(adminUbsPreviousAreaId);
+    adminUbsPreviousAreaId='';
+    publishModuleCore();
+  }
   if(shellActiveNative==='agendas'){
     try{if(window.ConectaAgendasNativeV1&&window.ConectaAgendasNativeV1.hide)window.ConectaAgendasNativeV1.hide()}catch(e){}
     var nativeHost=el('nativeModuleHost');if(nativeHost)nativeHost.hidden=true;
@@ -1352,7 +1372,7 @@ el('loginTacs').addEventListener('click',function(){
 });
 el('adminArea').addEventListener('change',function(){if(mode!=='admin')return;resetModuleShell();selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}publishModuleCore();renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
 el('viewerFrame').addEventListener('load',function(){try{applyUiStandard(el('viewerFrame').contentDocument)}catch(e){}});
-el('moduleGrid').addEventListener('click',function(e){var btn=e.target.closest('.module');if(!btn||btn.disabled||btn.hidden)return;if(btn.dataset.module!=='ubs')adminUbsContext=null;openModule(btn.dataset.module,btn.querySelector('strong').textContent)});
+el('moduleGrid').addEventListener('click',function(e){var btn=e.target.closest('.module');if(!btn||btn.disabled||btn.hidden)return;if(btn.dataset.module!=='ubs'){adminUbsContext=null;adminUbsPreviousAreaId=''}openModule(btn.dataset.module,btn.querySelector('strong').textContent)});
 /* CENTRAL_RETURN_R6: restaura imediatamente o conteúdo ao voltar pelo histórico/BFCache do iPhone. */
 window.addEventListener('pageshow',function(){
   token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||'');
