@@ -105,7 +105,7 @@ window.addEventListener('message',function(event){
 function schedulePoll(delay){
   if(!active)return;
   clearTimeout(active.pollTimer);
-  active.pollTimer=setTimeout(poll,Math.max(0,Number(delay||active.nextWait||1600)));
+  active.pollTimer=setTimeout(poll,Math.max(0,Number(delay==null?(active.nextWait||1600):delay)));
 }
 function poll(){
   if(!active)return;

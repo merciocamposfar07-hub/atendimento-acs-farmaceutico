@@ -286,7 +286,7 @@ function saveTacs(event){if(!territoryConfirmed){status('Aguarde a confirmação
     if(!r||r.ok!==true){status(text(r&&r.message||'Não foi possível salvar.'),'err');return;}
     var divergente=validarRetornoCadastro(r,body);
     if(divergente){status('Falha de integridade: o '+divergente+' retornou diferente do valor enviado. O formulário foi mantido aberto para impedir uma alteração silenciosa.','err');return;}
-    el('tacsForm').classList.add('hidden');loadData('',text(r.message||'Cadastro salvo e conferido.'));
+    var salvo=r.tacs||body,encontrado=false;data.tacs=data.tacs.map(function(t){if(text(t.tacsId)===text(salvo.tacsId)){encontrado=true;return salvo;}return t;});if(!encontrado)data.tacs.push(salvo);el('tacsForm').classList.add('hidden');render();status(text(r.message||'Cadastro salvo e conferido.'),'ok');setTimeout(function(){if(!active)loadData('Dados territoriais atualizados.');},1200);
   });
 }
 
