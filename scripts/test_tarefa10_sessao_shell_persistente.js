@@ -13,27 +13,29 @@ new Function(quick);
 new Function(core);
 
 // Shell único e persistente na Central.
-assert.match(central,/var shellFrames=\{\},shellActiveModule='',shellScopeKey=''/);
+assert.match(central,/var shellFrames=\{\},shellActiveModule='',shellActiveRoute='',shellScopeKey=''/);
 assert.match(central,/TAREFA_10_SHELL_PERSISTENTE_V1/);
-assert.match(central,/function ensureShellFrame\(name,url,title\)/);
+assert.match(central,/TAREFA_15_NAVEGACAO_INTERNA_V1/);
+assert.match(central,/voltar:closeViewer/);
+assert.match(central,/function ensureShellFrame\(name,url,title,routeId\)/);
 assert.match(central,/if\(frame\)return frame/,'Módulo já carregado deve reutilizar o mesmo iframe.');
-assert.match(central,/function showShellFrame\(name,frame,title\)/);
+assert.match(central,/function showShellFrame\(name,frame,title,routeId\)/);
 assert.match(central,/function resetModuleShell\(\)/);
 assert.match(central,/window\.ConectaCentralShellV1=\{/);
 assert.match(central,/contagemFrames:function\(\)\{return Object\.keys\(shellFrames\)\.length\}/);
 
 // Agendas deixa de abandonar a Central e passa pelo mesmo shell.
-const openStart=central.indexOf('function openModule(name,title)');
+const openStart=central.indexOf('function openModule(name,title,options)');
 const closeStart=central.indexOf('function closeViewer()',openStart);
 const openBlock=central.slice(openStart,closeStart);
 assert.ok(openStart>=0&&closeStart>openStart,'Bloco openModule ausente.');
 assert.doesNotMatch(openBlock,/location\.(?:assign|href)/,'Módulo não pode abandonar a Central.');
-assert.match(openBlock,/ensureShellFrame\(name,url,title\|\|'Painel'\)/);
-assert.match(openBlock,/showShellFrame\(name,frame,title\|\|'Painel'\)/);
+assert.match(openBlock,/ensureShellFrame\(name,url,title\|\|'Painel',routeId\)/);
+assert.match(openBlock,/showShellFrame\(name,frame,title\|\|'Painel',routeId\)/);
 
 // Safari/iPhone: frame só recebe URL depois de shell e iframe estarem visíveis.
-const ensureStart=central.indexOf('function ensureShellFrame(name,url,title)');
-const showStart=central.indexOf('function showShellFrame(name,frame,title)',ensureStart);
+const ensureStart=central.indexOf('function ensureShellFrame(name,url,title,routeId)');
+const showStart=central.indexOf('function showShellFrame(name,frame,title,routeId)',ensureStart);
 const unsavedStart=central.indexOf('function shellHasUnsaved',showStart);
 const ensureBlock=central.slice(ensureStart,showStart);
 const showBlock=central.slice(showStart,unsavedStart);
@@ -51,7 +53,7 @@ const closeBlock=central.slice(closeStart,loadContextStart);
 assert.doesNotMatch(closeBlock,/about:blank|\.src\s*=/,'Voltar à Central não pode descarregar o módulo.');
 assert.doesNotMatch(closeBlock,/removeItem\(TOKEN_KEY\)|removeItem\(TERRITORY_TOKEN_KEY\)/,'Voltar não pode encerrar sessão.');
 assert.match(closeBlock,/(?:viewer|el\('viewer'\))\.hidden=true/);
-assert.match(closeBlock,/shellActiveModule=''/);
+assert.match(closeBlock,/shellActiveModule='';shellActiveRoute=''/);
 
 // A sessão só destrói os frames em eventos realmente estruturais.
 assert.match(central,/cancelarOperacaoAtivaSemCallback\(\);\s*resetModuleShell\(\);\s*token='';territoryToken='';mode=''/,'Logoff explícito deve limpar módulos protegidos.');
