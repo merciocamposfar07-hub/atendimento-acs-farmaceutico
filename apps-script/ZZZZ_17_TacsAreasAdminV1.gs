@@ -475,14 +475,18 @@ function tacsTerritorioV1AdministradorAtual_(acesso,todos,administradores){
 
 function tacsTerritorioV1Dados_(acesso){
   var admin=['ADMIN_GERAL','ADMIN_MUNICIPAL'].indexOf(acesso.perfil)!==-1,ubs=acesso.perfil==='UBS';
-  var todos=tacsTerritorioV1LerTacs_();
+  var contextoUbs=ubs&&acesso&&acesso.contextoUbsInterno&&typeof acesso.contextoUbsInterno==='object'?acesso.contextoUbsInterno:null;
+  /* CORRECAO_CIRURGICA_UBS_CONTEXTO_SEM_RELEITURA_V1:
+     somente no perfil UBS, reutiliza as leituras já feitas durante a validação da sessão.
+     Administrador e TACS continuam exatamente no fluxo anterior. */
+  var todos=contextoUbs&&Array.isArray(contextoUbs.todosTacs)?contextoUbs.todosTacs:tacsTerritorioV1LerTacs_();
   var administradores=admin?tacsTerritorioV1AdministradoresContexto_(acesso,todos):[];
   var administradorAtual=admin?tacsTerritorioV1AdministradorAtual_(acesso,todos,administradores):null;
   var tacs=admin?todos:todos.filter(function(item){return tacsTerritorioV1PerfilTem_(item&&item.perfil,'TACS');});
-  var areas=tacsTerritorioV1LerAreas_();
+  var areas=contextoUbs&&Array.isArray(contextoUbs.areasUbs)?contextoUbs.areasUbs.slice():tacsTerritorioV1LerAreas_();
   var ubsAtual=null;
   if(ubs){
-    ubsAtual=tacsTerritorioV1EncontrarTacs_(acesso.cadastroId||acesso.tacsId);
+    ubsAtual=contextoUbs&&contextoUbs.ubsAtual?contextoUbs.ubsAtual:tacsTerritorioV1EncontrarTacs_(acesso.cadastroId||acesso.tacsId);
     areas=areas.filter(function(item){return item&&item.ativa===true&&item.unidadeId===acesso.unidadeId;});
     var responsaveis={};
     areas.forEach(function(area){if(area&&area.tacsId)responsaveis[area.tacsId]=true;});
