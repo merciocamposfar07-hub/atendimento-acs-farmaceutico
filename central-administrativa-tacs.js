@@ -1444,6 +1444,50 @@ function instalarProtecaoLogoff(){
     attributeFilter:['disabled','aria-disabled','data-csc-ubs-readonly-disabled','style']
   });
 }
+/* LOGOFF_TOQUE_RESILIENTE_V6:
+   Correção isolada para Safari/iPhone na Central UBS. O encerramento não depende
+   do click sintético do navegador: um toque curto confirmado em pointerup aciona
+   o mesmo logout; click permanece como fallback para teclado e navegadores sem
+   gesto de ponteiro. O filtro de deslocamento evita encerrar durante rolagem. */
+var logoutTapGuardInstalled=false,logoutTapLastAt=0,logoutPointerId=null,logoutPointerX=0,logoutPointerY=0;
+function alvoLogoff(e){
+  var t=e&&e.target;
+  return t&&t.closest?t.closest('#logout'):null;
+}
+function dispararLogoffResiliente(e){
+  var btn=alvoLogoff(e);if(!btn)return false;
+  garantirLogoffDisponivel();
+  var agora=Date.now();
+  if(agora-logoutTapLastAt<700){
+    if(e&&e.cancelable)try{e.preventDefault()}catch(err){}
+    return true;
+  }
+  logoutTapLastAt=agora;
+  if(e&&e.cancelable)try{e.preventDefault()}catch(err){}
+  logout();
+  return true;
+}
+function instalarToqueResilienteLogoff(){
+  if(logoutTapGuardInstalled)return;
+  logoutTapGuardInstalled=true;
+  if(window.PointerEvent){
+    document.addEventListener('pointerdown',function(e){
+      var btn=alvoLogoff(e);if(!btn)return;
+      logoutPointerId=e.pointerId;logoutPointerX=e.clientX;logoutPointerY=e.clientY;
+    },true);
+    document.addEventListener('pointercancel',function(e){
+      if(e.pointerId===logoutPointerId)logoutPointerId=null;
+    },true);
+    document.addEventListener('pointerup',function(e){
+      if(e.pointerId!==logoutPointerId)return;
+      var dx=e.clientX-logoutPointerX,dy=e.clientY-logoutPointerY;
+      logoutPointerId=null;
+      if((dx*dx+dy*dy)>324)return;
+      dispararLogoffResiliente(e);
+    },true);
+  }
+  document.addEventListener('click',function(e){dispararLogoffResiliente(e)},true);
+}
 function cancelarOperacaoAtivaSemCallback(){
   if(!active)return;
   var op=active;active=null;
@@ -1582,7 +1626,7 @@ el('loginTacs').addEventListener('click',function(){
     startRemoteAuthSync('tacs',pin,Boolean(saved));
   });
 });
-el('adminArea').addEventListener('change',function(){if(mode!=='admin'&&mode!=='ubs')return;resetModuleShell();selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}publishModuleCore();if(mode==='ubs')loadContext('Área da UBS selecionada.');else renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});instalarProtecaoLogoff();el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
+el('adminArea').addEventListener('change',function(){if(mode!=='admin'&&mode!=='ubs')return;resetModuleShell();selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}publishModuleCore();if(mode==='ubs')loadContext('Área da UBS selecionada.');else renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});instalarProtecaoLogoff();instalarToqueResilienteLogoff();el('viewerBack').addEventListener('click',closeViewer);
 el('viewerFrame').addEventListener('load',function(){try{applyUiStandard(el('viewerFrame').contentDocument)}catch(e){}});
 el('moduleGrid').addEventListener('click',function(e){var btn=e.target.closest('.module');if(!btn||btn.disabled||btn.hidden)return;if(btn.dataset.module!=='ubs'){adminUbsContext=null;adminUbsPreviousAreaId=''}openModule(btn.dataset.module,btn.querySelector('strong').textContent)});
 /* CENTRAL_RETURN_R6: restaura imediatamente o conteúdo ao voltar pelo histórico/BFCache do iPhone. */
