@@ -41,7 +41,9 @@ Arquivo: `central-administrativa-tacs.html`.
 ## Commits
 - `183093fac7404d65babe688a6e11c69b9870a4e0` — liberar painéis antes da sincronização remota;
 - `13f3cbb92cce3a7072c2e5644f042294004f8383` — incluir barra inferior no shell inicial;
-- `6acbb75d8634c87faeb9b4d2109e3760e3646504` — renovar cache da Central otimizada.
+- `6acbb75d8634c87faeb9b4d2109e3760e3646504` — renovar cache da Central otimizada;
+- `b59ce196a665524f3da39f032039dedc1d891ff2` — canonizar a hidratação do dock na fonte `admin-ui-behavior.inline.js`;
+- `50de857242a8d6e2dbeb233ae5958b2114b3e4a5` — publicar a hidratação canônica no HTML atual.
 
 ## Estado
 **PUBLICADA PARA TESTE NO DISPOSITIVO.**
