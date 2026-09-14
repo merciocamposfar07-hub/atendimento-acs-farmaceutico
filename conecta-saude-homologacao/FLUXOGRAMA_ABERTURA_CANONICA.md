@@ -648,7 +648,12 @@ Commits principais:
 - `3a3bc1cf4624f1f968885ca4ab72ec292a066e2c`;
 - implantação `34fffb8ac0c51cfe4ee5a41e6969f90805426e53`.
 
-Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente antes do encerramento.**
+Validação real no dispositivo — 13/09/2026:
+- usuário confirmou busca/identificação da UBS ágil;
+- usuário confirmou abertura ágil dos painéis da UBS após **Acessar painéis da UBS**;
+- confirmação restrita a este ramo de desempenho da UBS.
+
+Status final: **VALIDADA NO DISPOSITIVO, PUBLICADA E CANONIZADA — 13/09/2026.**
 
 Registro: `REGISTRO_CORRECAO_ABERTURA_IMEDIATA_PAINEIS_UBS_2026_09_13.md`.
 
