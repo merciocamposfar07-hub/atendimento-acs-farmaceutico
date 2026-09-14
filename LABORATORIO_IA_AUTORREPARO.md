@@ -131,6 +131,28 @@ Somente após aprovação do teste funcional real o incidente pode receber simul
 
 A declaração deve vir acompanhada do fundamento técnico da conclusão, nunca de texto vago de sistema.
 
+## Regra de continuidade após reparo não validado
+`REPARO_NAO_VALIDADO` é um estado transitório de trabalho e jamais um estado de encerramento.
+
+Quando um teste falhar após uma tentativa de reparo, o Supervisor deve:
+- manter o mesmo incidente ativo;
+- permanecer restrito ao mesmo bloco causal e às dependências diretas comprovadamente relacionadas;
+- comparar a falha anterior com o resultado da tentativa aplicada;
+- usar essa diferença para refinar o diagnóstico;
+- desfazer a tentativa se ela piorar o comportamento ou introduzir regressão;
+- executar a próxima correção mínima no mesmo bloco responsável;
+- repetir o teste funcional real;
+- continuar o ciclo diagnóstico → reparo → teste → refinamento enquanto a causa persistir e houver ações automáticas seguras disponíveis;
+- não criar nova versão paralela do módulo para cada tentativa;
+- não deslocar a investigação para partes não relacionadas apenas porque uma tentativa falhou.
+
+O ciclo só termina em uma destas condições:
+1. `RESOLVIDO_VALIDADO` + `ESTADO_NORMAL_RESTAURADO`, após teste funcional real aprovado;
+2. dependência externa indisponível, passando para estado de espera automática e retomada posterior;
+3. inexistência de ação automática segura restante, quando então a intervenção manual pode ser solicitada como último recurso, acompanhada de todo o diagnóstico acumulado.
+
+Enquanto nenhuma dessas condições ocorrer, o agente deve continuar trabalhando sobre a causa do mesmo incidente.
+
 ## Regra de isolamento
 Nenhuma alteração deste laboratório pode ser aplicada à branch main sem decisão explícita posterior.
 
