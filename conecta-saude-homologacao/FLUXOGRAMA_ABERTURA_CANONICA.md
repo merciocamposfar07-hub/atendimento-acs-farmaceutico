@@ -676,3 +676,28 @@ Validação:
 Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente antes do encerramento.**
 
 Registro: `REGISTRO_CORRECAO_BUSCA_MORADOR_CADASTRO_FAST_2026_09_13.md`.
+
+
+### Correção isolada — Ciclo de carregamento dos painéis
+Data: 13/09/2026
+
+Fluxo:
+`Toque no painel → montagem do módulo → snapshot/dados disponíveis → encerrar aviso de carregamento → confirmação remota em segundo plano → liberar escrita somente após confirmação real`.
+
+Regras:
+- ramo exclusivo do ciclo visual de carregamento dos painéis;
+- o shell comum mostra espera apenas enquanto o módulo ainda não montou;
+- snapshot já visível encerra a mensagem `Aguarde enquanto os dados carregam…`;
+- sem snapshot/dados, o aviso permanece até resposta ou erro;
+- erros, salvamentos e bloqueios de escrita continuam com mensagens próprias;
+- TACS/Áreas foi apenas conferido e não teve sua lógica alterada;
+- nenhum ajuste em PIN, perfis, permissões, UBS, regras de negócio, dados ou backend Apps Script;
+- versão de cache dos componentes alterados: `20260913-loading-lifecycle-v2`.
+
+Validação:
+- sintaxe dos JavaScripts alterados: válida;
+- scripts inline dos painéis HTML alterados: válidos;
+- correções confirmadas presentes após workflows automáticos;
+- estado: **PUBLICADA PARA TESTE NO DISPOSITIVO**.
+
+Registro: `REGISTRO_CORRECAO_CICLO_CARREGAMENTO_PAINEIS_2026_09_13.md`.
