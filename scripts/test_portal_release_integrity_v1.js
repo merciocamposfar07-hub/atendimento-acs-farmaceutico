@@ -27,6 +27,9 @@ assert.match(index,/function validCns\(value\)/,'Portal deve validar CNS diretam
 assert.match(index,/CPF\/CNS:/,'WhatsApp deve identificar corretamente CPF ou CNS');
 
 assert.match(institutional,/#portalTacsAtualizarPaginaV1\{[^']*width:50px!important[^']*height:50px!important[^']*border-radius:50%!important/,'Atualizar deve ser circular em todos os aparelhos');
+assert.match(institutional,/#portalTacsAtualizarPaginaV1\{[^']*display:flex!important[^']*align-items:center!important[^']*justify-content:center!important/,'Atualizar canônico deve manter a seta centralizada no círculo');
+assert.match(institutional,/#portalTacsAtualizarPaginaV1::before\{content:"↻";display:block;font-size:26px;line-height:1;color:#fff\}/,'Seta canônica do Portal TACS deve permanecer exatamente ↻');
+assert.match(institutional,/CANON_PORTAL_TACS_REFRESH_V1/,'Contrato canônico do botão Atualizar deve permanecer documentado no código');
 assert.doesNotMatch(institutional,/@media\(max-width:560px\)\{#portalTacsAtualizarPaginaV1/,'Formato do Atualizar não pode depender do aparelho');
 assert.match(institutional,/footer\.portal-institutional-footer[^']*linear-gradient\(135deg,#041f34 0%,#062c46 55%,#0b4b6e 100%\)/,'Rodapé deve usar a paleta do cabeçalho');
 
