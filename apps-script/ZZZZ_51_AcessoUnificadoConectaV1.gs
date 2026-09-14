@@ -494,7 +494,11 @@ function conectaAcessoV1FamiliaDiagnostico_(item){
       selecionado:true
     }]};
   }
-  var membros=conectaAcessoV1RegistrosArea_(item.area).filter(function(x){
+  /* CORRECAO_CIRURGICA_DIAGNOSTICO_MORADOR_TIMEOUT_V1:
+     reaproveita os registros já lidos na mesma busca e evita reler a planilha
+     apenas para montar a família do morador localizado. */
+  var registros=Array.isArray(item._registrosArea)?item._registrosArea:conectaAcessoV1RegistrosArea_(item.area);
+  var membros=registros.filter(function(x){
     return conectaAcessoV1CodigoFamiliaItem_(x)===familia;
   }).map(function(x){
     return {
@@ -532,9 +536,10 @@ function conectaAcessoV1BuscarNomeNascimentoDiagnostico_(nome,nascimento,areaId)
   return out;
 }
 
-function conectaAcessoV1BuscarCadastroAreaDiagnostico_(cadastro,areaId){
+function conectaAcessoV1BuscarCadastroAreaDiagnostico_(cadastro,areaId,excluirAreaId){
   var valor=conectaAcessoV1Texto_(cadastro).toUpperCase(),familia=conectaAcessoV1NormalizarFamiliaDiagnostico_(valor),areas=conectaAcessoV1Areas_();
   if(areaId)areas=areas.filter(function(a){return conectaAcessoV1Id_(a.areaId)===conectaAcessoV1Id_(areaId);});
+  else if(excluirAreaId)areas=areas.filter(function(a){return conectaAcessoV1Id_(a.areaId)!==conectaAcessoV1Id_(excluirAreaId);});
   var grupos=[];
   if(familia){
     areas.forEach(function(area){
@@ -589,11 +594,13 @@ function conectaAcessoV1FiltrosDiagnostico_(p){
   };
 }
 
-function conectaAcessoV1BuscarDiagnostico_(filtros){
+function conectaAcessoV1BuscarDiagnostico_(filtros,excluirAreaId){
   var areas=conectaAcessoV1Areas_(),out=[];
   if(filtros.areaId)areas=areas.filter(function(a){return conectaAcessoV1Id_(a.areaId)===filtros.areaId;});
+  else if(excluirAreaId)areas=areas.filter(function(a){return conectaAcessoV1Id_(a.areaId)!==conectaAcessoV1Id_(excluirAreaId);});
   areas.forEach(function(area){
-    conectaAcessoV1RegistrosArea_(area).forEach(function(x){
+    var registros=conectaAcessoV1RegistrosArea_(area);
+    registros.forEach(function(x){
       var m=x.morador||{};
       if(filtros.cpf&&conectaAcessoV1Texto_(m.cpf)!==filtros.cpf)return;
       if(filtros.cns&&moradoresAdminV1Digitos_(m.cns)!==filtros.cns)return;
@@ -609,6 +616,7 @@ function conectaAcessoV1BuscarDiagnostico_(filtros){
           filtros.cadastroNormalizado===idPortal||filtros.cadastroNormalizado===id;
         if(!cadastroOk)return;
       }
+      x._registrosArea=registros;
       out.push(x);
     });
   });
@@ -679,15 +687,16 @@ function conectaAcessoV1DiagnosticoMoradorAdmin_(p){
     }
     if(areaOriginal){
       filtros.areaId='';
-      porCadastro=conectaAcessoV1BuscarCadastroAreaDiagnostico_(filtros.cadastro,'');
+      porCadastro=conectaAcessoV1BuscarCadastroAreaDiagnostico_(filtros.cadastro,'',areaOriginal);
       if(porCadastro&&porCadastro.resposta)return porCadastro.resposta;
     }
     return conectaAcessoV1RespostaDiagnosticoLista_(porCadastro&&porCadastro.pessoais||[],filtros);
   }
   var lista=conectaAcessoV1BuscarDiagnostico_(filtros);
   if(!lista.length&&areaOriginal){
+    /* Procura somente nas demais áreas: a área preferida já foi lida uma vez. */
     filtros.areaId='';
-    lista=conectaAcessoV1BuscarDiagnostico_(filtros);
+    lista=conectaAcessoV1BuscarDiagnostico_(filtros,areaOriginal);
   }
   return conectaAcessoV1RespostaDiagnosticoLista_(lista,filtros);
 }
