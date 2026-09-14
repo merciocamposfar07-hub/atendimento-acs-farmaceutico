@@ -8,6 +8,7 @@ var API_KEY='conectaSupervisorIA:endpoint:v1';
 var busy=false;
 var lastIncidentAt=0;
 var MAX_QUEUE=40;
+var APP_BOOT_AT=(performance&&performance.timeOrigin)||Date.now();
 var lastDomMutationAt=now(),inflightNetwork=0,lastNetworkChangeAt=0,incidentSignatures={};
 
 function text(v){return String(v==null?'':v).trim()}
@@ -188,6 +189,41 @@ function shouldIncident(signature,windowMs){
   if(t-last<Number(windowMs||8000))return false;
   incidentSignatures[signature]=t;return true;
 }
+function startupPreflight(){
+  var bootElapsed=Math.max(0,Math.round(((performance&&performance.now&&performance.now())||0)));
+  emit('conecta-supervisor-ativo',{version:VERSION,aberturaMs:bootElapsed,path:location.pathname});
+  try{
+    var nav=performance&&performance.getEntriesByType?performance.getEntriesByType('navigation')[0]:null;
+    if(nav){
+      var dom=Math.round(nav.domInteractive||0),load=Math.round(nav.loadEventEnd||0);
+      if(dom>=2500&&shouldIncident('startup-dom:'+location.pathname,30000)){
+        incident('ABERTURA_LENTA',{mensagem:'DOM interativo em '+dom+' ms.',duracaoMs:dom,etapa:'abertura',funcao:'startupPreflight'});
+      }
+      if(load>=5000&&shouldIncident('startup-load:'+location.pathname,30000)){
+        incident('CARREGAMENTO_INICIAL_LENTO',{mensagem:'Carregamento inicial concluído em '+load+' ms.',duracaoMs:load,etapa:'abertura',funcao:'startupPreflight'});
+      }
+    }
+  }catch(e){}
+  if(navigator.onLine===false&&shouldIncident('startup-offline:'+location.pathname,30000)){
+    incident('REDE_OFFLINE',{mensagem:'Aplicativo aberto sem conexão disponível.',etapa:'abertura'});
+  }
+  panelShow('Supervisor IA ativo. Monitoramento em tempo real iniciado.','Abertura acompanhada • '+location.pathname,false);
+}
+function monitorStartupUntilStable(){
+  var checks=0,timer=setInterval(function(){
+    checks++;
+    var visible=document.visibilityState!=='hidden';
+    var age=Math.round(((performance&&performance.now&&performance.now())||0));
+    if(visible&&age>=8000){
+      var persistent=document.querySelector('[aria-busy="true"],.loading,.loader,.spinner,[class*="loading"],[class*="spinner"]');
+      if(persistent&&shouldIncident('startup-persistent-loading:'+location.pathname,30000)){
+        incident('ABERTURA_NAO_ESTABILIZADA',{mensagem:'A interface ainda apresenta carregamento persistente após '+age+' ms.',duracaoMs:age,etapa:'abertura',funcao:'monitorStartupUntilStable'});
+      }
+      clearInterval(timer);return;
+    }
+    if(checks>=12)clearInterval(timer);
+  },1000);
+}
 function installNetworkObserver(){
   if(typeof window.fetch==='function'&&!window.fetch.__conectaSupervisorWrapped){
     var nativeFetch=window.fetch;
@@ -270,6 +306,8 @@ function installLoadingObserver(){
 installNetworkObserver();
 installInteractionObserver();
 installLoadingObserver();
+startupPreflight();
+monitorStartupUntilStable();
 
 window.addEventListener('error',function(e){
   if(now()-lastIncidentAt<300)return;lastIncidentAt=now();
