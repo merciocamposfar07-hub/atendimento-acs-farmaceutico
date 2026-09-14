@@ -51,7 +51,25 @@ Sempre que houver reparo automático, o painel técnico deve informar:
 - teste executado;
 - resultado da validação.
 
-Se a causa não estiver localizada com segurança, nenhum código deve ser alterado.
+## Regra de localização obrigatória da causa
+Se a causa ainda não estiver localizada com segurança, o Supervisor NÃO encerra o incidente e NÃO começa a alterar arquivos por tentativa.
+
+O comportamento obrigatório é:
+
+1. manter o incidente ativo em estado `DIAGNOSTICO_EM_ANDAMENTO`;
+2. restringir a investigação ao fluxo real que apresentou a falha;
+3. seguir somente as dependências efetivamente chamadas por esse fluxo;
+4. medir cada etapa até identificar onde o comportamento divergiu;
+5. reduzir progressivamente o escopo: módulo → arquivo → função → bloco → instrução/dependência;
+6. excluir explicitamente do diagnóstico arquivos, módulos e regras sem relação causal demonstrada;
+7. só alterar código quando houver evidência suficiente de relação com a falha;
+8. aplicar a menor correção possível no menor trecho possível;
+9. testar especificamente o problema original e as dependências diretas afetadas;
+10. manter o último estado funcional ou rollback se a correção não resolver.
+
+É proibido usar alterações exploratórias em partes não relacionadas do sistema apenas para verificar se o problema desaparece.
+
+Se a origem estiver numa dependência externa ou em uma camada que o Conecta não possa modificar, o Supervisor deve continuar tentando contornar a causa dentro do próprio fluxo afetado, usando recuperação segura, fallback, nova tentativa controlada, isolamento do módulo ou último estado válido. Intervenção manual permanece como último recurso quando não existir reparo automático tecnicamente seguro.
 
 ## Regra de isolamento
 Nenhuma alteração deste laboratório pode ser aplicada à branch main sem decisão explícita posterior.
