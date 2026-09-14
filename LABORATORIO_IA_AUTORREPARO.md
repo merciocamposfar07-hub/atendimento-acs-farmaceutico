@@ -44,6 +44,21 @@ Regras obrigatórias:
 - se a validação real não puder ser executada naquele momento por falta de rede ou dependência externa, o estado deve permanecer `AGUARDANDO_VALIDACAO_REAL` e a validação deve ser retomada automaticamente assim que a condição necessária voltar;
 - intervenção manual continua sendo o último recurso.
 
+## Regra de não proliferação de versões
+O Supervisor deve atacar a causa no bloco canônico existente. É proibido criar uma nova versão de arquivo, módulo ou rotina apenas porque uma tentativa anterior falhou.
+
+Regras obrigatórias:
+- não criar sequências como `arquivo-v2.js`, `arquivo-v3.js`, `arquivo-v4.js` para corrigir o mesmo problema;
+- não duplicar módulos para contornar uma falha que pertence ao módulo canônico;
+- não manter versões antigas ativas em paralelo quando o problema já foi localizado no código oficial daquele bloco;
+- corrigir diretamente o arquivo/função/bloco responsável pela causa;
+- remover ou consolidar código obsoleto quando uma correção tornar uma versão paralela desnecessária, sempre sem afetar outras funções;
+- preservar rastreabilidade por histórico Git/commit, e não por proliferação de arquivos e versões;
+- só criar uma nova versão estrutural quando houver mudança de arquitetura real, aprovada e distinta da simples correção de defeito;
+- a mesma inconsistência não pode gerar uma cadeia de novos arquivos como substituto para um diagnóstico causal.
+
+Histórico e auditoria devem existir por commit. O número de arquivos e versões funcionais deve permanecer mínimo.
+
 ## Regra de retomada automática após falta de internet
 - A ausência de internet não encerra o incidente.
 - O incidente deve permanecer com estado `PENDENTE_REDE`.
