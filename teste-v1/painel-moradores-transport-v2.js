@@ -46,8 +46,11 @@ function el(id){return document.getElementById(id)}
 function rootQuery(selector){var root=nativeConfig&&nativeConfig.hostId?document.getElementById(nativeConfig.hostId):null;return(root&&root.querySelector(selector))||document.querySelector(selector)}
 function text(v){return String(v==null?'':v).trim()}
 function nativeNotify(type,payload){try{if(nativeConfig&&typeof nativeConfig.onState==='function')nativeConfig.onState(type,payload||{})}catch(e){}}
+function statusNode(id){
+  return rootQuery('#'+id)||el(id);
+}
 function setStatus(id,msg,type){
-  var node=el(id);
+  var node=statusNode(id);
   if(!node)return;
   node.hidden=false;
   node.textContent=msg;
@@ -57,14 +60,14 @@ function setStatus(id,msg,type){
    Os dois avisos de carregamento existem somente durante a leitura da base.
    Quando a confirmação termina, o aviso some sem alterar dados, permissões ou ações do painel. */
 function hideStatus(id){
-  var node=el(id);
+  var node=statusNode(id);
   if(!node)return;
   node.textContent='';
   node.className='status';
   node.hidden=true;
 }
 function hideLoadingStatus(id){
-  var node=el(id);
+  var node=statusNode(id);
   if(!node)return;
   var value=text(node.textContent);
   if(value==='Aguarde enquanto os dados carregam…')hideStatus(id);
