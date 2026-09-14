@@ -267,6 +267,41 @@ Nessa situação, o Supervisor deve:
 Mudanças externas ou uma causa nova podem gerar um incidente diferente, mas isso não pode ser usado para justificar o retorno de uma falha já conhecida e certificada pela mesma causa.
 
 
+## Regra de backup, substituição canônica e retenção somente do que funciona
+Antes de qualquer correção automática em código, o Supervisor deve preservar um ponto de restauração confiável do estado imediatamente anterior.
+
+Esse backup deve ser lógico e rastreável por Git/commit, snapshot ou mecanismo equivalente de rollback. Ele não deve gerar cópias paralelas permanentes do mesmo arquivo dentro do código operacional.
+
+Fluxo obrigatório:
+1. identificar a causa no bloco canônico;
+2. registrar o estado anterior e criar ponto de restauração;
+3. aplicar a correção diretamente no arquivo/função/bloco responsável;
+4. executar teste funcional real;
+5. se falhar, reverter para o último estado funcional e descartar a tentativa defeituosa;
+6. se funcionar, manter a correção no mesmo bloco canônico;
+7. executar testes de regressão;
+8. consolidar somente a correção validada como conhecimento permanente do sistema.
+
+É proibido:
+- criar arquivos como `backup-v1.js`, `backup-v2.js`, `corrigido-v3.js` para cada tentativa;
+- manter código morto, experimental ou substituído carregado pelo aplicativo;
+- deixar correções fracassadas comentadas dentro do arquivo canônico;
+- manter múltiplas implementações concorrentes do mesmo fluxo sem necessidade arquitetural real;
+- transformar o histórico de tentativas em inflação do código de produção.
+
+O histórico técnico das tentativas deve permanecer fora do caminho operacional, em commits, incidentes e registros de auditoria.
+
+O que deve permanecer no código aprendido é apenas:
+- correção efetivamente funcional;
+- regra preventiva validada;
+- teste de regressão correspondente;
+- observabilidade necessária para detectar nova anomalia;
+- dependências estritamente necessárias ao funcionamento correto.
+
+Qualquer código que não tenha função operacional validada, que tenha sido substituído ou que provoque desalinhamento negativo deve ser removido do caminho ativo após confirmação segura da substituição.
+
+Backup serve para rollback e auditoria. Não serve para multiplicar versões do aplicativo.
+
 ## Regra de isolamento
 Nenhuma alteração deste laboratório pode ser aplicada à branch main sem decisão explícita posterior.
 
