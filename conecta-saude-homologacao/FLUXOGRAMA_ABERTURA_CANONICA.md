@@ -613,31 +613,40 @@ Registro: `REGISTRO_CORRECAO_DESEMPENHO_PAINEIS_BARRA_INFERIOR_2026_09_13.md`.
 Data: 13/09/2026
 
 Diagnóstico:
-`PIN UBS validado → retorno do login sem áreas → tocar Acessar painéis → loadContext remoto obrigatório → permanência em “Abrindo os painéis da UBS…”`.
+`PIN UBS validado → retorno do login sem áreas → tocar Acessar painéis → loadContext remoto obrigatório → releituras territoriais repetidas → permanência em “Abrindo os painéis da UBS…”`.
 
-Fluxo corrigido:
-`PIN UBS válido → tocar Acessar painéis → validar snapshot local da MESMA UBS → abrir Central/painéis imediatamente → sincronizar contexto territorial em segundo plano`.
+Ramo A — contexto local:
+`PIN UBS válido → tocar Acessar painéis → validar snapshot da MESMA UBS → abrir Central/painéis imediatamente → sincronizar em segundo plano`.
+
+Ramo B — primeiro carregamento remoto:
+`validar sessão UBS → ler TACS uma vez → ler áreas uma vez → reutilizar o mesmo snapshot em admin_territorio_dados → devolver contexto`.
 
 Regras:
-- bloco exclusivo da porta UBS;
+- bloco exclusivo da porta/perfil UBS;
 - snapshot persistente somente para contexto UBS já confirmado;
-- comparação obrigatória de cadastro e unidade antes de reutilizar o snapshot;
-- snapshot de outra UBS é recusado;
-- sincronização remota continua obrigatória e não é substituída pelo cache;
-- nenhuma alteração em PIN, cadastro, permissões, áreas, Morador, TACS, Administrador, vagas, gravações ou backend;
-- sem snapshot válido, permanece o fallback remoto existente;
-- rollback funcional isolado em `central-administrativa-tacs.js` e renovação de cache no shell.
+- comparação obrigatória de cadastro e unidade antes de reutilizar cache;
+- cache de outra UBS é recusado;
+- sincronização remota continua obrigatória;
+- no backend, somente o perfil UBS reutiliza `contextoUbsInterno`; Administrador e TACS mantêm o fluxo anterior;
+- nenhuma alteração em regra de PIN, cadastro, permissões, vagas, gravações ou layout dos painéis;
+- sem snapshot local válido, o primeiro acesso usa o backend otimizado sem releituras duplicadas.
 
-Validação interna:
-- sintaxe JS: OK;
-- teste simulado mesma UBS: abertura pelo cache acionada;
-- teste simulado UBS diferente: cache recusado;
-- release da Central renovado.
+Validação:
+- sintaxe JS frontend: OK;
+- mesma UBS em teste simulado: cache aceito;
+- UBS diferente em teste simulado: cache recusado;
+- sintaxe dos módulos Apps Script: OK;
+- workflow Apps Script `34794709509`: **success**;
+- health check da primeira tentativa: **todos aprovados**;
+- Apps Script produção: **versão 217**;
+- GitHub Pages: **success**.
 
-Commits:
+Commits principais:
 - `521ca8db2a5302b3c9f2ea0bc561520f091efdd4`;
 - `c4cbaf5e715a42bfe1269ec225a7207cc0e5d822`;
-- release automático `66941049e75529be66736f90edb725630f964b3f`.
+- `d1c6a720a4a335ee355d72d296d1bd40e291b4e8`;
+- `3a3bc1cf4624f1f968885ca4ab72ec292a066e2c`;
+- implantação `34fffb8ac0c51cfe4ee5a41e6969f90805426e53`.
 
 Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente antes do encerramento.**
 
