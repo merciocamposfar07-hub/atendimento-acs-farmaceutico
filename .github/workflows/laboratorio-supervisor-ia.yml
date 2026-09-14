@@ -1,0 +1,34 @@
+name: Laboratório Supervisor IA
+
+on:
+  push:
+    branches: [laboratorio-ia-autorreparo]
+    paths:
+      - 'laboratorio-ia/**'
+      - 'central-administrativa-tacs.html'
+      - '.github/workflows/laboratorio-supervisor-ia.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar cliente Supervisor
+        run: node --check laboratorio-ia/supervisor-client.js
+      - name: Validar backend Apps Script como JavaScript
+        shell: bash
+        run: |
+          cp laboratorio-ia/apps-script/Code.gs /tmp/conecta-supervisor-code.js
+          node --check /tmp/conecta-supervisor-code.js
+      - name: Confirmar isolamento do laboratório
+        shell: bash
+        run: |
+          grep -q 'laboratorio-ia/supervisor-client.js' central-administrativa-tacs.html
+          ! grep -q 'laboratorio-ia/supervisor-client.js' index.html
