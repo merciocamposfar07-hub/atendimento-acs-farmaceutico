@@ -302,6 +302,33 @@ Qualquer código que não tenha função operacional validada, que tenha sido su
 
 Backup serve para rollback e auditoria. Não serve para multiplicar versões do aplicativo.
 
+## Regra de despertar junto com o aplicativo
+O Supervisor IA deve ser inicializado junto com a abertura do Conecta Saúde Comunitária e permanecer ativo durante toda a sessão.
+
+Ele não pode esperar uma falha explícita para começar a observar o sistema.
+
+Desde o primeiro carregamento, deve acompanhar em tempo real:
+- tempo até a interface ficar interativa;
+- tempo total de carregamento;
+- disponibilidade de rede;
+- abertura e estabilização da tela inicial;
+- resposta de sessão e autenticação;
+- carregamento dos dados iniciais;
+- renderização da interface;
+- comandos do usuário;
+- abertura de painéis;
+- transições entre módulos;
+- requisições de rede;
+- indicadores de carregamento;
+- bloqueios ou congelamentos;
+- estado final de cada operação importante.
+
+Se houver degradação anormal durante a própria abertura, o Supervisor deve tratá-la como incidente operacional e iniciar recuperação sem esperar o usuário repetir o comando.
+
+O objetivo é que a interação percebida pelo usuário seja rápida, contínua e previsível. O Supervisor deve atuar para reduzir espera desnecessária, evitar telas vazias/congeladas e preservar continuidade de uso.
+
+As metas de desempenho devem ser avaliadas com telemetria real do Conecta e aprimoradas continuamente, sem mascarar atraso com mensagens genéricas de carregamento.
+
 ## Escopo global de supervisão ponta a ponta
 O Supervisor IA do laboratório deve acompanhar a execução completa do Conecta Saúde Comunitária, e não somente a Central Administrativa.
 
