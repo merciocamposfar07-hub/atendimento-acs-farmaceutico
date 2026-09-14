@@ -67,7 +67,8 @@ function create(host,options){
   function q(role){return host.querySelector('[data-role="'+role+'"]')}
   function remoteReady(){return Boolean(core&&typeof core.ready==='function'&&core.ready())}
   function setDirty(v){dirty=Boolean(v);host.dataset.tacsDirty=dirty?'1':'0'}
-  function setStatus(msg,type){var n=q('status');n.textContent=msg;n.className='status'+(type?' '+type:'')}
+  function setStatus(msg,type){var n=q('status');n.hidden=false;n.textContent=msg;n.className='status'+(type?' '+type:'')}
+  function clearLoadingStatus(){var n=q('status');if(!n)return;n.textContent='';n.className='status';n.hidden=true}
   function bridge(){var f=q('bridge');try{return f&&f.contentWindow&&f.contentWindow.ConectaProfissionaisBridgeV1||null}catch(e){return null}}
   function readUndo(){try{var u=JSON.parse(sessionStorage.getItem(UNDO_KEY)||'null');return u&&u.areaId===areaId?u:null}catch(e){return null}}
   function writeUndo(tipo,registro){try{sessionStorage.setItem(UNDO_KEY,JSON.stringify({areaId:areaId,tipo:tipo,registro:clone(registro),criadoEm:Date.now()}))}catch(e){}syncUndo()}
@@ -104,9 +105,10 @@ function create(host,options){
           ok:true,confirmado:false,
           profissionais:Array.isArray(cached.profissionais)?cached.profissionais:[],
           servicos:Array.isArray(cached.servicos)?cached.servicos:[]
-        },'Dados válidos anteriores exibidos. Confirmando atualização…')||used;
+        },'')||used;
       });
     }catch(e){}
+    if(used)clearLoadingStatus();
     return used;
   }
   function scheduleRemoteReady(){
