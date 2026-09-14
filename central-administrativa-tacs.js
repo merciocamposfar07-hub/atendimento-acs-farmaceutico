@@ -3,7 +3,7 @@
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1',DEVICE_KEY='portalTacsDispositivoV1',AREA_KEY='portalTacsCentralAreaV1',CONTEXT_CACHE_KEY='portalTacsCentralContextCacheV3',MODULE_CORE_KEY='portalConectaModuleCoreV1';
 var SHARED_WARM_KEY='portalTacsAppsScriptWarmAtV1';
-var HEALTH_REFRESH_TTL=30000,HEALTH_CACHE_TTL=300000,HEALTH_DISPLAY_CACHE_TTL=86400000,HEALTH_CACHE_PREFIX='portalTacsHealthConfirmedV1:',healthRefreshInFlight=false,lastHealthRefreshAt=0,lastHealthRefreshArea='';
+var HEALTH_REFRESH_TTL=30000,HEALTH_CACHE_TTL=300000,HEALTH_DISPLAY_CACHE_TTL=86400000,HEALTH_CACHE_PREFIX='portalTacsHealthConfirmedV1:',healthRefreshInFlight=false,lastHealthRefreshAt=0,lastHealthRefreshArea='',healthRefreshTimer=null;
 var NOTIFICATION_CONFIRMED_CACHE_PREFIX='portalTacsNotificationConfirmedV1:',notificationRemoteSeq=0,notificationRemoteArea='',notificationLatestStarted={};
 var URL_PARAMS=new URLSearchParams(location.search);
 var ADMIN_TRUST_KEY='portalConectaRecoveryTrustV1:admin',ADMIN_LOCAL_VAULT_KEY='conectaPinLocalV3:admin';
@@ -413,7 +413,7 @@ function updateCentralWelcome(area,tacs){
   var adminPerfil=accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');
   node.innerHTML='<small>Identidade autenticada</small><h1>'+esc(adminNome+' — '+adminPerfil)+'</h1><p>Gestão administrativa da área selecionada.</p>';
 }
-function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId})){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(mode==='admin'&&areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):(mode==='ubs'?accessProfileLabel(ubs&&ubs.perfil||'UBS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN'));el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(mode==='ubs'?(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'UBS'):(text(admin&&admin.nomeCompleto)||'Administrador'));el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=mode==='ubs';el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=(mode!=='admin'&&mode!=='ubs')||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;if(mode!=='ubs'){renderModules();renderHealthInstant(selectedAreaId);if(!skipHealth)refreshHealth()}else renderModules()}
+function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId})){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(mode==='admin'&&areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):(mode==='ubs'?accessProfileLabel(ubs&&ubs.perfil||'UBS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN'));el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(mode==='ubs'?(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'UBS'):(text(admin&&admin.nomeCompleto)||'Administrador'));el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=mode==='ubs';el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=(mode!=='admin'&&mode!=='ubs')||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;if(mode!=='ubs'){renderModules();scheduleNativePanelPrewarm();renderHealthInstant(selectedAreaId);if(!skipHealth)scheduleHealthRefresh(false,650)}else{renderModules();scheduleNativePanelPrewarm()}}
 function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
 function markHealth(id,label,state){var n=el(id),s=n.querySelector('span');n.className='health-card'+(state?' '+state:'');s.textContent=label}
 function updatePendingBadge(result){
@@ -572,13 +572,25 @@ function refreshNotificationHealth(areaId,force){
     markHealth('healthNotifications','Sem confirmação','warn');
   });
 }
+/* CORRECAO_CIRURGICA_DESEMPENHO_PAINEIS_20260913_V1
+   A Central entrega primeiro o último estado válido e os painéis já preparados.
+   A validação remota continua em segundo plano e não ocupa o caminho crítico do toque. */
+function scheduleHealthRefresh(force,delay){
+  if(healthRefreshTimer){clearTimeout(healthRefreshTimer);healthRefreshTimer=null}
+  healthRefreshTimer=setTimeout(function(){
+    healthRefreshTimer=null;
+    if(!context||mode==='ubs')return;
+    if(shellActiveModule){scheduleHealthRefresh(force,700);return}
+    refreshHealth(Boolean(force));
+  },Math.max(0,Number(delay==null?650:delay)));
+}
 function refreshHealth(force){
   if(!context)return;
   var areaId=selectedAreaId,now=Date.now();
   if(healthRefreshInFlight)return;
   if(!force&&lastHealthRefreshArea===areaId&&now-lastHealthRefreshAt<HEALTH_REFRESH_TTL){refreshNotificationHealth(areaId,false);return}
   healthRefreshInFlight=true;lastHealthRefreshArea=areaId;lastHealthRefreshAt=now;
-  var cacheItens=renderHealthInstant(areaId);
+  var cacheItens=renderHealthInstant(areaId),notificacaoCache=readConfirmedNotification(areaId),hasCached=Boolean(cacheItens.portal||cacheItens.residents||cacheItens.agenda||cacheItens.content||notificacaoCache);
   if(!cacheItens.portal)markHealth('healthPortal','Verificando…','');
   if(!cacheItens.residents)markHealth('healthResidents','Verificando…','');
   if(!cacheItens.agenda)markHealth('healthAgenda','Verificando…','');
@@ -614,7 +626,7 @@ function refreshHealth(force){
     }
     done()
   });
-  el('healthUpdated').textContent='Atualizando dados validados • área '+(text(area&&area.areaNome)||areaId);
+  el('healthUpdated').textContent=hasCached?'Dados carregados • sincronizando atualização em segundo plano':'Carregando a primeira confirmação dos dados • área '+(text(area&&area.areaNome)||areaId);
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
 /* TAREFA_15_NAVEGACAO_INTERNA_V1:
@@ -1329,7 +1341,7 @@ function closeViewer(){
   var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-native-viewer','csc-frame-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   shellActiveModule='';shellActiveRoute='';shellActiveNative='';moduloPendente=null;
-  if(mode!=='ubs')refreshHealth(false);return true;
+  if(mode!=='ubs')scheduleHealthRefresh(false,900);return true;
 }
 function loadContext(message){
   post('admin_territorio_dados',session(),'admin_territorio_result',function(r){
@@ -1449,19 +1461,29 @@ function prefetchStaticPanels(){
   });
 }
 ['adminPin','tacsPin'].forEach(function(id){var input=el(id);if(!input)return;input.addEventListener('focus',aquecerValidacaoPin,{once:true});input.addEventListener('input',aquecerValidacaoPin,{once:true})});
+var nativePanelPrewarmStarted=false,nativePanelPrewarmScheduled=false,staticPanelPrefetchScheduled=false;
 function prewarmNativePanelAssets(){
+  if(nativePanelPrewarmStarted)return;
+  nativePanelPrewarmStarted=true;
   try{ensureTask16AgendaAssets(function(){})}catch(e){}
   try{ensureTask17MoradoresAssets(function(){})}catch(e){}
   try{ensureTask18ProfissionaisAssets(function(){})}catch(e){}
 }
-window.addEventListener('load',function(){
-  if('requestIdleCallback' in window){
-    requestIdleCallback(prefetchStaticPanels,{timeout:3000});
-    requestIdleCallback(prewarmNativePanelAssets,{timeout:3500});
-  }else{
-    setTimeout(prefetchStaticPanels,2200);
-    setTimeout(prewarmNativePanelAssets,2600);
+function scheduleNativePanelPrewarm(){
+  if(nativePanelPrewarmStarted||nativePanelPrewarmScheduled)return;
+  nativePanelPrewarmScheduled=true;
+  var run=function(){nativePanelPrewarmScheduled=false;prewarmNativePanelAssets()};
+  if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:350});else setTimeout(run,60);
+  if(!staticPanelPrefetchScheduled){
+    staticPanelPrefetchScheduled=true;
+    setTimeout(function(){
+      if('requestIdleCallback' in window)requestIdleCallback(prefetchStaticPanels,{timeout:900});else prefetchStaticPanels();
+    },420);
   }
+}
+window.addEventListener('load',function(){
+  scheduleNativePanelPrewarm();
+  if(!staticPanelPrefetchScheduled){staticPanelPrefetchScheduled=true;setTimeout(prefetchStaticPanels,900)}
 },{once:true});
 el('tabAdmin').addEventListener('click',function(){if(!TACS_ONLY)showLogin('admin')});el('tabTacs').addEventListener('click',function(){showLogin('tacs')});
 el('loginAdmin').addEventListener('click',function(){
