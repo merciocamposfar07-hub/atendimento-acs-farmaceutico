@@ -4,6 +4,7 @@ if(window.ConectaSupervisorIA)return;
 
 var VERSION='lab-2026-09-14';
 var QUEUE_KEY='conectaSupervisorIA:incidentes:v1';
+var SESSION_KEY='conectaSupervisorIA:sessao:v1';
 var API_KEY='conectaSupervisorIA:endpoint:v1';
 var busy=false;
 var lastIncidentAt=0;
@@ -38,6 +39,16 @@ function currentFileFromStack(stack){
 }
 function queueRead(){try{return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]')}catch(e){return []}}
 function queueWrite(q){try{localStorage.setItem(QUEUE_KEY,JSON.stringify(q.slice(-MAX_QUEUE)))}catch(e){}}
+function sessionRead(){try{return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'{"eventos":[]}')}catch(e){return {eventos:[]}}}
+function sessionEvent(tipo,detalhe){
+  supervisorWork(function(){
+    var s=sessionRead();if(!Array.isArray(s.eventos))s.eventos=[];
+    s.eventos.push({t:new Date().toISOString(),tipo:text(tipo).slice(0,60),detalhe:redact(detalhe||{}),path:location.pathname+location.hash});
+    s.eventos=s.eventos.slice(-80);
+    try{sessionStorage.setItem(SESSION_KEY,JSON.stringify(s))}catch(e){}
+  });
+}
+
 function emit(name,detail){try{window.dispatchEvent(new CustomEvent(name,{detail:detail}))}catch(e){}}
 function supervisorWork(fn){
   var start=(performance&&performance.now)?performance.now():Date.now(),out;
@@ -102,7 +113,8 @@ function incident(kind,data){
     urlPath:location.pathname,
     online:navigator.onLine!==false,
     supervisorVersion:VERSION,
-    estado:'DIAGNOSTICO_EM_ANDAMENTO'
+    estado:'DIAGNOSTICO_EM_ANDAMENTO',
+    contextoSessao:(sessionRead().eventos||[]).slice(-12)
   };
   var q=queueRead();q.push(item);queueWrite(q);panelShow('Inconsistência detectada. Diagnóstico automático iniciado.','Incidente '+item.id+' • '+(item.arquivo||item.modulo)+(item.linha?' • linha '+item.linha:''),true);emit('conecta-supervisor-incidente',item);scheduleRemoteFlush(350);
   return item.id;
@@ -254,6 +266,24 @@ function monitorStartupUntilStable(){
     if(checks>=12)clearInterval(timer);
   },1000);
 }
+function installNavigationObserver(){
+  var last=location.href;
+  function record(kind){
+    if(location.href===last&&kind!=='load')return;
+    var previous=last;last=location.href;
+    sessionEvent('NAVEGACAO',{tipo:kind,de:previous,para:location.href});
+    emit('conecta-supervisor-navegacao',{tipo:kind,de:previous,para:location.href});
+  }
+  try{
+    var push=history.pushState,replace=history.replaceState;
+    history.pushState=function(){var r=push.apply(this,arguments);record('pushState');return r};
+    history.replaceState=function(){var r=replace.apply(this,arguments);record('replaceState');return r};
+  }catch(e){}
+  window.addEventListener('popstate',function(){record('popstate')},{passive:true});
+  window.addEventListener('hashchange',function(){record('hashchange')},{passive:true});
+  document.addEventListener('visibilitychange',function(){sessionEvent('VISIBILIDADE',{estado:document.visibilityState})},{passive:true});
+  record('load');
+}
 function installNetworkObserver(){
   if(typeof window.fetch==='function'&&!window.fetch.__conectaSupervisorWrapped){
     var nativeFetch=window.fetch;
@@ -324,7 +354,7 @@ function installInteractionObserver(){
     supervisorWork(function(){
       var target=e.target&&e.target.closest?e.target.closest('button,[role="button"]'):null;
       if(!target||target.disabled||target.closest('#conectaSupervisorIaPanel'))return;
-      var beforeMutation=lastDomMutationAt,beforeNetwork=lastNetworkChangeAt,beforeHref=location.href,label=text(target.textContent||target.getAttribute('aria-label')||target.id).slice(0,120);
+      var beforeMutation=lastDomMutationAt,beforeNetwork=lastNetworkChangeAt,beforeHref=location.href,label=text(target.textContent||target.getAttribute('aria-label')||target.id).slice(0,120);sessionEvent('COMANDO_USUARIO',{rotulo:label});
       setTimeout(function(){
         if(location.href!==beforeHref)return;
         if(lastDomMutationAt>beforeMutation||lastNetworkChangeAt>beforeNetwork||inflightNetwork>0)return;
@@ -363,6 +393,7 @@ function installLoadingObserver(){
     });
   },lightMode?6000:4000);
 }
+installNavigationObserver();
 installNetworkObserver();
 installInteractionObserver();
 installLoadingObserver();
