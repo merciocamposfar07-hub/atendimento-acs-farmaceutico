@@ -153,6 +153,42 @@ O ciclo só termina em uma destas condições:
 
 Enquanto nenhuma dessas condições ocorrer, o agente deve continuar trabalhando sobre a causa do mesmo incidente.
 
+## Regra de velocidade e continuidade operacional
+O Supervisor não pode bloquear o agente de saúde ou o administrador por longos períodos enquanto diagnostica ou repara uma falha.
+
+Princípio obrigatório:
+falha detectada → resposta imediata ao usuário → recuperação local rápida → continuidade operacional segura → diagnóstico/reparo aprofundado sem bloquear a interface.
+
+Orçamento operacional:
+- até 1 segundo: detectar a anomalia e registrar o incidente;
+- até 3 segundos: tentar recuperação local imediata no próprio módulo;
+- até 8 segundos: concluir uma segunda estratégia segura de recuperação ou ativar fallback/último estado válido;
+- acima de 8 segundos: a interface não pode permanecer congelada aguardando o Supervisor. O módulo deve entrar em modo degradado seguro, usar snapshot válido quando permitido, isolar somente a função afetada e permitir que o restante do aplicativo continue operando;
+- o diagnóstico aprofundado e novas tentativas automáticas podem continuar em segundo plano, mas sem bloquear a navegação principal.
+
+É proibido deixar o usuário aguardando 10, 15 ou 20 minutos por uma correção automática com tela travada, carregamento infinito ou painel inutilizável.
+
+Enquanto o reparo ainda estiver em andamento, o painel técnico deve informar objetivamente:
+- incidente ativo;
+- módulo afetado;
+- ação atual;
+- estado operacional disponível;
+- se está usando fallback, snapshot ou modo degradado;
+- se o usuário pode continuar trabalhando naquele painel ou apenas nos demais módulos.
+
+Se a falha atingir somente um módulo, os demais módulos devem permanecer funcionais.
+
+Se houver risco de inconsistência em operação crítica de escrita, o Conecta deve bloquear somente aquela ação crítica específica, nunca o aplicativo inteiro, até que a validação necessária seja concluída.
+
+O Supervisor deve priorizar reparos por impacto operacional:
+1. desbloquear a interface;
+2. restaurar leitura dos dados;
+3. restaurar navegação;
+4. restaurar ações críticas de escrita;
+5. otimizar desempenho residual.
+
+Tempo de reparo não validado não autoriza encerrar o incidente, mas também não autoriza prender o usuário à espera. O agente continua trabalhando no mesmo incidente enquanto o aplicativo preserva o máximo de operação segura possível.
+
 ## Regra de isolamento
 Nenhuma alteração deste laboratório pode ser aplicada à branch main sem decisão explícita posterior.
 
