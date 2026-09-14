@@ -651,3 +651,28 @@ Commits principais:
 Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente antes do encerramento.**
 
 Registro: `REGISTRO_CORRECAO_ABERTURA_IMEDIATA_PAINEIS_UBS_2026_09_13.md`.
+
+
+### Correção isolada — Busca de Morador por número de cadastro
+Data: 13/09/2026
+
+Fluxo:
+`Diagnóstico administrativo do Morador → Número de cadastro na área → busca restrita à coluna de endereço → linhas da família localizada → resposta somente leitura`.
+
+Regras:
+- ramo exclusivo da busca do Morador pelo número de cadastro;
+- preservado o fallback para as demais áreas quando a área lembrada não contém o cadastro;
+- proibido reler a planilha inteira da área neste caminho familiar;
+- CPF, CNS, nome, data de nascimento e demais fluxos não são alterados;
+- nenhum ajuste no timeout global, layout, PIN, sessão, UBS, TACS, agendas, vagas, notificações ou gravações;
+- diagnóstico permanece sem assumir identidade ou vínculo residencial do Morador.
+
+Validação:
+- marcador isolado `CORRECAO_CIRURGICA_BUSCA_MORADOR_CADASTRO_FAST_V2`: presente;
+- teste de regressão específico: atualizado;
+- Apps Script operacional: workflow `34794773478`, job `testar-e-implantar`: **success**;
+- publicação operacional: `37b94515d0612f67070f2d724016db20bcfac518`.
+
+Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente antes do encerramento.**
+
+Registro: `REGISTRO_CORRECAO_BUSCA_MORADOR_CADASTRO_FAST_2026_09_13.md`.
