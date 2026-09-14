@@ -36,3 +36,13 @@
   -webkit-hyphens:none!important;
   hyphens:none!important;
 }
+
+
+/* CORRECAO_CIRURGICA_CARDS_PROF_SERV_AZUL_ESCURO_2026_09_13_V1 */
+/* Escopo: somente os cards internos das abas Profissionais e Serviços do módulo nativo. */
+.csc-prof-native [data-area="prof"] .card,
+.csc-prof-native [data-area="serv"] .card{
+  background:#081b2d!important;
+  background-image:none!important;
+  border-color:#2b5a76!important;
+}
