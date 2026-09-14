@@ -87,7 +87,8 @@ function create(host){
     api.shareGroupData(agendaGroupShareData({p:prof(items[0].MODULO)||{},items:items}),button);
   }
 
-  function setStatus(message,type){var n=q('status');n.textContent=message;n.className='status'+(type?' '+type:'')}
+  function setStatus(message,type){var n=q('status');n.hidden=false;n.textContent=message;n.className='status'+(type?' '+type:'')}
+  function clearLoadingStatus(){var n=q('status');if(!n)return;n.textContent='';n.className='status';n.hidden=true}
   function setDirty(v){dirty=Boolean(v);host.dataset.tacsDirty=dirty?'1':'0'}
   function session(){return core.session({areaId:areaId,escopo:'agendas'})}
   function ready(){return core.ready?core.ready():Boolean(session().token||session().territorioToken)}
@@ -106,7 +107,7 @@ function create(host){
     if(!perf||typeof perf.prime!=='function')return false;
     try{
       var item=perf.prime('agendas',function(data){applyData(data,false)});
-      if(item){setStatus('Aguarde enquanto os dados carregam…','aviso');return true}
+      if(item){clearLoadingStatus();return true}
     }catch(e){
       try{if(typeof perf.forget==='function')perf.forget('agendas')}catch(x){}
     }
