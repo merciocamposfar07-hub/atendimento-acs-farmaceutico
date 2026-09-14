@@ -414,6 +414,55 @@ A atuação automática pode otimizar, reparar, sanar e ajustar problemas técni
 
 O Supervisor NÃO pode, por iniciativa própria, redefinir regras de negócio, permissões, distribuição de vagas, vínculos territoriais, conteúdo clínico, cadastros ou decisões administrativas. Alterações desse tipo não são autorreparo técnico e permanecem fora do escopo automático.
 
+## Bloco único — Supervisor IA de Soluções, causalidade e pesquisa técnica online
+O Supervisor é responsável por acompanhar toda a experiência operacional do Conecta, mas nunca pode bloquear a função normal do aplicativo.
+
+### Diagnóstico obrigatório de origem
+Para cada incidente, o Supervisor deve distinguir, somente com evidência:
+- `CONECTA_INTERNO`: atraso/erro causado pelo código, renderização, lógica ou fluxo interno;
+- `REDE`: indisponibilidade ou degradação comprovável da conexão;
+- `SERVICO_EXTERNO`: resposta/limitação comprovadamente localizada em serviço externo;
+- `MISTO`: mais de uma camada comprovadamente contribui;
+- `INDETERMINADO`: a telemetria ainda não permite separar as camadas.
+
+Se o navegador medir apenas o tempo entre envio e resposta, o Supervisor não pode inventar quanto pertence à internet e quanto pertence ao servidor. Deve informar a última fronteira tecnicamente conhecida e continuar investigando.
+
+Quando a causa for interna, o diagnóstico deve informar o arquivo, função, linha/bloco e evidência causal. O autorreparo de código só é permitido depois da confirmação desse bloco.
+
+### Pesquisa técnica online assíncrona
+Quando uma documentação atual, padrão técnico ou solução de mercado puder trazer benefício mensurável, o Supervisor pode pesquisar a web em paralelo.
+
+A pesquisa:
+- nunca fica no caminho do clique, abertura ou navegação;
+- nunca é necessária para uma função normal continuar;
+- deve comparar a solução pesquisada com o código real do laboratório quando esse código estiver disponível;
+- não pode aplicar alteração por curiosidade;
+- deve registrar fontes e benefício esperado;
+- não altera regras de negócio, permissões, vagas, vínculos ou decisões administrativas.
+
+A OpenAI Responses API é usada com a ferramenta de web search somente nesse fluxo paralelo de pesquisa.
+
+### Bloco de Notas de Melhorias
+Toda melhoria técnica online fundamentada deve ser registrada no Bloco de Notas do Supervisor com:
+- incidente relacionado;
+- título;
+- recomendação;
+- código/bloco relacionado;
+- benefício esperado;
+- fontes;
+- estado da sugestão.
+
+O estado inicial é `SUGERIDA_NAO_APLICADA`.
+
+Uma sugestão só pode virar alteração automática se estiver ligada a causa técnica real, houver evidência de benefício, o bloco causal estiver confirmado e os testes funcionais/regressão forem executados. Caso contrário, permanece como anotação técnica.
+
+### Princípio operacional
+O Conecta deve responder primeiro. O Supervisor observa e trabalha em paralelo.
+
+Se houver travamento, lentidão, caractere ausente, painel que não abre, clique sem resposta ou qualquer outra inconsistência interna, o Supervisor deve localizar o porquê e o bloco responsável, corrigir o código canônico, testar e validar.
+
+Se a causa estiver fora do Conecta, deve informar essa condição de forma objetiva para que o usuário não atribua ao aplicativo uma falha externa.
+
 ## Regra de isolamento
 Nenhuma alteração deste laboratório pode ser aplicada à branch main sem decisão explícita posterior.
 

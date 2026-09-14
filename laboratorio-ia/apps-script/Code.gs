@@ -18,16 +18,22 @@ var CONECTA_SUPERVISOR_LAB = Object.freeze({
 
 function doPost(e){
   var p=e&&e.parameter?e.parameter:{};
-  if(String(p.action||'')!=='supervisor_ia_diagnosticar')return supervisorResponderIframe_({ok:false,message:'Ação inválida.'},String(p.requestId||''));
+  var action=String(p.action||'');if(action!=='supervisor_ia_diagnosticar'&&action!=='supervisor_ia_pesquisar_melhoria')return supervisorResponderIframe_({ok:false,message:'Ação inválida.'},String(p.requestId||''));
   var rid=supervisorTexto_(p.requestId);
   if(!/^[A-Za-z0-9_-]{8,180}$/.test(rid))return supervisorResponderIframe_({ok:false,message:'requestId inválido.'},rid);
   var result;
   try{
-    var incident=supervisorJson_(p.incidente),local=supervisorJson_(p.recuperacaoLocal);
-    incident=supervisorSanitizar_(incident);
-    local=supervisorSanitizar_(local);
-    var decision=supervisorOpenAI_(incident,local);
-    var codigo=null;if(decision.acao==='SOLICITAR_CORRECAO_CODIGO')codigo=supervisorTentarCorrecaoCodigo_(incident,decision);result={ok:true,decisao:decision,codigo:codigo,incidenteId:incident.id||'',modelo:decision.modelo||''};
+    var incident=supervisorSanitizar_(supervisorJson_(p.incidente));
+    if(action==='supervisor_ia_pesquisar_melhoria'){
+      var decisionIn=supervisorSanitizar_(supervisorJson_(p.decisao));
+      result={ok:true,pesquisa:supervisorPesquisarMelhoriaOnline_(incident,decisionIn),incidenteId:incident.id||''};
+    }else{
+      var local=supervisorSanitizar_(supervisorJson_(p.recuperacaoLocal));
+      var decision=supervisorOpenAI_(incident,local);
+      decision=supervisorRefinarComCodigoSeNecessario_(incident,local,decision);
+      var codigo=null;if(decision.acao==='SOLICITAR_CORRECAO_CODIGO')codigo=supervisorTentarCorrecaoCodigo_(incident,decision);
+      result={ok:true,decisao:decision,codigo:codigo,incidenteId:incident.id||'',modelo:decision.modelo||''};
+    }
   }catch(err){
     result={ok:false,message:supervisorErro_(err)};
   }
@@ -59,49 +65,19 @@ function supervisorOpenAI_(incident,local){
   var model=supervisorTexto_(props.getProperty(repeated?'OPENAI_ESCALATION_MODEL':'OPENAI_MODEL'))||
     (repeated?CONECTA_SUPERVISOR_LAB.ESCALATION_MODEL:CONECTA_SUPERVISOR_LAB.MODEL);
 
-  var tool={
-    type:'function',
-    name:'decidir_reparo',
-    description:'Escolhe a menor ação segura para recuperar exclusivamente o fluxo causal do incidente do Conecta Saúde Comunitária.',
-    strict:true,
-    parameters:{
-      type:'object',
-      additionalProperties:false,
-      properties:{
-        causa_status:{type:'string',enum:['CONFIRMADA','PROVAVEL','AINDA_ISOLANDO']},
-        causa:{type:'string'},
-        modulo:{type:'string'},
-        arquivo:{type:'string'},
-        funcao:{type:'string'},
-        linha:{type:'integer'},
-        acao:{type:'string',enum:[
-          'OBSERVAR',
-          'RECARREGAR_MODULO',
-          'INVALIDAR_CACHE_MODULO',
-          'USAR_ULTIMO_ESTADO_VALIDO',
-          'REVALIDAR_SESSAO',
-          'REPETIR_REQUISICAO',
-          'ISOLAR_MODULO',
-          'SOLICITAR_CORRECAO_CODIGO'
-        ]},
-        justificativa:{type:'string'},
-        teste_real_obrigatorio:{type:'string'},
-        tocar_apenas:{type:'array',items:{type:'string'}},
-        nao_tocar:{type:'array',items:{type:'string'}},
-        precisa_codigo_fonte:{type:'boolean'}
-      },
-      required:['causa_status','causa','modulo','arquivo','funcao','linha','acao','justificativa','teste_real_obrigatorio','tocar_apenas','nao_tocar','precisa_codigo_fonte']
-    }
-  };
+  var tool=supervisorDecisionTool_();
 
   var instructions=[
     'Você é o Supervisor técnico do laboratório do Conecta Saúde Comunitária.',
     'Objetivo: restaurar operação com rapidez e localizar a causa real.',
     'Nunca invente causa. Se ainda não houver evidência, use AINDA_ISOLANDO.',
+    'Separe rigorosamente gargalo interno do Conecta, internet/rede e serviço externo. Se a telemetria não permitir separar rede de servidor, use INDETERMINADO ou MISTO e descreva exatamente a fronteira conhecida.',
+    'Só marque codigo_responsavel_confirmado=true quando arquivo/bloco causal estiver sustentado por stack, linha, telemetria ou inspeção do código.',
     'Nunca mande alterar módulos sem relação causal demonstrada.',
     'Priorize desbloquear interface e restaurar continuidade operacional.',
     'Não declare problema resolvido; a validação real pertence ao aplicativo.',
-    'Se o incidente exigir mudança de código, selecione SOLICITAR_CORRECAO_CODIGO e identifique somente o arquivo/função/linha implicados.',
+    'Se o incidente exigir mudança de código, selecione SOLICITAR_CORRECAO_CODIGO somente quando a causa interna e o bloco causal estiverem confirmados.',
+    'Recomende pesquisa online somente quando documentação/padrões atuais puderem melhorar a solução. Pesquisa não pode bloquear a função normal do aplicativo.',
     'CPF, CNS, PIN, tokens e dados pessoais não são necessários ao diagnóstico e já devem estar removidos.'
   ].join('\n');
 
@@ -134,7 +110,109 @@ function supervisorOpenAI_(incident,local){
   return supervisorSanitizar_(args);
 }
 
+function supervisorDecisionTool_(){
+  return {
+    type:'function',name:'decidir_reparo',description:'Escolhe a menor ação segura para recuperar exclusivamente o fluxo causal do incidente do Conecta Saúde Comunitária.',strict:true,
+    parameters:{
+      type:'object',additionalProperties:false,
+      properties:{
+        causa_status:{type:'string',enum:['CONFIRMADA','PROVAVEL','AINDA_ISOLANDO']},
+        origem_gargalo:{type:'string',enum:['CONECTA_INTERNO','REDE','SERVICO_EXTERNO','MISTO','INDETERMINADO']},
+        evidencia_origem:{type:'string'},codigo_responsavel_confirmado:{type:'boolean'},causa:{type:'string'},
+        modulo:{type:'string'},arquivo:{type:'string'},funcao:{type:'string'},linha:{type:'integer'},
+        acao:{type:'string',enum:['OBSERVAR','RECARREGAR_MODULO','INVALIDAR_CACHE_MODULO','USAR_ULTIMO_ESTADO_VALIDO','REVALIDAR_SESSAO','REPETIR_REQUISICAO','ISOLAR_MODULO','SOLICITAR_CORRECAO_CODIGO']},
+        justificativa:{type:'string'},teste_real_obrigatorio:{type:'string'},
+        tocar_apenas:{type:'array',items:{type:'string'}},nao_tocar:{type:'array',items:{type:'string'}},
+        precisa_codigo_fonte:{type:'boolean'},pesquisa_online_recomendada:{type:'boolean'},tema_pesquisa:{type:'string'},beneficio_esperado:{type:'string'}
+      },
+      required:['causa_status','origem_gargalo','evidencia_origem','codigo_responsavel_confirmado','causa','modulo','arquivo','funcao','linha','acao','justificativa','teste_real_obrigatorio','tocar_apenas','nao_tocar','precisa_codigo_fonte','pesquisa_online_recomendada','tema_pesquisa','beneficio_esperado']
+    }
+  };
+}
+function supervisorRefinarComCodigoSeNecessario_(incident,local,decision){
+  if(!decision||decision.causa_status==='CONFIRMADA'&&decision.codigo_responsavel_confirmado===true)return decision;
+  var source=supervisorTrechoCodigo_(incident,decision);
+  if(!source)return decision;
+  var props=PropertiesService.getScriptProperties(),key=supervisorTexto_(props.getProperty('OPENAI_API_KEY'));
+  var model=supervisorTexto_(props.getProperty('OPENAI_ESCALATION_MODEL'))||CONECTA_SUPERVISOR_LAB.ESCALATION_MODEL;
+  var payload={
+    model:model,
+    instructions:[
+      'Refine o diagnóstico causal usando o trecho REAL do código do Conecta.',
+      'Não invente causa. Identifique exatamente arquivo, função e linha/bloco quando houver evidência.',
+      'Diferencie código interno, rede e serviço externo.',
+      'Não mude regras de negócio. Não proponha arquivo novo ou versão paralela.',
+      'Só autorize SOLICITAR_CORRECAO_CODIGO com codigo_responsavel_confirmado=true.'
+    ].join('\n'),
+    input:JSON.stringify({incidente:incident,recuperacaoLocal:local,diagnosticoInicial:decision,codigoReal:source}),
+    tools:[supervisorDecisionTool_()],tool_choice:{type:'function',name:'decidir_reparo'},max_output_tokens:1800
+  };
+  var response=UrlFetchApp.fetch('https://api.openai.com/v1/responses',{method:'post',contentType:'application/json',headers:{Authorization:'Bearer '+key},payload:JSON.stringify(payload),muteHttpExceptions:true});
+  if(response.getResponseCode()<200||response.getResponseCode()>=300)return decision;
+  var parsed=JSON.parse(response.getContentText()),call=null;(parsed.output||[]).some(function(item){if(item&&item.type==='function_call'&&item.name==='decidir_reparo'){call=item;return true}return false});
+  if(!call)return decision;
+  var refined=JSON.parse(call.arguments||'{}');refined.modelo=model;refined.responseId=supervisorTexto_(parsed.id);return supervisorSanitizar_(refined);
+}
+function supervisorTrechoCodigo_(incident,decision){
+  var props=PropertiesService.getScriptProperties(),token=supervisorTexto_(props.getProperty('GITHUB_TOKEN')),repo=supervisorTexto_(props.getProperty('GITHUB_REPO')),branch=supervisorTexto_(props.getProperty('GITHUB_BRANCH'));
+  if(!token||!repo||branch!=='laboratorio-ia-autorreparo')return null;
+  var path=supervisorNormalizarArquivo_(decision&&decision.arquivo||incident&&incident.arquivo||incident&&incident.urlPath);
+  if(!path||!/[.](?:js|html|css|gs)$/.test(path))return null;
+  try{
+    var src=supervisorGithubGet_(repo,path,branch,token),line=Math.max(1,Number(decision&&decision.linha||incident&&incident.linha||1)),lines=src.content.split('\n'),from=Math.max(0,line-61),to=Math.min(lines.length,line+60);
+    return {arquivo:path,sha:src.sha,linhaReferencia:line,trecho:lines.slice(from,to).map(function(v,i){return String(from+i+1)+': '+v}).join('\n')};
+  }catch(e){return null}
+}
+function supervisorPesquisarMelhoriaOnline_(incident,decision){
+  var props=PropertiesService.getScriptProperties(),key=supervisorTexto_(props.getProperty('OPENAI_API_KEY'));
+  if(!key)throw new Error('OPENAI_API_KEY não configurada.');
+  var model=supervisorTexto_(props.getProperty('OPENAI_MODEL'))||CONECTA_SUPERVISOR_LAB.MODEL;
+  var source=supervisorTrechoCodigo_(incident,decision);
+  var payload={
+    model:model,
+    instructions:[
+      'Pesquise tecnicamente na web uma solução atual e aplicável ao incidente do Conecta Saúde Comunitária.',
+      'A pesquisa é somente para melhoria fundamentada e ocorre fora do caminho crítico do usuário.',
+      'Compare a recomendação com o código real fornecido quando disponível.',
+      'Não sugira mudança sem benefício técnico claro. Não altere regra de negócio.',
+      'Explique se a limitação é interna, de rede ou de serviço externo; não invente separação que a evidência não permita.',
+      'Retorne recomendação curta, benefício esperado e referências técnicas úteis.'
+    ].join('\n'),
+    input:JSON.stringify({incidente:incident,diagnostico:decision,codigoReal:source}),
+    tools:[{type:'web_search_preview'}],
+    include:['web_search_call.action.sources'],
+    max_output_tokens:2200
+  };
+  var response=UrlFetchApp.fetch('https://api.openai.com/v1/responses',{method:'post',contentType:'application/json',headers:{Authorization:'Bearer '+key},payload:JSON.stringify(payload),muteHttpExceptions:true});
+  var status=response.getResponseCode(),body=response.getContentText();
+  if(status<200||status>=300)throw new Error('OpenAI web search HTTP '+status+': '+body.slice(0,500));
+  var parsed=JSON.parse(body),txt=supervisorResponseText_(parsed),sources=supervisorResponseSources_(parsed);
+  return supervisorSanitizar_({
+    titulo:supervisorTexto_(decision.tema_pesquisa)||'Melhoria técnica pesquisada',
+    resumo:txt.slice(0,3500),
+    recomendacao:txt.slice(0,3500),
+    beneficioEsperado:supervisorTexto_(decision.beneficio_esperado),
+    fontes:sources,
+    estado:'SUGERIDA_NAO_APLICADA',
+    responseId:supervisorTexto_(parsed.id)
+  });
+}
+function supervisorResponseText_(parsed){
+  var parts=[];(parsed.output||[]).forEach(function(item){
+    if(item&&item.type==='message'&&Array.isArray(item.content))item.content.forEach(function(c){if(c&&c.type==='output_text'&&c.text)parts.push(c.text)});
+  });return parts.join('\n').trim();
+}
+function supervisorResponseSources_(parsed){
+  var out=[],seen={};
+  (parsed.output||[]).forEach(function(item){
+    var sources=item&&item.action&&Array.isArray(item.action.sources)?item.action.sources:[];
+    sources.forEach(function(s){var url=supervisorTexto_(s&&s.url||s&&s.link),title=supervisorTexto_(s&&s.title);if(url&&!seen[url]){seen[url]=1;out.push({title:title,url:url})}});
+  });return out.slice(0,8);
+}
+
 function supervisorTentarCorrecaoCodigo_(incident,decision){
+  if(decision.codigo_responsavel_confirmado!==true)throw new Error('Autorreparo bloqueado: código causal ainda não confirmado.');
+  if(['CONECTA_INTERNO','MISTO'].indexOf(supervisorTexto_(decision.origem_gargalo))===-1)throw new Error('Autorreparo bloqueado: gargalo não confirmado no código do Conecta.');
   var props=PropertiesService.getScriptProperties();
   var token=supervisorTexto_(props.getProperty('GITHUB_TOKEN'));
   var repo=supervisorTexto_(props.getProperty('GITHUB_REPO'));

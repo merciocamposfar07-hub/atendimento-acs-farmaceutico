@@ -5,6 +5,7 @@ if(window.ConectaSupervisorIA)return;
 var VERSION='lab-2026-09-14';
 var QUEUE_KEY='conectaSupervisorIA:incidentes:v1';
 var SESSION_KEY='conectaSupervisorIA:sessao:v1';
+var NOTES_KEY='conectaSupervisorIA:notas:v1';
 var API_KEY='conectaSupervisorIA:endpoint:v1';
 var busy=false;
 var lastIncidentAt=0;
@@ -39,6 +40,21 @@ function currentFileFromStack(stack){
 }
 function queueRead(){try{return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]')}catch(e){return []}}
 function queueWrite(q){try{localStorage.setItem(QUEUE_KEY,JSON.stringify(q.slice(-MAX_QUEUE)))}catch(e){}}
+function notesRead(){try{return JSON.parse(localStorage.getItem(NOTES_KEY)||'[]')}catch(e){return []}}
+function notesWrite(v){try{localStorage.setItem(NOTES_KEY,JSON.stringify((v||[]).slice(-30)))}catch(e){}}
+function addNote(note){
+  var notes=notesRead(),id=text(note&&note.id)||('NOTA-'+now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase());
+  var normalized={
+    id:id,criadaEm:new Date().toISOString(),incidenteId:text(note&&note.incidenteId),
+    titulo:text(note&&note.titulo||'Melhoria técnica sugerida').slice(0,180),
+    resumo:redact(note&&note.resumo||''),
+    beneficioEsperado:redact(note&&note.beneficioEsperado||''),
+    codigo:text(note&&note.codigo||'').slice(0,260),
+    fontes:Array.isArray(note&&note.fontes)?note.fontes.slice(0,8):[],
+    estado:text(note&&note.estado||'SUGERIDA_NAO_APLICADA')
+  };
+  notes.push(normalized);notesWrite(notes);renderNotes();return normalized;
+}
 function sessionRead(){try{return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'{"eventos":[]}')}catch(e){return {eventos:[]}}}
 function sessionEvent(tipo,detalhe){
   supervisorWork(function(){
@@ -85,9 +101,24 @@ function ensurePanel(){
   box=document.createElement('aside');box.id='conectaSupervisorIaPanel';
   box.setAttribute('aria-live','polite');
   box.style.cssText='position:fixed;right:10px;bottom:10px;z-index:2147483646;width:min(92vw,390px);max-height:48vh;overflow:auto;background:#062c46;color:#fff;border:1px solid #69c7e7;border-radius:14px;box-shadow:0 12px 38px rgba(0,0,0,.28);padding:12px;font:12px/1.42 -apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;display:none';
-  box.innerHTML='<div style="font-weight:900;font-size:13px;margin-bottom:6px">Supervisor IA — laboratório</div><div data-sup-status>Monitorando o Conecta.</div><div data-sup-tech style="margin-top:7px;color:#d8eef7"></div>';
-  document.body.appendChild(box);return box;
+  box.innerHTML='<div style="font-weight:900;font-size:13px;margin-bottom:6px">Supervisor IA — laboratório</div><div data-sup-status>Monitorando o Conecta.</div><div data-sup-tech style="margin-top:7px;color:#d8eef7"></div><button type="button" data-sup-notes-btn style="margin-top:9px;border:1px solid #69c7e7;background:#0b5878;color:#fff;border-radius:9px;padding:7px 9px;font:inherit;font-weight:800">Melhorias técnicas <span data-sup-notes-count>0</span></button><div data-sup-notes hidden style="margin-top:8px;border-top:1px solid rgba(255,255,255,.18);padding-top:7px"></div>';
+  document.body.appendChild(box);
+  var btn=box.querySelector('[data-sup-notes-btn]');
+  if(btn)btn.onclick=function(){var n=box.querySelector('[data-sup-notes]');if(n)n.hidden=!n.hidden;renderNotes()};
+  renderNotes();return box;
 }
+function renderNotes(){
+  var box=document.getElementById('conectaSupervisorIaPanel');if(!box)return;
+  var notes=notesRead(),count=box.querySelector('[data-sup-notes-count]'),area=box.querySelector('[data-sup-notes]');
+  if(count)count.textContent=String(notes.length);
+  if(!area)return;
+  if(!notes.length){area.textContent='Nenhuma melhoria técnica registrada.';return}
+  area.innerHTML=notes.slice(-8).reverse().map(function(n){
+    var sources=(n.fontes||[]).map(function(s){return text(s&&s.url||s).slice(0,160)}).filter(Boolean);
+    return '<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.12)"><strong>'+escHtml(n.titulo)+'</strong><div>'+escHtml(n.resumo)+'</div>'+(n.codigo?'<div style="color:#b9e3f3">Código: '+escHtml(n.codigo)+'</div>':'')+(n.beneficioEsperado?'<div style="color:#c8f0d7">Benefício: '+escHtml(n.beneficioEsperado)+'</div>':'')+(sources.length?'<div style="color:#cfdce4">Fontes: '+sources.map(escHtml).join(' • ')+'</div>':'')+'<div style="opacity:.8">Estado: '+escHtml(n.estado)+'</div></div>';
+  }).join('');
+}
+function escHtml(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function panelShow(status,tech,keep){
   var box=ensurePanel();box.style.display='block';
   var a=box.querySelector('[data-sup-status]'),b=box.querySelector('[data-sup-tech]');
@@ -110,6 +141,7 @@ function incident(kind,data){
     stack:redact(stack),
     etapa:text(data.etapa||'runtime').slice(0,120),
     duracaoMs:Number(data.duracaoMs||0),
+    fronteira:text(data.fronteira||''),
     urlPath:location.pathname,
     online:navigator.onLine!==false,
     supervisorVersion:VERSION,
@@ -148,7 +180,7 @@ function supervisorRequest(url,payload){
     }
     frame.name=frameName;frame.hidden=true;frame.setAttribute('aria-hidden','true');
     form.method='POST';form.action=url+'?_='+now();form.target=frameName;form.hidden=true;
-    var fields=Object.assign({},payload,{action:'supervisor_ia_diagnosticar',requestId:rid});
+    var requestedAction=text(payload&&payload.__action)||'supervisor_ia_diagnosticar',cleanPayload=Object.assign({},payload);delete cleanPayload.__action;var fields=Object.assign({},cleanPayload,{action:requestedAction,requestId:rid});
     Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=typeof fields[k]==='string'?fields[k]:JSON.stringify(fields[k]);form.appendChild(i)});
     window.addEventListener('message',onMessage);
     document.body.append(frame,form);
@@ -198,6 +230,32 @@ function validate(item,decision,actionResult){
   emit('conecta-supervisor-validar',result);
   return result;
 }
+function scheduleResearch(item,decision){
+  if(!decision||decision.pesquisa_online_recomendada!==true||!text(decision.tema_pesquisa))return;
+  var task=function(){
+    if(navigator.onLine===false)return;
+    var url=endpoint();if(!url)return;
+    supervisorRequest(url,{
+      __action:'supervisor_ia_pesquisar_melhoria',
+      incidente:JSON.stringify(item),
+      decisao:JSON.stringify(decision)
+    }).then(function(r){
+      if(!r||r.ok!==true||!r.pesquisa)return;
+      var p=r.pesquisa;
+      addNote({
+        incidenteId:item.id,
+        titulo:p.titulo||decision.tema_pesquisa,
+        resumo:p.recomendacao||p.resumo||'',
+        beneficioEsperado:p.beneficioEsperado||decision.beneficio_esperado||'',
+        codigo:[decision.arquivo,decision.funcao,decision.linha?('linha '+decision.linha):''].filter(Boolean).join(' • '),
+        fontes:p.fontes||[],
+        estado:'SUGERIDA_NAO_APLICADA'
+      });
+      panelShow('Pesquisa técnica concluída em paralelo.','Uma melhoria fundamentada foi registrada no Bloco de Notas.',false);
+    }).catch(function(){});
+  };
+  if(typeof requestIdleCallback==='function')requestIdleCallback(task,{timeout:4000});else setTimeout(task,1600);
+}
 function flush(){
   if(busy||navigator.onLine===false)return;
   var url=endpoint();if(!url)return;
@@ -214,7 +272,7 @@ function flush(){
       var validation=validate(item,x.r.decisao||{},x.ar);
       var all=queueRead(),found=all.find(function(z){return z.id===item.id});
       if(found){found.enviadoEm=new Date().toISOString();found.decisao=x.r.decisao||{};found.validacao=validation}
-      queueWrite(all);panelShow('Diagnóstico recebido. Executando recuperação segura.',(x.r.decisao&&x.r.decisao.arquivo?x.r.decisao.arquivo:'módulo '+item.modulo)+(x.r.decisao&&x.r.decisao.funcao?' • '+x.r.decisao.funcao:'')+(x.r.decisao&&x.r.decisao.acao?' • ação '+x.r.decisao.acao:''),true);emit('conecta-supervisor-diagnostico',{incidente:item.id,resposta:x.r});
+      queueWrite(all);scheduleResearch(item,x.r.decisao||{});var d=x.r.decisao||{},origem=text(d.origem_gargalo||'INDETERMINADO').replace(/_/g,' '),codigo=(d.arquivo?d.arquivo:'módulo '+item.modulo)+(d.funcao?' • '+d.funcao:'')+(d.linha?' • linha '+d.linha:'');panelShow('Diagnóstico: '+origem+'. '+(d.evidencia_origem||'Evidência ainda em consolidação.'),codigo+(d.acao?' • ação '+d.acao:''),true);emit('conecta-supervisor-diagnostico',{incidente:item.id,resposta:x.r});
     })
     .catch(function(e){
       var all=queueRead(),found=all.find(function(z){return z.id===item.id});
@@ -293,7 +351,7 @@ function installNetworkObserver(){
       return nativeFetch.apply(this,args).then(function(r){
         var elapsed=now()-start;inflightNetwork=Math.max(0,inflightNetwork-1);lastNetworkChangeAt=now();
         if(elapsed>=8000&&shouldIncident('fetch-slow:'+url,15000)){
-          incident('REQUISICAO_LENTA',{mensagem:'Requisição levou '+elapsed+' ms para concluir.',duracaoMs:elapsed,etapa:'rede',funcao:'fetch',arquivo:'',modulo:location.pathname+' → '+url});
+          incident('REQUISICAO_LENTA',{mensagem:'Tempo total entre envio pelo Conecta e resposta: '+elapsed+' ms. Este valor sozinho não separa internet de processamento remoto.',duracaoMs:elapsed,etapa:'rede',funcao:'fetch',arquivo:'',modulo:location.pathname+' → '+url,fronteira:'CLIENTE_ATE_RESPOSTA_REMOTA'});
         }
         if(!r.ok&&shouldIncident('fetch-http:'+url+':'+r.status,12000)){
           incident('RESPOSTA_HTTP_INESPERADA',{mensagem:'Resposta HTTP '+r.status+' em '+url+'.',duracaoMs:elapsed,etapa:'rede',funcao:'fetch'});
@@ -319,7 +377,7 @@ function installNetworkObserver(){
       function done(){
         xhr.removeEventListener('loadend',done);
         var elapsed=now()-start;inflightNetwork=Math.max(0,inflightNetwork-1);lastNetworkChangeAt=now();
-        if(elapsed>=8000&&shouldIncident('xhr-slow:'+url,15000))incident('REQUISICAO_LENTA',{mensagem:'XHR levou '+elapsed+' ms para concluir.',duracaoMs:elapsed,etapa:'rede',funcao:'XMLHttpRequest'});
+        if(elapsed>=8000&&shouldIncident('xhr-slow:'+url,15000))incident('REQUISICAO_LENTA',{mensagem:'Tempo total XHR entre envio pelo Conecta e resposta: '+elapsed+' ms. A telemetria do navegador não deve inventar separação entre rede e servidor.',duracaoMs:elapsed,etapa:'rede',funcao:'XMLHttpRequest',fronteira:'CLIENTE_ATE_RESPOSTA_REMOTA'});
         if(xhr.status>=400&&shouldIncident('xhr-http:'+url+':'+xhr.status,12000))incident('RESPOSTA_HTTP_INESPERADA',{mensagem:'XHR retornou HTTP '+xhr.status+' em '+url+'.',duracaoMs:elapsed,etapa:'rede',funcao:'XMLHttpRequest'});
       }
       xhr.addEventListener('loadend',done);
@@ -425,7 +483,8 @@ window.ConectaSupervisorIA={
   incidente:incident,
   flush:flush,
   endpoint:endpoint,
-  pendentes:function(){return queueRead().filter(function(x){return !x.enviadoEm})}
+  pendentes:function(){return queueRead().filter(function(x){return !x.enviadoEm})},
+  notas:function(){return notesRead()}
 };
 scheduleRemoteFlush(800);
 }());
