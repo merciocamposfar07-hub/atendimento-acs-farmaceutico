@@ -810,3 +810,33 @@ Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário penden
 
 Registro:
 `conecta-saude-homologacao/REGISTRO_CORRECAO_CICLO_CARREGAMENTO_PAINEIS_2026_09_13.md`.
+
+
+### Correção isolada — prevenção de ciclo de mutação no Logoff Safari
+Data: 13/09/2026
+
+Fluxo:
+`Central UBS autenticada → botão #logout protegido → MutationObserver monitora somente estados de desabilitação → estilo de toque permanece estável → pointerup/click chama logout → retorno imediato ao acesso`.
+
+Causa corrigida:
+- o bloco de proteção do Logoff observava o atributo `style`;
+- a própria callback de proteção reescrevia o `style` do mesmo botão;
+- no Safari/iPhone/iPad isso podia gerar uma cadeia de mutações e tornar o toque intermitente ou sem resposta.
+
+Correção:
+- retirada apenas a observação de `style` do `MutationObserver`;
+- mantida a proteção de `disabled`, `aria-disabled` e `data-csc-ubs-readonly-disabled`;
+- mantidos `pointerup`, fallback de `click`, cor vermelha e fluxo de encerramento;
+- nenhuma alteração em painéis, dados, permissões, PIN, áreas, agendas, vagas ou backend.
+
+Validação de código:
+- o observador atual não monitora mais `style`;
+- `pointerup` continua ligado ao Logoff;
+- fallback de `click` continua ativo;
+- HTML da Central referencia versão renovada do script.
+
+Commits:
+- correção funcional: `ad2986c597659d1d9acf46b33cce7d756263873c`;
+- publicação/cache: `1ca7f545e18c481cece29597a9dffec33d58829d`.
+
+Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação física do usuário pendente.**
