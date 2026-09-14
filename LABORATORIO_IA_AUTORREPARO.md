@@ -1,3 +1,5 @@
+> Estado implementado em 14/09/2026: piloto LOCAL SEM IA REMOTA, versão `lab-local-2026-09-14-r1`. As regras de IA/autorreparo abaixo são objetivos da etapa futura, não garantias de funcionamento atual. Consulte `laboratorio-ia/ATIVAR_HOJE.md` para capacidades, limites e testes.
+
 # LABORATÓRIO — IA + AUTODIAGNÓSTICO + AUTORREPARO
 
 Status: EXPERIMENTAL
@@ -474,3 +476,26 @@ Telemetria enviada ao Supervisor deve excluir CPF, CNS, PIN, tokens e dados pess
 
 ## Estado atual
 Branch experimental criada. A integração de IA ainda não está ativa; ela será implementada exclusivamente nesta branch.
+
+## Bloco isolado: Supervisor local sem API — 14/09/2026
+
+Único ponto de ligação: as inclusões já existentes de `laboratorio-ia/supervisor-client.js`. Nenhum novo monitor foi anexado aos fluxos de negócio.
+
+```mermaid
+flowchart TD
+    A[Inclusão existente do Supervisor] --> B[Monitores locais]
+    B --> C{Assinatura aberta ou operação explícita?}
+    C -->|Sim| D[Acumular ocorrências e evidências]
+    C -->|Não| E[Registrar incidente local]
+    D --> F[Painel e persistência limitada]
+    E --> F
+    F --> G{Validação informada completa?}
+    G -->|Sim| H[Memória de causa e correção informadas]
+    G -->|Não| I[Manter pendente sem IA]
+```
+
+Sem aresta para a API nesta versão. A memória não aplica reparos. O registro de uma validação depende de evidência externa declarada e não constitui certificação automática.
+
+Rollback: reverter o commit deste bloco na branch de laboratório; não substituir arquivos na main. Ponto anterior: `d9658858a5f9069a434cacd6c0550e8b61e81c96`.
+
+Verificação: sete testes de comportamento do cliente em ambiente simulado (Node VM); sintaxe JavaScript. Validação em iPhone e publicação navegável permanecem pendentes.
