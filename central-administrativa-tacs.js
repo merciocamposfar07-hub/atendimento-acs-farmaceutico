@@ -850,7 +850,7 @@ function ensureTask18ProfissionaisAssets(callback){
   }
   task16LoadScript('cscModuleCoreTask18','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260913-ubs-panels-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
-    task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260913-apresentacao-paineis-v2&load=20260913-loading-standard-v1',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
+    task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260913-profissionais-carga-imediata-v1',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
   });
 }
 function hideAllNativeExcept(kind){
