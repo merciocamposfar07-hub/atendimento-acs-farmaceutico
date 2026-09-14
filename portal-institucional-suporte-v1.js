@@ -24,6 +24,9 @@ function rid(prefix){return prefix+'_'+Date.now()+'_'+Math.random().toString(36)
 
 function addStyle(){
   if(document.getElementById(STYLE_ID))return;
+  /* CANON_PORTAL_TACS_REFRESH_V1 — APROVADO NO IPHONE EM 13/09/2026.
+     Não substituir o glifo ↻, não alterar 50x50, círculo, posição, cores ou centralização
+     sem solicitação explícita. O teste de integridade trava este contrato visual. */
   var s=document.createElement('style');s.id=STYLE_ID;
   s.textContent=[
     '#portalTacsAtualizarPaginaV1{top:calc(10px + env(safe-area-inset-top))!important;right:10px!important;bottom:auto!important;width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important;padding:0!important;border:2px solid rgba(255,255,255,.9)!important;border-radius:50%!important;background:#073a55!important;color:#fff!important;font-size:0!important;box-shadow:0 2px 8px rgba(0,0,0,.2)!important;z-index:2147483000!important;display:flex!important;align-items:center!important;justify-content:center!important}',
