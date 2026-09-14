@@ -181,7 +181,7 @@ function renderUbsAuthenticated(r){
  var nome=institucional?(r.unidadeId||'Unidade de saúde'):identityHeadline(r.nome||'Acesso UBS',r.perfil||'UBS');
  var detalhe=institucional?'Perfil UBS':((r.funcaoUbs||'Função não informada')+' • '+(r.unidadeId||'Unidade não informada'));
  out.hidden=false;
- out.innerHTML='<button type="button" id="cscUbsOpenPanels" class="csc-ubs-auth-link" style="color:#fff!important" aria-label="Acessar painéis da UBS '+esc(nome)+'"><strong style="color:#fff!important">'+esc(titulo)+'</strong><br><span style="color:#fff!important;font-weight:900">'+esc(nome)+'</span><br><span style="color:#fff!important">'+esc(detalhe)+'</span><span class="csc-ubs-open-copy" style="color:#fff!important">Acessar painéis da UBS</span></button>';
+ out.innerHTML='<button type="button" id="cscUbsOpenPanels" class="csc-ubs-auth-link" style="color:#fff!important;background:transparent!important;background-image:none!important;box-shadow:none!important;border:0!important" aria-label="Acessar painéis da UBS '+esc(nome)+'"><strong style="color:#fff!important">'+esc(titulo)+'</strong><br><span style="color:#fff!important;font-weight:900">'+esc(nome)+'</span><br><span style="color:#fff!important">'+esc(detalhe)+'</span><span class="csc-ubs-open-copy" style="color:#fff!important">Acessar painéis da UBS</span></button>';
  bindUbsAuthenticatedOpen(r);
 }
 function guardarUbsLocal(pin,r){
