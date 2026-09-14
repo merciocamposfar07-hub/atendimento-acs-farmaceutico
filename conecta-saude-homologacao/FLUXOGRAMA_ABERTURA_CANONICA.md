@@ -781,3 +781,32 @@ Commits funcionais:
 
 Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente antes do encerramento.**
 
+
+
+### Correção isolada — Shell visível durante a montagem dos painéis
+Data: 13/09/2026
+
+Evidência real:
+`toque em Pendências/Prontuários → viewer abre → fundo azul vazio por vários segundos → interface aparece somente ao fim da montagem`.
+
+Causa:
+`setShellOpening(true) → hidden removido pelo JavaScript → CSS canônico ainda força display:none!important → estado de abertura fica invisível`.
+
+Fluxo corrigido:
+`toque no painel → shell comum aparece → "Aguarde enquanto os dados carregam…" fica visível → painel monta → aviso desaparece → dados/sincronização seguem o fluxo já existente`.
+
+Regras:
+- correção exclusivamente visual no shell compartilhado;
+- `[hidden]` é a autoridade para esconder o estado de abertura;
+- é proibido manter `#cscModuleOpening` permanentemente em `display:none!important`;
+- nenhuma otimização nova de backend ou de perfil foi introduzida;
+- nenhum ajuste em PIN, sessão, permissões, UBS, TACS, Morador, Administrador, vagas, agendas, profissionais, dados ou gravações;
+- esta ramificação pode ser revertida isoladamente sem alterar os módulos internos.
+
+Commit funcional:
+- `ffa72697b1a9a64c19ce2282f4d0b2eeb63b3281`.
+
+Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente.**
+
+Registro:
+`conecta-saude-homologacao/REGISTRO_CORRECAO_CICLO_CARREGAMENTO_PAINEIS_2026_09_13.md`.
