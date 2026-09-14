@@ -5,40 +5,69 @@ Data: 13/09/2026
 ## Escopo autorizado
 Correção limitada à demora observada depois de tocar em **Acessar painéis da UBS**, quando a tela permanecia em `Abrindo os painéis da UBS…`.
 
-Não fazem parte desta correção: login/PIN, regras de cadastro, permissões, áreas, Morador, TACS, Administrador, vagas, gravações, layout dos painéis ou backend Apps Script.
+Não fazem parte desta correção: regras de PIN, cadastro, permissões, Morador, TACS, Administrador, vagas, gravações ou layout dos painéis.
 
 ## Diagnóstico
-A correção anterior de abertura imediata dependia de `r.areas` vir preenchido no retorno do login UBS. A correção posterior que tornou o PIN rápido passou intencionalmente a devolver `areas: []`. Com isso, o frontend deixou de usar o caminho rápido e voltou obrigatoriamente para `loadContext()`, mantendo o usuário na tela de acesso enquanto o contexto territorial era relido no servidor.
+A correção anterior de abertura imediata dependia de `r.areas` vir preenchido no retorno do login UBS. A correção posterior que tornou o PIN rápido passou intencionalmente a devolver `areas: []`. Com isso, o frontend deixou de usar o caminho rápido e voltou obrigatoriamente para `loadContext()`.
 
-## Bloco isolado — cache validado da UBS
-Arquivo funcional: `central-administrativa-tacs.js`.
+Além disso, no primeiro carregamento remoto da UBS, o backend fazia leituras territoriais repetidas na mesma requisição: a validação da sessão lia TACS/áreas e `admin_territorio_dados` voltava a ler as mesmas estruturas.
+
+## Bloco isolado A — contexto local validado da UBS
+Arquivo: `central-administrativa-tacs.js`.
 
 Fluxo:
-`PIN UBS válido → cartão UBS autenticada → tocar Acessar painéis → procurar último contexto UBS válido do mesmo cadastro/unidade → abrir Central e painéis imediatamente → sincronizar contexto remoto em segundo plano`.
+`PIN UBS válido → cartão UBS autenticada → tocar Acessar painéis → validar último contexto da MESMA UBS → abrir Central/painéis imediatamente → sincronizar em segundo plano`.
 
 Regras:
-- o snapshot UBS continua em `sessionStorage` e passa também a ser preservado em `localStorage` para o computador reconhecido da unidade;
-- o cache só é aceito quando `cadastroId` e `unidadeId` correspondem à UBS que acabou de autenticar;
+- snapshot UBS preservado em `sessionStorage` e também em `localStorage` no computador reconhecido;
+- cache só é aceito quando `cadastroId` e `unidadeId` correspondem à UBS autenticada;
 - cache de outra UBS é rejeitado;
-- a sincronização remota continua obrigatória e acontece logo após a abertura;
-- o backend não foi alterado;
-- o fluxo de Administrador, TACS e Morador não foi alterado;
-- se ainda não existir nenhum contexto local válido da UBS naquele computador, o fallback remoto existente continua sendo usado.
+- sincronização remota continua obrigatória;
+- Administrador, TACS e Morador não usam este bloco.
+
+## Bloco isolado B — remover releituras territoriais da UBS
+Arquivos:
+- `apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs`;
+- `apps-script/ZZZZ_17_TacsAreasAdminV1.gs`.
+
+Fluxo:
+`validar sessão UBS → ler TACS uma vez → ler áreas uma vez → reutilizar o mesmo snapshot em admin_territorio_dados → devolver contexto`.
+
+Antes, a mesma abertura podia reler TACS até três vezes e áreas duas vezes dentro da mesma operação. Agora, somente no perfil UBS, `contextoUbsInterno` transporta o snapshot já lido durante a validação para a montagem do contexto.
+
+Administrador e TACS continuam no fluxo anterior.
 
 ## Publicação
-- `521ca8db2a5302b3c9f2ea0bc561520f091efdd4` — abertura imediata com contexto UBS local validado;
+Frontend:
+- `521ca8db2a5302b3c9f2ea0bc561520f091efdd4` — contexto UBS local validado;
 - `c4cbaf5e715a42bfe1269ec225a7207cc0e5d822` — renovação de cache do shell;
-- `66941049e75529be66736f90edb725630f964b3f` — release integral gerado automaticamente com a nova referência.
+- `66941049e75529be66736f90edb725630f964b3f` — release integral gerado automaticamente.
 
-## Validação interna
+Backend:
+- `d1c6a720a4a335ee355d72d296d1bd40e291b4e8` — reutilização do snapshot territorial na validação UBS;
+- `3a3bc1cf4624f1f968885ca4ab72ec292a066e2c` — eliminação das releituras em `admin_territorio_dados`;
+- `34fffb8ac0c51cfe4ee5a41e6969f90805426e53` — solicitação de implantação;
+- Apps Script produção: **versão 217**.
+
+## Validação executada
+Frontend:
 - sintaxe de `central-administrativa-tacs.js`: OK;
-- marcador `CORRECAO_CIRURGICA_ABERTURA_UBS_CACHE_V1`: uma ocorrência;
-- função `restoreUbsContextCache`: uma ocorrência;
+- marcador `CORRECAO_CIRURGICA_ABERTURA_UBS_CACHE_V1`: presente uma vez;
 - teste simulado com mesma UBS: cache aceito e renderização acionada;
-- teste simulado com cadastro UBS diferente: cache recusado e nenhuma renderização indevida;
-- referência do JavaScript da Central renovada.
+- teste simulado com UBS diferente: cache recusado.
+
+Backend:
+- sintaxe dos dois módulos alterados: OK antes da publicação;
+- workflow de implantação `34794709509`: **success**;
+- substituição somente dos módulos autorizados: **success**;
+- implantação no mesmo deployment: **success**;
+- health check da primeira tentativa: moradores, território, CSV, manutenção, isolamento, agendas, painéis públicos e conteúdo: **todos aprovados**;
+- Apps Script avançou da versão 216 para **217**.
+
+GitHub Pages:
+- build/deploy do commit de publicação: **success**.
 
 ## Estado
 **PUBLICADA PARA TESTE NO DISPOSITIVO.**
 
-Não marcar como concluída operacionalmente até o usuário testar no iPhone/computador da UBS e confirmar que o toque em **Acessar painéis da UBS** não permanece mais preso em `Abrindo os painéis da UBS…`.
+A correção não deve ser marcada como concluída operacionalmente até o usuário testar no iPhone/computador da UBS e confirmar que o toque em **Acessar painéis da UBS** deixou de permanecer preso em `Abrindo os painéis da UBS…`.
