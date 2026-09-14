@@ -701,3 +701,26 @@ Validação:
 - estado: **PUBLICADA PARA TESTE NO DISPOSITIVO**.
 
 Registro: `REGISTRO_CORRECAO_CICLO_CARREGAMENTO_PAINEIS_2026_09_13.md`.
+
+
+### Correção isolada — Atalho Portal TACS sem tela azul
+Data: 13/09/2026
+
+Fluxo:
+`Central → atalho Portal do Morador / Portal TACS → salvar URL da Central → abrir rota pública real na mesma aba → Portal TACS → Voltar à Central`.
+
+Regras:
+- ramo exclusivo do atalho do Portal TACS;
+- o Portal público não passa pelo viewer genérico dos painéis administrativos;
+- a sessão da Central permanece em `sessionStorage`;
+- a URL administrativa é preservada em `portalTacsCentralReturnUrlV1`;
+- `from=central` identifica o retorno;
+- nenhum outro painel ou regra de negócio é alterado.
+
+Validação:
+- marcador `CORRECAO_CIRURGICA_ATALHO_PORTAL_TACS_20260913_V1`: presente;
+- sintaxe do JavaScript principal: válida;
+- chamadas antigas `ensureShellFrame('portal', ...)` e `showShellFrame('portal', ...)` removidas do fluxo do atalho;
+- estado: **PUBLICADA PARA TESTE NO DISPOSITIVO**.
+
+Registro: `REGISTRO_CORRECAO_ATALHO_PORTAL_TACS_TELA_AZUL_2026_09_13.md`.
