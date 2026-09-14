@@ -36,6 +36,21 @@ function currentFileFromStack(stack){
 function queueRead(){try{return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]')}catch(e){return []}}
 function queueWrite(q){try{localStorage.setItem(QUEUE_KEY,JSON.stringify(q.slice(-MAX_QUEUE)))}catch(e){}}
 function emit(name,detail){try{window.dispatchEvent(new CustomEvent(name,{detail:detail}))}catch(e){}}
+function ensurePanel(){
+  var box=document.getElementById('conectaSupervisorIaPanel');
+  if(box)return box;
+  box=document.createElement('aside');box.id='conectaSupervisorIaPanel';
+  box.setAttribute('aria-live','polite');
+  box.style.cssText='position:fixed;right:10px;bottom:10px;z-index:2147483646;width:min(92vw,390px);max-height:48vh;overflow:auto;background:#062c46;color:#fff;border:1px solid #69c7e7;border-radius:14px;box-shadow:0 12px 38px rgba(0,0,0,.28);padding:12px;font:12px/1.42 -apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;display:none';
+  box.innerHTML='<div style="font-weight:900;font-size:13px;margin-bottom:6px">Supervisor IA — laboratório</div><div data-sup-status>Monitorando o Conecta.</div><div data-sup-tech style="margin-top:7px;color:#d8eef7"></div>';
+  document.body.appendChild(box);return box;
+}
+function panelShow(status,tech,keep){
+  var box=ensurePanel();box.style.display='block';
+  var a=box.querySelector('[data-sup-status]'),b=box.querySelector('[data-sup-tech]');
+  if(a)a.textContent=text(status);if(b)b.textContent=text(tech);
+  if(!keep)setTimeout(function(){if(box&&box.parentNode)box.style.display='none'},6500);
+}
 function incident(kind,data){
   data=data||{};
   var stack=text(data.stack||new Error().stack),loc=currentFileFromStack(stack);
@@ -57,7 +72,7 @@ function incident(kind,data){
     supervisorVersion:VERSION,
     estado:'DIAGNOSTICO_EM_ANDAMENTO'
   };
-  var q=queueRead();q.push(item);queueWrite(q);emit('conecta-supervisor-incidente',item);flush();
+  var q=queueRead();q.push(item);queueWrite(q);panelShow('Inconsistência detectada. Diagnóstico automático iniciado.','Incidente '+item.id+' • '+(item.arquivo||item.modulo)+(item.linha?' • linha '+item.linha:''),true);emit('conecta-supervisor-incidente',item);flush();
   return item.id;
 }
 function supervisorRequest(url,payload){
@@ -155,11 +170,11 @@ function flush(){
       var validation=validate(item,x.r.decisao||{},x.ar);
       var all=queueRead(),found=all.find(function(z){return z.id===item.id});
       if(found){found.enviadoEm=new Date().toISOString();found.decisao=x.r.decisao||{};found.validacao=validation}
-      queueWrite(all);emit('conecta-supervisor-diagnostico',{incidente:item.id,resposta:x.r});
+      queueWrite(all);panelShow('Diagnóstico recebido. Executando recuperação segura.',(x.r.decisao&&x.r.decisao.arquivo?x.r.decisao.arquivo:'módulo '+item.modulo)+(x.r.decisao&&x.r.decisao.funcao?' • '+x.r.decisao.funcao:'')+(x.r.decisao&&x.r.decisao.acao?' • ação '+x.r.decisao.acao:''),true);emit('conecta-supervisor-diagnostico',{incidente:item.id,resposta:x.r});
     })
     .catch(function(e){
       var all=queueRead(),found=all.find(function(z){return z.id===item.id});
-      if(found){found.ultimaFalhaSupervisor=redact(e&&e.message||e);found.estado=navigator.onLine===false?'PENDENTE_REDE':'DIAGNOSTICO_EM_ANDAMENTO'}
+      if(found){found.ultimaFalhaSupervisor=redact(e&&e.message||e);found.estado=navigator.onLine===false?'PENDENTE_REDE':'DIAGNOSTICO_EM_ANDAMENTO'} panelShow(navigator.onLine===false?'Sem internet. Reparo ficará pendente e retomará automaticamente.':'Supervisor ainda está isolando a causa.','Incidente '+item.id+' permanece aberto.',true)
       queueWrite(all);
     })
     .finally(function(){busy=false;setTimeout(flush,1200)});
@@ -174,7 +189,7 @@ window.addEventListener('unhandledrejection',function(e){
   incident('UNHANDLED_REJECTION',{mensagem:reason.message||reason,stack:reason.stack,etapa:'promise'});
 });
 window.addEventListener('offline',function(){incident('REDE_OFFLINE',{mensagem:'Conexão com a internet indisponível.',etapa:'rede'})});
-window.addEventListener('online',function(){emit('conecta-supervisor-rede-restaurada',{});flush()});
+window.addEventListener('online',function(){panelShow('Internet restaurada. Retomando reparos pendentes.','Supervisor IA retomando fila.',true);emit('conecta-supervisor-rede-restaurada',{});flush()});
 try{
   if(window.PerformanceObserver){
     var po=new PerformanceObserver(function(list){
