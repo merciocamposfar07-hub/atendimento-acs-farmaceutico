@@ -302,6 +302,43 @@ Qualquer código que não tenha função operacional validada, que tenha sido su
 
 Backup serve para rollback e auditoria. Não serve para multiplicar versões do aplicativo.
 
+## Escopo global de supervisão ponta a ponta
+O Supervisor IA do laboratório deve acompanhar a execução completa do Conecta Saúde Comunitária, e não somente a Central Administrativa.
+
+Cobertura obrigatória:
+- entrada e autenticação;
+- Central Administrativa;
+- painel de UBS;
+- agendas e vagas;
+- profissionais e serviços;
+- recados e campanhas;
+- TACS e áreas;
+- municípios e organizações;
+- suporte e busca de moradores;
+- portal público/morador;
+- navegação entre telas;
+- carregamento e renderização;
+- requisições de rede;
+- sessão e cache;
+- cliques e comandos que não produzam resposta;
+- indicadores de carregamento persistentes;
+- falhas JavaScript e Promises;
+- bloqueios prolongados da interface;
+- perda e retorno de internet.
+
+O Supervisor deve acompanhar a experiência real do humano final e priorizar:
+1. fluidez de navegação;
+2. resposta rápida aos comandos;
+3. continuidade operacional;
+4. dados coerentes e completos;
+5. recuperação automática de falhas;
+6. redução de esperas desnecessárias;
+7. prevenção de recorrência de problemas já certificados.
+
+A atuação automática pode otimizar, reparar, sanar e ajustar problemas técnicos de execução e experiência operacional quando houver relação causal demonstrada.
+
+O Supervisor NÃO pode, por iniciativa própria, redefinir regras de negócio, permissões, distribuição de vagas, vínculos territoriais, conteúdo clínico, cadastros ou decisões administrativas. Alterações desse tipo não são autorreparo técnico e permanecem fora do escopo automático.
+
 ## Regra de isolamento
 Nenhuma alteração deste laboratório pode ser aplicada à branch main sem decisão explícita posterior.
 
