@@ -60,14 +60,41 @@ function incident(kind,data){
   var q=queueRead();q.push(item);queueWrite(q);emit('conecta-supervisor-incidente',item);flush();
   return item.id;
 }
-function postForm(url,payload){
+function supervisorRequest(url,payload){
   return new Promise(function(resolve,reject){
-    var body=new URLSearchParams();
-    Object.keys(payload).forEach(function(k){body.set(k,typeof payload[k]==='string'?payload[k]:JSON.stringify(payload[k]))});
-    fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'})
-      .then(function(r){return r.text()})
-      .then(function(t){try{resolve(JSON.parse(t))}catch(e){reject(new Error('Resposta do Supervisor não é JSON.'))}})
-      .catch(reject);
+    var rid='sup_'+now()+'_'+Math.random().toString(36).slice(2,10);
+    var frame=document.createElement('iframe'),form=document.createElement('form');
+    var frameName='conectaSupervisorFrame'+now()+'_'+Math.floor(Math.random()*10000),done=false,pollTimer=null,deadline=now()+18000;
+    function cleanup(){clearTimeout(pollTimer);window.removeEventListener('message',onMessage);if(form.parentNode)form.remove();setTimeout(function(){if(frame.parentNode)frame.remove()},100)}
+    function finish(err,result){if(done)return;done=true;cleanup();err?reject(err):resolve(result)}
+    function onMessage(e){
+      if(e.source!==frame.contentWindow)return;
+      var d=e.data;if(typeof d==='string'){try{d=JSON.parse(d)}catch(ignore){return}}
+      if(!d||d.source!=='conecta-supervisor-ia-lab'||text(d.requestId)!==rid)return;
+      finish(null,d.result||{ok:false,message:'Resposta vazia do Supervisor.'});
+    }
+    function jsonpPoll(){
+      if(done)return;
+      var cb='__conectaSupervisor'+now()+Math.floor(Math.random()*10000),s=document.createElement('script'),settled=false;
+      function clear(){try{delete window[cb]}catch(e){window[cb]=undefined}if(s.parentNode)s.remove()}
+      window[cb]=function(r){
+        if(settled)return;settled=true;clear();
+        if(r&&r.ok===true&&r.pendente===false){finish(null,r.result);return}
+        if(now()>=deadline){finish(new Error('Supervisor IA não respondeu dentro do limite operacional.'));return}
+        pollTimer=setTimeout(jsonpPoll,1200);
+      };
+      s.onerror=function(){if(settled)return;settled=true;clear();if(now()>=deadline)finish(new Error('Falha de comunicação com o Supervisor IA.'));else pollTimer=setTimeout(jsonpPoll,1400)};
+      s.src=url+'?action=supervisor_ia_result&requestId='+encodeURIComponent(rid)+'&callback='+encodeURIComponent(cb)+'&_='+now();
+      document.head.appendChild(s);
+    }
+    frame.name=frameName;frame.hidden=true;frame.setAttribute('aria-hidden','true');
+    form.method='POST';form.action=url+'?_='+now();form.target=frameName;form.hidden=true;
+    var fields=Object.assign({},payload,{action:'supervisor_ia_diagnosticar',requestId:rid});
+    Object.keys(fields).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=typeof fields[k]==='string'?fields[k]:JSON.stringify(fields[k]);form.appendChild(i)});
+    window.addEventListener('message',onMessage);
+    document.body.append(frame,form);
+    try{form.submit()}catch(e){finish(e);return}
+    pollTimer=setTimeout(jsonpPoll,1500);
   });
 }
 function localRecover(item){
@@ -119,7 +146,7 @@ function flush(){
   if(!item)return;
   busy=true;
   var local=localRecover(item);
-  postForm(url,{action:'supervisor_ia_diagnosticar',incidente:JSON.stringify(item),recuperacaoLocal:JSON.stringify(local)})
+  supervisorRequest(url,{incidente:JSON.stringify(item),recuperacaoLocal:JSON.stringify(local)})
     .then(function(r){
       if(!r||r.ok!==true)throw new Error(text(r&&r.message)||'Supervisor remoto recusou o incidente.');
       return applyRuntimeAction(item,r.decisao||{}).then(function(ar){return {r:r,ar:ar}});
