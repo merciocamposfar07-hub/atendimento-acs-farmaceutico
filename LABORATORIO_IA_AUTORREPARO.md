@@ -302,6 +302,29 @@ Qualquer código que não tenha função operacional validada, que tenha sido su
 
 Backup serve para rollback e auditoria. Não serve para multiplicar versões do aplicativo.
 
+## Regra de acompanhamento contínuo da sessão
+Depois de inicializado junto com o aplicativo, o Supervisor deve permanecer acompanhando toda a sessão do usuário.
+
+Ele deve observar de forma leve:
+- abertura do aplicativo;
+- navegação entre telas e painéis;
+- comandos do usuário;
+- mudanças de rota;
+- visibilidade/retorno ao aplicativo;
+- início e fim de operações relevantes;
+- tempos de resposta;
+- incidentes e recuperações;
+- resultado das correções validadas.
+
+Esse acompanhamento serve para compreender como o Conecta funciona no uso real e identificar oportunidades de melhoria técnica, sem competir por recursos com o aplicativo.
+
+O aprendizado deve usar contexto operacional real da sessão, mas qualquer alteração automática deve continuar obedecendo à regra causal:
+problema confirmado → localizar bloco responsável → corrigir somente esse bloco → testar → validar → consolidar.
+
+O Supervisor não pode criar versões paralelas como forma de aprendizado. O que for aprendido deve melhorar o bloco canônico existente, os testes de regressão, as regras preventivas e a memória técnica.
+
+Melhorias preventivas e de otimização só podem ser aplicadas automaticamente quando houver evidência técnica de ganho e ausência de regressão no fluxo afetado. Caso contrário, permanecem como conhecimento/hipótese e não alteram o código operacional.
+
 ## Regra de não degradação pelo próprio Supervisor
 O Supervisor IA não pode reduzir a velocidade, responsividade ou fluidez do Conecta Saúde Comunitária.
 
