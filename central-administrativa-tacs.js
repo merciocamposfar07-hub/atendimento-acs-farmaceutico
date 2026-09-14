@@ -1453,7 +1453,7 @@ function instalarProtecaoLogoff(){
   logoutGuardObserver=new MutationObserver(function(){garantirLogoffDisponivel()});
   logoutGuardObserver.observe(btn,{
     attributes:true,
-    attributeFilter:['disabled','aria-disabled','data-csc-ubs-readonly-disabled','style']
+    attributeFilter:['disabled','aria-disabled','data-csc-ubs-readonly-disabled']
   });
 }
 /* LOGOFF_TOQUE_RESILIENTE_V6:
