@@ -1368,6 +1368,31 @@ function loadContext(message){
   });
 }
 var logoutEmCurso=false;
+/* LOGOFF_RESILIENTE_V5:
+   Proteção isolada do botão Logoff. Em sessão ativa ele nunca pode permanecer
+   desabilitado por estado visual, modo somente leitura ou restauração BFCache. */
+var logoutGuardObserver=null;
+function garantirLogoffDisponivel(){
+  var btn=el('logout');if(!btn)return;
+  if(token||territoryToken||ubsToken)logoutEmCurso=false;
+  try{
+    btn.disabled=false;
+    btn.removeAttribute('disabled');
+    btn.removeAttribute('aria-disabled');
+    btn.removeAttribute('data-csc-ubs-readonly-disabled');
+    if(btn.style&&btn.style.pointerEvents==='none')btn.style.removeProperty('pointer-events');
+  }catch(e){}
+}
+function instalarProtecaoLogoff(){
+  var btn=el('logout');if(!btn)return;
+  garantirLogoffDisponivel();
+  if(logoutGuardObserver||typeof MutationObserver!=='function')return;
+  logoutGuardObserver=new MutationObserver(function(){garantirLogoffDisponivel()});
+  logoutGuardObserver.observe(btn,{
+    attributes:true,
+    attributeFilter:['disabled','aria-disabled','data-csc-ubs-readonly-disabled','style']
+  });
+}
 function cancelarOperacaoAtivaSemCallback(){
   if(!active)return;
   var op=active;active=null;
@@ -1506,7 +1531,7 @@ el('loginTacs').addEventListener('click',function(){
     startRemoteAuthSync('tacs',pin,Boolean(saved));
   });
 });
-el('adminArea').addEventListener('change',function(){if(mode!=='admin'&&mode!=='ubs')return;resetModuleShell();selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}publishModuleCore();if(mode==='ubs')loadContext('Área da UBS selecionada.');else renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
+el('adminArea').addEventListener('change',function(){if(mode!=='admin'&&mode!=='ubs')return;resetModuleShell();selectedAreaId=normArea(this.value);try{localStorage.setItem(AREA_KEY,selectedAreaId)}catch(e){}publishModuleCore();if(mode==='ubs')loadContext('Área da UBS selecionada.');else renderContext()});el('refreshHealth').addEventListener('click',function(){refreshHealth(true)});instalarProtecaoLogoff();el('logout').addEventListener('click',logout);el('viewerBack').addEventListener('click',closeViewer);
 el('viewerFrame').addEventListener('load',function(){try{applyUiStandard(el('viewerFrame').contentDocument)}catch(e){}});
 el('moduleGrid').addEventListener('click',function(e){var btn=e.target.closest('.module');if(!btn||btn.disabled||btn.hidden)return;if(btn.dataset.module!=='ubs'){adminUbsContext=null;adminUbsPreviousAreaId=''}openModule(btn.dataset.module,btn.querySelector('strong').textContent)});
 /* CENTRAL_RETURN_R6: restaura imediatamente o conteúdo ao voltar pelo histórico/BFCache do iPhone. */
@@ -1515,6 +1540,7 @@ window.addEventListener('pageshow',function(){
   territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'';
   ubsToken=sessionStorage.getItem(UBS_TOKEN_KEY)||'';
   mode=territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':''));
+  garantirLogoffDisponivel();
   document.body.classList.remove('viewer-open');
   var viewer=el('viewer');if(viewer)viewer.hidden=true;
   shellActiveModule='';
