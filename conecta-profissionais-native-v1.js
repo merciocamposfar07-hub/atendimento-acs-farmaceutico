@@ -59,7 +59,7 @@ function create(host,options){
   if(!core||typeof core.session!=='function')throw new Error('Núcleo Conecta indisponível para Profissionais.');
   var areaId=text(options&&options.areaId||core.areaId&&core.areaId()||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)||'JAPARANDUBA';
   var scope=(core.mode&&core.mode()||'')+'|'+areaId;
-  var data={profissionais:[],servicos:[]},confirmed=false,dirty=false,visible=false,bridgeReady=false,booting=false;
+  var data={profissionais:[],servicos:[]},confirmed=false,dirty=false,visible=false,bridgeReady=false,booting=false,remoteWaitTimer=null;
 
   host.innerHTML=template(areaId);
   host.dataset.tacsDirty='0';
@@ -89,6 +89,33 @@ function create(host,options){
     render();
     if(message)setStatus(message,confirmed?'ok':'warn');
     return true;
+  }
+
+  /* CORRECAO_CIRURGICA_PROF_SERV_CARGA_IMEDIATA_V1
+     Exibe a última leitura válida deste mesmo modo/área enquanto confirma no servidor. */
+  function primeCached(){
+    var perf=core&&core.performance;
+    if(!perf||typeof perf.prime!=='function')return false;
+    var used=false;
+    try{
+      perf.prime('profissionais',function(cached){
+        if(!cached)return;
+        used=useSnapshot({
+          ok:true,confirmado:false,
+          profissionais:Array.isArray(cached.profissionais)?cached.profissionais:[],
+          servicos:Array.isArray(cached.servicos)?cached.servicos:[]
+        },'Dados válidos anteriores exibidos. Confirmando atualização…')||used;
+      });
+    }catch(e){}
+    return used;
+  }
+  function scheduleRemoteReady(){
+    if(remoteWaitTimer||!visible||bridgeReady||booting)return;
+    remoteWaitTimer=setTimeout(function(){
+      remoteWaitTimer=null;
+      if(!visible||bridgeReady||booting)return;
+      if(remoteReady())ensureBridge();else scheduleRemoteReady();
+    },350);
   }
 
   function serviceOptions(selected){
@@ -162,13 +189,15 @@ function create(host,options){
     if(booting||bridgeReady)return;
     if(!remoteReady()){
       confirmed=false;disableWrites();
-      setStatus('Aguarde enquanto os dados carregam…','warn');
+      if(!data.profissionais.length&&!data.servicos.length)setStatus('Aguarde enquanto os dados carregam…','warn');
+      scheduleRemoteReady();
       return;
     }
+    if(remoteWaitTimer){clearTimeout(remoteWaitTimer);remoteWaitTimer=null}
     booting=true;
-    var frame=q('bridge'),mode=core.mode&&core.mode(),access=mode==='tacs'?'&acesso=tacs':'';
+    var frame=q('bridge'),mode=core.mode&&core.mode(),access=mode==='tacs'?'&acesso=tacs':(mode==='ubs'?'&acesso=ubs':'');
     frame.onload=function(){booting=false;waitBridge(0)};
-    frame.src='/atendimento-acs-farmaceutico/teste-v1/painel-profissionais-servicos-v1.html?area='+encodeURIComponent(areaId)+access+'&from=central&bridge=1&v=20260912-task18-profissionais-native-v1';
+    frame.src='/atendimento-acs-farmaceutico/teste-v1/painel-profissionais-servicos-v1.html?area='+encodeURIComponent(areaId)+access+'&from=central&bridge=1&v=20260913-profissionais-carga-imediata-v1';
   }
 
   function field(card,name){var n=card.querySelector('[name="'+name+'"]');return n?n.value:''}
@@ -257,13 +286,14 @@ function create(host,options){
     scope:scope,
     mount:function(){
       visible=true;host.hidden=false;
-      if(!remoteReady()){confirmed=false;disableWrites();setStatus('Aguarde enquanto os dados carregam…','warn');return}
+      primeCached();
+      if(!remoteReady()){confirmed=false;disableWrites();if(!data.profissionais.length&&!data.servicos.length)setStatus('Aguarde enquanto os dados carregam…','warn');scheduleRemoteReady();return}
       if(!bridgeReady)ensureBridge();
       else{var api=bridge();if(api)api.reload(function(r){if(r&&r.snapshot)useSnapshot(r.snapshot,'Profissionais e serviços atualizados.')})}
     },
-    hide:function(){visible=false;host.hidden=true},
+    hide:function(){visible=false;if(remoteWaitTimer){clearTimeout(remoteWaitTimer);remoteWaitTimer=null}host.hidden=true},
     hasUnsaved:function(){return dirty},
-    reset:function(){visible=false;dirty=false;host.dataset.tacsDirty='0';var f=q('bridge');if(f)f.src='about:blank';host.innerHTML='';host.hidden=true}
+    reset:function(){visible=false;dirty=false;if(remoteWaitTimer){clearTimeout(remoteWaitTimer);remoteWaitTimer=null}host.dataset.tacsDirty='0';var f=q('bridge');if(f)f.src='about:blank';host.innerHTML='';host.hidden=true}
   };
 }
 
