@@ -600,7 +600,9 @@ Validação interna executada:
 Commits da correção:
 - `183093fac7404d65babe688a6e11c69b9870a4e0` — dados/cache e preparação antecipada dos painéis;
 - `13f3cbb92cce3a7072c2e5644f042294004f8383` — barra inferior no shell inicial;
-- `6acbb75d8634c87faeb9b4d2109e3760e3646504` — renovação de cache da Central otimizada.
+- `6acbb75d8634c87faeb9b4d2109e3760e3646504` — renovação de cache da Central otimizada;
+- `b59ce196a665524f3da39f032039dedc1d891ff2` — hidratação do dock registrada na fonte canônica App4;
+- `50de857242a8d6e2dbeb233ae5958b2114b3e4a5` — publicação da hidratação canônica no HTML da Central.
 
 Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente antes do encerramento.**
 
