@@ -765,8 +765,13 @@ function conectaAcessoV1ValidarSessaoUbs_(p,silencioso){
   var sessao;
   try{sessao=JSON.parse(raw);}catch(erroJson){throw new Error('A sessão da UBS é inválida.');}
   if(!sessao||sessao.dispositivoHash!==conectaAcessoV1Hash_(dispositivo))throw new Error('A sessão da UBS pertence a outro aparelho.');
-  if(typeof tacsTerritorioV1EncontrarTacs_!=='function'||typeof tacsTerritorioV1PerfilTem_!=='function'||typeof tacsTerritorioV1LerAreas_!=='function')throw new Error('O contexto territorial da UBS não está disponível.');
-  var ubs=tacsTerritorioV1EncontrarTacs_(sessao.cadastroId);
+  if(typeof tacsTerritorioV1LerTacs_!=='function'||typeof tacsTerritorioV1PerfilTem_!=='function'||typeof tacsTerritorioV1LerAreas_!=='function')throw new Error('O contexto territorial da UBS não está disponível.');
+  /* CORRECAO_CIRURGICA_UBS_CONTEXTO_SEM_RELEITURA_V1:
+     a validação da sessão lê TACS e áreas uma única vez e entrega o mesmo snapshot
+     para admin_territorio_dados reutilizar na mesma execução. Evita reler as mesmas
+     planilhas 3x/2x antes de abrir os painéis da UBS. */
+  var todosTacs=tacsTerritorioV1LerTacs_(),ubs=null;
+  for(var ti=0;ti<todosTacs.length;ti++)if(conectaAcessoV1Id_(todosTacs[ti]&&todosTacs[ti].tacsId)===conectaAcessoV1Id_(sessao.cadastroId)){ubs=todosTacs[ti];break;}
   if(!ubs||ubs.ativo!==true||!tacsTerritorioV1PerfilTem_(ubs.perfil,'UBS'))throw new Error('O acesso desta UBS foi desativado ou alterado.');
   var unidadeId=conectaAcessoV1Id_(ubs.unidadeId);
   if(!unidadeId)throw new Error('A UBS não possui unidade de saúde vinculada.');
@@ -784,7 +789,8 @@ function conectaAcessoV1ValidarSessaoUbs_(p,silencioso){
     tacsId:conectaAcessoV1Id_(ubs.tacsId),cadastroId:conectaAcessoV1Id_(ubs.tacsId),
     areaId:conectaAcessoV1Id_(area.areaId),areaNome:conectaAcessoV1Texto_(area.areaNome)||conectaAcessoV1Id_(area.areaId),
     unidadeId:unidadeId,planilhaId:conectaAcessoV1Texto_(area.planilhaId),
-    permissoes:Array.isArray(ubs.permissoes)?ubs.permissoes.slice():[],ubsToken:token
+    permissoes:Array.isArray(ubs.permissoes)?ubs.permissoes.slice():[],ubsToken:token,
+    contextoUbsInterno:{todosTacs:todosTacs,areasUbs:areas,ubsAtual:ubs}
   };
 }
 
