@@ -22,6 +22,8 @@ jobs:
           node-version: '20'
       - name: Validar cliente Supervisor
         run: node --check laboratorio-ia/supervisor-client.js
+      - name: Testar Supervisor local sem API
+        run: node --test laboratorio-ia/test-local.cjs
       - name: Validar backend Apps Script como JavaScript
         shell: bash
         run: |
