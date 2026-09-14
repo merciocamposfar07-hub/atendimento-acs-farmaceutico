@@ -52,25 +52,35 @@ function statusNode(id){
 function setStatus(id,msg,type){
   var node=statusNode(id);
   if(!node)return;
+  node.style.removeProperty('display');
   node.hidden=false;
   node.textContent=msg;
   node.className='status'+(type?' '+type:'');
 }
-/* CORRECAO_CIRURGICA_LOADER_MORADORES_20260913_V1
-   Os dois avisos de carregamento existem somente durante a leitura da base.
-   Quando a confirmação termina, o aviso some sem alterar dados, permissões ou ações do painel. */
+/* CORRECAO_CIRURGICA_LOADER_MORADORES_20260913_V2
+   O aviso de carregamento existe somente enquanto o painel ainda não exibiu os dados.
+   Ao surgir o snapshot visível, remove somente a mensagem de carregamento, inclusive em Safari/iPhone. */
 function hideStatus(id){
   var node=statusNode(id);
   if(!node)return;
   node.textContent='';
   node.className='status';
   node.hidden=true;
+  node.style.setProperty('display','none','important');
 }
 function hideLoadingStatus(id){
   var node=statusNode(id);
   if(!node)return;
-  var value=text(node.textContent);
-  if(value==='Aguarde enquanto os dados carregam…')hideStatus(id);
+  var value=text(node.textContent).replace(/…/g,'...');
+  if(value==='Aguarde enquanto os dados carregam...'||value==='Aguarde enquanto os dados carregam')hideStatus(id);
+}
+function settleLoadingStatuses(){
+  hideLoadingStatus('loginStatus');
+  hideLoadingStatus('operationStatus');
+  setTimeout(function(){
+    hideLoadingStatus('loginStatus');
+    hideLoadingStatus('operationStatus');
+  },120);
 }
 function requestId(action){
   return 'morv2_'+String(action||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
@@ -498,7 +508,7 @@ function confirmBaseState(r,message){
   if(el('consolidation'))el('consolidation').textContent=consolidationEnabled?'LIBERADA':'BLOQ.';
   if(el('situation'))el('situation').textContent=situationEnabled?'LIBERADA':'PROTEGIDA';
   hideStatus('loginStatus');
-  hideLoadingStatus('operationStatus');
+  settleLoadingStatuses();
   setTimeout(function(){maybeActivateSituation(r)},0);
 }
 function renderBase(r,message,confirmed){
@@ -521,13 +531,8 @@ function renderBase(r,message,confirmed){
   if(el('content'))el('content').classList.remove('hidden');
   if(el('logout'))el('logout').disabled=false;
   ensureSituationUi();setBaseLoading(false);updateNote();syncControls();
-  if(remoteConfirmed){
-    hideStatus('loginStatus');
-    hideLoadingStatus('operationStatus');
-  }else{
-    hideStatus('loginStatus');
-    hideLoadingStatus('operationStatus');
-  }
+  hideStatus('loginStatus');
+  settleLoadingStatuses();
   if(PRONTUARIOS_VIEW&&accessMode==='admin'){
     var searchHelp=rootQuery('#searchArea .muted');
     if(searchHelp)searchHelp.textContent='Busque por nome, CPF, CNS ou cadastro familiar. A consulta percorre todas as áreas cadastradas.';
