@@ -235,14 +235,37 @@ Quando detectar condições conhecidas que antecedem uma falha, deve agir antes 
 - trocar para snapshot/fallback quando a telemetria indicar degradação já catalogada;
 - bloquear a introdução de código que viole uma regra preventiva estabelecida após incidente anterior.
 
-## Limite de garantia
-O sistema deve perseguir a não recorrência da mesma causa conhecida, mas não pode declarar garantia absoluta de que um erro nunca mais ocorrerá. Mudanças de rede, navegador, serviço externo, dados ou código podem criar novas condições.
+## Regra de não recorrência de falha já certificada
+Para a mesma falha, mesma causa-raiz, mesmo bloco causal e mesmo fluxo funcional já corrigidos, aprendidos, testados e certificados no código canônico, a recorrência é proibida.
 
-A exigência correta é:
-- nenhuma causa conhecida pode ser ignorada;
-- toda causa validada deve gerar prevenção permanente;
-- toda regressão da mesma causa deve ser tratada como falha grave do mecanismo de prevenção;
-- a mensagem de prevenção bem-sucedida só pode ser emitida quando os testes de regressão correspondentes passarem.
+Depois que um incidente atingir simultaneamente:
+- `RESOLVIDO_VALIDADO`;
+- `ESTADO_NORMAL_RESTAURADO`;
+- teste funcional real aprovado;
+- teste de regressão permanente aprovado;
+- regra preventiva incorporada ao bloco canônico;
+
+o Supervisor deve considerar aquela causa como condição que não pode voltar a produzir o mesmo defeito naquele fluxo.
+
+Se a mesma causa voltar a gerar a mesma falha, o sistema deve classificar o evento como `REGRESSAO_CRITICA_DE_FALHA_CERTIFICADA`, porque isso significa que pelo menos uma destas garantias falhou:
+- a correção não foi consolidada corretamente;
+- a regra preventiva deixou de ser aplicada;
+- uma alteração posterior reintroduziu a causa;
+- o teste de regressão não cobriu corretamente o comportamento real;
+- o bloco canônico foi substituído, duplicado ou desviado por outra versão;
+- a certificação anterior foi emitida sem evidência suficiente.
+
+Nessa situação, o Supervisor deve:
+1. restaurar imediatamente o último estado realmente certificado;
+2. impedir que a mesma mudança defeituosa permaneça ativa;
+3. localizar qual alteração reintroduziu a causa;
+4. corrigir o mesmo bloco causal;
+5. repetir todos os testes funcionais e de regressão associados;
+6. atualizar a memória técnica para impedir nova reincidência;
+7. não emitir nova certificação até provar novamente o comportamento real.
+
+Mudanças externas ou uma causa nova podem gerar um incidente diferente, mas isso não pode ser usado para justificar o retorno de uma falha já conhecida e certificada pela mesma causa.
+
 
 ## Regra de isolamento
 Nenhuma alteração deste laboratório pode ser aplicada à branch main sem decisão explícita posterior.
