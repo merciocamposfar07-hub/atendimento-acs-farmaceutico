@@ -9,7 +9,8 @@ var busy=false;
 var lastIncidentAt=0;
 var MAX_QUEUE=40;
 var APP_BOOT_AT=(performance&&performance.timeOrigin)||Date.now();
-var lastDomMutationAt=now(),inflightNetwork=0,lastNetworkChangeAt=0,incidentSignatures={};
+var SUPERVISOR_SYNC_BUDGET_MS=4,supervisorCostWindowStart=now(),supervisorCostMs=0,lightMode=false;
+var lastDomMutationAt=now(),inflightNetwork=0,lastNetworkChangeAt=0,incidentSignatures={},loadingCandidates=[];
 
 function text(v){return String(v==null?'':v).trim()}
 function now(){return Date.now()}
@@ -38,6 +39,35 @@ function currentFileFromStack(stack){
 function queueRead(){try{return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]')}catch(e){return []}}
 function queueWrite(q){try{localStorage.setItem(QUEUE_KEY,JSON.stringify(q.slice(-MAX_QUEUE)))}catch(e){}}
 function emit(name,detail){try{window.dispatchEvent(new CustomEvent(name,{detail:detail}))}catch(e){}}
+function supervisorWork(fn){
+  var start=(performance&&performance.now)?performance.now():Date.now(),out;
+  try{out=fn()}finally{
+    var end=(performance&&performance.now)?performance.now():Date.now(),cost=Math.max(0,end-start);
+    supervisorCostMs+=cost;
+    if(now()-supervisorCostWindowStart>=5000){
+      lightMode=supervisorCostMs>20;
+      supervisorCostMs=0;supervisorCostWindowStart=now();
+    }
+  }
+  return out;
+}
+function scheduleRemoteFlush(delay){
+  var run=function(){flush()};
+  if(typeof window.requestIdleCallback==='function'){
+    window.requestIdleCallback(run,{timeout:Math.max(250,Number(delay||500))});
+  }else setTimeout(run,Math.max(30,Number(delay||120)));
+}
+function loadingLike(n){
+  if(!n||n.nodeType!==1)return false;
+  try{return n.matches('[aria-busy="true"],.loading,.loader,.spinner,[class*="loading"],[class*="spinner"]')}catch(e){return false}
+}
+function rememberLoadingCandidate(n){
+  if(!loadingLike(n))return;
+  if(loadingCandidates.indexOf(n)===-1){
+    loadingCandidates.push(n);
+    if(loadingCandidates.length>40)loadingCandidates.shift();
+  }
+}
 function ensurePanel(){
   var box=document.getElementById('conectaSupervisorIaPanel');
   if(box)return box;
@@ -74,7 +104,7 @@ function incident(kind,data){
     supervisorVersion:VERSION,
     estado:'DIAGNOSTICO_EM_ANDAMENTO'
   };
-  var q=queueRead();q.push(item);queueWrite(q);panelShow('Inconsistência detectada. Diagnóstico automático iniciado.','Incidente '+item.id+' • '+(item.arquivo||item.modulo)+(item.linha?' • linha '+item.linha:''),true);emit('conecta-supervisor-incidente',item);flush();
+  var q=queueRead();q.push(item);queueWrite(q);panelShow('Inconsistência detectada. Diagnóstico automático iniciado.','Incidente '+item.id+' • '+(item.arquivo||item.modulo)+(item.linha?' • linha '+item.linha:''),true);emit('conecta-supervisor-incidente',item);scheduleRemoteFlush(350);
   return item.id;
 }
 function supervisorRequest(url,payload){
@@ -179,7 +209,7 @@ function flush(){
       if(found){found.ultimaFalhaSupervisor=redact(e&&e.message||e);found.estado=navigator.onLine===false?'PENDENTE_REDE':'DIAGNOSTICO_EM_ANDAMENTO'} panelShow(navigator.onLine===false?'Sem internet. Reparo ficará pendente e retomará automaticamente.':'Supervisor ainda está isolando a causa.','Incidente '+item.id+' permanece aberto.',true)
       queueWrite(all);
     })
-    .finally(function(){busy=false;setTimeout(flush,1200)});
+    .finally(function(){busy=false;scheduleRemoteFlush(lightMode?1800:700)});
 }
 function safeUrl(value){
   try{var u=new URL(String(value||''),location.href);return u.origin+u.pathname}catch(e){return text(value).split('?')[0].slice(0,300)}
@@ -270,38 +300,68 @@ function installNetworkObserver(){
 }
 function installInteractionObserver(){
   try{
-    var mo=new MutationObserver(function(){lastDomMutationAt=now()});
-    mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,characterData:true});
+    var queued=false;
+    var mo=new MutationObserver(function(records){
+      if(queued)return;queued=true;
+      var task=function(){
+        supervisorWork(function(){
+          lastDomMutationAt=now();
+          for(var i=0;i<records.length&&i<20;i++){
+            var rec=records[i];
+            if(rec.target)rememberLoadingCandidate(rec.target);
+            if(rec.addedNodes){
+              for(var j=0;j<rec.addedNodes.length&&j<8;j++)rememberLoadingCandidate(rec.addedNodes[j]);
+            }
+          }
+        });
+        queued=false;
+      };
+      if(typeof requestAnimationFrame==='function')requestAnimationFrame(task);else setTimeout(task,16);
+    });
+    mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden','aria-busy','style']});
   }catch(e){}
   document.addEventListener('click',function(e){
-    var target=e.target&&e.target.closest?e.target.closest('button,[role="button"]'):null;
-    if(!target||target.disabled||target.closest('#conectaSupervisorIaPanel'))return;
-    var beforeMutation=lastDomMutationAt,beforeNetwork=lastNetworkChangeAt,beforeHref=location.href,label=text(target.textContent||target.getAttribute('aria-label')||target.id).slice(0,120);
-    setTimeout(function(){
-      if(location.href!==beforeHref)return;
-      if(lastDomMutationAt>beforeMutation||lastNetworkChangeAt>beforeNetwork||inflightNetwork>0)return;
-      if(shouldIncident('click-no-response:'+location.pathname+':'+label,15000)){
-        incident('ACAO_SEM_RESPOSTA_VISIVEL',{mensagem:'O comando "'+label+'" não produziu navegação, alteração de interface ou comunicação detectável.',etapa:'interacao',funcao:'click'});
-      }
-    },4500);
-  },true);
+    supervisorWork(function(){
+      var target=e.target&&e.target.closest?e.target.closest('button,[role="button"]'):null;
+      if(!target||target.disabled||target.closest('#conectaSupervisorIaPanel'))return;
+      var beforeMutation=lastDomMutationAt,beforeNetwork=lastNetworkChangeAt,beforeHref=location.href,label=text(target.textContent||target.getAttribute('aria-label')||target.id).slice(0,120);
+      setTimeout(function(){
+        if(location.href!==beforeHref)return;
+        if(lastDomMutationAt>beforeMutation||lastNetworkChangeAt>beforeNetwork||inflightNetwork>0)return;
+        if(shouldIncident('click-no-response:'+location.pathname+':'+label,15000)){
+          incident('ACAO_SEM_RESPOSTA_VISIVEL',{mensagem:'O comando "'+label+'" não produziu navegação, alteração de interface ou comunicação detectável.',etapa:'interacao',funcao:'click'});
+        }
+      },4500);
+    });
+  },{capture:true,passive:true});
 }
 function installLoadingObserver(){
+  supervisorWork(function(){
+    try{
+      document.querySelectorAll('[aria-busy="true"],.loading,.loader,.spinner,[class*="loading"],[class*="spinner"]').forEach(rememberLoadingCandidate);
+    }catch(e){}
+  });
   setInterval(function(){
-    var nodes=document.querySelectorAll('[aria-busy="true"],.loading,.loader,.spinner,[class*="loading"],[class*="spinner"]');
-    Array.prototype.slice.call(nodes,0,80).forEach(function(n){
-      if(!n||n.closest&&n.closest('#conectaSupervisorIaPanel'))return;
-      var cs;try{cs=getComputedStyle(n)}catch(e){return}
-      if(cs.display==='none'||cs.visibility==='hidden'||Number(cs.opacity)===0)return;
-      var msg=text(n.textContent||n.getAttribute('aria-label')||'carregamento');
-      var since=Number(n.dataset&&n.dataset.conectaSupervisorLoadingSince||0);
-      if(!since){try{n.dataset.conectaSupervisorLoadingSince=String(now())}catch(e){};return}
-      var elapsed=now()-since;
-      if(elapsed>=10000&&shouldIncident('loading:'+location.pathname+':'+msg.slice(0,80),20000)){
-        incident('CARREGAMENTO_PERSISTENTE',{mensagem:'Indicador de carregamento permaneceu visível por '+elapsed+' ms: '+msg.slice(0,180),duracaoMs:elapsed,etapa:'renderizacao'});
+    if(document.visibilityState==='hidden')return;
+    supervisorWork(function(){
+      var next=[];
+      for(var i=0;i<loadingCandidates.length&&i<(lightMode?12:30);i++){
+        var n=loadingCandidates[i];
+        if(!n||!n.isConnected||!loadingLike(n))continue;
+        next.push(n);
+        var cs;try{cs=getComputedStyle(n)}catch(e){continue}
+        if(cs.display==='none'||cs.visibility==='hidden'||Number(cs.opacity)===0)continue;
+        var msg=text(n.textContent||n.getAttribute('aria-label')||'carregamento');
+        var since=Number(n.dataset&&n.dataset.conectaSupervisorLoadingSince||0);
+        if(!since){try{n.dataset.conectaSupervisorLoadingSince=String(now())}catch(e){};continue}
+        var elapsed=now()-since;
+        if(elapsed>=10000&&shouldIncident('loading:'+location.pathname+':'+msg.slice(0,80),20000)){
+          incident('CARREGAMENTO_PERSISTENTE',{mensagem:'Indicador de carregamento permaneceu visível por '+elapsed+' ms: '+msg.slice(0,180),duracaoMs:elapsed,etapa:'renderizacao'});
+        }
       }
+      loadingCandidates=next.slice(-40);
     });
-  },2000);
+  },lightMode?6000:4000);
 }
 installNetworkObserver();
 installInteractionObserver();
@@ -319,7 +379,7 @@ window.addEventListener('unhandledrejection',function(e){
   incident('UNHANDLED_REJECTION',{mensagem:reason.message||reason,stack:reason.stack,etapa:'promise'});
 });
 window.addEventListener('offline',function(){incident('REDE_OFFLINE',{mensagem:'Conexão com a internet indisponível.',etapa:'rede'})});
-window.addEventListener('online',function(){panelShow('Internet restaurada. Retomando reparos pendentes.','Supervisor IA retomando fila.',true);emit('conecta-supervisor-rede-restaurada',{});flush()});
+window.addEventListener('online',function(){panelShow('Internet restaurada. Retomando reparos pendentes.','Supervisor IA retomando fila.',true);emit('conecta-supervisor-rede-restaurada',{});scheduleRemoteFlush(250)});
 try{
   if(window.PerformanceObserver){
     var po=new PerformanceObserver(function(list){
@@ -336,5 +396,5 @@ window.ConectaSupervisorIA={
   endpoint:endpoint,
   pendentes:function(){return queueRead().filter(function(x){return !x.enviadoEm})}
 };
-setTimeout(flush,800);
+scheduleRemoteFlush(800);
 }());
