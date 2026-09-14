@@ -1,58 +1,37 @@
-# Ativação hoje — Supervisor IA do Conecta Saúde Comunitária (LAB)
+# Piloto local sem API — 14/09/2026
 
-## Estado atual do código
-- Branch isolada: `laboratorio-ia-autorreparo`
-- Cliente Supervisor carregado somente na Central experimental.
-- Fila offline e retomada automática.
-- Painel técnico visível.
-- Backend Apps Script isolado em `laboratorio-ia/apps-script/Code.gs`.
-- OpenAI Responses API com function calling estruturado.
-- Modelo primário: `gpt-5.6-terra`.
-- Escalonamento: `gpt-5.6-sol`.
-- Autorreparo de código limitado à branch do laboratório.
-- Substituição exata no mesmo arquivo causal; sem criar v2/v3/v4.
-- Commit Git serve como backup/rollback.
-- Nenhuma credencial fica no GitHub ou no navegador.
+Esta instrução substitui a ativação remota anteriormente descrita neste arquivo.
 
-## O que falta para ficar operacional
-### 1. Criar um Apps Script separado para o laboratório
-Criar um projeto Apps Script novo, sem reutilizar o deployment oficial.
-Copiar para ele o conteúdo de:
-`laboratorio-ia/apps-script/Code.gs`
+- Branch: `laboratorio-ia-autorreparo`.
+- Bloco: `supervisor-client.js`, versão `lab-local-2026-09-14-r1`.
+- Não configurar chave, saldo nem Apps Script para este piloto.
+- Chamadas remotas bloqueadas no cliente, inclusive com `supervisorApi` ou endpoint salvo. Limite de gasto do cliente: zero.
+- O backend remoto existente não foi ativado ou alterado neste passo.
+- Não basta inverter a flag para liberar a etapa remota: ainda faltam orçamento central, deduplicação no servidor, limites de tentativas e validação do fluxo de reparo.
 
-Implantar como Web App e copiar a URL `.../exec`.
+## Funcionamento disponível
 
-### 2. Script Properties do Apps Script LAB
-Configurar:
-- `OPENAI_API_KEY` = chave da API OpenAI
-- `OPENAI_MODEL` = `gpt-5.6-terra`
-- `OPENAI_ESCALATION_MODEL` = `gpt-5.6-sol`
-- `GITHUB_TOKEN` = token fine-grained com Contents: Read and write apenas para o repositório do Conecta
-- `GITHUB_REPO` = `merciocamposfar07-hub/atendimento-acs-farmaceutico`
-- `GITHUB_BRANCH` = `laboratorio-ia-autorreparo`
+Monitores já existentes de erros, navegação, rede, interação e carregamento; registro local; repetições acumuladas no mesmo incidente; botão “Supervisor local” para reabrir o painel; fila sem internet; memória de validações informadas.
 
-NUNCA colocar essas chaves em arquivo JS, HTML ou commit.
+Sintomas distintos só podem compartilhar incidente quando a instrumentação fornece `operacaoId` explícito da mesma operação e módulo. Os monitores genéricos ainda não propagam esse ID automaticamente. Associação não confirma causalidade.
 
-### 3. Abrir a Central experimental com o endpoint
-Na URL do clone, adicionar:
-`?supervisorApi=URL_DO_APPS_SCRIPT_LAB`
+`ConectaSupervisorIA.registrarValidacao(id, evidencia)` exige aprovação explícita, descrição do teste, causa, correção, versão e commit completo. Registra evidência declarada; não executa nem certifica testes. Recorrência consulta memória e permanece aberta para investigação, sem reaplicar código.
 
-O cliente guarda essa URL apenas na sessão do navegador e inicia o Supervisor.
+## Limites reais
 
-## Teste inicial real
-Não fabricar erro.
-Usar o Conecta normalmente no iPhone.
-Quando ocorrer uma inconsistência real:
-1. painel técnico mostra incidente;
-2. erro é salvo localmente;
-3. Supervisor recebe telemetria sanitizada;
-4. IA localiza módulo/arquivo/função;
-5. recuperação runtime é tentada;
-6. se exigir código e as credenciais GitHub estiverem configuradas, a IA propõe substituição mínima no arquivo causal;
-7. backend valida que o trecho existe exatamente uma vez;
-8. commit é aplicado somente na branch LAB;
-9. estado fica `REPARO_APLICADO_AGUARDANDO_VALIDACAO`;
-10. somente após teste funcional real pode virar `RESOLVIDO_VALIDADO` e `ESTADO_NORMAL_RESTAURADO`.
+- Sem modelo: não há investigação de causas novas, pesquisa web, geração ou aplicação autônoma de reparos.
+- Eventos de recuperação não têm consumidores confirmados no código; não comprovam recuperação.
+- Fila limitada aos 40 incidentes mais recentes, 8 evidências recentes por repetição; não substitui histórico central auditável.
+- Persistência é por origem/navegador. Sem armazenamento disponível, usa memória da página e informa a limitação. Não é agregação global entre aparelhos.
+- Os monitores são heurísticos e podem gerar falsos positivos. O carregamento do script ao fim do HTML não captura todos os erros anteriores à inicialização.
+- Nenhuma alteração foi feita em login, permissões, vagas, cadastros ou backend oficial.
 
-## Regra de segurança
-A branch `main` não é alvo de escrita do Supervisor. O backend bloqueia qualquer `GITHUB_BRANCH` diferente de `laboratorio-ia-autorreparo`.
+## Verificação executável
+
+`node --test laboratorio-ia/test-local.cjs`
+
+Testes sintéticos isolados do Supervisor, sem dados reais e sem chamadas de rede. Não equivalem a aprovação funcional do Conecta no iPhone.
+
+## URL
+
+A branch é código. Ainda não há uma URL navegável própria confirmada para este laboratório. A publicação deve manter origem separada e verificar isolamento de backend, escrita, cache e service worker antes de permitir uso com dados reais.
