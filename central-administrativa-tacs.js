@@ -679,7 +679,7 @@ function moduleRouteId(name,options){
   return id;
 }
 function moduleUrl(name,options){
-  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260913-apresentacao-paineis-v2',territoryRevision='20260913-territorio-instant-v2',municipiosRevision='20260913-municipios-instant-v1',loadingRevision='20260913-loading-standard-v1',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
+  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260913-apresentacao-paineis-v2',territoryRevision='20260913-territorio-instant-v2',municipiosRevision='20260913-municipios-instant-v1',loadingRevision='20260913-loading-lifecycle-v2',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
   if(opts.view)extra+='&view='+encodeURIComponent(opts.view);
   if(opts.all)extra+='&all='+encodeURIComponent(opts.all);
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
@@ -733,11 +733,16 @@ function ensureShellOpening(){
 }
 function setShellOpening(title,visible){
   var node=ensureShellOpening();if(!node)return;
-  /* PADRAO_CARREGAMENTO_DISCRETO_20260913_V1:
-     o shell nunca substitui o conteúdo do painel por uma mensagem em tela lisa.
-     O aviso de espera pertence ao status interno de cada painel. */
-  node.hidden=true;
-  node.textContent='';
+  /* CORRECAO_CIRURGICA_LOADER_SHELL_20260913_V2:
+     o shell mostra o aviso somente no intervalo real entre o toque e a montagem do painel.
+     Assim que o módulo monta, o aviso some e o ciclo de carregamento passa a pertencer ao painel. */
+  if(visible){
+    node.hidden=false;
+    node.textContent='Aguarde enquanto os dados carregam…';
+  }else{
+    node.hidden=true;
+    node.textContent='';
+  }
 }
 /* TAREFA_16_AGENDAS_NATIVAS_V1:
    Agendas e vagas é o primeiro painel migrado definitivamente para o shell.
@@ -775,7 +780,7 @@ function ensureTask16AgendaAssets(callback){
     if(!ok){finish(false);return}
     task16LoadScript('cscAgendaTransportTask16','/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js?v=20260913-agendas-ios-mount-v1',function(){return Boolean(window.ConectaAgendasTransportV1)},function(ok2){
       if(!ok2){finish(false);return}
-      task16LoadScript('cscAgendaNativeTask16','/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260913-agendas-ios-mount-v1&load=20260913-loading-standard-v1',function(){return Boolean(window.ConectaAgendasNativeV1)},function(ok3){
+      task16LoadScript('cscAgendaNativeTask16','/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260913-loading-lifecycle-v2&load=20260913-loading-lifecycle-v2',function(){return Boolean(window.ConectaAgendasNativeV1)},function(ok3){
         if(!ok3){finish(false);return}
         task16LoadScript('cscAgendaWhatsappTask16','/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260913-agendas-ios-mount-v1',function(){return Boolean(window.PortalTacsAgendaWhatsAppV2API)},finish);
       });
@@ -836,7 +841,7 @@ function ensureTask17MoradoresAssets(callback){
   }
   task16LoadScript('cscModuleCoreTask17','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260913-ubs-panels-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
-    task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260913-apresentacao-paineis-v2&load=20260913-loader-lifecycle-v1',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
+    task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260913-loading-lifecycle-v2&load=20260913-loading-lifecycle-v2',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
   });
 }
 function showNativeMoradores(title,routeId){
@@ -896,7 +901,7 @@ function ensureTask18ProfissionaisAssets(callback){
   }
   task16LoadScript('cscModuleCoreTask18','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260913-ubs-panels-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
-    task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260913-profissionais-carga-imediata-v1',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
+    task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260913-loading-lifecycle-v2',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
   });
 }
 function hideAllNativeExcept(kind){
