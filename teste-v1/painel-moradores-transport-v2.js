@@ -522,7 +522,8 @@ function renderBase(r,message,confirmed){
     hideStatus('loginStatus');
     hideLoadingStatus('operationStatus');
   }else{
-    setStatus('loginStatus',message||'Aguarde enquanto os dados carregam…','warn');
+    hideStatus('loginStatus');
+    hideLoadingStatus('operationStatus');
   }
   if(PRONTUARIOS_VIEW&&accessMode==='admin'){
     var searchHelp=rootQuery('#searchArea .muted');
