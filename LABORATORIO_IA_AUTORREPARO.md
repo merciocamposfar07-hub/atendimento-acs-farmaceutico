@@ -104,6 +104,33 @@ O comportamento obrigatório é:
 
 Se a origem estiver numa dependência externa ou em uma camada que o Conecta não possa modificar, o Supervisor deve continuar tentando contornar a causa dentro do próprio fluxo afetado, usando recuperação segura, fallback, nova tentativa controlada, isolamento do módulo ou último estado válido. Intervenção manual permanece como último recurso quando não existir reparo automático tecnicamente seguro.
 
+## Regra de declaração de estado normal restaurado
+A mensagem de conclusão não pode ser genérica nem baseada apenas na existência de uma alteração de código.
+
+O Supervisor só pode exibir `ESTADO_NORMAL_RESTAURADO` quando houver evidência objetiva de que a causa original foi resolvida e que a operação funcional afetada voltou a executar corretamente.
+
+Antes dessa declaração, são obrigatórios:
+- repetir a mesma operação real que apresentou a falha;
+- confirmar que o erro original não reapareceu;
+- confirmar que o fluxo completou até o estado final esperado;
+- medir novamente tempo de resposta, retorno de dados, renderização, navegação e estado final conforme o tipo de incidente;
+- verificar que o trecho corrigido está sendo efetivamente executado;
+- verificar as dependências diretas afetadas pela correção;
+- confirmar ausência de regressão imediata no fluxo diretamente relacionado;
+- registrar evidências técnicas do teste, incluindo resultado, duração, módulo, arquivo, função, commit e incidente correspondente.
+
+Mensagens como "reparo executado", "problema corrigido", "normalizado" ou "estado normal restaurado" são proibidas enquanto o teste funcional real não tiver sido concluído com sucesso.
+
+Se o código tiver sido alterado mas o teste real ainda não tiver ocorrido, o estado deve ser `REPARO_APLICADO_AGUARDANDO_VALIDACAO`.
+
+Se o teste real falhar, o Supervisor deve declarar `REPARO_NAO_VALIDADO`, manter o incidente aberto e continuar o diagnóstico ou executar rollback quando necessário.
+
+Somente após aprovação do teste funcional real o incidente pode receber simultaneamente:
+- `RESOLVIDO_VALIDADO`;
+- `ESTADO_NORMAL_RESTAURADO`.
+
+A declaração deve vir acompanhada do fundamento técnico da conclusão, nunca de texto vago de sistema.
+
 ## Regra de isolamento
 Nenhuma alteração deste laboratório pode ser aplicada à branch main sem decisão explícita posterior.
 
