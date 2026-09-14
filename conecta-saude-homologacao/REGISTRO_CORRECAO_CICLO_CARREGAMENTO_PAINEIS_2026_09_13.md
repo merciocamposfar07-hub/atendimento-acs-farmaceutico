@@ -57,3 +57,26 @@ Não marcar como concluída operacionalmente até o usuário testar os painéis 
 1. o painel não fica em tela vazia durante a montagem;
 2. a mensagem de carregamento desaparece quando os dados aparecem;
 3. erros e operações de gravação continuam exibindo seus estados normalmente.
+
+## Correção isolada V2 — mensagem residual no painel Moradores
+Marcador: `CORRECAO_CIRURGICA_LOADER_MORADORES_20260913_V2`.
+
+Motivo: no iPhone/Safari, a mensagem `Aguarde enquanto os dados carregam...` ainda podia permanecer visível mesmo depois de o snapshot de Moradores já estar desenhado.
+
+Ramo isolado:
+`snapshot de Moradores visível → limpar somente loginStatus/operationStatus quando ainda contiverem a mensagem de carregamento → manter dados, permissões e demais estados intactos`.
+
+Alterações limitadas a:
+- esconder explicitamente o status residual quando o snapshot já está visível;
+- aceitar tanto reticências `...` quanto o caractere `…`;
+- repetir a limpeza por 120 ms para eliminar uma reescrita tardia do mesmo aviso;
+- renovar apenas as referências de cache do módulo Moradores até a Central.
+
+Não foram alterados: backend, dados, PIN, perfis, UBS, permissões, cadastro, busca, edição, consolidação, layout dos demais painéis ou regras de negócio.
+
+Validação interna:
+- sintaxe de `painel-moradores-transport-v2.js`: válida;
+- sintaxe de `conecta-moradores-native-v1.js`: válida;
+- sintaxe de `central-administrativa-tacs.js`: válida.
+
+Estado: **PUBLICADA PARA TESTE NO DISPOSITIVO — confirmação do usuário ainda pendente.**
