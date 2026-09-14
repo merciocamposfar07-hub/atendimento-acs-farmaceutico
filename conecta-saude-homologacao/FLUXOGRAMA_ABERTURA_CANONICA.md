@@ -748,3 +748,36 @@ Validação: JavaScript alterado com sintaxe válida.
 Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — não encerrar até confirmação do usuário.**
 
 Registro: `REGISTRO_CORRECAO_CICLO_CARREGAMENTO_PAINEIS_2026_09_13.md`.
+
+### Correção isolada — Logoff da sessão UBS confiável no primeiro toque
+Data: 13/09/2026
+
+Fluxo:
+`Central UBS autenticada → toque curto em Logoff / Encerrar sessão → capturar pointerup/click do próprio botão → encerrar autenticação local imediatamente → invalidar sessão remota em segundo plano → retornar ao acesso da UBS`.
+
+Regras:
+- ramo exclusivo do botão vermelho `#logout` na sessão de painéis administrativos da UBS;
+- não altera painéis, dados, permissões, PIN, áreas, agendas, vagas, moradores, profissionais, notificações ou backend;
+- o botão não pode permanecer `disabled`, `aria-disabled` ou com `pointer-events:none`;
+- a área de toque recebe prioridade própria sem mudar o visual;
+- toque confirmado em `pointerup` não depende do `click` sintético do Safari/iPhone;
+- `click` permanece como fallback para teclado e navegadores compatíveis;
+- deslocamento acima do limite de toque é tratado como rolagem e não encerra a sessão;
+- duplicidade `pointerup + click` é deduplicada antes de executar o Logoff;
+- cache local e contexto preservável permanecem conforme contrato anterior do Logoff.
+
+Validação interna:
+- sintaxe de `central-administrativa-tacs.js`: válida;
+- marcador `LOGOFF_TOQUE_RESILIENTE_V6`: presente;
+- captura de `pointerup`, filtro de deslocamento e fallback de `click`: presentes;
+- binding direto legado `el('logout').addEventListener('click',logout)`: removido;
+- prioridade de toque aplicada em runtime pelo próprio bloco do Logoff;
+- cache do JavaScript renovado no HTML da Central.
+
+Commits funcionais:
+- `e18a30a9c0565c748860e18b531673b6cf1a2ce8`;
+- `70b1044d45bd7d1cf5078a5c5d30b48c3fdc9b5d`;
+- publicação/cache `3c040617f9adc5b0ac1ae0f25b6a34a303468cee`.
+
+Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente antes do encerramento.**
+
