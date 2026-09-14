@@ -2547,7 +2547,7 @@ function el(id){return document.getElementById(id)}
 function txt(v){return String(v==null?'':v).trim()}
 function esc(v){return txt(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function id(v){var s=txt(v);if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');return s.toUpperCase().replace(/[^A-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,64)}
-function status(m,type){var n=el('status');n.textContent=m;n.className='status'+(type?' '+type:'')}
+function status(m,type){var n=el('status'),v=txt(m);n.textContent=v;n.hidden=!v;n.className='status'+(type?' '+type:'')}
 function rid(action){counter++;return'multi_'+action+'_'+Date.now()+'_'+counter}
 function jsonp(action,params,cb){var name='__multi_'+Date.now()+'_'+counter,s=document.createElement('script'),done=false,t=setTimeout(function(){finish({ok:false,message:'Consulta indisponível.'})},12000);function finish(r){if(done)return;done=true;clearTimeout(t);try{delete window[name]}catch(e){window[name]=undefined}if(s.parentNode)s.remove();cb(r)}window[name]=finish;s.onerror=function(){finish({ok:false,message:'Falha de rede.'})};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(name),'_='+Date.now()];Object.keys(params||{}).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(params[k]))});s.src=API+'?'+q.join('&');document.head.appendChild(s)}
 function finishPost(r){if(!active)return;var op=active;active=null;clearTimeout(op.timeout);clearTimeout(op.pollTimer);if(op.form&&op.form.parentNode)op.form.remove();if(op.frame&&op.frame.parentNode)setTimeout(function(){if(op.frame.parentNode)op.frame.remove()},100);op.cb(r||{ok:false,message:'Resposta vazia.'})}
@@ -2575,7 +2575,7 @@ function load(){
  if(!token){status('Sessão administrativa ausente. Volte à Central e entre como Administrador geral.','err');return}
  var cached=null;
  if(modulePerf&&typeof modulePerf.prime==='function'){
-  cached=modulePerf.prime('municipios',function(saved){data=saved;dataConfirmed=false;render();status('Estrutura disponível. Confirmando atualização em segundo plano…','warn')});
+  cached=modulePerf.prime('municipios',function(saved){data=saved;dataConfirmed=false;render();status('','')});
  }
  /* CORRECAO_CIRURGICA_MUNICIPIOS_INSTANT_V1:
     primeiro pinta a última estrutura administrativa confirmada neste aparelho.
@@ -2583,7 +2583,7 @@ function load(){
     Toda escrita permanece bloqueada até a confirmação remota desta abertura. */
  if(!cached){
   var fast=readMunicipiosFastCache()||primeMunicipiosFromCentralContext();
-  if(fast){data=fast;dataConfirmed=false;render();syncMunicipioWriteState();cached={source:'fast-readonly'};status('Estrutura disponível. Confirmando atualização em segundo plano…','warn')}
+  if(fast){data=fast;dataConfirmed=false;render();syncMunicipioWriteState();cached={source:'fast-readonly'};status('','')}
  }
  if(!cached)status('Aguarde enquanto os dados carregam…','warn');
  var leituraPayload=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'municipios'}):{token:token,dispositivo:device};coreRead('admin_multimunicipio_dados',leituraPayload,function(done){post('admin_multimunicipio_dados',{},done)},function(r){
