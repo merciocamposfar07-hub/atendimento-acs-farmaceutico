@@ -2626,6 +2626,7 @@ html body #listaProfissionais > details.cartao[data-tipo="profissional"]{
 (function(){
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var BRIDGE_MODE=(new URLSearchParams(location.search||'')).get('bridge')==='1';
 var TOKEN_KEY='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
@@ -2846,7 +2847,7 @@ window.ConectaProfissionaisBridgeV1={
   nativeCompat:'task18-profissionais-native-v1',
   version:'1.0.0'
 };
-iniciarPainel();
+if(!BRIDGE_MODE)iniciarPainel();
 }());
 </script>
 
