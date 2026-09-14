@@ -189,6 +189,61 @@ O Supervisor deve priorizar reparos por impacto operacional:
 
 Tempo de reparo não validado não autoriza encerrar o incidente, mas também não autoriza prender o usuário à espera. O agente continua trabalhando no mesmo incidente enquanto o aplicativo preserva o máximo de operação segura possível.
 
+## Regra de aprendizado operacional e prevenção de recorrência
+O Supervisor deve aprender com cada incidente real resolvido para reduzir a chance de repetição da mesma falha.
+
+Esse aprendizado NÃO significa permitir que o modelo altere livremente sua própria lógica ou reescreva o aplicativo sem controle. O aprendizado deve ser persistido de forma estruturada, auditável e vinculada ao código canônico.
+
+Para cada incidente que alcance `RESOLVIDO_VALIDADO`, o Conecta deve registrar uma memória técnica com:
+- identificador do incidente;
+- módulo, arquivo, função e bloco causal;
+- assinatura/fingerprint da falha;
+- causa-raiz confirmada;
+- sintomas observados;
+- condições que dispararam o problema;
+- correção canônica aplicada;
+- commit da correção;
+- teste funcional real que validou o reparo;
+- métricas antes/depois;
+- dependências diretas afetadas;
+- regra preventiva criada;
+- teste de regressão permanente associado;
+- data/hora e versão do aplicativo.
+
+A partir dessa memória, o Supervisor deve:
+1. reconhecer rapidamente a mesma assinatura se a falha tentar reaparecer;
+2. executar primeiro a correção ou contenção já validada, quando ainda aplicável à versão atual;
+3. adicionar guardas no bloco causal para impedir estados já conhecidos como inválidos;
+4. manter teste de regressão para a falha resolvida;
+5. comparar mudanças futuras naquele bloco com o histórico de incidentes;
+6. impedir que uma nova alteração reintroduza comportamento já classificado como defeituoso;
+7. alertar quando uma modificação planejada toca um bloco com histórico crítico;
+8. adaptar limites de tempo, fallback e observabilidade com base no uso real em campo;
+9. priorizar problemas que prejudiquem diretamente o trabalho de TACS, administradores e UBS;
+10. manter o conhecimento vinculado ao bloco canônico, sem criar versões paralelas.
+
+## Regra de prevenção antes da falha
+O objetivo não é apenas reparar depois que o problema aparece. O Supervisor deve usar o histórico validado para prevenir recorrências.
+
+Antes de aplicar qualquer mudança automática em um bloco com histórico de incidentes, deve executar os testes de regressão associados àquele bloco e verificar as regras preventivas já registradas.
+
+Quando detectar condições conhecidas que antecedem uma falha, deve agir antes do travamento completo, por exemplo:
+- cancelar requisição que entrou no padrão de timeout já conhecido;
+- impedir duplicidade de chamada já associada a congelamento;
+- renovar sessão antes de expirar quando houver evidência segura;
+- reconstruir somente o componente que entrou em estado inconsistente conhecido;
+- trocar para snapshot/fallback quando a telemetria indicar degradação já catalogada;
+- bloquear a introdução de código que viole uma regra preventiva estabelecida após incidente anterior.
+
+## Limite de garantia
+O sistema deve perseguir a não recorrência da mesma causa conhecida, mas não pode declarar garantia absoluta de que um erro nunca mais ocorrerá. Mudanças de rede, navegador, serviço externo, dados ou código podem criar novas condições.
+
+A exigência correta é:
+- nenhuma causa conhecida pode ser ignorada;
+- toda causa validada deve gerar prevenção permanente;
+- toda regressão da mesma causa deve ser tratada como falha grave do mecanismo de prevenção;
+- a mensagem de prevenção bem-sucedida só pode ser emitida quando os testes de regressão correspondentes passarem.
+
 ## Regra de isolamento
 Nenhuma alteração deste laboratório pode ser aplicada à branch main sem decisão explícita posterior.
 
