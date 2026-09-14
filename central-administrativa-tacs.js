@@ -834,7 +834,7 @@ function ensureTask18ProfissionaisHost(){
 function task18LoadStyle(){
   if(document.getElementById('cscProfissionaisNativeCssV1'))return;
   var link=document.createElement('link');link.id='cscProfissionaisNativeCssV1';link.rel='stylesheet';
-  link.href='/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.css?v=20260913-apresentacao-paineis-v2';
+  link.href='/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.css?v=20260913-cards-azul-escuro-v1';
   document.head.appendChild(link);
 }
 function ensureTask18ProfissionaisAssets(callback){
