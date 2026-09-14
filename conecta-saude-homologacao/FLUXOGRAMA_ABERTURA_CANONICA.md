@@ -607,3 +607,38 @@ Commits da correção:
 Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente antes do encerramento.**
 
 Registro: `REGISTRO_CORRECAO_DESEMPENHO_PAINEIS_BARRA_INFERIOR_2026_09_13.md`.
+
+
+### Correção isolada — Abertura imediata dos painéis da UBS
+Data: 13/09/2026
+
+Diagnóstico:
+`PIN UBS validado → retorno do login sem áreas → tocar Acessar painéis → loadContext remoto obrigatório → permanência em “Abrindo os painéis da UBS…”`.
+
+Fluxo corrigido:
+`PIN UBS válido → tocar Acessar painéis → validar snapshot local da MESMA UBS → abrir Central/painéis imediatamente → sincronizar contexto territorial em segundo plano`.
+
+Regras:
+- bloco exclusivo da porta UBS;
+- snapshot persistente somente para contexto UBS já confirmado;
+- comparação obrigatória de cadastro e unidade antes de reutilizar o snapshot;
+- snapshot de outra UBS é recusado;
+- sincronização remota continua obrigatória e não é substituída pelo cache;
+- nenhuma alteração em PIN, cadastro, permissões, áreas, Morador, TACS, Administrador, vagas, gravações ou backend;
+- sem snapshot válido, permanece o fallback remoto existente;
+- rollback funcional isolado em `central-administrativa-tacs.js` e renovação de cache no shell.
+
+Validação interna:
+- sintaxe JS: OK;
+- teste simulado mesma UBS: abertura pelo cache acionada;
+- teste simulado UBS diferente: cache recusado;
+- release da Central renovado.
+
+Commits:
+- `521ca8db2a5302b3c9f2ea0bc561520f091efdd4`;
+- `c4cbaf5e715a42bfe1269ec225a7207cc0e5d822`;
+- release automático `66941049e75529be66736f90edb725630f964b3f`.
+
+Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente antes do encerramento.**
+
+Registro: `REGISTRO_CORRECAO_ABERTURA_IMEDIATA_PAINEIS_UBS_2026_09_13.md`.
