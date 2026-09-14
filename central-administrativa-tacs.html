@@ -2044,7 +2044,17 @@ html body .csc-login-purpose-card p{
 
 /* LOGOFF_VERMELHO_2026_09_11_V1
    Exceção funcional solicitada: encerrar sessão volta ao vermelho histórico. */
+html body .csc-logout-actions{
+  position:relative!important;
+  z-index:8!important;
+  pointer-events:auto!important;
+}
 html body #logout.csc-logout-button{
+  position:relative!important;
+  z-index:9!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
   background:#972f2f!important;
   background-image:none!important;
   color:#fff!important;
@@ -2745,7 +2755,7 @@ html body .viewer.csc-frame-viewer>iframe{
 <div id="viewer" class="viewer" hidden><div class="viewer-bar" role="banner"><img class="viewer-official-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=481632ad8338" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="viewer-heading"><small>CONECTA SAÚDE COMUNITÁRIA</small><div id="viewerTitle" class="viewer-title">Painel</div></div><button id="viewerBack" class="viewer-back" type="button" aria-label="Voltar à Central">‹</button></div><div id="nativeModuleHost" class="csc-native-module-host" hidden></div><iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe><footer id="viewerFooter" class="viewer-platform-footer" hidden><strong>Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</strong><small>Plataforma institucional de saúde comunitária.</small></footer></div>
 <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=481632ad8338"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=481632ad8338"></script>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=481632ad8338"></script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260913-logoff-toque-resiliente-v6"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=481632ad8338"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=481632ad8338"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=481632ad8338"></script>
