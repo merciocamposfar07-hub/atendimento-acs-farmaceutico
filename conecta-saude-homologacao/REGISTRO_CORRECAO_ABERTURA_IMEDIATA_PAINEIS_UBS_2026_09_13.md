@@ -67,7 +67,15 @@ Backend:
 GitHub Pages:
 - build/deploy do commit de publicação: **success**.
 
-## Estado
-**PUBLICADA PARA TESTE NO DISPOSITIVO.**
+## Validação real no dispositivo — 13/09/2026
+O usuário executou o fluxo real após a publicação e confirmou que:
+- a busca/identificação da UBS passou a responder com agilidade;
+- o acesso por **Acessar painéis da UBS** passou a abrir os painéis de forma ágil;
+- o comportamento observado corresponde ao objetivo deste bloco: retirar releituras e esperas remotas desnecessárias do caminho crítico sem dispensar a sincronização do servidor.
 
-A correção não deve ser marcada como concluída operacionalmente até o usuário testar no iPhone/computador da UBS e confirmar que o toque em **Acessar painéis da UBS** deixou de permanecer preso em `Abrindo os painéis da UBS…`.
+Esta confirmação encerra **somente este bloco isolado de desempenho da UBS**. Não constitui validação automática de Administrador, TACS, Morador ou de outras correções de 13/09/2026.
+
+## Estado final
+**VALIDADA NO DISPOSITIVO, PUBLICADA E CANONIZADA — 13/09/2026.**
+
+Este bloco passa a ser referência canônica do desempenho de acesso/painéis da UBS. Alterações futuras não relacionadas não devem remover, substituir ou contornar `CORRECAO_CIRURGICA_ABERTURA_UBS_CACHE_V1` ou `CORRECAO_CIRURGICA_UBS_CONTEXTO_SEM_RELEITURA_V1` sem alteração explicitamente autorizada e registrada.
