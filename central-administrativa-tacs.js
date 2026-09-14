@@ -1431,7 +1431,19 @@ function garantirLogoffDisponivel(){
     btn.removeAttribute('disabled');
     btn.removeAttribute('aria-disabled');
     btn.removeAttribute('data-csc-ubs-readonly-disabled');
-    if(btn.style&&btn.style.pointerEvents==='none')btn.style.removeProperty('pointer-events');
+    if(btn.style){
+      btn.style.setProperty('pointer-events','auto','important');
+      btn.style.setProperty('touch-action','manipulation','important');
+      btn.style.setProperty('-webkit-tap-highlight-color','transparent','important');
+      btn.style.setProperty('position','relative','important');
+      btn.style.setProperty('z-index','9','important');
+    }
+    var wrap=btn.closest&&btn.closest('.csc-logout-actions');
+    if(wrap&&wrap.style){
+      wrap.style.setProperty('position','relative','important');
+      wrap.style.setProperty('z-index','8','important');
+      wrap.style.setProperty('pointer-events','auto','important');
+    }
   }catch(e){}
 }
 function instalarProtecaoLogoff(){
