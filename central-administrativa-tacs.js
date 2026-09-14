@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1',DEVICE_KEY='portalTacsDispositivoV1',AREA_KEY='portalTacsCentralAreaV1',CONTEXT_CACHE_KEY='portalTacsCentralContextCacheV3',MODULE_CORE_KEY='portalConectaModuleCoreV1';
+var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1',DEVICE_KEY='portalTacsDispositivoV1',AREA_KEY='portalTacsCentralAreaV1',CONTEXT_CACHE_KEY='portalTacsCentralContextCacheV3',UBS_LOCAL_CONTEXT_KEY='portalConectaUbsContextCacheV1',MODULE_CORE_KEY='portalConectaModuleCoreV1';
 var SHARED_WARM_KEY='portalTacsAppsScriptWarmAtV1';
 var HEALTH_REFRESH_TTL=30000,HEALTH_CACHE_TTL=300000,HEALTH_DISPLAY_CACHE_TTL=86400000,HEALTH_CACHE_PREFIX='portalTacsHealthConfirmedV1:',healthRefreshInFlight=false,lastHealthRefreshAt=0,lastHealthRefreshArea='',healthRefreshTimer=null;
 var NOTIFICATION_CONFIRMED_CACHE_PREFIX='portalTacsNotificationConfirmedV1:',notificationRemoteSeq=0,notificationRemoteArea='',notificationLatestStarted={};
@@ -169,12 +169,18 @@ function contextCacheKey(kind){return CONTEXT_CACHE_KEY+':'+(kind==='tacs'?'tacs
 function saveContextCache(){
   try{
     if(!context||!mode)return;
-    sessionStorage.setItem(contextCacheKey(mode),JSON.stringify({
+    var snapshot={
       context:context,
       mode:mode,
       selectedAreaId:selectedAreaId,
       savedAt:Date.now()
-    }));
+    };
+    sessionStorage.setItem(contextCacheKey(mode),JSON.stringify(snapshot));
+    /* CORRECAO_CIRURGICA_ABERTURA_UBS_CACHE_V1:
+       somente a UBS mantém também um snapshot local persistente do último contexto válido.
+       Isso permite abrir os painéis imediatamente no computador já reconhecido enquanto
+       a confirmação remota atualiza o que mudou em segundo plano. */
+    if(mode==='ubs')localStorage.setItem(UBS_LOCAL_CONTEXT_KEY,JSON.stringify(snapshot));
   }catch(e){}
 }
 function pinLocalApi(){
@@ -321,6 +327,34 @@ function restoreContextCache(){
     setStatus('Dados locais restaurados. Sincronizando somente o que mudou…','ok');
     return true;
   }catch(e){return false}
+}
+function restoreUbsContextCache(r){
+  if(!ubsToken||mode!=='ubs')return false;
+  var cadastroId=text(r&&r.cadastroId),unidadeId=text(r&&r.unidadeId),fontes=[];
+  try{fontes.push(sessionStorage.getItem(contextCacheKey('ubs'))||'')}catch(e){}
+  try{fontes.push(localStorage.getItem(UBS_LOCAL_CONTEXT_KEY)||'')}catch(e){}
+  for(var i=0;i<fontes.length;i++){
+    if(!fontes[i])continue;
+    try{
+      var saved=JSON.parse(fontes[i]),ctx=saved&&saved.context,areas=ctx&&Array.isArray(ctx.areas)?ctx.areas:[];
+      if(!saved||saved.mode!=='ubs'||!ctx||!areas.length)continue;
+      var atual=ctx.ubsAtual&&typeof ctx.ubsAtual==='object'?ctx.ubsAtual:{};
+      var cacheCadastro=text(atual.tacsId||atual.cadastroId);
+      var cacheUnidade=text(atual.unidadeId);
+      if(!cacheUnidade){
+        for(var a=0;a<areas.length;a++){if(text(areas[a]&&areas[a].unidadeId)){cacheUnidade=text(areas[a].unidadeId);break}}
+      }
+      if(cadastroId&&cacheCadastro!==cadastroId)continue;
+      if(unidadeId&&cacheUnidade!==unidadeId)continue;
+      context=ctx;
+      selectedAreaId=normArea(saved.selectedAreaId||areas[0].areaId||'');
+      saveContextCache();
+      renderContext(true);
+      setStatus('Painéis da UBS disponíveis. Sincronizando somente o que mudou…','ok');
+      return true;
+    }catch(e){}
+  }
+  return false;
 }
 function responsible(area){var list=context&&Array.isArray(context.tacs)?context.tacs:[];for(var i=0;i<list.length;i++)if(text(list[i].tacsId)===text(area&&area.tacsId))return list[i];return mode==='tacs'?(list[0]||null):null}
 var ACCESS_PROFILE_LABELS={
@@ -1572,6 +1606,10 @@ function entrarPaineisUbs(r){
     syncAppState();
     renderContext(true);
     setStatus('Acesso UBS validado.','ok');
+    setTimeout(function(){if(!active&&ubsToken)loadContext('Acesso UBS sincronizado.')},0);
+    return true;
+  }
+  if(restoreUbsContextCache(r)){
     setTimeout(function(){if(!active&&ubsToken)loadContext('Acesso UBS sincronizado.')},0);
     return true;
   }
