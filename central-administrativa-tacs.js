@@ -1305,12 +1305,24 @@ function shellHasUnsaved(frame){
   try{return Boolean(frame&&frame.contentDocument&&frame.contentDocument.documentElement.dataset.tacsDirty==='1')}catch(e){return false}
 }
 function showPortalTacs(title,routeId,url){
-  /* RETORNO_CENTRAL_PORTAL_V3:
-     Portal TACS permanece dentro do shell persistente da Central.
-     O botão interno Voltar à Central chama o shell pai e apenas fecha o viewer. */
+  /* CORRECAO_CIRURGICA_ATALHO_PORTAL_TACS_20260913_V1:
+     O Portal TACS é uma rota pública completa, não um painel administrativo.
+     Abrir no viewer genérico deixava o iframe invisível até a hidratação terminar e,
+     como o aviso do viewer é ocultado pelo contrato visual, o Safari mostrava apenas
+     a tela azul. O atalho agora navega diretamente para o Portal real na mesma aba.
+     A sessão da Central permanece em sessionStorage e o botão Voltar à Central usa
+     portalTacsCentralReturnUrlV1 para retornar ao ponto administrativo autenticado. */
   publishModuleCore();
-  var portalFrame=ensureShellFrame('portal',url,title||'Portal TACS',routeId);
-  showShellFrame('portal',portalFrame,title||'Portal TACS',routeId);
+  try{sessionStorage.setItem('portalTacsCentralReturnUrlV1',location.href)}catch(e){}
+  var target=text(url||moduleUrl('portal'))||'/atendimento-acs-farmaceutico/?from=central';
+  try{
+    var parsed=new URL(target,location.href);
+    parsed.searchParams.set('from','central');
+    parsed.searchParams.set('v','20260913-portal-shortcut-v1');
+    location.assign(parsed.href);
+  }catch(e){
+    location.href=target;
+  }
 }
 function openModule(name,title,options){
   if(name==='ubs'){if(mode==='admin')showAdminUbs(title||'UBS');return}
