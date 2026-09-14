@@ -499,3 +499,36 @@ Backend Apps Script não foi alterado; produção permanece na versão **208**.
 ## Correção emergencial de 13/09/2026 — Central inoperante
 
 O fechamento lógico da Tarefa 15 não bastava: CSS e guarda visual impediam o viewer de desaparecer e expunham hosts ocultos. O fluxo passa a ser validado também por execução do DOM/CSS, conforme `REGISTRO_CORRECAO_CENTRAL_INOPERANTE_2026_09_13.md`. Abrir → um host visível; voltar → viewer oculto imediatamente; reabrir → mesmo host/dados. A guarda visual não pode manter display inline nem observar as próprias escritas. Não constitui homologação física dos perfis/aparelhos nem encerramento das outras pendências.
+
+## Fechamento canônico — desempenho do acesso e painéis UBS (13/09/2026)
+
+O bloco isolado de desempenho da UBS foi validado no uso real pelo usuário e passa a integrar a fonte de verdade arquitetural do projeto.
+
+Fluxo canônico preservado:
+
+`PIN UBS → validação/criação da sessão → contexto local previamente confirmado da mesma UBS → painéis disponíveis imediatamente → sincronização remota em segundo plano`.
+
+No primeiro carregamento remoto sem snapshot local válido:
+
+`validar sessão UBS → ler TACS uma vez → ler áreas uma vez → transportar contextoUbsInterno → reutilizar o mesmo snapshot em admin_territorio_dados → devolver contexto`.
+
+Contratos:
+- cache/snapshot de outra UBS é recusado;
+- `cadastroId` e `unidadeId` precisam corresponder à UBS autenticada;
+- o cache acelera apresentação, mas não substitui a autoridade do servidor;
+- a sincronização remota permanece obrigatória;
+- leituras territoriais já feitas na mesma execução são reutilizadas, evitando releituras duplicadas;
+- este fechamento é exclusivo da UBS e não declara Administrador, TACS ou Morador equivalentes sem seus próprios blocos;
+- correções futuras não relacionadas devem preservar `CORRECAO_CIRURGICA_ABERTURA_UBS_CACHE_V1` e `CORRECAO_CIRURGICA_UBS_CONTEXTO_SEM_RELEITURA_V1`.
+
+Referências funcionais:
+- `521ca8db2a5302b3c9f2ea0bc561520f091efdd4` — contexto local UBS validado;
+- `d1c6a720a4a335ee355d72d296d1bd40e291b4e8` — snapshot territorial reutilizado na validação;
+- `3a3bc1cf4624f1f968885ca4ab72ec292a066e2c` — releituras territoriais eliminadas;
+- Apps Script de produção registrado na correção: versão **217**.
+
+### Status final do bloco
+**VALIDADO NO DISPOSITIVO, PUBLICADO E CANONIZADO — 13/09/2026.**
+
+A validação real confirmada pelo usuário encerra a pendência operacional registrada em `REGISTRO_CORRECAO_ABERTURA_IMEDIATA_PAINEIS_UBS_2026_09_13.md` e no ramo correspondente de `FLUXOGRAMA_ABERTURA_CANONICA.md`.
+
