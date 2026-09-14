@@ -26,7 +26,7 @@ function addStyle(){
   if(document.getElementById(STYLE_ID))return;
   var s=document.createElement('style');s.id=STYLE_ID;
   s.textContent=[
-    '#portalTacsAtualizarPaginaV1{top:calc(10px + env(safe-area-inset-top))!important;right:10px!important;bottom:auto!important;width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important;padding:0!important;border:2px solid rgba(255,255,255,.9)!important;border-radius:50%!important;background:#073a55!important;color:#fff!important;font-size:0!important;box-shadow:0 2px 8px rgba(0,0,0,.2)!important;z-index:2147483000!important}',
+    '#portalTacsAtualizarPaginaV1{top:calc(10px + env(safe-area-inset-top))!important;right:10px!important;bottom:auto!important;width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important;padding:0!important;border:2px solid rgba(255,255,255,.9)!important;border-radius:50%!important;background:#073a55!important;color:#fff!important;font-size:0!important;box-shadow:0 2px 8px rgba(0,0,0,.2)!important;z-index:2147483000!important;display:flex!important;align-items:center!important;justify-content:center!important}',
     '#portalTacsAtualizarPaginaV1::before{content:"↻";display:block;font-size:26px;line-height:1;color:#fff}',
     'footer.portal-institutional-footer{display:block!important;margin:0!important;padding:26px 22px calc(24px + env(safe-area-inset-bottom))!important;border:0!important;border-radius:0 0 27px 27px!important;background:linear-gradient(135deg,#041f34 0%,#062c46 55%,#0b4b6e 100%)!important;color:#fff!important;font-size:14px!important;line-height:1.5!important}',
     '.portal-footer-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:22px;align-items:start}',
