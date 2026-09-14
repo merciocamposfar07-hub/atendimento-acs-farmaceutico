@@ -724,3 +724,22 @@ Validação:
 - estado: **PUBLICADA PARA TESTE NO DISPOSITIVO**.
 
 Registro: `REGISTRO_CORRECAO_ATALHO_PORTAL_TACS_TELA_AZUL_2026_09_13.md`.
+
+### Correção isolada — Moradores / mensagem residual após snapshot
+Data: 13/09/2026
+
+Fluxo:
+`entrada no painel Moradores → aviso de carregamento → snapshot visível → remover somente o aviso residual → confirmação remota continua em segundo plano`.
+
+Regras:
+- ramo exclusivo do painel Moradores;
+- atua apenas em `loginStatus` e `operationStatus` quando o conteúdo ainda é exatamente o aviso de carregamento;
+- preserva mensagens de erro, gravação, bloqueio e confirmação;
+- preserva todos os dados e regras existentes;
+- cadeia de cache renovada com `20260913-loader-moradores-final-v4`.
+
+Validação: JavaScript alterado com sintaxe válida.
+
+Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — não encerrar até confirmação do usuário.**
+
+Registro: `REGISTRO_CORRECAO_CICLO_CARREGAMENTO_PAINEIS_2026_09_13.md`.
