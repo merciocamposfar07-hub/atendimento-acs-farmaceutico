@@ -26,6 +26,24 @@ Se a correção depender de internet e a conexão não estiver disponível:
 
 detectar → preservar último estado funcional → registrar incidente completo → enfileirar reparo pendente → continuar no modo possível/offline → detectar retorno da internet → retomar automaticamente o reparo → testar → confirmar → remover da fila.
 
+## Regra de atuação imediata e validação real
+A partir do primeiro sinal objetivo de inconsistência, degradação, lentidão anormal, bloqueio, travamento, congelamento, falha de navegação, resposta incompleta ou erro funcional, o Supervisor deve entrar em ação automaticamente e em tempo real.
+
+O fluxo obrigatório da fase crítica é:
+detectar → isolar o fluxo afetado → localizar a causa → executar o menor reparo possível → repetir a operação real que falhou → medir o resultado → confirmar estabilidade → encerrar o incidente.
+
+Regras obrigatórias:
+- não esperar o usuário repetir a ação para iniciar o diagnóstico;
+- não considerar um reparo concluído apenas porque o código foi alterado;
+- não considerar um reparo concluído apenas porque não houve erro de sintaxe;
+- a validação deve repetir a mesma operação funcional que apresentou a falha, no mesmo módulo e com o mesmo caminho de execução, sempre que isso puder ser feito com segurança;
+- comparar o comportamento antes e depois do reparo, incluindo tempo de resposta, retorno de dados, renderização, navegação e estado final;
+- verificar as dependências diretas do trecho alterado para detectar regressão imediata;
+- somente marcar o incidente como `RESOLVIDO_VALIDADO` quando a operação real voltar a funcionar dentro dos critérios previstos;
+- se o teste real falhar, o incidente permanece aberto, o reparo é revertido quando necessário e o Supervisor continua o diagnóstico;
+- se a validação real não puder ser executada naquele momento por falta de rede ou dependência externa, o estado deve permanecer `AGUARDANDO_VALIDACAO_REAL` e a validação deve ser retomada automaticamente assim que a condição necessária voltar;
+- intervenção manual continua sendo o último recurso.
+
 ## Regra de retomada automática após falta de internet
 - A ausência de internet não encerra o incidente.
 - O incidente deve permanecer com estado `PENDENTE_REDE`.
