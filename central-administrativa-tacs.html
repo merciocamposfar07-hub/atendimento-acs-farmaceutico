@@ -2616,7 +2616,6 @@ html body .viewer .csc-native-module-host>*{
   margin-right:auto!important;
 }
 html body #cscModuleOpening{
-  display:none!important;
   width:min(720px,100%)!important;
   margin:0 auto!important;
   border:0!important;
@@ -2625,6 +2624,8 @@ html body #cscModuleOpening{
   background:#071827!important;
   color:#adc4d2!important;
 }
+html body #cscModuleOpening[hidden]{display:none!important}
+html body #cscModuleOpening:not([hidden]){display:block!important}
 @media(max-width:430px){
   html body .viewer .viewer-bar{min-height:124px!important;padding-left:13px!important;padding-right:13px!important;gap:13px!important}
   html body .viewer .viewer-official-icon{width:94px!important;height:94px!important;min-width:94px!important;flex-basis:94px!important}
