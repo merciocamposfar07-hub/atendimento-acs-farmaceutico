@@ -80,3 +80,52 @@ Validação interna:
 - sintaxe de `central-administrativa-tacs.js`: válida.
 
 Estado: **PUBLICADA PARA TESTE NO DISPOSITIVO — confirmação do usuário ainda pendente.**
+
+
+## Correção isolada V3 — tela azul vazia durante a montagem
+Marcador: `CORRECAO_CIRURGICA_LOADER_SHELL_VISIVEL_20260913_V3`.
+
+### Evidência no dispositivo
+Dois registros em vídeo de 13/09/2026 confirmaram o mesmo comportamento em rotas diferentes:
+- ao abrir **Pendências da área**, o shell permanecia apenas com o fundo azul por vários segundos antes da interface aparecer;
+- ao abrir **Prontuários / Moradores**, o mesmo fundo azul permanecia visível durante a montagem do painel.
+
+### Diagnóstico
+O JavaScript do shell já executava corretamente:
+`setShellOpening(..., true) → remover hidden → escrever "Aguarde enquanto os dados carregam…"`.
+
+Entretanto, a camada visual canônica da Central continha a regra global:
+`#cscModuleOpening { display:none!important; }`.
+
+Essa regra anulava a abertura solicitada pelo JavaScript. O viewer era exibido, porém o único elemento destinado a representar a transição continuava invisível; por isso o usuário via somente `#071827` até o painel terminar de montar.
+
+### Correção
+A regra incondicional foi substituída por controle explícito de estado:
+- `#cscModuleOpening[hidden]` permanece invisível;
+- `#cscModuleOpening:not([hidden])` fica visível;
+- o JavaScript existente continua sendo a autoridade para iniciar e encerrar o ciclo.
+
+Fluxo:
+`toque no painel → shell visível → aviso de carregamento visível imediatamente → interface do painel monta → aviso some → sincronização dos dados continua conforme o módulo`.
+
+### Escopo
+Correção restrita ao **shell visual comum de abertura dos painéis**.
+
+Não foram alterados:
+- backend Apps Script;
+- consultas, cache de dados ou otimização de backend;
+- PIN, sessão ou reconhecimento de aparelho;
+- permissões;
+- regras de UBS/TACS/Morador/Administrador;
+- vagas, agendas, profissionais, moradores ou gravações;
+- layout funcional interno dos painéis.
+
+Como o defeito estava no shell compartilhado, a correção se aplica às rotas administrativas que usam esse shell sem implementar otimização nova em cada perfil.
+
+### Publicação
+- commit funcional: `ffa72697b1a9a64c19ce2282f4d0b2eeb63b3281`.
+
+### Estado
+**PUBLICADA PARA TESTE NO DISPOSITIVO — validação real do usuário pendente.**
+
+Não marcar como concluída operacionalmente até confirmar no iPhone que, ao tocar em diferentes painéis, não existe mais intervalo de tela azul vazia.
