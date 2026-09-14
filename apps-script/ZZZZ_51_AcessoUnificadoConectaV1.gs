@@ -735,28 +735,15 @@ function conectaAcessoV1CriarSessaoUbs_(ubs,dispositivo){
 }
 
 function conectaAcessoV1RespostaUbs_(ubs,dispositivo,chave,mensagem){
-  var sessao=conectaAcessoV1CriarSessaoUbs_(ubs,dispositivo),areas=[],ubsAtual=null,unidadeId=conectaAcessoV1Id_(ubs&&ubs.unidadeId);
-  try{
-    if(typeof tacsTerritorioV1LerAreas_==='function'&&unidadeId){
-      areas=tacsTerritorioV1LerAreas_().filter(function(area){
-        return area&&area.ativa===true&&conectaAcessoV1Id_(area.unidadeId)===unidadeId;
-      });
-    }
-  }catch(erroAreas){areas=[];}
-  try{
-    ubsAtual=typeof tacsTerritorioV1PublicarTacs_==='function'?tacsTerritorioV1PublicarTacs_(ubs):null;
-  }catch(erroPublicacao){ubsAtual=null;}
-  if(!ubsAtual){
-    ubsAtual={
-      tacsId:conectaAcessoV1Id_(ubs&&ubs.tacsId),nomeCompleto:conectaAcessoV1Texto_(ubs&&ubs.nomeCompleto),
-      perfil:conectaAcessoV1Texto_(ubs&&ubs.perfil)||'UBS',funcaoUbs:conectaAcessoV1Texto_(ubs&&ubs.funcaoUbs),
-      unidadeId:unidadeId,permissoes:Array.isArray(ubs&&ubs.permissoes)?ubs.permissoes.slice():[]
-    };
-  }
+  /* CORRECAO_CIRURGICA_UBS_LOGIN_ATIVO_V1:
+     O login da UBS volta a concluir somente a autenticação e a criação da sessão.
+     A leitura territorial completa permanece no carregamento dos painéis, como fallback já existente.
+     Evita bloquear "Validando o PIN da UBS…" com leituras de áreas/publicação durante o login. */
+  var sessao=conectaAcessoV1CriarSessaoUbs_(ubs,dispositivo);
   return {
     ok:true,token:sessao.token,perfil:conectaAcessoV1Texto_(ubs.perfil)||'UBS',cadastroId:ubs.tacsId,nome:ubs.nomeCompleto,funcaoUbs:ubs.funcaoUbs,
     unidadeId:ubs.unidadeId,permissoes:Array.isArray(ubs.permissoes)?ubs.permissoes.slice():[],
-    areas:areas,ubsAtual:ubsAtual,
+    areas:[],ubsAtual:null,
     chaveConfianca:chave||'',vinculoAparelhoCriado:true,message:mensagem||'Acesso UBS validado.'
   };
 }
