@@ -744,6 +744,21 @@ function setShellOpening(title,visible){
     node.textContent='';
   }
 }
+/* CORRECAO_CIRURGICA_PREPAINT_PAINEIS_20260913_V1
+   Evita o intervalo de tela azul vazia entre o toque e a montagem do painel.
+   Exibe somente a estrutura visual temporária do próprio painel; dados, permissões,
+   rotas, backend e lógica interna permanecem intocados. */
+function setShellOpeningPreview(name,routeId,visible){
+  var node=ensureShellOpening();if(!node)return;
+  if(!visible){
+    node.hidden=true;
+    node.textContent='';
+    return;
+  }
+  ensurePendingPreviewStyle();
+  node.hidden=false;
+  node.innerHTML='<div class="csc-pending-preview">'+pendingPreviewHtml(name,routeId)+'</div>';
+}
 /* TAREFA_16_AGENDAS_NATIVAS_V1:
    Agendas e vagas é o primeiro painel migrado definitivamente para o shell.
    O caminho normal não usa viewerFrame/iframe; os demais módulos permanecem inalterados. */
@@ -797,7 +812,7 @@ function showNativeAgenda(title,routeId){
   el('viewerTitle').textContent=title||'Agendas e vagas';
   viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;host.hidden=false;
   var footer=el('viewerFooter');if(footer)footer.hidden=false;
-  document.body.classList.add('viewer-open');setShellOpening(title||'Agendas e vagas',true);
+  document.body.classList.add('viewer-open');setShellOpeningPreview('agendas',routeId,true);
   ensureTask16AgendaAssets(function(ok){
     if(shellActiveNative!=='agendas'||shellActiveRoute!==routeId)return;
     if(!ok){
@@ -854,7 +869,7 @@ function showNativeMoradores(title,routeId){
   el('viewerTitle').textContent=title||'Moradores';
   viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;host.hidden=false;
   var footer=el('viewerFooter');if(footer)footer.hidden=false;
-  document.body.classList.add('viewer-open');setShellOpening(title||'Moradores',true);
+  document.body.classList.add('viewer-open');setShellOpeningPreview('moradores',routeId,true);
   ensureTask17MoradoresAssets(function(ok){
     if(shellActiveNative!=='moradores'||shellActiveRoute!==routeId)return;
     if(!ok){
@@ -918,7 +933,7 @@ function showNativeProfissionais(title,routeId){
   el('viewerTitle').textContent=title||'Profissionais e serviços';
   viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;host.hidden=false;
   var footer=el('viewerFooter');if(footer)footer.hidden=false;
-  document.body.classList.add('viewer-open');setShellOpening(title||'Profissionais e serviços',true);
+  document.body.classList.add('viewer-open');setShellOpeningPreview('profissionais',routeId,true);
   ensureTask18ProfissionaisAssets(function(ok){
     if(shellActiveNative!=='profissionais'||shellActiveRoute!==routeId)return;
     if(!ok){
@@ -1153,15 +1168,11 @@ function shellFrameAtTarget(frame){
   }
 }
 function setLegacyFrameOpening(frame,visible){
-  var node=ensureShellOpening();
   if(frame)frame.style.visibility=visible?'hidden':'visible';
-  if(!node)return;
   if(visible){
-    node.hidden=false;
-    node.textContent='Aguarde enquanto os dados carregam…';
+    setShellOpeningPreview(frame&&frame.dataset.shellModule||'',frame&&frame.dataset.shellRoute||'',true);
   }else{
-    node.hidden=true;
-    node.textContent='';
+    setShellOpeningPreview('', '', false);
   }
 }
 function enhanceShellFrame(frame){
@@ -1258,6 +1269,15 @@ function ensurePendingPreviewStyle(){
 function pendingPreviewHtml(name,routeId){
   var wait='<div class="csc-pending-status">Aguarde enquanto os dados carregam…</div>';
   var metrics=function(labels){return '<div class="csc-pending-metrics">'+labels.map(function(label){return '<div class="csc-pending-metric"><strong>—</strong><span>'+label+'</span></div>'}).join('')+'</div>'};
+  if(name==='agendas')return wait
+    +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Agendas</div><div class="csc-pending-tab">Vagas</div></div>'
+    +'<div class="csc-pending-card">'+metrics(['Profissionais','Dias disponíveis','Vagas comuns','Urgências'])+'</div>';
+  if(name==='moradores'&&String(routeId||'').indexOf('view=prontuarios')<0)return wait
+    +'<div class="csc-pending-card"><h2>Moradores</h2><div class="csc-pending-field">Buscar morador</div></div>'
+    +'<div class="csc-pending-card">'+metrics(['Ativos','Cadastros','Famílias','Pendências'])+'</div>';
+  if(name==='profissionais')return wait
+    +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Profissionais</div><div class="csc-pending-tab">Serviços</div></div>'
+    +'<div class="csc-pending-card">'+metrics(['Profissionais','Serviços','Ativos','Vínculos'])+'</div>';
   if(name==='suporte')return wait
     +'<div class="csc-pending-card"><h2>Vínculos protegidos</h2><p>Chamados e diagnóstico permanecem no próprio módulo.</p></div>'
     +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Chamados dos moradores</div><div class="csc-pending-tab">Diagnóstico dos aparelhos</div></div>'
