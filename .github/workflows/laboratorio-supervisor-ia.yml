@@ -27,8 +27,10 @@ jobs:
         run: |
           cp laboratorio-ia/apps-script/Code.gs /tmp/conecta-supervisor-code.js
           node --check /tmp/conecta-supervisor-code.js
-      - name: Confirmar isolamento do laboratório
+      - name: Confirmar cobertura do laboratório
         shell: bash
         run: |
-          grep -q 'laboratorio-ia/supervisor-client.js' central-administrativa-tacs.html
-          ! grep -q 'laboratorio-ia/supervisor-client.js' index.html
+          for file in             central-administrativa-tacs.html             painel-oficial-agendas-vagas.html             painel-oficial-organizacoes-municipios.html             painel-oficial-profissionais-servicos.html             painel-oficial-recados-campanhas.html             painel-oficial-tacs-areas.html             painel-suporte-moradores-v2.html             admin.html             index.html
+          do
+            grep -q 'laboratorio-ia/supervisor-client.js' "$file"
+          done
