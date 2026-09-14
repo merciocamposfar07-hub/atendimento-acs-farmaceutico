@@ -536,6 +536,45 @@ function conectaAcessoV1BuscarNomeNascimentoDiagnostico_(nome,nascimento,areaId)
   return out;
 }
 
+function conectaAcessoV1RegistrosFamiliaDiagnostico_(area,familia){
+  /* CORRECAO_CIRURGICA_BUSCA_MORADOR_CADASTRO_FAST_V2:
+     bloco exclusivo da busca administrativa do Morador pelo número de cadastro na área.
+     Em vez de carregar todas as linhas/colunas da planilha, localiza primeiro somente
+     as linhas cujo endereço contém o cadastro familiar e monta apenas esses moradores.
+     Não altera CPF, CNS, nome, nascimento, PIN, sessão, UBS, TACS ou demais painéis. */
+  familia=conectaAcessoV1NormalizarFamiliaDiagnostico_(familia);
+  var partes=familia.match(/^0*(\d{1,4})([A-Z])?$/);
+  if(!partes)return [];
+  var numero=partes[1].replace(/^0+/,'')||'0',sufixo=partes[2]||'';
+  var contexto={
+    perfil:'PUBLICO',operadorId:'PUBLICO',agenteId:area.agenteId||'',
+    areaId:area.areaId,areaNome:area.areaNome||area.areaId,
+    unidadeId:area.unidadeId||'',planilhaId:area.planilhaId,permissoes:[]
+  };
+  var fonte=moradoresAdminV1LocalizarFonte_(contexto);
+  if(fonte.map.endereco==null||fonte.map.endereco<0)return [];
+  var primeira=fonte.headerRow+2,ultima=fonte.sheet.getLastRow(),out=[];
+  if(ultima<primeira)return out;
+  var expressao=',\\s*0*'+numero+sufixo+'\\s*\\.';
+  var achados=fonte.sheet
+    .getRange(primeira,fonte.map.endereco+1,ultima-primeira+1,1)
+    .createTextFinder(expressao)
+    .useRegularExpression(true)
+    .matchCase(false)
+    .findAll()||[];
+  var ultimaColuna=fonte.sheet.getLastColumn();
+  achados.forEach(function(celula){
+    var linha=celula.getRow(),faixa=fonte.sheet.getRange(linha,1,1,ultimaColuna);
+    var raw=faixa.getValues()[0],display=faixa.getDisplayValues()[0];
+    var morador=moradoresAdminV1MontarMorador_(display,raw,fonte.map);
+    var status=conectaAcessoV1Texto_(morador.status||'ATIVO').toUpperCase();
+    if(!morador.nome||['FORA_DA_AREA','TRANSFERIDO','FALECIDO','IMPORTACAO_DESFEITA','INATIVO'].indexOf(status)!==-1)return;
+    var item={area:area,fonte:fonte,row:linha,morador:morador,chave:moradoresAdminV1ChaveRegistro_(morador)};
+    if(conectaAcessoV1CodigoFamiliaItem_(item)===familia)out.push(item);
+  });
+  return out;
+}
+
 function conectaAcessoV1BuscarCadastroAreaDiagnostico_(cadastro,areaId,excluirAreaId){
   var valor=conectaAcessoV1Texto_(cadastro).toUpperCase(),familia=conectaAcessoV1NormalizarFamiliaDiagnostico_(valor),areas=conectaAcessoV1Areas_();
   if(areaId)areas=areas.filter(function(a){return conectaAcessoV1Id_(a.areaId)===conectaAcessoV1Id_(areaId);});
@@ -543,7 +582,7 @@ function conectaAcessoV1BuscarCadastroAreaDiagnostico_(cadastro,areaId,excluirAr
   var grupos=[];
   if(familia){
     areas.forEach(function(area){
-      var membros=conectaAcessoV1RegistrosArea_(area).filter(function(x){return conectaAcessoV1CodigoFamiliaItem_(x)===familia;});
+      var membros=conectaAcessoV1RegistrosFamiliaDiagnostico_(area,familia);
       if(membros.length)grupos.push({area:area,membros:membros});
     });
     if(grupos.length>1)throw new Error('Este número de cadastro existe em mais de uma área. Selecione a área correta na Central e pesquise novamente.');
@@ -562,6 +601,9 @@ function conectaAcessoV1BuscarCadastroAreaDiagnostico_(cadastro,areaId,excluirAr
         }
       };
     }
+    /* Um cadastro normalizável como família não cai no varrimento genérico por ID.
+       Se não foi encontrado nesta área, o chamador preserva o fallback para as demais áreas. */
+    return {familia:false,pessoas:[]};
   }
   var pessoais=[];
   areas.forEach(function(area){
