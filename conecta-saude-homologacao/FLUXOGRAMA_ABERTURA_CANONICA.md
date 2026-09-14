@@ -562,3 +562,46 @@ Consolidação canônica:
 - commit canônico: `7ea70c998842ebe1e960fea8b6d7b26e42e241dc`;
 - workflow `Aplicar UI App4 canônica aos painéis administrativos` run `34790372078`: **success**;
 - verificação após a regeneração confirmou prepaint, sessão UBS e guarda de `about:blank` preservados no HEAD.
+
+
+### Correção isolada — Desempenho dos painéis e barra inferior imediata
+Data: 13/09/2026
+
+Diagnóstico observado no iPhone:
+
+`Central já visível → Saúde Geral permanece vários segundos em atualização → consultas remotas concorrem com abertura dos painéis → ativos nativos só começam a ser preparados após load/idle tardio → dock inferior depende de DOMContentLoaded e scripts externos`.
+
+Ramo A — carregamento interno dos painéis:
+
+`contexto/cache válido → renderização imediata → preparação antecipada dos módulos nativos → toque abre o painel → sincronização remota continua em segundo plano`.
+
+Ramo B — barra inferior:
+
+`HTML inicial da Central → dock já presente no shell → prepaint respeita sessão → hidratação posterior apenas conecta as ações`.
+
+Regras:
+- dados locais confirmados são exibidos antes da sincronização remota;
+- a mensagem de atualização remota não bloqueia mais a percepção de carregamento concluído quando já existe snapshot válido;
+- Agendas, Moradores e Profissionais começam a preparar seus ativos antes do antigo timeout de 3,5 s;
+- a barra inferior não depende mais do término dos scripts externos para existir no DOM;
+- em tela de Login, o dock continua oculto pelo estado prepaint de sessão;
+- nenhuma alteração em cadastro, permissões, PIN, áreas, UBS, TACS, moradores, vagas, gravações ou backend;
+- retorno dos painéis agenda uma atualização de Saúde Geral fora do caminho crítico do toque;
+- rollback permanece isolado aos arquivos `central-administrativa-tacs.js` e `central-administrativa-tacs.html`.
+
+Validação interna executada:
+- sintaxe de `central-administrativa-tacs.js`: OK;
+- sintaxe do script inline do shell App4: OK;
+- marcador de desempenho e agendamento antecipado presentes no HEAD;
+- antigo preload nativo de 3,5 s removido;
+- dock estático aparece uma única vez no HTML real e é hidratado sem duplicação;
+- cache do JavaScript da Central renovado.
+
+Commits da correção:
+- `183093fac7404d65babe688a6e11c69b9870a4e0` — dados/cache e preparação antecipada dos painéis;
+- `13f3cbb92cce3a7072c2e5644f042294004f8383` — barra inferior no shell inicial;
+- `6acbb75d8634c87faeb9b4d2109e3760e3646504` — renovação de cache da Central otimizada.
+
+Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação do usuário pendente antes do encerramento.**
+
+Registro: `REGISTRO_CORRECAO_DESEMPENHO_PAINEIS_BARRA_INFERIOR_2026_09_13.md`.
