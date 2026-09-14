@@ -8,6 +8,7 @@ var API_KEY='conectaSupervisorIA:endpoint:v1';
 var busy=false;
 var lastIncidentAt=0;
 var MAX_QUEUE=40;
+var lastDomMutationAt=now(),inflightNetwork=0,lastNetworkChangeAt=0,incidentSignatures={};
 
 function text(v){return String(v==null?'':v).trim()}
 function now(){return Date.now()}
@@ -179,6 +180,97 @@ function flush(){
     })
     .finally(function(){busy=false;setTimeout(flush,1200)});
 }
+function safeUrl(value){
+  try{var u=new URL(String(value||''),location.href);return u.origin+u.pathname}catch(e){return text(value).split('?')[0].slice(0,300)}
+}
+function shouldIncident(signature,windowMs){
+  var t=now(),last=Number(incidentSignatures[signature]||0);
+  if(t-last<Number(windowMs||8000))return false;
+  incidentSignatures[signature]=t;return true;
+}
+function installNetworkObserver(){
+  if(typeof window.fetch==='function'&&!window.fetch.__conectaSupervisorWrapped){
+    var nativeFetch=window.fetch;
+    var wrapped=function(){
+      var args=arguments,start=now(),url=safeUrl(args[0]&&args[0].url||args[0]);
+      inflightNetwork++;lastNetworkChangeAt=now();
+      return nativeFetch.apply(this,args).then(function(r){
+        var elapsed=now()-start;inflightNetwork=Math.max(0,inflightNetwork-1);lastNetworkChangeAt=now();
+        if(elapsed>=8000&&shouldIncident('fetch-slow:'+url,15000)){
+          incident('REQUISICAO_LENTA',{mensagem:'Requisição levou '+elapsed+' ms para concluir.',duracaoMs:elapsed,etapa:'rede',funcao:'fetch',arquivo:'',modulo:location.pathname+' → '+url});
+        }
+        if(!r.ok&&shouldIncident('fetch-http:'+url+':'+r.status,12000)){
+          incident('RESPOSTA_HTTP_INESPERADA',{mensagem:'Resposta HTTP '+r.status+' em '+url+'.',duracaoMs:elapsed,etapa:'rede',funcao:'fetch'});
+        }
+        return r;
+      },function(err){
+        var elapsed=now()-start;inflightNetwork=Math.max(0,inflightNetwork-1);lastNetworkChangeAt=now();
+        if(shouldIncident('fetch-fail:'+url,8000))incident('REQUISICAO_FALHOU',{mensagem:(err&&err.message)||'Falha de rede em '+url,stack:err&&err.stack,duracaoMs:elapsed,etapa:'rede',funcao:'fetch'});
+        throw err;
+      });
+    };
+    wrapped.__conectaSupervisorWrapped=true;window.fetch=wrapped;
+  }
+  if(window.XMLHttpRequest&&!XMLHttpRequest.prototype.__conectaSupervisorWrapped){
+    var nativeOpen=XMLHttpRequest.prototype.open,nativeSend=XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open=function(method,url){
+      this.__supUrl=safeUrl(url);this.__supMethod=text(method||'GET');
+      return nativeOpen.apply(this,arguments);
+    };
+    XMLHttpRequest.prototype.send=function(){
+      var xhr=this,start=now(),url=xhr.__supUrl||'xhr';
+      inflightNetwork++;lastNetworkChangeAt=now();
+      function done(){
+        xhr.removeEventListener('loadend',done);
+        var elapsed=now()-start;inflightNetwork=Math.max(0,inflightNetwork-1);lastNetworkChangeAt=now();
+        if(elapsed>=8000&&shouldIncident('xhr-slow:'+url,15000))incident('REQUISICAO_LENTA',{mensagem:'XHR levou '+elapsed+' ms para concluir.',duracaoMs:elapsed,etapa:'rede',funcao:'XMLHttpRequest'});
+        if(xhr.status>=400&&shouldIncident('xhr-http:'+url+':'+xhr.status,12000))incident('RESPOSTA_HTTP_INESPERADA',{mensagem:'XHR retornou HTTP '+xhr.status+' em '+url+'.',duracaoMs:elapsed,etapa:'rede',funcao:'XMLHttpRequest'});
+      }
+      xhr.addEventListener('loadend',done);
+      try{return nativeSend.apply(this,arguments)}catch(err){done();if(shouldIncident('xhr-fail:'+url,8000))incident('REQUISICAO_FALHOU',{mensagem:(err&&err.message)||'Falha XHR.',stack:err&&err.stack,etapa:'rede',funcao:'XMLHttpRequest'});throw err}
+    };
+    XMLHttpRequest.prototype.__conectaSupervisorWrapped=true;
+  }
+}
+function installInteractionObserver(){
+  try{
+    var mo=new MutationObserver(function(){lastDomMutationAt=now()});
+    mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,characterData:true});
+  }catch(e){}
+  document.addEventListener('click',function(e){
+    var target=e.target&&e.target.closest?e.target.closest('button,[role="button"]'):null;
+    if(!target||target.disabled||target.closest('#conectaSupervisorIaPanel'))return;
+    var beforeMutation=lastDomMutationAt,beforeNetwork=lastNetworkChangeAt,beforeHref=location.href,label=text(target.textContent||target.getAttribute('aria-label')||target.id).slice(0,120);
+    setTimeout(function(){
+      if(location.href!==beforeHref)return;
+      if(lastDomMutationAt>beforeMutation||lastNetworkChangeAt>beforeNetwork||inflightNetwork>0)return;
+      if(shouldIncident('click-no-response:'+location.pathname+':'+label,15000)){
+        incident('ACAO_SEM_RESPOSTA_VISIVEL',{mensagem:'O comando "'+label+'" não produziu navegação, alteração de interface ou comunicação detectável.',etapa:'interacao',funcao:'click'});
+      }
+    },4500);
+  },true);
+}
+function installLoadingObserver(){
+  setInterval(function(){
+    var nodes=document.querySelectorAll('[aria-busy="true"],.loading,.loader,.spinner,[class*="loading"],[class*="spinner"]');
+    Array.prototype.slice.call(nodes,0,80).forEach(function(n){
+      if(!n||n.closest&&n.closest('#conectaSupervisorIaPanel'))return;
+      var cs;try{cs=getComputedStyle(n)}catch(e){return}
+      if(cs.display==='none'||cs.visibility==='hidden'||Number(cs.opacity)===0)return;
+      var msg=text(n.textContent||n.getAttribute('aria-label')||'carregamento');
+      var since=Number(n.dataset&&n.dataset.conectaSupervisorLoadingSince||0);
+      if(!since){try{n.dataset.conectaSupervisorLoadingSince=String(now())}catch(e){};return}
+      var elapsed=now()-since;
+      if(elapsed>=10000&&shouldIncident('loading:'+location.pathname+':'+msg.slice(0,80),20000)){
+        incident('CARREGAMENTO_PERSISTENTE',{mensagem:'Indicador de carregamento permaneceu visível por '+elapsed+' ms: '+msg.slice(0,180),duracaoMs:elapsed,etapa:'renderizacao'});
+      }
+    });
+  },2000);
+}
+installNetworkObserver();
+installInteractionObserver();
+installLoadingObserver();
+
 window.addEventListener('error',function(e){
   if(now()-lastIncidentAt<300)return;lastIncidentAt=now();
   incident('JS_ERROR',{mensagem:e.message,stack:e.error&&e.error.stack,arquivo:e.filename,linha:e.lineno,coluna:e.colno,etapa:'javascript'});
