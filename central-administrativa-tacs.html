@@ -36,6 +36,8 @@ root.classList.add(active?'csc-central-state-app':'csc-central-state-login');
 html.csc-canonical-prepaint,html.csc-canonical-prepaint body{background:#071827!important}
 html.csc-prepaint-auth.csc-central-state-app #loginPanel{display:none!important}
 html.csc-canonical-prepaint body>header{display:none!important}
+html.csc-session-missing #cscInstitutionalDock{display:none!important}
+html.csc-session-active #cscInstitutionalDock{display:grid!important}
 </style>
 <style>
 :root{--p:#073a55;--p2:#0b5878;--green:#148a46;--greenbg:#e8f7ee;--bg:#dfeef3;--text:#102d40;--muted:#536b78;--border:#8fb4c2;--white:#fff;--warn:#805300;--warnbg:#fff6dd;--err:#a52d2d;--errbg:#fff0f0;--blue:#69c7e7}
@@ -2296,7 +2298,16 @@ function buildCentralWelcome(){
     copy.innerHTML='<small>Perfil autenticado</small><h1>Gestão da área</h1><p>Carregando sua identificação…</p>';
     identity.insertBefore(copy,identity.firstChild);
   }
-  if(document.getElementById('cscInstitutionalDock'))return;
+  var existingDock=document.getElementById('cscInstitutionalDock');
+  if(existingDock){
+    var existingHandlers=[showCentralHome,openRecordsPage,openPendingPage,openProfilePage];
+    Array.prototype.forEach.call(existingDock.querySelectorAll('.csc-navitem'),function(b,i){
+      if(b.dataset.cscDockWired==='1'||!existingHandlers[i])return;
+      b.dataset.cscDockWired='1';
+      b.addEventListener('click',function(){vibrate();existingDock.querySelectorAll('.csc-navitem').forEach(function(x){x.classList.toggle('active',x===b)});existingHandlers[i]()});
+    });
+    return;
+  }
   var dock=document.createElement('nav');
   dock.id='cscInstitutionalDock';
   dock.className='csc-dock';
@@ -2683,6 +2694,7 @@ html body .viewer.csc-frame-viewer>iframe{
 </head>
 <body class="csc-brand-enhanced csc-central">
 <div id="cscInstitutionalAppbar" class="csc-appbar" role="banner"><img class="csc-appbar-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=183093fac740" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="csc-appbar-title"><small>CONECTA SAÚDE COMUNITÁRIA</small><strong>Central Administrativa</strong></div></div>
+<nav id="cscInstitutionalDock" class="csc-dock" aria-label="Navegação da Central"><button type="button" class="csc-navitem active"><i>⌂</i><span>Início</span></button><button type="button" class="csc-navitem"><i>▦</i><span>Prontuários</span></button><button id="cscPendingNav" type="button" class="csc-navitem" style="position:relative"><i>🔔</i><span>Pendências</span><em id="cscPendingBadge" hidden aria-label="Nenhuma pendência" style="position:absolute;top:4px;left:calc(50% + 7px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#d62f2f;color:#fff;font:900 11px/18px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px #071827">0</em></button><button type="button" class="csc-navitem"><i>●</i><span>Perfil</span></button></nav>
 <header><span class="badge">CENTRAL ADMINISTRATIVA TACS</span><h1>Seus painéis em um só lugar</h1><p>Um único acesso para administrar a área, sem misturar a lógica interna dos módulos.</p></header>
 <main>
 <section id="loginPanel" class="panel">
