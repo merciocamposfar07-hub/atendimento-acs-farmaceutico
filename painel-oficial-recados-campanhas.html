@@ -2324,7 +2324,16 @@ function buildCentralWelcome(){
     copy.innerHTML='<small>Perfil autenticado</small><h1>Gestão da área</h1><p>Carregando sua identificação…</p>';
     identity.insertBefore(copy,identity.firstChild);
   }
-  if(document.getElementById('cscInstitutionalDock'))return;
+  var existingDock=document.getElementById('cscInstitutionalDock');
+  if(existingDock){
+    var existingHandlers=[showCentralHome,openRecordsPage,openPendingPage,openProfilePage];
+    Array.prototype.forEach.call(existingDock.querySelectorAll('.csc-navitem'),function(b,i){
+      if(b.dataset.cscDockWired==='1'||!existingHandlers[i])return;
+      b.dataset.cscDockWired='1';
+      b.addEventListener('click',function(){vibrate();existingDock.querySelectorAll('.csc-navitem').forEach(function(x){x.classList.toggle('active',x===b)});existingHandlers[i]()});
+    });
+    return;
+  }
   var dock=document.createElement('nav');
   dock.id='cscInstitutionalDock';
   dock.className='csc-dock';
