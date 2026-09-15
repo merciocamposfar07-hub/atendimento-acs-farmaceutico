@@ -322,7 +322,10 @@ function startCpf(cpf){
  post('conecta_morador_identificar',{cpf:cpf,coreMode:state.coreMode,dispositivo:device()}).then(handleIdentity).catch(function(e){setStatus(e.message,'err')});
 }
 function handleIdentity(r){
- if(r.identidadeToken){state.cpfNaoLocalizado=false;state.identidadeToken=r.identidadeToken;state.areaId=r.areaId||state.areaId;renderIdentityFound(r);return}
+ if(r.identidadeToken){
+  state.cpfNaoLocalizado=false;state.identidadeToken=r.identidadeToken;state.areaId=r.areaId||state.areaId;
+  setStatus('CPF reconhecido no cadastro.','ok');renderPinCreate();return;
+ }
  if(r.precisaNascimento){state.cpfNaoLocalizado=r.ambiguo!==true;renderIdentityForm(false,r.message);return}
  setStatus(r.message||'Não foi possível localizar o cadastro agora.','warn');
 }
