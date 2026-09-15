@@ -74,7 +74,7 @@ assert(unified.includes("state.cpfNaoLocalizado=r.ambiguo!==true"),'CPF ausente 
 assert(unified.includes("CPF confirmado com sua data de nascimento."),'Após confirmar CPF ausente com nascimento, a interface deve confirmar explicitamente essa etapa.');
 assert(unified.includes("Agora crie o seu PIN com quatro números."),'Após a confirmação por nascimento, a próxima etapa deve ser a criação explícita do PIN de quatro números.');
 assert(unified.includes("Confirmar PIN de 4 números"),'A criação do PIN deve exigir confirmação do mesmo PIN de quatro números.');
-assert(unified.includes("if(state.cpfNaoLocalizado===true){setStatus('CPF confirmado com sua data de nascimento.'"),'O ramo de CPF ausente deve seguir diretamente para criação do PIN, sem a tela intermediária Salvar e continuar.');
+assert(unified.includes("if(state.cpfNaoLocalizado===true&&r.provisorio!==true){setStatus('CPF confirmado com sua data de nascimento.'"),'O ramo de CPF ausente só deve seguir diretamente para criação do PIN após vínculo territorial confirmado, nunca em cadastro provisório.');
 assert(backend.includes("CPF_PREENCHIDO_EM_CAMPO_VAZIO"),'CPF deve ser escrito no registro canônico quando o campo estiver vazio');
 assert(backend.includes("Cadastro pendente de conferência. Você pode continuar normalmente com sua solicitação."),'Morador sem correspondência segura não pode ser bloqueado');
 assert(backend.includes("function conectaAcessoV1ContarPendenciasArea_"),'Pendências cadastrais devem alimentar a Central');
