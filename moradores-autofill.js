@@ -72,10 +72,8 @@
   }
 
   function rememberFamilyReference(payload) {
-    var current = familyReference();
-    if (current) return current;
-    var family = String(payload && payload.familiaId || '').trim().toUpperCase();
-    if (!/^[0-9]{1,4}[A-Z]?$/.test(family)) return '';
+    var family = String(payload && (payload.familiaBeneficiario || payload.familiaId) || '').trim().toUpperCase();
+    if (!/^[0-9]{1,4}[A-Z]?$/.test(family)) return familyReference();
     familyMemory = family;
     try { localStorage.setItem(familyStorageKey(), family); } catch (e) {}
     return family;
@@ -87,26 +85,11 @@
   }
 
   function applyFamilyContext(payload) {
-    if (!payload || payload.familiaDiferente !== true) {
-      clearFamilyNotice();
-      rememberFamilyReference(payload);
-      return;
-    }
-    var notice = document.getElementById('familyAutofillNotice');
-    if (!notice) {
-      notice = document.createElement('div');
-      notice.id = 'familyAutofillNotice';
-      notice.className = 'info amber full';
-      notice.setAttribute('role', 'status');
-      var status = document.getElementById('cpfStatus');
-      var label = status && status.closest ? status.closest('label') : null;
-      if (label && label.parentNode) label.parentNode.insertBefore(notice, label.nextSibling);
-      else {
-        var form = document.querySelector('.form-panel') || document.body;
-        form.appendChild(notice);
-      }
-    }
-    notice.textContent = payload.messageFamilia || 'Esta pessoa pertence a outro cadastro familiar desta mesma área. Você pode continuar a solicitação normalmente.';
+    clearFamilyNotice();
+    if (!payload) return;
+    rememberFamilyReference({
+      familiaId: payload.familiaBeneficiario || payload.familiaId || ''
+    });
   }
 
   function validCpf(value) {
