@@ -110,16 +110,30 @@ function identificacaoFamiliarPublicaV1DocumentoConfirmaFamilia_(documento,conte
 
 function identificacaoFamiliarPublicaV1ConsultarFamilia_(p){
   var contexto=identificacaoFamiliarPublicaV1Contexto_(p.areaId||p.area||'');
-  var familia=identificacaoFamiliarPublicaV1NormalizarFamilia_(p.familia||p.familiaId||'');
-  if(!familia)throw new Error('Informe um número de cadastro familiar válido.');
-  var porAparelho=identificacaoFamiliarPublicaV1AparelhoDaFamilia_(p.subscriptionId,contexto,familia);
-  var porDocumento=!porAparelho&&identificacaoFamiliarPublicaV1DocumentoConfirmaFamilia_(p.documentoConfirmacao||p.documento||'',contexto,familia);
-  if(!porAparelho&&!porDocumento){
-    return {ok:true,autorizada:false,requerConfirmacao:true,familiaId:familia,message:'Para proteger os dados da família, confirme uma vez com o CPF ou Cartão SUS (CNS) de um integrante cadastrado.'};
+  var familiaInformada=identificacaoFamiliarPublicaV1NormalizarFamilia_(p.familia||p.familiaId||'');
+  var documento=moradoresAdminV1Digitos_(p.documento||p.documentoConfirmacao||'');
+  var familia=familiaInformada;
+
+  if(!familia&&documento){
+    if(!identificacaoFamiliarPublicaV1TipoDocumento_(documento))throw new Error('Informe um CPF ou Cartão SUS (CNS) válido.');
+    var achado=moradoresAdminV1BuscarPublico_(documento,contexto.areaId);
+    if(!achado||achado.ok!==true||achado.encontrado!==true||!achado.morador){
+      return {ok:true,autorizada:false,requerConfirmacao:false,familiaId:'',message:achado&&achado.message?achado.message:'Cadastro ativo não encontrado.'};
+    }
+    familia=identificacaoFamiliarPublicaV1CodigoMorador_(achado.morador);
   }
+
+  if(!familia)throw new Error('Informe um número de cadastro familiar, CPF ou Cartão SUS (CNS) válido.');
   var membros=identificacaoFamiliarPublicaV1Membros_(familia,contexto);
   if(!membros.length)return {ok:true,autorizada:false,requerConfirmacao:false,familiaId:familia,message:'Nenhum cadastro ativo desta família foi localizado na área atual.'};
-  return {ok:true,autorizada:true,requerConfirmacao:false,familiaId:familia,autorizacao:porAparelho?'APARELHO_VINCULADO':'DOCUMENTO_CONFIRMADO',membros:membros};
+  return {
+    ok:true,
+    autorizada:true,
+    requerConfirmacao:false,
+    familiaId:familia,
+    autorizacao:familiaInformada?'CADASTRO_FAMILIAR':'DOCUMENTO_LOCALIZADOR',
+    membros:membros
+  };
 }
 
 function identificacaoFamiliarPublicaV1TipoDocumento_(doc){
