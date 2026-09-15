@@ -1,0 +1,212 @@
+name: Laboratório — backend operacional isolado
+
+on:
+  push:
+    branches: [laboratorio-ia-autorreparo]
+    paths:
+      - '.github/workflows/laboratorio-backend-isolado.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: laboratorio-backend-isolado
+  cancel-in-progress: false
+
+jobs:
+  preparar:
+    if: github.ref == 'refs/heads/laboratorio-ia-autorreparo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      LAB_ADMIN_ID: '1Pnpcr97DXIqeBEr3xATjd5aYghRO_dmqPWfYeSvYMI0'
+      LAB_MATIAS_ID: '1WRCuCLqXdamhVxKt_WJrTiXrf3U3mwc_vGfBVGvTmQs'
+      PROD_ADMIN_ID: '114ObXLQ8sQSDosauEbAdlhQRWNksJ20Kq57CucpKbTg'
+      PROD_MATIAS_ID: '1eZkJDXwCkYDbb0WovzYi2FU6ecg7cJ0z-nyD2f6bGDA'
+
+    steps:
+      - name: Baixar laboratório
+        uses: actions/checkout@v4
+        with:
+          ref: laboratorio-ia-autorreparo
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validar credenciais existentes sem exibir conteúdo
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+
+      - name: Baixar código do Apps Script oficial somente para clonar
+        env:
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROD_DIR="$RUNNER_TEMP/apps-script-producao-leitura"
+          mkdir -p "$PROD_DIR"
+          CLASP_JSON="$CLASP_JSON" PROD_DIR="$PROD_DIR" node - <<'NODE'
+          const fs=require('fs'), path=require('path');
+          const cfg=JSON.parse(process.env.CLASP_JSON);
+          if(!cfg.scriptId) throw new Error('CLASP_JSON sem scriptId.');
+          fs.writeFileSync(path.join(process.env.PROD_DIR,'.clasp.json'), JSON.stringify({scriptId:cfg.scriptId,rootDir:'.'},null,2)+'\n');
+          NODE
+          cd "$PROD_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Montar clone operacional ligado somente às planilhas LAB
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROD_DIR="$RUNNER_TEMP/apps-script-producao-leitura"
+          LAB_DIR="$RUNNER_TEMP/apps-script-laboratorio"
+          mkdir -p "$LAB_DIR"
+          cp -R "$PROD_DIR"/. "$LAB_DIR"/
+          rm -f "$LAB_DIR/.clasp.json"
+          LAB_DIR="$LAB_DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const root=process.env.LAB_DIR;
+          const prodAdmin=process.env.PROD_ADMIN_ID, labAdmin=process.env.LAB_ADMIN_ID;
+          const prodMatias=process.env.PROD_MATIAS_ID, labMatias=process.env.LAB_MATIAS_ID;
+          function walk(dir){
+            for(const name of fs.readdirSync(dir)){
+              const p=path.join(dir,name), st=fs.statSync(p);
+              if(st.isDirectory()) walk(p);
+              else if(/\.(gs|js|html|json)$/i.test(name)){
+                let s=fs.readFileSync(p,'utf8');
+                s=s.split(prodAdmin).join(labAdmin).split(prodMatias).join(labMatias);
+                s=s.replace(/SpreadsheetApp\.getActiveSpreadsheet\(\)/g, "SpreadsheetApp.openById('"+labAdmin+"')");
+                fs.writeFileSync(p,s);
+              }
+            }
+          }
+          walk(root);
+          NODE
+          if grep -R -n -F "$PROD_ADMIN_ID" "$LAB_DIR" --include='*.gs' --include='*.js' --include='*.html' --include='*.json'; then
+            echo 'ERRO: referência à planilha administrativa oficial ainda presente.'
+            exit 1
+          fi
+          if grep -R -n -F "$PROD_MATIAS_ID" "$LAB_DIR" --include='*.gs' --include='*.js' --include='*.html' --include='*.json'; then
+            echo 'ERRO: referência à planilha de Matias oficial ainda presente.'
+            exit 1
+          fi
+          printf 'Clone operacional sem IDs oficiais de planilhas.\n'
+
+      - name: Criar ou reutilizar projeto Apps Script exclusivo do LAB
+        shell: bash
+        run: |
+          set -euo pipefail
+          LAB_DIR="$RUNNER_TEMP/apps-script-laboratorio"
+          STATUS='.github/laboratorio-apps-script-project.json'
+          if [ -f "$STATUS" ]; then
+            SCRIPT_ID=$(node -e "const x=require('./$STATUS');process.stdout.write(x.scriptId||'')")
+            test -n "$SCRIPT_ID"
+            printf '{"scriptId":"%s","rootDir":"."}\n' "$SCRIPT_ID" > "$LAB_DIR/.clasp.json"
+            echo 'Projeto LAB existente reutilizado.'
+          else
+            cd "$LAB_DIR"
+            npx --yes @google/clasp@3.3.0 create --type standalone --title "Conecta Saúde — LAB operacional isolado"
+            SCRIPT_ID=$(node -e "const x=require('./.clasp.json');process.stdout.write(x.scriptId||'')")
+            test -n "$SCRIPT_ID"
+            cd "$GITHUB_WORKSPACE"
+            node -e "require('fs').writeFileSync('$STATUS',JSON.stringify({scriptId:process.argv[1],createdAt:new Date().toISOString(),branch:'laboratorio-ia-autorreparo'},null,2)+'\n')" "$SCRIPT_ID"
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add "$STATUS"
+            git commit -m 'lab: registra projeto Apps Script isolado'
+            git push origin HEAD:laboratorio-ia-autorreparo
+          fi
+
+      - name: Enviar clone ao projeto LAB
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/apps-script-laboratorio"
+          npx --yes @google/clasp@3.3.0 push --force
+          while IFS= read -r -d '' f; do
+            case "$f" in
+              *.gs|*.js) node --check --input-type=commonjs < "$f" >/dev/null ;;
+            esac
+          done < <(find . -type f \( -name '*.gs' -o -name '*.js' \) -print0)
+
+      - name: Criar deployment web separado
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/apps-script-laboratorio"
+          VERSION_OUT=$(npx --yes @google/clasp@3.3.0 version "Conecta LAB isolado - ${GITHUB_SHA::7}")
+          VERSION=$(printf '%s\n' "$VERSION_OUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          DEPLOY_OUT=$(npx --yes @google/clasp@3.3.0 deploy --versionNumber "$VERSION" --description "Conecta Saúde LAB operacional isolado")
+          printf '%s\n' "$DEPLOY_OUT"
+          DEPLOYMENT_ID=$(printf '%s\n' "$DEPLOY_OUT" | grep -Eo 'AKfy[A-Za-z0-9_-]+' | head -n 1)
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            DEPLOYMENT_ID=$(npx --yes @google/clasp@3.3.0 deployments | grep -Eo 'AKfy[A-Za-z0-9_-]+' | tail -n 1)
+          fi
+          test -n "$DEPLOYMENT_ID"
+          printf '%s' "$DEPLOYMENT_ID" > "$RUNNER_TEMP/lab_deployment_id"
+
+      - name: Validar backend LAB somente com leituras
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOYMENT_ID=$(cat "$RUNNER_TEMP/lab_deployment_id")
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          ok=0
+          for tentativa in 1 2 3 4; do
+            status=$(curl -L --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=status&_=$(date +%s)") || true
+            jap=$(curl -L --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=agenda&areaId=JAPARANDUBA&_=$(date +%s)") || true
+            matias=$(curl -L --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=agenda&areaId=SITIO_MATIAS&_=$(date +%s)") || true
+            printf 'Tentativa %s: status=%s jap=%s matias=%s\n' "$tentativa" "${#status}" "${#jap}" "${#matias}"
+            if printf '%s' "$status" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' &&                printf '%s' "$jap" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' &&                printf '%s' "$matias" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
+              ok=1
+              break
+            fi
+            sleep 7
+          done
+          test "$ok" = '1'
+          printf '%s' "$BASE" > "$RUNNER_TEMP/lab_base_url"
+
+      - name: Registrar endpoint isolado na branch LAB
+        shell: bash
+        run: |
+          set -euo pipefail
+          SCRIPT_ID=$(node -e "const x=require('./.github/laboratorio-apps-script-project.json');process.stdout.write(x.scriptId)")
+          DEPLOYMENT_ID=$(cat "$RUNNER_TEMP/lab_deployment_id")
+          BASE=$(cat "$RUNNER_TEMP/lab_base_url")
+          cat > .github/laboratorio-backend-isolado-status <<EOF
+          estado=VALIDADO_LEITURA
+          branch=laboratorio-ia-autorreparo
+          script_id=$SCRIPT_ID
+          deployment_id=$DEPLOYMENT_ID
+          base_url=$BASE
+          planilha_admin_lab=$LAB_ADMIN_ID
+          planilha_matias_lab=$LAB_MATIAS_ID
+          openai_api=DESATIVADA
+          registrado_em_utc=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/laboratorio-backend-isolado-status
+          git commit -m 'lab: registra backend operacional isolado validado' || true
+          git push origin HEAD:laboratorio-ia-autorreparo
+
+      - name: Remover credenciais temporárias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -rf "$RUNNER_TEMP/apps-script-producao-leitura" "$RUNNER_TEMP/apps-script-laboratorio"
