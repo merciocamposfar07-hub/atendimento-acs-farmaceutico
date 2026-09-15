@@ -909,10 +909,13 @@ Fluxo correto preservado:
 `CPF OU CNS OU cadastro familiar → localizar família → listar integrantes ativos → selecionar beneficiário`.
 
 Falha corrigida:
-`navegador reutiliza JS familiar antigo → CPF/CNS reconhecido, mas módulo antigo ainda exige número familiar → lista some`.
+`autofill localiza pessoa e família → evento perde familiaBeneficiario/familiaId → módulo familiar tenta resolver novamente → resposta legada pode exigir número familiar → lista some`.
 
 Correção:
-`portal-auto-update.js → nova chave de cache do portal-identificacao-familia-v1.js → navegador baixa a lógica familiar atual`.
+`autofill → repassa família resolvida → módulo familiar envia família + CPF/CNS juntos → backend lista integrantes`.
+
+Entrega:
+`portal-auto-update.js → chave 20260915-familia-resolvida-v3 → navegador baixa a lógica familiar corrigida`.
 
 Proteções:
 - não alterar a regra já homologada de família completa;
