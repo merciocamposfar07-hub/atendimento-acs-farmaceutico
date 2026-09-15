@@ -1,0 +1,31 @@
+name: Laboratório — mapear endpoint oficial
+
+on:
+  push:
+    branches: [laboratorio-ia-autorreparo]
+    paths:
+      - '.github/workflows/laboratorio-mapear-endpoint.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mapear:
+    if: github.ref == 'refs/heads/laboratorio-ia-autorreparo'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: laboratorio-ia-autorreparo
+      - name: Localizar referências operacionais ao endpoint oficial
+        shell: bash
+        env:
+          OFFICIAL: 'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+        run: |
+          set -euo pipefail
+          grep -RIlF "$OFFICIAL" . \
+            --exclude-dir=.git \
+            --exclude-dir=node_modules \
+            | sed 's#^./##' \
+            | sort
