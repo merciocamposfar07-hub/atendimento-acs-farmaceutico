@@ -603,12 +603,14 @@ Sintoma:
 `CPF/CNS reconhecido → dados pessoais carregados → aviso legado “Informe um número de cadastro familiar válido.” → integrantes da família não aparecem`.
 
 Causa:
-o código familiar atual já aceitava CPF/CNS diretamente, mas `portal-auto-update.js` ainda reutilizava a mesma chave de cache do módulo familiar usada antes da correção. Alguns aparelhos podiam continuar executando uma cópia anterior de `portal-identificacao-familia-v1.js`.
+- o autofill já recebia a família correta do backend, mas o evento `tacs:morador` descartava `familiaBeneficiario/familiaId`;
+- o módulo familiar então precisava resolver novamente a família pelo documento;
+- o carregador ainda podia reutilizar uma cópia anterior do JavaScript familiar.
 
 Correção:
-`portal-identificacao-familia-v1.js?v=20260915-familia-direta-v1`
-→
-`portal-identificacao-familia-v1.js?v=20260915-familia-documento-direto-v2`.
+- `moradores-autofill.js` passa a repassar a família resolvida no evento;
+- `portal-identificacao-familia-v1.js` usa primeiro `família resolvida + CPF/CNS`, mantendo documento puro apenas como fallback;
+- cache renovado para `portal-identificacao-familia-v1.js?v=20260915-familia-resolvida-v3`.
 
 Contrato preservado:
 - CPF → família completa;
