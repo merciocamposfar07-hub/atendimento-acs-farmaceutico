@@ -5,6 +5,7 @@ const path=require('node:path');
 
 const ROOT=path.resolve(__dirname,'..');
 const PORTAL=fs.readFileSync(path.join(ROOT,'portal-identificacao-familia-v1.js'),'utf8');
+const AUTOFILL=fs.readFileSync(path.join(ROOT,'moradores-autofill.js'),'utf8');
 const FAMILY=fs.readFileSync(path.join(ROOT,'apps-script/ZZZZ_37_VinculoFamiliarNotificacoesV1.gs'),'utf8');
 const HEALTH=fs.readFileSync(path.join(ROOT,'portal-notification-health.js'),'utf8');
 
@@ -25,6 +26,8 @@ assert(fillBlock.includes('input.value=documento'),'Beneficiário selecionado de
 assert(!/localStorage\.setItem|PushSubscription|OneSignal|oneSignal/.test(fillBlock),'Carregar beneficiário não pode persistir identidade de aparelho/Push.');
 
 assert(!/OneSignal\.login|\.addAlias\s*\(|external_id|externalId/.test(PORTAL),'CPF/CNS/beneficiário não podem virar External ID do OneSignal nesta camada.');
+assert(AUTOFILL.includes('payload.familiaBeneficiario || payload.familiaId'),'O CPF/CNS digitado deve definir a família operacional exibida no Portal.');
+assert(!AUTOFILL.includes('Esta pessoa pertence a outro cadastro familiar desta mesma área.'),'O autofill não deve bloquear nem advertir por uma família antiga lembrada no aparelho.');
 assert(HEALTH.includes('subscriptionId:st.subscriptionId'),'Check-in técnico precisa permanecer centrado na Subscription ID.');
 assert(!/phoneNumber|mobileNumber|telefone|celular|whatsapp/i.test(HEALTH.slice(HEALTH.indexOf('function state()'),HEALTH.indexOf('function waitSubscriptionState'))),'Telefone não pode definir a identidade técnica do aparelho.');
 
