@@ -593,3 +593,31 @@ Implantação:
 - registro técnico do deploy: `374af0e517721afc678d5822b5547324dc4d99eb`.
 
 Status: **IMPLEMENTADO, PUBLICADO E CANONIZADO — aguardando validação real no iPhone antes da homologação.**
+
+## Correção isolada — cache legado da identificação familiar
+Data: 15/09/2026
+
+Referência: `REGISTRO_CORRECAO_CACHE_IDENTIFICACAO_FAMILIAR_2026_09_15.md`.
+
+Sintoma:
+`CPF/CNS reconhecido → dados pessoais carregados → aviso legado “Informe um número de cadastro familiar válido.” → integrantes da família não aparecem`.
+
+Causa:
+o código familiar atual já aceitava CPF/CNS diretamente, mas `portal-auto-update.js` ainda reutilizava a mesma chave de cache do módulo familiar usada antes da correção. Alguns aparelhos podiam continuar executando uma cópia anterior de `portal-identificacao-familia-v1.js`.
+
+Correção:
+`portal-identificacao-familia-v1.js?v=20260915-familia-direta-v1`
+→
+`portal-identificacao-familia-v1.js?v=20260915-familia-documento-direto-v2`.
+
+Contrato preservado:
+- CPF → família completa;
+- CNS → família completa;
+- cadastro familiar → família completa;
+- sem segunda confirmação por CPF/CNS;
+- integrantes ativos selecionáveis;
+- nenhuma alteração em agendas, vagas, serviços, profissionais, UBS, TACS, login, PIN ou backend familiar.
+
+Publicação: GitHub Pages `35035689197` — **success**.
+
+Status: **CORRIGIDO E PUBLICADO — validação real no dispositivo pendente.**
