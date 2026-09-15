@@ -56,18 +56,29 @@ jobs:
           BASE: 'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec'
         run: |
           set -euo pipefail
-          for QUERY in \
-            'action=status' \
-            'action=agenda&areaId=JAPARANDUBA' \
-            'action=agenda&areaId=SITIO_MATIAS'
-          do
-            BODY=$(curl -L --fail --silent --show-error --connect-timeout 8 --max-time 30 "$BASE?$QUERY")
-            printf '%s' "$BODY" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'
-            echo "$QUERY=OK"
-          done
-          STATUS=$(curl -L --fail --silent --show-error --connect-timeout 8 --max-time 30 "$BASE?action=status")
+          fetch_ok() {
+            local query="$1" body=""
+            for tentativa in 1 2 3; do
+              body=$(curl -L --fail --silent --show-error --connect-timeout 8 --max-time 35 "$BASE?$query" || true)
+              if printf '%s' "$body" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
+                printf '%s' "$body"
+                return 0
+              fi
+              echo "tentativa $tentativa falhou para $query" >&2
+              sleep 5
+            done
+            return 1
+          }
+          STATUS=$(fetch_ok 'action=status')
+          echo 'action=status=OK'
+          JAP=$(fetch_ok 'action=agenda&areaId=JAPARANDUBA')
+          echo 'action=agenda&areaId=JAPARANDUBA=OK'
+          MATIAS=$(fetch_ok 'action=agenda&areaId=SITIO_MATIAS')
+          echo 'action=agenda&areaId=SITIO_MATIAS=OK'
           printf '%s' "$STATUS" | grep -Fq '"planilha":"LAB — Portal TACS — Banco de Dados"'
-          echo 'PLANILHA_LAB_CONFIRMADA=OK'
+          printf '%s' "$JAP" | grep -Fq '"areaId":"JAPARANDUBA"'
+          printf '%s' "$MATIAS" | grep -Fq '"areaId":"SITIO_MATIAS"'
+          echo 'PLANILHA_E_AREAS_LAB_CONFIRMADAS=OK'
 
       - name: Testar Supervisor local sem API
         run: node --test laboratorio-ia/test-local.cjs
