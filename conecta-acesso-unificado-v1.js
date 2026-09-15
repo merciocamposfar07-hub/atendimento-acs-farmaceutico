@@ -340,7 +340,7 @@ function confirmIdentity(){
  if(birth)state.nascimento=text(birth.value);if(name)state.nome=text(name.value);
  setStatus('Conferindo o cadastro…','warn');
  post('conecta_morador_confirmar',{cpf:state.cpf,nascimento:state.nascimento,nome:state.nome,areaId:state.areaId,dispositivo:device()}).then(function(r){
-  if(r.identidadeToken){state.identidadeToken=r.identidadeToken;state.areaId=r.areaId||state.areaId;if(state.cpfNaoLocalizado===true){setStatus('CPF confirmado com sua data de nascimento.','ok');renderPinCreate();return}renderIdentityFound(r);return}
+  if(r.identidadeToken){state.identidadeToken=r.identidadeToken;state.areaId=r.areaId||state.areaId;if(state.cpfNaoLocalizado===true&&r.provisorio!==true){setStatus('CPF confirmado com sua data de nascimento.','ok');renderPinCreate();return}renderIdentityFound(r);return}
   if(r.precisaNome){renderIdentityForm(true,r.message);return}
   if(r.precisaArea){renderAreaChoice(r);return}
   setStatus(r.message||'Não foi possível confirmar o cadastro.','warn');
