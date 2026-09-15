@@ -8,6 +8,7 @@
  */
 var TACS_NASCIMENTO_CIVIL_BACKUP_GUARD_V1 = Object.freeze({
   VERSAO: '1.0.0',
+  ATIVA: false,
   AREA_ID: 'JAPARANDUBA',
   BACKUP_SHEET: 'TACS_BACKUP_NASCIMENTO_V1',
   HEADERS: Object.freeze(['ABA_FONTE','LINHA_FONTE','ID_PORTAL','DATA_ANTES','DATA_DEPOIS','REGISTRADO_EM'])
@@ -19,6 +20,7 @@ var nascimentoCivilBackupGuardV1LocalizarAnterior_ =
     : null;
 
 (function instalarNascimentoCivilBackupGuardV1_(){
+  if(TACS_NASCIMENTO_CIVIL_BACKUP_GUARD_V1.ATIVA!==true)return;
   if(typeof nascimentoCivilBackupGuardV1LocalizarAnterior_!=='function')return;
   moradoresAdminV1LocalizarTodosPorDocumento_=function(fonte,cpf,cns){
     var encontrados=nascimentoCivilBackupGuardV1LocalizarAnterior_(fonte,cpf,cns);
@@ -96,6 +98,7 @@ function nascimentoCivilBackupGuardV1Mapa_(fonte){
 }
 
 function nascimentoCivilBackupGuardV1CorrigirResultados_(fonte,encontrados){
+  if(TACS_NASCIMENTO_CIVIL_BACKUP_GUARD_V1.ATIVA!==true)return encontrados;
   if(!Array.isArray(encontrados)||!encontrados.length)return encontrados;
   var mapa=nascimentoCivilBackupGuardV1Mapa_(fonte);
   if(!mapa)return encontrados;
