@@ -23,9 +23,9 @@ assert.equal(sandbox.identificacaoFamiliarPublicaV1NormalizarFamilia_('02'),'002
 assert.equal(sandbox.identificacaoFamiliarPublicaV1NormalizarFamilia_('002'),'002');
 
 assert.match(backend,/publico_familia_consultar/);
-assert.match(backend,/requerConfirmacao:true/,'Família sem aparelho vinculado precisa exigir confirmação por documento.');
-assert.match(backend,/identificacaoFamiliarPublicaV1AparelhoDaFamilia_/);
-assert.match(backend,/identificacaoFamiliarPublicaV1DocumentoConfirmaFamilia_/);
+assert.doesNotMatch(backend,/requerConfirmacao:true/,'CPF, CNS ou cadastro familiar não podem exigir uma segunda confirmação documental.');
+assert.match(backend,/moradoresAdminV1BuscarPublico_\(documento,contexto\.areaId\)/,'CPF/CNS deve localizar o integrante e resolver a família na própria área.');
+assert.match(backend,/autorizacao:familiaInformada\?'CADASTRO_FAMILIAR':'DOCUMENTO_LOCALIZADOR'/,'O backend deve distinguir busca direta por família da busca iniciada por CPF/CNS.');
 assert.match(backend,/moradoresAdminV1AreasPublicas_\(areaId\)/,'A consulta familiar deve permanecer presa à área pública solicitada.');
 assert.match(backend,/publico_documento_complementar/);
 assert.match(backend,/já possui .* registrado/,'Documento existente não pode ser substituído pelo portal público.');
@@ -52,6 +52,9 @@ assert.match(frontend,/Buscar esta família/);
 assert.match(frontend,/De quem é este/,'Documento não localizado deve levar à escolha explícita do proprietário.');
 assert.match(frontend,/data-member-token/);
 assert.match(frontend,/publico_familia_consultar/);
+assert.match(frontend,/function searchFamilyByDocument\(documento\)/,'CPF/CNS reconhecido deve acionar a listagem da família sem novo preenchimento.');
+assert.match(frontend,/if\(!pendingMissing&&docType\(d\)\)searchFamilyByDocument\(d\)/,'Após o autofill do morador, a família correspondente deve ser carregada automaticamente.');
+assert.doesNotMatch(frontend,/tacsFamilyConfirmDoc|data-family-confirm|Confirmar família/,'A interface não pode pedir uma segunda confirmação documental da família.');
 assert.match(frontend,/publico_familia_membro/);
 assert.match(frontend,/documentoLocalizador/);
 assert.match(frontend,/documentoNovo/);
