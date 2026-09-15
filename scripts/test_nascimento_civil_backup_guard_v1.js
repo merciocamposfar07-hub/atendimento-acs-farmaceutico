@@ -62,8 +62,8 @@ function execute(rows, currentBirth = '24/08/1988', currentId = 'TACS-000123', s
 }
 
 const comprovado = [['MORADORES','27','TACS-000123','23/08/1988','24/08/1988','14/08/2026 00:00:00']];
-assert.equal(execute(comprovado), '23/08/1988', 'O backup comprovado 23→24 precisa devolver 23 no autofill.');
-assert.equal(execute(comprovado, '25/08/1988'), '25/08/1988', 'Data alterada depois do backup não pode ser tocada.');
+assert.equal(execute(comprovado), '24/08/1988', 'O autofill deve preservar exatamente a data civil atual exibida na planilha.');
+assert.equal(execute(comprovado, '25/08/1988'), '25/08/1988', 'Data atual da planilha não pode ser tocada pelo backup histórico.');
 assert.equal(execute(comprovado, '24/08/1988', 'OUTRO-ID'), '24/08/1988', 'ID Portal divergente não pode ser tocado.');
 assert.equal(execute(comprovado, '24/08/1988', 'TACS-000123', 'OUTRA_PLANILHA'), '24/08/1988', 'Outra área/fonte não pode receber a correção.');
 assert.equal(
@@ -78,8 +78,8 @@ assert.equal(
 );
 
 assert.match(guardSource, /TACS_BACKUP_NASCIMENTO_V1/);
-assert.match(guardSource, /atual!==backup\.depois/);
-assert.match(guardSource, /copia\.morador\.nascimento=backup\.antes/);
+assert.match(guardSource, /ATIVA:\s*false/,'A camada histórica de leitura precisa permanecer desativada.');
+assert.match(guardSource, /ATIVA!==true\)return encontrados/,'Mesmo se chamada diretamente, a camada não pode trocar a data atual pelo backup.');
 assert.doesNotMatch(guardSource, /\.setValues\(|\.setValue\(|appendRow\(|deleteRow\(/,
   'A proteção de leitura não pode escrever na planilha.');
 
@@ -95,4 +95,4 @@ if (/test_nascimento_civil_backup_guard_v1\.js/.test(packageSource)) {
   assert.match(packageSource, /test_birth_plus_one_fix\.js && node scripts\/test_nascimento_civil_backup_guard_v1\.js/);
 }
 
-console.log('NASCIMENTO_CIVIL_BACKUP_GUARD_V1_OK');
+console.log('NASCIMENTO_CIVIL_BACKUP_GUARD_V1_OK: planilha atual preservada como fonte de verdade, sem recuo de um dia pelo backup histórico.');
