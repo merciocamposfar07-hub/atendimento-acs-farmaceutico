@@ -558,3 +558,28 @@ Implantação técnica:
 Status final: **HOMOLOGADO NO IPHONE, PUBLICADO E CANONIZADO — 15/09/2026.**
 
 A validação real do usuário confirmou o fluxo de família completa por CPF/CNS/cadastro familiar e a preservação correta da data civil de nascimento. Este bloco corretivo fica encerrado e passa a integrar a fonte de verdade operacional do Portal do Morador.
+
+## Bloco isolado — Primeiro acesso do Morador com CPF ainda ausente
+Data: 15/09/2026
+
+Referência: `REGISTRO_CANONICO_PRIMEIRO_ACESSO_MORADOR_CPF_NASCIMENTO_PIN_FAMILIA_2026_09_15.md`.
+
+Fluxo:
+`CPF não localizado → data de nascimento → localizar cadastro existente → salvar CPF no campo vazio da mesma pessoa → “Agora crie o seu PIN com quatro números.” → confirmar PIN de 4 números → Portal do Morador`.
+
+Reentrada:
+`PIN de 4 números → sessão do Morador → família vinculada → todos os integrantes ativos → seleção do beneficiário`.
+
+Limites:
+- não criar novo morador apenas porque o CPF estava ausente;
+- não substituir CPF já existente;
+- manter desambiguação por nome quando a mesma data de nascimento corresponder a mais de uma pessoa;
+- preservar o bloco já homologado de família completa e nascimento civil;
+- nenhuma alteração em agendas, vagas, profissionais, serviços, UBS, TACS, permissões, Push ou outros painéis.
+
+Implementação:
+- `conecta-acesso-unificado-v1.js`;
+- teste em `scripts/test_conecta_acesso_unificado_v1.js`;
+- cache renovado em `central-administrativa-tacs.html`.
+
+Status: **IMPLEMENTADO EM MAIN — aguardando publicação final do Pages e validação real no iPhone.**
