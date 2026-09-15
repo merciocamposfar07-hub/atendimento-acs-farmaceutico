@@ -94,6 +94,11 @@ jobs:
             }
           }
           walk(root);
+          const manifestPath=path.join(root,'appsscript.json');
+          const manifest=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
+          manifest.webapp={access:'ANYONE_ANONYMOUS',executeAs:'USER_DEPLOYING'};
+          manifest.timeZone='America/Recife';
+          fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2)+'\n');
           NODE
           if grep -R -n -F "$PROD_ADMIN_ID" "$LAB_DIR" --include='*.gs' --include='*.js' --include='*.html' --include='*.json'; then
             echo 'ERRO: referência à planilha administrativa oficial ainda presente.'
@@ -142,7 +147,7 @@ jobs:
             esac
           done < <(find . -type f \( -name '*.gs' -o -name '*.js' \) -print0)
 
-      - name: Criar deployment web separado
+      - name: Criar ou atualizar deployment web separado
         shell: bash
         run: |
           set -euo pipefail
@@ -150,12 +155,21 @@ jobs:
           VERSION_OUT=$(npx --yes @google/clasp@3.3.0 version "Conecta LAB isolado - ${GITHUB_SHA::7}")
           VERSION=$(printf '%s\n' "$VERSION_OUT" | grep -Eo '[0-9]+' | tail -n 1)
           test -n "$VERSION"
-          DEPLOY_OUT=$(npx --yes @google/clasp@3.3.0 deploy --versionNumber "$VERSION" --description "Conecta Saúde LAB operacional isolado")
-          printf '%s\n' "$DEPLOY_OUT"
-          DEPLOYMENT_ID=$(printf '%s\n' "$DEPLOY_OUT" | grep -Eo 'AKfy[A-Za-z0-9_-]+' | head -n 1)
-          if [ -z "$DEPLOYMENT_ID" ]; then
-            DEPLOYMENT_ID=$(npx --yes @google/clasp@3.3.0 deployments | grep -Eo 'AKfy[A-Za-z0-9_-]+' | tail -n 1)
+
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments || true)
+          DEPLOYMENT_ID=$(printf '%s\n' "$DEPLOYMENTS" | grep -Eo 'AKfy[A-Za-z0-9_-]+' | head -n 1 || true)
+
+          if [ -n "$DEPLOYMENT_ID" ]; then
+            npx --yes @google/clasp@3.3.0 redeploy \
+              --versionNumber "$VERSION" \
+              --description "Conecta Saúde LAB operacional isolado" \
+              "$DEPLOYMENT_ID"
+          else
+            DEPLOY_OUT=$(npx --yes @google/clasp@3.3.0 deploy --versionNumber "$VERSION" --description "Conecta Saúde LAB operacional isolado")
+            printf '%s\n' "$DEPLOY_OUT"
+            DEPLOYMENT_ID=$(printf '%s\n' "$DEPLOY_OUT" | grep -Eo 'AKfy[A-Za-z0-9_-]+' | head -n 1)
           fi
+
           test -n "$DEPLOYMENT_ID"
           printf '%s' "$DEPLOYMENT_ID" > "$RUNNER_TEMP/lab_deployment_id"
 
@@ -170,8 +184,11 @@ jobs:
             status=$(curl -L --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=status&_=$(date +%s)") || true
             jap=$(curl -L --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=agenda&areaId=JAPARANDUBA&_=$(date +%s)") || true
             matias=$(curl -L --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=agenda&areaId=SITIO_MATIAS&_=$(date +%s)") || true
-            printf 'Tentativa %s: status=%s jap=%s matias=%s\n' "$tentativa" "${#status}" "${#jap}" "${#matias}"
-            if printf '%s' "$status" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' &&                printf '%s' "$jap" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' &&                printf '%s' "$matias" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
+            titulo=$(printf '%s' "$status" | tr '\n' ' ' | sed -n 's/.*<title>\([^<]*\)<\/title>.*/\1/p' | head -n 1)
+            printf 'Tentativa %s: status=%s jap=%s matias=%s titulo=%s\n' "$tentativa" "${#status}" "${#jap}" "${#matias}" "${titulo:-JSON/sem-titulo}"
+            if printf '%s' "$status" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' && \
+               printf '%s' "$jap" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' && \
+               printf '%s' "$matias" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
               ok=1
               break
             fi
