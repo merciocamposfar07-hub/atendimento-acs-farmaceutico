@@ -321,7 +321,14 @@
 
     window.TACS_MORADOR_ATUAL = resident;
     try {
-      document.dispatchEvent(new CustomEvent('tacs:morador', { detail: resident }));
+      var eventResident = {};
+      Object.keys(resident).forEach(function (key) { eventResident[key] = resident[key]; });
+      var eventFamily = String(payload && (payload.familiaBeneficiario || payload.familiaId) || '').trim().toUpperCase();
+      if (eventFamily) {
+        eventResident.familiaId = eventFamily;
+        eventResident.familiaBeneficiario = eventFamily;
+      }
+      document.dispatchEvent(new CustomEvent('tacs:morador', { detail: eventResident }));
     } catch (e) {}
     window.requestAnimationFrame(function () { updatePreciseAge(); resizeLocality(); });
     return true;
