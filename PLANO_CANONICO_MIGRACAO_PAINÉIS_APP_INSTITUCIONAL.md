@@ -623,3 +623,24 @@ Contrato preservado:
 Publicação: GitHub Pages `35035689197` — **success**.
 
 Status: **CORRIGIDO E PUBLICADO — validação real no dispositivo pendente.**
+
+## Correção isolada — toque imediato nos integrantes da família
+Data: 15/09/2026
+
+Fluxo:
+`família exibida → toque em qualquer ponto do cartão do integrante → feedback imediato → pointerup → seleção única → carregar dados do integrante`.
+
+Causa:
+o listener anterior dependia de `click` e consultava `data-member-token` somente no alvo exato do evento. Elementos internos do cartão podiam receber o toque e impedir a seleção.
+
+Correção:
+- `closest('[data-member-token]')`;
+- `pointerdown/pointerup` com limite de movimento para não confundir rolagem;
+- `click` como fallback;
+- deduplicação;
+- `touch-action: manipulation`;
+- feedback visual pressionado.
+
+Escopo: somente cartões dos integrantes da família no Portal do Morador.
+
+Status: **IMPLEMENTADO — validação física pendente.**
