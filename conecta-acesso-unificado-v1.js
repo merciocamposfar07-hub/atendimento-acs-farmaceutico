@@ -262,6 +262,9 @@ function bindResidentStage(){
  b=el('cscResidentIdentityNext');if(b)b.onclick=confirmIdentity;
  b=el('cscResidentAreaNext');if(b)b.onclick=function(){var s=el('cscResidentArea');state.areaId=s?text(s.value):'';confirmIdentity()};
  b=el('cscResidentIdentitySave');if(b)b.onclick=renderPinCreate;
+ b=el('cscResidentCpfReviewConfirm');if(b)b.onclick=confirmReviewedCpf;
+ b=el('cscResidentCpfReviewCorrect');if(b)b.onclick=renderCpfCorrection;
+ b=el('cscResidentCpfCorrectionNext');if(b)b.onclick=confirmCorrectedCpf;
  b=el('cscResidentPinCreate');if(b)b.onclick=createResidentPin;
 }
 function startResidentDocument(){
