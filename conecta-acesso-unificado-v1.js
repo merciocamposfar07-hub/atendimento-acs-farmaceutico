@@ -358,6 +358,46 @@ function confirmIdentity(){
  setStatus('Conferindo o cadastro…','warn');
  post('conecta_morador_confirmar',{cpf:state.cpf,nascimento:state.nascimento,nome:state.nome,areaId:state.areaId,dispositivo:device()}).then(handleConfirmedIdentity).catch(function(e){setStatus(e.message,'err')});
 }
+function renderCpfReview(r){
+ var stage=el('residentStage');if(!stage)return;
+ state.identidadeToken=r.identidadeToken||state.identidadeToken;state.nascimento=r.nascimento||state.nascimento;
+ stage.innerHTML='<div class="csc-access-note"><strong>Confira seus dados antes de continuar</strong><br>Verifique com atenção se o CPF e a data de nascimento estão corretos. O CPF será salvo no seu cadastro quando você confirmar.</div>'+
+ '<div class="csc-access-note"><strong>CPF</strong><br>'+esc(formatCpfResident(state.cpf))+'<br><br><strong>Data de nascimento</strong><br>'+esc(state.nascimento)+'</div>'+
+ '<div class="csc-inline-actions"><button class="btn gray" id="cscResidentCpfReviewCorrect" type="button">Corrigir</button><button class="btn green" id="cscResidentCpfReviewConfirm" type="button">Confirmar e continuar</button></div>';
+ setStatus('Pare um momento e confira os 11 números do CPF e a data de nascimento antes de salvar.','warn');bindResidentStage();
+}
+function confirmReviewedCpf(){
+ if(digits(state.cpf).length!==11){setStatus('O CPF precisa ter exatamente 11 números. Toque em Corrigir.','err');return}
+ setStatus('Confirmando e salvando seu CPF…','warn');
+ post('conecta_morador_confirmar',{cpf:state.cpf,nascimento:state.nascimento,areaId:state.areaId,identidadeToken:state.identidadeToken,confirmarCpf:'SIM',dispositivo:device()}).then(function(r){
+  if(!r||!r.identidadeToken||r.provisorio===true)throw new Error(r&&r.message||'Não foi possível confirmar o CPF.');
+  state.identidadeToken=r.identidadeToken;state.areaId=r.areaId||state.areaId;state.nascimento=r.nascimento||state.nascimento;
+  setStatus('CPF salvo corretamente no seu cadastro.','ok');renderPinCreate();
+ }).catch(function(e){setStatus(e.message,'err')});
+}
+function renderCpfCorrection(){
+ var stage=el('residentStage');if(!stage)return;
+ stage.innerHTML='<div class="csc-access-note"><strong>Corrija os dados</strong><br>Revise o CPF e a data de nascimento antes de tentar novamente.</div>'+
+ field('cscResidentCpfCorrection','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" value="'+esc(formatCpfResident(state.cpf))+'"')+
+ field('cscResidentBirthCorrection','Data de nascimento','type="text" inputmode="numeric" maxlength="10" autocomplete="off" value="'+esc(state.nascimento)+'"')+
+ '<div class="csc-inline-actions"><button class="btn green" id="cscResidentCpfCorrectionNext" type="button">Conferir novamente</button></div>';
+ var cpf=el('cscResidentCpfCorrection');if(cpf)cpf.addEventListener('input',function(){this.value=formatCpfResident(this.value)});
+ var birth=el('cscResidentBirthCorrection');if(birth)birth.addEventListener('input',function(){this.value=formatBirthResident(this.value)});
+ bindResidentStage();
+}
+function confirmCorrectedCpf(){
+ var cpf=digits(el('cscResidentCpfCorrection')&&el('cscResidentCpfCorrection').value),birth=text(el('cscResidentBirthCorrection')&&el('cscResidentBirthCorrection').value);
+ if(cpf.length!==11){setStatus('O CPF precisa ter exatamente 11 números.','err');return}
+ if(digits(birth).length!==8){setStatus('Informe a data de nascimento completa no formato DD/MM/AAAA.','err');return}
+ state.cpf=cpf;state.nascimento=birth;state.nome='';state.areaId='';state.identidadeToken='';state.cpfNaoLocalizado=false;
+ setStatus('Conferindo novamente…','warn');
+ post('conecta_morador_identificar',{cpf:cpf,coreMode:state.coreMode,dispositivo:device()}).then(function(r){
+  if(r.identidadeToken){handleIdentity(r);return}
+  if(!r.precisaNascimento){setStatus(r.message||'Não foi possível localizar o cadastro.','warn');return}
+  state.cpfNaoLocalizado=r.ambiguo!==true;
+  return post('conecta_morador_confirmar',{cpf:state.cpf,nascimento:state.nascimento,nome:'',areaId:'',dispositivo:device()}).then(handleConfirmedIdentity);
+ }).catch(function(e){setStatus(e.message,'err')});
+}
 function renderAreaChoice(r){
  var stage=el('residentStage'),areas=Array.isArray(r.areas)?r.areas:[];if(!stage)return;
  stage.innerHTML='<div class="csc-access-note"><strong>Seu atendimento não será bloqueado.</strong><br>'+esc(r.message||'Selecione sua área para continuar.')+'</div><label for="cscResidentArea">Comunidade / área</label><select class="field" id="cscResidentArea"><option value="">Selecione</option>'+areas.map(function(a){return '<option value="'+esc(a.areaId)+'">'+esc(a.areaNome||a.areaId)+'</option>'}).join('')+'</select><div class="csc-inline-actions"><button class="btn green" id="cscResidentAreaNext" type="button">Continuar</button></div>';
