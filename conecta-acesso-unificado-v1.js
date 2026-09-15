@@ -8,7 +8,7 @@ var RESIDENT_TOKEN_KEY='portalConectaMoradorTokenV1',UBS_TOKEN_KEY='portalConect
 var AREA_KEY='portalTacsCentralAreaV1',LAST_ROLE_KEY='portalConectaLastRoleV1',TACS_QUICK_KEY='portalTacsAcessoRapidoV1';
 var TRUST_ADMIN_KEY='portalConectaRecoveryTrustV1:admin',TRUST_TACS_KEY='portalConectaRecoveryTrustV1:tacs',TRUST_UBS_KEY='portalConectaRecoveryTrustV1:ubs';
 var RESIDENT_CORE_REAL='MORADOR_REAL',RESIDENT_CORE_DIAGNOSTIC='DIAGNOSTICO_ADMINISTRATIVO';
-var activeRole='admin',busy=false,pinWarmup=false,state={cpf:'',nascimento:'',nome:'',areaId:'',identidadeToken:'',coreMode:RESIDENT_CORE_REAL};
+var activeRole='admin',busy=false,pinWarmup=false,state={cpf:'',nascimento:'',nome:'',areaId:'',identidadeToken:'',cpfNaoLocalizado:false,coreMode:RESIDENT_CORE_REAL};
 
 function text(v){return String(v==null?'':v).trim()}
 function digits(v){return text(v).replace(/\D/g,'')}
@@ -131,7 +131,7 @@ function recoveryMarkup(){
  document.body.appendChild(modal);
 }
 function residentCoreMode(){return adminResidentDiagnostic()?RESIDENT_CORE_DIAGNOSTIC:RESIDENT_CORE_REAL}
-function resetState(){state={cpf:'',nascimento:'',nome:'',areaId:'',identidadeToken:'',coreMode:residentCoreMode()}}
+function resetState(){state={cpf:'',nascimento:'',nome:'',areaId:'',identidadeToken:'',cpfNaoLocalizado:false,coreMode:residentCoreMode()}}
 function setTabs(role){
  activeRole=role;
  ['Admin','Tacs','Morador','Ubs'].forEach(function(k){var n=el('tab'+k);if(!n)return;var on=role===k.toLowerCase()||(k==='Tacs'&&role==='tacs')||(k==='Ubs'&&role==='ubs');n.classList.toggle('active',on);n.setAttribute('aria-selected',on?'true':'false')});
@@ -322,8 +322,8 @@ function startCpf(cpf){
  post('conecta_morador_identificar',{cpf:cpf,coreMode:state.coreMode,dispositivo:device()}).then(handleIdentity).catch(function(e){setStatus(e.message,'err')});
 }
 function handleIdentity(r){
- if(r.identidadeToken){state.identidadeToken=r.identidadeToken;state.areaId=r.areaId||state.areaId;renderIdentityFound(r);return}
- if(r.precisaNascimento){renderIdentityForm(false,r.message);return}
+ if(r.identidadeToken){state.cpfNaoLocalizado=false;state.identidadeToken=r.identidadeToken;state.areaId=r.areaId||state.areaId;renderIdentityFound(r);return}
+ if(r.precisaNascimento){state.cpfNaoLocalizado=r.ambiguo!==true;renderIdentityForm(false,r.message);return}
  setStatus(r.message||'Não foi possível localizar o cadastro agora.','warn');
 }
 function renderIdentityForm(needName,message){
@@ -340,7 +340,7 @@ function confirmIdentity(){
  if(birth)state.nascimento=text(birth.value);if(name)state.nome=text(name.value);
  setStatus('Conferindo o cadastro…','warn');
  post('conecta_morador_confirmar',{cpf:state.cpf,nascimento:state.nascimento,nome:state.nome,areaId:state.areaId,dispositivo:device()}).then(function(r){
-  if(r.identidadeToken){state.identidadeToken=r.identidadeToken;state.areaId=r.areaId||state.areaId;renderIdentityFound(r);return}
+  if(r.identidadeToken){state.identidadeToken=r.identidadeToken;state.areaId=r.areaId||state.areaId;if(state.cpfNaoLocalizado===true){setStatus('CPF confirmado com sua data de nascimento.','ok');renderPinCreate();return}renderIdentityFound(r);return}
   if(r.precisaNome){renderIdentityForm(true,r.message);return}
   if(r.precisaArea){renderAreaChoice(r);return}
   setStatus(r.message||'Não foi possível confirmar o cadastro.','warn');
@@ -358,7 +358,7 @@ function renderIdentityFound(r){
 }
 function renderPinCreate(){
  var stage=el('residentStage');if(!stage)return;
- stage.innerHTML='<div class="csc-access-note"><strong>Crie seu PIN</strong><br>A partir do próximo acesso, serão necessários apenas estes 4 números.</div>'+field('cscResidentNewPin','Novo PIN','type="password" inputmode="numeric" maxlength="4" autocomplete="new-password"')+field('cscResidentNewPin2','Confirmar PIN','type="password" inputmode="numeric" maxlength="4" autocomplete="new-password"')+'<div class="csc-inline-actions"><button class="btn green" id="cscResidentPinCreate" type="button">Salvar PIN</button></div>';
+ stage.innerHTML='<div class="csc-access-note"><strong>Agora crie o seu PIN com quatro números.</strong><br>Digite 4 números e confirme o mesmo PIN abaixo. Da próxima vez, este PIN abrirá o acesso da sua família.</div>'+field('cscResidentNewPin','PIN de 4 números','type="password" inputmode="numeric" maxlength="4" autocomplete="new-password"')+field('cscResidentNewPin2','Confirmar PIN de 4 números','type="password" inputmode="numeric" maxlength="4" autocomplete="new-password"')+'<div class="csc-inline-actions"><button class="btn green" id="cscResidentPinCreate" type="button">Salvar PIN</button></div>';
  bindResidentStage();
 }
 function createResidentPin(){
