@@ -305,7 +305,7 @@
     var script=document.createElement('script');
     script.id='portalTacsIdentificacaoFamiliaScriptV1';
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260823-bloco9-v1';
+    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260915-familia-direta-v1';
     (document.head||document.documentElement).appendChild(script);
   }
 
