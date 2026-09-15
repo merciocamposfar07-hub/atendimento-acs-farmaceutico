@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var API = String(window.TACS_ADMIN_API_URL || 'https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec').trim();
+  var API = String(window.TACS_ADMIN_API_URL || 'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec').trim();
   var timer = null;
   var requestId = 0;
   var activeFrame = null;
