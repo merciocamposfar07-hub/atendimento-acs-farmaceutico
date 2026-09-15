@@ -42,8 +42,16 @@ jobs:
               if(payload.email){email=String(payload.email);break}
             }catch(e){}
           }
-          console.log('clasp_email='+(email||'NAO_DISPONIVEL_NO_ID_TOKEN'));
+          console.log('clasp_email_id_token='+(email||'NAO_DISPONIVEL_NO_ID_TOKEN'));
           NODE
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          AUTH_INFO=$(npx --yes @google/clasp@3.3.0 show-authorized-user --json)
+          AUTH_INFO="$AUTH_INFO" node - <<'NODE'
+          const x=JSON.parse(process.env.AUTH_INFO||'{}');
+          console.log('clasp_email_confirmado='+(x.email||'NAO_IDENTIFICADO'));
+          NODE
+          rm -f "$HOME/.clasprc.json"
 
       - name: Inspecionar resposta pública sem autenticação
         shell: bash
