@@ -66,9 +66,12 @@ Cache da Central renovado em:
 ## Commits
 
 - `c21f13091b7b66ff60758f82cc78db81742235f0` — fluxo direto da confirmação por nascimento para criação do PIN;
-- `fd479647b0046a04972d9c672c8bab23619174e4` — contrato automatizado da etapa;
-- `0b77d9f60e1e80b39f0e058f736ee46a1536bc34` — renovação de cache da Central;
-- `83e9d3b77b31e727b2b18cb8f06fdea8e461cc38` — consolidação integral automática do Portal após a alteração.
+- `fd479647b0046a04972d9c672c8bab23619174e4` — contrato automatizado inicial da etapa;
+- `0b77d9f60e1e80b39f0e058f736ee46a1536bc34` — primeira renovação de cache da Central;
+- `83e9d3b77b31e727b2b18cb8f06fdea8e461cc38` — consolidação integral automática após a primeira alteração;
+- `0e6da5f8cdc173d3a832f26abd1f367d69284f30` — proteção: criação direta do PIN somente quando o vínculo territorial foi confirmado, nunca em identidade provisória;
+- `e27326c450e41c6dab88fc089d830fb5a47255a1` — gate correspondente da proteção;
+- `59f2041046d692d716780ad5c8111c43ab0888be` — cache-buster final do primeiro acesso seguro.
 
 ## Proteção de reversão
 
