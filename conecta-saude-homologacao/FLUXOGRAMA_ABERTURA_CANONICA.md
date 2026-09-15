@@ -840,3 +840,32 @@ Commits:
 - publicação/cache: `1ca7f545e18c481cece29597a9dffec33d58829d`.
 
 Status: **PUBLICADA PARA TESTE NO DISPOSITIVO — validação física do usuário pendente.**
+
+### Correção isolada — Portal do Morador / família completa + nascimento civil
+Data: 15/09/2026
+
+Ramo único:
+`entrada do Morador → CPF OU CNS OU número da família → resolver cadastro familiar da área → listar todos os integrantes ativos → selecionar integrante → autofill`.
+
+Sub-regra de documento ausente:
+`CPF informado ainda ausente → localizar morador por vínculo existente/CNS/família → usuário seleciona o integrante correto → complementar CPF somente no campo vazio da mesma linha → validar duplicidade → auditar`.
+
+Sub-regra de nascimento:
+`DATA_NASCIMENTO exibida na planilha → tratar como data civil → enviar ao Portal sem conversão de fuso e sem substituição por backup histórico`.
+
+Proteções:
+- sem segunda confirmação por CPF/CNS para abrir família;
+- CPF/CNS do integrante não é exposto na lista familiar;
+- integrante oculto/inativo não entra na lista;
+- complemento documental não cria nova linha e não substitui documento existente;
+- família lembrada anteriormente no aparelho não pode prevalecer sobre a família do CPF/CNS digitado no atendimento atual;
+- nenhuma alteração em agendas, vagas, profissionais, serviços, notificações, Push, Central administrativa ou demais painéis.
+
+Validação técnica:
+- deployment preservado;
+- Apps Script **218 → 219**;
+- workflow `35031883368`: **success**;
+- health checks do deploy: aprovados;
+- registro técnico: `REGISTRO_CANONICO_CORRECAO_MORADOR_FAMILIA_NASCIMENTO_2026_09_15.md`.
+
+Status: **PUBLICADA E CANONIZADA — aguardando validação do usuário no iPhone para homologação real.**
