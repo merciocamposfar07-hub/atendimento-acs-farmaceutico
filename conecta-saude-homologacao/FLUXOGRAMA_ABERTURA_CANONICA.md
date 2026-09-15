@@ -925,3 +925,18 @@ Proteções:
 Registro: `REGISTRO_CORRECAO_CACHE_IDENTIFICACAO_FAMILIAR_2026_09_15.md`.
 
 Status: **PUBLICADA — validação do usuário pendente.**
+
+### Ramo isolado — resposta tátil da seleção familiar
+Data: 15/09/2026
+
+`cartão do integrante → pointerdown mostra resposta → pointerup sem deslocamento → resolver botão pelo closest → selecionar uma única vez → carregar integrante`.
+
+Proteções:
+- tocar no nome, nascimento ou área interna do cartão seleciona o mesmo integrante;
+- rolagem não deve virar seleção;
+- `pointerup + click` é deduplicado;
+- sem alteração de backend, identidade, família, documento, vaga, PIN, agenda ou serviço.
+
+Cache: `familia-resolvida-v3 → toque-integrante-v4`.
+
+Status: **IMPLEMENTADO — validação do usuário pendente.**
