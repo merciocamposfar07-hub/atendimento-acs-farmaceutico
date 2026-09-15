@@ -122,6 +122,7 @@ function conectaAcessoV1Identificar_(p){
 function conectaAcessoV1Confirmar_(p){
   var dispositivo=conectaAcessoV1Texto_(p.dispositivo);
   if(conectaAcessoV1AparelhoAdministrativo_(dispositivo))throw new Error('Aparelho administrativo: confirmação residencial bloqueada; use o diagnóstico sem vínculo.');
+  if(conectaAcessoV1Bool_(p.confirmarCpf)&&p.identidadeToken)return conectaAcessoV1ConfirmarCpfRevisado_(p);
   var cpf=conectaAcessoV1Cpf_(p.cpf),nascimento=conectaAcessoV1Nascimento_(p.nascimento),nome=conectaAcessoV1Texto_(p.nome),areaPreferida=conectaAcessoV1Id_(p.areaId);
   if(!nascimento)throw new Error('Informe uma data de nascimento válida no formato DD/MM/AAAA.');
   var candidatos=conectaAcessoV1BuscarNascimento_(nascimento,areaPreferida);
@@ -134,9 +135,12 @@ function conectaAcessoV1Confirmar_(p){
     if(item.morador.cpf&&item.morador.cpf!==cpf){
       return conectaAcessoV1CriarPendenteResposta_(p,cpf,nascimento,nome||item.morador.nome,areaPreferida||item.area.areaId,'CPF_DIVERGENTE');
     }
-    if(!item.morador.cpf)conectaAcessoV1SalvarCpf_(item,cpf);
-    item.morador.cpf=cpf;
-    return conectaAcessoV1IdentidadeResposta_(item,cpf,false,'Cadastro localizado. CPF vinculado e salvo.');
+    if(!item.morador.cpf){
+      var revisao=conectaAcessoV1IdentidadeResposta_(item,cpf,false,'Cadastro localizado. Confira o CPF e a data de nascimento antes de salvar.');
+      revisao.revisarCpf=true;revisao.cpf=cpf;revisao.nascimento=nascimento;
+      return revisao;
+    }
+    return conectaAcessoV1IdentidadeResposta_(item,cpf,false,'Cadastro localizado.');
   }
   if(candidatos.length>1){
     return {ok:true,encontrado:false,precisaNome:true,message:'Ainda há mais de um cadastro possível. Confira o nome completo.'};
@@ -145,6 +149,25 @@ function conectaAcessoV1Confirmar_(p){
     return {ok:true,encontrado:false,precisaNome:true,message:'Não localizamos com segurança. Informe também seu nome completo.'};
   }
   return conectaAcessoV1CriarPendenteResposta_(p,cpf,nascimento,nome,areaPreferida,'CADASTRO_NAO_LOCALIZADO');
+}
+
+function conectaAcessoV1ConfirmarCpfRevisado_(p){
+  var identidade=conectaAcessoV1LerTokenCache_(p.identidadeToken,TACS_CONECTA_ACESSO_V1.IDENTITY_PREFIX,'ci1');
+  if(identidade.provisorio)throw new Error('Este cadastro ainda precisa de conferência antes de vincular um CPF.');
+  var cpf=conectaAcessoV1Cpf_(p.cpf||identidade.cpf),nascimento=conectaAcessoV1Nascimento_(p.nascimento||identidade.nascimento);
+  if(cpf!==conectaAcessoV1Texto_(identidade.cpf)||nascimento!==conectaAcessoV1Texto_(identidade.nascimento))throw new Error('Os dados foram alterados. Toque em Corrigir e confira novamente.');
+  var candidatos=conectaAcessoV1BuscarNascimento_(nascimento,conectaAcessoV1Id_(identidade.areaId));
+  candidatos=candidatos.filter(function(x){
+    if(identidade.moradorChave&&conectaAcessoV1Texto_(x.chave)===conectaAcessoV1Texto_(identidade.moradorChave))return true;
+    if(identidade.idPortal&&conectaAcessoV1Texto_(x.morador.idPortal||x.morador.id)===conectaAcessoV1Texto_(identidade.idPortal))return true;
+    return conectaAcessoV1Nome_(x.morador.nome)===conectaAcessoV1Nome_(identidade.nome);
+  });
+  if(candidatos.length!==1)throw new Error('Não foi possível confirmar com segurança este cadastro. Corrija os dados e tente novamente.');
+  var item=candidatos[0],atual=conectaAcessoV1Texto_(item.morador.cpf).replace(/\D/g,'');
+  if(atual&&atual!==cpf)throw new Error('Este cadastro já possui outro CPF. A alteração exige conferência do TACS.');
+  if(!atual)conectaAcessoV1SalvarCpf_(item,cpf);
+  item.morador.cpf=cpf;
+  return conectaAcessoV1IdentidadeResposta_(item,cpf,false,'CPF conferido e salvo no seu cadastro.');
 }
 
 function conectaAcessoV1IdentidadeResposta_(item,cpf,provisorio,mensagem){
