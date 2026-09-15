@@ -1,0 +1,80 @@
+name: Laboratório — validar isolamento completo
+
+on:
+  push:
+    branches: [laboratorio-ia-autorreparo]
+    paths:
+      - '.github/workflows/laboratorio-validar-isolamento.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    if: github.ref == 'refs/heads/laboratorio-ia-autorreparo'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: laboratorio-ia-autorreparo
+
+      - name: Bloquear endpoints Apps Script externos no fluxo operacional
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, sys
+          lab='https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec'
+          rx=re.compile(r'https://script\.google\.com/macros/s/[A-Za-z0-9_-]+/(?:exec|dev)')
+          bad=[]
+          for p in list(Path('.').rglob('*.js'))+list(Path('.').rglob('*.html')):
+            if any(part in {'.git','.github','node_modules','teste-v1','scripts'} for part in p.parts):
+              continue
+            text=p.read_text(encoding='utf-8',errors='ignore')
+            for url in sorted(set(rx.findall(text))):
+              if url != lab:
+                bad.append((str(p),url))
+          if bad:
+            for p,u in bad: print('ENDPOINT_NAO_ISOLADO',p,u)
+            sys.exit(1)
+          print('ISOLAMENTO_ENDPOINTS_OPERACIONAIS=OK')
+          PY
+
+      - name: Validar sintaxe do autofill e clientes centrais
+        run: |
+          node --check moradores-autofill.js
+          node --check central-administrativa-tacs.js
+          node --check conecta-acesso-unificado-v1.js
+          node --check portal-public-data.js
+          node --check conecta-agendas-transport-v1.js
+
+      - name: Validar backend LAB por leitura
+        shell: bash
+        env:
+          BASE: 'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec'
+        run: |
+          set -euo pipefail
+          for QUERY in \
+            'action=status' \
+            'action=agenda&areaId=JAPARANDUBA' \
+            'action=agenda&areaId=SITIO_MATIAS'
+          do
+            BODY=$(curl -L --fail --silent --show-error --connect-timeout 8 --max-time 30 "$BASE?$QUERY")
+            printf '%s' "$BODY" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'
+            echo "$QUERY=OK"
+          done
+          STATUS=$(curl -L --fail --silent --show-error --connect-timeout 8 --max-time 30 "$BASE?action=status")
+          printf '%s' "$STATUS" | grep -Fq '"planilha":"LAB — Portal TACS — Banco de Dados"'
+          echo 'PLANILHA_LAB_CONFIRMADA=OK'
+
+      - name: Testar Supervisor local sem API
+        run: node --test laboratorio-ia/test-local.cjs
+
+      - name: Confirmar main não é alvo
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = 'laboratorio-ia-autorreparo'
+          echo 'BRANCH_LAB=OK'
