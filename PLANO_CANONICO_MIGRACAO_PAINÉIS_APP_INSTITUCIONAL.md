@@ -586,4 +586,10 @@ Implementação:
 - teste em `scripts/test_conecta_acesso_unificado_v1.js`;
 - cache renovado em `central-administrativa-tacs.html`.
 
-Status: **IMPLEMENTADO EM MAIN — aguardando implantação do Apps Script/Pages e validação real no iPhone.**
+Implantação:
+- GitHub Pages run `35034630527`: **success**;
+- Apps Script workflow `35034644793`: **success**;
+- Apps Script produção: **220**, no mesmo deployment;
+- registro técnico do deploy: `374af0e517721afc678d5822b5547324dc4d99eb`.
+
+Status: **IMPLEMENTADO, PUBLICADO E CANONIZADO — aguardando validação real no iPhone antes da homologação.**
