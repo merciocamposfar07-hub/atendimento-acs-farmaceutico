@@ -52,12 +52,18 @@ assert.match(frontend,/CPF, Cartão SUS \(CNS\) ou cadastro da família/);
 assert.match(frontend,/Buscar esta família/);
 assert.match(frontend,/De quem é este/,'Documento não localizado deve levar à escolha explícita do proprietário.');
 assert.match(frontend,/data-member-token/);
+assert.match(frontend,/function memberButton\(target\)\{return target&&target\.closest\?target\.closest\('\[data-member-token\]'\):null\}/,'Toque no texto interno do cartão deve resolver o botão do integrante inteiro.');
+assert.match(frontend,/document\.addEventListener\('pointerup'/,'Seleção do integrante deve responder no pointerup, sem depender somente do click tardio.');
+assert.match(frontend,/dx>14\|\|dy>14/,'Rolagem deve ser distinguida de um toque real no cartão.');
+assert.match(frontend,/lastMemberActivation\.token===token&&now-lastMemberActivation\.at<900/,'pointerup + click sintético não podem selecionar o mesmo integrante duas vezes.');
+assert.match(frontend,/touch-action:manipulation/,'Cartões familiares devem usar touch-action manipulation para resposta tátil imediata.');
+
 assert.match(frontend,/publico_familia_consultar/);
 assert.match(frontend,/function searchFamilyByDocument\(documento\)/,'CPF/CNS reconhecido deve acionar a listagem da família sem novo preenchimento.');
 assert.match(frontend,/function searchFamilyResolved\(fam,documento\)/,'Quando o autofill já resolveu a família, a consulta deve enviar família e documento juntos.');
 assert.match(frontend,/if\(fam\)searchFamilyResolved\(fam,d\);else searchFamilyByDocument\(d\)/,'CPF/CNS reconhecido deve preferir a família já resolvida pelo autofill e manter busca por documento como fallback.');
 
-assert.match(frontend,/if\(!pendingMissing&&docType\(d\)\)searchFamilyByDocument\(d\)/,'Após o autofill do morador, a família correspondente deve ser carregada automaticamente.');
+assert.match(frontend,/if\(!pendingMissing&&docType\(d\)\)\{if\(fam\)searchFamilyResolved\(fam,d\);else searchFamilyByDocument\(d\)\}/,'Após o autofill, a família deve carregar pela referência resolvida ou pelo documento como fallback.');
 assert.doesNotMatch(frontend,/tacsFamilyConfirmDoc|data-family-confirm|Confirmar família/,'A interface não pode pedir uma segunda confirmação documental da família.');
 assert.match(frontend,/publico_familia_membro/);
 assert.match(frontend,/documentoLocalizador/);
@@ -79,9 +85,10 @@ assert.match(frontend,/OneSignalDeferred/,'A consulta pode aproveitar o vínculo
 assert.match(autofill,/eventResident\.familiaBeneficiario = eventFamily/,'O autofill deve repassar a família real do morador no evento tacs:morador.');
 assert.match(autofill,/payload\.familiaBeneficiario \|\| payload\.familiaId/,'A família do beneficiário deve vir da resposta territorial já confirmada.');
 assert.match(loader,/portal-identificacao-familia-v1\.js\?v=[^\"']+/,'O carregador familiar precisa ter cache-buster explícito.');
-assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-resolvida-v3/,'O Portal deve carregar a revisão que usa a família já resolvida no autofill.');
+assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260915-toque-integrante-v4/,'O Portal deve carregar a revisão com toque imediato nos integrantes.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-direta-v1/,'A chave legada não pode voltar a ser usada.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-documento-direto-v2/,'A revisão intermediária também precisa ser invalidada depois do ajuste da família resolvida.');
+assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-resolvida-v3/,'A revisão anterior deve ser invalidada para aparelhos que já abriram a família.');
 assert.doesNotMatch(backend,/Informe um número de cadastro familiar válido\./,'O backend atual não pode voltar à mensagem legada que exigia número familiar após CPF/CNS reconhecido.');
 assert.match(loader,/isAdminPage\(\)\|\|document\.getElementById/,'A camada familiar não deve ser carregada nos painéis administrativos.');
 assert.match(build,/ZZZZ_43_IdentificacaoFamiliarPublicaV1\.gs/);
