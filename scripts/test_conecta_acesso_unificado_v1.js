@@ -70,6 +70,11 @@ assert(backend.includes("dispositivoHash:conectaAcessoV1Hash_(dispositivo)"),'Re
 assert(backend.includes("recupere o PIN em um aparelho já reconhecido"),'Admin/TACS não podem redefinir PIN só conhecendo CPF');
 assert(backend.includes("recupere o PIN no aparelho já reconhecido por este morador"),'Morador não pode redefinir PIN só conhecendo CPF');
 assert(backend.includes("function conectaAcessoV1SalvarCpf_"),'Primeiro acesso deve poder qualificar o cadastro existente com CPF');
+assert(unified.includes("state.cpfNaoLocalizado=r.ambiguo!==true"),'CPF ausente no banco deve marcar o ramo de confirmação por nascimento sem alterar o fluxo de CPF já cadastrado.');
+assert(unified.includes("CPF confirmado com sua data de nascimento."),'Após confirmar CPF ausente com nascimento, a interface deve confirmar explicitamente essa etapa.');
+assert(unified.includes("Agora crie o seu PIN com quatro números."),'Após a confirmação por nascimento, a próxima etapa deve ser a criação explícita do PIN de quatro números.');
+assert(unified.includes("Confirmar PIN de 4 números"),'A criação do PIN deve exigir confirmação do mesmo PIN de quatro números.');
+assert(unified.includes("if(state.cpfNaoLocalizado===true){setStatus('CPF confirmado com sua data de nascimento.'"),'O ramo de CPF ausente deve seguir diretamente para criação do PIN, sem a tela intermediária Salvar e continuar.');
 assert(backend.includes("CPF_PREENCHIDO_EM_CAMPO_VAZIO"),'CPF deve ser escrito no registro canônico quando o campo estiver vazio');
 assert(backend.includes("Cadastro pendente de conferência. Você pode continuar normalmente com sua solicitação."),'Morador sem correspondência segura não pode ser bloqueado');
 assert(backend.includes("function conectaAcessoV1ContarPendenciasArea_"),'Pendências cadastrais devem alimentar a Central');
@@ -80,6 +85,8 @@ assert(resident.includes('Esta etapa é obrigatória.'),'Notificações devem se
 assert(!/Agora n[aã]o/i.test(resident),'Gate inicial não deve oferecer pular notificações');
 assert(resident.includes("conecta_morador_notificacao_confirmar"),'Ativação precisa ser confirmada no backend');
 assert(resident.includes("renderFamily"),'Sessão autenticada deve apresentar núcleo familiar');
+assert(backend.includes("familia:familia"),'Sessão de Morador autenticada por PIN deve devolver a família vinculada ao cadastro.');
+assert(resident.includes('Quem precisa do atendimento?'),'Após o PIN, o Portal deve apresentar os integrantes da família para seleção.');
 assert(resident.includes("portalConectaMoradorTokenV1"),'Próximos acessos devem usar sessão do morador');
 assert(resident.includes('hasBackgroundRequest()'),'Morador deve poder abrir o snapshot local enquanto uma nova sessão é confirmada');
 assert(resident.includes("if(!token){showPortalToast('Acesso aberto. Aguarde a confirmação segura do servidor"),'Alterações do morador devem esperar token remoto novo');
