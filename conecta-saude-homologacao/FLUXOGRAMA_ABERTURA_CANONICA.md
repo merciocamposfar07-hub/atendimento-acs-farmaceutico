@@ -940,3 +940,26 @@ Proteções:
 Cache: `familia-resolvida-v3 → toque-integrante-v4`.
 
 Status: **IMPLEMENTADO — validação do usuário pendente.**
+
+### Correção isolada — criação e reentrada por PIN dentro do Portal TACS
+Data: 15/09/2026
+
+`CPF já cadastrado → reconhecer → família → criar PIN 4 dígitos → confirmar → salvar acesso`.
+
+`CPF ausente → nascimento → nome se necessário → revisar CPF+nascimento → salvar CPF → criar PIN → confirmar`.
+
+`próximo acesso no mesmo aparelho → digitar PIN → validar quickKey/aparelho → abrir sessão → família completa`.
+
+A causa do defeito era de integração: o fluxo PIN existia na porta unificada, mas o Portal TACS público não chamava essas mesmas actions.
+
+Proteções:
+- CPF reconhecido não pede nascimento;
+- CPF ausente exige nascimento e revisão antes da gravação;
+- PIN precisa ter exatamente quatro dígitos e confirmação idêntica;
+- CPF não é criado em nova linha;
+- utiliza o backend canônico existente;
+- não altera vagas, agendas, profissionais, serviços ou regras familiares.
+
+Cache atual: `portal-identificacao-familia-v1.js?v=20260915-cpf-nascimento-pin-v6`.
+
+Status: **IMPLEMENTADO — validação do usuário pendente.**
