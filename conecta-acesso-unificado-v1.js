@@ -341,16 +341,22 @@ function renderIdentityForm(needName,message){
  var birth=el('cscResidentBirth');if(birth)birth.addEventListener('input',function(){var d=digits(this.value).slice(0,8);this.value=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d});
  bindResidentStage();
 }
+function handleConfirmedIdentity(r){
+ if(r.identidadeToken){
+  state.identidadeToken=r.identidadeToken;state.areaId=r.areaId||state.areaId;
+  if(r.revisarCpf===true){state.nascimento=r.nascimento||state.nascimento;renderCpfReview(r);return}
+  if(r.provisorio===true){renderIdentityFound(r);return}
+  setStatus('CPF confirmado no cadastro.','ok');renderPinCreate();return;
+ }
+ if(r.precisaNome){renderIdentityForm(true,r.message);return}
+ if(r.precisaArea){renderAreaChoice(r);return}
+ setStatus(r.message||'Não foi possível confirmar o cadastro.','warn');
+}
 function confirmIdentity(){
  var birth=el('cscResidentBirth'),name=el('cscResidentName');
  if(birth)state.nascimento=text(birth.value);if(name)state.nome=text(name.value);
  setStatus('Conferindo o cadastro…','warn');
- post('conecta_morador_confirmar',{cpf:state.cpf,nascimento:state.nascimento,nome:state.nome,areaId:state.areaId,dispositivo:device()}).then(function(r){
-  if(r.identidadeToken){state.identidadeToken=r.identidadeToken;state.areaId=r.areaId||state.areaId;if(state.cpfNaoLocalizado===true&&r.provisorio!==true){setStatus('CPF confirmado com sua data de nascimento.','ok');renderPinCreate();return}renderIdentityFound(r);return}
-  if(r.precisaNome){renderIdentityForm(true,r.message);return}
-  if(r.precisaArea){renderAreaChoice(r);return}
-  setStatus(r.message||'Não foi possível confirmar o cadastro.','warn');
- }).catch(function(e){setStatus(e.message,'err')});
+ post('conecta_morador_confirmar',{cpf:state.cpf,nascimento:state.nascimento,nome:state.nome,areaId:state.areaId,dispositivo:device()}).then(handleConfirmedIdentity).catch(function(e){setStatus(e.message,'err')});
 }
 function renderAreaChoice(r){
  var stage=el('residentStage'),areas=Array.isArray(r.areas)?r.areas:[];if(!stage)return;
