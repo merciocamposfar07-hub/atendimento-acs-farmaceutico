@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+  var API='https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
   var oneSignal=null,running=false,attempts={},timer=null,counter=0;
   function text(v){return String(v==null?'':v).trim()}
   function uuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(text(v).toLowerCase())}

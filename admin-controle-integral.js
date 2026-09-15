@@ -3,7 +3,7 @@
 
   var MAIN = String(
     window.TACS_ADMIN_API_URL ||
-      'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+      'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec'
   ).trim();
   var DENTAL = String(window.DENTAL_AGENDA_API_URL || '').trim();
   var DAYS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];

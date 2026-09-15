@@ -1,7 +1,7 @@
 (function (window, document) {
   'use strict';
 
-  var API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+  var API_URL = 'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
   var ACTION = 'publico_conteudo';
   var TARGET_ID = 'noticeArea';
   var TIMEOUT_MS = 15000;

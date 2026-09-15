@@ -8,8 +8,8 @@
  * Este arquivo não publica avisos nem reserva vagas. Ele apenas expõe os
  * endereços oficiais e cuida de recursos locais do formulário.
  */
-window.TACS_ADMIN_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+window.TACS_ADMIN_API_URL = 'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
+window.DENTAL_AGENDA_API_URL = 'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
 
 (function () {
   'use strict';

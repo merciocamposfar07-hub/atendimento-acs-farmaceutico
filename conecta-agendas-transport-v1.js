@@ -2,7 +2,7 @@
 'use strict';
 /* TAREFA_16_AGENDAS_NATIVAS_V1 — transporte compartilhado do módulo nativo.
    O iframe abaixo é somente ponte POST invisível; não hospeda nem renderiza o painel. */
-var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var API='https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
 function text(v){return String(v==null?'':v)}
 function requestId(prefix){
   var bytes=new Uint8Array(24);

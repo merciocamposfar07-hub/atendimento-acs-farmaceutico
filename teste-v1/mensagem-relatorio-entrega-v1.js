@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 if(window.PortalTacsRelatorioMensagensV1)return;
-var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var API='https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1';
 var ativa=null,contador=0,pendingReport=false,syncTimer=null;
 function txt(v){return String(v==null?'':v).trim()}

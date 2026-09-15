@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+  var API='https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
   var oneSignal=null,pendingMissing='',pendingType='',pendingOwnerLookup='',currentResident=null,complementing=false;
   var FAMILY_BOX='portalFamilyLookupV1',DOC_BOX='portalDocumentComplementV1',STYLE_ID='portalFamilyLookupStyleV1',DEVICE_KEY='portalTacsDispositivoV1',TECH_TOKEN_PREFIX='portalTacsAparelhoTesteTokenV3:',FAMILY_STORAGE_PREFIX='portalTacsFamiliaAutofillV1:',LEGACY_FAMILY_STORAGE_PREFIX='portalTacsFamiliaConfirmadaV1:';
   function text(v){return String(v==null?'':v).trim()}

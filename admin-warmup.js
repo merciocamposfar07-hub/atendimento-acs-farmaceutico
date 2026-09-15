@@ -10,7 +10,7 @@
     return;
   }
 
-  var API=String(window.TACS_ADMIN_API_URL||'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec').trim();
+  var API=String(window.TACS_ADMIN_API_URL||'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec').trim();
   var CACHE_KEY='portalTacsAdminStatusV5';
   var WARM_KEY='portalTacsAppsScriptWarmAtV1';
   var CACHE_MS=5*60*1000;
@@ -186,7 +186,7 @@
   function aplicar(){document.querySelectorAll('#saudeNotificacoesLista .saude-aparelho').forEach(botaoPara)}
   function reparoApi(){
   var warm=window.PortalTacsAdminWarmup;
-  return texto(warm&&warm.api)||'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+  return texto(warm&&warm.api)||'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
 }
 function reparoRequestId(){return'admin_reparo_individual_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
 function consultarResultadoReparo(id,limite,cb){

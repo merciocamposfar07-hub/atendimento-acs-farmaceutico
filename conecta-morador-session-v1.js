@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var API='https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
 var TOKEN_KEY='portalConectaMoradorTokenV1',PROFILE_KEY='portalConectaMoradorQuickV1',DEVICE_KEY='portalTacsDispositivoV1',BOOTSTRAP_KEY='portalConectaMoradorBootstrapV2',BG_REQUEST_KEY='portalConectaMoradorLoginRequestV2';
 var token='',resident=null,oneSignal=null,busy=false;
 

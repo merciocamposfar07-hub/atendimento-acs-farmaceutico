@@ -3,7 +3,7 @@
   if(typeof window==='undefined'||typeof document==='undefined'||typeof location==='undefined')return;
   if(!/\/painel-oficial-recados-campanhas\.html$/.test(String(location.pathname||'')))return;
   if(window.PortalTacsAparelhoTesteAdminV1)return;window.PortalTacsAparelhoTesteAdminV1=true;
-  var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+  var API='https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
   var APP_ID='e2294b98-c72b-4f8c-a055-de28979676dc',SAFARI_ID='web.onesignal.auto.4bead971-106d-461b-853f-83aecbd62d40';
   var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1',TECH_TOKEN_PREFIX='portalTacsAparelhoTesteTokenV3:';
   var BOX_ID='aparelhoTacsTesteV1Box',STYLE_ID='aparelhoTacsTesteV1Style',operando=false,ultimoEstado=null,oneSignalRef=null,oneSignalTentado=false;

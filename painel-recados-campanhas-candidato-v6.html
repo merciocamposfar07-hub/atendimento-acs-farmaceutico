@@ -93,7 +93,7 @@ body.tema-petroleo .saude-resumo .saude-numero,body.tema-petroleo .saude-aparelh
 <script>
 (function(){
 'use strict';
-var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var API='https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1',UNDO_KEY='portalTacsUndoConteudoV1',TEMA_KEY='portalTacsTemaRecadosV1';
 var token=sessionStorage.getItem(TOKEN_KEY)||'',territorioToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'',dispositivo=localStorage.getItem(DEVICE_KEY)||'';
 var accessMode=territorioToken?'tacs':(token?'admin':'');var podeAdministrar=accessMode==='admin';

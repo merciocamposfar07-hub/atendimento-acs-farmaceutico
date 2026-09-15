@@ -3,7 +3,7 @@
 if(window.PortalTacsInstitucionalSuporteV1)return;
 window.PortalTacsInstitucionalSuporteV1=true;
 
-var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var API='https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec';
 var STYLE_ID='portalTacsInstitutionalStyleV1';
 var MODAL_ID='portalTacsInstitutionalModalV1';
 var VERSION_URL='/atendimento-acs-farmaceutico/portal-version.json';

@@ -3,7 +3,7 @@
 
   if(window.PortalTacsManutencao)return;
 
-  var API=String(window.TACS_ADMIN_API_URL||'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec').trim();
+  var API=String(window.TACS_ADMIN_API_URL||'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec').trim();
   var AREA_ID=String(window.TACS_AREA_ID||'JAPARANDUBA').trim().toUpperCase().replace(/[^A-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,64);
   if(!/^[A-Z0-9][A-Z0-9_-]{1,63}$/.test(AREA_ID))AREA_ID='JAPARANDUBA';
   var CACHE_KEY='portalTacsManutencaoAtivaV2:'+AREA_ID;
