@@ -895,4 +895,9 @@ Proteções:
 
 Registro: `REGISTRO_CANONICO_PRIMEIRO_ACESSO_MORADOR_CPF_NASCIMENTO_PIN_FAMILIA_2026_09_15.md`.
 
-Status: **IMPLEMENTADO EM MAIN — implantação e validação real no iPhone pendentes.**
+Implantação técnica:
+- GitHub Pages `35034630527`: **success**;
+- Apps Script `35034644793`: **success**;
+- versão operacional: **220** no mesmo deployment.
+
+Status: **PUBLICADO E CANONIZADO — validação real no iPhone pendente antes da homologação.**
