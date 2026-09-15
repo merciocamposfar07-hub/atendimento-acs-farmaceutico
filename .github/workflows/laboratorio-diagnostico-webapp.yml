@@ -15,6 +15,36 @@ jobs:
     if: github.ref == 'refs/heads/laboratorio-ia-autorreparo'
     runs-on: ubuntu-latest
     steps:
+      - name: Identificar somente a conta Google do clasp
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          CLASPRC_JSON="$CLASPRC_JSON" node - <<'NODE'
+          const cfg=JSON.parse(process.env.CLASPRC_JSON);
+          const candidates=[];
+          function walk(x){
+            if(!x||typeof x!=='object')return;
+            for(const [k,v] of Object.entries(x)){
+              if(k==='id_token'&&typeof v==='string') candidates.push(v);
+              else walk(v);
+            }
+          }
+          walk(cfg);
+          let email='';
+          for(const tok of candidates){
+            try{
+              const parts=tok.split('.');
+              if(parts.length<2)continue;
+              const payload=JSON.parse(Buffer.from(parts[1].replace(/-/g,'+').replace(/_/g,'/'),'base64').toString('utf8'));
+              if(payload.email){email=String(payload.email);break}
+            }catch(e){}
+          }
+          console.log('clasp_email='+(email||'NAO_DISPONIVEL_NO_ID_TOKEN'));
+          NODE
+
       - name: Inspecionar resposta pública sem autenticação
         shell: bash
         env:
