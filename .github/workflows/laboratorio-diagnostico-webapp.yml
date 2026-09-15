@@ -59,20 +59,21 @@ jobs:
           LAB_URL: 'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec?action=status'
         run: |
           set -euo pipefail
-          curl -L --silent --show-error --connect-timeout 8 --max-time 30             -D /tmp/headers.txt -o /tmp/body.html             -w 'http=%{http_code}\nfinal_url=%{url_effective}\n'             "$LAB_URL"
-          echo '--- headers relevantes ---'
-          grep -Ei '^(HTTP/|location:|content-type:|x-|server:)' /tmp/headers.txt | tail -n 40 || true
-          echo '--- texto visível sanitizado ---'
-          python3 - <<'PY'
-          from pathlib import Path
-          import re, html
-          s=Path('/tmp/body.html').read_text(encoding='utf-8',errors='ignore')
-          s=re.sub(r'(?is)<script.*?</script>',' ',s)
-          s=re.sub(r'(?is)<style.*?</style>',' ',s)
-          s=re.sub(r'(?is)<[^>]+>',' ',s)
-          s=html.unescape(s)
-          s=re.sub(r'\s+',' ',s).strip()
-          print(s[:3500])
-          PY
+          BASE="${LAB_URL%%\?*}"
+          for QUERY in \
+            'action=status' \
+            'action=agenda&areaId=JAPARANDUBA' \
+            'action=agenda&areaId=SITIO_MATIAS'
+          do
+            echo "--- $QUERY ---"
+            curl -L --silent --show-error --connect-timeout 8 --max-time 30 \
+              -D /tmp/headers.txt -o /tmp/body.txt \
+              -w 'http=%{http_code}\nfinal_url=%{url_effective}\n' \
+              "$BASE?$QUERY"
+            BODY=$(cat /tmp/body.txt)
+            printf '%s\n' "$BODY" | head -c 4500
+            echo
+            printf '%s' "$BODY" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'
+          done
 
 # teste apos atualizacao manual v1
