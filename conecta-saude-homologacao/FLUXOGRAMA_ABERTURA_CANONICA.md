@@ -901,3 +901,24 @@ Implantação técnica:
 - versão operacional: **220** no mesmo deployment.
 
 Status: **PUBLICADO E CANONIZADO — validação real no iPhone pendente antes da homologação.**
+
+### Correção isolada — entrega do módulo de família sem cache legado
+Data: 15/09/2026
+
+Fluxo correto preservado:
+`CPF OU CNS OU cadastro familiar → localizar família → listar integrantes ativos → selecionar beneficiário`.
+
+Falha corrigida:
+`navegador reutiliza JS familiar antigo → CPF/CNS reconhecido, mas módulo antigo ainda exige número familiar → lista some`.
+
+Correção:
+`portal-auto-update.js → nova chave de cache do portal-identificacao-familia-v1.js → navegador baixa a lógica familiar atual`.
+
+Proteções:
+- não alterar a regra já homologada de família completa;
+- não alterar backend, vagas, agendas, UBS, TACS, PIN ou autenticação;
+- bloquear regressão da mensagem legada **“Informe um número de cadastro familiar válido.”** após CPF/CNS reconhecido.
+
+Registro: `REGISTRO_CORRECAO_CACHE_IDENTIFICACAO_FAMILIAR_2026_09_15.md`.
+
+Status: **PUBLICADA — validação do usuário pendente.**
