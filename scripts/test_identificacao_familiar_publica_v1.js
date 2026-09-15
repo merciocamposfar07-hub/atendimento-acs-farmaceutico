@@ -81,14 +81,22 @@ assert.match(frontend,/pendingMissing&&current===pendingMissing/,'Um render atra
 assert.match(frontend,/documento ficará guardado somente nesta tela/,'Sem família conhecida, o documento pode ficar apenas em memória enquanto o usuário confirma a família.');
 assert.doesNotMatch(frontend,/localStorage\.setItem\([^\n]*(?:pendingMissing|documentoNovo)/i,'CPF/CNS não localizado não pode ser persistido no navegador.');
 assert.match(frontend,/OneSignalDeferred/,'A consulta pode aproveitar o vínculo familiar do aparelho sem alterar o Push.');
+assert.match(frontend,/conecta_morador_identificar/,'CPF reconhecido no Portal TACS deve preparar a identidade para criação do PIN.');
+assert.match(frontend,/Agora crie o seu PIN com quatro números\./,'O Portal TACS deve mostrar a criação explícita do PIN após reconhecer o CPF.');
+assert.match(frontend,/conecta_morador_criar_pin/,'O PIN criado no Portal deve usar o backend canônico já existente.');
+assert.match(frontend,/portalConectaMoradorQuickV1/,'Após criar o PIN, o acesso rápido deve ser salvo na mesma chave usada pelo Conecta.');
+assert.match(frontend,/conecta_morador_login_pin/,'No próximo acesso, o próprio Portal deve aceitar o PIN de quatro números.');
+assert.match(frontend,/Acesse com seu PIN/,'A reentrada do morador deve apresentar a opção de PIN no Portal direto.');
+assert.match(frontend,/if\(docType\(d\)==='CPF'\)beginResidentPinEnrollment\(d\)/,'O evento de CPF reconhecido deve iniciar a criação do PIN sem exigir nascimento.');
 
 assert.match(autofill,/eventResident\.familiaBeneficiario = eventFamily/,'O autofill deve repassar a família real do morador no evento tacs:morador.');
 assert.match(autofill,/payload\.familiaBeneficiario \|\| payload\.familiaId/,'A família do beneficiário deve vir da resposta territorial já confirmada.');
 assert.match(loader,/portal-identificacao-familia-v1\.js\?v=[^\"']+/,'O carregador familiar precisa ter cache-buster explícito.');
-assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260915-toque-integrante-v4/,'O Portal deve carregar a revisão com toque imediato nos integrantes.');
+assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260915-cpf-pin-direto-v5/,'O Portal deve carregar a revisão que inclui PIN após CPF reconhecido e preserva o toque imediato.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-direta-v1/,'A chave legada não pode voltar a ser usada.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-documento-direto-v2/,'A revisão intermediária também precisa ser invalidada depois do ajuste da família resolvida.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-resolvida-v3/,'A revisão anterior deve ser invalidada para aparelhos que já abriram a família.');
+assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-toque-integrante-v4/,'A revisão anterior sem criação de PIN no Portal direto deve ser invalidada.');
 assert.doesNotMatch(backend,/Informe um número de cadastro familiar válido\./,'O backend atual não pode voltar à mensagem legada que exigia número familiar após CPF/CNS reconhecido.');
 assert.match(loader,/isAdminPage\(\)\|\|document\.getElementById/,'A camada familiar não deve ser carregada nos painéis administrativos.');
 assert.match(build,/ZZZZ_43_IdentificacaoFamiliarPublicaV1\.gs/);
