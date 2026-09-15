@@ -73,6 +73,9 @@ assert.doesNotMatch(frontend,/localStorage\.setItem\([^\n]*(?:pendingMissing|doc
 assert.match(frontend,/OneSignalDeferred/,'A consulta pode aproveitar o vínculo familiar do aparelho sem alterar o Push.');
 
 assert.match(loader,/portal-identificacao-familia-v1\.js\?v=[^\"']+/,'O carregador familiar precisa ter cache-buster explícito.');
+assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-documento-direto-v2/,'O Portal deve invalidar a cópia antiga do módulo familiar que ainda exigia número de cadastro para CPF/CNS.');
+assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-direta-v1/,'A chave de cache anterior não pode continuar servindo a lógica antiga em aparelhos que já abriram o Portal.');
+assert.doesNotMatch(backend,/Informe um número de cadastro familiar válido\./,'O backend atual não pode voltar à mensagem legada que exigia número familiar após CPF/CNS reconhecido.');
 assert.match(loader,/isAdminPage\(\)\|\|document\.getElementById/,'A camada familiar não deve ser carregada nos painéis administrativos.');
 assert.match(build,/ZZZZ_43_IdentificacaoFamiliarPublicaV1\.gs/);
 assert.match(build,/TACS_IDENTIFICACAO_FAMILIAR_PUBLICA_V1/);
