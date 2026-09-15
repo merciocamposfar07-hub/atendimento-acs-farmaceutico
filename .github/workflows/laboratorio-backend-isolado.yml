@@ -147,7 +147,7 @@ jobs:
             esac
           done < <(find . -type f \( -name '*.gs' -o -name '*.js' \) -print0)
 
-      - name: Criar ou atualizar deployment web separado
+      - name: Criar novo deployment web com manifesto isolado
         shell: bash
         run: |
           set -euo pipefail
@@ -155,21 +155,9 @@ jobs:
           VERSION_OUT=$(npx --yes @google/clasp@3.3.0 version "Conecta LAB isolado - ${GITHUB_SHA::7}")
           VERSION=$(printf '%s\n' "$VERSION_OUT" | grep -Eo '[0-9]+' | tail -n 1)
           test -n "$VERSION"
-
-          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments || true)
-          DEPLOYMENT_ID=$(printf '%s\n' "$DEPLOYMENTS" | grep -Eo 'AKfy[A-Za-z0-9_-]+' | head -n 1 || true)
-
-          if [ -n "$DEPLOYMENT_ID" ]; then
-            npx --yes @google/clasp@3.3.0 redeploy \
-              --versionNumber "$VERSION" \
-              --description "Conecta Saúde LAB operacional isolado" \
-              "$DEPLOYMENT_ID"
-          else
-            DEPLOY_OUT=$(npx --yes @google/clasp@3.3.0 deploy --versionNumber "$VERSION" --description "Conecta Saúde LAB operacional isolado")
-            printf '%s\n' "$DEPLOY_OUT"
-            DEPLOYMENT_ID=$(printf '%s\n' "$DEPLOY_OUT" | grep -Eo 'AKfy[A-Za-z0-9_-]+' | head -n 1)
-          fi
-
+          DEPLOY_OUT=$(npx --yes @google/clasp@3.3.0 deploy --versionNumber "$VERSION" --description "Conecta Saúde LAB web anônimo isolado")
+          printf '%s\n' "$DEPLOY_OUT"
+          DEPLOYMENT_ID=$(printf '%s\n' "$DEPLOY_OUT" | grep -Eo 'AKfy[A-Za-z0-9_-]+' | head -n 1)
           test -n "$DEPLOYMENT_ID"
           printf '%s' "$DEPLOYMENT_ID" > "$RUNNER_TEMP/lab_deployment_id"
 
