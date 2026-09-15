@@ -872,13 +872,20 @@ Status final: **HOMOLOGADA NO IPHONE, PUBLICADA E CANONIZADA — 15/09/2026.**
 
 Validação real confirmada pelo usuário. O ramo passa a ser referência operacional fechada para identificação familiar e nascimento civil no Portal do Morador.
 
-### Ramo isolado — Primeiro acesso Morador / CPF ausente → nascimento → PIN familiar
+### Ramo isolado — Primeiro acesso Morador / CPF + revisão + PIN familiar
 Data: 15/09/2026
 
-`Morador → CPF válido não encontrado → pedir data de nascimento → localizar cadastro territorial existente → preencher CPF somente no campo vazio → confirmação concluída → mostrar “Agora crie o seu PIN com quatro números.” → PIN + confirmação → sessão Morador → Portal → família completa selecionável`.
+Ramo A — CPF já existente:
+`Morador → CPF localizado → criar PIN de 4 números → confirmar PIN → sessão Morador → Portal → família completa selecionável`.
+
+Ramo B — CPF ainda ausente:
+`Morador → CPF válido não encontrado → pedir data de nascimento → localizar cadastro territorial existente → mostrar CPF + nascimento para revisão → Corrigir OU Confirmar e continuar → revalidar → salvar CPF no campo vazio → criar PIN de 4 números → confirmar PIN → sessão Morador → Portal → família completa selecionável`.
 
 Proteções:
+- CPF já cadastrado não pede data de nascimento;
 - se houver mais de um cadastro com a mesma data, pedir nome antes de vincular;
+- antes de salvar CPF novo, mostrar os dados e oferecer botão **Corrigir**;
+- CPF precisa ter exatamente 11 números e passar pela validação canônica;
 - CPF divergente não é sobrescrito;
 - PIN tem exatamente quatro dígitos e confirmação idêntica;
 - PIN não é salvo em texto;
@@ -888,4 +895,4 @@ Proteções:
 
 Registro: `REGISTRO_CANONICO_PRIMEIRO_ACESSO_MORADOR_CPF_NASCIMENTO_PIN_FAMILIA_2026_09_15.md`.
 
-Status: **IMPLEMENTADO EM MAIN — validação real no iPhone pendente.**
+Status: **IMPLEMENTADO EM MAIN — implantação e validação real no iPhone pendentes.**
