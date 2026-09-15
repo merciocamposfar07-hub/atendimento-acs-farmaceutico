@@ -555,4 +555,6 @@ Implantação técnica:
 - workflow: `35031883368` — **success**;
 - registro de deploy: `7febbe48e34f615eb7faa05f714b08c402db8137`.
 
-Status: **IMPLEMENTADO, PUBLICADO E CANONIZADO — validação real no iPhone ainda pendente antes de homologação final.**
+Status final: **HOMOLOGADO NO IPHONE, PUBLICADO E CANONIZADO — 15/09/2026.**
+
+A validação real do usuário confirmou o fluxo de família completa por CPF/CNS/cadastro familiar e a preservação correta da data civil de nascimento. Este bloco corretivo fica encerrado e passa a integrar a fonte de verdade operacional do Portal do Morador.
