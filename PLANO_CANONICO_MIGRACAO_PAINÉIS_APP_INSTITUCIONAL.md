@@ -564,14 +564,17 @@ Data: 15/09/2026
 
 Referência: `REGISTRO_CANONICO_PRIMEIRO_ACESSO_MORADOR_CPF_NASCIMENTO_PIN_FAMILIA_2026_09_15.md`.
 
-Fluxo:
-`CPF não localizado → data de nascimento → localizar cadastro existente → salvar CPF no campo vazio da mesma pessoa → “Agora crie o seu PIN com quatro números.” → confirmar PIN de 4 números → Portal do Morador`.
+Fluxos:
+- CPF já cadastrado: `CPF localizado → criar PIN de 4 números → confirmar PIN → Portal do Morador`. Não pede nascimento.
+- CPF ausente: `CPF não localizado → data de nascimento → localizar cadastro existente → revisar CPF + nascimento → Corrigir OU Confirmar e continuar → salvar CPF validado no campo vazio → “Agora crie o seu PIN com quatro números.” → confirmar PIN → Portal do Morador`.
 
 Reentrada:
 `PIN de 4 números → sessão do Morador → família vinculada → todos os integrantes ativos → seleção do beneficiário`.
 
 Limites:
 - não criar novo morador apenas porque o CPF estava ausente;
+- CPF novo só é salvo depois da revisão explícita;
+- exigir exatamente 11 números e validação canônica do CPF;
 - não substituir CPF já existente;
 - manter desambiguação por nome quando a mesma data de nascimento corresponder a mais de uma pessoa;
 - preservar o bloco já homologado de família completa e nascimento civil;
@@ -579,7 +582,8 @@ Limites:
 
 Implementação:
 - `conecta-acesso-unificado-v1.js`;
+- `apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs`;
 - teste em `scripts/test_conecta_acesso_unificado_v1.js`;
 - cache renovado em `central-administrativa-tacs.html`.
 
-Status: **IMPLEMENTADO EM MAIN — aguardando publicação final do Pages e validação real no iPhone.**
+Status: **IMPLEMENTADO EM MAIN — aguardando implantação do Apps Script/Pages e validação real no iPhone.**
