@@ -107,16 +107,20 @@ Health checks do workflow:
 
 ## Estado canônico
 
-**IMPLEMENTADO E IMPLANTADO TECNICAMENTE — AGUARDANDO VALIDAÇÃO REAL DO USUÁRIO NO IPHONE.**
+**HOMOLOGADO NO DISPOSITIVO, PUBLICADO E CANONIZADO — 15/09/2026.**
 
-Não registrar este bloco como homologado em aparelho real até confirmação explícita do usuário de que:
+Validação real confirmada pelo usuário no iPhone em 15/09/2026.
 
-1. uma data conhecida na planilha chega com exatamente o mesmo dia/mês/ano no Portal;
+Ficam homologados neste bloco:
+
+1. a data conhecida na planilha chega ao Portal com o mesmo dia/mês/ano;
 2. CPF carrega a família completa;
 3. CNS carrega a família completa;
 4. número do cadastro familiar carrega a família completa sem segunda confirmação;
 5. integrantes aparecem selecionáveis;
-6. complemento de CPF em morador sem CPF previamente cadastrado grava no cadastro correto sem duplicar a pessoa.
+6. o fluxo de complemento documental permanece vinculado ao cadastro correto, sem criar pessoa duplicada.
+
+Esta homologação encerra a pendência operacional deste bloco específico. Correções futuras não relacionadas devem preservar este contrato canônico.
 
 ## Regra de reversão
 
