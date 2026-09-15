@@ -10,6 +10,7 @@ const backend=read('apps-script/ZZZZ_43_IdentificacaoFamiliarPublicaV1.gs');
 const selection=read('apps-script/ZZZZ_44_SelecaoMembroFamiliaPublicaV1.gs');
 const familySearch=read('apps-script/ZZZZ_41_BuscaEnvioFamiliaMoradoresV1.gs');
 const frontend=read('portal-identificacao-familia-v1.js');
+const autofill=read('moradores-autofill.js');
 const loader=read('portal-auto-update.js');
 const build=read('scripts/build_apps_script_release.js');
 new vm.Script(backend,{filename:'ZZZZ_43_IdentificacaoFamiliarPublicaV1.gs'});
@@ -53,6 +54,9 @@ assert.match(frontend,/De quem é este/,'Documento não localizado deve levar à
 assert.match(frontend,/data-member-token/);
 assert.match(frontend,/publico_familia_consultar/);
 assert.match(frontend,/function searchFamilyByDocument\(documento\)/,'CPF/CNS reconhecido deve acionar a listagem da família sem novo preenchimento.');
+assert.match(frontend,/function searchFamilyResolved\(fam,documento\)/,'Quando o autofill já resolveu a família, a consulta deve enviar família e documento juntos.');
+assert.match(frontend,/if\(fam\)searchFamilyResolved\(fam,d\);else searchFamilyByDocument\(d\)/,'CPF/CNS reconhecido deve preferir a família já resolvida pelo autofill e manter busca por documento como fallback.');
+
 assert.match(frontend,/if\(!pendingMissing&&docType\(d\)\)searchFamilyByDocument\(d\)/,'Após o autofill do morador, a família correspondente deve ser carregada automaticamente.');
 assert.doesNotMatch(frontend,/tacsFamilyConfirmDoc|data-family-confirm|Confirmar família/,'A interface não pode pedir uma segunda confirmação documental da família.');
 assert.match(frontend,/publico_familia_membro/);
@@ -72,9 +76,12 @@ assert.match(frontend,/documento ficará guardado somente nesta tela/,'Sem famí
 assert.doesNotMatch(frontend,/localStorage\.setItem\([^\n]*(?:pendingMissing|documentoNovo)/i,'CPF/CNS não localizado não pode ser persistido no navegador.');
 assert.match(frontend,/OneSignalDeferred/,'A consulta pode aproveitar o vínculo familiar do aparelho sem alterar o Push.');
 
+assert.match(autofill,/eventResident\.familiaBeneficiario = eventFamily/,'O autofill deve repassar a família real do morador no evento tacs:morador.');
+assert.match(autofill,/payload\.familiaBeneficiario \|\| payload\.familiaId/,'A família do beneficiário deve vir da resposta territorial já confirmada.');
 assert.match(loader,/portal-identificacao-familia-v1\.js\?v=[^\"']+/,'O carregador familiar precisa ter cache-buster explícito.');
-assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-documento-direto-v2/,'O Portal deve invalidar a cópia antiga do módulo familiar que ainda exigia número de cadastro para CPF/CNS.');
-assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-direta-v1/,'A chave de cache anterior não pode continuar servindo a lógica antiga em aparelhos que já abriram o Portal.');
+assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-resolvida-v3/,'O Portal deve carregar a revisão que usa a família já resolvida no autofill.');
+assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-direta-v1/,'A chave legada não pode voltar a ser usada.');
+assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-documento-direto-v2/,'A revisão intermediária também precisa ser invalidada depois do ajuste da família resolvida.');
 assert.doesNotMatch(backend,/Informe um número de cadastro familiar válido\./,'O backend atual não pode voltar à mensagem legada que exigia número familiar após CPF/CNS reconhecido.');
 assert.match(loader,/isAdminPage\(\)\|\|document\.getElementById/,'A camada familiar não deve ser carregada nos painéis administrativos.');
 assert.match(build,/ZZZZ_43_IdentificacaoFamiliarPublicaV1\.gs/);
