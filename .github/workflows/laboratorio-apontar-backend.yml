@@ -1,0 +1,109 @@
+name: Laboratório — apontar interface ao backend isolado
+
+on:
+  push:
+    branches: [laboratorio-ia-autorreparo]
+    paths:
+      - '.github/workflows/laboratorio-apontar-backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: laboratorio-apontar-backend
+  cancel-in-progress: false
+
+jobs:
+  aplicar:
+    if: github.ref == 'refs/heads/laboratorio-ia-autorreparo'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: laboratorio-ia-autorreparo
+          fetch-depth: 0
+
+      - name: Substituir somente o endpoint oficial
+        shell: bash
+        env:
+          OFFICIAL: 'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+          LAB: 'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec'
+        run: |
+          set -euo pipefail
+          mapfile -t FILES < <(git grep -IlF "$OFFICIAL" -- '*.js' '*.html' || true)
+          printf 'Arquivos alterados: %s\n' "${#FILES[@]}"
+          printf '%s\n' "${FILES[@]}"
+          test "${#FILES[@]}" -gt 0
+          OFFICIAL="$OFFICIAL" LAB="$LAB" node - "${FILES[@]}" <<'NODE'
+          const fs=require('fs');
+          const files=process.argv.slice(2);
+          const oldUrl=process.env.OFFICIAL,newUrl=process.env.LAB;
+          for(const f of files){
+            const before=fs.readFileSync(f,'utf8');
+            const count=before.split(oldUrl).length-1;
+            if(!count) continue;
+            const after=before.split(oldUrl).join(newUrl);
+            fs.writeFileSync(f,after);
+            console.log(f+': '+count+' substituição(ões)');
+          }
+          NODE
+
+      - name: Confirmar que endpoint oficial saiu de JS e HTML
+        shell: bash
+        env:
+          OFFICIAL: 'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+        run: |
+          set -euo pipefail
+          if git grep -nF "$OFFICIAL" -- '*.js' '*.html'; then
+            echo 'ERRO: endpoint oficial ainda presente em arquivo executável.'
+            exit 1
+          fi
+
+      - name: Mapear outros endpoints Apps Script restantes
+        shell: bash
+        env:
+          LAB: 'https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec'
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          lab='https://script.google.com/macros/s/AKfycbyvkv9N9IGuxHUfZaw8bAkZEJEo-BCTSLrgilsG72uM8EkeGB1ExS874oVfDUADnrDhsA/exec'
+          rx=re.compile(r'https://script\.google\.com/macros/s/[A-Za-z0-9_-]+/(?:exec|dev)')
+          found={}
+          for p in list(Path('.').rglob('*.js'))+list(Path('.').rglob('*.html')):
+            if '.git' in p.parts: continue
+            s=p.read_text(encoding='utf-8',errors='ignore')
+            for u in rx.findall(s):
+              if u!=lab:
+                found.setdefault(u,[]).append(str(p))
+          if found:
+            print('OUTROS_ENDPOINTS_RESTANTES')
+            for u,paths in sorted(found.items()):
+              print(u)
+              for p in sorted(set(paths)): print('  '+p)
+          else:
+            print('NENHUM_OUTRO_ENDPOINT_APPS_SCRIPT_EM_JS_HTML')
+          PY
+
+      - name: Validar sintaxe dos JS alterados
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only -- '*.js' | while read -r f; do
+            [ -n "$f" ] && node --check "$f"
+          done
+
+      - name: Testar Supervisor local sem API
+        run: node --test laboratorio-ia/test-local.cjs
+
+      - name: Gravar somente na branch LAB
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- '*.js' '*.html'
+          git commit -m 'lab: apontar interface somente ao backend isolado'
+          git push origin HEAD:laboratorio-ia-autorreparo
