@@ -868,4 +868,6 @@ Validação técnica:
 - health checks do deploy: aprovados;
 - registro técnico: `REGISTRO_CANONICO_CORRECAO_MORADOR_FAMILIA_NASCIMENTO_2026_09_15.md`.
 
-Status: **PUBLICADA E CANONIZADA — aguardando validação do usuário no iPhone para homologação real.**
+Status final: **HOMOLOGADA NO IPHONE, PUBLICADA E CANONIZADA — 15/09/2026.**
+
+Validação real confirmada pelo usuário. O ramo passa a ser referência operacional fechada para identificação familiar e nascimento civil no Portal do Morador.
