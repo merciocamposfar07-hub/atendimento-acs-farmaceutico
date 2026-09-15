@@ -81,3 +81,35 @@ Nenhum novo deploy de Apps Script foi necessário nesta correção, porque o bac
 ## Estado
 
 **CORRIGIDO NO CÓDIGO E PUBLICADO — validação real do usuário no dispositivo pendente.**
+
+## Correção cirúrgica adicional — resposta imediata ao toque nos integrantes
+Data: 15/09/2026
+
+Sintoma observado em vídeo real:
+`família já carregada → usuário toca em um integrante → alguns toques não disparam a seleção → precisa tocar repetidas vezes até carregar o morador`.
+
+Causa localizada no frontend:
+- a seleção dependia somente do evento `click`;
+- o listener lia `data-member-token` apenas em `event.target`;
+- o cartão contém elementos internos, inclusive o `<span>` do nascimento; tocar nesses elementos podia fazer o alvo do evento ser o filho, não o botão;
+- não havia resposta no `pointerup` nem feedback imediato no `pointerdown`.
+
+Correção aplicada exclusivamente em `portal-identificacao-familia-v1.js`:
+- o alvo do toque agora é resolvido por `closest('[data-member-token]')`, tornando todo o cartão clicável;
+- `pointerup` faz a seleção imediatamente;
+- `click` continua como fallback para teclado/navegadores;
+- deduplicação impede `pointerup + click` de selecionar duas vezes;
+- deslocamento acima de 14 px é tratado como rolagem e não como toque;
+- `touch-action: manipulation` e estado visual pressionado dão resposta imediata;
+- nenhuma regra de família, documento, vaga, agenda, PIN ou backend foi alterada.
+
+Cache do mesmo módulo:
+`portal-identificacao-familia-v1.js?v=20260915-toque-integrante-v4`.
+
+Commits:
+- `5d452c694bcbd6a58ee691b1184483356ff31348` — toque imediato e alvo completo do cartão;
+- `b5988805e3a9ff2c38c7b431ebdd2096e63d25be` — cache-buster da correção;
+- `f7ca01b8f833207ca0fc94ab5c9b116b13d86239` — contrato de regressão;
+- `284761393d98bff23a574cfbd5f1fd7582b11796` — consolidação integral automática do Portal.
+
+Status: **IMPLEMENTADO EM MAIN — publicação final do Pages e validação real no dispositivo pendentes.**
