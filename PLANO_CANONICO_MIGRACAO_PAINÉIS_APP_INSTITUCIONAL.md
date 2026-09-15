@@ -532,3 +532,27 @@ Referências funcionais:
 
 A validação real confirmada pelo usuário encerra a pendência operacional registrada em `REGISTRO_CORRECAO_ABERTURA_IMEDIATA_PAINEIS_UBS_2026_09_13.md` e no ramo correspondente de `FLUXOGRAMA_ABERTURA_CANONICA.md`.
 
+## Bloco corretivo isolado — Portal do Morador: identificação familiar + nascimento
+Data: 15/09/2026
+
+Referência canônica: `REGISTRO_CANONICO_CORRECAO_MORADOR_FAMILIA_NASCIMENTO_2026_09_15.md`.
+
+Fluxo:
+`CPF OU CNS OU cadastro familiar → resolver família na área → carregar todos os integrantes ativos → selecionar integrante → preencher dados automaticamente`.
+
+Contrato:
+- CPF, CNS e número do cadastro familiar são três entradas equivalentes para abrir a família completa;
+- não existe segunda confirmação por CPF/CNS depois de localizada a família;
+- o documento digitado identifica o solicitante/beneficiário inicial, mas não limita a lista familiar;
+- todos os integrantes ativos retornados permanecem selecionáveis;
+- CPF ainda ausente pode ser complementado na mesma linha do morador selecionado, sem duplicar pessoa e sem substituir documento existente;
+- DATA_NASCIMENTO atual exibida na planilha é a fonte de verdade e deve chegar ao Portal como data civil, sem recuo de um dia;
+- a camada histórica de backup de nascimento não pode substituir a data operacional atual;
+- nenhuma agenda, vaga, profissional, serviço, Push, painel administrativo ou regra externa a este ramo é autorizada a mudar.
+
+Implantação técnica:
+- Apps Script: versão **219**;
+- workflow: `35031883368` — **success**;
+- registro de deploy: `7febbe48e34f615eb7faa05f714b08c402db8137`.
+
+Status: **IMPLEMENTADO, PUBLICADO E CANONIZADO — validação real no iPhone ainda pendente antes de homologação final.**
