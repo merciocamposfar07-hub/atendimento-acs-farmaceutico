@@ -16,29 +16,30 @@ Nesse estado, a lista dos integrantes da família deixava de aparecer.
 
 A frase exibida pertence à lógica antiga do módulo familiar. Ela existe nas revisões anteriores do backend familiar, nas quais a consulta pública exigia obrigatoriamente um número de família antes de prosseguir.
 
-O código operacional atual já possui a regra correta:
+O fluxo atual correto é:
 
-`CPF/CNS → localizar morador na área → resolver código familiar do morador → listar integrantes`.
+`CPF/CNS → localizar morador na área → resolver código familiar do próprio morador → listar integrantes`.
 
-Também não contém mais a mensagem legada acima e não exige segunda confirmação documental.
+Foram encontrados dois pontos específicos que permitiam a regressão:
 
-O defeito estava no carregador do navegador: `portal-auto-update.js` continuava chamando `portal-identificacao-familia-v1.js` com a mesma chave de cache usada antes da correção do fluxo familiar. Em aparelhos que já haviam aberto o Portal, uma cópia anterior do JavaScript podia permanecer reutilizada.
+1. `moradores-autofill.js` recebia `familiaBeneficiario/familiaId` do backend, mas o evento `tacs:morador` repassava apenas o objeto interno `morador`. Assim, o módulo familiar perdia a família já resolvida e precisava tentar resolvê-la novamente pelo documento;
+2. `portal-auto-update.js` ainda reutilizava uma chave de cache anterior do módulo familiar, permitindo que aparelhos que já haviam aberto o Portal mantivessem uma cópia anterior da lógica.
 
-Isso explica o comportamento reaparecer de forma dependente do aparelho/cache mesmo com o arquivo-fonte atual correto.
+A combinação desses dois pontos explica o comportamento intermitente entre aparelhos e o reaparecimento da mensagem antiga.
 
 ## Correção aplicada
 
-Alterado somente o carregamento do módulo familiar:
+Foram alterados somente os pontos do fluxo familiar responsáveis pela regressão:
 
-Antes:
-`portal-identificacao-familia-v1.js?v=20260915-familia-direta-v1`
+- `moradores-autofill.js` agora inclui `familiaBeneficiario/familiaId` no próprio evento `tacs:morador`;
+- `portal-identificacao-familia-v1.js` passa a usar primeiro essa família já resolvida e envia **família + CPF/CNS** juntos na consulta;
+- se a família não vier no payload, a busca direta pelo documento permanece como fallback;
+- `portal-auto-update.js` recebeu nova chave de cache para obrigar os aparelhos a baixar a correção.
 
-Agora:
-`portal-identificacao-familia-v1.js?v=20260915-familia-documento-direto-v2`
+Chave atual:
+`portal-identificacao-familia-v1.js?v=20260915-familia-resolvida-v3`
 
 Não foi alterada a lógica de vagas, agendas, serviços, profissionais, UBS, TACS, login, PIN ou demais módulos.
-
-A consolidação do Portal também renovou a referência de `portal-auto-update.js` no `index.html`, obrigando os aparelhos a buscar o carregador atualizado.
 
 ## Contrato preservado
 
@@ -63,9 +64,13 @@ Confirmado em `main`:
 
 ## Commits
 
-- `35f0ef71a968dd622b3858db0334ee280071b155` — invalida cache antigo do módulo familiar;
-- `d7e829994f3dafaf6730d48b3c6080869d745b2c` — consolidação integral automática do Portal;
-- `29acb6fa5310179aff135596ff5c3ff99798b67b` — teste de regressão contra retorno do cache familiar legado.
+- `35f0ef71a968dd622b3858db0334ee280071b155` — primeira invalidação do cache antigo;
+- `29acb6fa5310179aff135596ff5c3ff99798b67b` — teste contra retorno do cache legado;
+- `46de505e21bd5fb2509f411b2e74f1b14ce3c233` — repassa a família resolvida no evento do autofill;
+- `9cf2d8df16aa2f74a64a35170058007b4cce27ca` — usa família resolvida + CPF/CNS na consulta familiar;
+- `00b25f44dc844322b8082eec7f7a710c4544eda7` — renova o cache da família resolvida;
+- `55c1e8702b031945faf03eb4c877f6b791117e9c` — consolidação integral automática do Portal;
+- `702954d87aed7a541440273e1f3f8f68b84c13e7` — contrato de regressão da família resolvida.
 
 ## Publicação
 
