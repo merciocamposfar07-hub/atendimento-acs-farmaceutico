@@ -100,9 +100,19 @@ Cache da Central renovado em:
 
 Se esta etapa precisar ser alterada ou desfeita, atuar somente no ramo de primeiro acesso do Morador descrito acima. Não usar esta correção como autorização para alterar o fluxo já homologado de família completa/nascimento civil nem os demais perfis/painéis.
 
+## Implantação técnica
+
+- GitHub Pages: run `35034630527` — **success**;
+- Apps Script: workflow `35034644793` — **success**;
+- deployment principal preservado;
+- versão Apps Script anterior: `219`;
+- versão Apps Script implantada: `220`;
+- health checks de moradores, território, CSV, manutenção, isolamento, Japaranduba, Sítio Matias e conteúdo público: aprovados;
+- registro do deploy: `374af0e517721afc678d5822b5547324dc4d99eb`.
+
 ## Estado
 
-**IMPLEMENTADO EM MAIN — PUBLICAÇÃO E VALIDAÇÃO REAL NO IPHONE PENDENTES.**
+**IMPLEMENTADO, PUBLICADO E CANONIZADO — VALIDAÇÃO REAL NO IPHONE PENDENTE.**
 
 Não considerar homologado antes de o usuário confirmar no dispositivo:
 1. CPF já existente não pede nascimento e segue para criação do PIN;
