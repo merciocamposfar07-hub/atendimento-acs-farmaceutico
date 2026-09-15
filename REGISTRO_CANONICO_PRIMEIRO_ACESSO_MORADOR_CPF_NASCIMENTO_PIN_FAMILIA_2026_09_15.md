@@ -124,3 +124,35 @@ Não considerar homologado antes de o usuário confirmar no dispositivo:
 7. no próximo acesso o PIN entra sem pedir CPF novamente;
 8. a família completa aparece;
 9. qualquer integrante pode ser selecionado para a solicitação.
+
+## Correção complementar — PIN também no Portal TACS público
+Data: 15/09/2026
+
+Falha confirmada por gravação real:
+o fluxo de criação/reentrada por PIN havia sido implementado na porta unificada do Conecta, porém **não estava ligado ao Portal TACS público onde o morador efetivamente digitava o CPF**. Por isso o CPF e a família eram reconhecidos, mas a criação do PIN não aparecia.
+
+Correção no mesmo módulo existente `portal-identificacao-familia-v1.js`:
+
+Ramo A — CPF já existe:
+`CPF reconhecido → autofill + família → conecta_morador_identificar → “Agora crie o seu PIN com quatro números.” → PIN + confirmação → conecta_morador_criar_pin → salvar quickKey/sessão`.
+
+Ramo B — CPF ainda não existe:
+`CPF não localizado → data de nascimento → nome se necessário → revisão CPF + nascimento → Corrigir OU Confirmar e continuar → backend salva CPF na mesma pessoa → criação/confirmação do PIN`.
+
+Reentrada no próprio Portal:
+`aparelho já reconhecido → “Acesse com seu PIN” → conecta_morador_login_pin → sessão → Portal autenticado → família vinculada`.
+
+Chaves canônicas reaproveitadas:
+- `portalConectaMoradorQuickV1`;
+- `portalConectaMoradorTokenV1`;
+- `portalTacsDispositivoV1`.
+
+Nenhum backend paralelo, nova página ou nova versão funcional foi criado. As actions já existentes de `ZZZZ_51_AcessoUnificadoConectaV1.gs` foram reaproveitadas.
+
+Commits:
+- `4d999fe2485d0bb5792d9e196cb5e97c47cea4b1` — cria PIN após CPF reconhecido diretamente no Portal;
+- `7899478c9873fb8a1469118e03541bc3a90efc4c` — liga CPF ausente → nascimento → revisão → PIN no Portal;
+- `09924e75057e3c3d95c7686b9158d3469f19642d` — cache-buster do fluxo completo;
+- `cbf2e28ea6e98874c7da22c95efa822e9eaa203b` — contrato de regressão.
+
+Status: **IMPLEMENTADO EM MAIN — publicação Pages e validação real no aparelho pendentes.**
