@@ -113,3 +113,38 @@ Commits:
 - `284761393d98bff23a574cfbd5f1fd7582b11796` — consolidação integral automática do Portal.
 
 Status: **IMPLEMENTADO EM MAIN — publicação final do Pages e validação real no dispositivo pendentes.**
+
+## Correção cirúrgica — navegador Google + integrante sem segunda busca
+Data: 15/09/2026
+
+Vídeo 1 — navegador Google/Chrome:
+- o Portal TACS carregava, porém a busca por família/CPF podia terminar em “Não foi possível consultar agora” ou “A consulta demorou além do esperado”;
+- foi encontrado um desvio concreto: `moradores-autofill.js` ainda usava um deployment Apps Script diferente daquele usado por agenda, família, PIN e demais rotas públicas do Portal;
+- o autofill foi apontado para o deployment canônico único do Portal TACS;
+- a consulta familiar ganhou fallback GET somente quando o carregamento JSONP falha no navegador.
+
+Vídeo 2 — Portal TACS aberto diretamente:
+- ao selecionar outro integrante da família, o token familiar já era validado no backend;
+- mesmo assim o frontend trocava o CPF/CNS no campo e iniciava uma segunda chamada `buscar_morador`;
+- essa releitura redundante podia ficar em carregamento e reproduzir a inconsistência.
+
+Correção:
+- `publico_familia_membro` continua revalidando token, área, situação ativa e família;
+- depois da validação, devolve também nome, nascimento, localidade e área pública;
+- o frontend aplica esses dados diretamente no autofill e no cache local;
+- a segunda busca remota do mesmo integrante foi removida;
+- a família já carregada permanece disponível;
+- resposta tátil, PIN, CPF ausente, agendas, vagas, serviços e painéis administrativos não foram alterados.
+
+Arquivos funcionais:
+- `moradores-autofill.js`;
+- `portal-identificacao-familia-v1.js`;
+- `apps-script/ZZZZ_44_SelecaoMembroFamiliaPublicaV1.gs`.
+
+Publicação:
+- GitHub Pages run `35046767074`: **success**;
+- Apps Script run `35046775071`: **success**;
+- deployment operacional preservado e atualizado **220 → 221**;
+- health check do deploy: aprovado na primeira tentativa.
+
+Status: **CORRIGIDO E PUBLICADO — validação física dos dois vídeos ainda pendente.**
