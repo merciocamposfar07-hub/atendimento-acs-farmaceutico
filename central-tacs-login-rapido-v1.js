@@ -226,6 +226,12 @@ function concluirPrimeiroAcesso(r,device,pin){
 
 pinInput.addEventListener('focus',aquecerPinTacs,{once:true});
 pinInput.addEventListener('input',aquecerPinTacs,{once:true});
+pinInput.addEventListener('input',function(){
+  var pin=digits(pinInput.value),msg=text(status&&status.textContent);
+  if(/^\d{4,8}$/.test(pin)&&status&&status.classList.contains('err')&&/pin|4\s*a\s*8|númer|dígit/i.test(msg)){
+    status.textContent='';status.className='status';status.hidden=true;
+  }
+});
 
 loginBtn.addEventListener('click',function(event){
   event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
