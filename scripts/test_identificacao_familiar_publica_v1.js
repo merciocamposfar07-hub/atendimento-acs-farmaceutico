@@ -47,6 +47,9 @@ assert.match(selection,/return \{token:token,nome:item\.nome,nascimento:item\.na
 assert.doesNotMatch(selection,/return \{token:token[^\n]*(?:cpf:|cns:)/i,'CPF/CNS não podem ser campos da lista de integrantes.');
 assert.match(selection,/documentoAcesso:documento/,'Documento só pode ser liberado após selecionar o integrante pelo token temporário.');
 assert.match(selection,/CodigoMorador_\(registro\.morador\)!==familia/,'Seleção deve revalidar a família antes de liberar o integrante.');
+assert.match(selection,/nascimento:registro\.morador\.nascimento/,'A seleção validada deve devolver o nascimento necessário ao preenchimento direto.');
+assert.match(selection,/localidade:registro\.morador\.endereco/,'A seleção validada deve devolver a localidade necessária ao preenchimento direto.');
+assert.match(selection,/areaId:contexto\.areaId/,'A seleção validada deve manter a área pública confirmada.');
 
 assert.match(frontend,/CPF, Cartão SUS \(CNS\) ou cadastro da família/);
 assert.match(frontend,/Buscar esta família/);
@@ -54,13 +57,16 @@ assert.match(frontend,/De quem é este/,'Documento não localizado deve levar à
 assert.match(frontend,/data-member-token/);
 assert.match(frontend,/function memberButton\(target\)\{return target&&target\.closest\?target\.closest\('\[data-member-token\]'\):null\}/,'Toque no texto interno do cartão deve resolver o botão do integrante inteiro.');
 assert.match(frontend,/document\.addEventListener\('pointerup'/,'Seleção do integrante deve responder no pointerup, sem depender somente do click tardio.');
-assert.match(frontend,/dx>14\|\|dy>14/,'Rolagem deve ser distinguida de um toque real no cartão.');
-assert.match(frontend,/lastMemberActivation\.token===token&&now-lastMemberActivation\.at<900/,'pointerup + click sintético não podem selecionar o mesmo integrante duas vezes.');
+assert.match(frontend,/dx>32\|\|dy>32/,'Rolagem deve ser distinguida do microdeslocamento natural de um toque no cartão.');
+assert.match(frontend,/lastMemberActivation\.token===token&&now-lastMemberActivation\.at<280/,'pointerup + click sintético são deduplicados sem bloquear nova tentativa humana.');
 assert.match(frontend,/touch-action:manipulation/,'Cartões familiares devem usar touch-action manipulation para resposta tátil imediata.');
 assert.match(frontend,/activeFamilyId===fam&&familySnapshot/,'Família já carregada não deve ser consultada novamente ao alternar integrantes.');
 assert.match(frontend,/function primeFamilyMembers\(membros\)/,'Ao exibir a família, o Portal deve aquecer o cache dos integrantes em segundo plano.');
 assert.match(frontend,/memberResolvedCache\[key\]/,'Documento já resolvido do integrante deve ser reutilizado em memória.');
 assert.match(frontend,/window\.TacsMoradoresAutofillV1/,'Seleção familiar deve aproveitar o cache do autofill já existente.');
+assert.match(frontend,/function fetchJson\(params\)/,'Falha do JSONP deve ter fallback GET para navegadores externos.');
+assert.match(frontend,/function applyMemberWithoutSecondLookup\(r\)/,'Integrante validado deve preencher o formulário sem disparar segunda busca buscar_morador.');
+assert.doesNotMatch(frontend,/api\.prefetch\(r\.documentoAcesso\)/,'Selecionar integrante não pode iniciar uma consulta redundante no autofill.');
 assert.doesNotMatch(frontend,/setTimeout\(hide,1800\)/,'Selecionar um integrante não pode esconder a família e obrigar nova busca.');
 assert.doesNotMatch(frontend,/Validando o cadastro selecionado…/,'A lista familiar não pode ser substituída por uma tela intermediária de validação.');
 
@@ -108,7 +114,7 @@ assert.match(frontend,/if\(resolved==='CPF'\).*renderMissingCpfBirth/s,'CPF não
 assert.match(autofill,/eventResident\.familiaBeneficiario = eventFamily/,'O autofill deve repassar a família real do morador no evento tacs:morador.');
 assert.match(autofill,/payload\.familiaBeneficiario \|\| payload\.familiaId/,'A família do beneficiário deve vir da resposta territorial já confirmada.');
 assert.match(loader,/portal-identificacao-familia-v1\.js\?v=[^\"']+/,'O carregador familiar precisa ter cache-buster explícito.');
-assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-cache-ponta-a-ponta-v8/,'O Portal deve carregar a revisão que preserva PIN/guard administrativo e mantém a família em cache ponta a ponta.');
+assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260915-browser-integrante-v10/,'O Portal deve carregar a revisão com fallback de navegador e seleção familiar sem segunda busca.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-direta-v1/,'A chave legada não pode voltar a ser usada.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-documento-direto-v2/,'A revisão intermediária também precisa ser invalidada depois do ajuste da família resolvida.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-resolvida-v3/,'A revisão anterior deve ser invalidada para aparelhos que já abriram a família.');
