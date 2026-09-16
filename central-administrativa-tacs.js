@@ -714,7 +714,7 @@ function resetModuleShell(){
   var moradoresHost=el('nativeMoradoresHost');if(moradoresHost&&moradoresHost.parentNode)moradoresHost.remove()
   var profissionaisHost=el('nativeProfissionaisHost');if(profissionaisHost&&profissionaisHost.parentNode)profissionaisHost.remove()
   shellFrames={};shellActiveModule='';shellActiveRoute='';shellActiveNative='';shellScopeKey='';
-  if(base){base.hidden=false;base.removeAttribute('data-shell-key');base.removeAttribute('data-shell-module');base.removeAttribute('data-shell-route');base.removeAttribute('data-shell-url');base.removeAttribute('data-shell-loaded');if(base.src!=='about:blank')base.src='about:blank'}
+  if(base){base.hidden=true;base.removeAttribute('data-shell-key');base.removeAttribute('data-shell-module');base.removeAttribute('data-shell-route');base.removeAttribute('data-shell-url');base.removeAttribute('data-shell-loaded');if(base.src!=='about:blank')base.src='about:blank'}
   if(viewer)viewer.hidden=true;
   setShellOpening('',false);
   document.body.classList.remove('viewer-open');
@@ -1412,7 +1412,12 @@ function closeViewer(){
     try{if(window.ConectaProfissionaisNativeV1&&window.ConectaProfissionaisNativeV1.hide)window.ConectaProfissionaisNativeV1.hide()}catch(e){}
     var profissionaisHost=el('nativeProfissionaisHost');if(profissionaisHost)profissionaisHost.hidden=true;
   }
-  var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-native-viewer','csc-frame-viewer','csc-frame-opening','csc-agendas-native-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
+  /* CORRECAO_CIRURGICA_QUADRO_VAZIO_UBS_2026_09_16_V1
+     Ao voltar para a Central, nenhuma superfície de frame pode continuar visível.
+     O frame permanece montado/cacheado, mas só reaparece por showShellFrame(). */
+  Object.keys(shellFrames).forEach(function(key){var item=shellFrames[key];if(item)item.hidden=true});
+  var baseFrame=el('viewerFrame');if(baseFrame)baseFrame.hidden=true;
+  var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-shell-viewer','csc-native-viewer','csc-frame-viewer','csc-frame-opening','csc-agendas-native-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   shellActiveModule='';shellActiveRoute='';shellActiveNative='';moduloPendente=null;
   if(mode!=='ubs')scheduleHealthRefresh(false,900);return true;
