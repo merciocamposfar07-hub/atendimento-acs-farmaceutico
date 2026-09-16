@@ -1749,6 +1749,10 @@ el('loginAdmin').addEventListener('click',function(){
   });
 });
 el('loginTacs').addEventListener('click',function(){
+  /* DONO_UNICO_PIN_TACS_2026_09_16_V1:
+     se o módulo específico de login rápido está carregado, ele é o único dono deste clique.
+     Este trecho existe apenas como contingência de carregamento. */
+  if(window.PortalTacsQuickLoginPinHandlerV1===true)return;
   var pin=digits(el('tacsPin').value);
   if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN individual de 4 a 8 números.','err');return}
   setStatus('Liberando o acesso…','warn');
