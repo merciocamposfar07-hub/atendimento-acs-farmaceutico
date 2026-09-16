@@ -2726,11 +2726,11 @@ function selecionarSaudeFiltro(filtro){
   if(saudeFiltroAtivo){var lista=document.getElementById('saudeNotificacoesLista');if(lista&&typeof lista.scrollIntoView==='function')setTimeout(function(){lista.scrollIntoView({behavior:'smooth',block:'nearest'})},0)}
 }
 function renderSaudeNotificacoes(r){
-  if(!r||r.ok!==true||r.oneSignalConsultado!==true){
-    status('saudeNotificacoesStatus','Confirmando o estado atual das notificações…','aviso');
+  if(!r||r.ok!==true){
+    status('saudeNotificacoesStatus','Não foi possível carregar a situação das notificações agora.','aviso');
     return false;
   }
-  var box=document.getElementById('saudeNotificacoes'),c=r.contagens||{},aparelhos=Array.isArray(r.aparelhos)?r.aparelhos:[];
+  var box=document.getElementById('saudeNotificacoes'),c=r.contagens||{},aparelhos=Array.isArray(r.aparelhos)?r.aparelhos:[],confirmado=r.oneSignalConsultado===true;
   saudeNotificacoesDados=r;
   box.classList.remove('oculto');
   document.getElementById('saudeTitulo').textContent='Saúde das notificações — '+txt(r.areaNome||areaId);
@@ -2739,6 +2739,10 @@ function renderSaudeNotificacoes(r){
   document.getElementById('saudeReparo').textContent=Number(c.reparo||0);
   document.getElementById('saudeSemConfirmacao').textContent=Number(c.semConfirmacao||0);
   renderSaudeLista();
+  if(!confirmado){
+    status('saudeNotificacoesStatus','Dados carregados. Conferindo o estado atual no OneSignal em segundo plano…','aviso');
+    return true;
+  }
   if(!aparelhos.length){status('saudeNotificacoesStatus','Consulta técnica confirmada: nenhum aparelho identificado nesta área.','ok');return true}
   status('saudeNotificacoesStatus','Situação confirmada com a consulta técnica ao OneSignal. Toque em um indicador para ver os aparelhos.','ok');
   return true;
@@ -2755,7 +2759,8 @@ function carregarSaudeNotificacoes(){
   status('saudeNotificacoesStatus','Confirmando o estado atual das notificações…','aviso');
   atualizarSaudeNotificacoesRemota();
   post('admin_notificacoes_saude_rapida',sessao(),function(r){
-    if(r&&r.ok===true&&r.oneSignalConsultado===true)renderSaudeNotificacoes(r);
+    if(r&&r.ok===true)renderSaudeNotificacoes(r);
+    else status('saudeNotificacoesStatus',txt(r&&r.message||'Não foi possível carregar a situação das notificações agora.'),'aviso');
   },'admin_notificacoes_saude_result');
 }
 var saudeRemotaEmCurso=false;
