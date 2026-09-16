@@ -305,7 +305,7 @@
     var script=document.createElement('script');
     script.id='portalTacsIdentificacaoFamiliaScriptV1';
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260916-busca-estavel-v11';
+    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260916-member-feedback-v12';
     (document.head||document.documentElement).appendChild(script);
   }
 
