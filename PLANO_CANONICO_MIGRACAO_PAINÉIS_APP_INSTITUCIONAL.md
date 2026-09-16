@@ -592,7 +592,11 @@ Implantação:
 - Apps Script produção: **220**, no mesmo deployment;
 - registro técnico do deploy: `374af0e517721afc678d5822b5547324dc4d99eb`.
 
-Status: **IMPLEMENTADO, PUBLICADO E CANONIZADO — aguardando validação real no iPhone antes da homologação.**
+Status atualizado em 15/09/2026:
+- **Ramo CPF já cadastrado → criação/confirmação do PIN: HOMOLOGADO NO DISPOSITIVO pelo usuário.**
+- **Ramo CPF ausente → nascimento → revisão → gravação do CPF → PIN: ainda aguardando teste real.**
+
+Esta atualização é exclusivamente documental. Nenhum código, comportamento, cache, backend, painel, vaga, agenda, serviço, família ou regra funcional foi alterado.
 
 ## Correção isolada — cache legado da identificação familiar
 Data: 15/09/2026
