@@ -56,5 +56,5 @@ function selecaoMembroFamiliaPublicaV1Resolver_(p){
   var cpf=moradoresAdminV1Digitos_(registro.morador.cpf),cns=moradoresAdminV1Digitos_(registro.morador.cns),documento='';
   if(cpf&&moradoresAdminV1CpfValido_(cpf))documento=cpf;else if(/^\d{15}$/.test(cns))documento=cns;
   if(!documento)throw new Error('Este integrante ainda não possui CPF ou Cartão SUS disponível para carregamento automático. Procure seu TACS.');
-  return {ok:true,documentoAcesso:documento,tipoDocumento:documento.length===11?'CPF':'CNS',familiaId:familia,nome:registro.morador.nome};
+  return {ok:true,documentoAcesso:documento,tipoDocumento:documento.length===11?'CPF':'CNS',familiaId:familia,nome:registro.morador.nome,nascimento:registro.morador.nascimento,localidade:registro.morador.endereco,areaId:contexto.areaId};
 }
