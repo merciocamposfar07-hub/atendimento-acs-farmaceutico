@@ -85,7 +85,12 @@ function renderFamily(r){
  var members=Array.isArray(r.familia)?r.familia:[];if(!members.length)return;
  var box=document.createElement('section');box.id='cscFamilySession';box.className='csc-family-session';
  box.innerHTML='<h2>Quem precisa do atendimento?</h2><p>Selecione uma pessoa do vínculo familiar. O responsável deste acesso continua sendo '+esc(r.nome||'o morador autenticado')+'.</p><div class="csc-family-grid">'+members.map(function(m){return '<button type="button" class="csc-family-person'+(m.responsavel?' active':'')+'" data-csc-family-token="'+esc(m.token||'')+'" data-csc-family-name="'+esc(m.nome||'')+'" data-csc-family-birth="'+esc(m.nascimento||'')+'" data-csc-family-hasdoc="'+(m.temDocumento?'1':'0')+'">'+esc(m.nome||'Morador')+'<span>'+(m.nascimento?'Nascimento: '+esc(m.nascimento):'')+(m.temDocumento?'':' • CPF/CNS ainda não disponível')+'</span></button>'}).join('')+'</div>';
- var main=document.querySelector('main');if(main&&main.parentNode)main.parentNode.insertBefore(box,main);else document.body.appendChild(box);
+ // Mantém a família na identificação, logo abaixo do PIN, inclusive na reentrada.
+ var anchor=el('portalResidentPinV1'),cpf=el('cpf');
+ if(!anchor&&cpf)anchor=cpf.closest('label');
+ if(!anchor||!anchor.parentNode)return;
+ box.style.gridColumn='1 / -1';
+ anchor.parentNode.insertBefore(box,anchor.nextSibling);
  box.addEventListener('click',function(e){var b=e.target.closest('[data-csc-family-token]');if(!b)return;selectFamilyMember(b)});
 }
 
