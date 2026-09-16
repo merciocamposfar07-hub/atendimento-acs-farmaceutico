@@ -27,7 +27,10 @@
 
   function itemValido(item){
     if(!item||!item.data||item.data.ok===false)return false;
-    return Date.now()-Number(item.salvoEm||0)<=CACHE_MAX_MS;
+    var salvoEm=Number(item.salvoEm||0),invalidadoEm=0;
+    try{invalidadoEm=Number(localStorage.getItem(INVALIDATE_KEY)||0)}catch(e){}
+    if(invalidadoEm&&salvoEm<invalidadoEm)return false;
+    return Date.now()-salvoEm<=CACHE_MAX_MS;
   }
 
   function lerItem(chave){
