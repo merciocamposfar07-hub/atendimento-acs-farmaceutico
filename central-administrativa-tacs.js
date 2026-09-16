@@ -447,7 +447,7 @@ function updateCentralWelcome(area,tacs){
   var adminPerfil=accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');
   node.innerHTML='<small>Identidade autenticada</small><h1>'+esc(adminNome+' — '+adminPerfil)+'</h1><p>Gestão administrativa da área selecionada.</p>';
 }
-function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId})){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(mode==='admin'&&areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):(mode==='ubs'?accessProfileLabel(ubs&&ubs.perfil||'UBS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN'));el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(mode==='ubs'?(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'UBS'):(text(admin&&admin.nomeCompleto)||'Administrador'));el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=mode==='ubs';el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=(mode!=='admin'&&mode!=='ubs')||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;if(mode!=='ubs'){renderModules();scheduleNativePanelPrewarm();renderHealthInstant(selectedAreaId);if(!skipHealth)scheduleHealthRefresh(false,650)}else{renderModules();scheduleNativePanelPrewarm()}}
+function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId})){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(mode==='admin'&&areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):(mode==='ubs'?accessProfileLabel(ubs&&ubs.perfil||'UBS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN'));el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(mode==='ubs'?(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'UBS'):(text(admin&&admin.nomeCompleto)||'Administrador'));el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=mode==='ubs';el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=(mode!=='admin'&&mode!=='ubs')||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;if(mode!=='ubs'){renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm();renderHealthInstant(selectedAreaId);if(!skipHealth)scheduleHealthRefresh(false,650)}else{renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm()}}
 function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
 function markHealth(id,label,state){var n=el(id),s=n.querySelector('span');n.className='health-card'+(state?' '+state:'');s.textContent=label}
 function updatePendingBadge(result){
@@ -700,6 +700,7 @@ function shellCurrentScope(){return (mode||'')+'|'+normArea(selectedAreaId)}
 function shellFrameKey(routeId){return shellCurrentScope()+'|'+text(routeId).toLowerCase()}
 function shellActiveFrame(){return shellActiveRoute&&shellFrames[shellFrameKey(shellActiveRoute)]||null}
 function resetModuleShell(){
+  cancelPanelRuntimePrewarm();
   var viewer=el('viewer'),base=el('viewerFrame');
   Object.keys(shellFrames).forEach(function(key){
     var frame=shellFrames[key];if(!frame)return;
@@ -1634,6 +1635,98 @@ function scheduleNativePanelPrewarm(){
       if('requestIdleCallback' in window)requestIdleCallback(prefetchStaticPanels,{timeout:900});else prefetchStaticPanels();
     },420);
   }
+}
+
+/* PRECARREGAMENTO_REAL_PAINEIS_2026_09_16_V1
+   Regra aprovada: depois que a sessão/área estão confirmadas, os painéis permitidos
+   começam a montar e ler seus dados em segundo plano. Ao tocar, a Central revela o
+   estado já preparado em vez de iniciar o painel do zero.
+   Isolamento: não altera permissões, rotas, dados, escrita nem escopo da área. */
+var panelRuntimePrewarmScope='',panelRuntimePrewarmTimers=[];
+function cancelPanelRuntimePrewarm(){
+  panelRuntimePrewarmTimers.forEach(function(timer){clearTimeout(timer)});
+  panelRuntimePrewarmTimers=[];
+  panelRuntimePrewarmScope='';
+}
+function panelRuntimeAllowed(name){
+  var btn=document.querySelector('#moduleGrid .module[data-module="'+name+'"]');
+  return Boolean(btn&&!btn.hidden&&!btn.disabled);
+}
+function panelRuntimeRemoteReady(){return Boolean(token||territoryToken||ubsToken)}
+function prewarmLegacyPanel(name){
+  if(!panelRuntimeRemoteReady()||!panelRuntimeAllowed(name)||shellActiveModule===name)return;
+  var routeId=moduleRouteId(name),url=moduleUrl(name);if(!url)return;
+  var frame=ensureShellFrame(name,url,(document.querySelector('#moduleGrid .module[data-module="'+name+'"] strong')||{}).textContent||'Painel',routeId);
+  if(!frame||frame.dataset.shellLoaded==='1'||frame.dataset.shellReady==='1')return;
+  frame.hidden=true;
+  frame.dataset.shellLoaded='1';
+  var carregar=function(){
+    if(!panelRuntimeRemoteReady()||shellCurrentScope()!==panelRuntimePrewarmScope)return;
+    var target=frame.dataset.shellUrl||url;
+    try{if(!shellFrameAtTarget(frame))frame.src=target}catch(e){}
+  };
+  if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(carregar);else setTimeout(carregar,0);
+}
+function prewarmNativePanel(name){
+  if(!panelRuntimeRemoteReady()||!panelRuntimeAllowed(name)||shellActiveModule===name)return;
+  var scope=panelRuntimePrewarmScope;
+  publishModuleCore();
+  if(name==='moradores'){
+    ensureTask17MoradoresAssets(function(ok){
+      if(!ok||scope!==panelRuntimePrewarmScope||shellCurrentScope()!==scope||!panelRuntimeRemoteReady()||shellActiveModule==='moradores')return;
+      try{
+        var host=ensureTask17MoradoresHost();
+        window.ConectaMoradoresNativeV1.mount(host,{areaId:selectedAreaId});
+        window.ConectaMoradoresNativeV1.hide();
+        if(host)host.hidden=true;
+      }catch(e){}
+    });
+    return;
+  }
+  if(name==='profissionais'){
+    ensureTask18ProfissionaisAssets(function(ok){
+      if(!ok||scope!==panelRuntimePrewarmScope||shellCurrentScope()!==scope||!panelRuntimeRemoteReady()||shellActiveModule==='profissionais')return;
+      try{
+        var host=ensureTask18ProfissionaisHost();
+        window.ConectaProfissionaisNativeV1.mount(host,{areaId:selectedAreaId});
+        window.ConectaProfissionaisNativeV1.hide();
+        if(host)host.hidden=true;
+      }catch(e){}
+    });
+    return;
+  }
+  if(name==='agendas'){
+    ensureTask16AgendaAssets(function(ok){
+      if(!ok||scope!==panelRuntimePrewarmScope||shellCurrentScope()!==scope||!panelRuntimeRemoteReady()||shellActiveModule==='agendas')return;
+      var host=el('nativeModuleHost');
+      if(!host||(!host.hidden&&shellActiveModule&&shellActiveModule!=='agendas'))return;
+      try{
+        window.ConectaAgendasNativeV1.mount(host);
+        window.ConectaAgendasNativeV1.hide();
+        host.hidden=true;
+      }catch(e){}
+    });
+  }
+}
+function prewarmPanelRuntime(name){
+  if(name==='moradores'||name==='agendas'||name==='profissionais'){prewarmNativePanel(name);return}
+  if(name==='suporte'||name==='recados'||name==='territorio'||name==='municipios')prewarmLegacyPanel(name);
+}
+function schedulePanelRuntimePrewarm(){
+  if(!context||!selectedAreaId||!panelRuntimeRemoteReady())return;
+  var scope=shellCurrentScope();
+  if(panelRuntimePrewarmScope===scope)return;
+  cancelPanelRuntimePrewarm();
+  panelRuntimePrewarmScope=scope;
+  var order=['moradores','agendas','profissionais','recados','suporte','territorio','municipios'];
+  var delays={moradores:80,agendas:240,profissionais:430,recados:700,suporte:980,territorio:1320,municipios:1680};
+  order.forEach(function(name){
+    if(!panelRuntimeAllowed(name))return;
+    panelRuntimePrewarmTimers.push(setTimeout(function(){
+      if(panelRuntimePrewarmScope!==scope||shellCurrentScope()!==scope||!panelRuntimeRemoteReady())return;
+      prewarmPanelRuntime(name);
+    },delays[name]||0));
+  });
 }
 window.addEventListener('load',function(){
   scheduleNativePanelPrewarm();
