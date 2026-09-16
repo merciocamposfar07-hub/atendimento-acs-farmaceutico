@@ -21,7 +21,6 @@
   var familyMemory = '';
   var residentCache = {};
   var RESIDENT_CACHE_MS = 10 * 60 * 1000;
-  var recoveryTimer = null;
   var FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaAutofillV1:'; // FAMILIA_AUTOFILL_SEM_PUSH_V1
   var LEGACY_FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaConfirmadaV1:'; // FAMILIA_AUTOFILL_MIGRA_LEGADO_V1
 
@@ -388,11 +387,9 @@
     if (activeBridgeTimeout) clearTimeout(activeBridgeTimeout);
     if (activeJsonpTimeout) clearTimeout(activeJsonpTimeout);
     if (adaptiveHedgeTimer) clearTimeout(adaptiveHedgeTimer);
-    if (recoveryTimer) clearTimeout(recoveryTimer);
     activeBridgeTimeout = null;
     activeJsonpTimeout = null;
     adaptiveHedgeTimer = null;
-    recoveryTimer = null;
     activeNonce = '';
 
     if (activeFrame) {
@@ -475,16 +472,6 @@
       return true;
     }
 
-    function scheduleRecovery(doc, token) {
-      cleanupTransport();
-      if (token !== requestId || onlyDigits(input.value) !== doc) return;
-      setLoadingStatus(status);
-      recoveryTimer = setTimeout(function () {
-        recoveryTimer = null;
-        if (token === requestId && token !== completedRequestId && onlyDigits(input.value) === doc) startBridge(doc, token);
-      }, 1600);
-    }
-
     function complete(payload, token, proofKey, jsonpAttempt) {
       if (token !== requestId || token === completedRequestId) return;
 
@@ -522,8 +509,12 @@
       } else if (payload && payload.ok === true && payload.encontrado === false) {
         setStatus(status, validCns(input.value) ? 'Cartão SUS não localizado nesta área. Confira os 15 números ou procure seu TACS.' : 'CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).', 'invalid');
       } else {
-        completedRequestId = 0;
-        scheduleRecovery(onlyDigits(input.value), token);
+        var currentDoc = onlyDigits(input.value), cached = cachedResident(currentDoc);
+        if (cached) {
+          applyResidentPayload(cached, currentDoc, true);
+        } else {
+          setStatus(status, payload && payload.message ? payload.message : 'A consulta não respondeu. Toque novamente no CPF/CNS para repetir.', 'invalid');
+        }
       }
     }
 
@@ -537,7 +528,14 @@
           if (token === requestId && token !== completedRequestId) startJsonp(doc, token, attempt + 1, Boolean(activeFrame));
         }, 700);
       } else {
-        scheduleRecovery(doc, token);
+        cleanupTransport();
+        var cached = cachedResident(doc);
+        if (cached) {
+          completedRequestId = token;
+          applyResidentPayload(cached, doc, true);
+        } else {
+          setStatus(status, 'A consulta demorou além do esperado. Toque novamente no CPF/CNS para repetir.', 'invalid');
+        }
       }
     }
 
