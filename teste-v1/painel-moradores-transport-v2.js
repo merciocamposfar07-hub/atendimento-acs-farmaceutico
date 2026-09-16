@@ -4,12 +4,14 @@
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var TOKEN_KEY='portalTacsAdminTokenV1';
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
+var UBS_TOKEN_KEY='portalConectaUbsTokenV1';
 var DEVICE_KEY='portalTacsDispositivoV1';
 var nativeConfig=window.ConectaMoradoresNativeConfigV1&&typeof window.ConectaMoradoresNativeConfigV1==='object'?window.ConectaMoradoresNativeConfigV1:null;
 var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'moradores'}):null,modulePerf=moduleCore&&moduleCore.performance,moduleRequests=moduleCore&&moduleCore.requests;
 var token=moduleSession&&moduleSession.token||'';
 var territoryToken=moduleSession&&moduleSession.territorioToken||'';
-var accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':''));
+var ubsToken=moduleSession&&moduleSession.ubsToken||'';
+var accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':'')));
 var device=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
 var active=null;
 var writesEnabled=false;
@@ -89,6 +91,7 @@ function session(){
   if(moduleCore&&typeof moduleCore.session==='function'){var extra={escopo:'moradores'};if(selectedAreaId)extra.areaId=selectedAreaId;return moduleCore.session(extra)}
   var out={dispositivo:device};
   if(accessMode==='tacs'&&territoryToken)out.territorioToken=territoryToken;
+  else if(accessMode==='ubs'&&ubsToken)out.ubsToken=ubsToken;
   else out.token=token;
   if(selectedAreaId)out.areaId=selectedAreaId;
   return out;
@@ -546,6 +549,10 @@ function loadBase(message,done){
   var cached=null;
   if(modulePerf&&typeof modulePerf.prime==='function'){
     cached=modulePerf.prime('moradores-base',function(data){renderBase(data,'Aguarde enquanto os dados carregam…',false)});
+  }
+  if(!cached){
+    setStatus('loginStatus','Aguarde enquanto os dados carregam…','warn');
+    setStatus('operationStatus','Aguarde enquanto os dados carregam…','warn');
   }
   var leituraPayload=session();coreRead('admin_moradores_status',leituraPayload,function(next){post('admin_moradores_status',leituraPayload,'admin_moradores_result',next)},function(r){
     if(!r||r.ok!==true){var ok=renderBase(r,message,true);if(typeof done==='function')done(r,ok);return}
@@ -1231,14 +1238,14 @@ renderBirthAge();
 /* Pré-aquece a implantação sem autenticar nem escrever nada. */
 jsonp('admin_result',{requestId:'warmup_moradores_v2_'+Date.now()},function(){});
 
-if(token||territoryToken){
+if(token||territoryToken||ubsToken||accessMode==='ubs'){
   showAuthenticatedShell(accessMode==='tacs'
     ?'Sessão individual encontrada. Painel aberto somente para a área vinculada; conferindo a base em segundo plano…'
-    :'Sessão administrativa encontrada. Painel aberto; conferindo a base em segundo plano…');
+    :(accessMode==='ubs'?'Sessão da UBS encontrada. Painel aberto; conferindo a base em segundo plano…':'Sessão administrativa encontrada. Painel aberto; conferindo a base em segundo plano…'));
   setTimeout(function(){
     if(!active)loadBase(accessMode==='tacs'
       ?'Sessão individual existente validada e base da área conferida.'
-      :'Sessão administrativa existente validada e base conferida.');
+      :(accessMode==='ubs'?'Sessão da UBS validada e base da área conferida.':'Sessão administrativa existente validada e base conferida.'));
   },100);
 }
 
@@ -1247,7 +1254,8 @@ function rebindNativeContext(config){
   var s=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'moradores'}):null;
   token=s&&s.token||sessionStorage.getItem(TOKEN_KEY)||token||'';
   territoryToken=s&&s.territorioToken||sessionStorage.getItem(TERRITORY_TOKEN_KEY)||territoryToken||'';
-  accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':accessMode));
+  ubsToken=s&&s.ubsToken||sessionStorage.getItem(UBS_TOKEN_KEY)||ubsToken||'';
+  accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':accessMode)));
   if(nativeConfig&&nativeConfig.areaId)selectedAreaId=String(nativeConfig.areaId);
   PRONTUARIOS_VIEW=Boolean(nativeConfig&&String(nativeConfig.view||'').toLowerCase()==='prontuarios');
   if(!baseConfirmed){
