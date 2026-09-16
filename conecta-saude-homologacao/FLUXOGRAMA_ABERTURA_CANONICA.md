@@ -972,3 +972,28 @@ Proteções:
 Cache atual: `portal-identificacao-familia-v1.js?v=20260915-cpf-nascimento-pin-v6`.
 
 Status: **IMPLEMENTADO — validação do usuário pendente.**
+
+### Correção isolada — navegador externo + seleção familiar sem releitura
+Data: 15/09/2026
+
+Ramo navegador:
+`Portal TACS no navegador → CPF/CNS → deployment canônico único → bridge/JSONP → fallback GET se o JSONP falhar → autofill`.
+
+Ramo família já encontrada:
+`família aberta → tocar integrante → validar token temporário → receber dados públicos do integrante → preencher formulário diretamente → manter família ativa`.
+
+Regra obrigatória:
+`integrante já validado pela família NÃO dispara uma segunda busca buscar_morador`.
+
+Proteções:
+- documento do integrante continua não exposto na lista familiar;
+- token, área, família e situação ativa continuam revalidados no servidor;
+- nenhuma alteração em Conecta Saúde Comunitária, Central administrativa, UBS, vagas, agendas, serviços, profissionais ou regras de PIN;
+- nenhuma nova versão funcional do Portal foi criada.
+
+Publicação:
+- Pages `35046767074`: success;
+- Apps Script `35046775071`: success;
+- versão operacional Apps Script: **221**.
+
+Status: **PUBLICADA PARA TESTE REAL — não homologar até confirmação do usuário nos dois modos de acesso.**
