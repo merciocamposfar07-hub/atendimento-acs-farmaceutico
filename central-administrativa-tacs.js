@@ -1168,7 +1168,9 @@ function shellFrameAtTarget(frame){
   }
 }
 function setLegacyFrameOpening(frame,visible){
+  var viewer=el('viewer');
   if(frame)frame.style.visibility=visible?'hidden':'visible';
+  if(viewer)viewer.classList.toggle('csc-frame-opening',Boolean(visible));
   if(visible){
     setShellOpeningPreview(frame&&frame.dataset.shellModule||'',frame&&frame.dataset.shellRoute||'',true);
   }else{
@@ -1409,7 +1411,7 @@ function closeViewer(){
     try{if(window.ConectaProfissionaisNativeV1&&window.ConectaProfissionaisNativeV1.hide)window.ConectaProfissionaisNativeV1.hide()}catch(e){}
     var profissionaisHost=el('nativeProfissionaisHost');if(profissionaisHost)profissionaisHost.hidden=true;
   }
-  var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-native-viewer','csc-frame-viewer','csc-agendas-native-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
+  var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-native-viewer','csc-frame-viewer','csc-frame-opening','csc-agendas-native-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   shellActiveModule='';shellActiveRoute='';shellActiveNative='';moduloPendente=null;
   if(mode!=='ubs')scheduleHealthRefresh(false,900);return true;
