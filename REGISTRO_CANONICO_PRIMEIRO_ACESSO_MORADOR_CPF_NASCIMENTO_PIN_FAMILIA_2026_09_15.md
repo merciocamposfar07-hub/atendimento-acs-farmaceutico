@@ -126,6 +126,25 @@ Não considerar homologado antes de o usuário confirmar no dispositivo:
 9. qualquer integrante pode ser selecionado para a solicitação.
 
 ## Correção complementar — PIN também no Portal TACS público
+### Proteção preservada — aparelho administrativo não vira aparelho residencial
+A gravação real de validação mostrou um aparelho já reconhecido como Administrador tentando executar o onboarding residencial do PIN no Portal público.
+
+Esse comportamento não deve remover a barreira canônica já homologada nas Tarefas 6 e 7:
+- aparelho administrativo permanece em diagnóstico/consulta;
+- não cria PIN de Morador;
+- não cria sessão residencial;
+- não grava quickKey residencial;
+- não assume notificações do Morador.
+
+A correção desta etapa foi estritamente no frontend público: antes de iniciar o onboarding residencial por CPF, o Portal verifica se o aparelho já é administrativo e, nesse caso, não chama as actions residenciais. O backend permanece intacto como segunda barreira.
+
+Commits:
+- `a798da89afc80ace061c75b0e8d8df5102fe5973` — preserva a barreira administrativa no Portal público;
+- `92f66fda30a0addbdd5c6219c5a34f758b64fad4` — cache-buster;
+- `5279583cc4baa3d934c6636b0873645edc2b53fe` — teste de regressão.
+
+A regra de PIN continua válida para **Morador real em aparelho não administrativo**.
+
 Data: 15/09/2026
 
 Falha confirmada por gravação real:
