@@ -18,9 +18,10 @@ assert.doesNotMatch(source, /activeTimeout/);
 assert.doesNotMatch(source, /method\s*=\s*['"]POST['"]/i);
 assert.match(source, /var residentCache = \{\};/,'O autofill precisa manter cache em memória dos moradores já resolvidos.');
 assert.match(source, /function cachedResident\(documento\)/,'Documento já resolvido deve ser reutilizado sem nova consulta remota.');
+assert.match(source, /var cached = cachedResident\(doc\)/,'Se houver cache válido, o autofill deve usá-lo antes de iniciar outra consulta.');
 assert.match(source, /function prefetchResident\(documento\)/,'A família pode aquecer o cache dos integrantes em segundo plano.');
-assert.match(source, /function scheduleRecovery\(doc, token\)/,'Falha transitória precisa entrar em recuperação automática.');
-assert.doesNotMatch(source, /setStatus\(status, 'Não foi possível consultar agora\. Tente novamente\.'/,'Falha de transporte não pode virar estado terminal vermelho.');
+assert.doesNotMatch(source, /function scheduleRecovery\(doc, token\)/,'O autofill não pode reiniciar indefinidamente a consulta após esgotar as tentativas normais.');
+assert.match(source, /A consulta demorou além do esperado\. Toque novamente no CPF\/CNS para repetir\./,'Após as tentativas normais, o Portal deve encerrar o ciclo e permitir nova tentativa sem carregamento infinito.');
 
 
 function currentSameDelay(seconds) {
