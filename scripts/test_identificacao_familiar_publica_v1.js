@@ -88,6 +88,9 @@ assert.match(frontend,/portalConectaMoradorQuickV1/,'Após criar o PIN, o acesso
 assert.match(frontend,/conecta_morador_login_pin/,'No próximo acesso, o próprio Portal deve aceitar o PIN de quatro números.');
 assert.match(frontend,/Acesse com seu PIN/,'A reentrada do morador deve apresentar a opção de PIN no Portal direto.');
 assert.match(frontend,/if\(docType\(d\)==='CPF'\)beginResidentPinEnrollment\(d\)/,'O evento de CPF reconhecido deve iniciar a criação do PIN sem exigir nascimento.');
+assert.match(frontend,/function administrativeDeviceLocal\(\)/,'O Portal deve reconhecer localmente aparelho administrativo antes de iniciar onboarding residencial.');
+assert.match(frontend,/if\(administrativeDeviceLocal\(\)\|\|!\/\^\\d\{11\}\$\/.test\(d\)\|\|residentSessionToken\(\)\)return Promise\.resolve\(null\)/,'Aparelho administrativo não pode disparar criação de PIN residencial pelo Portal público.');
+assert.match(frontend,/if\(resolved==='CPF'&&!administrativeDeviceLocal\(\)\)/,'CPF ausente só entra no fluxo nascimento/PIN quando o aparelho não é administrativo.');
 assert.match(frontend,/Confirme seu CPF com a data de nascimento/,'CPF ausente deve abrir confirmação por nascimento no próprio Portal TACS.');
 assert.match(frontend,/Confira seus dados antes de salvar/,'CPF ausente confirmado deve exigir revisão explícita antes da gravação.');
 assert.match(frontend,/data-resident-cpf-review-correct/,'A revisão deve oferecer o botão Corrigir.');
@@ -98,12 +101,13 @@ assert.match(frontend,/if\(resolved==='CPF'\).*renderMissingCpfBirth/s,'CPF não
 assert.match(autofill,/eventResident\.familiaBeneficiario = eventFamily/,'O autofill deve repassar a família real do morador no evento tacs:morador.');
 assert.match(autofill,/payload\.familiaBeneficiario \|\| payload\.familiaId/,'A família do beneficiário deve vir da resposta territorial já confirmada.');
 assert.match(loader,/portal-identificacao-familia-v1\.js\?v=[^\"']+/,'O carregador familiar precisa ter cache-buster explícito.');
-assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260915-cpf-nascimento-pin-v6/,'O Portal deve carregar a revisão completa de CPF reconhecido/ausente, nascimento e PIN.');
+assert.match(loader,/portal-identificacao-familia-v1\.js\?v=20260915-cpf-pin-admin-guard-v7/,'O Portal deve carregar o fluxo de PIN com a barreira administrativa preservada.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-direta-v1/,'A chave legada não pode voltar a ser usada.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-documento-direto-v2/,'A revisão intermediária também precisa ser invalidada depois do ajuste da família resolvida.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-familia-resolvida-v3/,'A revisão anterior deve ser invalidada para aparelhos que já abriram a família.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-toque-integrante-v4/,'A revisão anterior sem criação de PIN no Portal direto deve ser invalidada.');
 assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-cpf-pin-direto-v5/,'A revisão intermediária sem confirmação de CPF ausente por nascimento deve ser invalidada.');
+assert.doesNotMatch(loader,/portal-identificacao-familia-v1\.js\?v=20260915-cpf-nascimento-pin-v6/,'A revisão sem o guard administrativo não pode permanecer em cache.');
 assert.doesNotMatch(backend,/Informe um número de cadastro familiar válido\./,'O backend atual não pode voltar à mensagem legada que exigia número familiar após CPF/CNS reconhecido.');
 assert.match(loader,/isAdminPage\(\)\|\|document\.getElementById/,'A camada familiar não deve ser carregada nos painéis administrativos.');
 assert.match(build,/ZZZZ_43_IdentificacaoFamiliarPublicaV1\.gs/);
