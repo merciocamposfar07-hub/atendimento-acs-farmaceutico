@@ -22,6 +22,9 @@ assert.match(source, /var cached = cachedResident\(doc\)/,'Se houver cache váli
 assert.match(source, /function prefetchResident\(documento\)/,'A família pode aquecer o cache dos integrantes em segundo plano.');
 assert.doesNotMatch(source, /function scheduleRecovery\(doc, token\)/,'O autofill não pode reiniciar indefinidamente a consulta após esgotar as tentativas normais.');
 assert.match(source, /A consulta demorou além do esperado\. Toque novamente no CPF\/CNS para repetir\./,'Após as tentativas normais, o Portal deve encerrar o ciclo e permitir nova tentativa sem carregamento infinito.');
+assert.match(source, /AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/,'O autofill público deve usar o mesmo deployment canônico do Portal TACS.');
+assert.doesNotMatch(source, /AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/,'O endpoint antigo isolado não pode voltar ao autofill.');
+assert.match(source, /TacsMoradoresAutofillV1\.applyResolved/,'Integrante já validado pela família deve ser aplicado sem uma segunda busca remota.');
 
 
 function currentSameDelay(seconds) {
