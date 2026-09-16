@@ -63,7 +63,7 @@ function jsonp(ok,attempt){
   document.head.appendChild(s);
 }
 function insertArea(){var content=document.querySelector('.content');if(!content)return null;var area=document.getElementById('integralPublicArea');if(area)return area;area=document.createElement('section');area.id='integralPublicArea';area.className='integral-area';var purpose=content.querySelector('.purpose');content.insertBefore(area,purpose||content.firstChild);return area}
-function renderBalloon(area,item,label,extra){var c=document.createElement('article');c.className='integral-balloon '+(extra||'');c.innerHTML='<small>'+esc(label)+'</small><strong>'+esc(item.title||'Aviso da Unidade')+'</strong><p>'+esc(item.message||'')+(item.time||item.horario?'\nHorário: '+esc(item.time||item.horario):'')+(item.validity?'\nVálido até: '+esc(dateBr(item.validity)):'')+'</p>';area.appendChild(c)}
+function renderBalloon(area,item,label,extra){var c=document.createElement('article');c.className='integral-balloon '+(extra||'');c.innerHTML='<small>'+esc(label)+'</small><strong>'+esc(item.title||'Aviso da Unidade')+'</strong><p>'+esc(item.message||'')+(item.time||item.horario?'\nExpira às: '+esc(item.time||item.horario):'')+(item.validity?'\nVálido até: '+esc(dateBr(item.validity)):'')+'</p>';area.appendChild(c)}
 function normalize(value){var t=String(value||'').toLowerCase();return t.normalize?t.normalize('NFD').replace(/[\u0300-\u036f]/g,''):t}
 function campaignTheme(item){var t=String(item&&item.theme||'').toLowerCase().replace(/[^a-z0-9-]/g,'');if(t)return t;var n=normalize(item&&item.title),temas=['lilas','dourado','azul-marinho','laranja','amarelo','vermelho','verde','roxo','rosa','azul'];for(var i=0;i<temas.length;i++)if(n.indexOf(temas[i])!==-1)return temas[i];return'azul'}
 
