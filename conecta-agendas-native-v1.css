@@ -58,3 +58,16 @@ html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native .gr
 html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native .card>summary{
   touch-action:pan-y!important;
 }
+
+
+/* CORRECAO_CIRURGICA_AGENDAS_PROPORCAO_CARDS_20260916_V1 */
+/* Neutraliza apenas o padding global de .card herdado da Central.
+   Sem isto, os dias fechados ganham espaço externo extra e ficam altos/desproporcionais. */
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native .card{
+  padding:0!important;
+  border-radius:16px!important;
+}
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native .card>summary{
+  min-height:0!important;
+  padding:12px!important;
+}
