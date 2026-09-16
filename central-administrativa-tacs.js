@@ -766,7 +766,7 @@ var task16AgendaAssetsLoading=false,task16AgendaAssetWaiters=[];
 function task16LoadStyle(){
   if(document.getElementById('cscAgendaNativeCssV1'))return;
   var link=document.createElement('link');link.id='cscAgendaNativeCssV1';link.rel='stylesheet';
-  link.href='/atendimento-acs-farmaceutico/conecta-agendas-native-v1.css?v=20260916-agendas-proporcao-v2';
+  link.href='/atendimento-acs-farmaceutico/conecta-agendas-native-v1.css?v=20260916-data-hora-proporcao-v3';
   document.head.appendChild(link);
 }
 function task16LoadScript(id,src,ready,done){
