@@ -14,6 +14,12 @@ var tacsLogin=document.getElementById('tacsLogin');
 var status=document.getElementById('loginStatus');
 if(!loginBtn||!pinInput||!tacsLogin)return;
 
+/* DONO_UNICO_PIN_TACS_2026_09_16_V1
+   Este módulo é o único responsável pelo clique/validação do PIN TACS.
+   A Central mantém somente fallback caso este arquivo não carregue. */
+window.PortalTacsQuickLoginPinHandlerV1=true;
+loginBtn.dataset.tacsPinOwner='quick-login-v1';
+
 var busy=false,pinWarmup=false;
 function aquecerPinTacs(){
   if(pinWarmup)return;
@@ -35,7 +41,7 @@ function normalizeSessionFailure(result){
   return out;
 }
 function digits(v){return text(v).replace(/\D/g,'')}
-function setStatus(msg,type){if(!status)return;status.textContent=msg;status.className='status'+(type?' '+type:'')}
+function setStatus(msg,type){if(!status)return;var value=text(msg);status.textContent=value;status.hidden=!value;status.className='status'+(type?' '+type:'')}
 function getDevice(){var d='';try{d=localStorage.getItem(DEVICE_KEY)||''}catch(e){}return d}
 function adminDeviceRecognized(){try{return Boolean(localStorage.getItem(ADMIN_TRUST_KEY)||localStorage.getItem(ADMIN_LOCAL_VAULT_KEY))}catch(e){return false}}
 function queryTacsOnly(){try{return String(new URLSearchParams(location.search).get('acesso')||'').toLowerCase()==='tacs'&&!adminDeviceRecognized()}catch(e){return false}}
