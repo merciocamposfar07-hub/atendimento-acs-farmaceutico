@@ -19,6 +19,9 @@
   var localityDisplay = null;
   var ageObserver = null;
   var familyMemory = '';
+  var residentCache = {};
+  var RESIDENT_CACHE_MS = 10 * 60 * 1000;
+  var recoveryTimer = null;
   var FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaAutofillV1:'; // FAMILIA_AUTOFILL_SEM_PUSH_V1
   var LEGACY_FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaConfirmadaV1:'; // FAMILIA_AUTOFILL_MIGRA_LEGADO_V1
 
@@ -78,6 +81,53 @@
     try { localStorage.setItem(familyStorageKey(), family); } catch (e) {}
     return family;
   }
+
+  function residentCacheKey(documento) {
+    return portalAreaId() + ':' + onlyDigits(documento);
+  }
+
+  function cacheResident(documento, payload) {
+    var doc = onlyDigits(documento);
+    if (!(validCpf(doc) || validCns(doc)) || !payload || payload.ok !== true || payload.encontrado !== true) return false;
+    residentCache[residentCacheKey(doc)] = { at: Date.now(), payload: payload };
+    return true;
+  }
+
+  function cachedResident(documento) {
+    var key = residentCacheKey(documento), item = residentCache[key];
+    if (!item) return null;
+    if (Date.now() - item.at > RESIDENT_CACHE_MS) {
+      delete residentCache[key];
+      return null;
+    }
+    return item.payload || null;
+  }
+
+  function prefetchResident(documento) {
+    var doc = onlyDigits(documento), cached = cachedResident(doc);
+    if (cached) return Promise.resolve(cached);
+    if (!(validCpf(doc) || validCns(doc))) return Promise.resolve(null);
+    return new Promise(function (resolve) {
+      var callback = '__tacsMoradorPrefetch_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
+      var script = document.createElement('script'), done = false;
+      var timeout = setTimeout(function () { finish(null); }, 6500);
+      function finish(payload) {
+        if (done) return;
+        done = true;
+        clearTimeout(timeout);
+        try { delete window[callback]; } catch (e) { window[callback] = undefined; }
+        if (script.parentNode) script.remove();
+        if (payload && payload.ok === true && payload.encontrado === true) cacheResident(doc, payload);
+        resolve(payload && payload.ok === true && payload.encontrado === true ? payload : null);
+      }
+      window[callback] = finish;
+      script.async = true;
+      script.onerror = function () { finish(null); };
+      script.src = API + '?action=buscar_morador&documento=' + encodeURIComponent(doc) + '&areaId=' + encodeURIComponent(portalAreaId()) + '&familiaReferencia=' + encodeURIComponent(familyReference()) + '&callback=' + encodeURIComponent(callback) + '&prefetch=1&v=' + Date.now();
+      document.head.appendChild(script);
+    });
+  }
+
 
   function clearFamilyNotice() {
     var notice = document.getElementById('familyAutofillNotice');
@@ -338,9 +388,11 @@
     if (activeBridgeTimeout) clearTimeout(activeBridgeTimeout);
     if (activeJsonpTimeout) clearTimeout(activeJsonpTimeout);
     if (adaptiveHedgeTimer) clearTimeout(adaptiveHedgeTimer);
+    if (recoveryTimer) clearTimeout(recoveryTimer);
     activeBridgeTimeout = null;
     activeJsonpTimeout = null;
     adaptiveHedgeTimer = null;
+    recoveryTimer = null;
     activeNonce = '';
 
     if (activeFrame) {
@@ -404,6 +456,35 @@
     if (label && label.firstChild) label.firstChild.textContent = 'CPF ou Cartão SUS (CNS) ';
     setStatus(status, 'Digite seu CPF ou Cartão SUS (CNS). Seus dados serão carregados automaticamente para conferência.', '');
 
+    function applyResidentPayload(payload, documento, fromCache) {
+      var expectedArea = portalAreaId();
+      var returnedArea = normalizeArea(payload && payload.morador && payload.morador.areaId);
+      if (!returnedArea || returnedArea !== expectedArea) {
+        clearResidentFields();
+        setStatus(status, 'Este cadastro não pertence à área deste TACS.', 'invalid');
+        return false;
+      }
+      if (!fillFields(payload)) {
+        clearResidentFields();
+        setStatus(status, 'O cadastro retornado está incompleto. Procure seu TACS.', 'invalid');
+        return false;
+      }
+      cacheResident(documento, payload);
+      applyFamilyContext(payload);
+      setStatus(status, (validCns(documento) ? 'Cartão SUS encontrado ✓ ' : 'CPF encontrado ✓ ') + (fromCache ? 'Dados prontos para uso. ' : 'Dados carregados automaticamente. ') + 'Confira nome, nascimento e localidade; se algo estiver errado, corrija antes de continuar.', 'valid');
+      return true;
+    }
+
+    function scheduleRecovery(doc, token) {
+      cleanupTransport();
+      if (token !== requestId || onlyDigits(input.value) !== doc) return;
+      setLoadingStatus(status);
+      recoveryTimer = setTimeout(function () {
+        recoveryTimer = null;
+        if (token === requestId && token !== completedRequestId && onlyDigits(input.value) === doc) startBridge(doc, token);
+      }, 1600);
+    }
+
     function complete(payload, token, proofKey, jsonpAttempt) {
       if (token !== requestId || token === completedRequestId) return;
 
@@ -437,24 +518,12 @@
       cleanupTransport();
 
       if (payload && payload.ok === true && payload.encontrado === true) {
-        var expectedArea = portalAreaId();
-        var returnedArea = normalizeArea(payload.morador && payload.morador.areaId);
-        if (!returnedArea || returnedArea !== expectedArea) {
-          clearResidentFields();
-          setStatus(status, 'Este cadastro não pertence à área deste TACS.', 'invalid');
-          return;
-        }
-        if (fillFields(payload)) {
-          applyFamilyContext(payload);
-          setStatus(status, (validCns(input.value) ? 'Cartão SUS encontrado ✓ ' : 'CPF encontrado ✓ ') + 'Dados carregados automaticamente. Confira nome, nascimento e localidade; se algo estiver errado, corrija antes de continuar.', 'valid');
-        } else {
-          clearResidentFields();
-          setStatus(status, 'O cadastro retornado está incompleto. Procure seu TACS.', 'invalid');
-        }
+        applyResidentPayload(payload, onlyDigits(input.value), false);
       } else if (payload && payload.ok === true && payload.encontrado === false) {
         setStatus(status, validCns(input.value) ? 'Cartão SUS não localizado nesta área. Confira os 15 números ou procure seu TACS.' : 'CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).', 'invalid');
       } else {
-        setStatus(status, payload && payload.message ? payload.message : 'Não foi possível consultar agora. Tente novamente.', 'invalid');
+        completedRequestId = 0;
+        scheduleRecovery(onlyDigits(input.value), token);
       }
     }
 
@@ -468,8 +537,7 @@
           if (token === requestId && token !== completedRequestId) startJsonp(doc, token, attempt + 1, Boolean(activeFrame));
         }, 700);
       } else {
-        cleanupTransport();
-        setStatus(status, 'Não foi possível consultar agora. Tente novamente.', 'invalid');
+        scheduleRecovery(doc, token);
       }
     }
 
@@ -559,6 +627,14 @@
       requestId++;
 
       if (validCpf(doc) || validCns(doc)) {
+        var cached = cachedResident(doc);
+        if (cached) {
+          var token = ++requestId;
+          completedRequestId = token;
+          cleanupTransport();
+          applyResidentPayload(cached, doc, true);
+          return;
+        }
         clearResidentFields();
         setLoadingStatus(status);
         timer = setTimeout(lookup, 350);
@@ -586,6 +662,11 @@
       }, 0);
     });
   }
+
+  window.TacsMoradoresAutofillV1 = {
+    prefetch: prefetchResident,
+    cached: function (documento) { return Boolean(cachedResident(documento)); }
+  };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
   else install();
