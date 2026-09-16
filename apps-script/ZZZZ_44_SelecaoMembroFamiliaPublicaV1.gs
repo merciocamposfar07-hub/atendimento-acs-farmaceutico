@@ -32,9 +32,15 @@ function selecaoMembroFamiliaPublicaV1CriarLista_(familia,contexto){
   var lista=buscaEnvioFamiliaV1BuscarExata_(familia,contexto).resultados||[],cache=CacheService.getScriptCache();
   return lista.map(function(item){
     var token='fm_'+Utilities.getUuid().replace(/-/g,'')+'_'+Date.now().toString(36);
-    var dados={areaId:contexto.areaId,familiaId:familia,origemAba:String(item.origemAba||''),origemLinha:Number(item.origemLinha||0)};
+    var cpf=moradoresAdminV1Digitos_(item.cpf),cns=moradoresAdminV1Digitos_(item.cns),documento='';
+    if(cpf&&moradoresAdminV1CpfValido_(cpf))documento=cpf;
+    else if(/^\d{15}$/.test(cns))documento=cns;
+    /* DOCUMENTO_VALIDADO_NO_TOKEN_FAMILIAR_2026_09_16_V1
+       O documento não é exposto ao navegador na lista. Fica apenas no token
+       temporário do servidor para evitar divergência na releitura da mesma linha. */
+    var dados={areaId:contexto.areaId,familiaId:familia,origemAba:String(item.origemAba||''),origemLinha:Number(item.origemLinha||0),documentoAcesso:documento};
     cache.put(TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1.TOKEN_PREFIX+token,JSON.stringify(dados),TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1.TOKEN_SECONDS);
-    return {token:token,nome:item.nome,nascimento:item.nascimento,temDocumento:Boolean(moradoresAdminV1Digitos_(item.cpf)||moradoresAdminV1Digitos_(item.cns))};
+    return {token:token,nome:item.nome,nascimento:item.nascimento,temDocumento:Boolean(documento)};
   });
 }
 
@@ -55,6 +61,10 @@ function selecaoMembroFamiliaPublicaV1Resolver_(p){
   if(identificacaoFamiliarPublicaV1CodigoMorador_(registro.morador)!==familia)throw new Error('O cadastro familiar mudou. Pesquise novamente.');
   var cpf=moradoresAdminV1Digitos_(registro.morador.cpf),cns=moradoresAdminV1Digitos_(registro.morador.cns),documento='';
   if(cpf&&moradoresAdminV1CpfValido_(cpf))documento=cpf;else if(/^\d{15}$/.test(cns))documento=cns;
+  if(!documento){
+    var documentoToken=moradoresAdminV1Digitos_(dados.documentoAcesso||'');
+    if((documentoToken.length===11&&moradoresAdminV1CpfValido_(documentoToken))||/^\d{15}$/.test(documentoToken))documento=documentoToken;
+  }
   if(!documento)throw new Error('Este integrante ainda não possui CPF ou Cartão SUS disponível para carregamento automático. Procure seu TACS.');
   return {ok:true,documentoAcesso:documento,tipoDocumento:documento.length===11?'CPF':'CNS',familiaId:familia,nome:registro.morador.nome,nascimento:registro.morador.nascimento,localidade:registro.morador.endereco,areaId:contexto.areaId};
 }
