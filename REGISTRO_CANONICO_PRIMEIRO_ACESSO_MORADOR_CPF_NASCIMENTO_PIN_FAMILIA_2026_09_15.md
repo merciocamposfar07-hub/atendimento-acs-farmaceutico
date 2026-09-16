@@ -112,18 +112,25 @@ Se esta etapa precisar ser alterada ou desfeita, atuar somente no ramo de primei
 
 ## Estado
 
-**IMPLEMENTADO, PUBLICADO E CANONIZADO — VALIDAÇÃO REAL NO IPHONE PENDENTE.**
+**HOMOLOGAÇÃO PARCIAL REAL NO DISPOSITIVO — 15/09/2026.**
 
-Não considerar homologado antes de o usuário confirmar no dispositivo:
-1. CPF já existente não pede nascimento e segue para criação do PIN;
-2. CPF ausente pede data de nascimento;
-3. após localizar o cadastro, aparece a revisão com CPF + nascimento e botão **Corrigir**;
-4. **Confirmar e continuar** grava o CPF correto com 11 números na mesma pessoa;
-5. em seguida aparece **Agora crie o seu PIN com quatro números.**;
-6. confirmação do PIN é exigida;
-7. no próximo acesso o PIN entra sem pedir CPF novamente;
-8. a família completa aparece;
-9. qualquer integrante pode ser selecionado para a solicitação.
+O usuário confirmou em uso real que o ramo em que o CPF **já está cadastrado na base** está correto e funcional. Fica homologado somente o que foi efetivamente testado nesse caminho:
+
+1. o CPF já existente é reconhecido sem pedir data de nascimento;
+2. os dados do morador são carregados;
+3. a família correspondente permanece disponível;
+4. a criação do PIN de 4 números é apresentada;
+5. a confirmação do PIN faz parte do mesmo fluxo residencial;
+6. nenhuma regressão foi observada pelo usuário no caminho já testado.
+
+O ramo abaixo permanece **não homologado fisicamente**, porque ainda não foi testado pelo usuário:
+
+`CPF ausente → data de nascimento → localizar cadastro → revisar CPF + nascimento → Corrigir OU Confirmar e continuar → salvar CPF → criar PIN → confirmar PIN`.
+
+Portanto:
+- **Ramo CPF já cadastrado: HOMOLOGADO NO DISPOSITIVO.**
+- **Ramo CPF ausente: IMPLEMENTADO/PUBLICADO, MAS AINDA AGUARDANDO TESTE REAL.**
+- Nenhuma alteração funcional adicional foi autorizada ou realizada nesta homologação documental.
 
 ## Correção complementar — PIN também no Portal TACS público
 ### Proteção preservada — aparelho administrativo não vira aparelho residencial
