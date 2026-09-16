@@ -900,7 +900,11 @@ Implantação técnica:
 - Apps Script `35034644793`: **success**;
 - versão operacional: **220** no mesmo deployment.
 
-Status: **PUBLICADO E CANONIZADO — validação real no iPhone pendente antes da homologação.**
+Status em 15/09/2026:
+- **Ramo A — CPF já existente: HOMOLOGADO EM USO REAL PELO USUÁRIO.**
+- **Ramo B — CPF ainda ausente: PUBLICADO, MAS AINDA NÃO HOMOLOGADO FISICAMENTE.**
+
+A homologação desta etapa é parcial e respeita exatamente o que foi testado. O fluxograma funcional não foi alterado; somente o estado de validação de cada ramo foi registrado.
 
 ### Correção isolada — entrega do módulo de família sem cache legado
 Data: 15/09/2026
