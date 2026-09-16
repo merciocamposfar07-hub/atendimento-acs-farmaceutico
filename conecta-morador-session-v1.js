@@ -88,6 +88,13 @@ function renderFamily(r){
  var main=document.querySelector('main');if(main&&main.parentNode)main.parentNode.insertBefore(box,main);else document.body.appendChild(box);
  box.addEventListener('click',function(e){var b=e.target.closest('[data-csc-family-token]');if(!b)return;selectFamilyMember(b)});
 }
+
+function mergeResidentFamily(primary,fallback){
+ var out=Object.assign({},fallback||{},primary||{}),a=Array.isArray(primary&&primary.familia)?primary.familia:[],b=Array.isArray(fallback&&fallback.familia)?fallback.familia:[];
+ out.familia=a.length?a:b;
+ out.familiaId=text(primary&&primary.familiaId)||text(fallback&&fallback.familiaId);
+ return out;
+}
 function selectFamilyMember(button){
  var tok=text(button.getAttribute('data-csc-family-token')),name=text(button.getAttribute('data-csc-family-name')),birth=text(button.getAttribute('data-csc-family-birth')),has=button.getAttribute('data-csc-family-hasdoc')==='1';
  document.querySelectorAll('.csc-family-person').forEach(function(x){x.classList.toggle('active',x===button)});
@@ -175,15 +182,16 @@ function install(){
  }
  ensureStyle();gateMarkup();
  if(local)applyResident(local,true);
- function fresh(){
-  if(!token)return Promise.reject(new Error('Sessão remota ainda não confirmada.'));
-  return getSession().then(function(r){try{sessionStorage.setItem(BOOTSTRAP_KEY,JSON.stringify(r))}catch(e){}applyResident(r,false);return r});
- }
- function confirmBackground(){
-  return waitBackgroundLogin().then(function(login){
-   token=text(login.token);try{sessionStorage.setItem(TOKEN_KEY,token)}catch(e){}
-   return fresh();
-  });
+	 function fresh(){
+	  if(!token)return Promise.reject(new Error('Sessão remota ainda não confirmada.'));
+	  return getSession().then(function(r){r=mergeResidentFamily(r,readBootstrap());try{sessionStorage.setItem(BOOTSTRAP_KEY,JSON.stringify(r))}catch(e){}applyResident(r,false);return r});
+	 }
+	 function confirmBackground(){
+	  return waitBackgroundLogin().then(function(login){
+	   token=text(login.token);try{sessionStorage.setItem(TOKEN_KEY,token)}catch(e){}
+	   if(Array.isArray(login.familia)&&login.familia.length){try{sessionStorage.setItem(BOOTSTRAP_KEY,JSON.stringify(login))}catch(e){}applyResident(login,true)}
+	   return fresh();
+	  });
  }
  var sync=token?fresh().catch(function(err){
   if(err&&err.refused)return Promise.reject(err);

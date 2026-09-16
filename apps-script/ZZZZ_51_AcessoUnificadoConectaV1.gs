@@ -215,8 +215,8 @@ function conectaAcessoV1CriarPin_(p){
       Boolean(identidade.provisorio),identidade.pendenciaId||'',true,criado,agora
     ];
     if(registro)sheet.getRange(registro.row,1,1,vals.length).setValues([vals]);else sheet.appendRow(vals);
-    var session=conectaAcessoV1CriarSessao_(vals,dispositivo);
-    return {ok:true,token:session.token,quickKey:quick,perfil:'MORADOR',areaId:identidade.areaId,areaNome:identidade.areaNome||identidade.areaId,nome:identidade.nome,cpf:identidade.cpf,notificacoesAtivas:Boolean(vals[10]),provisorio:Boolean(vals[13]),pendenciaId:vals[14],message:'PIN criado e salvo.'};
+    var session=conectaAcessoV1CriarSessao_(vals,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(vals);
+    return {ok:true,token:session.token,quickKey:quick,perfil:'MORADOR',areaId:identidade.areaId,areaNome:identidade.areaNome||identidade.areaId,nome:identidade.nome,cpf:identidade.cpf,notificacoesAtivas:Boolean(vals[10]),provisorio:Boolean(vals[13]),pendenciaId:vals[14],familiaId:nucleo.familiaId,familia:nucleo.membros,message:'PIN criado e salvo.'};
   }finally{lock.releaseLock();}
 }
 
@@ -228,20 +228,20 @@ function conectaAcessoV1LoginMorador_(p){
   if(!registro||!conectaAcessoV1Bool_(registro.values[15]))throw new Error('Acesso não localizado ou inativo.');
   if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo)))throw new Error('Este acesso rápido pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
   if(!conectaAcessoV1Seguro_(registro.values[7],conectaAcessoV1Hash_(registro.values[6]+'|'+pin)))throw new Error('PIN incorreto.');
-  var session=conectaAcessoV1CriarSessao_(registro.values,dispositivo);
-  return {ok:true,token:session.token,perfil:'MORADOR',areaId:registro.values[1],nome:registro.values[4],cpf:registro.values[3],notificacoesAtivas:conectaAcessoV1Bool_(registro.values[10]),silencioso:conectaAcessoV1Bool_(registro.values[12]),provisorio:conectaAcessoV1Bool_(registro.values[13]),pendenciaId:conectaAcessoV1Texto_(registro.values[14])};
+  var session=conectaAcessoV1CriarSessao_(registro.values,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(registro.values);
+  return {ok:true,token:session.token,perfil:'MORADOR',areaId:registro.values[1],nome:registro.values[4],cpf:registro.values[3],notificacoesAtivas:conectaAcessoV1Bool_(registro.values[10]),silencioso:conectaAcessoV1Bool_(registro.values[12]),provisorio:conectaAcessoV1Bool_(registro.values[13]),pendenciaId:conectaAcessoV1Texto_(registro.values[14]),familiaId:nucleo.familiaId,familia:nucleo.membros};
 }
 
 function conectaAcessoV1SessaoMorador_(p){
   var sessao=conectaAcessoV1ValidarSessao_(p);
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=conectaAcessoV1AcessoPorId_(sheet,sessao.accessId);
   if(!registro)throw new Error('Acesso do morador não localizado.');
-  var v=registro.values,familia=conectaAcessoV1Familia_(v),endereco='';
+  var v=registro.values,nucleo=conectaAcessoV1NucleoFamiliar_(v),endereco='';
   try{
     var achados=conectaAcessoV1BuscarCpf_(conectaAcessoV1Texto_(v[3]));
     if(achados.length===1)endereco=conectaAcessoV1Texto_(achados[0].morador.endereco||'');
   }catch(e){}
-  return {ok:true,perfil:'MORADOR',areaId:v[1],cpf:v[3],nome:v[4],nascimento:v[5],endereco:endereco,notificacoesAtivas:conectaAcessoV1Bool_(v[10]),subscriptionId:conectaAcessoV1Texto_(v[11]).toLowerCase(),silencioso:conectaAcessoV1Bool_(v[12]),provisorio:conectaAcessoV1Bool_(v[13]),pendenciaId:conectaAcessoV1Texto_(v[14]),familia:familia};
+  return {ok:true,perfil:'MORADOR',areaId:v[1],cpf:v[3],nome:v[4],nascimento:v[5],endereco:endereco,notificacoesAtivas:conectaAcessoV1Bool_(v[10]),subscriptionId:conectaAcessoV1Texto_(v[11]).toLowerCase(),silencioso:conectaAcessoV1Bool_(v[12]),provisorio:conectaAcessoV1Bool_(v[13]),pendenciaId:conectaAcessoV1Texto_(v[14]),familiaId:nucleo.familiaId,familia:nucleo.membros};
 }
 
 function conectaAcessoV1ConfirmarNotificacao_(p){
@@ -455,17 +455,37 @@ function conectaAcessoV1CriarPendencia_(areaId,cpf,nome,nascimento,dispositivo,m
   return {id:id,row:sh.getLastRow()};
 }
 
-function conectaAcessoV1Familia_(v){
-  if(conectaAcessoV1Bool_(v[13]))return [{nome:v[4],cpf:v[3],responsavel:true}];
+/* REENTRADA_PIN_EXPANDE_NUCLEO_FAMILIAR_2026_09_16_V1
+ * Resolve o titular dentro da area gravada no acesso e usa MORADOR_CHAVE antes
+ * do CPF. Assim, o PIN identifica a pessoa, mas a resposta sempre e montada a
+ * partir do vinculo familiar territorial dessa pessoa, independentemente de
+ * qual integrante criou o PIN.
+ */
+function conectaAcessoV1NucleoFamiliar_(v){
+  var titularUnico={nome:v[4],cpf:v[3],responsavel:true};
+  if(conectaAcessoV1Bool_(v[13]))return {familiaId:'',membros:[titularUnico]};
   try{
-    var areaId=conectaAcessoV1Id_(v[1]),cpf=conectaAcessoV1Texto_(v[3]),achados=conectaAcessoV1BuscarCpf_(cpf);
-    if(achados.length!==1)return [{nome:v[4],cpf:v[3],responsavel:true}];
-    var familia=typeof vinculoFamiliarNotifV1CodigoEndereco_==='function'?vinculoFamiliarNotifV1CodigoEndereco_(achados[0].morador.endereco):'';
-    if(!familia)return [{nome:v[4],cpf:v[3],responsavel:true}];
-    var contexto={perfil:'PUBLICO',operadorId:'PUBLICO',agenteId:achados[0].area.agenteId,areaId:areaId,areaNome:achados[0].area.areaNome,unidadeId:achados[0].area.unidadeId,planilhaId:achados[0].area.planilhaId,permissoes:[]};
-    var membros=typeof identificacaoFamiliarPublicaV1Membros_==='function'?identificacaoFamiliarPublicaV1Membros_(familia,contexto):[];
-    return (membros||[]).map(function(m){return {token:m.token||'',nome:m.nome||'',nascimento:m.nascimento||'',temDocumento:Boolean(m.temDocumento),responsavel:conectaAcessoV1Nome_(m.nome)===conectaAcessoV1Nome_(v[4])};});
-  }catch(e){return [{nome:v[4],cpf:v[3],responsavel:true}];}
+    var areaId=conectaAcessoV1Id_(v[1]),cpf=conectaAcessoV1Texto_(v[3]),moradorChave=conectaAcessoV1Texto_(v[2]);
+    var area=(conectaAcessoV1Areas_()||[]).filter(function(a){return conectaAcessoV1Id_(a.areaId)===areaId;})[0];
+    if(!area)return {familiaId:'',membros:[titularUnico]};
+    var registros=conectaAcessoV1RegistrosArea_(area),titular=null;
+    if(moradorChave)titular=registros.filter(function(x){return conectaAcessoV1Texto_(x.chave)===moradorChave;})[0]||null;
+    if(!titular){
+      var peloCpf=registros.filter(function(x){return conectaAcessoV1Texto_(x.morador&&x.morador.cpf)===cpf;});
+      if(peloCpf.length===1)titular=peloCpf[0];
+    }
+    if(!titular)return {familiaId:'',membros:[titularUnico]};
+    var familia=typeof vinculoFamiliarNotifV1CodigoEndereco_==='function'?identificacaoFamiliarPublicaV1NormalizarFamilia_(vinculoFamiliarNotifV1CodigoEndereco_(titular.morador.endereco)):'';
+    if(!familia)return {familiaId:'',membros:[titularUnico]};
+    var contexto={perfil:'PUBLICO',operadorId:'PUBLICO',agenteId:area.agenteId,areaId:areaId,areaNome:area.areaNome,unidadeId:area.unidadeId,planilhaId:area.planilhaId,permissoes:[]};
+    var membros=typeof selecaoMembroFamiliaPublicaV1CriarLista_==='function'?selecaoMembroFamiliaPublicaV1CriarLista_(familia,contexto):(typeof identificacaoFamiliarPublicaV1Membros_==='function'?identificacaoFamiliarPublicaV1Membros_(familia,contexto):[]);
+    membros=(membros||[]).map(function(m){return {token:m.token||'',nome:m.nome||'',nascimento:m.nascimento||'',temDocumento:Boolean(m.temDocumento),responsavel:conectaAcessoV1Nome_(m.nome)===conectaAcessoV1Nome_(v[4])};});
+    return {familiaId:familia,membros:membros.length?membros:[titularUnico]};
+  }catch(e){return {familiaId:'',membros:[titularUnico]};}
+}
+
+function conectaAcessoV1Familia_(v){
+  return conectaAcessoV1NucleoFamiliar_(v).membros;
 }
 
 function conectaAcessoV1AparelhoAdministrativo_(dispositivo){

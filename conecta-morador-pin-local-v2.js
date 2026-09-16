@@ -47,7 +47,9 @@ function snapshotFrom(r){
     notificacoesAtivas:Boolean(r&&r.notificacoesAtivas===true),
     silencioso:Boolean(r&&r.silencioso===true),
     provisorio:Boolean(r&&r.provisorio===true),
-    pendenciaId:text(r&&r.pendenciaId)
+    pendenciaId:text(r&&r.pendenciaId),
+    familiaId:text(r&&r.familiaId),
+    familia:Array.isArray(r&&r.familia)?r.familia.slice():[]
   };
 }
 function registrar(pin,r,snapshot){
