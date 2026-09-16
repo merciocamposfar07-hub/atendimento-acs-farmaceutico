@@ -2619,7 +2619,8 @@ function agendarReconexaoSnapshot(msg){cancelarReconexaoSnapshot();if(snapshotRe
 function bool(v){if(v===true||v===1)return true;return ['true','1','sim','yes','ativo'].indexOf(txt(v).trim().toLowerCase())!==-1}
 function esc(v){return txt(v).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
 function dataInput(v){var s=txt(v).trim();if(!s)return'';var iso=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})(?:\D|$)/);if(iso)return iso[1]+'-'+String(iso[2]).padStart(2,'0')+'-'+String(iso[3]).padStart(2,'0');var br=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})(?:\D|$)/);if(br)return br[3]+'-'+String(br[2]).padStart(2,'0')+'-'+String(br[1]).padStart(2,'0');var d=new Date(s);if(isNaN(d.getTime()))return'';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function dataExibicao(v){var iso=dataInput(v),m=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:iso}\nfunction horaInput(v){var m=txt(v).trim().match(/^([01]\\d|2[0-3]):([0-5]\\d)/);return m?m[1]+':'+m[2]:''}
+function dataExibicao(v){var iso=dataInput(v),m=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:iso}
+function horaInput(v){var m=txt(v).trim().match(/^([01]\d|2[0-3]):([0-5]\d)/);return m?m[1]+':'+m[2]:''}
 function lerTemaVisual(){try{return localStorage.getItem(TEMA_KEY)==='petroleo'?'petroleo':'claro'}catch(e){return'claro'}}
 function aplicarTemaVisual(tema){var escuro=tema==='petroleo';document.body.classList.toggle('tema-petroleo',escuro);contraste.setAttribute('aria-pressed',escuro?'true':'false');contraste.textContent=escuro?'◐ Usar cartões claros':'◐ Usar cartões azul-petróleo'}
 function alternarTemaVisual(){var proximo=document.body.classList.contains('tema-petroleo')?'claro':'petroleo';try{localStorage.setItem(TEMA_KEY,proximo)}catch(e){}aplicarTemaVisual(proximo)}
