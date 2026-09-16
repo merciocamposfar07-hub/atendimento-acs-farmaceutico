@@ -39,3 +39,22 @@
 @media(min-width:700px){.csc-ag-native .metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.csc-ag-native .filters{max-width:720px}}
 
 .csc-ag-native .card-actions{display:grid;gap:8px}.csc-ag-native .share{width:100%;border:1px solid #416f89;background:#135272;color:#fff}.csc-ag-native .csc-ag-share-group{margin:0 0 10px;background:#102d46;border-color:#416f89}
+
+
+/* CORRECAO_CIRURGICA_AGENDAS_TOUCH_SCROLL_IOS_20260916_V1 */
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer:not([hidden]){
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-y!important;
+  overscroll-behavior-y:contain!important;
+}
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer>.csc-native-module-host:not([hidden]){
+  overflow:visible!important;
+  touch-action:pan-y!important;
+}
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native .group>summary,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native .card>summary{
+  touch-action:pan-y!important;
+}
