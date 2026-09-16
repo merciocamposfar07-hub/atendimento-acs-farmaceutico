@@ -71,3 +71,29 @@ html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native .ca
   min-height:0!important;
   padding:12px!important;
 }
+
+
+/* CORRECAO_CIRURGICA_AGENDAS_DATA_HORA_PROPORCAO_20260916_V1 */
+/* Corrige somente os dois campos nativos de data/hora que o Safari expande além dos demais campos. */
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native input[name="data"][type="date"],
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native input[name="encerraHorario"][type="time"]{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  inline-size:100%!important;
+  min-inline-size:0!important;
+  max-inline-size:100%!important;
+  box-sizing:border-box!important;
+  margin-left:0!important;
+  margin-right:0!important;
+  min-height:54px!important;
+  -webkit-appearance:none!important;
+  appearance:none!important;
+  overflow:hidden!important;
+}
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native input[name="data"][type="date"]::-webkit-date-and-time-value,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native input[name="encerraHorario"][type="time"]::-webkit-date-and-time-value{
+  min-width:0!important;
+  text-align:center!important;
+}
