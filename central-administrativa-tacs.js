@@ -766,7 +766,7 @@ var task16AgendaAssetsLoading=false,task16AgendaAssetWaiters=[];
 function task16LoadStyle(){
   if(document.getElementById('cscAgendaNativeCssV1'))return;
   var link=document.createElement('link');link.id='cscAgendaNativeCssV1';link.rel='stylesheet';
-  link.href='/atendimento-acs-farmaceutico/conecta-agendas-native-v1.css?v=20260913-agendas-ios-mount-v1';
+  link.href='/atendimento-acs-farmaceutico/conecta-agendas-native-v1.css?v=20260916-agendas-touch-scroll-v1';
   document.head.appendChild(link);
 }
 function task16LoadScript(id,src,ready,done){
@@ -810,7 +810,7 @@ function showNativeAgenda(title,routeId){
   if(!host||!viewer)return false;
   shellActiveModule='agendas';shellActiveRoute=routeId;shellActiveNative='agendas';
   el('viewerTitle').textContent=title||'Agendas e vagas';
-  viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;host.hidden=false;
+  viewer.classList.add('csc-shell-viewer','csc-native-viewer','csc-agendas-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;host.hidden=false;
   var footer=el('viewerFooter');if(footer)footer.hidden=false;
   document.body.classList.add('viewer-open');setShellOpeningPreview('agendas',routeId,true);
   ensureTask16AgendaAssets(function(ok){
@@ -920,7 +920,7 @@ function ensureTask18ProfissionaisAssets(callback){
   });
 }
 function hideAllNativeExcept(kind){
-  if(kind!=='agendas'){try{if(window.ConectaAgendasNativeV1&&window.ConectaAgendasNativeV1.hide)window.ConectaAgendasNativeV1.hide()}catch(e){}var a=el('nativeModuleHost');if(a)a.hidden=true}
+  if(kind!=='agendas'){try{if(window.ConectaAgendasNativeV1&&window.ConectaAgendasNativeV1.hide)window.ConectaAgendasNativeV1.hide()}catch(e){}var a=el('nativeModuleHost');if(a)a.hidden=true;var av=el('viewer');if(av)av.classList.remove('csc-agendas-native-viewer')}
   if(kind!=='moradores'){try{if(window.ConectaMoradoresNativeV1&&window.ConectaMoradoresNativeV1.hide)window.ConectaMoradoresNativeV1.hide()}catch(e){}var m=el('nativeMoradoresHost');if(m)m.hidden=true}
   if(kind!=='profissionais'){try{if(window.ConectaProfissionaisNativeV1&&window.ConectaProfissionaisNativeV1.hide)window.ConectaProfissionaisNativeV1.hide()}catch(e){}var p=el('nativeProfissionaisHost');if(p)p.hidden=true}
 }
@@ -1409,7 +1409,7 @@ function closeViewer(){
     try{if(window.ConectaProfissionaisNativeV1&&window.ConectaProfissionaisNativeV1.hide)window.ConectaProfissionaisNativeV1.hide()}catch(e){}
     var profissionaisHost=el('nativeProfissionaisHost');if(profissionaisHost)profissionaisHost.hidden=true;
   }
-  var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-native-viewer','csc-frame-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
+  var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-native-viewer','csc-frame-viewer','csc-agendas-native-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   shellActiveModule='';shellActiveRoute='';shellActiveNative='';moduloPendente=null;
   if(mode!=='ubs')scheduleHealthRefresh(false,900);return true;
