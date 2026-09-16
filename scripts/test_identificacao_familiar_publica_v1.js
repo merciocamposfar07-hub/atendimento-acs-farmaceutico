@@ -57,6 +57,13 @@ assert.match(frontend,/document\.addEventListener\('pointerup'/,'Seleção do in
 assert.match(frontend,/dx>14\|\|dy>14/,'Rolagem deve ser distinguida de um toque real no cartão.');
 assert.match(frontend,/lastMemberActivation\.token===token&&now-lastMemberActivation\.at<900/,'pointerup + click sintético não podem selecionar o mesmo integrante duas vezes.');
 assert.match(frontend,/touch-action:manipulation/,'Cartões familiares devem usar touch-action manipulation para resposta tátil imediata.');
+assert.match(frontend,/activeFamilyId===fam&&familySnapshot/,'Família já carregada não deve ser consultada novamente ao alternar integrantes.');
+assert.match(frontend,/function primeFamilyMembers\(membros\)/,'Ao exibir a família, o Portal deve aquecer o cache dos integrantes em segundo plano.');
+assert.match(frontend,/memberResolvedCache\[key\]/,'Documento já resolvido do integrante deve ser reutilizado em memória.');
+assert.match(frontend,/window\.TacsMoradoresAutofillV1/,'Seleção familiar deve aproveitar o cache do autofill já existente.');
+assert.doesNotMatch(frontend,/setTimeout\(hide,1800\)/,'Selecionar um integrante não pode esconder a família e obrigar nova busca.');
+assert.doesNotMatch(frontend,/Validando o cadastro selecionado…/,'A lista familiar não pode ser substituída por uma tela intermediária de validação.');
+
 
 assert.match(frontend,/publico_familia_consultar/);
 assert.match(frontend,/function searchFamilyByDocument\(documento\)/,'CPF/CNS reconhecido deve acionar a listagem da família sem novo preenchimento.');
