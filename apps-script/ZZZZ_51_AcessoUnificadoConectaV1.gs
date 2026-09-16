@@ -109,10 +109,14 @@ function conectaAcessoV1TratarPost_(e){
   return conectaAcessoV1ResponderPost_(id,resultado);
 }
 
+/* FLUXO_MORADOR_EXPLICITO_MULTIPERFIL_2026_09_16_V1
+   Um aparelho com perfil administrativo pode entrar no fluxo MORADOR quando a
+   própria porta residencial sinaliza explicitamente essa intenção. Isso não concede
+   privilégio administrativo ao Morador e não altera os demais perfis. */
 function conectaAcessoV1Identificar_(p){
   var cpf=conectaAcessoV1Cpf_(p.cpf),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
   if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
-  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo))throw new Error('Aparelho administrativo: use o diagnóstico do Morador sem criar vínculo.');
+  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo)&&!conectaAcessoV1Bool_(p.fluxoMoradorExplicito))throw new Error('Aparelho administrativo: use o diagnóstico do Morador sem criar vínculo.');
   var achados=conectaAcessoV1BuscarCpf_(cpf);
   if(achados.length===1)return conectaAcessoV1IdentidadeResposta_(achados[0],cpf,false,'Cadastro localizado.');
   if(achados.length>1)return {ok:true,encontrado:false,precisaNascimento:true,ambiguo:true,message:'Precisamos confirmar mais um dado para localizar seu cadastro com segurança.'};
@@ -121,7 +125,7 @@ function conectaAcessoV1Identificar_(p){
 
 function conectaAcessoV1Confirmar_(p){
   var dispositivo=conectaAcessoV1Texto_(p.dispositivo);
-  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo))throw new Error('Aparelho administrativo: confirmação residencial bloqueada; use o diagnóstico sem vínculo.');
+  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo)&&!conectaAcessoV1Bool_(p.fluxoMoradorExplicito))throw new Error('Aparelho administrativo: confirmação residencial bloqueada; use o diagnóstico sem vínculo.');
   if(conectaAcessoV1Bool_(p.confirmarCpf)&&p.identidadeToken)return conectaAcessoV1ConfirmarCpfRevisado_(p);
   var cpf=conectaAcessoV1Cpf_(p.cpf),nascimento=conectaAcessoV1Nascimento_(p.nascimento),nome=conectaAcessoV1Texto_(p.nome),areaPreferida=conectaAcessoV1Id_(p.areaId);
   if(!nascimento)throw new Error('Informe uma data de nascimento válida no formato DD/MM/AAAA.');
@@ -195,7 +199,7 @@ function conectaAcessoV1CriarPin_(p){
   var identidade=conectaAcessoV1LerTokenCache_(p.identidadeToken,TACS_CONECTA_ACESSO_V1.IDENTITY_PREFIX,'ci1');
   var pin=conectaAcessoV1Pin_(p.pin,p.confirmacao),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
   if(!dispositivo)throw new Error('A identificação do aparelho está ausente.');
-  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo))throw new Error('Aparelho administrativo não pode criar PIN nem vínculo residencial.');
+  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo)&&!conectaAcessoV1Bool_(p.fluxoMoradorExplicito))throw new Error('Aparelho administrativo não pode criar PIN nem vínculo residencial.');
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),lock=LockService.getScriptLock();
   if(!lock.tryLock(10000))throw new Error('Seu acesso está sendo salvo. Tente novamente em instantes.');
   try{
@@ -219,7 +223,7 @@ function conectaAcessoV1CriarPin_(p){
 function conectaAcessoV1LoginMorador_(p){
   var pin=conectaAcessoV1PinSomente_(p.pin),quick=conectaAcessoV1Texto_(p.quickKey),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
   if(!/^cmq1\./.test(quick)||!dispositivo)throw new Error('Este aparelho ainda não possui um acesso de morador reconhecido.');
-  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo))throw new Error('Aparelho administrativo não pode assumir sessão de Morador; use o diagnóstico sem vínculo.');
+  if(conectaAcessoV1AparelhoAdministrativo_(dispositivo)&&!conectaAcessoV1Bool_(p.fluxoMoradorExplicito))throw new Error('Aparelho administrativo não pode assumir sessão de Morador; use o diagnóstico sem vínculo.');
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=conectaAcessoV1AcessoPorQuick_(sheet,quick);
   if(!registro||!conectaAcessoV1Bool_(registro.values[15]))throw new Error('Acesso não localizado ou inativo.');
   if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo)))throw new Error('Este acesso rápido pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
