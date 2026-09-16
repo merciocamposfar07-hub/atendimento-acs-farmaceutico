@@ -10,7 +10,7 @@
  */
 
 var PUBLICO_AGENDAS_PORTAL_V1 = Object.freeze({
-  VERSAO: '1.3.1',
+  VERSAO: '1.3.2',
   ACAO: 'painel_publico',
   AREA_PADRAO: 'JAPARANDUBA',
   FUSO: 'America/Recife',
@@ -340,10 +340,16 @@ function publicoAgendasV1LerRecados_(planilha, areaId) {
 
   if (idx.mensagem < 0 || idx.ativo < 0) return [];
 
+  var agoraRecados = new Date();
   var hoje = Utilities.formatDate(
-    new Date(),
+    agoraRecados,
     PUBLICO_AGENDAS_PORTAL_V1.FUSO,
     'yyyy-MM-dd'
+  );
+  var horaAgora = Utilities.formatDate(
+    agoraRecados,
+    PUBLICO_AGENDAS_PORTAL_V1.FUSO,
+    'HH:mm'
   );
   var recados = [];
 
@@ -359,7 +365,11 @@ function publicoAgendasV1LerRecados_(planilha, areaId) {
     var validade = idx.validade >= 0
       ? publicoAgendasV1DataIso_(registro[idx.validade])
       : '';
+    var horarioExpiracao = idx.horario >= 0
+      ? publicoAgendasV1Hora_(registro[idx.horario])
+      : '';
     if (validade && validade < hoje) continue;
+    if (validade && validade === hoje && horarioExpiracao && horaAgora >= horarioExpiracao) continue;
 
     var mensagem = String(registro[idx.mensagem] || '').trim();
     if (!mensagem) continue;
@@ -377,7 +387,7 @@ function publicoAgendasV1LerRecados_(planilha, areaId) {
       message: mensagem,
       priority: prioridade || 'INFORMATIVO',
       validity: validade,
-      time: idx.horario >= 0 ? String(registro[idx.horario] || '').trim() : '',
+      time: horarioExpiracao,
       active: true
     });
   }
