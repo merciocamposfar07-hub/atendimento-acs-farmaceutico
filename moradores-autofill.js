@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var API = String(window.TACS_ADMIN_API_URL || 'https://script.google.com/macros/s/AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/exec').trim();
+  var API = String(window.TACS_ADMIN_API_URL || 'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec').trim();
   var timer = null;
   var requestId = 0;
   var activeFrame = null;
@@ -472,6 +472,24 @@
       return true;
     }
 
+    window.TacsMoradoresAutofillV1 = window.TacsMoradoresAutofillV1 || {};
+    window.TacsMoradoresAutofillV1.applyResolved = function (documento, resident, familia) {
+      var doc = onlyDigits(documento);
+      if (!(validCpf(doc) || validCns(doc)) || !resident || typeof resident !== 'object') return false;
+      var payload = {
+        ok: true,
+        encontrado: true,
+        familiaId: String(familia || '').trim().toUpperCase(),
+        familiaBeneficiario: String(familia || '').trim().toUpperCase(),
+        morador: resident
+      };
+      requestId++;
+      completedRequestId = requestId;
+      cleanupTransport();
+      input.value = formatDocument(doc);
+      return applyResidentPayload(payload, doc, true);
+    };
+
     function complete(payload, token, proofKey, jsonpAttempt) {
       if (token !== requestId || token === completedRequestId) return;
 
@@ -661,10 +679,9 @@
     });
   }
 
-  window.TacsMoradoresAutofillV1 = {
-    prefetch: prefetchResident,
-    cached: function (documento) { return Boolean(cachedResident(documento)); }
-  };
+  window.TacsMoradoresAutofillV1 = window.TacsMoradoresAutofillV1 || {};
+  window.TacsMoradoresAutofillV1.prefetch = prefetchResident;
+  window.TacsMoradoresAutofillV1.cached = function (documento) { return Boolean(cachedResident(documento)); };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
   else install();
