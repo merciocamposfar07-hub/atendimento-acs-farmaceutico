@@ -2692,6 +2692,25 @@ html body .viewer.csc-frame-viewer>iframe{
   background:#071827!important;
 }
 </style>
+
+<style id="cscFrameOpeningIdentity20260916">
+/* Identidade imediata somente enquanto um painel legado ainda está carregando. */
+html body .viewer.csc-frame-viewer.csc-frame-opening:not([hidden]){
+  display:flex!important;flex-direction:column!important;overflow:hidden!important;
+}
+html body .viewer.csc-frame-viewer.csc-frame-opening>.viewer-bar{
+  display:flex!important;position:static!important;flex:0 0 auto!important;
+  width:min(720px,100%)!important;margin:0 auto!important;
+  background:#071827!important;border:0!important;box-shadow:none!important;
+}
+html body .viewer.csc-frame-viewer.csc-frame-opening>#cscModuleOpening:not([hidden]){
+  display:block!important;flex:1 1 auto!important;overflow:auto!important;
+}
+html body .viewer.csc-frame-viewer.csc-frame-opening>iframe:not([hidden]){
+  position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;
+  pointer-events:none!important;
+}
+</style>
 </head>
 <body class="csc-brand-enhanced csc-central">
 <div id="cscInstitutionalAppbar" class="csc-appbar" role="banner"><img class="csc-appbar-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=56d50e04b8e5" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="csc-appbar-title"><small>CONECTA SAÚDE COMUNITÁRIA</small><strong>Central Administrativa</strong></div></div>
