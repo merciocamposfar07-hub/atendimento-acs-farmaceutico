@@ -226,17 +226,49 @@ function concluirPrimeiroAcesso(r,device,pin){
 
 pinInput.addEventListener('focus',aquecerPinTacs,{once:true});
 pinInput.addEventListener('input',aquecerPinTacs,{once:true});
-pinInput.addEventListener('input',function(){
-  var pin=digits(pinInput.value),msg=text(status&&status.textContent);
+
+/* LEITURA_PIN_TACS_ATIVO_IPHONE_2026_09_16_V1
+   O clique sempre lê o #tacsPin atualmente montado no DOM.
+   Mantém somente em memória o último valor numérico da tentativa atual para cobrir
+   restauração/recomposição do campo pelo Safari, sem persistir o PIN. */
+var tacsPinDigitadoEmMemoria='';
+function tacsPinAtual(){
+  return document.getElementById('tacsPin')||pinInput;
+}
+function registrarPinTacsAtual(node){
+  node=node||tacsPinAtual();
+  var raw=node?String(node.value==null?'':node.value):'',pin=digits(raw);
+  if(!raw){tacsPinDigitadoEmMemoria='';return''}
+  if(/^\d{1,8}$/.test(pin))tacsPinDigitadoEmMemoria=pin;
+  return pin;
+}
+function lerPinTacsParaEntrar(){
+  var node=tacsPinAtual(),pin=registrarPinTacsAtual(node);
+  if(/^\d{4,8}$/.test(pin))return pin;
+  if(/^\d{4,8}$/.test(tacsPinDigitadoEmMemoria))return tacsPinDigitadoEmMemoria;
+  return pin;
+}
+function limparPinTacsTentativa(){
+  var node=tacsPinAtual();
+  if(node)node.value='';
+  tacsPinDigitadoEmMemoria='';
+}
+document.addEventListener('input',function(event){
+  var node=event&&event.target;
+  if(!node||node.id!=='tacsPin')return;
+  var pin=registrarPinTacsAtual(node),msg=text(status&&status.textContent);
   if(/^\d{4,8}$/.test(pin)&&status&&status.classList.contains('err')&&/pin|4\s*a\s*8|númer|dígit/i.test(msg)){
     status.textContent='';status.className='status';status.hidden=true;
   }
-});
+},true);
+document.addEventListener('change',function(event){
+  var node=event&&event.target;if(node&&node.id==='tacsPin')registrarPinTacsAtual(node);
+},true);
 
 loginBtn.addEventListener('click',function(event){
   event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
   if(busy){setStatus('Aguarde a validação em andamento.','warn');return}
-  var pin=digits(pinInput.value),device=getDevice(),profile=getProfile(),api=centralPinLocal();
+  var pin=lerPinTacsParaEntrar(),device=getDevice(),profile=getProfile(),api=centralPinLocal();
   if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN individual de 4 a 8 números.','err');return}
   if(!device){setStatus('Este aparelho ainda não foi identificado. Atualize a página e tente novamente.','err');return}
   var action='admin_territorio_login_pin';
@@ -244,7 +276,7 @@ loginBtn.addEventListener('click',function(event){
   function validarServidor(saved){
     setStatus(saved?'Área liberada. Sincronizando em segundo plano…':'Validando seu PIN…',saved?'ok':'warn');
     post(action,payload,function(r){
-      pinInput.value='';
+      limparPinTacsTentativa();
       if(!r||r.ok!==true||!r.token){
         if(saved&&r&&r.temporario===true){setStatus('Área aberta com os dados locais. O servidor ainda está sincronizando.','warn');return}
         if(saved&&api&&typeof api.bloquear==='function'){api.bloquear('tacs',text(r&&r.message)||'Acesso TACS recusado.');return}
