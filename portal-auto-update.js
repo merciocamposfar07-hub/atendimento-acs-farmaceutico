@@ -305,7 +305,7 @@
     var script=document.createElement('script');
     script.id='portalTacsIdentificacaoFamiliaScriptV1';
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260915-cpf-pin-admin-guard-v7';
+    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260915-familia-cache-ponta-a-ponta-v8';
     (document.head||document.documentElement).appendChild(script);
   }
 
