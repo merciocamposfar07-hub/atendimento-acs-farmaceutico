@@ -370,6 +370,28 @@ button:focus-visible,.btn:focus-visible,.botao:focus-visible,a:focus-visible{out
   box-shadow:none!important;
 }
 .tab.active,.aba.ativa,.tabs button.active,[role="tab"][aria-selected="true"]{background:#145574!important;color:#fff!important;border-color:#5cb89d!important}
+
+/* DIMENSAO_CANONICA_ABAS_COMPACTAS_2026_09_16_V1
+   Correção exclusivamente visual: impede que abas de navegação herdem altura de cards/módulos.
+   Não altera IDs, eventos, permissões, dados, rotas ou lógica dos painéis. */
+.tabs,.abas,.login-tabs{
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  align-content:start!important;
+  grid-auto-rows:minmax(52px,auto)!important;
+}
+.tabs>.tab,.abas>.aba,.login-tabs>.tab{
+  height:auto!important;
+  min-height:52px!important;
+  max-height:76px!important;
+  padding:9px 10px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  align-self:stretch!important;
+  line-height:1.2!important;
+}
 details,.cartao,.item,.ticket,.grupoProfissional,.area-row,.maprow,.saude-aparelho,.saude-vazio{
   min-width:0;
   color:var(--tacs-app-text)!important;
@@ -1309,7 +1331,7 @@ footer,footer p,.footer{
 }
 
 
-/* R7 VISUAL ONLY — UNIFICAÇÃO CROMÁTICA + MARCA/LEITURA */
+/* R7 VISUAL ONLY — UNIFICAÇÃO CROMÁTICA + MARCA/LEITURA
    Pedido do usuário: tela única, sem faixas de cor; ícone oficial maior;
    CONECTA SAÚDE COMUNITÁRIA maior/destacado; textos e ícones mais nítidos.
    Esta seção é SOMENTE visual. */
