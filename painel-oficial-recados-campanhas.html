@@ -2748,7 +2748,7 @@ function renderSaudeNotificacoes(r){
   return true;
 }
 function prepararSaudeSemNumeroProvisorio(){
-  if(saudeNotificacoesDados&&saudeNotificacoesDados.oneSignalConsultado===true)return;
+  if(saudeNotificacoesDados&&saudeNotificacoesDados.ok===true)return;
   ['saudeAtivos','saudeInativos','saudeReparo','saudeSemConfirmacao'].forEach(function(id){var n=document.getElementById(id);if(n)n.textContent='—'});
   var lista=document.getElementById('saudeNotificacoesLista');if(lista){lista.innerHTML='';lista.classList.add('oculto')}
 }
@@ -2756,11 +2756,11 @@ function carregarSaudeNotificacoes(){
   if(!(token||territorioToken)||ativa)return;
   document.getElementById('saudeNotificacoes').classList.remove('oculto');
   prepararSaudeSemNumeroProvisorio();
-  status('saudeNotificacoesStatus','Confirmando o estado atual das notificações…','aviso');
-  atualizarSaudeNotificacoesRemota();
+  status('saudeNotificacoesStatus','Carregando a situação das notificações…','aviso');
   post('admin_notificacoes_saude_rapida',sessao(),function(r){
     if(r&&r.ok===true)renderSaudeNotificacoes(r);
     else status('saudeNotificacoesStatus',txt(r&&r.message||'Não foi possível carregar a situação das notificações agora.'),'aviso');
+    setTimeout(atualizarSaudeNotificacoesRemota,80);
   },'admin_notificacoes_saude_result');
 }
 var saudeRemotaEmCurso=false;
