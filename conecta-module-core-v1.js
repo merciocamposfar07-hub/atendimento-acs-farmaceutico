@@ -272,7 +272,8 @@ function performanceFreshnessMeta(item){
 function performanceRead(name){
   var key=performanceKey(name);if(!key)return null;
   try{
-    var item=JSON.parse(sessionStorage.getItem(key)||'null');
+    var raw=localStorage.getItem(key)||sessionStorage.getItem(key)||'';
+    var item=JSON.parse(raw||'null');
     if(!item||!item.data||item.areaId!==areaId()||item.mode!==mode())return null;
     if(item.schemaVersion===1){
       item.legacyUnversioned=true;
@@ -282,6 +283,10 @@ function performanceRead(name){
     }
     if(item.schemaVersion!==PERFORMANCE_SCHEMA_VERSION||!item.cacheVersionReference)return null;
     item.requiresRemote=true;
+    /* CACHE_PERSISTENTE_MODULOS_20260916_V1:
+       snapshots já sanitizados sobrevivem ao encerramento da sessão/app.
+       Credenciais continuam fora deste cache e a conferência remota segue obrigatória. */
+    if(!localStorage.getItem(key))try{localStorage.setItem(key,JSON.stringify(item))}catch(e){}
     return item;
   }catch(e){return null}
 }
@@ -306,12 +311,12 @@ function performanceCommit(name,data,apply){
     fingerprint:fingerprint,
     data:safe
   };
-  try{sessionStorage.setItem(key,JSON.stringify(item))}catch(e){}
+  try{localStorage.setItem(key,JSON.stringify(item))}catch(e){try{sessionStorage.setItem(key,JSON.stringify(item))}catch(x){}}
   var meta={cached:false,authoritative:true,requiresRemote:false,stale:false,changed:changed,confirmedAt:now,checkedAt:now,cacheVersionReference:cacheVersionReference,fingerprint:fingerprint};
   if(changed&&typeof apply==='function')apply(safe,meta);
   return {changed:changed,item:item,previous:previous,authoritative:true,cacheVersionReference:cacheVersionReference};
 }
-function performanceForget(name){var key=performanceKey(name);if(key)try{sessionStorage.removeItem(key)}catch(e){}}
+function performanceForget(name){var key=performanceKey(name);if(!key)return;try{localStorage.removeItem(key)}catch(e){}try{sessionStorage.removeItem(key)}catch(e){}}
 function performanceSame(name,data){
   var previous=performanceRead(name);if(!previous||previous.legacyUnversioned)return false;
   var safe=performanceSanitize(data),fingerprint=performanceFingerprint(safe);
