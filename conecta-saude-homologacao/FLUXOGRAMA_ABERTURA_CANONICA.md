@@ -942,6 +942,11 @@ Cache: `familia-resolvida-v3 → toque-integrante-v4`.
 Status: **IMPLEMENTADO — validação do usuário pendente.**
 
 ### Correção isolada — criação e reentrada por PIN dentro do Portal TACS
+Proteção de contexto:
+`aparelho administrativo reconhecido → NÃO iniciar onboarding residencial/PIN → preservar modo diagnóstico administrativo`.
+
+Esta proteção não altera o fluxo do Morador real; apenas impede que o teste em aparelho administrativo crie vínculo, sessão ou quickKey residencial.
+
 Data: 15/09/2026
 
 `CPF já cadastrado → reconhecer → família → criar PIN 4 dígitos → confirmar → salvar acesso`.
