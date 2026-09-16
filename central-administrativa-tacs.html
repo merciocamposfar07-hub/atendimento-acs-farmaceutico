@@ -2733,6 +2733,25 @@ html body .viewer.csc-frame-viewer.csc-frame-opening>iframe:not([hidden]){
   pointer-events:none!important;
 }
 </style>
+
+<style id="cscPinGateVisibleFix20260916">
+/* CORRECAO_CIRURGICA_PIN_GATE_VISIVEL_20260916_V1
+   Se a própria Central está mostrando a tela de acesso, o campo de PIN do perfil
+   selecionado nunca pode ser escondido por uma classe de sessão ainda pendente/stale. */
+html body.csc-central.csc-login-gate-visible #loginPanel:not([hidden]) #adminLogin:not([hidden]),
+html body.csc-central.csc-login-gate-visible #loginPanel:not([hidden]) #tacsLogin:not([hidden]){
+  display:block!important;
+}
+html body.csc-central.csc-login-gate-visible #loginPanel:not([hidden]) #adminLogin:not([hidden]) .csc-auth-control:not([hidden]),
+html body.csc-central.csc-login-gate-visible #loginPanel:not([hidden]) #adminLogin:not([hidden]) .csc-admin-only-auth:not([hidden]),
+html body.csc-central.csc-login-gate-visible #loginPanel:not([hidden]) #tacsLogin:not([hidden]) .csc-auth-control:not([hidden]),
+html body.csc-central.csc-login-gate-visible #loginPanel:not([hidden]) #tacsLogin:not([hidden]) .csc-admin-only-auth:not([hidden]){
+  display:revert!important;
+}
+html body.csc-central.csc-login-gate-visible .csc-dock{
+  display:none!important;
+}
+</style>
 </head>
 <body class="csc-brand-enhanced csc-central">
 <div id="cscInstitutionalAppbar" class="csc-appbar" role="banner"><img class="csc-appbar-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=0ee28e092fa0" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="csc-appbar-title"><small>CONECTA SAÚDE COMUNITÁRIA</small><strong>Central Administrativa</strong></div></div>
@@ -2792,5 +2811,25 @@ html body .viewer.csc-frame-viewer.csc-frame-opening>iframe:not([hidden]){
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=0ee28e092fa0"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=0ee28e092fa0"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-morador-pin-local-v2.js?v=0ee28e092fa0"></script>
+
+<script id="cscPinGateVisibleSync20260916">
+(function(){
+'use strict';
+function sync(){
+  var panel=document.getElementById('loginPanel'),visible=Boolean(panel&&!panel.hidden);
+  if(document.body)document.body.classList.toggle('csc-login-gate-visible',visible);
+}
+function boot(){
+  var panel=document.getElementById('loginPanel');
+  sync();
+  if(panel&&typeof MutationObserver==='function'){
+    var observer=new MutationObserver(sync);
+    observer.observe(panel,{attributes:true,attributeFilter:['hidden','style','class']});
+  }
+  window.addEventListener('pageshow',sync);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+}());
+</script>
 </body>
 </html>
