@@ -390,7 +390,7 @@ function setBaseLoading(loading){
   var searchButton=el('search');
   if(searchButton){
     searchButton.disabled=baseCheckPending;
-    searchButton.textContent=baseCheckPending?'Conferindo base…':(PRONTUARIOS_VIEW&&accessMode==='admin'?'Buscar em todas as áreas':'Buscar na base real');
+    searchButton.textContent=baseCheckPending?'Conferindo base…':(PRONTUARIOS_VIEW?'Buscar na área selecionada':'Buscar na base real');
   }
   var areaSelect=el('areaSelect');
   if(areaSelect)areaSelect.disabled=baseCheckPending||availableAreas.length<2;
@@ -536,10 +536,10 @@ function renderBase(r,message,confirmed){
   ensureSituationUi();setBaseLoading(false);updateNote();syncControls();
   hideStatus('loginStatus');
   settleLoadingStatuses();
-  if(PRONTUARIOS_VIEW&&accessMode==='admin'){
+  if(PRONTUARIOS_VIEW){
     var searchHelp=rootQuery('#searchArea .muted');
-    if(searchHelp)searchHelp.textContent='Busque por nome, CPF, CNS ou cadastro familiar. A consulta percorre todas as áreas cadastradas.';
-    var searchButton=el('search');if(searchButton)searchButton.textContent='Buscar em todas as áreas';
+    if(searchHelp)searchHelp.textContent='Busque por nome, CPF, CNS ou cadastro familiar. A consulta usa somente a área selecionada.';
+    var searchButton=el('search');if(searchButton)searchButton.textContent='Buscar na área selecionada';
   }
   if(remoteConfirmed)setTimeout(function(){maybeActivateSituation(r)},0);
   return true;
@@ -990,7 +990,7 @@ function doSearch(query,options){
   if(q.length<2){setStatus('operationStatus','Digite pelo menos 2 caracteres.','err');return}
   token=sessionStorage.getItem(TOKEN_KEY)||token||'';
   territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||territoryToken||'';
-  if(!(token||territoryToken)){setStatus('operationStatus','Sessão administrativa ausente. Entre novamente.','err');return}
+  if(!(token||territoryToken||ubsToken||accessMode==='ubs')){setStatus('operationStatus','Sessão administrativa ausente. Entre novamente.','err');return}
   if(baseCheckPending){
     setStatus('operationStatus','O painel já está aberto. Aguarde somente a conferência da base terminar.','warn');
     return;
@@ -998,12 +998,8 @@ function doSearch(query,options){
   lastSearchQuery=q;
   duplicateLock=false;
   syncControls();
-  if(PRONTUARIOS_VIEW&&accessMode==='admin'){
-    searchProntuariosTodasAreas(q,options);
-    return;
-  }
   setStatus('operationStatus','Buscando na base real…','warn');
-  post('admin_moradores_buscar',cloneSession({q:q}),'admin_moradores_result',function(r){
+  post('admin_moradores_buscar',cloneSession({q:q,areaId:selectedAreaId}),'admin_moradores_result',function(r){
     if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'Busca recusada.'),'err');return}
     var lista=Array.isArray(r.resultados)?r.resultados:[];
     lista.forEach(function(item){item._areaId=selectedAreaId;var a=availableAreas.filter(function(x){return text(x.areaId)===selectedAreaId})[0];item._areaNome=text(a&&a.areaNome||selectedAreaId)});
