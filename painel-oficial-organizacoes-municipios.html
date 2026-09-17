@@ -2535,7 +2535,23 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1';
 var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'municipios'}):null,modulePerf=moduleCore&&moduleCore.performance,moduleRequests=moduleCore&&moduleCore.requests;
 var token=moduleSession&&moduleSession.token||'',territoryToken=moduleSession&&moduleSession.territorioToken||'',device=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
-var data=null,active=null,counter=0,dataConfirmed=false;
+var data=null,active=null,counter=0,dataConfirmed=false,remoteSessionTimer=null;
+function syncMunicipiosSession(){
+ try{
+  var atual=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'municipios'}):null;
+  token=atual&&atual.token||'';
+  territoryToken=atual&&atual.territorioToken||'';
+  if(atual&&atual.dispositivo)device=atual.dispositivo;
+ }catch(e){}
+}
+function municipiosRemoteReady(){syncMunicipiosSession();return Boolean(token)}
+function scheduleMunicipiosRemote(){
+ if(remoteSessionTimer)return;
+ remoteSessionTimer=setTimeout(function waitMunicipios(){
+  if(municipiosRemoteReady()){remoteSessionTimer=null;load();return}
+  remoteSessionTimer=setTimeout(waitMunicipios,450);
+ },450);
+}
 var MUNICIPIOS_FAST_CACHE_PREFIX='portalConectaMunicipiosFastV1:';
 function municipiosFastCacheKey(){return MUNICIPIOS_FAST_CACHE_PREFIX+(device||'sem-dispositivo')}
 function municipiosSafeData(r){
@@ -2593,8 +2609,9 @@ function render(){
 function syncMunicipioWriteState(){document.querySelectorAll('#addOrg,#addMun,.saveOrg,.saveMun,.saveArea').forEach(function(n){n.disabled=!dataConfirmed})}
 function apply(r,message){if(!r||r.ok!==true){status(txt(r&&r.message)||'A operação não foi confirmada.','err');return false}var diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('municipios',r):{changed:true};writeMunicipiosFastCache(r);data=r;dataConfirmed=true;if(diff.changed)render();else syncMunicipioWriteState();status(diff.changed?(message||txt(r.message)||'Dados confirmados.'):'Dados atuais confirmados; nenhuma mudança nova encontrada.','ok');return true}
 function load(){
- if(territoryToken&&!token){status('Este painel é exclusivo do Administrador geral. Volte à Central.','err');return}
- if(!token){status('Sessão administrativa ausente. Volte à Central e entre como Administrador geral.','err');return}
+ syncMunicipiosSession();
+ var currentMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':''));
+ if(currentMode==='tacs'||(territoryToken&&!token)){status('Este painel é exclusivo do Administrador geral. Volte à Central.','err');return}
  var cached=null;
  if(modulePerf&&typeof modulePerf.prime==='function'){
   cached=modulePerf.prime('municipios',function(saved){data=saved;dataConfirmed=false;render();status('','')});
@@ -2606,6 +2623,11 @@ function load(){
  if(!cached){
   var fast=readMunicipiosFastCache()||primeMunicipiosFromCentralContext();
   if(fast){data=fast;dataConfirmed=false;render();syncMunicipioWriteState();cached={source:'fast-readonly'};status('','')}
+ }
+ if(!token){
+  if(!cached)status('Aguarde enquanto os dados carregam…','warn');else status('','');
+  scheduleMunicipiosRemote();
+  return;
  }
  if(!cached)status('Aguarde enquanto os dados carregam…','warn');
  var leituraPayload=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'municipios'}):{token:token,dispositivo:device};coreRead('admin_multimunicipio_dados',leituraPayload,function(done){post('admin_multimunicipio_dados',{},done)},function(r){
