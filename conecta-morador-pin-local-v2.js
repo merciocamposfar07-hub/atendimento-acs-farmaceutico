@@ -98,25 +98,24 @@ window.ConectaMoradorPinLocalV2={
 };
 }());
 
-/* CORRECAO_CACHE_FIRST_PAINEIS_20260917_V5
-   Bloco isolado. Atua somente na Central administrativa, na abertura/leitura e no fluxo visual.
-   Não altera PIN, sessão, áreas, permissões, agendas, regras de escrita ou backend.
-
-   Fluxo canônico:
-   toque -> shell abre imediatamente -> cache confirmado aparece -> módulo atualiza em segundo plano
-   -> ao terminar o carregamento real, o próprio shell substitui somente a visualização temporária. */
+/* CORRECAO_CACHE_FIRST_PAINEIS_20260917_V6
+   Bloco isolado. Não intercepta nem substitui o clique original dos módulos.
+   O shell oficial continua sendo o único responsável por abrir/fechar painéis.
+   Este bloco apenas mostra cache confirmado quando o shell já iniciou a abertura
+   e normaliza o fluxo visual da Central sem alterar PIN, sessão, área, permissão,
+   agendas, escrita ou backend. */
 (function(){
 'use strict';
 if(typeof window==='undefined'||typeof document==='undefined'||typeof location==='undefined')return;
 if(!/\/central-administrativa-tacs\.html$/i.test(String(location.pathname||'')))return;
-if(window.ConectaCacheFirstPanels20260917V5)return;
+if(window.ConectaCacheFirstPanels20260917V6)return;
 
 var CONTEXT_KEY='portalConectaModuleCoreV1',PERF_PREFIX='portalConectaModulePerfV1:';
-var state={module:'',suppressUntil:0,seq:0,observer:null};
-window.ConectaCacheFirstPanels20260917V5=state;
+var state={module:'',seq:0,observer:null,bound:false};
+window.ConectaCacheFirstPanels20260917V6=state;
 
 function t(v){return String(v==null?'':v).trim()}
-function e(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]})}
+function e(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function b(v){if(v===true||v===1)return true;return['true','1','sim','yes','ativo'].indexOf(t(v).toLowerCase())!==-1}
 function n(v){var x=Number(v);return Number.isFinite(x)?x:0}
 function a(v){return t(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
@@ -161,32 +160,28 @@ function cachedHtml(name){
   }else return'';
   return'<div class="csc-cf-preview" data-cache-module="'+e(name)+'">'+note(item)+body+'</div>';
 }
-function style(){
-  if(document.getElementById('cscCacheFirstPanelsV5Style'))return;
-  var s=document.createElement('style');s.id='cscCacheFirstPanelsV5Style';s.textContent=''
-    +'.csc-cf-preview{width:min(720px,100%);margin:0 auto;padding:8px 16px 34px;color:#f7fcff;background:#071827}'
-    +'.csc-cf-note{margin:4px 0 14px;padding:10px 12px;border:0;border-radius:14px;background:#102d46;color:#adc4d2;font-size:.84rem;line-height:1.4}.csc-cf-note strong{color:#83efa9}'
-    +'.csc-cf-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}.csc-cf-metric{min-height:88px;padding:13px;border:0;border-radius:18px;background:linear-gradient(145deg,#153b58,#102d46);display:flex;flex-direction:column;justify-content:center;text-align:center}.csc-cf-metric strong{color:#fff;font-size:1.45rem}.csc-cf-metric span{margin-top:5px;color:#adc4d2;font-size:.82rem;font-weight:800}'
-    +'.csc-cf-list{display:grid;gap:9px}.csc-cf-row{padding:13px;border:0;border-radius:17px;background:#102d46}.csc-cf-row strong{display:block;color:#fff;font-size:.96rem}.csc-cf-row span{display:block;margin-top:4px;color:#adc4d2;font-size:.84rem;line-height:1.38}'
-    +'html body.csc-central{display:block!important;min-height:100svh!important;height:auto!important;align-items:initial!important;justify-content:initial!important}'
-    +'html body.csc-central:not(.viewer-open)>main{display:block!important;position:static!important;inset:auto!important;transform:none!important;min-height:0!important;height:auto!important;margin:0 auto!important;padding-top:8px!important;padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;align-items:initial!important;justify-content:initial!important}'
-    +'html body.csc-central:not(.viewer-open) #identityPanel:not([hidden]),html body.csc-central:not(.viewer-open) #healthPanel:not([hidden]),html body.csc-central:not(.viewer-open) #modulesPanel:not([hidden]){position:static!important;inset:auto!important;transform:none!important;min-height:0!important;height:auto!important;float:none!important}'
+function installStyle(){
+  if(document.getElementById('cscCacheFirstPanelsV6Style'))return;
+  var s=document.createElement('style');s.id='cscCacheFirstPanelsV6Style';s.textContent=''
+    +'html,body{max-width:100%!important;overflow-x:hidden!important}'
+    +'html body.csc-central:not(.viewer-open)>main{position:static!important;inset:auto!important;transform:none!important;width:min(720px,100%)!important;max-width:100%!important;min-height:0!important;height:auto!important;margin:0 auto!important;padding-top:8px!important;padding-bottom:calc(148px + env(safe-area-inset-bottom))!important;overflow:visible!important}'
+    +'html body.csc-central:not(.viewer-open) #identityPanel:not([hidden]),html body.csc-central:not(.viewer-open) #healthPanel:not([hidden]),html body.csc-central:not(.viewer-open) #modulesPanel:not([hidden]){position:static!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;min-height:0!important;height:auto!important;float:none!important}'
     +'html body.csc-central:not(.viewer-open) #healthPanel:not([hidden]),html body.csc-central:not(.viewer-open) #modulesPanel:not([hidden]){margin-top:22px!important}'
-    +'html body.csc-central:not(.viewer-open) .health-grid,html body.csc-central:not(.viewer-open) .module-grid{position:static!important;inset:auto!important;transform:none!important;height:auto!important;min-height:0!important;align-content:start!important}'
-    +'html.csc-session-active body.csc-central:not(.csc-login-gate-visible) #loginPanel,html.csc-central-state-app body.csc-central:not(.csc-login-gate-visible) #loginPanel{display:none!important;min-height:0!important;height:0!important;margin:0!important;padding:0!important}'
-    +'html body.csc-central.csc-login-gate-visible #loginPanel:not([hidden]){display:block!important;height:auto!important;min-height:0!important}'
-    +'html body.csc-central #cscInstitutionalAppbar{position:static!important;inset:auto!important;transform:none!important}'
-    +'html body.csc-central #cscInstitutionalDock{position:fixed!important;left:50%!important;bottom:0!important;transform:translateX(-50%)!important}';
+    +'html body.csc-central:not(.viewer-open) .health-grid,html body.csc-central:not(.viewer-open) .module-grid{position:static!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;align-content:start!important;overflow:visible!important}'
+    +'html body.csc-central:not(.viewer-open) .health-card,html body.csc-central:not(.viewer-open) .module{min-width:0!important;max-width:100%!important}'
+    +'html.csc-central-state-app body.csc-central:not(.csc-login-gate-visible) #cscInstitutionalDock{display:grid!important;position:fixed!important;left:50%!important;right:auto!important;bottom:0!important;transform:translateX(-50%)!important;width:min(720px,100%)!important;max-width:100%!important}'
+    +'html body.csc-central #cscInstitutionalAppbar{position:static!important;inset:auto!important;transform:none!important;max-width:100%!important}'
+    +'.csc-cf-preview{width:min(720px,100%);max-width:100%;margin:0 auto;padding:8px 16px 34px;color:#f7fcff;background:#071827;overflow-x:hidden}'
+    +'.csc-cf-note{margin:4px 0 14px;padding:10px 12px;border:0;border-radius:14px;background:#102d46;color:#adc4d2;font-size:.84rem;line-height:1.4}.csc-cf-note strong{color:#83efa9}'
+    +'.csc-cf-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}.csc-cf-metric{min-width:0;min-height:88px;padding:13px;border:0;border-radius:18px;background:linear-gradient(145deg,#153b58,#102d46);display:flex;flex-direction:column;justify-content:center;text-align:center}.csc-cf-metric strong{color:#fff;font-size:1.45rem}.csc-cf-metric span{margin-top:5px;color:#adc4d2;font-size:.82rem;font-weight:800}'
+    +'.csc-cf-list{display:grid;gap:9px}.csc-cf-row{min-width:0;padding:13px;border:0;border-radius:17px;background:#102d46}.csc-cf-row strong{display:block;color:#fff;font-size:.96rem}.csc-cf-row span{display:block;margin-top:4px;color:#adc4d2;font-size:.84rem;line-height:1.38;overflow-wrap:anywhere}';
   document.head.appendChild(s);
 }
-function shell(){var x=window.ConectaCentralShellV1;return x&&typeof x.abrir==='function'?x:null}
-function active(){try{var x=shell();return x&&typeof x.ativo==='function'?t(x.ativo()).toLowerCase():''}catch(err){return''}}
-function button(event){return event.target&&event.target.closest?event.target.closest('#moduleGrid .module[data-module]'):null}
-function title(btn){try{return t((btn.querySelector('strong')||{}).textContent)||'Painel'}catch(err){return'Painel'}}
+function shell(){var x=window.ConectaCentralShellV1;return x&&typeof x.ativo==='function'?x:null}
+function active(){try{var x=shell();return x?t(x.ativo()).toLowerCase():''}catch(err){return''}}
 function place(name,seq){
   if(seq!==state.seq||active()!==name)return false;
   var html=cachedHtml(name);if(!html)return false;
-  style();
   var p=document.getElementById('nativePendingHost');
   if(p&&!p.hidden){p.innerHTML=html;p.dataset.cscCacheFirst='1';return true}
   var o=document.getElementById('cscModuleOpening');
@@ -194,39 +189,29 @@ function place(name,seq){
   return false;
 }
 function schedule(name){
-  var seq=++state.seq;
-  place(name,seq);
-  [0,16,45,95].forEach(function(ms){setTimeout(function(){place(name,seq)},ms)});
+  state.module=name;var seq=++state.seq;
+  [0,16,45,95,180].forEach(function(ms){setTimeout(function(){place(name,seq)},ms)});
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(function(){place(name,seq)});
 }
-function onDown(event){
-  var btn=button(event);if(!btn||btn.hidden||btn.disabled)return;
-  var name=t(btn.dataset.module).toLowerCase();if(!name||name==='portal')return;
-  var api=shell();if(!api)return;
-  state.module=name;state.suppressUntil=Date.now()+1200;
-  try{
-    api.abrir(name,title(btn));
-    schedule(name);
-  }catch(err){state.suppressUntil=0}
-}
-function onClick(event){
-  var btn=button(event);if(!btn)return;
-  var name=t(btn.dataset.module).toLowerCase();
-  if(name===state.module&&Date.now()<=state.suppressUntil){
-    event.preventDefault();event.stopPropagation();if(event.stopImmediatePropagation)event.stopImmediatePropagation();state.suppressUntil=0;
+function bind(){
+  installStyle();
+  var grid=document.getElementById('moduleGrid');
+  if(grid&&grid.dataset.cscCacheFirstV6!=='1'){
+    grid.dataset.cscCacheFirstV6='1';
+    grid.addEventListener('click',function(event){
+      var btn=event.target&&event.target.closest?event.target.closest('.module[data-module]'):null;
+      if(!btn||btn.disabled||btn.hidden)return;
+      var name=t(btn.dataset.module).toLowerCase();
+      if(!name||name==='portal'||name==='ubs'||name==='territorio')return;
+      setTimeout(function(){schedule(name)},0);
+    },false);
+  }
+  var v=document.getElementById('viewer');
+  if(v&&!state.observer&&typeof MutationObserver==='function'){
+    state.observer=new MutationObserver(function(){var name=active();if(name&&name===state.module)place(name,state.seq)});
+    state.observer.observe(v,{attributes:true,childList:true,subtree:true,attributeFilter:['class','hidden']});
   }
 }
-function normalizeHome(){style()}
-document.addEventListener('pointerdown',onDown,{capture:true,passive:true});
-if(!window.PointerEvent)document.addEventListener('touchstart',onDown,{capture:true,passive:true});
-document.addEventListener('click',onClick,true);
-function observe(){
-  style();
-  var v=document.getElementById('viewer');
-  if(!v||state.observer||typeof MutationObserver!=='function')return;
-  state.observer=new MutationObserver(function(){var name=active();if(name===state.module)place(name,state.seq)});
-  state.observer.observe(v,{attributes:true,childList:true,subtree:true,attributeFilter:['class','hidden']});
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){normalizeHome();observe()},{once:true});else{normalizeHome();observe()}
-window.addEventListener('pageshow',function(){normalizeHome();observe()});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+window.addEventListener('pageshow',bind);
 }());
