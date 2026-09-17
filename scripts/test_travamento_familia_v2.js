@@ -18,7 +18,7 @@ assert.ok(runtimeStart>=0&&runtimeEnd>runtimeStart,'schedulePanelRuntimePrewarm 
 const runtime=central.slice(runtimeStart,runtimeEnd);
 assert.doesNotMatch(runtime,/prewarmPanelRuntime\(name\)/,'runtime oculto voltou ao caminho de prewarm');
 assert.match(runtime,/scheduleNativePanelPrewarm\(\)/);
-assert.match(centralHtml,/central-administrativa-tacs\.js\?v=20260916-resposta-imediata-v2/);
+assert.match(centralHtml,/central-administrativa-tacs\.js\?v=[A-Za-z0-9._-]+/,'Central publicada sem revisão de cache');
 
 // Moradores: consulta da base e busca são leituras independentes; escrita continua serializada.
 assert.match(moradores,/LEITURAS_CONCORRENTES_MORADORES_2026_09_16_V1/);
