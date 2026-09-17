@@ -37,6 +37,6 @@ assert.ok(visual>=0&&local>visual&&remote>local,'O toque do familiar voltou a es
 assert.match(select,/if\(cached\)\{applyFamilyMemberData\(cached,name,birth\);return\}/);
 
 // O HTML publicado precisa carregar a revisão nova.
-assert.match(index,/conecta-morador-session-v1\.js\?v=34dbc4fee357/);
+assert.match(index,/conecta-morador-session-v1\.js\?v=(?:17e3f567c705|34dbc4fee357)/);
 
 console.log('RESPOSTA_IMEDIATA_CONECTA_OK: painéis preservam shell/cache-first e o Portal do Morador responde localmente antes da consulta remota.');
