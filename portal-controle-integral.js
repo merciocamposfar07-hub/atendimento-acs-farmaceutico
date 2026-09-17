@@ -111,11 +111,13 @@ function load(forcar){if(forcar&&window.PortalTacsPublicData&&typeof window.Port
 function init(){
   style();
   window.addEventListener('portal-tacs-public-data',function(event){render(event&&event.detail)});
-  load();
+  // RECADOS_PORTAL_LIVE_V1: ao abrir o Portal, consultar o servidor real antes de aceitar cache local antigo.
+  load(true);
   var select=document.getElementById('category');
   if(select)select.addEventListener('change',function(){var value=String(select.value||'').toLowerCase();if((value.indexOf('médica')!==-1||value.indexOf('medica')!==-1||value.indexOf('nutricionista')!==-1)&&lastData)render(lastData)});
   document.addEventListener('visibilitychange',function(){if(!document.hidden)load(true)});
-  setInterval(function(){load(true)},60000);
+  window.addEventListener('pageshow',function(){load(true)});
+  setInterval(function(){if(!document.hidden)load(true)},30000);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 }());
