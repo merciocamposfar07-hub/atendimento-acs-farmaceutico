@@ -15,15 +15,13 @@ on:
       - 'index.html'
       - 'scripts/test_resposta_imediata_conecta_v1.js'
       - 'scripts/test_travamento_familia_v2.js'
-      - 'scripts/aplicar_correcao_travamento_familia_20260916.py'
       - 'scripts/test_pin_agendas_safari_20260916.js'
-      - 'scripts/aplicar_correcao_pin_agendas_safari_20260916.py'
       - 'package.json'
       - '.github/workflows/validar-resposta-imediata-conecta.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   resposta-imediata:
@@ -32,35 +30,11 @@ jobs:
       - name: Baixar código
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Preparar Node
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Adaptar âncora do Portal atual
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('scripts/aplicar_correcao_travamento_familia_20260916.py')
-          s=p.read_text(encoding='utf-8')
-          s=s.replace(
-            "pattern=r'(<script\\s+src=\"/atendimento-acs-farmaceutico/moradores-autofill\\.js\\?v=[^\"]+\"></script>)'",
-            "pattern=r'(<script\\s+src=\"(?:/atendimento-acs-farmaceutico/)?moradores-autofill\\.js\\?v=[^\"]+\"></script>)'"
-          )
-          s=s.replace(
-            "family_src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260916-toque-resiliente-v1'",
-            "family_src='portal-identificacao-familia-v1.js?v=20260916-toque-resiliente-v1'"
-          )
-          p.write_text(s,encoding='utf-8')
-          PY
-      - name: Aplicar bloco de travamento e família
-        run: python3 scripts/aplicar_correcao_travamento_familia_20260916.py
-      - name: Restaurar script auxiliar anterior
-        run: git checkout -- scripts/aplicar_correcao_travamento_familia_20260916.py
-      - name: Validar script PIN e Agendas
-        run: python3 -m py_compile scripts/aplicar_correcao_pin_agendas_safari_20260916.py
-      - name: Aplicar bloco PIN e Agendas Safari
-        run: python3 scripts/aplicar_correcao_pin_agendas_safari_20260916.py
       - name: Validar sintaxe dos arquivos afetados
         run: |
           node --check conecta-morador-session-v1.js
@@ -77,33 +51,5 @@ jobs:
         run: node scripts/test_travamento_familia_v2.js
       - name: Executar gate PIN e Agendas Safari
         run: node scripts/test_pin_agendas_safari_20260916.js
-      - name: Restringir arquivos alterados pelos patches
-        run: |
-          git diff --check
-          python3 - <<'PY'
-          import subprocess
-          allowed={
-            'teste-v1/painel-moradores-transport-v2.js',
-            'conecta-moradores-native-v1.js',
-            'portal-identificacao-familia-v1.js',
-            'central-administrativa-tacs.html',
-            'central-administrativa-tacs.js',
-            'index.html'
-          }
-          changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
-          unexpected=changed-allowed
-          if unexpected:
-              raise SystemExit('Alteração fora do escopo: '+', '.join(sorted(unexpected)))
-          print('ESCOPO_CIRURGICO_OK:', ', '.join(sorted(changed)))
-          PY
-      - name: Publicar somente se os gates passaram
-        run: |
-          if git diff --quiet; then
-            echo 'Nenhuma alteração funcional pendente.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add teste-v1/painel-moradores-transport-v2.js conecta-moradores-native-v1.js portal-identificacao-familia-v1.js central-administrativa-tacs.html central-administrativa-tacs.js index.html
-          git commit -m 'fix: PIN TACS e Agendas Safari com escopo cirúrgico'
-          git push origin HEAD:main
+      - name: Confirmar árvore limpa
+        run: git diff --exit-code
