@@ -1,0 +1,149 @@
+name: Corrigir recados salvar com cache V1
+
+on:
+  push:
+    paths:
+      - '.github/workflows/corrigir-recados-salvar-cache-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar correção cirúrgica no painel de Recados e campanhas
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('painel-oficial-recados-campanhas.html')
+          s = path.read_text(encoding='utf-8')
+
+          def once(old, new, label):
+              global s
+              n = s.count(old)
+              if n != 1:
+                  raise SystemExit(f'{label}: esperado 1 trecho, encontrado {n}')
+              s = s.replace(old, new, 1)
+
+          once(
+              "function mutacaoPublica(action){return /^admin_(?:publicacoes_)?(salvar|remover|restaurar|criar)_/.test(txt(action))}",
+              "function mutacaoPublica(action){return /^admin_(?:publicacoes_)?(salvar|remover|restaurar|criar)_/.test(txt(action))}\nfunction leituraPublicacoesEmSegundoPlano(){return Boolean(ativa&&ativa.action==='admin_publicacoes_dados'&&snapshotVisivel)}\nfunction contextoMutacaoDisponivel(){return Boolean((contextoPronto||snapshotVisivel)&&areaId&&(token||territorioToken||ubsToken||accessMode==='ubs'))}\nfunction interromperLeituraPublicacoesEmSegundoPlano(){if(!leituraPublicacoesEmSegundoPlano())return false;var operacao=ativa;clearTimeout(operacao.timeout);clearTimeout(operacao.pollTimer);clearTimeout(operacao.submitTimer);ativa=null;entrar.disabled=false;if(entrarTacs)entrarTacs.disabled=false;sair.disabled=!(token||territorioToken||ubsToken||accessMode==='ubs');atualizarBloqueioMutacoes();return true}",
+              'helpers de escrita cache-first'
+          )
+
+          once(
+              "  if(ativa){cb({ok:false,message:'Aguarde a operação anterior.'});return}",
+              "  if(ativa){if(mutacaoPublica(action)&&leituraPublicacoesEmSegundoPlano()){interromperLeituraPublicacoesEmSegundoPlano()}else{cb({ok:false,message:'Aguarde a operação anterior.'});return}}",
+              'preempção da leitura em segundo plano ao salvar'
+          )
+
+          once(
+              "function atualizarBloqueioMutacoes(){var bloqueado=!contextoPronto||Boolean(ativa)||confirmacaoPendente;document.querySelectorAll('#conteudo .salvarNovoRecado,#conteudo .salvarNovaCampanha,#conteudo .salvarRecado,#conteudo .salvarCampanha,#conteudo .removerRecado,#conteudo .removerCampanha,#novoRecado,#novaCampanha').forEach(function(botao){botao.disabled=bloqueado});var select=document.getElementById('areaEnvio');if(select)select.disabled=bloqueado||!podeAdministrar||areas.length<2;atualizarUndo()}",
+              "function atualizarBloqueioMutacoes(){var bloqueado=!contextoMutacaoDisponivel()||Boolean(ativa&&!leituraPublicacoesEmSegundoPlano())||confirmacaoPendente;document.querySelectorAll('#conteudo .salvarNovoRecado,#conteudo .salvarNovaCampanha,#conteudo .salvarRecado,#conteudo .salvarCampanha,#conteudo .removerRecado,#conteudo .removerCampanha,#novoRecado,#novaCampanha').forEach(function(botao){botao.disabled=bloqueado});var select=document.getElementById('areaEnvio');if(select)select.disabled=!contextoPronto||Boolean(ativa)||confirmacaoPendente||!podeAdministrar||areas.length<2;atualizarUndo()}",
+              'bloqueio de mutações independente da leitura de fundo'
+          )
+
+          once(
+              "if(!contextoPronto){status('statusOperacao','Aguarde a validação da área e das notificações antes de salvar.','aviso');return}",
+              "if(!contextoMutacaoDisponivel()){status('statusOperacao','Aguarde a validação da sessão e da área antes de salvar.','aviso');return}",
+              'guarda de salvamento com snapshot válido'
+          )
+
+          once(
+              "function remover(tipo,id){var anterior=achar(tipo,id);if(!anterior)return;if(!confirm('Remover '+(tipo==='recado'?'este recado':'esta campanha')+' da planilha real?'))return;",
+              "function remover(tipo,id){var anterior=achar(tipo,id);if(!anterior)return;if(!contextoMutacaoDisponivel()){status('statusOperacao','Aguarde a validação da sessão e da área antes de remover.','aviso');return}if(!confirm('Remover '+(tipo==='recado'?'este recado':'esta campanha')+' da planilha real?'))return;",
+              'guarda de remoção com snapshot válido'
+          )
+
+          once(
+              "version:'1.3.0-local-first'",
+              "version:'1.3.1-cache-write-nonblocking'",
+              'versão do painel'
+          )
+
+          path.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Validar escopo e invariantes
+        shell: bash
+        run: |
+          set -euo pipefail
+          bad=$(git diff --name-only | grep -Ev '^painel-oficial-recados-campanhas\.html$' || true)
+          if [ -n "$bad" ]; then
+            echo "Arquivo fora do escopo: $bad"
+            exit 1
+          fi
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('painel-oficial-recados-campanhas.html').read_text(encoding='utf-8')
+          assert "version:'1.3.1-cache-write-nonblocking'" in s
+          assert "function contextoMutacaoDisponivel()" in s
+          assert "function leituraPublicacoesEmSegundoPlano()" in s
+          assert "function interromperLeituraPublicacoesEmSegundoPlano()" in s
+          assert "mutacaoPublica(action)&&leituraPublicacoesEmSegundoPlano()" in s
+          assert "var bloqueado=!contextoMutacaoDisponivel()||Boolean(ativa&&!leituraPublicacoesEmSegundoPlano())||confirmacaoPendente" in s
+          assert "if(!contextoMutacaoDisponivel()){status('statusOperacao','Aguarde a validação da sessão e da área antes de salvar.'" in s
+          assert "if(!contextoMutacaoDisponivel()){status('statusOperacao','Aguarde a validação da sessão e da área antes de remover.'" in s
+          assert "Últimos dados confirmados permanecem visíveis. A sincronização continuará em segundo plano." in s
+          assert "function payloadRecado" in s and "function payloadCampanha" in s
+          print('validacao-recados-cache-write-ok')
+          PY
+
+      - name: Teste lógico do bloqueio cache-first
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'JS'
+          function bloqueado({contextoPronto,snapshotVisivel,areaId,sessao,ativa,confirmacaoPendente}){
+            const contextoMutacaoDisponivel=Boolean((contextoPronto||snapshotVisivel)&&areaId&&sessao);
+            const leituraPublicacoesEmSegundoPlano=Boolean(ativa&&ativa.action==='admin_publicacoes_dados'&&snapshotVisivel);
+            return !contextoMutacaoDisponivel||Boolean(ativa&&!leituraPublicacoesEmSegundoPlano)||confirmacaoPendente;
+          }
+          if (bloqueado({contextoPronto:false,snapshotVisivel:true,areaId:'JAPARANDUBA',sessao:true,ativa:null,confirmacaoPendente:false}) !== false) throw new Error('snapshot válido deveria liberar salvar');
+          if (bloqueado({contextoPronto:false,snapshotVisivel:true,areaId:'JAPARANDUBA',sessao:true,ativa:{action:'admin_publicacoes_dados'},confirmacaoPendente:false}) !== false) throw new Error('leitura em segundo plano não deveria bloquear salvar');
+          if (bloqueado({contextoPronto:true,snapshotVisivel:false,areaId:'JAPARANDUBA',sessao:true,ativa:{action:'admin_publicacoes_salvar_recado'},confirmacaoPendente:false}) !== true) throw new Error('salvamento em curso deve bloquear nova mutação');
+          if (bloqueado({contextoPronto:false,snapshotVisivel:false,areaId:'JAPARANDUBA',sessao:true,ativa:null,confirmacaoPendente:false}) !== true) throw new Error('sem contexto nem snapshot deve permanecer bloqueado');
+          console.log('teste-logico-cache-write-ok');
+          JS
+
+      - name: Publicar somente a correção autorizada
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Nenhuma alteração pendente.'
+            exit 0
+          fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add painel-oficial-recados-campanhas.html
+          git commit -m 'Libera salvar recados com cache durante sincronização'
+          git push
+
+      - name: Validar GitHub Pages publicado
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html'
+          ok=0
+          for i in $(seq 1 36); do
+            pagina=$(curl -fsSL --max-time 20 "$url?v=20260917-recados-cache-write-v1&_=$RANDOM" || true)
+            if printf '%s' "$pagina" | grep -q "1.3.1-cache-write-nonblocking" \
+              && printf '%s' "$pagina" | grep -q "contextoMutacaoDisponivel" \
+              && printf '%s' "$pagina" | grep -q "leituraPublicacoesEmSegundoPlano"; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ok" = 1
