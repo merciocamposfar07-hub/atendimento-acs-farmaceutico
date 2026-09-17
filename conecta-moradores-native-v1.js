@@ -88,7 +88,27 @@ function create(host,options){
 
   function setDirty(v){dirty=Boolean(v);host.dataset.tacsDirty=dirty?'1':'0'}
   function remoteReady(){return Boolean(core&&typeof core.ready==='function'&&core.ready())}
-  function showWaitingSession(){var status=host.querySelector('#loginStatus');if(status){status.textContent='Aguarde enquanto os dados carregam…';status.className='status warn'}}
+  function showWaitingSession(){
+    var transport=window.PortalTacsMoradoresTransportV2;
+    if(transport&&typeof transport.showAuthenticatedShell==='function'){
+      try{
+        transport.showAuthenticatedShell('Acesso validado. Conferindo os dados em segundo plano.');
+        var perf=core&&core.performance;
+        if(perf&&typeof perf.prime==='function'&&typeof transport.renderBase==='function'){
+          perf.prime('moradores-base',function(data){
+            try{
+              transport.renderBase(data,'Dados anteriores exibidos enquanto a confirmação atual é concluída.',false);
+              var search=host.querySelector('#search');if(search){search.disabled=true;search.textContent='Conferindo base…'}
+              var areaSelect=host.querySelector('#areaSelect');if(areaSelect)areaSelect.disabled=true;
+              var operationStatus=host.querySelector('#operationStatus');if(operationStatus){operationStatus.textContent='Conferindo atualização da base…';operationStatus.className='status warn'}
+            }catch(ignoreCache){}
+          });
+        }
+        return;
+      }catch(ignoreShell){}
+    }
+    var status=host.querySelector('#loginStatus');if(status){status.textContent='Aguarde enquanto os dados carregam…';status.className='status warn'}
+  }
   function notify(type){
     if(type==='write-confirmed')setDirty(false);
   }
