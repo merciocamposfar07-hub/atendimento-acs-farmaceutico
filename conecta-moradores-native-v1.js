@@ -92,15 +92,19 @@ function create(host,options){
     var transport=window.PortalTacsMoradoresTransportV2;
     if(transport&&typeof transport.showAuthenticatedShell==='function'){
       try{
-        transport.showAuthenticatedShell('Acesso validado. Conferindo os dados em segundo plano.');
-        var perf=core&&core.performance;
+        /* CACHE_FIRST_MORADORES_ORDEM_VISUAL_20260917:
+           snapshot conhecido aparece antes de qualquer estado AGUARDE.
+           Segurança não muda: renderBase(..., false) mantém escrita, situação
+           e consolidação bloqueadas até a confirmação remota. */
+        var perf=core&&core.performance,snapshot=null;
         if(perf&&typeof perf.prime==='function'&&typeof transport.renderBase==='function'){
-          perf.prime('moradores-base',function(data){
+          snapshot=perf.prime('moradores-base',function(data){
             try{
               transport.renderBase(data,'Dados anteriores exibidos enquanto a confirmação atual é concluída.',false);
             }catch(ignoreCache){}
           });
         }
+        if(!snapshot)transport.showAuthenticatedShell('Acesso validado. Conferindo os dados em segundo plano.');
         return;
       }catch(ignoreShell){}
     }
