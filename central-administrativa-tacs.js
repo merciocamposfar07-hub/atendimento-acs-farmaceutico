@@ -447,7 +447,7 @@ function updateCentralWelcome(area,tacs){
   var adminPerfil=accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');
   node.innerHTML='<small>Identidade autenticada</small><h1>'+esc(adminNome+' — '+adminPerfil)+'</h1><p>Gestão administrativa da área selecionada.</p>';
 }
-function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId})){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(mode==='admin'&&areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):(mode==='ubs'?accessProfileLabel(ubs&&ubs.perfil||'UBS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN'));el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(mode==='ubs'?(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'UBS'):(text(admin&&admin.nomeCompleto)||'Administrador'));el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=mode==='ubs';el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=(mode!=='admin'&&mode!=='ubs')||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;if(mode!=='ubs'){renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm();renderHealthInstant(selectedAreaId);if(!skipHealth)scheduleHealthRefresh(false,650)}else{renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm()}}
+function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId})){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(mode==='admin'&&areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):(mode==='ubs'?accessProfileLabel(ubs&&ubs.perfil||'UBS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN'));el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(mode==='ubs'?(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'UBS'):(text(admin&&admin.nomeCompleto)||'Administrador'));el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=mode==='ubs';el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=(mode!=='admin'&&mode!=='ubs')||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;if(mode!=='ubs'){renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm();renderHealthInstant(selectedAreaId);if(!skipHealth)scheduleHealthRefresh(false,1800)}else{renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm()}}
 function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
 function markHealth(id,label,state){var n=el(id),s=n.querySelector('span');n.className='health-card'+(state?' '+state:'');s.textContent=label}
 function updatePendingBadge(result){
@@ -1596,49 +1596,69 @@ function logout(){
   },0);
 }
 /* LOGIN_PREFETCH_ESTATICO_V2: a tela termina de carregar primeiro. Depois, fetch assíncrono aquece o cache sem iframe oculto e sem bloquear o evento load do Safari. */
-var staticPrefetchStarted=false;
+var staticPrefetchStarted=false,staticPrefetchQueueTimer=null;
+/* CORRECAO_CONGELAMENTO_PREWARM_2026_09_16_V1:
+   pré-aquecimento de arquivos é leve e serial. Nunca dispara uma rajada de downloads
+   no mesmo instante em que o usuário está tocando na Central. */
 function prefetchStaticPanels(){
   if(staticPrefetchStarted)return;
   if(active){setTimeout(prefetchStaticPanels,1200);return}
   staticPrefetchStarted=true;
-  [
-    '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html',
+  var queue=[
+    '/atendimento-acs-farmaceutico/conecta-module-core-v1.js',
+    '/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js',
+    '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-transport-v2.js',
+    '/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js',
+    '/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js',
+    '/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js',
     '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html',
     '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html',
-    '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html',
-    '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html',
-    '/atendimento-acs-farmaceutico/painel-oficial-tacs-areas.html',
-    '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html',
-    '/atendimento-acs-farmaceutico/teste-v1/painel-profissionais-servicos-v1.html',
-    '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html',
-    '/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js',
-    '/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js',
-    '/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js',
-    '/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js',
-    '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-transport-v2.js'
-  ].forEach(function(url){
-    try{fetch(url+'?v=20260910-login-prefetch-v2',{method:'GET',cache:'force-cache',credentials:'same-origin',priority:'low'}).catch(function(){})}catch(e){}
-  });
+    '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html'
+  ],index=0;
+  function next(){
+    if(index>=queue.length)return;
+    var url=queue[index++];
+    var run=function(){
+      try{fetch(url+'?v=20260916-prewarm-leve-v1',{method:'GET',cache:'force-cache',credentials:'same-origin',priority:'low'}).catch(function(){})}catch(e){}
+      staticPrefetchQueueTimer=setTimeout(next,260);
+    };
+    if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:1400});else setTimeout(run,90);
+  }
+  next();
 }
 ['adminPin','tacsPin'].forEach(function(id){var input=el(id);if(!input)return;input.addEventListener('focus',aquecerValidacaoPin,{once:true});input.addEventListener('input',aquecerValidacaoPin,{once:true})});
 var nativePanelPrewarmStarted=false,nativePanelPrewarmScheduled=false,staticPanelPrefetchScheduled=false;
 function prewarmNativePanelAssets(){
   if(nativePanelPrewarmStarted)return;
   nativePanelPrewarmStarted=true;
-  try{ensureTask16AgendaAssets(function(){})}catch(e){}
-  try{ensureTask17MoradoresAssets(function(){})}catch(e){}
-  try{ensureTask18ProfissionaisAssets(function(){})}catch(e){}
+  /* Um módulo por vez. O navegador nunca precisa parsear três runtimes grandes juntos. */
+  var queue=[ensureTask17MoradoresAssets,ensureTask16AgendaAssets,ensureTask18ProfissionaisAssets],index=0;
+  function next(){
+    if(index>=queue.length)return;
+    var loader=queue[index++];
+    try{
+      loader(function(){
+        setTimeout(function(){
+          if('requestIdleCallback' in window)requestIdleCallback(next,{timeout:1600});else next();
+        },320);
+      });
+    }catch(e){setTimeout(next,320)}
+  }
+  next();
 }
 function scheduleNativePanelPrewarm(){
   if(nativePanelPrewarmStarted||nativePanelPrewarmScheduled)return;
   nativePanelPrewarmScheduled=true;
-  var run=function(){nativePanelPrewarmScheduled=false;prewarmNativePanelAssets()};
-  if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:350});else setTimeout(run,60);
+  /* Primeiro deixa a Central totalmente responsiva; só depois aquece os scripts. */
+  setTimeout(function(){
+    var run=function(){nativePanelPrewarmScheduled=false;prewarmNativePanelAssets()};
+    if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:1800});else run();
+  },900);
   if(!staticPanelPrefetchScheduled){
     staticPanelPrefetchScheduled=true;
     setTimeout(function(){
-      if('requestIdleCallback' in window)requestIdleCallback(prefetchStaticPanels,{timeout:900});else prefetchStaticPanels();
-    },420);
+      if('requestIdleCallback' in window)requestIdleCallback(prefetchStaticPanels,{timeout:1800});else prefetchStaticPanels();
+    },2400);
   }
 }
 
@@ -1718,24 +1738,20 @@ function prewarmPanelRuntime(name){
   if(name==='suporte'||name==='recados'||name==='territorio'||name==='municipios')prewarmLegacyPanel(name);
 }
 function schedulePanelRuntimePrewarm(){
-  if(!context||!selectedAreaId||!panelRuntimeRemoteReady())return;
+  if(!context||!selectedAreaId)return;
   var scope=shellCurrentScope();
   if(panelRuntimePrewarmScope===scope)return;
   cancelPanelRuntimePrewarm();
   panelRuntimePrewarmScope=scope;
-  var order=['moradores','agendas','profissionais','recados','suporte','territorio','municipios'];
-  var delays={moradores:80,agendas:240,profissionais:430,recados:700,suporte:980,territorio:1320,municipios:1680};
-  order.forEach(function(name){
-    if(!panelRuntimeAllowed(name))return;
-    panelRuntimePrewarmTimers.push(setTimeout(function(){
-      if(panelRuntimePrewarmScope!==scope||shellCurrentScope()!==scope||!panelRuntimeRemoteReady())return;
-      prewarmPanelRuntime(name);
-    },delays[name]||0));
-  });
+  /* CORRECAO_CONGELAMENTO_PREWARM_2026_09_16_V1:
+     não monta iframes nem painéis nativos ocultos. O snapshot persistente já atende
+     ao cache-first quando o usuário toca; montar sete runtimes invisíveis em sequência
+     estava competindo com o toque e com o Apps Script no Safari/iPhone. */
+  scheduleNativePanelPrewarm();
 }
 window.addEventListener('load',function(){
   scheduleNativePanelPrewarm();
-  if(!staticPanelPrefetchScheduled){staticPanelPrefetchScheduled=true;setTimeout(prefetchStaticPanels,900)}
+  if(!staticPanelPrefetchScheduled){staticPanelPrefetchScheduled=true;setTimeout(prefetchStaticPanels,2600)}
 },{once:true});
 el('tabAdmin').addEventListener('click',function(){if(!TACS_ONLY)showLogin('admin')});el('tabTacs').addEventListener('click',function(){showLogin('tacs')});
 el('loginAdmin').addEventListener('click',function(){
