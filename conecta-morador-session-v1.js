@@ -3,6 +3,8 @@
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var TOKEN_KEY='portalConectaMoradorTokenV1',PROFILE_KEY='portalConectaMoradorQuickV1',DEVICE_KEY='portalTacsDispositivoV1',BOOTSTRAP_KEY='portalConectaMoradorBootstrapV2',BG_REQUEST_KEY='portalConectaMoradorLoginRequestV2';
 var token='',resident=null,oneSignal=null,busy=false;
+/* RESPOSTA_IMEDIATA_MORADOR_2026_09_16_V1: cache efêmero, isolado por área/família/token. */
+var familyMemberCache={},familyMemberLoads={},familyWarmGeneration=0;
 
 function text(v){return String(v==null?'':v).trim()}
 var MORADOR_SESSION_AUTH_REFUSAL_RE=/(sess[aã]o|token|autentica[cç][aã]o|acesso).*(inv[aá]lid|expir|recus|revog|desativ|n[aã]o autoriz)|n[aã]o autorizado|unauthor|forbidden|pertence a outro aparelho/i;
@@ -54,14 +56,14 @@ function applyResident(r,localOnly){
  resident=r||resident;if(!resident)return;
  prefill(resident);
  var old=el('cscResidentBar');if(old)old.remove();
- topBar(resident);renderFamily(resident);
+ topBar(resident);renderFamily(resident);warmFamilyMembers(Array.isArray(resident.familia)?resident.familia:[]);
  if(onboardingFlag()||(!localOnly&&!resident.notificacoesAtivas))showGate();else if(!onboardingFlag())hideGate();
 }
 
 function ensureStyle(){
  if(el('cscResidentSessionStyle'))return;
  var s=document.createElement('style');s.id='cscResidentSessionStyle';s.textContent=
- '.csc-resident-bar{position:sticky;top:0;z-index:9500;width:min(calc(100% - 20px),980px);margin:8px auto 0;padding:10px 12px;display:flex;align-items:center;gap:10px;border:1px solid #315d74;border-radius:18px;background:rgba(6,44,70,.96);color:#fff;box-shadow:0 10px 28px rgba(3,35,56,.25);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}.csc-resident-bar strong{display:block;min-width:0;flex:1;font-size:.95rem}.csc-resident-bar small{display:block;color:#c9dce6;font-weight:650;margin-top:2px}.csc-resident-icon{width:46px;height:46px;border:1px solid #4d7890;border-radius:15px;background:#0b4263;color:#fff;font-size:1.25rem;display:grid;place-items:center}.csc-resident-menu{display:flex;gap:7px}.csc-resident-menu button{min-height:44px;border:1px solid #4d7890;border-radius:14px;background:#0d567a;color:#fff;padding:8px 11px;font-weight:850}.csc-family-session{width:min(calc(100% - 24px),956px);margin:12px auto;padding:15px;border:1px solid #93b4c4;border-radius:20px;background:#fff;color:#102d40;box-shadow:0 10px 25px rgba(7,58,85,.09)}.csc-family-session h2{margin:0 0 5px;font-size:1.25rem;color:#073a55}.csc-family-session p{margin:0 0 10px;color:#536b78}.csc-family-grid{display:grid;gap:8px}.csc-family-person{width:100%;min-height:54px;border:1px solid #8eb0c1;border-radius:15px;background:#eef7fa;color:#073a55;text-align:left;padding:10px 12px;font-weight:900}.csc-family-person.active{border-color:#15935a;background:#e8f7ee;color:#075b31}.csc-family-person span{display:block;margin-top:2px;color:#536b78;font-size:.82rem}.csc-gate{position:fixed;inset:0;z-index:70000;display:grid;place-items:center;padding:18px;background:rgba(3,16,27,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}.csc-gate[hidden]{display:none!important}.csc-gate-card{width:min(520px,100%);padding:22px;border:1px solid #2b5a76;border-radius:26px;background:#102d46;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5)}.csc-gate-card h2{margin:0 0 9px;color:#fff}.csc-gate-card p{color:#d5e4ec;line-height:1.45}.csc-gate-card button{width:100%;min-height:56px;border:0;border-radius:16px;background:#176a48;color:#fff;font-weight:900;font-size:1rem}.csc-gate-status{margin-top:12px;padding:11px 12px;border:1px solid #3f6980;border-radius:14px;background:#0a2438;color:#dcebf2;font-weight:750}.csc-gate-status.err{border-color:#a85d64;background:#401e26;color:#ffd7da}.csc-gate-status.ok{border-color:#49a97a;background:#103b2b;color:#c8f6dc}.csc-session-hidden-doc{display:none!important}@media(max-width:560px){.csc-resident-bar{align-items:flex-start}.csc-resident-menu{flex-direction:column}.csc-resident-menu button{min-height:40px;padding:6px 9px;font-size:.82rem}}';
+ '.csc-resident-bar{position:sticky;top:0;z-index:9500;width:min(calc(100% - 20px),980px);margin:8px auto 0;padding:10px 12px;display:flex;align-items:center;gap:10px;border:1px solid #315d74;border-radius:18px;background:rgba(6,44,70,.96);color:#fff;box-shadow:0 10px 28px rgba(3,35,56,.25);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}.csc-resident-bar strong{display:block;min-width:0;flex:1;font-size:.95rem}.csc-resident-bar small{display:block;color:#c9dce6;font-weight:650;margin-top:2px}.csc-resident-icon{width:46px;height:46px;border:1px solid #4d7890;border-radius:15px;background:#0b4263;color:#fff;font-size:1.25rem;display:grid;place-items:center}.csc-resident-menu{display:flex;gap:7px}.csc-resident-menu button{min-height:44px;border:1px solid #4d7890;border-radius:14px;background:#0d567a;color:#fff;padding:8px 11px;font-weight:850}.csc-family-session{width:min(calc(100% - 24px),956px);margin:12px auto;padding:15px;border:1px solid #93b4c4;border-radius:20px;background:#fff;color:#102d40;box-shadow:0 10px 25px rgba(7,58,85,.09)}.csc-family-session h2{margin:0 0 5px;font-size:1.25rem;color:#073a55}.csc-family-session p{margin:0 0 10px;color:#536b78}.csc-family-grid{display:grid;gap:8px}.csc-family-person{width:100%;min-height:54px;border:1px solid #8eb0c1;border-radius:15px;background:#eef7fa;color:#073a55;text-align:left;padding:10px 12px;font-weight:900}.csc-family-person.active{border-color:#15935a;background:#e8f7ee;color:#075b31}.csc-family-person:active{transform:scale(.985);filter:brightness(1.04)}.csc-family-person[aria-busy="true"]{cursor:progress}.csc-family-person span{display:block;margin-top:2px;color:#536b78;font-size:.82rem}.csc-gate{position:fixed;inset:0;z-index:70000;display:grid;place-items:center;padding:18px;background:rgba(3,16,27,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}.csc-gate[hidden]{display:none!important}.csc-gate-card{width:min(520px,100%);padding:22px;border:1px solid #2b5a76;border-radius:26px;background:#102d46;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5)}.csc-gate-card h2{margin:0 0 9px;color:#fff}.csc-gate-card p{color:#d5e4ec;line-height:1.45}.csc-gate-card button{width:100%;min-height:56px;border:0;border-radius:16px;background:#176a48;color:#fff;font-weight:900;font-size:1rem}.csc-gate-status{margin-top:12px;padding:11px 12px;border:1px solid #3f6980;border-radius:14px;background:#0a2438;color:#dcebf2;font-weight:750}.csc-gate-status.err{border-color:#a85d64;background:#401e26;color:#ffd7da}.csc-gate-status.ok{border-color:#49a97a;background:#103b2b;color:#c8f6dc}.csc-session-hidden-doc{display:none!important}@media(max-width:560px){.csc-resident-bar{align-items:flex-start}.csc-resident-menu{flex-direction:column}.csc-resident-menu button{min-height:40px;padding:6px 9px;font-size:.82rem}}';
  document.head.appendChild(s);
 }
 function setField(id,value){
@@ -100,16 +102,56 @@ function mergeResidentFamily(primary,fallback){
  out.familiaId=text(primary&&primary.familiaId)||text(fallback&&fallback.familiaId);
  return out;
 }
+/* RESPOSTA_IMEDIATA_MORADOR_2026_09_16_V1
+   O toque nunca espera Apps Script para responder visualmente.
+   Integrantes com documento são pré-resolvidos em segundo plano e mantidos somente
+   em memória, com chave por área + família + token. Nenhum CPF/CNS novo é persistido
+   por este cache. A rede continua sendo a autoridade de atualização. */
+function familyMemberKey(tok){
+ return text((resident&&resident.areaId)||areaId())+'|'+text(resident&&resident.familiaId)+'|'+text(tok);
+}
+function resolveFamilyMember(tok){
+ var key=familyMemberKey(tok);if(!text(tok)||!key)return Promise.reject(new Error('Integrante inválido.'));
+ if(familyMemberCache[key])return Promise.resolve(familyMemberCache[key]);
+ if(familyMemberLoads[key])return familyMemberLoads[key];
+ familyMemberLoads[key]=jsonp({action:'publico_familia_membro',areaId:(resident&&resident.areaId)||areaId(),token:tok}).then(function(r){
+  if(!r||r.ok!==true||!r.documentoAcesso)throw new Error(r&&r.message||'Não foi possível carregar este integrante.');
+  familyMemberCache[key]=r;return r;
+ }).finally(function(){delete familyMemberLoads[key]});
+ return familyMemberLoads[key];
+}
+function warmFamilyMembers(members){
+ var generation=++familyWarmGeneration,list=Array.isArray(members)?members.filter(function(m){return m&&m.temDocumento&&m.token}):[],index=0;
+ function next(){
+  if(generation!==familyWarmGeneration||index>=list.length)return;
+  var item=list[index++];
+  resolveFamilyMember(item.token).catch(function(){}).finally(function(){if(generation===familyWarmGeneration)setTimeout(next,70)});
+ }
+ setTimeout(next,30);
+}
+function applyFamilyMemberData(r,name,birth){
+ setField('cpf',r.documentoAcesso);
+ setField('name',r.nome||name);
+ setField('birth',r.nascimento||birth);
+}
 function selectFamilyMember(button){
  var tok=text(button.getAttribute('data-csc-family-token')),name=text(button.getAttribute('data-csc-family-name')),birth=text(button.getAttribute('data-csc-family-birth')),has=button.getAttribute('data-csc-family-hasdoc')==='1';
+ /* Resposta tátil/visual primeiro: seleção e dados locais conhecidos aparecem já no toque. */
  document.querySelectorAll('.csc-family-person').forEach(function(x){x.classList.toggle('active',x===button)});
+ setField('name',name);setField('birth',birth);
  if(!has||!tok){
-  setField('name',name);setField('birth',birth);
   if(tok){promptMemberCpf(button,tok,name,birth);return}
   showPortalToast('Este integrante ainda não possui documento disponível. A solicitação permanece acessível e o cadastro poderá ser regularizado pelo TACS.');
   return
  }
- jsonp({action:'publico_familia_membro',areaId:resident.areaId||areaId(),token:tok}).then(function(r){if(!r||r.ok!==true||!r.documentoAcesso)throw new Error(r&&r.message||'Não foi possível carregar este integrante.');setField('cpf',r.documentoAcesso);setTimeout(function(){setField('name',r.nome||name);if(birth)setField('birth',birth)},80)}).catch(function(e){showPortalToast(e.message)});
+ var key=familyMemberKey(tok),cached=familyMemberCache[key];
+ if(cached){applyFamilyMemberData(cached,name,birth);return}
+ button.setAttribute('aria-busy','true');
+ resolveFamilyMember(tok).then(function(r){
+  applyFamilyMemberData(r,name,birth);
+ }).catch(function(e){
+  showPortalToast(e.message);
+ }).finally(function(){button.removeAttribute('aria-busy')});
 }
 function promptMemberCpf(button,tok,name,birth){
  var box=el('cscFamilySession');if(!box)return;
