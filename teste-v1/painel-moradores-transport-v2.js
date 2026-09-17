@@ -14,6 +14,7 @@ var ubsToken=moduleSession&&moduleSession.ubsToken||'';
 var accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':'')));
 var device=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
 var active=null;
+var baseRemoteTimer=null;
 var writesEnabled=false;
 var situationEnabled=false;
 var consolidationEnabled=false;
@@ -572,14 +573,27 @@ function renderBase(r,message,confirmed){
   return true;
 }
 
+function moradoresRemoteReady(){return Boolean(moduleCore&&typeof moduleCore.ready==='function'&&moduleCore.ready())}
+function scheduleMoradoresRemote(message,done){
+  if(baseRemoteTimer)return;
+  baseRemoteTimer=setTimeout(function waitMoradores(){
+    if(moradoresRemoteReady()){baseRemoteTimer=null;loadBase(message,done);return}
+    baseRemoteTimer=setTimeout(waitMoradores,450);
+  },450);
+}
 function loadBase(message,done){
   var cached=null;
   if(modulePerf&&typeof modulePerf.prime==='function'){
-    cached=modulePerf.prime('moradores-base',function(data){renderBase(data,'Aguarde enquanto os dados carregam…',false)});
+    cached=modulePerf.prime('moradores-base',function(data){renderBase(data,'',false);settleLoadingStatuses()});
   }
   if(!cached){
     setStatus('loginStatus','Aguarde enquanto os dados carregam…','warn');
     setStatus('operationStatus','Aguarde enquanto os dados carregam…','warn');
+  }
+  if(!moradoresRemoteReady()){
+    if(cached)settleLoadingStatuses();
+    scheduleMoradoresRemote(message,done);
+    return;
   }
   var leituraPayload=session();coreRead('admin_moradores_status',leituraPayload,function(next){readPost('admin_moradores_status',leituraPayload,'admin_moradores_result',next)},function(r){
     if(!r||r.ok!==true){var ok=renderBase(r,message,true);if(typeof done==='function')done(r,ok);return}
