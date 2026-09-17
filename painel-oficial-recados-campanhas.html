@@ -2618,8 +2618,30 @@ var token=moduleSession&&moduleSession.token||'',territorioToken=moduleSession&&
 var accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territorioToken?'tacs':(token?'admin':''));var podeAdministrar=accessMode==='admin';
 if(!dispositivo){dispositivo='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,dispositivo)}
 var areaId=moduleCore&&typeof moduleCore.areaId==='function'?moduleCore.areaId():(new URLSearchParams(location.search).get('area')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA';
-var dados={recados:[],campanhas:[]},areas=[],ativa=null,contador=0,abaAtual='recados',testesOk=false,manutencaoAtiva=false,manutencaoConhecida=false,contextoPronto=false,confirmacaoPendente=false,snapshotVisivel=false,snapshotReconexaoTentativas=0,snapshotReconexaoTimer=null;
+var dados={recados:[],campanhas:[]},areas=[],ativa=null,contador=0,abaAtual='recados',testesOk=false,manutencaoAtiva=false,manutencaoConhecida=false,contextoPronto=false,confirmacaoPendente=false,snapshotVisivel=false,snapshotReconexaoTentativas=0,snapshotReconexaoTimer=null,cacheRemoteTimer=null;
 var entrar=document.getElementById('entrar'),entrarTacs=document.getElementById('entrarTacs'),sair=document.getElementById('sair'),desfazer=document.getElementById('desfazer'),contraste=document.getElementById('alternarContraste');
+function syncCoreSession(){
+  if(!moduleCore)return;
+  try{
+    var atual=typeof moduleCore.session==='function'?moduleCore.session({escopo:'recados'}):null;
+    token=atual&&atual.token||'';
+    territorioToken=atual&&atual.territorioToken||'';
+    ubsToken=atual&&atual.ubsToken||'';
+    if(atual&&atual.dispositivo)dispositivo=atual.dispositivo;
+    if(typeof moduleCore.mode==='function')accessMode=moduleCore.mode()||accessMode;
+  }catch(e){}
+}
+function remoteSessionReady(){
+  syncCoreSession();
+  return Boolean(token||territorioToken||ubsToken||(moduleCore&&typeof moduleCore.ready==='function'&&moduleCore.ready()));
+}
+function scheduleCacheRemoteSync(msg){
+  if(cacheRemoteTimer)return;
+  cacheRemoteTimer=setTimeout(function waitRemote(){
+    if(remoteSessionReady()){cacheRemoteTimer=null;carregar(msg,null,true);return}
+    cacheRemoteTimer=setTimeout(waitRemote,450);
+  },450);
+}
 function txt(v){return String(v==null?'':v)}
 function cacheFingerprint(v){var s=txt(v),a=2166136261,b=2246822519;for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,3266489917)}return (a>>>0).toString(16)+(b>>>0).toString(16)}
 function cacheTacsProfile(){try{var p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');return p&&p.tacsId&&p.areaId?p:null}catch(e){return null}}
@@ -2628,12 +2650,13 @@ function dataCacheKey(){var id=cacheIdentity();return id?'portalTacsAdminSnapsho
 function lerSnapshot(){try{var key=dataCacheKey();if(!key)return null;var item=JSON.parse(localStorage.getItem(key)||'null');if(!item||!item.data||Date.now()-Number(item.salvoEm||0)>24*60*60*1000)return null;return item}catch(e){return null}}
 function salvarSnapshot(r){try{var key=dataCacheKey();if(!key)return;localStorage.setItem(key,JSON.stringify({salvoEm:Date.now(),data:{ok:true,areaId:areaId,recados:Array.isArray(r.recados)?r.recados:[],campanhas:Array.isArray(r.campanhas)?r.campanhas:[]}}))}catch(e){}}
 function aplicarSnapshotSeDisponivel(){
- if(!(token||territorioToken||ubsToken||accessMode==='ubs'))return false;
  if(modulePerf&&typeof modulePerf.prime==='function'){
   var coreItem=modulePerf.prime('recados',function(data){snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;aplicar(data,true)});
   if(coreItem){limparStatusCarregamento('loginStatus');limparStatusCarregamento('statusOperacao');return true}
-  return false;
  }
+ /* O fallback legado depende da identidade remota; sem token, apenas o snapshot
+    persistente do core é elegível. */
+ if(!(token||territorioToken||ubsToken||accessMode==='ubs'))return false;
  var item=lerSnapshot();if(!item)return false;snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;aplicar(item.data,true);limparStatusCarregamento('loginStatus');limparStatusCarregamento('statusOperacao');return true
 }
 function cancelarReconexaoSnapshot(){if(snapshotReconexaoTimer){clearTimeout(snapshotReconexaoTimer);snapshotReconexaoTimer=null}}
@@ -2713,7 +2736,7 @@ function renderAreas(){var box=document.getElementById('areaEnvioBox'),select=do
 function carregarAreas(cb){post('admin_moradores_areas',sessao(),function(r){if(!r||r.ok!==true||!Array.isArray(r.areas)||!r.areas.length){areas=[];contextoPronto=false;renderAreas();manutencaoConhecida=false;status('statusOperacao','Não foi possível validar as áreas. Notificações e manutenção foram bloqueadas por segurança.','erro');if(cb)cb(false,r);return}areas=r.areas;areaId=txt(r.areaId||areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'')||areaId;renderAreas();if(cb)cb(true,r)},'admin_moradores_result')}
 function renderManutencao(){var box=document.getElementById('manutencaoBox'),estado=document.getElementById('manutencaoEstado'),texto=document.getElementById('manutencaoTexto'),botao=document.getElementById('alternarManutencao');box.classList.toggle('ativa',manutencaoAtiva);estado.textContent=manutencaoAtiva?'PORTAL EM MANUTENÇÃO':'Portal disponível';texto.textContent=manutencaoAtiva?'Novos testes e salvamentos continuam permitidos, mas nenhuma notificação comum será enviada aos aparelhos inscritos.':'Qualquer recado ou campanha ativa que você salvar ou republicar poderá gerar uma nova notificação.';botao.textContent=manutencaoAtiva?'DESATIVAR MANUTENÇÃO':'ATIVAR PORTAL EM MANUTENÇÃO';botao.classList.toggle('oculto',!podeAdministrar);botao.disabled=!podeAdministrar||!manutencaoConhecida||Boolean(ativa)}
 function carregarManutencao(cb){post('admin_portal_manutencao_status',sessao(),function(r){if(r&&r.ok===true){manutencaoAtiva=bool(r.ativa);manutencaoConhecida=true;contextoPronto=true;renderManutencao();atualizarBloqueioMutacoes();if(cb)cb(true,r);return}manutencaoConhecida=false;contextoPronto=false;renderManutencao();atualizarBloqueioMutacoes();status('statusOperacao','Não foi possível confirmar o estado de manutenção. Publicações foram bloqueadas por segurança.','erro');if(cb)cb(false,r)})}
-function carregar(msg,cb,silencioso){contextoPronto=false;manutencaoConhecida=false;var tinhaSnapshot=aplicarSnapshotSeDisponivel();if(!tinhaSnapshot){status('loginStatus','Aguarde enquanto os dados carregam…','aviso');status('statusOperacao','Aguarde enquanto os dados carregam…','aviso')}var leituraPayload=sessao();coreRead('admin_publicacoes_dados',leituraPayload,function(done){post('admin_publicacoes_dados',leituraPayload,done)},function(r){if(!r||r.ok!==true){var erroMsg=txt(r&&r.message||'A leitura das publicações ainda não foi confirmada.');var authInvalida=Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(erroMsg));if((!r||r.temporario===true)&&snapshotVisivel){contextoPronto=false;manutencaoConhecida=false;atualizarBloqueioMutacoes();status('loginStatus','Últimos dados confirmados permanecem visíveis. A sincronização continuará em segundo plano.','aviso');limparStatusCarregamento('statusOperacao');agendarReconexaoSnapshot(msg);if(cb)cb(false,r);return}if(authInvalida){snapshotVisivel=false;cancelarReconexaoSnapshot();token='';territorioToken='';accessMode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);document.getElementById('conteudo').classList.add('oculto');document.getElementById('resumo').classList.add('oculto');document.getElementById('areaEnvioBox').classList.add('oculto');document.getElementById('manutencaoBox').classList.add('oculto');esconderSaudeNotificacoes();sair.disabled=true;status('loginStatus',erroMsg||'A sessão foi recusada pelo servidor. Volte à Central.','erro');if(cb)cb(false,r);return}contextoPronto=false;manutencaoConhecida=false;atualizarBloqueioMutacoes();status('loginStatus',erroMsg+' A sessão da Central foi preservada.','aviso');if(cb)cb(false,r);return}var diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('recados',r):{changed:true};if(diff.changed||!tinhaSnapshot)aplicar(r,false);else{confirmarContextoSemRender(r);salvarSnapshot(r)}status('loginStatus',diff.changed?(msg||'Sessão validada e publicações da área carregadas.'):'Dados atuais confirmados; nenhuma mudança nova encontrada.','ok');setTimeout(carregarSaudeNotificacoes,80);if(cb)cb(true,r)})}
+function carregar(msg,cb,silencioso){syncCoreSession();contextoPronto=false;manutencaoConhecida=false;var tinhaSnapshot=aplicarSnapshotSeDisponivel();if(!tinhaSnapshot){status('loginStatus','Aguarde enquanto os dados carregam…','aviso');status('statusOperacao','Aguarde enquanto os dados carregam…','aviso')}if(!remoteSessionReady()){if(tinhaSnapshot){limparStatusCarregamento('loginStatus');limparStatusCarregamento('statusOperacao');atualizarBloqueioMutacoes()}scheduleCacheRemoteSync(msg);if(cb)cb(false,{ok:false,temporario:true,aguardandoSessao:true});return}var leituraPayload=sessao();coreRead('admin_publicacoes_dados',leituraPayload,function(done){post('admin_publicacoes_dados',leituraPayload,done)},function(r){if(!r||r.ok!==true){var erroMsg=txt(r&&r.message||'A leitura das publicações ainda não foi confirmada.');var authInvalida=Boolean(r&&r.temporario!==true&&/(sess[aã]o|token|acesso).*(inv[aá]lid|expir|recus)|n[aã]o autorizado|unauthor/i.test(erroMsg));if((!r||r.temporario===true)&&snapshotVisivel){contextoPronto=false;manutencaoConhecida=false;atualizarBloqueioMutacoes();status('loginStatus','Últimos dados confirmados permanecem visíveis. A sincronização continuará em segundo plano.','aviso');limparStatusCarregamento('statusOperacao');agendarReconexaoSnapshot(msg);if(cb)cb(false,r);return}if(authInvalida){snapshotVisivel=false;cancelarReconexaoSnapshot();token='';territorioToken='';accessMode='';sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);document.getElementById('conteudo').classList.add('oculto');document.getElementById('resumo').classList.add('oculto');document.getElementById('areaEnvioBox').classList.add('oculto');document.getElementById('manutencaoBox').classList.add('oculto');esconderSaudeNotificacoes();sair.disabled=true;status('loginStatus',erroMsg||'A sessão foi recusada pelo servidor. Volte à Central.','erro');if(cb)cb(false,r);return}contextoPronto=false;manutencaoConhecida=false;atualizarBloqueioMutacoes();status('loginStatus',erroMsg+' A sessão da Central foi preservada.','aviso');if(cb)cb(false,r);return}var diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('recados',r):{changed:true};if(diff.changed||!tinhaSnapshot)aplicar(r,false);else{confirmarContextoSemRender(r);salvarSnapshot(r)}status('loginStatus',diff.changed?(msg||'Sessão validada e publicações da área carregadas.'):'Dados atuais confirmados; nenhuma mudança nova encontrada.','ok');setTimeout(carregarSaudeNotificacoes,80);if(cb)cb(true,r)})}
 
 
 var saudeNotificacoesDados=null,saudeFiltroAtivo='';
