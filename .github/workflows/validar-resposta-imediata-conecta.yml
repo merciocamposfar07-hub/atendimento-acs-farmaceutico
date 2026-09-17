@@ -6,12 +6,20 @@ on:
       - 'conecta-morador-session-v1.js'
       - 'conecta-moradores-native-v1.js'
       - 'central-administrativa-tacs.js'
+      - 'central-administrativa-tacs.html'
       - 'conecta-module-core-v1.js'
+      - 'teste-v1/painel-moradores-transport-v2.js'
+      - 'portal-identificacao-familia-v1.js'
       - 'index.html'
       - 'scripts/test_resposta_imediata_conecta_v1.js'
+      - 'scripts/test_travamento_familia_v2.js'
+      - 'scripts/aplicar_correcao_travamento_familia_20260916.py'
       - 'package.json'
       - '.github/workflows/validar-resposta-imediata-conecta.yml'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   resposta-imediata:
@@ -19,15 +27,51 @@ jobs:
     steps:
       - name: Baixar código
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Preparar Node
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Validar sintaxe do Morador
-        run: node --check conecta-morador-session-v1.js
-      - name: Validar sintaxe do painel Moradores
-        run: node --check conecta-moradores-native-v1.js
-      - name: Validar sintaxe do núcleo
-        run: node --check conecta-module-core-v1.js
-      - name: Executar gate isolado
+      - name: Aplicar bloco cirúrgico pendente
+        run: python3 scripts/aplicar_correcao_travamento_familia_20260916.py
+      - name: Validar sintaxe dos arquivos afetados
+        run: |
+          node --check conecta-morador-session-v1.js
+          node --check conecta-moradores-native-v1.js
+          node --check conecta-module-core-v1.js
+          node --check teste-v1/painel-moradores-transport-v2.js
+          node --check portal-identificacao-familia-v1.js
+          node --check central-administrativa-tacs.js
+      - name: Executar gate de resposta imediata
         run: node scripts/test_resposta_imediata_conecta_v1.js
+      - name: Executar gate de travamento e família
+        run: node scripts/test_travamento_familia_v2.js
+      - name: Restringir arquivos alterados pelo patch
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          allowed={
+            'teste-v1/painel-moradores-transport-v2.js',
+            'conecta-moradores-native-v1.js',
+            'portal-identificacao-familia-v1.js',
+            'central-administrativa-tacs.html',
+            'index.html'
+          }
+          changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          unexpected=changed-allowed
+          if unexpected:
+              raise SystemExit('Alteração fora do escopo: '+', '.join(sorted(unexpected)))
+          print('ESCOPO_CIRURGICO_OK:', ', '.join(sorted(changed)))
+          PY
+      - name: Publicar somente se os gates passaram
+        run: |
+          if git diff --quiet; then
+            echo 'Nenhuma alteração funcional pendente.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add teste-v1/painel-moradores-transport-v2.js conecta-moradores-native-v1.js portal-identificacao-familia-v1.js central-administrativa-tacs.html index.html
+          git commit -m 'fix: liberar leituras dos painéis e restaurar busca familiar'
+          git push origin HEAD:main
