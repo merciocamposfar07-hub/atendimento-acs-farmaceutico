@@ -769,7 +769,7 @@ var task16AgendaAssetsLoading=false,task16AgendaAssetWaiters=[];
 function task16LoadStyle(){
   if(document.getElementById('cscAgendaNativeCssV1'))return;
   var link=document.createElement('link');link.id='cscAgendaNativeCssV1';link.rel='stylesheet';
-  link.href='/atendimento-acs-farmaceutico/conecta-agendas-native-v1.css?v=20260917-mobile-proporcao-v4';
+  link.href='/atendimento-acs-farmaceutico/conecta-agendas-native-v1.css?v=20260917-mobile-proporcao-v5';
   document.head.appendChild(link);
 }
 function task16LoadScript(id,src,ready,done){
