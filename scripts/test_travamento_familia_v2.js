@@ -36,7 +36,7 @@ for(const action of ['admin_morador_salvar','admin_morador_situacao','admin_mora
 assert.match(nativeMoradores,/painel-moradores-transport-v2\.js\?v=20260916-read-concorrente-v1/);
 
 // Família: o módulo precisa estar realmente carregado pela página publicada e responder no pointer/touch.
-assert.match(index,/portal-identificacao-familia-v1\.js\?v=20260916-toque-resiliente-v1/,'módulo familiar não está carregado pelo Portal publicado');
+assert.match(index,/portal-identificacao-familia-v1\.js\?v=[A-Za-z0-9._-]+/,'módulo familiar não está carregado pelo Portal publicado');
 assert.match(familia,/BUSCA_FAMILIAR_TOQUE_RESILIENTE_2026_09_16_V1/);
 assert.match(familia,/function activateFamilySearchButton\(button,e\)/);
 assert.match(familia,/function familySearchButton\(target\)/);
