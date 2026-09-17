@@ -1704,11 +1704,12 @@ function scheduleNativePanelPrewarm(){
    começam a montar e ler seus dados em segundo plano. Ao tocar, a Central revela o
    estado já preparado em vez de iniciar o painel do zero.
    Isolamento: não altera permissões, rotas, dados, escrita nem escopo da área. */
-var panelRuntimePrewarmScope='',panelRuntimePrewarmTimers=[];
+var panelRuntimePrewarmScope='',panelRuntimePrewarmTimers=[],agendaSnapshotPrewarmScope='';
 function cancelPanelRuntimePrewarm(){
   panelRuntimePrewarmTimers.forEach(function(timer){clearTimeout(timer)});
   panelRuntimePrewarmTimers=[];
   panelRuntimePrewarmScope='';
+  agendaSnapshotPrewarmScope='';
 }
 function panelRuntimeAllowed(name){
   var btn=document.querySelector('#moduleGrid .module[data-module="'+name+'"]');
@@ -1774,6 +1775,27 @@ function prewarmPanelRuntime(name){
   if(name==='moradores'||name==='agendas'||name==='profissionais'){prewarmNativePanel(name);return}
   if(name==='suporte'||name==='recados'||name==='territorio'||name==='municipios')prewarmLegacyPanel(name);
 }
+function scheduleAgendaSnapshotPrewarm(scope){
+  if(!scope||agendaSnapshotPrewarmScope===scope)return;
+  agendaSnapshotPrewarmScope=scope;
+  var tentativas=0;
+  function aquecer(){
+    if(scope!==panelRuntimePrewarmScope||shellCurrentScope()!==scope)return;
+    if(!panelRuntimeAllowed('agendas'))return;
+    if(!panelRuntimeRemoteReady()||active){
+      if(++tentativas>40)return;
+      panelRuntimePrewarmTimers.push(setTimeout(aquecer,500));
+      return;
+    }
+    /* CACHE_FIRST_AGENDAS_DADOS_20260917:
+       aquece SOMENTE o módulo nativo de Agendas, em segundo plano, depois que a sessão
+       remota existe. O objetivo é gravar/confirmar o snapshot antes do primeiro toque.
+       Não monta os demais painéis, não cria iframe e não altera PIN, layout, regras,
+       permissões, vagas ou escrita. */
+    prewarmNativePanel('agendas');
+  }
+  panelRuntimePrewarmTimers.push(setTimeout(aquecer,650));
+}
 function schedulePanelRuntimePrewarm(){
   if(!context||!selectedAreaId)return;
   var scope=shellCurrentScope();
@@ -1781,10 +1803,11 @@ function schedulePanelRuntimePrewarm(){
   cancelPanelRuntimePrewarm();
   panelRuntimePrewarmScope=scope;
   /* CORRECAO_CONGELAMENTO_PREWARM_2026_09_16_V1:
-     não monta iframes nem painéis nativos ocultos. O snapshot persistente já atende
-     ao cache-first quando o usuário toca; montar sete runtimes invisíveis em sequência
-     estava competindo com o toque e com o Apps Script no Safari/iPhone. */
+     não monta sete iframes/painéis ocultos. Arquivos continuam sendo aquecidos de forma
+     leve; somente Agendas recebe um aquecimento de DADOS isolado porque o vídeo real
+     mostrou a primeira abertura aguardando o backend por vários segundos. */
   scheduleNativePanelPrewarm();
+  scheduleAgendaSnapshotPrewarm(scope);
 }
 window.addEventListener('load',function(){
   scheduleNativePanelPrewarm();
