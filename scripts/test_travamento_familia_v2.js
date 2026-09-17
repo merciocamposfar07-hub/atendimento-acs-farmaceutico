@@ -5,6 +5,7 @@ function read(p){return fs.readFileSync(p,'utf8')}
 
 const central=read('central-administrativa-tacs.js');
 const centralHtml=read('central-administrativa-tacs.html');
+const index=read('index.html');
 const moradores=read('teste-v1/painel-moradores-transport-v2.js');
 const nativeMoradores=read('conecta-moradores-native-v1.js');
 const familia=read('portal-identificacao-familia-v1.js');
@@ -34,7 +35,8 @@ for(const action of ['admin_morador_salvar','admin_morador_situacao','admin_mora
 }
 assert.match(nativeMoradores,/painel-moradores-transport-v2\.js\?v=20260916-read-concorrente-v1/);
 
-// Família: botão responde ao pointer/touch e click vira apenas fallback deduplicado.
+// Família: o módulo precisa estar realmente carregado pela página publicada e responder no pointer/touch.
+assert.match(index,/portal-identificacao-familia-v1\.js\?v=20260916-toque-resiliente-v1/,'módulo familiar não está carregado pelo Portal publicado');
 assert.match(familia,/BUSCA_FAMILIAR_TOQUE_RESILIENTE_2026_09_16_V1/);
 assert.match(familia,/function activateFamilySearchButton\(button,e\)/);
 assert.match(familia,/function familySearchButton\(target\)/);
@@ -42,4 +44,4 @@ assert.match(familia,/document\.addEventListener\('pointerup',function\(e\)\{if\
 assert.match(familia,/activateFamilySearchButton\(t,e\)/);
 assert.match(familia,/touch-action:manipulation/);
 
-console.log('TRAVAMENTO_FAMILIA_V2_OK: Central sem montagem oculta em massa; Moradores lê e busca sem trava global; busca familiar responde ao toque com fallback deduplicado.');
+console.log('TRAVAMENTO_FAMILIA_V2_OK: Central sem montagem oculta em massa; Moradores lê e busca sem trava global; módulo familiar publicado e busca responde ao toque.');
