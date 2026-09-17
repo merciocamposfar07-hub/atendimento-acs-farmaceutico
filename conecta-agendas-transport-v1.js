@@ -12,6 +12,20 @@ function requestId(prefix){
   }
   return prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
 }
+/* CORRECAO_CIRURGICA_AGENDAS_DATA_BR_20260917_V1:
+   O backend/planilha pode devolver DATA como DD/MM/AAAA, enquanto o input date
+   e a conferência do painel trabalham com AAAA-MM-DD. Normalizamos somente a
+   resposta de admin_dados, sem alterar gravação, vagas, áreas ou regras de agenda. */
+function normalizeAdminRead(action,result){
+  if(action!=='admin_dados'||!result||result.ok!==true||!Array.isArray(result.agendas))return result;
+  result.agendas=result.agendas.map(function(row){
+    if(!row||typeof row!=='object')return row;
+    var copy=Object.assign({},row),s=text(copy.DATA).trim(),m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s.*)?$/);
+    if(m)copy.DATA=m[3]+'-'+m[2]+'-'+m[1];
+    return copy;
+  });
+  return result;
+}
 function create(options){
   options=options||{};
   var requests=options.requests||null,active=null,counter=0,messageHandler=null;
@@ -123,11 +137,11 @@ function create(options){
   }
   function read(action,payload,cb){
     if(requests&&typeof requests.read==='function'){
-      requests.read(action,payload,function(done){post(action,payload,done)},function(result,meta){cb(result,meta)})
+      requests.read(action,payload,function(done){post(action,payload,done)},function(result,meta){cb(normalizeAdminRead(action,result),meta)})
         .catch(function(e){cb({ok:false,temporario:true,message:text(e&&e.message)||'Falha na leitura compartilhada.'},{shared:false,source:'broker-error'})});
       return;
     }
-    post(action,payload,function(result){cb(result,{shared:false,source:'direct'})});
+    post(action,payload,function(result){cb(normalizeAdminRead(action,result),{shared:false,source:'direct'})});
   }
   function publicAgenda(areaId,cb){jsonp('agenda',{areaId:areaId},cb)}
   function destroy(){
