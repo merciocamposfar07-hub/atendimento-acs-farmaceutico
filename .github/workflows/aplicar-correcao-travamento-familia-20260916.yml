@@ -1,0 +1,63 @@
+name: Aplicar correção travamento e família 20260916
+
+on:
+  push:
+    paths:
+      - 'scripts/aplicar_correcao_travamento_familia_20260916.py'
+      - '.github/workflows/aplicar-correcao-travamento-familia-20260916.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validar patch Python
+        run: python3 -m py_compile scripts/aplicar_correcao_travamento_familia_20260916.py
+      - name: Aplicar bloco cirúrgico
+        run: python3 scripts/aplicar_correcao_travamento_familia_20260916.py
+      - name: Validar sintaxe JavaScript alterada
+        run: |
+          node --check teste-v1/painel-moradores-transport-v2.js
+          node --check conecta-moradores-native-v1.js
+          node --check portal-identificacao-familia-v1.js
+          node --check central-administrativa-tacs.js
+      - name: Executar gate específico
+        run: node scripts/test_travamento_familia_v2.js
+      - name: Confirmar escopo cirúrgico
+        run: |
+          git diff --name-only
+          python3 - <<'PY'
+          import subprocess
+          allowed={
+            'teste-v1/painel-moradores-transport-v2.js',
+            'conecta-moradores-native-v1.js',
+            'portal-identificacao-familia-v1.js',
+            'central-administrativa-tacs.html',
+            'index.html'
+          }
+          changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          unexpected=changed-allowed
+          if unexpected:
+              raise SystemExit('Alteração fora do escopo: '+', '.join(sorted(unexpected)))
+          PY
+      - name: Publicar correção validada
+        run: |
+          if git diff --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add teste-v1/painel-moradores-transport-v2.js conecta-moradores-native-v1.js portal-identificacao-familia-v1.js central-administrativa-tacs.html index.html
+          git commit -m 'fix: remover bloqueio de leitura e restaurar busca familiar no toque'
+          git push origin HEAD:main
