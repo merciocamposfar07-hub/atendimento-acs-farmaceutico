@@ -30,4 +30,5 @@ assert.match(agenda,/if\(instance&&instance\.scope!==scope\)\{instance\.reset\(\
 assert.match(agenda,/reset:function\(\)\{visible=false;/);
 assert.match(agenda,/window\.ConectaAgendasNativeV1=\{/);
 
+// GATE_PIN_AGENDAS_SAFARI_20260916_V1
 console.log('PIN_AGENDAS_SAFARI_OK: bundle do PIN atualizado; Agendas com revisão nova e retry isolado sem alterar sessão/dados.');
