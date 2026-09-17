@@ -97,3 +97,64 @@ html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native inp
   min-width:0!important;
   text-align:center!important;
 }
+
+
+/* CORRECAO_CIRURGICA_AGENDAS_MOBILE_PROPORCAO_20260917_V1 */
+/* Mantém Agendas dentro da largura visível no iPhone. Não altera campos, dados ou regras. */
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer:not([hidden]),
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer>.csc-native-module-host:not([hidden]),
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+  overflow-x:hidden!important;
+}
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer>.csc-native-module-host:not([hidden]){
+  margin:0 auto!important;
+}
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native{
+  max-width:720px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .metrics,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .filters,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer [data-role="lista"],
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .group,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .group>summary,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .group-name,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .group-name>div,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .card,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .card>summary{
+  min-width:0!important;
+  max-width:100%!important;
+}
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .group-name>div{
+  flex:1 1 auto!important;
+}
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .group-name strong,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .group-meta,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .metric span,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer>.viewer-platform-footer strong,
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer>.viewer-platform-footer small{
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+}
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer .group>summary>span:last-child{
+  flex:0 0 auto!important;
+}
+html body .viewer.csc-native-viewer.csc-agendas-native-viewer>.viewer-platform-footer{
+  width:100%!important;
+  max-width:720px!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+  overflow-x:hidden!important;
+}
+@media(max-width:430px){
+  html body .viewer.csc-native-viewer.csc-agendas-native-viewer .csc-ag-native{padding-left:12px!important;padding-right:12px!important}
+  html body .viewer.csc-native-viewer.csc-agendas-native-viewer .group>summary{padding-left:12px!important;padding-right:12px!important}
+  html body .viewer.csc-native-viewer.csc-agendas-native-viewer .group-name strong{font-size:.96rem!important;line-height:1.18!important}
+  html body .viewer.csc-native-viewer.csc-agendas-native-viewer .group-meta{font-size:.78rem!important;line-height:1.2!important}
+  html body .viewer.csc-native-viewer.csc-agendas-native-viewer .undo{font-size:.95rem!important;white-space:normal!important}
+}
