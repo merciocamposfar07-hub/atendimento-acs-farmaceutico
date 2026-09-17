@@ -1,0 +1,77 @@
+name: Hotfix recados horario layout 20260917
+
+on:
+  push:
+    paths:
+      - '.github/workflows/hotfix-recados-horario-layout-20260917.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir-layout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Corrigir somente o campo horario de expiracao
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('painel-oficial-recados-campanhas.html')
+          s = p.read_text(encoding='utf-8')
+          old = 'input[type="date"].campo{width:100%;min-width:0;max-width:100%;inline-size:100%;min-inline-size:0;max-inline-size:100%}'
+          time_rule = 'input[type="time"].campo{display:block;width:100%!important;min-width:0!important;max-width:100%!important;inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;box-sizing:border-box!important}'
+          if time_rule not in s:
+              if s.count(old) != 1:
+                  raise SystemExit(f'Base CSS inesperada: seletor de data encontrado {s.count(old)} vez(es).')
+              s = s.replace(old, old + time_rule, 1)
+              p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Validar escopo e regressao visual
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed=$(git diff --name-only)
+          test "$changed" = 'painel-oficial-recados-campanhas.html'
+          git diff --check
+          grep -Fq 'input[type="time"].campo{display:block;width:100%!important;min-width:0!important;max-width:100%!important;inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;box-sizing:border-box!important}' painel-oficial-recados-campanhas.html
+          test "$(grep -o 'Horário de expiração' painel-oficial-recados-campanhas.html | wc -l | tr -d ' ')" -ge 2
+          git diff -- painel-oficial-recados-campanhas.html
+
+      - name: Publicar correcao cirurgica
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Layout já estava corrigido.'
+            exit 0
+          fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add painel-oficial-recados-campanhas.html
+          git commit -m 'fix(recados): alinhar horario de expiracao no Safari'
+          git push
+
+      - name: Verificar publicacao no GitHub Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html'
+          ok=0
+          for i in $(seq 1 36); do
+            html=$(curl -fsSL --max-time 20 "$base?v=20260917-horario-layout&_=$RANDOM" || true)
+            if printf '%s' "$html" | grep -Fq 'input[type="time"].campo{display:block;width:100%!important;min-width:0!important;max-width:100%!important;inline-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;box-sizing:border-box!important}'; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ok" = 1
