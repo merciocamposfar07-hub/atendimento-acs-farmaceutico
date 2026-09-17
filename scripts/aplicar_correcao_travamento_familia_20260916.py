@@ -74,12 +74,10 @@ function readPost(action,payload,resultAction,cb){
 """
     s=replace_once(s,old_guard,'','retirar bloqueio da busca durante status')
 
-    # Há duas rotas de busca (área atual e prontuários por áreas). Ambas devem ser leitura concorrente.
     count=s.count("post('admin_moradores_buscar'")
     if count<2:
         raise SystemExit(f'Esperadas pelo menos 2 buscas serializadas; encontradas {count}')
     s=s.replace("post('admin_moradores_buscar'","readPost('admin_moradores_buscar'")
-
     write(p,s)
 
 # 2) Native Moradores: forçar carregamento da revisão corrigida do transporte.
@@ -123,22 +121,23 @@ if 'BUSCA_FAMILIAR_TOQUE_RESILIENTE_2026_09_16_V1' not in s:
     s=replace_once(s,"var f=t.getAttribute('data-family-search');if(f){searchFamily(f);return}","var f=t.getAttribute('data-family-search');if(f){activateFamilySearchButton(t,e);return}",'fallback click da família')
     write(p,s)
 
-# 4) Cache-busters: Central e qualquer carregador da identificação familiar.
+# 4) Cache-buster da Central.
 p=Path('central-administrativa-tacs.html')
 s=read(p)
 s=re.sub(r'central-administrativa-tacs\.js\?v=[^"\']+','central-administrativa-tacs.js?v=20260916-resposta-imediata-v2',s)
 write(p,s)
 
-for ext in ('*.html','*.js'):
-    for q in ROOT.rglob(ext):
-        if q.name=='portal-identificacao-familia-v1.js':
-            continue
-        try:
-            t=q.read_text(encoding='utf-8')
-        except Exception:
-            continue
-        new=re.sub(r'portal-identificacao-familia-v1\.js\?v=[^"\'&<\\s]+','portal-identificacao-familia-v1.js?v=20260916-toque-resiliente-v1',t)
-        if new!=t:
-            q.write_text(new,encoding='utf-8')
+# 5) Restaurar explicitamente o módulo familiar no Portal publicado.
+p=Path('index.html')
+s=read(p)
+family_src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260916-toque-resiliente-v1'
+if 'portal-identificacao-familia-v1.js' not in s:
+    pattern=r'(<script\s+src="/atendimento-acs-farmaceutico/moradores-autofill\.js\?v=[^"]+"></script>)'
+    if not re.search(pattern,s):
+        raise SystemExit('Âncora moradores-autofill não encontrada no index.html')
+    s=re.sub(pattern,r'\1\n<script src="'+family_src+r'"></script>',s,count=1)
+else:
+    s=re.sub(r'/atendimento-acs-farmaceutico/portal-identificacao-familia-v1\.js\?v=[^"]+',family_src,s)
+write(p,s)
 
 print('CORRECAO_TRAVAMENTO_FAMILIA_20260916_APLICADA')
