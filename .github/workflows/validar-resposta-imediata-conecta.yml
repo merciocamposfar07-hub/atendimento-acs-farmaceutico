@@ -33,8 +33,26 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Adaptar âncora do Portal atual
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/aplicar_correcao_travamento_familia_20260916.py')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace(
+            "pattern=r'(<script\\s+src=\"/atendimento-acs-farmaceutico/moradores-autofill\\.js\\?v=[^\"]+\"></script>)'",
+            "pattern=r'(<script\\s+src=\"(?:/atendimento-acs-farmaceutico/)?moradores-autofill\\.js\\?v=[^\"]+\"></script>)'"
+          )
+          s=s.replace(
+            "family_src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260916-toque-resiliente-v1'",
+            "family_src='portal-identificacao-familia-v1.js?v=20260916-toque-resiliente-v1'"
+          )
+          p.write_text(s,encoding='utf-8')
+          PY
       - name: Aplicar bloco cirúrgico pendente
         run: python3 scripts/aplicar_correcao_travamento_familia_20260916.py
+      - name: Restaurar script auxiliar antes dos gates
+        run: git checkout -- scripts/aplicar_correcao_travamento_familia_20260916.py
       - name: Validar sintaxe dos arquivos afetados
         run: |
           node --check conecta-morador-session-v1.js
