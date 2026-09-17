@@ -1,0 +1,129 @@
+name: Corrigir recados Portal live V1
+
+on:
+  push:
+    paths:
+      - '.github/workflows/corrigir-recados-portal-live-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  corrigir-validar-publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar correcao cirurgica de atualizacao publica
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new, label):
+              s=path.read_text(encoding='utf-8')
+              n=s.count(old)
+              if n != 1:
+                  raise SystemExit(f'{label}: esperado 1 trecho, encontrado {n}')
+              path.write_text(s.replace(old,new,1),encoding='utf-8')
+
+          control=Path('portal-controle-integral.js')
+          replace_once(
+              control,
+              "  load();\n  var select=document.getElementById('category');",
+              "  // RECADOS_PORTAL_LIVE_V1: ao abrir o Portal, consultar o servidor real antes de aceitar cache local antigo.\n  load(true);\n  var select=document.getElementById('category');",
+              'carga inicial ao vivo'
+          )
+          replace_once(
+              control,
+              "  document.addEventListener('visibilitychange',function(){if(!document.hidden)load(true)});\n  setInterval(function(){load(true)},60000);",
+              "  document.addEventListener('visibilitychange',function(){if(!document.hidden)load(true)});\n  window.addEventListener('pageshow',function(){load(true)});\n  setInterval(function(){if(!document.hidden)load(true)},30000);",
+              'retorno ao Portal e sincronizacao em primeiro plano'
+          )
+
+          index=Path('index.html')
+          replace_once(
+              index,
+              'portal-public-data.js?v=5b56e3dda8cb',
+              'portal-public-data.js?v=20260917-recados-live-v1',
+              'cache-buster dados publicos'
+          )
+          replace_once(
+              index,
+              'portal-controle-integral.js?v=5b56e3dda8cb',
+              'portal-controle-integral.js?v=20260917-recados-live-v1',
+              'cache-buster renderizacao publica'
+          )
+          PY
+
+      - name: Validar escopo e logica
+        shell: bash
+        run: |
+          set -euo pipefail
+          bad=$(git diff --name-only | grep -Ev '^(portal-controle-integral\.js|index\.html)$' || true)
+          if [ -n "$bad" ]; then
+            echo "Arquivo fora do escopo: $bad"
+            exit 1
+          fi
+          grep -q "RECADOS_PORTAL_LIVE_V1" portal-controle-integral.js
+          grep -q "load(true);" portal-controle-integral.js
+          grep -q "window.addEventListener('pageshow',function(){load(true)})" portal-controle-integral.js
+          grep -q "setInterval(function(){if(!document.hidden)load(true)},30000)" portal-controle-integral.js
+          grep -q "portal-public-data.js?v=20260917-recados-live-v1" index.html
+          grep -q "portal-controle-integral.js?v=20260917-recados-live-v1" index.html
+          node --check portal-controle-integral.js
+          echo 'validacao-recados-portal-live-ok'
+
+      - name: Confirmar endpoint publico contem recado ativo
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec?action=painel_publico&areaId=JAPARANDUBA'
+          curl -fsSL --max-time 30 "$url" -o /tmp/publico.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/publico.json',encoding='utf-8'))
+          assert d.get('ok') is True, d
+          recados=[r for r in (d.get('recados') or []) if r.get('active') is not False]
+          assert recados, 'endpoint publico sem recado ativo'
+          print('endpoint-publico-ok',[(r.get('id'),r.get('title'),r.get('validity'),r.get('time')) for r in recados])
+          PY
+
+      - name: Publicar somente a correcao autorizada
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Nenhuma alteracao pendente.'
+            exit 0
+          fi
+          git config user.name 'merciocamposfar07-hub'
+          git config user.email 'merciocamposfar07@icloud.com'
+          git add portal-controle-integral.js index.html
+          git commit -m 'Forca recados atuais no Portal ao abrir e retornar'
+          git push
+
+      - name: Validar GitHub Pages publicado
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico'
+          ok=0
+          for i in $(seq 1 36); do
+            pagina=$(curl -fsSL --max-time 20 "$base/?_=$RANDOM" || true)
+            script=$(curl -fsSL --max-time 20 "$base/portal-controle-integral.js?_=$RANDOM" || true)
+            if printf '%s' "$pagina" | grep -q 'portal-controle-integral.js?v=20260917-recados-live-v1' \
+              && printf '%s' "$script" | grep -q 'RECADOS_PORTAL_LIVE_V1' \
+              && printf '%s' "$script" | grep -q "window.addEventListener('pageshow',function(){load(true)})"; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ok" = 1
+          echo 'github-pages-recados-live-ok'
