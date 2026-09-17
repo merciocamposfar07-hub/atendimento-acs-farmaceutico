@@ -197,3 +197,13 @@ document.addEventListener('load',function(event){
 injectStyle();installObserver();
 window.addEventListener('pageshow',function(){installObserver();var viewer=document.getElementById('viewer');if(viewer&&viewer.classList.contains('csc-frame-opening'))revealLegacyFrame()});
 }());
+
+/* CARREGADOR_ISOLADO_CACHE_FIRST_PAINEIS_20260917_V3 */
+(function(){
+'use strict';
+if(typeof document==='undefined'||typeof location==='undefined')return;
+if(!/\/central-administrativa-tacs\.html$/i.test(String(location.pathname||'')))return;
+if(window.ConectaCacheFirstPanels20260917V3)return;
+var id='cscCacheFirstPanels20260917V3Loader';if(document.getElementById(id))return;
+var s=document.createElement('script');s.id=id;s.async=false;s.src='/atendimento-acs-farmaceutico/conecta-cache-first-paineis-v3.js?v=20260917-cache-first-v3';document.head.appendChild(s);
+}());
