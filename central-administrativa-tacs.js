@@ -1704,12 +1704,13 @@ function scheduleNativePanelPrewarm(){
    começam a montar e ler seus dados em segundo plano. Ao tocar, a Central revela o
    estado já preparado em vez de iniciar o painel do zero.
    Isolamento: não altera permissões, rotas, dados, escrita nem escopo da área. */
-var panelRuntimePrewarmScope='',panelRuntimePrewarmTimers=[],agendaSnapshotPrewarmScope='';
+var panelRuntimePrewarmScope='',panelRuntimePrewarmTimers=[],agendaSnapshotPrewarmScope='',supportRuntimePrewarmScope='';
 function cancelPanelRuntimePrewarm(){
   panelRuntimePrewarmTimers.forEach(function(timer){clearTimeout(timer)});
   panelRuntimePrewarmTimers=[];
   panelRuntimePrewarmScope='';
   agendaSnapshotPrewarmScope='';
+  supportRuntimePrewarmScope='';
 }
 function panelRuntimeAllowed(name){
   var btn=document.querySelector('#moduleGrid .module[data-module="'+name+'"]');
@@ -1796,6 +1797,26 @@ function scheduleAgendaSnapshotPrewarm(scope){
   }
   panelRuntimePrewarmTimers.push(setTimeout(aquecer,650));
 }
+function scheduleSupportRuntimePrewarm(scope){
+  if(!scope||supportRuntimePrewarmScope===scope)return;
+  supportRuntimePrewarmScope=scope;
+  var tentativas=0;
+  function aquecerSuporte(){
+    if(scope!==panelRuntimePrewarmScope||shellCurrentScope()!==scope)return;
+    if(!panelRuntimeAllowed('suporte'))return;
+    if(!panelRuntimeRemoteReady()||active){
+      if(++tentativas>40)return;
+      panelRuntimePrewarmTimers.push(setTimeout(aquecerSuporte,650));
+      return;
+    }
+    /* CACHE_FIRST_SUPORTE_RUNTIME_20260917:
+       o vídeo real mostrou alguns segundos até o painel de Suporte terminar de montar.
+       Mantém apenas ESTE frame real pré-montado, oculto, depois da autenticação remota.
+       Não pré-monta os demais frames e não altera dados/regras/permissões. */
+    prewarmLegacyPanel('suporte');
+  }
+  panelRuntimePrewarmTimers.push(setTimeout(aquecerSuporte,2600));
+}
 function schedulePanelRuntimePrewarm(){
   if(!context||!selectedAreaId)return;
   var scope=shellCurrentScope();
@@ -1808,6 +1829,7 @@ function schedulePanelRuntimePrewarm(){
      mostrou a primeira abertura aguardando o backend por vários segundos. */
   scheduleNativePanelPrewarm();
   scheduleAgendaSnapshotPrewarm(scope);
+  scheduleSupportRuntimePrewarm(scope);
 }
 window.addEventListener('load',function(){
   scheduleNativePanelPrewarm();
