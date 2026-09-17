@@ -22,8 +22,11 @@ function create(options){
     frame.id='cscAgendaNativeBridgeV1';
     frame.name='cscAgendaNativeBridgeV1';
     frame.src='about:blank';
-    frame.hidden=true;
     frame.setAttribute('aria-hidden','true');
+    /* CORRECAO_CIRURGICA_AGENDAS_POST_SAFARI_20260917_V1:
+       no Safari/iPhone a ponte POST precisa continuar sendo um browsing context ativo.
+       Portanto, ela fica visualmente invisível, mas não usa hidden/display:none. */
+    frame.style.cssText='position:absolute;left:0;top:0;width:1px;height:1px;border:0;opacity:0;visibility:hidden;pointer-events:none;z-index:-1';
     document.body.appendChild(frame);
     return frame;
   }
@@ -50,7 +53,7 @@ function create(options){
   function finishActive(result){
     if(!active)return;
     var action=active.action,cb=active.cb;
-    clearTimeout(active.timeout);clearTimeout(active.pollTimer);
+    clearTimeout(active.timeout);clearTimeout(active.pollTimer);clearTimeout(active.submitTimer);
     active=null;
     if(result&&result.ok===true&&/^admin_(salvar|remover|restaurar|criar)_/.test(action))invalidatePublic();
     cb(result||{ok:false,message:'Resposta vazia do servidor.'});
@@ -61,7 +64,7 @@ function create(options){
       if(!active)return;
       if(r&&r.ok===true&&r.pendente===false){finishActive(r.result);return}
       if(Date.now()>=active.deadline){
-        finishActive({ok:false,temporario:true,message:'A conexão demorou mais que o esperado. A sessão foi preservada.'});
+        finishActive({ok:false,temporario:true,message:'A conexão demorou mais que o esperado.'});
         return;
       }
       active.wait=Math.min(2200,Number(active.wait||700)+200);
@@ -90,8 +93,8 @@ function create(options){
     fields.action=action;fields.requestId=id;
     var duration=action==='admin_dados'?30000:60000;
     active={
-      id:id,action:action,cb:cb,deadline:Date.now()+duration,wait:450,pollTimer:null,
-      timeout:setTimeout(function(){finishActive({ok:false,temporario:true,message:'O servidor ainda não confirmou a operação. A sessão foi preservada.'})},duration+500)
+      id:id,action:action,cb:cb,deadline:Date.now()+duration,wait:450,pollTimer:null,submitTimer:null,
+      timeout:setTimeout(function(){finishActive({ok:false,temporario:true,message:'O servidor ainda não confirmou a operação.'})},duration+500)
     };
     var frame=ensureBridge(),form=document.createElement('form');
     form.method='POST';form.action=API+'?_='+Date.now();form.target=frame.name;form.hidden=true;
@@ -99,9 +102,24 @@ function create(options){
       var input=document.createElement('input');input.type='hidden';input.name=k;input.value=text(fields[k]);form.appendChild(input);
     });
     document.body.appendChild(form);
-    try{form.submit()}catch(e){form.remove();finishActive({ok:false,temporario:true,message:'O navegador não conseguiu iniciar a comunicação com o servidor.'});return}
-    setTimeout(function(){if(form.parentNode)form.remove()},4000);
-    active.pollTimer=setTimeout(poll,450);
+    var sent=false;
+    function sendOnce(){
+      if(sent||!active||active.id!==id)return;
+      sent=true;clearTimeout(active.submitTimer);active.submitTimer=null;
+      try{form.submit()}catch(e){if(form.parentNode)form.remove();finishActive({ok:false,temporario:true,message:'O navegador não conseguiu iniciar a comunicação com o servidor.'});return}
+      setTimeout(function(){if(form.parentNode)form.remove()},4000);
+      if(active&&active.id===id)active.pollTimer=setTimeout(poll,450);
+    }
+    function sendAfterRegistration(){
+      if(typeof window.requestAnimationFrame==='function'){
+        window.requestAnimationFrame(function(){window.requestAnimationFrame(sendOnce)});
+        return;
+      }
+      setTimeout(sendOnce,60);
+    }
+    frame.addEventListener('load',sendAfterRegistration,{once:true});
+    sendAfterRegistration();
+    active.submitTimer=setTimeout(sendOnce,180);
   }
   function read(action,payload,cb){
     if(requests&&typeof requests.read==='function'){
@@ -113,7 +131,7 @@ function create(options){
   }
   function publicAgenda(areaId,cb){jsonp('agenda',{areaId:areaId},cb)}
   function destroy(){
-    if(active){clearTimeout(active.timeout);clearTimeout(active.pollTimer);active=null}
+    if(active){clearTimeout(active.timeout);clearTimeout(active.pollTimer);clearTimeout(active.submitTimer);active=null}
     if(messageHandler)window.removeEventListener('message',messageHandler);
     var frame=document.getElementById('cscAgendaNativeBridgeV1');if(frame)frame.remove();
   }
