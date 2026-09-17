@@ -796,7 +796,7 @@ function ensureTask16AgendaAssets(callback){
     if(!ok){finish(false);return}
     task16LoadScript('cscAgendaTransportTask16','/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js?v=20260913-agendas-ios-mount-v1',function(){return Boolean(window.ConectaAgendasTransportV1)},function(ok2){
       if(!ok2){finish(false);return}
-      task16LoadScript('cscAgendaNativeTask16','/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260913-loading-lifecycle-v2&load=20260913-loading-lifecycle-v2',function(){return Boolean(window.ConectaAgendasNativeV1)},function(ok3){
+      task16LoadScript('cscAgendaNativeTask16','/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260916-safari-mount-retry-v1&load=20260916-safari-mount-retry-v1',function(){return Boolean(window.ConectaAgendasNativeV1)},function(ok3){
         if(!ok3){finish(false);return}
         task16LoadScript('cscAgendaWhatsappTask16','/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260913-agendas-ios-mount-v1',function(){return Boolean(window.PortalTacsAgendaWhatsAppV2API)},finish);
       });
@@ -820,10 +820,19 @@ function showNativeAgenda(title,routeId){
       host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">Não foi possível carregar o módulo nativo de Agendas. Volte à Central e tente novamente.</div>';
       setShellOpening('',false);return;
     }
+    /* CORRECAO_CIRURGICA_AGENDAS_RETRY_SAFARI_20260916_V1
+       Safari pode manter uma instância nativa antiga mesmo após o shell ter sido atualizado.
+       Na primeira falha, reinicia SOMENTE a instância de Agendas e repete a montagem uma vez.
+       Sessão, área, permissões, dados e regras de escrita permanecem intactos. */
     try{window.ConectaAgendasNativeV1.mount(host);watchAdminUbsRemoteMode(host);setShellOpening('',false)}
     catch(e){
-      host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">O módulo de Agendas não pôde ser iniciado sem perder a sessão. Volte à Central e tente novamente.</div>';
-      setShellOpening('',false);
+      try{
+        if(window.ConectaAgendasNativeV1&&typeof window.ConectaAgendasNativeV1.reset==='function')window.ConectaAgendasNativeV1.reset();
+        window.ConectaAgendasNativeV1.mount(host);watchAdminUbsRemoteMode(host);setShellOpening('',false);
+      }catch(retryError){
+        host.innerHTML='<div style="padding:18px;color:#ffd0d6;background:#071827">O módulo de Agendas não pôde ser iniciado sem perder a sessão. Volte à Central e tente novamente.</div>';
+        setShellOpening('',false);
+      }
     }
   });
   return true;
@@ -1608,7 +1617,7 @@ function prefetchStaticPanels(){
     '/atendimento-acs-farmaceutico/conecta-module-core-v1.js',
     '/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js',
     '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-transport-v2.js',
-    '/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js',
+    '/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260916-safari-mount-retry-v1',
     '/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js',
     '/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js',
     '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html',
