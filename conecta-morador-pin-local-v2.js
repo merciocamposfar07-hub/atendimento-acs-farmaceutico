@@ -99,137 +99,101 @@ window.ConectaMoradorPinLocalV2={
 };
 }());
 
-/* CORRECAO_CACHE_FIRST_PAINEIS_20260917_V1
+/* CORRECAO_CACHE_FIRST_PAINEIS_20260917_V2
    Bloco isolado de desempenho da Central. Não altera PIN, permissões, áreas,
-   agendas, regras de escrita ou dados. O toque passa a preparar somente o painel
-   escolhido; painéis legados deixam de ficar ocultos até o load completo e as
-   leituras de saúde da Central cedem prioridade à navegação. */
+   agendas, regras de escrita ou dados. Usa somente a API pública do shell e a
+   superfície visual já existente: o painel escolhido começa a abrir no pointerdown
+   e o clique subsequente é deduplicado. Em painéis legados, o iframe real deixa de
+   ficar reduzido/oculto até o load completo. */
 (function(){
 'use strict';
 if(typeof window==='undefined'||typeof document==='undefined'||typeof location==='undefined')return;
 if(!/\/central-administrativa-tacs\.html$/i.test(String(location.pathname||'')))return;
-if(window.ConectaCacheFirstPanels20260917V1)return;
+if(window.ConectaCacheFirstPanels20260917V2)return;
 
-var state={intentAt:0,marker:'CORRECAO_CACHE_FIRST_PAINEIS_20260917_V1'};
-window.ConectaCacheFirstPanels20260917V1=state;
+var state={intentAt:0,module:'',suppressUntil:0,observer:null,marker:'CORRECAO_CACHE_FIRST_PAINEIS_20260917_V2'};
+window.ConectaCacheFirstPanels20260917V2=state;
 
-function recentIntent(ms){return Date.now()-Number(state.intentAt||0)<Number(ms||1800)}
-function remoteReady(){
-  try{
-    return Boolean(
-      String(sessionStorage.getItem('portalTacsAdminTokenV1')||'').trim()||
-      String(sessionStorage.getItem('portalTacsTerritorioTokenV1')||'').trim()||
-      String(sessionStorage.getItem('portalConectaUbsTokenV1')||'').trim()
-    );
-  }catch(e){return false}
+function shell(){var s=window.ConectaCentralShellV1;return s&&typeof s.abrir==='function'?s:null}
+function moduleButton(event){return event.target&&event.target.closest?event.target.closest('#moduleGrid .module[data-module]'):null}
+function moduleName(button){return String(button&&button.dataset&&button.dataset.module||'').toLowerCase()}
+function moduleTitle(button){try{return String((button.querySelector('strong')||{}).textContent||'Painel').trim()||'Painel'}catch(e){return'Painel'}}
+function activeFrame(){
+  var viewer=document.getElementById('viewer');if(!viewer)return null;
+  var frames=viewer.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i++)if(!frames[i].hidden)return frames[i];
+  return document.getElementById('viewerFrame');
 }
+function hideOpeningNotice(){var n=document.getElementById('cscModuleOpening');if(n){n.hidden=true;n.textContent=''}}
 function injectStyle(){
-  if(document.getElementById('cscCacheFirstPanels20260917V1'))return;
-  var style=document.createElement('style');
-  style.id='cscCacheFirstPanels20260917V1';
+  if(document.getElementById('cscCacheFirstPanels20260917V2'))return;
+  var style=document.createElement('style');style.id='cscCacheFirstPanels20260917V2';
   style.textContent=''
     +'html body .viewer.csc-frame-viewer.csc-cache-first-opening:not([hidden]){display:flex!important;flex-direction:column!important;overflow:hidden!important;background:#071827!important}'
     +'html body .viewer.csc-frame-viewer.csc-cache-first-opening>.viewer-bar{display:flex!important;position:static!important;flex:0 0 auto!important;width:min(720px,100%)!important;margin:0 auto!important;background:#071827!important;border:0!important;box-shadow:none!important}'
-    +'html body .viewer.csc-frame-viewer.csc-cache-first-opening>iframe:not([hidden]){display:block!important;position:static!important;width:100%!important;height:auto!important;min-height:0!important;flex:1 1 auto!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;background:#071827!important}'
+    +'html body .viewer.csc-frame-viewer.csc-cache-first-opening>iframe:not([hidden]){display:block!important;position:static!important;left:auto!important;top:auto!important;width:100%!important;height:auto!important;min-height:0!important;flex:1 1 auto!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;background:#071827!important}'
     +'html body .viewer.csc-frame-viewer.csc-cache-first-opening>#cscModuleOpening{display:none!important}';
   document.head.appendChild(style);
 }
-
-function hideShellWait(){
-  var node=document.getElementById('cscModuleOpening');
-  if(node){node.hidden=true;node.textContent='';}
+function revealLegacyFrame(){
+  var viewer=document.getElementById('viewer');if(!viewer||viewer.hidden||!viewer.classList.contains('csc-frame-viewer'))return;
+  injectStyle();
+  viewer.classList.remove('csc-frame-opening');
+  viewer.classList.add('csc-cache-first-opening');
+  var frame=activeFrame();
+  if(frame){
+    frame.style.visibility='visible';
+    frame.style.opacity='1';
+    frame.style.pointerEvents='auto';
+  }
+  hideOpeningNotice();
 }
-
-/* O iframe real fica visível enquanto termina a hidratação; não esperamos o evento
-   load de todos os recursos para só então mostrar o painel. */
-var originalSetLegacyFrameOpening=window.setLegacyFrameOpening;
-if(typeof originalSetLegacyFrameOpening==='function'){
-  window.setLegacyFrameOpening=function(frame,visible){
-    injectStyle();
-    var viewer=document.getElementById('viewer');
-    if(frame){
-      frame.style.visibility='visible';
-      frame.style.opacity='1';
-      frame.style.pointerEvents='auto';
-    }
-    if(viewer){
-      viewer.classList.remove('csc-frame-opening');
-      viewer.classList.toggle('csc-cache-first-opening',Boolean(visible));
-    }
-    hideShellWait();
-    if(!visible&&viewer)viewer.classList.remove('csc-cache-first-opening');
-  };
+function settleLegacyFrame(){
+  var viewer=document.getElementById('viewer');if(!viewer)return;
+  viewer.classList.remove('csc-cache-first-opening');
+  hideOpeningNotice();
 }
-
-function warmNative(name){
-  var loader=null;
-  if(name==='moradores')loader=window.ensureTask17MoradoresAssets;
-  else if(name==='agendas')loader=window.ensureTask16AgendaAssets;
-  else if(name==='profissionais')loader=window.ensureTask18ProfissionaisAssets;
-  if(typeof loader!=='function')return;
-  var run=function(){try{loader(function(){})}catch(e){}};
-  if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(run);else setTimeout(run,0);
+function afterOpen(){
+  revealLegacyFrame();
+  if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(revealLegacyFrame);
+  setTimeout(revealLegacyFrame,40);
+  setTimeout(revealLegacyFrame,100);
 }
-
-function warmLegacy(name,title){
-  if(!remoteReady()&&name!=='territorio')return;
-  if(typeof window.moduleRouteId!=='function'||typeof window.moduleUrl!=='function'||typeof window.ensureShellFrame!=='function')return;
-  try{
-    var routeId=window.moduleRouteId(name,{}),url=window.moduleUrl(name,{});if(!url)return;
-    var frame=window.ensureShellFrame(name,url,title||'Painel',routeId);if(!frame)return;
-    if(frame.dataset.shellLoaded!=='1'){
-      frame.dataset.shellLoaded='1';
-      frame.dataset.cscIntentPreload='1';
-      var target=frame.dataset.shellUrl||url;
-      if(typeof window.shellFrameAtTarget!=='function'||!window.shellFrameAtTarget(frame))frame.src=target;
-    }
-  }catch(e){}
+function openOnIntent(button){
+  if(!button||button.hidden||button.disabled)return false;
+  var name=moduleName(button);if(!name||name==='portal')return false;
+  var api=shell();if(!api)return false;
+  state.intentAt=Date.now();state.module=name;state.suppressUntil=state.intentAt+1200;
+  try{api.abrir(name,moduleTitle(button));afterOpen();return true}catch(e){state.suppressUntil=0;return false}
 }
-
-function prioritizePanel(button){
-  if(!button||button.hidden||button.disabled)return;
-  var name=String(button.dataset.module||'').toLowerCase();if(!name||name==='portal'||name==='ubs')return;
-  state.intentAt=Date.now();
-  /* Se a Saúde geral ainda aguardava seu timer, ela não disputa rede/CPU com o toque. */
-  try{if(window.healthRefreshTimer){clearTimeout(window.healthRefreshTimer);window.healthRefreshTimer=null}}catch(e){}
-  var title='';try{title=String((button.querySelector('strong')||{}).textContent||'Painel')}catch(e){}
-  if(name==='moradores'||name==='agendas'||name==='profissionais')warmNative(name);
-  else warmLegacy(name,title);
-}
-
-function onPointerDown(event){
-  var button=event.target&&event.target.closest?event.target.closest('#moduleGrid .module[data-module]'):null;
-  prioritizePanel(button);
+function onPointerDown(event){var button=moduleButton(event);openOnIntent(button)}
+function onClick(event){
+  var button=moduleButton(event);if(!button)return;
+  var name=moduleName(button);
+  if(name&&name===state.module&&Date.now()<=state.suppressUntil){
+    event.preventDefault();event.stopPropagation();if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+    state.suppressUntil=0;
+  }
 }
 document.addEventListener('pointerdown',onPointerDown,{capture:true,passive:true});
 if(!window.PointerEvent)document.addEventListener('touchstart',onPointerDown,{capture:true,passive:true});
+document.addEventListener('click',onClick,true);
 
-/* Saúde geral continua atualizando em segundo plano, mas somente quando a Central
-   está ociosa. Atualização manual permanece intocada. */
-var originalScheduleHealthRefresh=window.scheduleHealthRefresh;
-if(typeof originalScheduleHealthRefresh==='function'){
-  window.scheduleHealthRefresh=function(force,delay){
-    if(force)return originalScheduleHealthRefresh.apply(this,arguments);
-    try{if(window.healthRefreshTimer){clearTimeout(window.healthRefreshTimer);window.healthRefreshTimer=null}}catch(e){}
-    var wait=Math.max(2200,Number(delay==null?2200:delay));
-    window.healthRefreshTimer=setTimeout(function attempt(){
-      window.healthRefreshTimer=null;
-      if(!window.context||window.mode==='ubs')return;
-      if(window.shellActiveModule||recentIntent(1800)){
-        window.healthRefreshTimer=setTimeout(attempt,900);
-        return;
-      }
-      var run=function(){
-        if(window.shellActiveModule||recentIntent(900)){
-          window.healthRefreshTimer=setTimeout(attempt,900);
-          return;
-        }
-        if(typeof window.refreshHealth==='function')window.refreshHealth(false);
-      };
-      if('requestIdleCallback' in window)window.requestIdleCallback(run,{timeout:1300});else setTimeout(run,0);
-    },wait);
-  };
+/* Se a Central voltar a marcar o frame como "opening" durante a mesma abertura,
+   a observação remove somente esse estado visual bloqueante. */
+function installObserver(){
+  var viewer=document.getElementById('viewer');if(!viewer||state.observer||typeof MutationObserver!=='function')return;
+  state.observer=new MutationObserver(function(){
+    if(viewer.hidden){viewer.classList.remove('csc-cache-first-opening');return}
+    if(viewer.classList.contains('csc-frame-opening'))revealLegacyFrame();
+  });
+  state.observer.observe(viewer,{attributes:true,attributeFilter:['class','hidden']});
 }
+document.addEventListener('load',function(event){
+  var target=event.target;
+  if(target&&target.tagName==='IFRAME'&&target.closest&&target.closest('#viewer'))setTimeout(settleLegacyFrame,0);
+},true);
 
-injectStyle();
+injectStyle();installObserver();
+window.addEventListener('pageshow',function(){installObserver();var viewer=document.getElementById('viewer');if(viewer&&viewer.classList.contains('csc-frame-opening'))revealLegacyFrame()});
 }());
