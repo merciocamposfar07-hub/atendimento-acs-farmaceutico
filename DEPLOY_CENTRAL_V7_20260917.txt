@@ -1,0 +1,1 @@
+Publicação forçada da Central após correção V7 passiva e atualização das versões de script. Arquivo temporário de deploy; não contém lógica do aplicativo.
