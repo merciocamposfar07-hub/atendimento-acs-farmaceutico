@@ -7,6 +7,8 @@ on:
       - 'conecta-moradores-native-v1.js'
       - 'central-administrativa-tacs.js'
       - 'central-administrativa-tacs.html'
+      - 'central-tacs-login-rapido-v1.js'
+      - 'conecta-agendas-native-v1.js'
       - 'conecta-module-core-v1.js'
       - 'teste-v1/painel-moradores-transport-v2.js'
       - 'portal-identificacao-familia-v1.js'
@@ -14,6 +16,8 @@ on:
       - 'scripts/test_resposta_imediata_conecta_v1.js'
       - 'scripts/test_travamento_familia_v2.js'
       - 'scripts/aplicar_correcao_travamento_familia_20260916.py'
+      - 'scripts/test_pin_agendas_safari_20260916.js'
+      - 'scripts/aplicar_correcao_pin_agendas_safari_20260916.py'
       - 'package.json'
       - '.github/workflows/validar-resposta-imediata-conecta.yml'
   workflow_dispatch:
@@ -49,10 +53,14 @@ jobs:
           )
           p.write_text(s,encoding='utf-8')
           PY
-      - name: Aplicar bloco cirúrgico pendente
+      - name: Aplicar bloco de travamento e família
         run: python3 scripts/aplicar_correcao_travamento_familia_20260916.py
-      - name: Restaurar script auxiliar antes dos gates
+      - name: Restaurar script auxiliar anterior
         run: git checkout -- scripts/aplicar_correcao_travamento_familia_20260916.py
+      - name: Validar script PIN e Agendas
+        run: python3 -m py_compile scripts/aplicar_correcao_pin_agendas_safari_20260916.py
+      - name: Aplicar bloco PIN e Agendas Safari
+        run: python3 scripts/aplicar_correcao_pin_agendas_safari_20260916.py
       - name: Validar sintaxe dos arquivos afetados
         run: |
           node --check conecta-morador-session-v1.js
@@ -61,12 +69,17 @@ jobs:
           node --check teste-v1/painel-moradores-transport-v2.js
           node --check portal-identificacao-familia-v1.js
           node --check central-administrativa-tacs.js
+          node --check central-tacs-login-rapido-v1.js
+          node --check conecta-agendas-native-v1.js
       - name: Executar gate de resposta imediata
         run: node scripts/test_resposta_imediata_conecta_v1.js
       - name: Executar gate de travamento e família
         run: node scripts/test_travamento_familia_v2.js
-      - name: Restringir arquivos alterados pelo patch
+      - name: Executar gate PIN e Agendas Safari
+        run: node scripts/test_pin_agendas_safari_20260916.js
+      - name: Restringir arquivos alterados pelos patches
         run: |
+          git diff --check
           python3 - <<'PY'
           import subprocess
           allowed={
@@ -74,6 +87,7 @@ jobs:
             'conecta-moradores-native-v1.js',
             'portal-identificacao-familia-v1.js',
             'central-administrativa-tacs.html',
+            'central-administrativa-tacs.js',
             'index.html'
           }
           changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
@@ -90,6 +104,6 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add teste-v1/painel-moradores-transport-v2.js conecta-moradores-native-v1.js portal-identificacao-familia-v1.js central-administrativa-tacs.html index.html
-          git commit -m 'fix: liberar leituras dos painéis e restaurar busca familiar'
+          git add teste-v1/painel-moradores-transport-v2.js conecta-moradores-native-v1.js portal-identificacao-familia-v1.js central-administrativa-tacs.html central-administrativa-tacs.js index.html
+          git commit -m 'fix: PIN TACS e Agendas Safari com escopo cirúrgico'
           git push origin HEAD:main
