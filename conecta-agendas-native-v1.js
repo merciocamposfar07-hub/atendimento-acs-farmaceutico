@@ -15,7 +15,10 @@ function normalSituacao(v){return text(v).toUpperCase().replace(/_/g,' ').replac
 function normalId(v){return text(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim().replace(/[^A-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'')}
 function normalDia(v){var s=text(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();if(s.indexOf('SEGUNDA')===0)return'SEGUNDA';if(s.indexOf('TERCA')===0)return'TERCA';if(s.indexOf('QUARTA')===0)return'QUARTA';if(s.indexOf('QUINTA')===0)return'QUINTA';if(s.indexOf('SEXTA')===0)return'SEXTA';return s}
 function ordemDia(v){var d=normalDia(v),m={SEGUNDA:1,TERCA:2,QUARTA:3,QUINTA:4,SEXTA:5};return Object.prototype.hasOwnProperty.call(m,d)?m[d]:99}
-function dataInput(v){var s=text(v).trim();if(!s)return'';var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];var d=new Date(s);if(isNaN(d.getTime()))return'';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+/* CORRECAO_CIRURGICA_AGENDAS_DATA_BR_COMPARE_20260917_V2
+   A planilha exibe DATA em DD/MM/AAAA; o input date usa AAAA-MM-DD.
+   Normaliza os dois formatos no ponto de comparação, sem alterar gravação ou regras de vagas. */
+function dataInput(v){var s=text(v).trim();if(!s)return'';var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];var br=s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s.*)?$/);if(br)return br[3]+'-'+br[2]+'-'+br[1];var d=new Date(s);if(isNaN(d.getTime()))return'';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function clone(v){try{return JSON.parse(JSON.stringify(v))}catch(e){return v}}
 function objectRows(v){return Array.isArray(v)?v.filter(function(x){return x&&typeof x==='object'}):[]}
 
