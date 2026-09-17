@@ -1,0 +1,30 @@
+name: Validar resposta imediata Conecta
+
+on:
+  push:
+    paths:
+      - 'conecta-morador-session-v1.js'
+      - 'central-administrativa-tacs.js'
+      - 'conecta-module-core-v1.js'
+      - 'index.html'
+      - 'scripts/test_resposta_imediata_conecta_v1.js'
+      - 'package.json'
+      - '.github/workflows/validar-resposta-imediata-conecta.yml'
+  workflow_dispatch:
+
+jobs:
+  resposta-imediata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validar sintaxe do Morador
+        run: node --check conecta-morador-session-v1.js
+      - name: Validar sintaxe do núcleo
+        run: node --check conecta-module-core-v1.js
+      - name: Executar gate isolado
+        run: node scripts/test_resposta_imediata_conecta_v1.js
