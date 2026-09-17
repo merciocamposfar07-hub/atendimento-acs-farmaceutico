@@ -1391,16 +1391,25 @@ function openModule(name,title,options){
     if(name==='agendas'){showNativeAgenda(title||'Agendas e vagas',routeId);return}
     if(name==='moradores'&&moduleRouteOptions(options).view!=='prontuarios'){showNativeMoradores(title||'Moradores',routeId);return}
     if(name==='profissionais'){showNativeProfissionais(title||'Profissionais e serviços',routeId);return}
-    /* TACS/áreas responde no primeiro toque com a tela real em leitura local.
-       Escritas continuam bloqueadas até a sessão remota ser confirmada. */
-    if(name==='territorio'){
-      priorizarSincronizacaoTerritorioPendente();
-      var localFrame=ensureShellFrame(name,url,title||'TACS e áreas',routeId);
+    /* CACHE_FIRST_PAINEIS_LEGADOS_20260917:
+       Depois que o PIN local libera o contexto, painéis que já possuem snapshot próprio
+       abrem a tela REAL no primeiro toque. O servidor apenas reconfirma em segundo plano.
+       Não altera PIN, permissões, backend, escrita, rotas ou layout. */
+    var legacyCacheFirst=(
+      name==='territorio'||
+      name==='suporte'||
+      name==='recados'||
+      name==='municipios'||
+      (name==='moradores'&&moduleRouteOptions(options).view==='prontuarios')
+    );
+    if(legacyCacheFirst){
+      if(name==='territorio')priorizarSincronizacaoTerritorioPendente();
+      var localFrame=ensureShellFrame(name,url,title||'Painel',routeId);
       localFrame.dataset.shellLocalFirst='1';
-      showShellFrame(name,localFrame,title||'TACS e áreas',routeId);
+      showShellFrame(name,localFrame,title||'Painel',routeId);
       return;
     }
-    /* Demais painéis em frame preservam a prévia já existente. */
+    /* Somente módulos sem snapshot local permanecem na prévia estrutural. */
     showPendingModuleShell(name,title||'Painel',routeId);
     return;
   }
