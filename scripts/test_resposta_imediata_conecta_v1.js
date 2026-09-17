@@ -37,6 +37,25 @@ assert.match(moradoresNative,/function showWaitingSession\(\)/);
 assert.match(moradoresNative,/perf\.prime\('moradores-base'/);
 assert.match(moradoresNative,/showAuthenticatedShell\('Acesso validado\. Conferindo os dados em segundo plano\.'/);
 
+// Reentrada em Moradores: o toque apenas revela a superfície preparada. Não pode reiniciar
+// a consulta remota no mesmo instante nem bloquear a busca por causa da pintura do cache.
+assert.match(moradoresNative,/RESPOSTA_IMEDIATA_MORADORES_REENTRADA_2026_09_16_V1/);
+assert.match(moradoresNative,/function scheduleRefreshIfStale\(\)/);
+assert.match(moradoresNative,/Date\.now\(\)-lastRemoteBindAt<15000/);
+assert.match(moradoresNative,/refreshTimer=setTimeout\(function\(\)\{/);
+assert.match(moradoresNative,/\},1200\);/);
+const waitingStart=moradoresNative.indexOf('function showWaitingSession()');
+const waitingEnd=moradoresNative.indexOf('function notify(type)',waitingStart);
+assert.ok(waitingStart>=0&&waitingEnd>waitingStart,'showWaitingSession não encontrado.');
+const waiting=moradoresNative.slice(waitingStart,waitingEnd);
+assert.doesNotMatch(waiting,/search\.disabled=true/,'O cache voltou a bloquear o botão Buscar.');
+assert.doesNotMatch(waiting,/areaSelect\.disabled=true/,'O cache voltou a bloquear a área antes da confirmação remota.');
+const mountStart=moradoresNative.indexOf('mount:function(next)');
+const mountEnd=moradoresNative.indexOf('hide:function()',mountStart);
+const mountBody=moradoresNative.slice(mountStart,mountEnd);
+assert.doesNotMatch(mountBody,/rebindNativeContext/,'Reabrir Moradores voltou a disparar rede no mesmo toque.');
+assert.match(mountBody,/scheduleRefreshIfStale\(\)/);
+
 // Morador: família é aquecida antes do toque e o toque não espera Apps Script.
 assert.match(morador,/RESPOSTA_IMEDIATA_MORADOR_2026_09_16_V1/);
 assert.match(morador,/familyMemberCache=\{\},familyMemberLoads=\{\},familyWarmGeneration=0/);
@@ -59,4 +78,4 @@ assert.match(select,/if\(cached\)\{applyFamilyMemberData\(cached,name,birth\);re
 // O Portal deve carregar uma revisão versionada do script; o gate não pode quebrar a cada cache-buster integral.
 assert.match(index,/conecta-morador-session-v1\.js\?v=[a-z0-9-]+/i);
 
-console.log('RESPOSTA_IMEDIATA_CONECTA_OK: PIN local abre antes da rede; painéis nativos exibem shell/cache primeiro; família responde localmente; remoto apenas confirma e atualiza.');
+console.log('RESPOSTA_IMEDIATA_CONECTA_OK: PIN local abre antes da rede; painéis nativos exibem shell/cache primeiro; Moradores não reinicia rede no toque; família responde localmente; remoto apenas confirma e atualiza.');
