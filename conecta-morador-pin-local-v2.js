@@ -98,21 +98,22 @@ window.ConectaMoradorPinLocalV2={
 };
 }());
 
-/* CORRECAO_CACHE_FIRST_PAINEIS_20260917_V6
-   Bloco isolado. Não intercepta nem substitui o clique original dos módulos.
-   O shell oficial continua sendo o único responsável por abrir/fechar painéis.
-   Este bloco apenas mostra cache confirmado quando o shell já iniciou a abertura
-   e normaliza o fluxo visual da Central sem alterar PIN, sessão, área, permissão,
-   agendas, escrita ou backend. */
+/* CORRECAO_CACHE_FIRST_PAINEIS_20260917_V7
+   Bloco passivo. Não intercepta pointerdown, touchstart ou click dos módulos.
+   O shell oficial continua sendo o único dono da navegação. Este bloco apenas:
+   1) corrige o fluxo/recorte visual da Central;
+   2) quando o shell oficial já abriu um painel, substitui a prévia genérica por cache confirmado;
+   3) deixa o Apps Script e o próprio shell substituírem a prévia quando os dados reais chegam.
+   Não altera PIN, sessão, áreas, permissões, agendas, escrita ou backend. */
 (function(){
 'use strict';
 if(typeof window==='undefined'||typeof document==='undefined'||typeof location==='undefined')return;
 if(!/\/central-administrativa-tacs\.html$/i.test(String(location.pathname||'')))return;
-if(window.ConectaCacheFirstPanels20260917V6)return;
+if(window.ConectaCacheFirstPanels20260917V7)return;
 
 var CONTEXT_KEY='portalConectaModuleCoreV1',PERF_PREFIX='portalConectaModulePerfV1:';
-var state={module:'',seq:0,observer:null,bound:false};
-window.ConectaCacheFirstPanels20260917V6=state;
+var state={module:'',observer:null,timer:0};
+window.ConectaCacheFirstPanels20260917V7=state;
 
 function t(v){return String(v==null?'':v).trim()}
 function e(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -125,7 +126,7 @@ function area(){var x=ctx(),id=a(x&&x.area&&x.area.areaId);if(id)return id;try{i
 function perf(name){
   var m=mode(),id=area(),key=PERF_PREFIX+(m||'anon')+':'+id+':'+name;
   try{
-    var item=JSON.parse(localStorage.getItem(key)||sessionStorage.getItem(key)||'null');
+    var raw=localStorage.getItem(key)||sessionStorage.getItem(key)||'',item=JSON.parse(raw||'null');
     if(!item||!item.data||t(item.mode).toLowerCase()!==m||a(item.areaId)!==id)return null;
     if(item.schemaVersion!==1&&item.schemaVersion!==2)return null;
     return{data:item.data,confirmedAt:Number(item.confirmedAt||item.savedAt||0)};
@@ -161,11 +162,11 @@ function cachedHtml(name){
   return'<div class="csc-cf-preview" data-cache-module="'+e(name)+'">'+note(item)+body+'</div>';
 }
 function installStyle(){
-  if(document.getElementById('cscCacheFirstPanelsV6Style'))return;
-  var s=document.createElement('style');s.id='cscCacheFirstPanelsV6Style';s.textContent=''
+  if(document.getElementById('cscCacheFirstPanelsV7Style'))return;
+  var s=document.createElement('style');s.id='cscCacheFirstPanelsV7Style';s.textContent=''
     +'html,body{max-width:100%!important;overflow-x:hidden!important}'
-    +'html body.csc-central:not(.viewer-open)>main{position:static!important;inset:auto!important;transform:none!important;width:min(720px,100%)!important;max-width:100%!important;min-height:0!important;height:auto!important;margin:0 auto!important;padding-top:8px!important;padding-bottom:calc(148px + env(safe-area-inset-bottom))!important;overflow:visible!important}'
-    +'html body.csc-central:not(.viewer-open) #identityPanel:not([hidden]),html body.csc-central:not(.viewer-open) #healthPanel:not([hidden]),html body.csc-central:not(.viewer-open) #modulesPanel:not([hidden]){position:static!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;min-height:0!important;height:auto!important;float:none!important}'
+    +'html body.csc-central:not(.viewer-open)>main{position:static!important;inset:auto!important;transform:none!important;width:min(720px,100%)!important;max-width:100%!important;min-height:0!important;height:auto!important;margin:0 auto!important;padding-top:8px!important;padding-bottom:calc(164px + env(safe-area-inset-bottom))!important;overflow:visible!important}'
+    +'html body.csc-central:not(.viewer-open) #identityPanel:not([hidden]),html body.csc-central:not(.viewer-open) #healthPanel:not([hidden]),html body.csc-central:not(.viewer-open) #modulesPanel:not([hidden]){position:static!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;min-height:0!important;height:auto!important;float:none!important;overflow:visible!important}'
     +'html body.csc-central:not(.viewer-open) #healthPanel:not([hidden]),html body.csc-central:not(.viewer-open) #modulesPanel:not([hidden]){margin-top:22px!important}'
     +'html body.csc-central:not(.viewer-open) .health-grid,html body.csc-central:not(.viewer-open) .module-grid{position:static!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;align-content:start!important;overflow:visible!important}'
     +'html body.csc-central:not(.viewer-open) .health-card,html body.csc-central:not(.viewer-open) .module{min-width:0!important;max-width:100%!important}'
@@ -179,38 +180,32 @@ function installStyle(){
 }
 function shell(){var x=window.ConectaCentralShellV1;return x&&typeof x.ativo==='function'?x:null}
 function active(){try{var x=shell();return x?t(x.ativo()).toLowerCase():''}catch(err){return''}}
-function place(name,seq){
-  if(seq!==state.seq||active()!==name)return false;
+function place(){
+  var name=active();
+  if(!name||name==='portal'||name==='ubs'||name==='territorio')return false;
   var html=cachedHtml(name);if(!html)return false;
   var p=document.getElementById('nativePendingHost');
-  if(p&&!p.hidden){p.innerHTML=html;p.dataset.cscCacheFirst='1';return true}
+  if(p&&!p.hidden){if(p.dataset.cscCacheModule!==name){p.innerHTML=html;p.dataset.cscCacheModule=name}return true}
   var o=document.getElementById('cscModuleOpening');
-  if(o&&!o.hidden){o.innerHTML=html;o.dataset.cscCacheFirst='1';return true}
+  if(o&&!o.hidden){if(o.dataset.cscCacheModule!==name){o.innerHTML=html;o.dataset.cscCacheModule=name}return true}
   return false;
 }
-function schedule(name){
-  state.module=name;var seq=++state.seq;
-  [0,16,45,95,180].forEach(function(ms){setTimeout(function(){place(name,seq)},ms)});
-  if(typeof requestAnimationFrame==='function')requestAnimationFrame(function(){place(name,seq)});
+function schedulePlace(){
+  if(state.timer)return;
+  state.timer=setTimeout(function(){
+    state.timer=0;
+    place();
+    if(typeof requestAnimationFrame==='function')requestAnimationFrame(place);
+  },0);
 }
 function bind(){
   installStyle();
-  var grid=document.getElementById('moduleGrid');
-  if(grid&&grid.dataset.cscCacheFirstV6!=='1'){
-    grid.dataset.cscCacheFirstV6='1';
-    grid.addEventListener('click',function(event){
-      var btn=event.target&&event.target.closest?event.target.closest('.module[data-module]'):null;
-      if(!btn||btn.disabled||btn.hidden)return;
-      var name=t(btn.dataset.module).toLowerCase();
-      if(!name||name==='portal'||name==='ubs'||name==='territorio')return;
-      setTimeout(function(){schedule(name)},0);
-    },false);
-  }
   var v=document.getElementById('viewer');
   if(v&&!state.observer&&typeof MutationObserver==='function'){
-    state.observer=new MutationObserver(function(){var name=active();if(name&&name===state.module)place(name,state.seq)});
+    state.observer=new MutationObserver(schedulePlace);
     state.observer.observe(v,{attributes:true,childList:true,subtree:true,attributeFilter:['class','hidden']});
   }
+  schedulePlace();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 window.addEventListener('pageshow',bind);
