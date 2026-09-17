@@ -555,9 +555,16 @@ function renderBase(r,message,confirmed){
   renderAreaSelector(r.areas,r.areaId,r.areaNome);
   if(el('countResidents'))el('countResidents').textContent=String(r.totalRegistros);
   if(el('schema'))el('schema').textContent=r.schemaValido?'20/20':'ERRO';
-  if(el('write'))el('write').textContent=remoteConfirmed?(writesEnabled?'LIBERADO':'BLOQ.'):'AGUARDE';
-  if(el('consolidation'))el('consolidation').textContent=remoteConfirmed?(consolidationEnabled?'LIBERADA':'BLOQ.'):'AGUARDE';
-  if(el('situation'))el('situation').textContent=remoteConfirmed?(situationEnabled?'LIBERADA':'PROTEGIDA'):'AGUARDE';
+  /* CACHE_FIRST_MORADORES_ESTADO_VISUAL_20260917:
+     snapshot mostra imediatamente o último estado conhecido, como nos apps de referência.
+     Segurança permanece intacta: writesEnabled/situationEnabled/consolidationEnabled continuam
+     falsos até a confirmação remota; somente o TEXTO visual vem do snapshot. */
+  var visualWrite=remoteConfirmed?writesEnabled:(r.escritaHabilitada===true);
+  var visualConsolidation=remoteConfirmed?consolidationEnabled:(r.consolidacaoHabilitada===true);
+  var visualSituation=remoteConfirmed?situationEnabled:(r.situacaoHabilitada===true);
+  if(el('write'))el('write').textContent=visualWrite?'LIBERADO':'BLOQ.';
+  if(el('consolidation'))el('consolidation').textContent=visualConsolidation?'LIBERADA':'BLOQ.';
+  if(el('situation'))el('situation').textContent=visualSituation?'LIBERADA':'PROTEGIDA';
   if(el('summary'))el('summary').classList.remove('hidden');
   if(el('content'))el('content').classList.remove('hidden');
   if(el('logout'))el('logout').disabled=false;
