@@ -1,0 +1,48 @@
+name: Diagnostico recados Portal V1
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/diagnostico-recados-portal-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnosticar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar endpoint publico real
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec?action=painel_publico&areaId=JAPARANDUBA'
+          curl -fsSL --max-time 30 "$url" -o /tmp/publico.json
+          python - <<'PY'
+          import json
+          p='/tmp/publico.json'
+          raw=open(p,encoding='utf-8').read()
+          print(raw[:12000])
+          data=json.loads(raw)
+          assert data.get('ok') is True, data
+          print('VERSAO=',data.get('versao'))
+          print('AREA=',data.get('areaId'))
+          print('RECADOS=',len(data.get('recados') or []))
+          for x in data.get('recados') or []:
+              print('RECADO',x.get('id'),x.get('title'),x.get('validity'),x.get('time'),x.get('active'))
+          print('CAMPANHAS=',len(data.get('campanhas') or []))
+          PY
+
+      - name: Consultar Portal publicado e scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico'
+          curl -fsSL --max-time 30 "$base/?_=$RANDOM" -o /tmp/index.html
+          curl -fsSL --max-time 30 "$base/portal-public-data.js?_=$RANDOM" -o /tmp/public.js
+          curl -fsSL --max-time 30 "$base/portal-controle-integral.js?_=$RANDOM" -o /tmp/integral.js
+          grep -q 'action=painel_publico' /tmp/public.js
+          grep -q 'renderAlerts' /tmp/integral.js
+          grep -q 'portal-tacs-public-data' /tmp/integral.js
+          echo 'portal-front-ok'
