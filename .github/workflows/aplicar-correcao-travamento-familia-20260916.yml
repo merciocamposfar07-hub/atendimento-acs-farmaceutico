@@ -1,4 +1,5 @@
 name: Aplicar correção travamento e família 20260916
+# segunda passagem: workflow já existente na main, agora dispara a aplicação
 
 on:
   push:
