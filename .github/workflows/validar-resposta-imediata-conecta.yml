@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'conecta-morador-session-v1.js'
+      - 'conecta-moradores-native-v1.js'
       - 'central-administrativa-tacs.js'
       - 'conecta-module-core-v1.js'
       - 'index.html'
@@ -24,6 +25,8 @@ jobs:
           node-version: '24'
       - name: Validar sintaxe do Morador
         run: node --check conecta-morador-session-v1.js
+      - name: Validar sintaxe do painel Moradores
+        run: node --check conecta-moradores-native-v1.js
       - name: Validar sintaxe do núcleo
         run: node --check conecta-module-core-v1.js
       - name: Executar gate isolado
