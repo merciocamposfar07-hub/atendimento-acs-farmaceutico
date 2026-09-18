@@ -43,7 +43,7 @@ assert.match(block,/if\(name==='territorio'&&frame\.dataset\.shellLocalFirst==='
 const remoteTerritoryGuard=block.match(/if\(name==='territorio'&&frame\.dataset\.shellLocalFirst==='1'\)\{[\s\S]*?\n  \}/);
 assert.ok(remoteTerritoryGuard,'Guard de promoção local→remoto ausente.');
 assert.doesNotMatch(remoteTerritoryGuard[0],/frame\.src='about:blank'|frame\.dataset\.shellLoaded=''|frame\.dataset\.shellReady=''/,'A confirmação remota não pode apagar o painel territorial já visível.');
-assert.match(central,/teste-v1\/painel-tacs-areas-v1\.html\?from=central&v=/);
+assert.match(central,/teste-v1\/painel-tacs-areas-v1\.html\?from=central&localfirst=1&v=/);
 assert.doesNotMatch(central,/if\(name==='territorio'\)return '\/atendimento-acs-farmaceutico\/painel-oficial-tacs-areas\.html\?from=central&localfirst=1/);
 
 // Os demais painéis em frame preservam a prévia segura já existente.
