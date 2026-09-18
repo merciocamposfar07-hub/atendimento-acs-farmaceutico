@@ -406,9 +406,14 @@ function updateNote(){
   if(!note)return;
   if(writesEnabled&&situationEnabled){
     note.textContent='PAINEL DE MORADORES: cadastro, edição, situação e consolidação de duplicidades estão liberados. Todas as alterações permanecem registradas em auditoria.';
-    note.style.background='#e8f7ee';
-    note.style.borderColor='#9ed6b2';
-    note.style.color='#08723a';
+    /* CORRECAO_AVISO_VERDE_MORADORES_20260918:
+       este estado só é aplicado depois da confirmação remota completa.
+       Usa prioridade inline apenas neste aviso para vencer o azul institucional
+       definido no CSS do próprio painel, sem alterar qualquer outro painel. */
+    note.style.setProperty('background','#e8f7ee','important');
+    note.style.setProperty('background-image','none','important');
+    note.style.setProperty('border-color','#9ed6b2','important');
+    note.style.setProperty('color','#08723a','important');
   }else if(writesEnabled){
     note.textContent='PAINEL DE MORADORES: novo cadastro, edição e consolidação de duplicidades estão liberados. Situação cadastral permanece protegida pelo servidor.';
     note.style.background='#e7f3f7';
@@ -1338,6 +1343,6 @@ window.PortalTacsMoradoresTransportV2={
   maybeActivateSituation:maybeActivateSituation,
   rebindNativeContext:rebindNativeContext,
   nativeCompat:'task17-moradores-native-v1',
-  version:'3.6.2-superficie-nativa'
+  version:'3.6.3-aviso-verde'
 };
 }());
