@@ -139,4 +139,15 @@ window.addEventListener('pageshow',install);
   document.head.appendChild(s);
 }());
 
+(function(){
+  var s=document.createElement('style');
+  s.id='portalCscFooterIconVerticalAlignV4';
+  s.textContent=[
+    '.portal-footer-brand-main>img,.portal-footer-brand-main>svg{transform:translateY(-8px)!important}',
+    '@media(max-width:430px){.portal-footer-brand-main>img,.portal-footer-brand-main>svg{transform:translateY(-8px)!important}}'
+  ].join('');
+  document.head.appendChild(s);
+}());
+
+
 
