@@ -56,6 +56,13 @@ assert.match(native,/function objectRows\(v\)/,'Linhas inválidas de cache não 
 assert.match(native,/state\.profissionais=objectRows/);
 assert.match(native,/state\.agendas=objectRows/);
 assert.match(native,/perf\.commit\('agendas'/);
+assert.match(native,/SNAPSHOT_PREFIX='portalConectaAgendasLastConfirmedV1:'/);
+assert.match(native,/function snapshotKey\(\)\{return SNAPSHOT_PREFIX\+snapshotMode\+':'\+areaId\}/);
+assert.match(native,/function lerSnapshotPersistente\(\)/);
+assert.match(native,/function lerSnapshotLegado\(\)/);
+assert.match(native,/salvarSnapshotPersistente\(r\);/);
+assert.match(native,/if\(!carregou\)\{[\s\S]*lerSnapshotPersistente\(\)/);
+assert.match(native,/mode:snapshotMode,areaId:areaId/,'Snapshot persistente deve continuar isolado por perfil + área.');
 assert.match(native,/transport\.read\('admin_dados'/);
 assert.match(native,/policy\.classify/);
 assert.match(transport,/requests\.read\(action,payload/);
@@ -71,7 +78,8 @@ assert.match(transport,/portalTacsPublicInvalidateAtV1/);
 
 // O iframe remanescente é somente ponte de transporte, nunca hospeda o painel nativo.
 assert.match(transport,/não hospeda nem renderiza o painel/);
-assert.match(transport,/frame\.hidden=true/);
+assert.match(transport,/visibility:hidden/,'Ponte Safari deve ser invisível sem retirar o browsing context.');
+assert.doesNotMatch(transport,/frame\.hidden=true/,'display:none/hidden interrompe POST no Safari.');
 assert.doesNotMatch(native,/document\.createElement\('iframe'\)/);
 
 // Visual nativo institucional existe e o painel legado permanece preservado como fallback histórico.
