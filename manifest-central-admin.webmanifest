@@ -1,8 +1,8 @@
 {
-  "id": "/atendimento-acs-farmaceutico/conecta-saude-comunitaria",
-  "name": "Conecta Saúde Comunitária",
-  "short_name": "Conecta Saúde",
-  "description": "Plataforma institucional de gestão e acesso à saúde comunitária.",
+  "id": "/atendimento-acs-farmaceutico/admin-conecta-saude-comunitaria",
+  "name": "Admin Conecta Saúde Comunitária",
+  "short_name": "Admin Conecta Saúde Comunitária",
+  "description": "Admin Conecta Saúde Comunitária para gestão administrativa da plataforma.",
   "start_url": "/atendimento-acs-farmaceutico/central-administrativa-tacs.html",
   "scope": "/atendimento-acs-farmaceutico/",
   "display": "standalone",
