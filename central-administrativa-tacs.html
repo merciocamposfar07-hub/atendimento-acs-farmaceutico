@@ -2778,6 +2778,20 @@ html body:not(.viewer-open) #viewer iframe{
   text-align:center!important;
 }
 </style>
+
+<style id="cscTremorCentralSafariScroll20260917">
+/* TREMOR_CENTRAL_SAFARI_SCROLL_20260917
+   O viewer já é fixed e ocupa a tela inteira. Não bloquear o scroll do body evita
+   o salto de viewport do Safari ao abrir/fechar painéis, mantendo a Central imóvel. */
+html body.viewer-open{
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+}
+html body.csc-central #healthUpdated{
+  min-height:2.7em!important;
+  line-height:1.35!important;
+}
+</style>
 </head>
 <body class="csc-brand-enhanced csc-central">
 <div id="cscInstitutionalAppbar" class="csc-appbar" role="banner"><img class="csc-appbar-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=18df60496b55" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="csc-appbar-title"><small>CONECTA SAÚDE COMUNITÁRIA</small><strong>Central Administrativa</strong></div></div>
