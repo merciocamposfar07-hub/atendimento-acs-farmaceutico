@@ -7,6 +7,7 @@ on:
       - 'conecta-moradores-native-v1.js'
       - 'central-administrativa-tacs.js'
       - 'central-administrativa-tacs.html'
+      - 'painel-oficial-recados-campanhas.html'
       - 'central-tacs-login-rapido-v1.js'
       - 'conecta-agendas-native-v1.js'
       - 'conecta-module-core-v1.js'
@@ -14,6 +15,7 @@ on:
       - 'portal-identificacao-familia-v1.js'
       - 'index.html'
       - 'scripts/test_resposta_imediata_conecta_v1.js'
+      - 'scripts/test_primeiro_toque_paineis_v1.js'
       - 'scripts/test_travamento_familia_v2.js'
       - 'scripts/test_pin_agendas_safari_20260916.js'
       - 'package.json'
@@ -47,6 +49,8 @@ jobs:
           node --check conecta-agendas-native-v1.js
       - name: Executar gate de resposta imediata
         run: node scripts/test_resposta_imediata_conecta_v1.js
+      - name: Executar gate de primeiro toque e cache-first
+        run: node scripts/test_primeiro_toque_paineis_v1.js
       - name: Executar gate de travamento e família
         run: node scripts/test_travamento_familia_v2.js
       - name: Executar gate PIN e Agendas Safari
