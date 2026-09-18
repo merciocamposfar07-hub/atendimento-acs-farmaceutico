@@ -82,7 +82,7 @@ assert.match(recados,/if\(token\|\|territorioToken\|\|ubsToken\|\|accessMode==='
 assert.match(recados,/function contextoMutacaoDisponivel\(\)\{return Boolean\(\(contextoPronto\|\|snapshotVisivel\)&&areaId&&\(token\|\|territorioToken\|\|ubsToken\|\|accessMode==='ubs'\)\)\}/);
 
 const core=fs.readFileSync('conecta-module-core-v1.js','utf8');
-assert.match(core,/function ready\(\)[\s\S]*Boolean\(s\.adminToken\|\|s\.territoryToken\)/);
+assert.match(core,/function ready\(\)[\s\S]*Boolean\(s\.adminToken\|\|s\.territoryToken\|\|s\.ubsToken\)/);
 assert.match(core,/function localFirstContextAllowed\(\)/);
 assert.match(core,/params\.get\('localfirst'\)==='1'&&Boolean\(ctx&&text\(ctx\.mode\)\)/);
 assert.match(core,/if\(!ready\(\)&&!localFirstContextAllowed\(\)\)showCentralGate\(\)/);
