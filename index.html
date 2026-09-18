@@ -102,95 +102,149 @@
     @media(min-resolution:2dppx){.panel,.purpose,.form-panel,.notice-board,.notice-card,.dental,.slot,input,textarea,select{backface-visibility:hidden}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   
-    /* CSC_PORTAL_MORADOR_APP_SHELL_20260918
-       Camada exclusivamente visual/navegacional. Não altera IDs, dados, PIN, família,
-       área, agendas, reservas, WhatsApp ou integrações existentes. */
+
+    /* CSC_PORTAL_MORADOR_NATIVE_APP_20260918_V2
+       Interface por telas. Mantém IDs e regras funcionais existentes. */
+    :root{--csc-appbar-h:64px}
+    html{overflow-x:hidden}
+    body{overflow-x:hidden;background:#eef3f6}
     .csc-resident-appbar{
       position:sticky;top:0;z-index:2500;display:flex;align-items:center;gap:11px;
-      min-height:64px;padding:calc(9px + env(safe-area-inset-top)) 16px 9px;
-      background:rgba(6,44,70,.97);color:#fff;border-bottom:1px solid rgba(255,255,255,.12);
-      -webkit-backdrop-filter:saturate(150%) blur(16px);backdrop-filter:saturate(150%) blur(16px)
+      min-height:var(--csc-appbar-h);padding:calc(9px + env(safe-area-inset-top)) 15px 9px;
+      background:#062c46;color:#fff;border-bottom:1px solid rgba(255,255,255,.12);
+      box-shadow:0 5px 18px rgba(2,27,44,.16)
     }
-    .csc-resident-appbar img{width:40px;height:40px;flex:0 0 40px;border-radius:12px;object-fit:cover}
+    .csc-resident-appbar img{width:40px;height:40px;flex:0 0 40px;border-radius:11px;object-fit:cover}
     .csc-resident-appbar-copy{min-width:0;display:grid;gap:1px}
-    .csc-resident-appbar-copy small{color:#79dfa5;font-size:11px;font-weight:950;letter-spacing:.075em;text-transform:uppercase}
+    .csc-resident-appbar-copy small{color:#79dfa5;font-size:10px;font-weight:950;letter-spacing:.08em}
     .csc-resident-appbar-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px;line-height:1.2}
-    .csc-resident-dock{
-      position:fixed;left:50%;bottom:0;z-index:2600;display:grid;grid-template-columns:repeat(3,1fr);
-      width:min(100%,760px);transform:translateX(-50%);
-      padding:7px 10px calc(7px + env(safe-area-inset-bottom));
-      border-top:1px solid #b7c6cf;background:rgba(255,255,255,.97);
-      box-shadow:0 -10px 28px rgba(4,44,70,.12);
-      -webkit-backdrop-filter:saturate(150%) blur(16px);backdrop-filter:saturate(150%) blur(16px)
-    }
-    .csc-resident-nav{
-      min-height:52px;border:0;border-radius:14px;background:transparent;color:#425e6d;
-      display:grid;place-items:center;align-content:center;gap:2px;padding:5px 8px;cursor:pointer;
+    .csc-resident-back{
+      width:40px;height:40px;flex:0 0 40px;border:0;border-radius:12px;background:rgba(255,255,255,.11);
+      color:#fff;font-size:33px;line-height:36px;font-weight:500;padding:0 0 3px;cursor:pointer;
       -webkit-tap-highlight-color:transparent;touch-action:manipulation
     }
-    .csc-resident-nav i{font-style:normal;font-size:20px;line-height:1}
-    .csc-resident-nav span{font-size:11px;font-weight:900;line-height:1.15}
-    .csc-resident-nav.is-active{background:#e7f1f6;color:#062c46}
-    .csc-resident-nav:active{transform:scale(.97)}
-    .hero,.purpose,.form-panel,#noticeArea{scroll-margin-top:82px}
-    .action-card,.slot,.send{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-    .action-card:active,.slot:active,.send:active{transform:scale(.992)}
-    @media(max-width:820px){
-      html,body{background:#fff}
-      body{padding:0 0 calc(68px + env(safe-area-inset-bottom))}
-      .shell{width:100%;margin:0;padding:0}
-      .panel{min-height:100svh;border:0;border-radius:0;box-shadow:none}
-      .hero{padding:20px 18px 22px;border-radius:0}
-      .hero::after{width:240px;height:240px;right:-105px;bottom:-110px}
-      .hero-top{display:grid;gap:14px}
-      .identity{gap:11px}
-      .mark{display:none}
-      .identity strong{font-size:13px;letter-spacing:.035em}
-      .identity span{font-size:12px;line-height:1.35}
-      .hours{width:100%;margin:0;display:flex;align-items:center;justify-content:space-between;gap:8px;
-        min-height:48px;padding:10px 12px;border-radius:13px;text-align:left}
-      .hours small{font-size:10px}.hours strong{margin:0;font-size:18px}
-      h1{margin:20px 0 9px;font-size:30px;line-height:1.04;letter-spacing:-.035em}
-      .exclusive{margin-bottom:14px;font-size:14px;line-height:1.45}
-      .responsible{font-size:13px;gap:8px}.responsible-icon{width:25px;height:25px}
-      .hero-actions{margin:0;border:0;border-bottom:1px solid #c7d3da;border-radius:0;box-shadow:none}
-      .action-card{padding:14px 16px}.action-icon{width:42px;height:42px;font-size:20px}
-      .action-card small{font-size:10px}.action-card p{font-size:13px;line-height:1.4}
-      .content{padding:14px 12px 20px;background:#f3f6f8}
-      .notice-area{margin-bottom:14px}
-      .notice-board{padding:16px;border-width:1px;border-radius:18px}
-      .purpose{padding:17px 16px;border-radius:18px;box-shadow:none}
-      .purpose h2{font-size:14px}.purpose p{font-size:15px;line-height:1.5}
-      .info{font-size:14px}
-      .form-panel{margin-top:14px;padding:18px 14px 20px;border:1px solid #c6d2d9;border-radius:20px;box-shadow:none}
-      .section-title{margin-bottom:19px;font-size:27px}.section-icon{width:40px;height:40px;font-size:18px}
-      .grid{gap:15px}
-      label{font-size:15px;gap:7px}
-      input,textarea,select{min-height:56px;border-width:1.5px;border-radius:13px;padding:13px 14px;font-size:17px}
-      textarea{min-height:124px}
-      .help{font-size:12px;min-height:17px}
-      .dental{padding:16px;border-width:1px;border-radius:17px}
-      .slot{min-height:86px}
-      .before-send{margin-top:17px}
-      .send{min-height:62px;margin-top:14px;border-radius:15px;font-size:18px}
-      footer{padding:18px 16px calc(22px + env(safe-area-inset-bottom));border-radius:0}
-      .toast{bottom:calc(78px + env(safe-area-inset-bottom))}
+    .csc-resident-back:active{transform:scale(.94);background:rgba(255,255,255,.18)}
+    body:not([data-csc-screen="home"]) .csc-resident-appbar img{display:none}
+    body:not([data-csc-screen="home"]) .csc-resident-back{display:block!important}
+    .shell{width:min(100%,760px);margin:0 auto;padding:0}
+    .panel{border:0;border-radius:0;box-shadow:none;background:#f1f5f7;overflow:visible}
+    .hero{
+      border-radius:0;padding:20px 18px 21px;background:linear-gradient(145deg,#062c46 0%,#084b6b 100%);
+      box-shadow:none
     }
-    @media(min-width:821px){
-      body{padding-bottom:76px}
-      .csc-resident-appbar{max-width:980px;margin:0 auto;border-radius:0 0 18px 18px}
-      .csc-resident-dock{bottom:12px;border:1px solid #b7c6cf;border-radius:20px;padding-bottom:7px}
-      .shell{padding-top:12px}
+    .hero::after{width:220px;height:220px;right:-100px;bottom:-110px}
+    .hero-top{display:grid;gap:12px}
+    .identity{gap:10px}.mark{display:none}
+    .identity strong{font-size:12px;letter-spacing:.045em;line-height:1.35}
+    .identity span{font-size:12px;line-height:1.35;margin-top:2px}
+    .hours{width:100%;min-width:0;margin:0;display:flex;justify-content:space-between;align-items:center;
+      min-height:45px;padding:9px 12px;border-radius:12px;text-align:left}
+    .hours small{font-size:9px}.hours strong{margin:0;font-size:17px}
+    h1{margin:17px 0 8px;font-size:28px;line-height:1.04;letter-spacing:-.035em}
+    .exclusive{margin:0;color:#d9e7ee;font-size:13px;line-height:1.45}
+    .responsible{margin-top:11px;font-size:12px;gap:7px}.responsible-icon{width:24px;height:24px}
+    .hero-actions{display:none!important}
+    .csc-app-home{display:none;padding:16px 13px 22px;background:#f1f5f7;min-height:calc(100svh - 290px)}
+    body[data-csc-screen="home"] .csc-app-home{display:block;animation:cscScreenIn .16s ease-out}
+    .csc-home-area{
+      display:flex;align-items:center;gap:11px;padding:13px 14px;margin:0 0 14px;border:1px solid #b9cbd5;
+      border-radius:17px;background:#fff;box-shadow:0 5px 15px rgba(4,44,70,.055)
     }
+    .csc-home-area-icon{width:37px;height:37px;display:grid;place-items:center;flex:0 0 37px;border-radius:12px;
+      background:#e5f4eb;color:#06763a;font-size:20px;font-weight:950}
+    .csc-home-area small{display:block;color:#507080;font-size:10px;font-weight:950;letter-spacing:.07em;text-transform:uppercase}
+    .csc-home-area strong{display:block;margin-top:2px;color:#0c2e49;font-size:15px;line-height:1.3}
+    .csc-home-heading{padding:3px 3px 11px}
+    .csc-home-heading>small{color:#087a45;font-size:10px;font-weight:950;letter-spacing:.08em}
+    .csc-home-heading h2{margin:4px 0 3px;color:#102f43;font-size:25px;letter-spacing:-.035em}
+    .csc-home-heading p{margin:0;color:#5c7380;font-size:13px;line-height:1.4}
+    .csc-home-grid{display:grid;gap:10px}
+    .csc-home-tile{
+      width:100%;min-height:82px;display:grid;grid-template-columns:48px 1fr 22px;gap:12px;align-items:center;
+      padding:13px;border:1px solid #bbcad2;border-radius:18px;background:#fff;color:#123246;text-align:left;
+      box-shadow:0 6px 16px rgba(4,44,70,.055);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation
+    }
+    .csc-home-tile:active{transform:scale(.985);background:#f6f9fa}
+    .csc-home-tile-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:15px;background:#e8f1f5;
+      color:#073a55;font-size:23px;font-weight:900}
+    .csc-home-tile>span:nth-child(2){min-width:0}
+    .csc-home-tile strong{display:block;font-size:16px;line-height:1.25}
+    .csc-home-tile small{display:block;margin-top:3px;color:#647b87;font-size:12px;line-height:1.35}
+    .csc-home-tile b{color:#6f8793;font-size:28px;font-weight:400;text-align:right}
+    .csc-home-tile-primary{border-color:#1b7d55;background:#f5fbf7}
+    .csc-home-tile-primary .csc-home-tile-icon{background:#daf3e4;color:#087a45}
+    .content{padding:0;background:#f1f5f7}
+    body[data-csc-screen="home"] .content{display:none!important}
+    body[data-csc-screen="request"] .hero,
+    body[data-csc-screen="community"] .hero,
+    body[data-csc-screen="info"] .hero,
+    body[data-csc-screen="request"] .csc-app-home,
+    body[data-csc-screen="community"] .csc-app-home,
+    body[data-csc-screen="info"] .csc-app-home{display:none!important}
+    body[data-csc-screen="request"] .content,
+    body[data-csc-screen="community"] .content,
+    body[data-csc-screen="info"] .content{
+      display:block!important;min-height:calc(100svh - var(--csc-appbar-h));padding:14px 12px 28px;
+      animation:cscScreenIn .16s ease-out
+    }
+    body[data-csc-screen="request"] .content>*,
+    body[data-csc-screen="community"] .content>*,
+    body[data-csc-screen="info"] .content>*{display:none!important}
+    body[data-csc-screen="request"] .content>.form-panel{display:block!important}
+    body[data-csc-screen="request"] .content>#scheduleInfo:not([hidden]){display:block!important}
+    body[data-csc-screen="community"] .content>#integralPublicArea{display:block!important}
+    body[data-csc-screen="community"] .content>#noticeArea:not([hidden]){display:block!important}
+    body[data-csc-screen="info"] .content>.purpose{display:flex!important}
+    body[data-csc-screen="community"] #cscCommunityEmpty{display:block}
+    body[data-csc-screen="community"] #cscCommunityEmpty[hidden]{display:none!important}
+    .csc-community-empty{
+      margin:14px 12px;padding:18px;border:1px solid #bdd0d9;border-radius:18px;background:#fff;
+      color:#4e6977;font-size:14px;font-weight:800;line-height:1.45
+    }
+    .form-panel{margin:0;padding:19px 14px 22px;border:1px solid #c1cfd6;border-radius:20px;box-shadow:none;background:#fff}
+    .section-title{margin:0 0 20px;font-size:27px}.section-icon{width:40px;height:40px;font-size:18px}
+    .grid{grid-template-columns:1fr;gap:16px}.full{grid-column:auto}
+    label{gap:7px;font-size:15px}
+    input,textarea,select{min-height:56px;border-width:1.5px;border-radius:13px;padding:13px 14px;font-size:17px}
+    textarea{min-height:122px}.help{min-height:17px;font-size:12px}
+    .purpose{margin:0;padding:20px 17px;border-radius:20px;box-shadow:none}
+    .purpose-icon{display:none}.purpose h2{font-size:14px}.purpose p{font-size:15px;line-height:1.55}
+    .integral-area{margin:0!important}
+    footer{display:none!important}
+    .slot,.send,.tacs-petroleum-button,.portal-service-card,.csc-home-tile{
+      -webkit-tap-highlight-color:transparent;touch-action:manipulation
+    }
+    .toast{bottom:max(18px,env(safe-area-inset-bottom))}
+    @keyframes cscScreenIn{from{opacity:.72;transform:translateX(10px)}to{opacity:1;transform:none}}
+    @media(max-width:720px){
+      .shell{width:100%;padding:0}
+      .panel{min-height:100svh}
+      .notice-board{border-radius:18px}
+      .dental{border-radius:17px}
+      .before-send{padding:15px 13px}
+      .send{min-height:62px;font-size:18px}
+    }
+    @media(min-width:721px){
+      .csc-resident-appbar{max-width:760px;margin:0 auto}
+      .panel{min-height:calc(100svh - var(--csc-appbar-h))}
+      .csc-app-home{padding-left:18px;padding-right:18px}
+      .csc-home-grid{grid-template-columns:1fr 1fr}
+      .csc-home-tile-primary{grid-column:1/-1}
+      body[data-csc-screen="request"] .content,
+      body[data-csc-screen="community"] .content,
+      body[data-csc-screen="info"] .content{padding-left:18px;padding-right:18px}
+    }
+    @media(prefers-reduced-motion:reduce){.csc-app-home,body[data-csc-screen] .content{animation:none!important}}
 
   </style>
 </head>
 <body class="tema-petroleo">
   <div class="csc-resident-appbar" id="cscResidentAppbar" role="banner">
-    <img src="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=fcd7641e7453" alt="">
+    <button type="button" class="csc-resident-back" id="cscResidentBack" aria-label="Voltar para a tela inicial" hidden>‹</button>
+    <img src="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=639f1067f02f" alt="">
     <div class="csc-resident-appbar-copy">
       <small>PORTAL TACS</small>
-      <strong>Portal do Morador</strong>
+      <strong id="cscResidentTitle">Portal do Morador</strong>
     </div>
   </div>
   <main class="shell">
@@ -215,6 +269,37 @@
       <section class="hero-actions" aria-label="Envio da solicitação">
         <div class="action-card whatsapp-action"><span class="action-icon" aria-hidden="true">☎</span><div><small>Envio pelo WhatsApp</small><p>Após o preenchimento, sua solicitação será enviada ao TACS - Técnico Agente Comunitário de Saúde.</p></div></div>
       </section>
+
+
+      <section class="csc-app-home" id="cscResidentHome" aria-label="Início do Portal do Morador">
+        <div class="csc-home-area">
+          <span class="csc-home-area-icon" aria-hidden="true">⌖</span>
+          <div><small>Minha área</small><strong id="cscHomeAreaName">Área de atendimento</strong></div>
+        </div>
+        <div class="csc-home-heading">
+          <small>PORTAL DO MORADOR</small>
+          <h2>O que você precisa?</h2>
+          <p>Escolha uma função para abrir a tela correspondente.</p>
+        </div>
+        <div class="csc-home-grid">
+          <button type="button" class="csc-home-tile csc-home-tile-primary" data-csc-open-screen="request">
+            <span class="csc-home-tile-icon" aria-hidden="true">＋</span>
+            <span><strong>Solicitar serviço</strong><small>Faça uma solicitação à sua unidade de saúde</small></span>
+            <b aria-hidden="true">›</b>
+          </button>
+          <button type="button" class="csc-home-tile" data-csc-open-screen="community">
+            <span class="csc-home-tile-icon" aria-hidden="true">●</span>
+            <span><strong>Recados e campanhas</strong><small>Veja as informações ativas da sua área</small></span>
+            <b aria-hidden="true">›</b>
+          </button>
+          <button type="button" class="csc-home-tile" data-csc-open-screen="info">
+            <span class="csc-home-tile-icon" aria-hidden="true">i</span>
+            <span><strong>Informações do portal</strong><small>Entenda a finalidade e o atendimento</small></span>
+            <b aria-hidden="true">›</b>
+          </button>
+        </div>
+      </section>
+      <div class="csc-community-empty" id="cscCommunityEmpty" hidden role="status">Carregando as informações disponíveis da sua área…</div>
 
       <div class="content">
         <section class="notice-area" id="noticeArea" hidden aria-live="polite"></section>
@@ -297,15 +382,7 @@
         <div><strong>Serviço da Unidade de Saúde Posto Matias</strong>Sítio Japaranduba • Chã Grande/PE</div>
       </footer>
     </section>
-  </main>
-
-  <nav class="csc-resident-dock" id="cscResidentDock" aria-label="Navegação do Portal do Morador">
-    <button type="button" class="csc-resident-nav is-active" data-csc-resident-target="top" aria-label="Ir para o início"><i>⌂</i><span>Início</span></button>
-    <button type="button" class="csc-resident-nav" data-csc-resident-target="request" aria-label="Ir para a solicitação"><i>＋</i><span>Solicitar</span></button>
-    <button type="button" class="csc-resident-nav" data-csc-resident-target="info" aria-label="Ir para as informações"><i>ⓘ</i><span>Informações</span></button>
-  </nav>
-
-  <script src="agenda-config.js?v=fcd7641e7453"></script>
+  </main><script src="agenda-config.js?v=fcd7641e7453"></script>
   <script src="portal-area-resolver.js?v=fcd7641e7453"></script>
   <script src="portal-public-data.js?v=fcd7641e7453"></script>
   <script src="portal-manutencao.js?v=fcd7641e7453"></script>
@@ -387,46 +464,72 @@
 <script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=fcd7641e7453"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-morador-session-v1.js?v=fcd7641e7453"></script>
 
-<script id="cscPortalMoradorAppShell20260918">
+<script id="cscPortalMoradorNativeApp20260918V2">
 (function(){
   'use strict';
-  if(window.__CSC_PORTAL_MORADOR_APP_SHELL_20260918__)return;
-  window.__CSC_PORTAL_MORADOR_APP_SHELL_20260918__=true;
-  var buttons=[].slice.call(document.querySelectorAll('[data-csc-resident-target]'));
-  function targetFor(name){
-    if(name==='request')return document.querySelector('.form-panel');
-    if(name==='info'){
-      var notices=document.getElementById('noticeArea');
-      if(notices&&!notices.hidden&&notices.offsetHeight)return notices;
-      return document.querySelector('.purpose');
-    }
-    return document.querySelector('.hero');
+  if(window.__CSC_PORTAL_MORADOR_NATIVE_APP_20260918_V2__)return;
+  window.__CSC_PORTAL_MORADOR_NATIVE_APP_20260918_V2__=true;
+
+  var titles={home:'Portal do Morador',request:'Solicitar serviço',community:'Recados e campanhas',info:'Informações do portal'};
+  var body=document.body,title=document.getElementById('cscResidentTitle'),back=document.getElementById('cscResidentBack');
+  var empty=document.getElementById('cscCommunityEmpty');
+
+  function setAreaName(){
+    var out=document.getElementById('cscHomeAreaName');
+    if(!out)return;
+    var spans=document.querySelectorAll('.identity span'),value='';
+    if(spans.length)value=String(spans[spans.length-1].textContent||'').trim();
+    if(value)out.textContent=value;
   }
-  function activate(name){
-    buttons.forEach(function(btn){btn.classList.toggle('is-active',btn.getAttribute('data-csc-resident-target')===name)});
+
+  function syncCommunityEmpty(){
+    if(!empty)return;
+    var area=document.getElementById('integralPublicArea');
+    var notice=document.getElementById('noticeArea');
+    var hasArea=!!(area&&area.textContent&&area.textContent.trim());
+    var hasNotice=!!(notice&&!notice.hidden&&notice.textContent&&notice.textContent.trim());
+    empty.hidden=hasArea||hasNotice;
   }
-  buttons.forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var name=btn.getAttribute('data-csc-resident-target'),target=targetFor(name);
-      activate(name);
-      if(name==='top'){window.scrollTo({top:0,behavior:'smooth'});return}
-      if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
-    });
+
+  function openScreen(name){
+    if(!titles[name])name='home';
+    body.setAttribute('data-csc-screen',name);
+    if(title)title.textContent=titles[name];
+    if(back)back.hidden=name==='home';
+    window.scrollTo(0,0);
+    if(name==='community')syncCommunityEmpty();
+  }
+
+  document.addEventListener('pointerdown',function(e){
+    var b=e.target&&e.target.closest?e.target.closest('[data-csc-open-screen]'):null;
+    if(b)b.classList.add('is-pressed');
+  },{passive:true});
+  document.addEventListener('pointerup',function(e){
+    var b=e.target&&e.target.closest?e.target.closest('[data-csc-open-screen]'):null;
+    if(b)b.classList.remove('is-pressed');
+  },{passive:true});
+
+  document.addEventListener('click',function(e){
+    var b=e.target&&e.target.closest?e.target.closest('[data-csc-open-screen]'):null;
+    if(!b)return;
+    e.preventDefault();
+    openScreen(b.getAttribute('data-csc-open-screen'));
   });
-  if('IntersectionObserver' in window){
-    var watched=[
-      {name:'top',el:document.querySelector('.hero')},
-      {name:'request',el:document.querySelector('.form-panel')},
-      {name:'info',el:document.querySelector('.purpose')}
-    ].filter(function(x){return x.el});
-    var io=new IntersectionObserver(function(entries){
-      var visible=entries.filter(function(e){return e.isIntersecting}).sort(function(a,b){return b.intersectionRatio-a.intersectionRatio})[0];
-      if(!visible)return;
-      var found=watched.find(function(x){return x.el===visible.target});
-      if(found)activate(found.name);
-    },{rootMargin:'-70px 0px -58% 0px',threshold:[.08,.2,.45]});
-    watched.forEach(function(x){io.observe(x.el)});
-  }
+
+  if(back)back.addEventListener('click',function(){openScreen('home')});
+
+  var mo=new MutationObserver(function(){setAreaName();syncCommunityEmpty()});
+  mo.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['hidden']});
+
+  setAreaName();
+  syncCommunityEmpty();
+  openScreen('home');
+
+  window.CscPortalMoradorApp={
+    open:openScreen,
+    home:function(){openScreen('home')},
+    screen:function(){return body.getAttribute('data-csc-screen')||'home'}
+  };
 }());
 </script>
 
