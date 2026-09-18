@@ -70,6 +70,12 @@ const closeBlock=central.slice(closeStart,closeEnd);
 assert.match(closeBlock,/moduloPendente=null/);
 
 // Escrita continua protegida pela sessão remota; local-first libera apenas a tela real para leitura.
+const recados=fs.readFileSync('painel-oficial-recados-campanhas.html','utf8');
+assert.match(recados,/RECADO_CACHE_FIRST_LOCAL_20260918/);
+assert.match(recados,/localFirst=new URLSearchParams\(location\.search\|\|''\)\.get\('localfirst'\)==='1'/);
+assert.match(recados,/if\(token\|\|territorioToken\|\|ubsToken\|\|accessMode==='ubs'\|\|localFirst\)[\s\S]*?carregar\('Sessão existente validada e publicações da área carregadas\.',null,true\)/);
+assert.match(recados,/function contextoMutacaoDisponivel\(\)\{return Boolean\(\(contextoPronto\|\|snapshotVisivel\)&&areaId&&\(token\|\|territorioToken\|\|ubsToken\|\|accessMode==='ubs'\)\)\}/);
+
 const core=fs.readFileSync('conecta-module-core-v1.js','utf8');
 assert.match(core,/function ready\(\)[\s\S]*Boolean\(s\.adminToken\|\|s\.territoryToken\)/);
 assert.match(core,/function localFirstContextAllowed\(\)/);

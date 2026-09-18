@@ -2927,7 +2927,24 @@ sair.addEventListener('click',function(){if(!(token||territorioToken))return;var
 document.getElementById('areaEnvio').addEventListener('change',function(){if(ativa||confirmacaoPendente){this.value=areaId;return}areaId=txt(this.value).toUpperCase().replace(/[^A-Z0-9_-]/g,'')||areaId;manutencaoConhecida=false;contextoPronto=false;renderAreas();try{var u=new URL(location.href);u.searchParams.set('area',areaId);history.replaceState(null,'',u.toString())}catch(e){}status('statusOperacao','Aguarde enquanto os dados carregam…','aviso');carregar('Área alterada e publicações isoladas carregadas.')});
 document.getElementById('abaRecados').addEventListener('click',function(){alternar('recados')});document.getElementById('abaCampanhas').addEventListener('click',function(){alternar('campanhas')});document.getElementById('novoRecado').addEventListener('click',function(){document.getElementById('formNovoRecado').classList.remove('oculto')});document.querySelector('.cancelarNovoRecado').addEventListener('click',function(){document.getElementById('formNovoRecado').classList.add('oculto')});document.getElementById('novaCampanha').addEventListener('click',function(){document.getElementById('formNovaCampanha').classList.remove('oculto')});document.querySelector('.cancelarNovaCampanha').addEventListener('click',function(){document.getElementById('formNovaCampanha').classList.add('oculto')});document.querySelector('.salvarNovoRecado').addEventListener('click',function(){salvar('recado',document.getElementById('formNovoRecado'),'')});document.querySelector('.salvarNovaCampanha').addEventListener('click',function(){salvar('campanha',document.getElementById('formNovaCampanha'),'')});document.getElementById('listaRecados').addEventListener('click',function(e){var c=e.target.closest('.item');if(!c)return;if(e.target.closest('.salvarRecado'))salvar('recado',c,c.dataset.id);if(e.target.closest('.removerRecado'))remover('recado',c.dataset.id)});document.getElementById('listaCampanhas').addEventListener('click',function(e){var c=e.target.closest('.item');if(!c)return;if(e.target.closest('.salvarCampanha'))salvar('campanha',c,c.dataset.id);if(e.target.closest('.removerCampanha'))remover('campanha',c.dataset.id)});desfazer.addEventListener('click',desfazerUltima);document.getElementById('alternarManutencao').addEventListener('click',alternarManutencao);document.getElementById('atualizarSaudeNotificacoes').addEventListener('click',atualizarSaudeNotificacoesRemota);document.getElementById('solicitarReparoNotificacoes').addEventListener('click',solicitarReparoNotificacoesArea);document.getElementById('saudeNotificacoes').addEventListener('click',function(e){var filtro=e.target.closest('[data-saude-filtro]');if(filtro){selecionarSaudeFiltro(filtro.getAttribute('data-saude-filtro'));return}if(e.target.closest('.saude-fechar-lista')){saudeFiltroAtivo='';renderSaudeLista()}});contraste.addEventListener('click',alternarTemaVisual);aplicarTemaVisual(lerTemaVisual());renderManutencao();
 window.PortalTacsRecadosCampanhasV12={version:'1.3.1-cache-write-nonblocking',post:post,localizarSalvo:localizarSalvo,relerAteConfirmar:relerAteConfirmar,aplicarSnapshotSeDisponivel:aplicarSnapshotSeDisponivel};
-var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!testesOk){status('loginStatus','Os testes internos da página falharam. O painel foi bloqueado.','erro');return}function iniciarPainel(){entrar.disabled=false;entrarTacs.disabled=false;if(token||territorioToken||ubsToken||accessMode==='ubs'){carregar('Sessão existente validada e publicações da área carregadas.',null,true);return}mostrarLogin('admin');status('loginStatus','Digite o PIN administrativo ou entre como TACS da área. A conexão já está sendo preparada em segundo plano.','ok');var aquecimento=window.PortalTacsAdminWarmup;if(aquecimento&&typeof aquecimento.iniciar==='function')aquecimento.iniciar()}iniciarPainel();
+var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!testesOk){status('loginStatus','Os testes internos da página falharam. O painel foi bloqueado.','erro');return}function iniciarPainel(){
+  entrar.disabled=false;entrarTacs.disabled=false;
+  var localFirst=false;
+  try{
+    localFirst=new URLSearchParams(location.search||'').get('localfirst')==='1'&&Boolean(moduleCore&&typeof moduleCore.mode==='function'&&moduleCore.mode());
+  }catch(e){}
+  /* RECADO_CACHE_FIRST_LOCAL_20260918:
+     O PIN local já liberou o contexto da Central. Exibe o último snapshot sanitizado
+     imediatamente; sessão remota continua obrigatória para confirmar dados e liberar escrita. */
+  if(token||territorioToken||ubsToken||accessMode==='ubs'||localFirst){
+    carregar('Sessão existente validada e publicações da área carregadas.',null,true);
+    return;
+  }
+  mostrarLogin('admin');
+  status('loginStatus','Digite o PIN administrativo ou entre como TACS da área. A conexão já está sendo preparada em segundo plano.','ok');
+  var aquecimento=window.PortalTacsAdminWarmup;
+  if(aquecimento&&typeof aquecimento.iniciar==='function')aquecimento.iniciar();
+}iniciarPainel();
 }());
 </script>
 
