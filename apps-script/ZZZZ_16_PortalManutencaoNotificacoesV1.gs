@@ -88,10 +88,25 @@ function portalManutencaoV1TratarGet_(e){
   var action=portalManutencaoV1Texto_(p.action).toLowerCase();
 
   if(action==='portal_manutencao_status'){
-    return portalManutencaoV1ResponderJson_(
-      portalManutencaoV1StatusPublico_(p.areaId||p.area||''),
-      p.callback
-    );
+    var status=portalManutencaoV1StatusPublico_(p.areaId||p.area||'');
+    var bypass=false;
+    try{
+      if(
+        status.ativa&&
+        typeof aparelhoTacsTesteV1TokenValido_==='function'&&
+        portalManutencaoV1Texto_(p.dispositivo)&&
+        portalManutencaoV1Texto_(p.chaveTacsTeste)
+      ){
+        bypass=aparelhoTacsTesteV1TokenValido_(
+          p.dispositivo,
+          status.areaId,
+          p.chaveTacsTeste
+        )===true;
+      }
+    }catch(ignoreBypass){bypass=false;}
+    status.bypassTacsTeste=bypass;
+    status.bloqueada=status.ativa&&!bypass;
+    return portalManutencaoV1ResponderJson_(status,p.callback);
   }
 
   if(action!=='admin_result')return null;

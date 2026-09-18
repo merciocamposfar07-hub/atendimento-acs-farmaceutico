@@ -29,6 +29,8 @@ var TACS_CONECTA_ACESSO_V1 = Object.freeze({
   IDENTITY_PREFIX:'tacs_conecta_identidade_',
   RECOVERY_PREFIX:'tacs_conecta_recuperacao_',
   SESSION_PREFIX:'tacs_conecta_sessao_',
+  TEST_SESSION_PREFIX:'tacs_conecta_teste_sessao_',
+  TEST_ACCESS_PREFIX:'TACS_CONECTA_TEST_ACCESS_V1:',
   UBS_SESSION_PREFIX:'tacs_conecta_ubs_sessao_',
   RATE_PREFIX:'tacs_conecta_rate_',
   RESULT_SECONDS:300,
@@ -85,23 +87,32 @@ function conectaAcessoV1TratarPost_(e){
   var id=conectaAcessoV1Texto_(p.requestId),resultado;
   try{
     if(!/^[A-Za-z0-9_-]{8,160}$/.test(id))throw new Error('Identificador da operação inválido.');
-    if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_pin_recuperar_iniciar','conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_morador_diagnostico_admin'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||p.documento||action);
-    if(action==='conecta_morador_identificar')resultado=conectaAcessoV1Identificar_(p);
-    else if(action==='conecta_morador_confirmar')resultado=conectaAcessoV1Confirmar_(p);
-    else if(action==='conecta_morador_criar_pin')resultado=conectaAcessoV1CriarPin_(p);
-    else if(action==='conecta_morador_login_pin')resultado=conectaAcessoV1LoginMorador_(p);
-    else if(action==='conecta_morador_sessao')resultado=conectaAcessoV1SessaoMorador_(p);
-    else if(action==='conecta_morador_notificacao_confirmar')resultado=conectaAcessoV1ConfirmarNotificacao_(p);
-    else if(action==='conecta_morador_preferencia_notificacao')resultado=conectaAcessoV1PreferenciaNotificacao_(p);
-    else if(action==='conecta_morador_encerrar')resultado=conectaAcessoV1EncerrarMorador_(p);
-    else if(action==='conecta_pin_recuperar_iniciar')resultado=conectaAcessoV1RecuperarIniciar_(p);
+    var modoTeste=conectaAcessoV1Bool_(p.modoTacsTeste);
+    if(modoTeste){
+      if(!/^conecta_morador_/.test(action))throw new Error('Esta ação não pertence ao espelho do Morador.');
+      if(!conectaAcessoV1AparelhoTesteValido_(p))throw new Error('O modo TACS / teste não está autorizado neste aparelho.');
+      conectaAcessoV1Limitar_(p.dispositivo||p.cpf||action);
+      resultado=conectaAcessoV1TratarMoradorTeste_(action,p);
+    }else{
+      if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_pin_recuperar_iniciar','conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_morador_diagnostico_admin'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||p.documento||action);
+      if(action==='conecta_morador_identificar')resultado=conectaAcessoV1Identificar_(p);
+      else if(action==='conecta_morador_confirmar')resultado=conectaAcessoV1Confirmar_(p);
+      else if(action==='conecta_morador_criar_pin')resultado=conectaAcessoV1CriarPin_(p);
+      else if(action==='conecta_morador_login_pin')resultado=conectaAcessoV1LoginMorador_(p);
+      else if(action==='conecta_morador_sessao')resultado=conectaAcessoV1SessaoMorador_(p);
+      else if(action==='conecta_morador_notificacao_confirmar')resultado=conectaAcessoV1ConfirmarNotificacao_(p);
+      else if(action==='conecta_morador_preferencia_notificacao')resultado=conectaAcessoV1PreferenciaNotificacao_(p);
+      else if(action==='conecta_morador_membro_salvar_cpf')resultado=conectaAcessoV1SalvarCpfMembro_(p);
+      else if(action==='conecta_morador_encerrar')resultado=conectaAcessoV1EncerrarMorador_(p);
+      else if(action==='conecta_pin_recuperar_iniciar')resultado=conectaAcessoV1RecuperarIniciar_(p);
     else if(action==='conecta_pin_recuperar_salvar')resultado=conectaAcessoV1RecuperarSalvar_(p);
     else if(action==='conecta_recuperacao_registrar_aparelho')resultado=conectaAcessoV1RegistrarAparelhoConfiavel_(p);
     else if(action==='conecta_ubs_identificar_primeiro_acesso')resultado=conectaAcessoV1IdentificarUbsPrimeiroAcesso_(p);
     else if(action==='conecta_ubs_login_pin')resultado=conectaAcessoV1LoginUbs_(p);
     else if(action==='conecta_ubs_encerrar')resultado=conectaAcessoV1EncerrarUbs_(p);
-    else if(action==='conecta_morador_diagnostico_admin')resultado=conectaAcessoV1DiagnosticoMoradorAdmin_(p);
-    else resultado=conectaAcessoV1PendenciasContagem_(p);
+      else if(action==='conecta_morador_diagnostico_admin')resultado=conectaAcessoV1DiagnosticoMoradorAdmin_(p);
+      else resultado=conectaAcessoV1PendenciasContagem_(p);
+    }
   }catch(erro){
     resultado={ok:false,message:conectaAcessoV1Erro_(erro)};
   }
@@ -113,6 +124,211 @@ function conectaAcessoV1TratarPost_(e){
    Um aparelho com perfil administrativo pode entrar no fluxo MORADOR quando a
    própria porta residencial sinaliza explicitamente essa intenção. Isso não concede
    privilégio administrativo ao Morador e não altera os demais perfis. */
+/* ESPELHO_MORADOR_ADMIN_2026_09_18_V1
+ * O Aparelho TACS / teste executa as mesmas ações do Morador, porém PIN, sessão,
+ * preferências e complementos ficam em um cofre técnico isolado. Nenhum PIN de
+ * teste é gravado no acesso real da família e nenhuma escrita cadastral é feita.
+ */
+function conectaAcessoV1AparelhoTesteValido_(p){
+  var area=conectaAcessoV1Id_(p.areaId||p.area);
+  var dispositivo=conectaAcessoV1Texto_(p.dispositivo);
+  var chave=conectaAcessoV1Texto_(p.chaveTacsTeste);
+  if(!area||!dispositivo||!chave||typeof aparelhoTacsTesteV1TokenValido_!=='function')return false;
+  try{return aparelhoTacsTesteV1TokenValido_(dispositivo,area,chave)===true;}catch(e){return false;}
+}
+
+function conectaAcessoV1TratarMoradorTeste_(action,p){
+  if(action==='conecta_morador_identificar')return conectaAcessoV1TesteIdentificar_(p);
+  if(action==='conecta_morador_confirmar')return conectaAcessoV1TesteConfirmar_(p);
+  if(action==='conecta_morador_criar_pin')return conectaAcessoV1TesteCriarPin_(p);
+  if(action==='conecta_morador_login_pin')return conectaAcessoV1TesteLogin_(p);
+  if(action==='conecta_morador_sessao')return conectaAcessoV1TesteSessao_(p);
+  if(action==='conecta_morador_notificacao_confirmar')return conectaAcessoV1TesteNotificacao_(p);
+  if(action==='conecta_morador_preferencia_notificacao')return conectaAcessoV1TestePreferencia_(p);
+  if(action==='conecta_morador_membro_salvar_cpf')return conectaAcessoV1TesteMembroCpf_(p);
+  if(action==='conecta_morador_encerrar')return conectaAcessoV1TesteEncerrar_(p);
+  throw new Error('Ação do Morador não habilitada no espelho administrativo.');
+}
+
+function conectaAcessoV1TesteIdentificar_(p){
+  var cpf=conectaAcessoV1Cpf_(p.cpf),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
+  if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
+  var achados=conectaAcessoV1BuscarCpf_(cpf);
+  if(achados.length===1)return conectaAcessoV1IdentidadeResposta_(achados[0],cpf,false,'Cadastro localizado.');
+  if(achados.length>1)return {ok:true,encontrado:false,precisaNascimento:true,ambiguo:true,message:'Precisamos confirmar mais um dado para localizar seu cadastro com segurança.'};
+  return {ok:true,encontrado:false,precisaNascimento:true,ambiguo:false,message:'CPF ainda não localizado. Informe sua data de nascimento.'};
+}
+
+function conectaAcessoV1TesteConfirmar_(p){
+  if(conectaAcessoV1Bool_(p.confirmarCpf)&&p.identidadeToken)return conectaAcessoV1TesteConfirmarCpfRevisado_(p);
+  var cpf=conectaAcessoV1Cpf_(p.cpf),nascimento=conectaAcessoV1Nascimento_(p.nascimento),nome=conectaAcessoV1Texto_(p.nome),areaPreferida=conectaAcessoV1Id_(p.areaId);
+  if(!nascimento)throw new Error('Informe uma data de nascimento válida no formato DD/MM/AAAA.');
+  var candidatos=conectaAcessoV1BuscarNascimento_(nascimento,areaPreferida);
+  if(candidatos.length>1&&!nome)return {ok:true,encontrado:false,precisaNome:true,message:'Há mais de um cadastro com essa data. Informe seu nome completo.'};
+  if(nome)candidatos=candidatos.filter(function(x){return conectaAcessoV1Nome_(x.morador.nome)===conectaAcessoV1Nome_(nome);});
+  if(candidatos.length===1){
+    var item=candidatos[0];
+    if(item.morador.cpf&&item.morador.cpf!==cpf)return conectaAcessoV1TestePendenteResposta_(cpf,nascimento,nome||item.morador.nome,areaPreferida||item.area.areaId,'CPF_DIVERGENTE');
+    if(!item.morador.cpf){
+      var revisao=conectaAcessoV1IdentidadeResposta_(item,cpf,false,'Cadastro localizado. Confira o CPF e a data de nascimento antes de salvar.');
+      revisao.revisarCpf=true;revisao.cpf=cpf;revisao.nascimento=nascimento;revisao.teste=true;
+      return revisao;
+    }
+    var resposta=conectaAcessoV1IdentidadeResposta_(item,cpf,false,'Cadastro localizado.');
+    resposta.teste=true;return resposta;
+  }
+  if(candidatos.length>1)return {ok:true,encontrado:false,precisaNome:true,message:'Ainda há mais de um cadastro possível. Confira o nome completo.'};
+  if(!nome)return {ok:true,encontrado:false,precisaNome:true,message:'Não localizamos com segurança. Informe também seu nome completo.'};
+  return conectaAcessoV1TestePendenteResposta_(cpf,nascimento,nome,areaPreferida,'CADASTRO_NAO_LOCALIZADO');
+}
+
+function conectaAcessoV1TestePendenteResposta_(cpf,nascimento,nome,areaPreferida,motivo){
+  var areas=conectaAcessoV1Areas_(),area=null;
+  if(areaPreferida)for(var i=0;i<areas.length;i++)if(areas[i].areaId===areaPreferida){area=areas[i];break;}
+  if(!area&&areas.length===1)area=areas[0];
+  if(!area)return {ok:true,encontrado:false,precisaArea:true,areas:areas.map(function(a){return {areaId:a.areaId,areaNome:a.areaNome||a.areaId};}),message:'Selecione sua comunidade/área para continuar. Seu atendimento não será bloqueado.'};
+  var item={area:area,morador:{nome:nome,nascimento:nascimento,endereco:'',idPortal:'',id:'',cpf:cpf},chave:'TESTE:'+conectaAcessoV1Hash_(cpf+'|'+nome+'|'+nascimento).slice(0,24),pendenciaId:'TESTE'};
+  var r=conectaAcessoV1IdentidadeResposta_(item,cpf,true,'Cadastro pendente de conferência. No modo teste nenhuma alteração foi gravada.');
+  r.teste=true;r.motivo=motivo;return r;
+}
+
+function conectaAcessoV1TesteConfirmarCpfRevisado_(p){
+  var identidade=conectaAcessoV1LerTokenCache_(p.identidadeToken,TACS_CONECTA_ACESSO_V1.IDENTITY_PREFIX,'ci1');
+  if(identidade.provisorio)throw new Error('Este cadastro ainda precisa de conferência antes de vincular um CPF.');
+  var cpf=conectaAcessoV1Cpf_(p.cpf||identidade.cpf),nascimento=conectaAcessoV1Nascimento_(p.nascimento||identidade.nascimento);
+  if(cpf!==conectaAcessoV1Texto_(identidade.cpf)||nascimento!==conectaAcessoV1Texto_(identidade.nascimento))throw new Error('Os dados foram alterados. Toque em Corrigir e confira novamente.');
+  var candidatos=conectaAcessoV1BuscarNascimento_(nascimento,conectaAcessoV1Id_(identidade.areaId));
+  candidatos=candidatos.filter(function(x){
+    if(identidade.moradorChave&&conectaAcessoV1Texto_(x.chave)===conectaAcessoV1Texto_(identidade.moradorChave))return true;
+    if(identidade.idPortal&&conectaAcessoV1Texto_(x.morador.idPortal||x.morador.id)===conectaAcessoV1Texto_(identidade.idPortal))return true;
+    return conectaAcessoV1Nome_(x.morador.nome)===conectaAcessoV1Nome_(identidade.nome);
+  });
+  if(candidatos.length!==1)throw new Error('Não foi possível confirmar com segurança este cadastro. Corrija os dados e tente novamente.');
+  var item=candidatos[0],atual=conectaAcessoV1Texto_(item.morador.cpf).replace(/\D/g,'');
+  if(atual&&atual!==cpf)throw new Error('Este cadastro já possui outro CPF. A alteração exige conferência do TACS.');
+  item.morador.cpf=cpf;
+  var r=conectaAcessoV1IdentidadeResposta_(item,cpf,false,'CPF conferido para esta simulação. Nenhum cadastro real foi alterado.');
+  r.teste=true;return r;
+}
+
+function conectaAcessoV1TestePropKey_(quick){
+  return TACS_CONECTA_ACESSO_V1.TEST_ACCESS_PREFIX+conectaAcessoV1Hash_(quick).slice(0,48);
+}
+
+function conectaAcessoV1TesteSalvar_(quick,registro){
+  registro=registro||{};registro.atualizadoEm=Date.now();
+  PropertiesService.getScriptProperties().setProperty(conectaAcessoV1TestePropKey_(quick),JSON.stringify(registro));
+}
+
+function conectaAcessoV1TesteLer_(quick){
+  quick=conectaAcessoV1Texto_(quick);
+  if(!/^cmtq1\./.test(quick))throw new Error('Este aparelho ainda não possui um acesso de teste reconhecido.');
+  var props=PropertiesService.getScriptProperties(),key=conectaAcessoV1TestePropKey_(quick),raw=props.getProperty(key);
+  if(!raw)throw new Error('Acesso de teste não localizado. Crie novamente o PIN fictício.');
+  var r=JSON.parse(raw),idade=Date.now()-Number(r.atualizadoEm||0);
+  if(!Number.isFinite(idade)||idade>30*24*60*60*1000){props.deleteProperty(key);throw new Error('O acesso de teste expirou. Crie novamente o PIN fictício.');}
+  if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(r.quickHash),conectaAcessoV1Hash_(quick)))throw new Error('Acesso de teste inválido.');
+  return {key:key,registro:r};
+}
+
+function conectaAcessoV1TesteVals_(r){
+  return [
+    r.accessId||'',r.areaId||'',r.moradorChave||'',r.cpf||'',r.nome||'',r.nascimento||'',
+    r.pinSalt||'',r.pinHash||'',r.quickHash||'',r.dispositivoHash||'',Boolean(r.notificacoesAtivas),
+    '',Boolean(r.silencioso),Boolean(r.provisorio),r.pendenciaId||'',true,r.criadoEm||'',r.atualizadoEm||''
+  ];
+}
+
+function conectaAcessoV1TesteCriarSessao_(quick,registro,dispositivo){
+  var token=conectaAcessoV1Token_('cmts1'),payload={token:token,accessKey:conectaAcessoV1TestePropKey_(quick),areaId:registro.areaId,dispositivoHash:conectaAcessoV1Hash_(dispositivo),criadoEm:Date.now()};
+  CacheService.getScriptCache().put(TACS_CONECTA_ACESSO_V1.TEST_SESSION_PREFIX+conectaAcessoV1Hash_(token),JSON.stringify(payload),TACS_CONECTA_ACESSO_V1.SESSION_SECONDS);
+  return payload;
+}
+
+function conectaAcessoV1TesteValidarSessao_(p){
+  var token=conectaAcessoV1Texto_(p.token),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
+  if(!/^cmts1\./.test(token)||!dispositivo)throw new Error('Sessão de morador de teste ausente.');
+  var raw=CacheService.getScriptCache().get(TACS_CONECTA_ACESSO_V1.TEST_SESSION_PREFIX+conectaAcessoV1Hash_(token));
+  if(!raw)throw new Error('Sua sessão de teste expirou. Entre novamente com o PIN fictício.');
+  var s=JSON.parse(raw);
+  if(s.dispositivoHash!==conectaAcessoV1Hash_(dispositivo))throw new Error('Esta sessão de teste pertence a outro aparelho.');
+  return s;
+}
+
+function conectaAcessoV1TesteRegistroSessao_(p){
+  var s=conectaAcessoV1TesteValidarSessao_(p),raw=PropertiesService.getScriptProperties().getProperty(s.accessKey);
+  if(!raw)throw new Error('O acesso de teste não foi localizado.');
+  return {sessao:s,registro:JSON.parse(raw)};
+}
+
+function conectaAcessoV1TesteCriarPin_(p){
+  var identidade=conectaAcessoV1LerTokenCache_(p.identidadeToken,TACS_CONECTA_ACESSO_V1.IDENTITY_PREFIX,'ci1');
+  var pin=conectaAcessoV1Pin_(p.pin,p.confirmacao),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
+  if(!dispositivo)throw new Error('A identificação do aparelho está ausente.');
+  var quick=conectaAcessoV1Token_('cmtq1'),salt=Utilities.getUuid().replace(/-/g,''),agora=Date.now();
+  var registro={
+    accessId:'CMTEST-'+Utilities.getUuid().replace(/-/g,'').slice(0,18).toUpperCase(),
+    areaId:conectaAcessoV1Id_(identidade.areaId),moradorChave:identidade.moradorChave||'',
+    cpf:identidade.cpf||'',nome:identidade.nome||'',nascimento:identidade.nascimento||'',
+    pinSalt:salt,pinHash:conectaAcessoV1Hash_(salt+'|'+pin),quickHash:conectaAcessoV1Hash_(quick),
+    dispositivoHash:conectaAcessoV1Hash_(dispositivo),notificacoesAtivas:false,silencioso:false,
+    provisorio:Boolean(identidade.provisorio),pendenciaId:identidade.pendenciaId||'',criadoEm:agora,atualizadoEm:agora
+  };
+  conectaAcessoV1TesteSalvar_(quick,registro);
+  var session=conectaAcessoV1TesteCriarSessao_(quick,registro,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(conectaAcessoV1TesteVals_(registro));
+  return {ok:true,teste:true,token:session.token,quickKey:quick,perfil:'MORADOR',areaId:registro.areaId,areaNome:identidade.areaNome||registro.areaId,nome:registro.nome,cpf:registro.cpf,notificacoesAtivas:false,provisorio:registro.provisorio,pendenciaId:registro.pendenciaId,familiaId:nucleo.familiaId,familia:nucleo.membros,message:'PIN fictício criado somente para este teste administrativo.'};
+}
+
+function conectaAcessoV1TesteLogin_(p){
+  var pin=conectaAcessoV1PinSomente_(p.pin),quick=conectaAcessoV1Texto_(p.quickKey),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
+  var achado=conectaAcessoV1TesteLer_(quick),r=achado.registro;
+  if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(r.dispositivoHash),conectaAcessoV1Hash_(dispositivo)))throw new Error('Este acesso de teste pertence a outro aparelho.');
+  if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(r.pinHash),conectaAcessoV1Hash_(r.pinSalt+'|'+pin)))throw new Error('PIN incorreto.');
+  r.atualizadoEm=Date.now();PropertiesService.getScriptProperties().setProperty(achado.key,JSON.stringify(r));
+  var session=conectaAcessoV1TesteCriarSessao_(quick,r,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(conectaAcessoV1TesteVals_(r));
+  return {ok:true,teste:true,token:session.token,perfil:'MORADOR',areaId:r.areaId,nome:r.nome,cpf:r.cpf,notificacoesAtivas:Boolean(r.notificacoesAtivas),silencioso:Boolean(r.silencioso),provisorio:Boolean(r.provisorio),pendenciaId:r.pendenciaId||'',familiaId:nucleo.familiaId,familia:nucleo.membros};
+}
+
+function conectaAcessoV1TesteSessao_(p){
+  var x=conectaAcessoV1TesteRegistroSessao_(p),r=x.registro,nucleo=conectaAcessoV1NucleoFamiliar_(conectaAcessoV1TesteVals_(r)),endereco='';
+  try{
+    var achados=conectaAcessoV1BuscarCpf_(conectaAcessoV1Texto_(r.cpf));
+    if(achados.length===1)endereco=conectaAcessoV1Texto_(achados[0].morador.endereco||'');
+  }catch(e){}
+  return {ok:true,teste:true,perfil:'MORADOR',areaId:r.areaId,cpf:r.cpf,nome:r.nome,nascimento:r.nascimento,endereco:endereco,notificacoesAtivas:Boolean(r.notificacoesAtivas),subscriptionId:'',silencioso:Boolean(r.silencioso),provisorio:Boolean(r.provisorio),pendenciaId:r.pendenciaId||'',familiaId:nucleo.familiaId,familia:nucleo.membros};
+}
+
+function conectaAcessoV1TesteNotificacao_(p){
+  var x=conectaAcessoV1TesteRegistroSessao_(p),r=x.registro;
+  r.notificacoesAtivas=true;r.atualizadoEm=Date.now();
+  PropertiesService.getScriptProperties().setProperty(x.sessao.accessKey,JSON.stringify(r));
+  return {ok:true,teste:true,notificacoesAtivas:true,message:'Etapa de notificações validada no modo teste. Nenhum aparelho real foi vinculado.'};
+}
+
+function conectaAcessoV1TestePreferencia_(p){
+  var x=conectaAcessoV1TesteRegistroSessao_(p),r=x.registro;
+  r.silencioso=conectaAcessoV1Bool_(p.silencioso);r.atualizadoEm=Date.now();
+  PropertiesService.getScriptProperties().setProperty(x.sessao.accessKey,JSON.stringify(r));
+  return {ok:true,teste:true,silencioso:r.silencioso,message:'Preferência simulada somente no modo teste.'};
+}
+
+function conectaAcessoV1TesteMembroCpf_(p){
+  var x=conectaAcessoV1TesteRegistroSessao_(p),cpf=conectaAcessoV1Cpf_(p.cpf),tokenMembro=conectaAcessoV1Texto_(p.membroToken);
+  if(!/^fm_[A-Za-z0-9_]{20,160}$/.test(tokenMembro))throw new Error('Seleção do integrante inválida ou expirada.');
+  if(typeof TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1==='undefined')throw new Error('A seleção familiar ainda não está disponível.');
+  var bruto=CacheService.getScriptCache().get(TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1.TOKEN_PREFIX+tokenMembro);
+  if(!bruto)throw new Error('Esta seleção expirou. Abra novamente o vínculo familiar.');
+  var dados=JSON.parse(bruto);
+  if(conectaAcessoV1Id_(dados.areaId)!==conectaAcessoV1Id_(x.registro.areaId))throw new Error('O integrante selecionado não pertence à área deste acesso.');
+  return {ok:true,teste:true,documentoAcesso:cpf,nome:conectaAcessoV1Texto_(dados.nome),nascimento:conectaAcessoV1Texto_(dados.nascimento),message:'CPF usado somente nesta simulação. Nenhum cadastro real foi alterado.'};
+}
+
+function conectaAcessoV1TesteEncerrar_(p){
+  var s=conectaAcessoV1TesteValidarSessao_(p);
+  try{CacheService.getScriptCache().remove(TACS_CONECTA_ACESSO_V1.TEST_SESSION_PREFIX+conectaAcessoV1Hash_(s.token));}catch(e){}
+  return {ok:true,teste:true,message:'Sessão de teste encerrada.'};
+}
+
 function conectaAcessoV1Identificar_(p){
   var cpf=conectaAcessoV1Cpf_(p.cpf),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
   if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');

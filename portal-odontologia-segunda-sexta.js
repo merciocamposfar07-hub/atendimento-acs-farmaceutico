@@ -165,6 +165,15 @@
     return value || 'JAPARANDUBA';
   }
 
+  function tacsTestCredential() {
+    try {
+      var dispositivo = clean(localStorage.getItem('portalTacsDispositivoV1') || '');
+      if (!dispositivo) return null;
+      var chave = clean(localStorage.getItem('portalTacsAparelhoTesteTokenV3:' + currentAreaId() + ':' + dispositivo) || '');
+      return chave ? {dispositivo: dispositivo, chave: chave} : null;
+    } catch (ignore) { return null; }
+  }
+
   function dentalCacheKey() { return CACHE_PREFIX + currentAreaId(); }
 
   function normalizedAgenda(data) {
@@ -542,6 +551,12 @@
       params.set('requestId', item.requestId);
       params.set('date', item.date);
       params.set('type', item.type);
+      var teste = tacsTestCredential();
+      if (teste) {
+        params.set('modoTacsTeste', 'SIM');
+        params.set('dispositivo', teste.dispositivo);
+        params.set('chaveTacsTeste', teste.chave);
+      }
       params.set('callback', callbackName);
       params.set('v', String(Date.now()));
 
@@ -569,7 +584,7 @@
   }
 
   function reservationTerminalError(error) {
-    return ['INVALID_REQUEST','INVALID_DATE','PAST_DATE','INVALID_TYPE','DATE_NOT_FOUND','CLOSED','EXPIRED','NO_SLOTS','CONFLICT'].indexOf(clean(error && error.code)) !== -1;
+    return ['INVALID_REQUEST','INVALID_DATE','PAST_DATE','INVALID_TYPE','DATE_NOT_FOUND','CLOSED','EXPIRED','NO_SLOTS','CONFLICT','TESTE_NAO_AUTORIZADO'].indexOf(clean(error && error.code)) !== -1;
   }
 
   function confirmReservation(item, result) {
@@ -683,7 +698,7 @@
     if (!selection || !selection.confirmed) return;
     var age = ageLabel(el('birth').value);
     var category = REGULAR;
-    var message = '*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n' +
+    var message = (tacsTestCredential() ? '*TESTE ADMINISTRATIVO — NÃO REGISTRAR COMO SOLICITAÇÃO REAL*\n\n' : '') + '*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n' +
       '*TACS - Técnico Agente Comunitário de Saúde*\n' +
       '*TACS responsável: Mércio José Campos dos Santos*\n\n' +
       'Código: ' + selection.requestId + '\n' +

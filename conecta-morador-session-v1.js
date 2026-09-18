@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-var TOKEN_KEY='portalConectaMoradorTokenV1',PROFILE_KEY='portalConectaMoradorQuickV1',DEVICE_KEY='portalTacsDispositivoV1',BOOTSTRAP_KEY='portalConectaMoradorBootstrapV2',BG_REQUEST_KEY='portalConectaMoradorLoginRequestV2';
+var TOKEN_KEY='portalConectaMoradorTokenV1',PROFILE_KEY='portalConectaMoradorQuickV1',TEST_TOKEN_KEY='portalConectaMoradorTokenTesteV1',TEST_PROFILE_KEY='portalConectaMoradorQuickTesteV1',DEVICE_KEY='portalTacsDispositivoV1',TECH_TOKEN_PREFIX='portalTacsAparelhoTesteTokenV3:',BOOTSTRAP_KEY='portalConectaMoradorBootstrapV2',TEST_BOOTSTRAP_KEY='portalConectaMoradorBootstrapTesteV2',BG_REQUEST_KEY='portalConectaMoradorLoginRequestV2',TEST_BG_REQUEST_KEY='portalConectaMoradorLoginRequestTesteV2';
 var token='',resident=null,oneSignal=null,busy=false;
 /* RESPOSTA_IMEDIATA_MORADOR_2026_09_16_V1: cache efêmero, isolado por área/família/token. */
 var familyMemberCache={},familyMemberLoads={},familyWarmGeneration=0;
@@ -20,18 +20,23 @@ function device(){try{return text(localStorage.getItem(DEVICE_KEY)||'')}catch(e)
 function queryFlag(){try{return String(new URLSearchParams(location.search).get('conecta')||'')==='1'}catch(e){return false}}
 function onboardingFlag(){try{return String(new URLSearchParams(location.search).get('onboarding')||'')==='1'}catch(e){return false}}
 function areaId(){try{return text(new URLSearchParams(location.search).get('area')||new URLSearchParams(location.search).get('areaId')||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'')||'JAPARANDUBA'}catch(e){return'JAPARANDUBA'}}
+function technicalToken(){try{var d=device();return d?text(localStorage.getItem(TECH_TOKEN_PREFIX+areaId()+':'+d)||''):''}catch(e){return''}}
+function testMode(){return Boolean(device()&&technicalToken())}
+function activeTokenKey(){return testMode()?TEST_TOKEN_KEY:TOKEN_KEY}
+function activeBootstrapKey(){return testMode()?TEST_BOOTSTRAP_KEY:BOOTSTRAP_KEY}
+function activeBackgroundKey(){return testMode()?TEST_BG_REQUEST_KEY:BG_REQUEST_KEY}
 function requestId(prefix){return 'conecta_portal_'+prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
 function jsonp(params){return new Promise(function(resolve,reject){var cb='__conectaPortal_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false,t=setTimeout(function(){finish(null,new Error('A confirmação demorou demais.'))},14000);function finish(data,err){if(done)return;done=true;clearTimeout(t);try{delete window[cb]}catch(e){window[cb]=undefined}if(s.parentNode)s.remove();err?reject(err):resolve(data)}window[cb]=function(d){finish(d,null)};s.onerror=function(){finish(null,new Error('Falha de comunicação.'))};params.callback=cb;params._=Date.now();s.src=API+'?'+Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k])}).join('&');document.head.appendChild(s)})}
-function post(action,payload){if(busy)return Promise.reject(remoteError('Aguarde a operação em andamento.',{temporario:true}));busy=true;var id=requestId(action),body=new URLSearchParams();body.set('action',action);body.set('requestId',id);Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});var started=Date.now();return fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){}).then(function poll(){return jsonp({action:'conecta_result',requestId:id}).then(function(r){if(r&&r.ok===true&&r.pendente===false&&r.result){if(r.result.ok===true)return r.result;throw remoteError(r.result.message||'Não foi possível concluir a operação.',r.result)}if(Date.now()-started>30000)throw remoteError('A operação demorou demais.',{temporario:true});return new Promise(function(resolve){setTimeout(resolve,650)}).then(poll)}).catch(function(e){if(e&&typeof e.refused==='boolean')throw e;throw remoteError(e&&e.message||'Falha de comunicação.',{temporario:true})})}).finally(function(){busy=false})}
+function post(action,payload){if(busy)return Promise.reject(remoteError('Aguarde a operação em andamento.',{temporario:true}));busy=true;var id=requestId(action),body=new URLSearchParams();body.set('action',action);body.set('requestId',id);Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});if(/^conecta_morador_/.test(action)&&testMode()){body.set('modoTacsTeste','SIM');body.set('areaId',body.get('areaId')||areaId());body.set('dispositivo',body.get('dispositivo')||device());body.set('chaveTacsTeste',technicalToken());body.set('fluxoMoradorExplicito','SIM')}var started=Date.now();return fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){}).then(function poll(){return jsonp({action:'conecta_result',requestId:id}).then(function(r){if(r&&r.ok===true&&r.pendente===false&&r.result){if(r.result.ok===true)return r.result;throw remoteError(r.result.message||'Não foi possível concluir a operação.',r.result)}if(Date.now()-started>30000)throw remoteError('A operação demorou demais.',{temporario:true});return new Promise(function(resolve){setTimeout(resolve,650)}).then(poll)}).catch(function(e){if(e&&typeof e.refused==='boolean')throw e;throw remoteError(e&&e.message||'Falha de comunicação.',{temporario:true})})}).finally(function(){busy=false})}
 function getSession(){return post('conecta_morador_sessao',{token:token,dispositivo:device()})}
-function clearSession(){try{sessionStorage.removeItem(TOKEN_KEY)}catch(e){}token=''}
+function clearSession(){try{sessionStorage.removeItem(activeTokenKey())}catch(e){}token=''}
 
-function readBootstrap(){try{var r=JSON.parse(sessionStorage.getItem(BOOTSTRAP_KEY)||'null');return r&&typeof r==='object'?r:null}catch(e){return null}}
-function clearBackgroundRequest(){try{sessionStorage.removeItem(BG_REQUEST_KEY)}catch(e){}}
-function hasBackgroundRequest(){try{return !!text(sessionStorage.getItem(BG_REQUEST_KEY)||'')}catch(e){return false}}
-function removeResidentVault(){try{var v=window.ConectaPinLocalV2;if(v&&typeof v.remover==='function')v.remover('morador')}catch(e){}}
+function readBootstrap(){try{var r=JSON.parse(sessionStorage.getItem(activeBootstrapKey())||'null');return r&&typeof r==='object'?r:null}catch(e){return null}}
+function clearBackgroundRequest(){try{sessionStorage.removeItem(activeBackgroundKey())}catch(e){}}
+function hasBackgroundRequest(){try{return !!text(sessionStorage.getItem(activeBackgroundKey())||'')}catch(e){return false}}
+function removeResidentVault(){if(testMode())return;try{var v=window.ConectaPinLocalV2;if(v&&typeof v.remover==='function')v.remover('morador')}catch(e){}}
 function waitBackgroundLogin(){
- var id='';try{id=text(sessionStorage.getItem(BG_REQUEST_KEY)||'')}catch(e){}
+ var id='';try{id=text(sessionStorage.getItem(activeBackgroundKey())||'')}catch(e){}
  if(!id)return Promise.reject(new Error('Sem sincronização pendente.'));
  var started=Date.now();
  return new Promise(function(resolve,reject){
@@ -181,8 +186,10 @@ function toggleMute(){
  post('conecta_morador_preferencia_notificacao',{token:token,dispositivo:device(),silencioso:next?'SIM':'NAO'}).then(function(r){resident.silencioso=Boolean(r.silencioso);if(btn)btn.textContent=resident.silencioso?'🔕 Silenciado':'🔔 Avisos';showPortalToast(resident.silencioso?'Preferência silenciosa ativada. As notificações continuam chegando.':'Preferência de avisos sonoros reativada.')}).catch(function(e){showPortalToast(e.message)}).finally(function(){if(btn)btn.disabled=false})
 }
 function logout(){
- var t=token;clearSession();try{sessionStorage.removeItem('portalTacsAdminTokenV1');sessionStorage.removeItem('portalTacsTerritorioTokenV1')}catch(e){}
+ var t=token,teste=testMode();clearSession();clearBackgroundRequest();try{sessionStorage.removeItem(activeBootstrapKey())}catch(e){}
+ if(!teste)try{sessionStorage.removeItem('portalTacsAdminTokenV1');sessionStorage.removeItem('portalTacsTerritorioTokenV1')}catch(e){}
  if(t)post('conecta_morador_encerrar',{token:t,dispositivo:device()}).catch(function(){});
+ if(teste){location.assign('/atendimento-acs-farmaceutico/?area='+encodeURIComponent(areaId()));return}
  location.assign('/atendimento-acs-farmaceutico/central-administrativa-tacs.html');
 }
 
@@ -202,6 +209,11 @@ function osState(os){
 async function activateNotifications(){
  var btn=el('cscNotificationEnable');
  if(!token){gateStatus('Acesso aberto. Aguarde a confirmação segura do servidor para concluir esta etapa.','');return}
+ if(testMode()){
+  if(btn)btn.disabled=true;gateStatus('Validando a etapa no modo teste…','');
+  try{var tr=await post('conecta_morador_notificacao_confirmar',{token:token,dispositivo:device(),permission:'SIM',optedIn:'SIM',subscriptionId:'teste'});resident.notificacoesAtivas=true;gateStatus(tr.message||'Etapa validada no modo teste.','ok');setTimeout(function(){hideGate();renderFamily(resident)},450)}catch(te){gateStatus(te.message,'err')}finally{if(btn)btn.disabled=false}
+  return;
+ }
  if(btn)btn.disabled=true;gateStatus('Solicitando permissão neste aparelho…','');
  try{
   var os=await oneSignalReady();if(!os)throw new Error('O serviço de notificações ainda não terminou de carregar.');
@@ -220,7 +232,7 @@ async function activateNotifications(){
 }
 
 function install(){
- try{token=text(sessionStorage.getItem(TOKEN_KEY)||'')}catch(e){token=''}
+ try{token=text(sessionStorage.getItem(activeTokenKey())||'')}catch(e){token=''}
  var local=readBootstrap(),pending=hasBackgroundRequest();
  if(!queryFlag()){
   if(!token)return;
@@ -231,12 +243,12 @@ function install(){
  if(local)applyResident(local,true);
 	 function fresh(){
 	  if(!token)return Promise.reject(new Error('Sessão remota ainda não confirmada.'));
-	  return getSession().then(function(r){r=mergeResidentFamily(r,readBootstrap());try{sessionStorage.setItem(BOOTSTRAP_KEY,JSON.stringify(r))}catch(e){}applyResident(r,false);return r});
+	  return getSession().then(function(r){r=mergeResidentFamily(r,readBootstrap());try{sessionStorage.setItem(activeBootstrapKey(),JSON.stringify(r))}catch(e){}applyResident(r,false);return r});
 	 }
 	 function confirmBackground(){
 	  return waitBackgroundLogin().then(function(login){
-	   token=text(login.token);try{sessionStorage.setItem(TOKEN_KEY,token)}catch(e){}
-	   if(Array.isArray(login.familia)&&login.familia.length){try{sessionStorage.setItem(BOOTSTRAP_KEY,JSON.stringify(login))}catch(e){}applyResident(login,true)}
+	   token=text(login.token);try{sessionStorage.setItem(activeTokenKey(),token)}catch(e){}
+	   if(Array.isArray(login.familia)&&login.familia.length){try{sessionStorage.setItem(activeBootstrapKey(),JSON.stringify(login))}catch(e){}applyResident(login,true)}
 	   return fresh();
 	  });
  }
