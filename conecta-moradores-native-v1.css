@@ -21,3 +21,21 @@
 .csc-mor-native table{width:100%;border-collapse:collapse;font-size:.78rem}.csc-mor-native th,.csc-mor-native td{padding:7px;border-bottom:1px solid #2b5a76;text-align:left;vertical-align:top;color:#f7fcff}.csc-mor-native th{color:#83efa9}.csc-mor-native details{max-width:100%}
 .csc-mor-native .native-note{margin:0 0 10px;color:#8eb2c6;font-size:.78rem}
 @media(min-width:700px){.csc-mor-native .summary{grid-template-columns:repeat(5,minmax(0,1fr))}.csc-mor-native .grid{grid-template-columns:1fr 1fr;gap:0 12px}}
+
+
+/* CORRECAO_VISUAL_MORADORES_APP4_20260918
+   Escopo exclusivo do painel Moradores. O aviso de permissões permanece informativo,
+   mas volta à mesma linguagem azul-petróleo dos demais painéis. */
+.csc-mor-native .csc-mor-native-note{
+  background:linear-gradient(145deg,#153b58,#102d46)!important;
+  background-image:linear-gradient(145deg,#153b58,#102d46)!important;
+  color:#f7fcff!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.csc-mor-native .csc-mor-native-note strong{color:#83efa9!important}
+.csc-mor-native #content,
+.csc-mor-native #summary{
+  max-height:none!important;
+  overflow:visible!important;
+}
