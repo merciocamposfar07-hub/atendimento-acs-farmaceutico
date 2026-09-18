@@ -2636,7 +2636,7 @@ html{overflow-x:hidden!important;overflow-y:auto!important}body{overflow-x:hidde
 (function(){
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1',DEVICE_KEY='portalTacsDispositivoV1',PROFILE_KEY='portalTacsAcessoRapidoV1',UNDO_KEY='portalTacsUndoConteudoV1',TEMA_KEY='portalTacsTemaRecadosV1',CACHE_SCHEMA='lf1';
+var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1',DEVICE_KEY='portalTacsDispositivoV1',PROFILE_KEY='portalTacsAcessoRapidoV1',UNDO_KEY='portalTacsUndoConteudoV1',TEMA_KEY='portalTacsTemaRecadosV1',CACHE_SCHEMA='lf1',STABLE_CACHE_PREFIX='portalConectaRecadosSnapshotEstavelV1:',SNAPSHOT_TTL=24*60*60*1000;
 var moduleCore=window.ConectaModuleCoreV1,moduleSession=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'recados'}):null,modulePerf=moduleCore&&moduleCore.performance,moduleRequests=moduleCore&&moduleCore.requests;
 var token=moduleSession&&moduleSession.token||'',territorioToken=moduleSession&&moduleSession.territorioToken||'',ubsToken=moduleSession&&moduleSession.ubsToken||'',dispositivo=moduleSession&&moduleSession.dispositivo||localStorage.getItem(DEVICE_KEY)||'';
 var accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territorioToken?'tacs':(token?'admin':''));var podeAdministrar=accessMode==='admin';
@@ -2671,17 +2671,41 @@ function cacheFingerprint(v){var s=txt(v),a=2166136261,b=2246822519;for(var i=0;
 function cacheTacsProfile(){try{var p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');return p&&p.tacsId&&p.areaId?p:null}catch(e){return null}}
 function cacheIdentity(){if(accessMode==='ubs'){var id=moduleCore&&typeof moduleCore.identity==='function'?moduleCore.identity():null,unit=txt(id&&id.unidadeId).toUpperCase().replace(/[^A-Z0-9_-]/g,'');return'ubs:'+(unit||'UNIDADE')+':'+areaId}if(territorioToken){var p=cacheTacsProfile(),tid=txt(p&&p.tacsId).toUpperCase().replace(/[^A-Z0-9_-]/g,''),pa=txt(p&&p.areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'');if(!tid||pa!==areaId)return'';return'tacs:'+tid+':'+areaId}if(token)return'admin:'+cacheFingerprint(token)+':'+areaId;return''}
 function dataCacheKey(){var id=cacheIdentity();return id?'portalTacsAdminSnapshotV1:recados:'+CACHE_SCHEMA+':'+id:''}
-function lerSnapshot(){try{var key=dataCacheKey();if(!key)return null;var item=JSON.parse(localStorage.getItem(key)||'null');if(!item||!item.data||Date.now()-Number(item.salvoEm||0)>24*60*60*1000)return null;return item}catch(e){return null}}
-function salvarSnapshot(r){try{var key=dataCacheKey();if(!key)return;localStorage.setItem(key,JSON.stringify({salvoEm:Date.now(),data:{ok:true,areaId:areaId,recados:Array.isArray(r.recados)?r.recados:[],campanhas:Array.isArray(r.campanhas)?r.campanhas:[]}}))}catch(e){}}
+function snapshotPayload(r){return {ok:true,areaId:areaId,recados:Array.isArray(r&&r.recados)?r.recados:[],campanhas:Array.isArray(r&&r.campanhas)?r.campanhas:[]}}
+function cacheModeEstavel(){var m='';try{m=txt(moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():accessMode).toLowerCase()}catch(e){m=txt(accessMode).toLowerCase()}return ['admin','tacs','ubs'].indexOf(m)!==-1?m:''}
+function stableCacheKey(){var m=cacheModeEstavel(),a=txt(areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'');return m&&a?STABLE_CACHE_PREFIX+m+':'+a:''}
+function lerSnapshotEstavel(){try{var key=stableCacheKey();if(!key)return null;var item=JSON.parse(localStorage.getItem(key)||'null'),age=Date.now()-Number(item&&item.salvoEm||0);if(!item||!item.data||age<0||age>SNAPSHOT_TTL)return null;return item}catch(e){return null}}
+function salvarSnapshotEstavel(r){try{var key=stableCacheKey();if(!key)return;localStorage.setItem(key,JSON.stringify({salvoEm:Date.now(),data:snapshotPayload(r)}))}catch(e){}}
+function lerSnapshotLegadoDaArea(){
+ try{
+  var m=cacheModeEstavel(),a=txt(areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'');if(!m||!a)return null;
+  var prefix='portalTacsAdminSnapshotV1:recados:'+CACHE_SCHEMA+':'+m+':',suffix=':'+a,melhor=null,melhorEm=0;
+  for(var i=0;i<localStorage.length;i++){
+   var key=localStorage.key(i)||'';if(key.indexOf(prefix)!==0||key.slice(-suffix.length)!==suffix)continue;
+   var item=JSON.parse(localStorage.getItem(key)||'null'),salvoEm=Number(item&&item.salvoEm||0),age=Date.now()-salvoEm;
+   if(item&&item.data&&age>=0&&age<=SNAPSHOT_TTL&&salvoEm>melhorEm){melhor=item;melhorEm=salvoEm}
+  }
+  return melhor;
+ }catch(e){return null}
+}
+function lerSnapshot(){try{var key=dataCacheKey();if(!key)return null;var item=JSON.parse(localStorage.getItem(key)||'null');if(!item||!item.data||Date.now()-Number(item.salvoEm||0)>SNAPSHOT_TTL)return null;return item}catch(e){return null}}
+function salvarSnapshot(r){try{var key=dataCacheKey();if(key)localStorage.setItem(key,JSON.stringify({salvoEm:Date.now(),data:snapshotPayload(r)}))}catch(e){}salvarSnapshotEstavel(r)}
 function aplicarSnapshotSeDisponivel(){
+ /* RECADO_RETORNO_BFCACHE_CACHE_FIRST_20260918_V1
+    A leitura visual não depende do token efêmero. O último snapshot sanitizado da
+    mesma função + área volta primeiro; a sessão remota continua obrigatória para escrita. */
  if(modulePerf&&typeof modulePerf.prime==='function'){
-  var coreItem=modulePerf.prime('recados',function(data){snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;aplicar(data,true)});
-  if(coreItem){limparStatusCarregamento('loginStatus');limparStatusCarregamento('statusOperacao');return true}
+  var coreItem=modulePerf.prime('recados',function(data){snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;aplicar(data,true);salvarSnapshotEstavel(data)});
+  if(coreItem){limparStatusCarregamento('loginStatus');limparStatusCarregamento('statusOperacao');try{restaurarSaudeResumo()}catch(e){}return true}
  }
- /* O fallback legado depende da identidade remota; sem token, apenas o snapshot
-    persistente do core é elegível. */
- if(!(token||territorioToken||ubsToken||accessMode==='ubs'))return false;
- var item=lerSnapshot();if(!item)return false;snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;aplicar(item.data,true);limparStatusCarregamento('loginStatus');limparStatusCarregamento('statusOperacao');return true
+ var item=lerSnapshotEstavel()||lerSnapshotLegadoDaArea();
+ if(!item&&(token||territorioToken||ubsToken||accessMode==='ubs'))item=lerSnapshot();
+ if(!item)return false;
+ snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;
+ aplicar(item.data,true);salvarSnapshotEstavel(item.data);
+ limparStatusCarregamento('loginStatus');limparStatusCarregamento('statusOperacao');
+ try{restaurarSaudeResumo()}catch(e){}
+ return true
 }
 function cancelarReconexaoSnapshot(){if(snapshotReconexaoTimer){clearTimeout(snapshotReconexaoTimer);snapshotReconexaoTimer=null}}
 function agendarReconexaoSnapshot(msg){cancelarReconexaoSnapshot();if(snapshotReconexaoTentativas>=2)return;snapshotReconexaoTentativas++;snapshotReconexaoTimer=setTimeout(function(){snapshotReconexaoTimer=null;if(snapshotVisivel&&(token||territorioToken||ubsToken||accessMode==='ubs')&&!ativa)carregar(msg,null,true)},2500+snapshotReconexaoTentativas*1500)}
@@ -2926,7 +2950,27 @@ entrarTacs.addEventListener('click',function(){if(!testesOk)return;var pin=docum
 sair.addEventListener('click',function(){if(!(token||territorioToken))return;var action=accessMode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout';post(action,sessao(),function(){token='';territorioToken='';accessMode='';podeAdministrar=false;areas=[];contextoPronto=false;confirmacaoPendente=false;sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);document.getElementById('conteudo').classList.add('oculto');document.getElementById('resumo').classList.add('oculto');document.getElementById('areaEnvioBox').classList.add('oculto');document.getElementById('manutencaoBox').classList.add('oculto');esconderSaudeNotificacoes();manutencaoConhecida=false;sair.disabled=true;atualizarBloqueioMutacoes();status('loginStatus','Sessão encerrada.','ok')})});
 document.getElementById('areaEnvio').addEventListener('change',function(){if(ativa||confirmacaoPendente){this.value=areaId;return}areaId=txt(this.value).toUpperCase().replace(/[^A-Z0-9_-]/g,'')||areaId;manutencaoConhecida=false;contextoPronto=false;renderAreas();try{var u=new URL(location.href);u.searchParams.set('area',areaId);history.replaceState(null,'',u.toString())}catch(e){}status('statusOperacao','Aguarde enquanto os dados carregam…','aviso');carregar('Área alterada e publicações isoladas carregadas.')});
 document.getElementById('abaRecados').addEventListener('click',function(){alternar('recados')});document.getElementById('abaCampanhas').addEventListener('click',function(){alternar('campanhas')});document.getElementById('novoRecado').addEventListener('click',function(){document.getElementById('formNovoRecado').classList.remove('oculto')});document.querySelector('.cancelarNovoRecado').addEventListener('click',function(){document.getElementById('formNovoRecado').classList.add('oculto')});document.getElementById('novaCampanha').addEventListener('click',function(){document.getElementById('formNovaCampanha').classList.remove('oculto')});document.querySelector('.cancelarNovaCampanha').addEventListener('click',function(){document.getElementById('formNovaCampanha').classList.add('oculto')});document.querySelector('.salvarNovoRecado').addEventListener('click',function(){salvar('recado',document.getElementById('formNovoRecado'),'')});document.querySelector('.salvarNovaCampanha').addEventListener('click',function(){salvar('campanha',document.getElementById('formNovaCampanha'),'')});document.getElementById('listaRecados').addEventListener('click',function(e){var c=e.target.closest('.item');if(!c)return;if(e.target.closest('.salvarRecado'))salvar('recado',c,c.dataset.id);if(e.target.closest('.removerRecado'))remover('recado',c.dataset.id)});document.getElementById('listaCampanhas').addEventListener('click',function(e){var c=e.target.closest('.item');if(!c)return;if(e.target.closest('.salvarCampanha'))salvar('campanha',c,c.dataset.id);if(e.target.closest('.removerCampanha'))remover('campanha',c.dataset.id)});desfazer.addEventListener('click',desfazerUltima);document.getElementById('alternarManutencao').addEventListener('click',alternarManutencao);document.getElementById('atualizarSaudeNotificacoes').addEventListener('click',atualizarSaudeNotificacoesRemota);document.getElementById('solicitarReparoNotificacoes').addEventListener('click',solicitarReparoNotificacoesArea);document.getElementById('saudeNotificacoes').addEventListener('click',function(e){var filtro=e.target.closest('[data-saude-filtro]');if(filtro){selecionarSaudeFiltro(filtro.getAttribute('data-saude-filtro'));return}if(e.target.closest('.saude-fechar-lista')){saudeFiltroAtivo='';renderSaudeLista()}});contraste.addEventListener('click',alternarTemaVisual);aplicarTemaVisual(lerTemaVisual());renderManutencao();
-window.PortalTacsRecadosCampanhasV12={version:'1.3.1-cache-write-nonblocking',post:post,localizarSalvo:localizarSalvo,relerAteConfirmar:relerAteConfirmar,aplicarSnapshotSeDisponivel:aplicarSnapshotSeDisponivel};
+var retornoBfCacheTimer=null;
+function cancelarLeituraSuspensaNoRetorno(){
+ if(!ativa||ativa.action!=='admin_publicacoes_dados')return false;
+ var op=ativa;clearTimeout(op.timeout);clearTimeout(op.pollTimer);clearTimeout(op.submitTimer);
+ if(op.form&&op.form.parentNode)op.form.parentNode.removeChild(op.form);
+ if(op.frame&&op.frame.parentNode)op.frame.parentNode.removeChild(op.frame);
+ ativa=null;entrar.disabled=false;if(entrarTacs)entrarTacs.disabled=false;sair.disabled=!(token||territorioToken||ubsToken||accessMode==='ubs');atualizarBloqueioMutacoes();
+ return true
+}
+function retomarAposBfCache(){
+ if(retornoBfCacheTimer)clearTimeout(retornoBfCacheTimer);
+ retornoBfCacheTimer=setTimeout(function(){
+  retornoBfCacheTimer=null;cancelarLeituraSuspensaNoRetorno();syncCoreSession();
+  var tinhaSnapshot=aplicarSnapshotSeDisponivel();
+  if(tinhaSnapshot){limparStatusCarregamento('loginStatus');limparStatusCarregamento('statusOperacao')}
+  if(remoteSessionReady()){carregar('Dados atuais confirmados em segundo plano.',null,true);return}
+  scheduleCacheRemoteSync('Dados atuais confirmados em segundo plano.');
+ },0)
+}
+window.PortalTacsRecadosCampanhasV12={version:'1.3.2-retorno-bfcache-cache-first',post:post,localizarSalvo:localizarSalvo,relerAteConfirmar:relerAteConfirmar,aplicarSnapshotSeDisponivel:aplicarSnapshotSeDisponivel,retomar:retomarAposBfCache};
+window.addEventListener('pageshow',function(event){if(event&&event.persisted)retomarAposBfCache()});
 var teste=testesInternos();testesOk=teste.ok;entrar.disabled=!testesOk;if(!testesOk){status('loginStatus','Os testes internos da página falharam. O painel foi bloqueado.','erro');return}function iniciarPainel(){
   entrar.disabled=false;entrarTacs.disabled=false;
   var localFirst=false;
