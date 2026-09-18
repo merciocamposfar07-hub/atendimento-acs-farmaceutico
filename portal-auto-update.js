@@ -317,7 +317,7 @@
     var script=document.createElement('script');
     script.id=CONECTA_SCRIPT_ID;
     script.async=false;
-    script.src='/atendimento-acs-farmaceutico/portal-conecta-oficial-v1.js?v=20260823-conecta-estavel-v4';
+    script.src='/atendimento-acs-farmaceutico/portal-conecta-oficial-v1.js?v=20260918-portal-csc-identidade-v1';
     (document.head||document.documentElement).appendChild(script);
   }
 
@@ -338,7 +338,7 @@
       var script=document.createElement('script');
       script.id=INSTITUTIONAL_SCRIPT_ID;
       script.async=false;
-      script.src='/atendimento-acs-farmaceutico/portal-institucional-suporte-v1.js?v=20260913-seta-historica-centralizada-v1';
+      script.src='/atendimento-acs-farmaceutico/portal-institucional-suporte-v1.js?v=20260918-portal-csc-identidade-v1';
       script.addEventListener('load',afterInstitutionalReady,{once:true});
       (document.head||document.documentElement).appendChild(script);
       return;
