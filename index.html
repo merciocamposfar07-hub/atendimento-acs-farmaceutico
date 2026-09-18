@@ -482,6 +482,44 @@
       .hours{margin-top:16px!important}
     }
 
+  
+    /* CSC_HORARIO_ALINHADO_20260918_V7 */
+    .hours{
+      width:100%!important;
+      min-width:0!important;
+      display:flex!important;
+      flex-direction:column!important;
+      align-items:center!important;
+      justify-content:center!important;
+      gap:6px!important;
+      padding:14px 16px!important;
+      text-align:center!important;
+    }
+    .hours small:first-child,
+    .hours strong,
+    .hours small:last-child{
+      width:100%!important;
+      align-self:center!important;
+      justify-self:center!important;
+      grid-area:auto!important;
+      margin-left:0!important;
+      margin-right:0!important;
+      text-align:center!important;
+    }
+    .hours small:first-child{
+      order:1!important;
+      margin:0!important;
+    }
+    .hours strong{
+      order:2!important;
+      margin:0!important;
+      line-height:1.05!important;
+    }
+    .hours small:last-child{
+      order:3!important;
+      margin:0!important;
+    }
+
   </style>
 </head>
 <body class="tema-petroleo"><main class="shell">
@@ -500,7 +538,6 @@
           <div class="hours"><small>Atendimento</small><strong>08h <span>às</span> 16h</strong><small>Segunda a sexta</small></div>
         </div>
         <h1>Solicite serviços da sua unidade de saúde</h1>
-        <p class="exclusive"><strong>Atendimento exclusivo</strong> aos moradores do Sítio Japaranduba - Unidade de Saúde Posto Matias.</p>
         <div class="responsible"><span class="responsible-icon" aria-hidden="true">✓</span><div>TACS - Técnico Agente Comunitário de Saúde<b>Mércio José Campos dos Santos</b></div></div>
       </header>
 
