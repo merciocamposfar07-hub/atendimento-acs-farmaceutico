@@ -301,11 +301,11 @@
   }
 
   function loadFamilyIdentification(){
-    if(isAdminPage()||document.getElementById('portalTacsIdentificacaoFamiliaScriptV1'))return;
+    if(isAdminPage()||document.getElementById('portalTacsIdentificacaoFamiliaScriptV1')||document.querySelector('script[src*="portal-identificacao-familia-v1.js"]'))return;
     var script=document.createElement('script');
     script.id='portalTacsIdentificacaoFamiliaScriptV1';
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260918-cpf-data-padronizados-v4';
+    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260918-familia-instantanea-v5';
     (document.head||document.documentElement).appendChild(script);
   }
 
