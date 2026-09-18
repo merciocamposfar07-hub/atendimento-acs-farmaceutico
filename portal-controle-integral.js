@@ -107,16 +107,29 @@ function renderLegacy(m,days){
   box.appendChild(list);
 }
 function render(data){if(!data||data.ok===false)return;lastData=data;renderAlerts(data)}
-function load(forcar){if(forcar&&window.PortalTacsPublicData&&typeof window.PortalTacsPublicData.refresh==='function'){window.PortalTacsPublicData.refresh().then(render).catch(function(){});return}jsonp(render,1)}
+function load(forcar){
+  var api=window.PortalTacsPublicData;
+  if(api){
+    if(forcar&&typeof api.refresh==='function'){api.refresh().then(render).catch(function(){});return}
+    if(typeof api.get==='function'){api.get().then(render).catch(function(){});return}
+  }
+  jsonp(render,1)
+}
 function init(){
   style();
   window.addEventListener('portal-tacs-public-data',function(event){render(event&&event.detail)});
-  // RECADOS_PORTAL_LIVE_V1: ao abrir o Portal, consultar o servidor real antes de aceitar cache local antigo.
-  load(true);
+  // RECADOS_CAMPANHAS_CACHE_FIRST_2026_09_18_V1
+  // Exibe imediatamente o último dado válido e atualiza em segundo plano.
+  var publicData=window.PortalTacsPublicData,cached=null;
+  if(publicData&&typeof publicData.cached==='function'){
+    try{cached=publicData.cached()}catch(e){cached=null}
+  }
+  if(cached)render(cached);
+  load(false);
   var select=document.getElementById('category');
   if(select)select.addEventListener('change',function(){var value=String(select.value||'').toLowerCase();if((value.indexOf('médica')!==-1||value.indexOf('medica')!==-1||value.indexOf('nutricionista')!==-1)&&lastData)render(lastData)});
-  document.addEventListener('visibilitychange',function(){if(!document.hidden)load(true)});
-  window.addEventListener('pageshow',function(){load(true)});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)load(false)});
+  window.addEventListener('pageshow',function(){load(false)});
   setInterval(function(){if(!document.hidden)load(true)},30000);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();

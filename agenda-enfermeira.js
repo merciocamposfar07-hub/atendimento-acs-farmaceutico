@@ -40,6 +40,8 @@
     syncError: ''
   };
   var publicListenerInstalled = false;
+  var notificationSdkReady = false;
+  var notificationPinPromptPending = false;
 
   function id(value) {
     return document.getElementById(value);
@@ -948,7 +950,38 @@
     var status = id('notificationStatus');
     var help = id('notificationHelp');
 
+    function showNotificationAfterPin(){
+      notificationPinPromptPending = true;
+      var offer = id('notificationOffer');
+      var pin = id('portalResidentPinV1');
+      if(!offer)return;
+      offer.hidden = false;
+      offer.setAttribute('data-pin-onboarding','1');
+      if(pin && pin.parentNode && offer.previousElementSibling !== pin){
+        try{pin.insertAdjacentElement('afterend',offer)}catch(moveError){}
+      }
+      if(status)status.textContent = notificationSdkReady
+        ? 'PIN confirmado. Agora ative as notificações deste aparelho.'
+        : 'PIN confirmado. Preparando a ativação das notificações…';
+      if(help)help.textContent = notificationSdkReady
+        ? 'Toque em “Ativar avisos neste aparelho” e escolha Permitir.'
+        : 'O Portal está preparando o canal de avisos. O botão será liberado assim que estiver pronto.';
+      if(button && !notificationSdkReady){
+        button.disabled = true;
+        button.textContent = 'Preparando ativação…';
+      }else if(button && button.textContent !== 'Avisos ativados'){
+        button.disabled = false;
+        button.textContent = 'Ativar avisos neste aparelho';
+      }
+      setTimeout(function(){
+        try{offer.scrollIntoView({behavior:'smooth',block:'center'})}catch(scrollError){}
+      },40);
+    }
+
+    document.addEventListener('tacs:pin-criado-confirmado',showNotificationAfterPin);
+
     if (isIos() && !isStandalone()) {
+      notificationSdkReady = true;
       status.textContent =
         'Ative os avisos neste aparelho para receber recados, campanhas e alterações de agenda.';
       help.textContent =
@@ -963,6 +996,8 @@
       return;
     }
 
+    button.disabled = true;
+    button.textContent = 'Preparando avisos…';
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async function (OneSignal) {
       try {
@@ -985,6 +1020,13 @@
           notifyButton: { enable: false },
           allowLocalhostAsSecureOrigin: false
         });
+        notificationSdkReady = true;
+        if(notificationPinPromptPending){
+          status.textContent = 'PIN confirmado. Agora ative as notificações deste aparelho.';
+          help.textContent = 'Toque em “Ativar avisos neste aparelho” e escolha Permitir.';
+          button.disabled = false;
+          button.textContent = 'Ativar avisos neste aparelho';
+        }
 
         var repairInProgress = false;
 
