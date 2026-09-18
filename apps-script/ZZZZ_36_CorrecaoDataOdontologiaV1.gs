@@ -170,6 +170,15 @@ function correcaoDataOdontologiaV1Reservar_(p){
   var hoje=Utilities.formatDate(new Date(),TACS_CORRECAO_DATA_ODONTOLOGIA_V1.TZ,'yyyy-MM-dd');
   if(data<hoje)return{ok:false,code:'PAST_DATE',message:'Essa data já passou.'};
   if(tipo!=='comum'&&tipo!=='emergencial')return{ok:false,code:'INVALID_TYPE',message:'Tipo de vaga inválido.'};
+  var modoTeste=String(p.modoTacsTeste||'').trim().toUpperCase()==='SIM';
+  if(modoTeste){
+    var testeValido=false;
+    try{
+      testeValido=typeof aparelhoTacsTesteV1TokenValido_==='function'&&
+        aparelhoTacsTesteV1TokenValido_(p.dispositivo,areaId,p.chaveTacsTeste)===true;
+    }catch(ignoreTeste){testeValido=false;}
+    if(!testeValido)return{ok:false,code:'TESTE_NAO_AUTORIZADO',message:'O modo TACS / teste não está autorizado neste aparelho.'};
+  }
 
   var lock=LockService.getScriptLock();
   if(!lock.tryLock(15000))return{ok:false,code:'BUSY',message:'A agenda está sendo atualizada. Tente novamente.'};
@@ -178,7 +187,7 @@ function correcaoDataOdontologiaV1Reservar_(p){
     correcaoDataOdontologiaV1GarantirSchemaReservas_(ss);
     var reservas=agendasProfissionaisTerritoriaisV1Tabela_(ss,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_RESERVAS,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.RESERVA_HEADERS,true);
     var existente=agendasProfissionaisTerritoriaisV1Encontrar_(reservas,'CODIGO_SOLICITACAO',requestId,areaId);
-    if(existente){
+    if(existente&&!modoTeste){
       var antigo=agendasProfissionaisTerritoriaisV1Objeto_(reservas.headers,existente.values);
       return{ok:true,alreadyReserved:true,requestId:requestId,areaId:areaId,date:correcaoDataOdontologiaV1DataCivil_(antigo.DATA_CONSULTA)||agendasProfissionaisTerritoriaisV1Data_(antigo.DATA_CONSULTA),type:correcaoDataOdontologiaV1Texto_(antigo.TIPO_VAGA),remaining:agendasProfissionaisTerritoriaisV1NaoNegativo_(antigo.VAGAS_RESTANTES),message:'Esta solicitação já possui uma vaga reservada nesta área.'};
     }
@@ -199,6 +208,9 @@ function correcaoDataOdontologiaV1Reservar_(p){
     var indice=agendasProfissionaisTerritoriaisV1Indice_(agenda,campo);
     var disponiveis=Number(alvo.values[indice]);
     if(!Number.isInteger(disponiveis)||disponiveis<=0)return{ok:false,code:'NO_SLOTS',message:tipo==='emergencial'?'A vaga emergencial desse dia acabou.':'As vagas comuns desse dia acabaram.'};
+    if(modoTeste){
+      return{ok:true,teste:true,alreadyReserved:false,requestId:requestId,areaId:areaId,date:data,type:tipo,remaining:disponiveis,message:'Vaga validada no modo teste. Nenhuma vaga real foi consumida.'};
+    }
     var restantes=disponiveis-1;
     agenda.sheet.getRange(alvo.row,indice+1).setValue(restantes);
     var idxAtualizado=agendasProfissionaisTerritoriaisV1Indice_(agenda,'ATUALIZADO_EM',false);

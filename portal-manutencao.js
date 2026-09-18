@@ -8,10 +8,20 @@
   if(!/^[A-Z0-9][A-Z0-9_-]{1,63}$/.test(AREA_ID))AREA_ID='JAPARANDUBA';
   var CACHE_KEY='portalTacsManutencaoAtivaV2:'+AREA_ID;
   var TIMEOUT_MS=12000;
-  var estado={conhecido:false,ativa:false,mensagem:'',atualizadoEm:''};
+  var DEVICE_KEY='portalTacsDispositivoV1';
+  var TECH_TOKEN_PREFIX='portalTacsAparelhoTesteTokenV3:';
+  var estado={conhecido:false,ativa:false,bypassTacsTeste:false,bloqueada:false,mensagem:'',atualizadoEm:''};
   var consulta=null;
 
   function texto(valor){return String(valor==null?'':valor).trim()}
+
+  function credencialTesteLocal(){
+    try{
+      var dispositivo=texto(localStorage.getItem(DEVICE_KEY)||'');
+      var chave=dispositivo?texto(localStorage.getItem(TECH_TOKEN_PREFIX+AREA_ID+':'+dispositivo)||''):'';
+      return {dispositivo:dispositivo,chave:chave};
+    }catch(erro){return {dispositivo:'',chave:''}}
+  }
 
   function lerAtivaSalva(){
     try{
@@ -85,16 +95,20 @@
   }
 
   function aplicar(novo){
+    var ativa=novo.ativa===true;
+    var bypass=novo.bypassTacsTeste===true;
     estado={
       conhecido:novo.conhecido===true,
-      ativa:novo.ativa===true,
+      ativa:ativa,
+      bypassTacsTeste:bypass,
+      bloqueada:ativa&&!bypass,
       mensagem:texto(novo.mensagem),
       atualizadoEm:texto(novo.atualizadoEm)
     };
     var e=elementos();
     e.verificacao.hidden=true;
-    e.tela.hidden=!estado.ativa;
-    if(estado.ativa){
+    e.tela.hidden=!estado.bloqueada;
+    if(estado.bloqueada){
       document.getElementById('portalManutencaoMensagem').textContent=estado.mensagem||'O Portal TACS está temporariamente indisponível.';
     }
     salvarAtiva();
@@ -128,6 +142,7 @@
         aplicar({
           conhecido:true,
           ativa:dados.ativa===true,
+          bypassTacsTeste:dados.bypassTacsTeste===true,
           mensagem:dados.mensagem,
           atualizadoEm:dados.atualizadoEm
         });
@@ -142,8 +157,11 @@
         fim(null,dados);
       };
       script.onerror=function(){fim(new Error('Falha ao verificar a manutenção.'))};
+      var credencial=credencialTesteLocal();
       script.src=API+(API.indexOf('?')<0?'?':'&')+
         'action=portal_manutencao_status&areaId='+encodeURIComponent(AREA_ID)+
+        '&dispositivo='+encodeURIComponent(credencial.dispositivo)+
+        '&chaveTacsTeste='+encodeURIComponent(credencial.chave)+
         '&callback='+encodeURIComponent(nome)+'&_='+Date.now();
       document.head.appendChild(script);
       timer=setTimeout(function(){fim(new Error('A verificação de manutenção demorou.'))},TIMEOUT_MS);
@@ -151,7 +169,7 @@
     return consulta;
   }
 
-  function disponivel(){return !estado.ativa}
+  function disponivel(){return !estado.bloqueada}
   function obter(){return Object.assign({},estado)}
 
   function instalarCorrecaoOdontologicaCns_(){
@@ -212,7 +230,16 @@
     elementos();
     instalarCorrecaoOdontologicaCns_();
     if(salva){
-      aplicar({conhecido:true,ativa:true,mensagem:salva.mensagem,atualizadoEm:salva.atualizadoEm});
+      var credencial=credencialTesteLocal();
+      if(credencial.dispositivo&&credencial.chave){
+        estado={conhecido:false,ativa:true,bypassTacsTeste:false,bloqueada:true,mensagem:salva.mensagem||'',atualizadoEm:salva.atualizadoEm||''};
+        var e=elementos();
+        e.tela.hidden=true;
+        e.verificacao.hidden=false;
+        e.verificacao.textContent='Verificando o acesso administrativo ao Portal TACS…';
+      }else{
+        aplicar({conhecido:true,ativa:true,bypassTacsTeste:false,mensagem:salva.mensagem,atualizadoEm:salva.atualizadoEm});
+      }
     }
     consultar().catch(function(){});
     window.setInterval(function(){
