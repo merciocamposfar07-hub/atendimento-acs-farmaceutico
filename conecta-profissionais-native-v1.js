@@ -208,7 +208,9 @@ function create(host,options){
     var api=bridge();
     if(api){
       bridgeReady=true;
-      if(visible)reloadRemote('Profissionais e serviços confirmados pelo servidor.');
+      /* No pré-aquecimento oculto, faz uma única leitura para que o primeiro toque
+         já encontre o snapshot pronto. Reaberturas continuam fora do caminho crítico. */
+      reloadRemote('Profissionais e serviços confirmados pelo servidor.');
       return;
     }
     if(attempt>80){setStatus('A ponte técnica de Profissionais não ficou pronta. Volte à Central e tente novamente.','err');return}
