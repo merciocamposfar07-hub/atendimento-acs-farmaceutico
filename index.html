@@ -346,6 +346,142 @@
       .hours strong{font-size:22px!important}
     }
 
+  
+    /* CSC_PORTAL_CSC_REFINO_VISUAL_20260918_V6
+       Somente apresentação. Não altera busca, PIN, família, agenda, serviços ou envio. */
+    .hero-actions,
+    .purpose{display:none!important}
+
+    .identity{
+      align-items:center!important;
+      gap:16px!important
+    }
+    .mark{
+      width:104px!important;
+      height:104px!important;
+      min-width:104px!important;
+      flex:0 0 104px!important;
+      padding:0!important;
+      border:0!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      filter:none!important;
+      overflow:visible!important
+    }
+    .mark img{
+      width:104px!important;
+      height:104px!important;
+      object-fit:contain!important;
+      border:0!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      filter:none!important;
+      transform:none!important
+    }
+    .portal-brand-copy{
+      min-width:0!important;
+      display:flex!important;
+      flex-direction:column!important;
+      align-items:flex-start!important
+    }
+    .portal-brand-name{
+      display:block!important;
+      margin:0!important;
+      color:#8ff0ae!important;
+      font-size:1.08rem!important;
+      line-height:1.16!important;
+      font-weight:950!important;
+      letter-spacing:.045em!important;
+      text-transform:uppercase!important
+    }
+    .portal-brand-title{
+      display:block!important;
+      margin:5px 0 7px!important;
+      color:#fff!important;
+      font-size:1.36rem!important;
+      line-height:1.12!important;
+      font-weight:900!important;
+      letter-spacing:-.025em!important
+    }
+    .portal-brand-copy>span:not(.portal-brand-name){
+      display:block!important;
+      margin-top:3px!important;
+      color:#d8e6ee!important;
+      font-size:.92rem!important;
+      line-height:1.32!important;
+      font-weight:600!important;
+      letter-spacing:0!important;
+      text-transform:none!important
+    }
+
+    .hours{
+      width:100%!important;
+      min-width:0!important;
+      margin:18px 0 0!important;
+      padding:13px 14px!important;
+      display:flex!important;
+      flex-direction:column!important;
+      justify-content:center!important;
+      align-items:center!important;
+      gap:3px!important;
+      text-align:center!important;
+      border:1px solid rgba(98,200,232,.35)!important;
+      border-radius:18px!important;
+      background:rgba(16,45,70,.58)!important;
+      box-shadow:none!important
+    }
+    .hours small:first-child{
+      order:1!important;
+      color:#8ff0ae!important;
+      font-size:.86rem!important;
+      line-height:1.1!important;
+      font-weight:950!important;
+      letter-spacing:.08em!important;
+      text-transform:uppercase!important;
+      text-align:center!important
+    }
+    .hours strong{
+      order:2!important;
+      margin:2px 0!important;
+      color:#fff!important;
+      font-size:1.65rem!important;
+      line-height:1.05!important;
+      font-weight:900!important;
+      text-align:center!important
+    }
+    .hours strong span{color:#fff!important}
+    .hours small:last-child{
+      order:3!important;
+      color:#8ff0ae!important;
+      font-size:.78rem!important;
+      line-height:1.1!important;
+      font-weight:900!important;
+      letter-spacing:.075em!important;
+      text-transform:uppercase!important;
+      text-align:center!important
+    }
+
+    @media(max-width:430px){
+      .identity{gap:13px!important}
+      .mark{
+        width:94px!important;height:94px!important;min-width:94px!important;flex-basis:94px!important
+      }
+      .mark img{width:94px!important;height:94px!important}
+      .portal-brand-name{
+        font-size:1.00rem!important;
+        line-height:1.15!important;
+        letter-spacing:.035em!important
+      }
+      .portal-brand-title{font-size:1.25rem!important}
+      .portal-brand-copy>span:not(.portal-brand-name){
+        font-size:.84rem!important;
+        line-height:1.30!important
+      }
+      .hours{margin-top:16px!important}
+    }
+
   </style>
 </head>
 <body class="tema-petroleo"><main class="shell">
@@ -354,8 +490,9 @@
         <div class="hero-top">
           <div class="identity">
             <div class="mark" aria-hidden="true"><img src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3" alt=""></div>
-            <div>
-              <strong>PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA</strong>
+            <div class="portal-brand-copy">
+              <span class="portal-brand-name">CONECTA SAÚDE COMUNITÁRIA</span>
+              <strong class="portal-brand-title">Portal CSC</strong>
               <span>Serviço vinculado à Unidade de Saúde Posto Matias</span>
               <span>Sítio Japaranduba • Chã Grande/PE</span>
             </div>
@@ -546,7 +683,7 @@
   </script>
   <script src="moradores-autofill.js?v=69a1f1ba696e"></script>
 <script src="portal-identificacao-familia-v1.js?v=20260918-espelho-morador-admin-v1"></script>
-  <script src="portal-auto-update.js?v=20260918-portal-csc-identidade-v1"></script>
+  <script src="portal-auto-update.js?v=20260918-portal-csc-refino-v2"></script>
   <script src="portal-controle-integral.js?v=69a1f1ba696e"></script>
   <script src="portal-ajustes-finais.js?v=69a1f1ba696e"></script>
   <script src="portal-odontologia-segunda-sexta.js?v=20260918-espelho-morador-admin-v1"></script>

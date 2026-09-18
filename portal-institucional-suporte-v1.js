@@ -50,7 +50,7 @@ function brandSvg(){return '<img src="/atendimento-acs-farmaceutico/conecta-saud
 function institutionalFooter(){
   var footer=document.querySelector('footer');if(!footer)return;
   footer.className='portal-institutional-footer';
-  footer.innerHTML='<div class="portal-footer-grid"><div class="portal-footer-block"><span class="portal-footer-eyebrow">PORTAL CSC</span><strong class="portal-footer-title">Técnico Agente Comunitário de Saúde</strong><span class="portal-footer-meta">Unidade de Saúde Posto Matias<br>Sítio Japaranduba • Chã Grande/PE</span></div><div class="portal-footer-owner"><strong>Idealização e gestão da plataforma</strong><span>Mércio José Campos dos Santos</span></div></div><nav class="portal-footer-links" aria-label="Informações institucionais"><button class="portal-footer-link" type="button" data-portal-info="privacy">Privacidade</button><button class="portal-footer-link" type="button" data-portal-info="accessibility">Acessibilidade</button><button class="portal-footer-link" type="button" data-portal-info="about">Sobre</button><button class="portal-footer-link" type="button" data-portal-info="support">Suporte</button></nav><div class="portal-footer-brand">'+brandSvg()+'<div><strong>Conecta Saúde Comunitária</strong><span>Plataforma de saúde comunitária</span></div><span class="portal-footer-version" id="portalFooterVersionV1">Versão atual</span></div>';
+  footer.innerHTML='<nav class="portal-footer-links" aria-label="Informações institucionais"><button class="portal-footer-link" type="button" data-portal-info="privacy">Privacidade</button><button class="portal-footer-link" type="button" data-portal-info="accessibility">Acessibilidade</button><button class="portal-footer-link" type="button" data-portal-info="about">Sobre</button><button class="portal-footer-link" type="button" data-portal-info="support">Suporte</button></nav><div class="portal-footer-brand">'+brandSvg()+'<div class="portal-footer-brand-copy"><span class="portal-footer-brand-name">CONECTA SAÚDE COMUNITÁRIA</span><strong class="portal-footer-brand-title">Portal CSC</strong></div><span class="portal-footer-version" id="portalFooterVersionV1">Versão atual</span></div>';
   var oldPrivacy=document.querySelector('.privacy');if(oldPrivacy)oldPrivacy.hidden=true;
   try{window.dispatchEvent(new CustomEvent('portal-tacs-institutional-footer-ready'))}catch(e){}
 }
@@ -105,3 +105,21 @@ document.addEventListener('tacs:morador',function(e){resident=(e&&e.detail)||win
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 window.addEventListener('pageshow',install);
 }());
+
+(function(){
+  var s=document.createElement('style');
+  s.id='portalCscFooterRefinoVisualV2';
+  s.textContent=[
+    '.portal-institutional-footer{background:#071827!important;padding-top:22px!important}',
+    '.portal-footer-links{margin:0 0 24px!important;padding-top:0!important;border-top:0!important}',
+    '.portal-footer-brand{display:flex!important;align-items:center!important;gap:16px!important;padding-top:0!important}',
+    '.portal-footer-brand>img,.portal-footer-brand>svg{width:104px!important;height:104px!important;min-width:104px!important;flex:0 0 104px!important;object-fit:contain!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;filter:none!important}',
+    '.portal-footer-brand-copy{min-width:0!important;display:flex!important;flex:1 1 auto!important;flex-direction:column!important;align-items:flex-start!important}',
+    '.portal-footer-brand-name{display:block!important;color:#8ff0ae!important;font-size:1.08rem!important;line-height:1.16!important;font-weight:950!important;letter-spacing:.045em!important;text-transform:uppercase!important}',
+    '.portal-footer-brand-title{display:block!important;margin-top:5px!important;color:#fff!important;font-size:1.36rem!important;line-height:1.12!important;font-weight:900!important;letter-spacing:-.025em!important}',
+    '.portal-footer-version{margin-left:auto!important;color:#a9c4d0!important;font-size:12px!important;font-weight:800!important;white-space:nowrap!important}',
+    '@media(max-width:430px){.portal-footer-brand{gap:13px!important;flex-wrap:wrap!important}.portal-footer-brand>img,.portal-footer-brand>svg{width:94px!important;height:94px!important;min-width:94px!important;flex-basis:94px!important}.portal-footer-brand-name{font-size:1rem!important;line-height:1.15!important;letter-spacing:.035em!important}.portal-footer-brand-title{font-size:1.25rem!important}.portal-footer-version{width:100%!important;margin:4px 0 0 107px!important}}'
+  ].join('');
+  document.head.appendChild(s);
+}());
+
