@@ -2874,7 +2874,7 @@ function carregarSaudeNotificacoes(){
   post('admin_notificacoes_saude_rapida',sessao(),function(r){
     if(r&&r.ok===true)renderSaudeNotificacoes(r);
     else status('saudeNotificacoesStatus',txt(r&&r.message||'Não foi possível carregar a situação das notificações agora.'),'aviso');
-    setTimeout(atualizarSaudeNotificacoesRemota,80);
+    setTimeout(function(){atualizarSaudeNotificacoesRemota(true)},1200);
   },'admin_notificacoes_saude_result');
 }
 var saudeRemotaEmCurso=false;
@@ -2895,16 +2895,16 @@ function postSaudeNotificacoesIsolado(payload,cb){
   fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});
   setTimeout(consultarResultado,350);
 }
-function atualizarSaudeNotificacoesRemota(){
-  if(!(token||territorioToken)||ativa||saudeRemotaEmCurso)return;
-  var botao=document.getElementById('atualizarSaudeNotificacoes');
-  saudeRemotaEmCurso=true;if(botao)botao.disabled=true;
+function atualizarSaudeNotificacoesRemota(silencioso){
+  if(!(token||territorioToken||ubsToken)||ativa||saudeRemotaEmCurso)return;
+  var oculto=silencioso===true,botao=document.getElementById('atualizarSaudeNotificacoes');
+  saudeRemotaEmCurso=true;if(botao&&!oculto)botao.disabled=true;
   document.getElementById('saudeNotificacoes').classList.remove('oculto');
-  status('saudeNotificacoesStatus','Conferindo o estado atual no OneSignal…','aviso');
+  if(!oculto)status('saudeNotificacoesStatus','Conferindo o estado atual no OneSignal…','aviso');
   postSaudeNotificacoesIsolado(sessao(),function(remoto){
     saudeRemotaEmCurso=false;if(botao)botao.disabled=false;
     if(remoto&&remoto.ok===true){renderSaudeNotificacoes(remoto);return}
-    status('saudeNotificacoesStatus',txt(remoto&&remoto.message||'A conferência do OneSignal não terminou agora. Os últimos dados continuam visíveis.'),'aviso');
+    if(!oculto)status('saudeNotificacoesStatus',txt(remoto&&remoto.message||'A conferência do OneSignal não terminou agora. Os últimos dados continuam visíveis.'),'aviso');
   });
 }
 function solicitarReparoNotificacoesArea(){if(!(token||territorioToken)||ativa)return;var atual=areas.find(function(a){return txt(a.areaId)===areaId}),nome=txt(atual&&atual.areaNome||areaId);if(!confirm('Solicitar reparo das notificações para os aparelhos identificados de '+nome+'? Cada aparelho será orientado quando abrir o Portal TACS.'))return;status('saudeNotificacoesStatus','Registrando solicitação de reparo para '+nome+'…','aviso');post('admin_notificacoes_solicitar_reparo_area',sessao(),function(r){if(!r||r.ok!==true){status('saudeNotificacoesStatus',txt(r&&r.message||'Não foi possível solicitar o reparo.'),'erro');return}status('saudeNotificacoesStatus','Reparo solicitado. Os aparelhos serão orientados na próxima abertura do Portal.','ok');setTimeout(carregarSaudeNotificacoes,250)},'admin_notificacoes_saude_result')}
