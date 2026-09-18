@@ -29,16 +29,21 @@ assert.match(block,/if\(name==='agendas'\)\{showNativeAgenda/);
 assert.match(block,/if\(name==='moradores'/);
 assert.match(block,/if\(name==='profissionais'\)\{showNativeProfissionais/);
 
-// Correção cirúrgica: TACS/áreas abre a tela real no primeiro toque, em leitura local.
-assert.match(block,/if\(name==='territorio'\)\{[\s\S]*?priorizarSincronizacaoTerritorioPendente\(\)[\s\S]*?ensureShellFrame\(name,url,title\|\|'TACS e áreas',routeId\)[\s\S]*?localFrame\.dataset\.shellLocalFirst='1'[\s\S]*?showShellFrame\(name,localFrame,title\|\|'TACS e áreas',routeId\)[\s\S]*?return;\s*\}/);
-const territoryGuard=block.match(/if\(name==='territorio'\)\{[\s\S]*?return;\s*\}/);
-assert.ok(territoryGuard,'Guard cirúrgico de TACS/áreas ausente.');
-assert.doesNotMatch(territoryGuard[0],/showPendingModuleShell/);
+// Painéis legados com snapshot real usam o mesmo caminho local-first no primeiro toque.
+assert.match(block,/var legacyCacheFirst=\([\s\S]*?name==='territorio'[\s\S]*?name==='suporte'[\s\S]*?name==='recados'[\s\S]*?name==='municipios'[\s\S]*?view==='prontuarios'[\s\S]*?\);/);
+const legacyGuard=block.match(/if\(legacyCacheFirst\)\{[\s\S]*?return;\s*\}/);
+assert.ok(legacyGuard,'Guard local-first dos painéis legados ausente.');
+assert.match(legacyGuard[0],/localUrl\.searchParams\.set\('localfirst','1'\)/);
+assert.match(legacyGuard[0],/ensureShellFrame\(name,url,title\|\|'Painel',routeId\)/);
+assert.match(legacyGuard[0],/localFrame\.dataset\.shellLocalFirst='1'/);
+assert.match(legacyGuard[0],/showShellFrame\(name,localFrame,title\|\|'Painel',routeId\)/);
+assert.match(legacyGuard[0],/if\(name==='territorio'\)priorizarSincronizacaoTerritorioPendente\(\)/);
+assert.doesNotMatch(legacyGuard[0],/showPendingModuleShell/);
 assert.match(block,/if\(name==='territorio'&&frame\.dataset\.shellLocalFirst==='1'\)[\s\S]*?delete frame\.dataset\.shellLocalFirst/);
 const remoteTerritoryGuard=block.match(/if\(name==='territorio'&&frame\.dataset\.shellLocalFirst==='1'\)\{[\s\S]*?\n  \}/);
 assert.ok(remoteTerritoryGuard,'Guard de promoção local→remoto ausente.');
 assert.doesNotMatch(remoteTerritoryGuard[0],/frame\.src='about:blank'|frame\.dataset\.shellLoaded=''|frame\.dataset\.shellReady=''/,'A confirmação remota não pode apagar o painel territorial já visível.');
-assert.match(central,/teste-v1\/painel-tacs-areas-v1\.html\?from=central&localfirst=1&v=/);
+assert.match(central,/teste-v1\/painel-tacs-areas-v1\.html\?from=central&v=/);
 assert.doesNotMatch(central,/if\(name==='territorio'\)return '\/atendimento-acs-farmaceutico\/painel-oficial-tacs-areas\.html\?from=central&localfirst=1/);
 
 // Os demais painéis em frame preservam a prévia segura já existente.
