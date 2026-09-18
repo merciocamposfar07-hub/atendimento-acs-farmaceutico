@@ -1,4 +1,4 @@
-name: Aplicar UI App4 canônica aos painéis administrativos
+name: Validar UI App4 canônica dos painéis administrativos
 
 on:
   workflow_dispatch:
@@ -25,7 +25,7 @@ on:
       - 'teste-v1/painel-profissionais-servicos-v1.html'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: admin-ui-app4-main
@@ -42,9 +42,6 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-
-      - name: Injetar skin e comportamento App4 R6 somente nos painéis administrativos
-        run: python3 scripts/injetar_admin_ui_standard_v1.py
 
       - name: Validar contrato App4 R6, sessão única e isolamento do Portal público
         run: python3 scripts/test_admin_ui_app4_canonical.py
@@ -70,27 +67,5 @@ jobs:
               grep -q 'portalTacsAdminUiBehaviorR6' "$f"
           done
 
-      - name: Registrar HTMLs normalizados se houver diferença
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git diff --quiet; then
-            echo 'Todos os painéis já estão no padrão App4 R6.'
-            exit 0
-          fi
-          git config user.name 'Conecta Saúde UI Release'
-          git config user.email 'actions@users.noreply.github.com'
-          git add -- \
-            central-administrativa-tacs.html \
-            painel-oficial-organizacoes-municipios.html \
-            painel-oficial-agendas-vagas.html \
-            painel-oficial-profissionais-servicos.html \
-            painel-oficial-recados-campanhas.html \
-            painel-oficial-tacs-areas.html \
-            painel-suporte-moradores-v2.html \
-            painel-suporte-moradores.html \
-            teste-v1/painel-moradores-v2.html \
-            teste-v1/painel-profissionais-servicos-v1.html \
-            teste-v1/painel-tacs-areas-v1.html
-          git commit -m 'UI: aplicar App institucional canônico R6 aos painéis administrativos [skip ci]'
-          git push origin HEAD:main
+      - name: Confirmar que a validação não alterou o código
+        run: git diff --exit-code

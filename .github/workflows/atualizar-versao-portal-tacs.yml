@@ -1,24 +1,6 @@
 name: Atualizar versao do Portal TACS
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'index.html'
-      - 'abrir.html'
-      - 'central-administrativa-tacs.html'
-      - 'central-*.js'
-      - 'portal-*.js'
-      - 'agenda-*.js'
-      - 'moradores-autofill.js'
-      - 'admin-*.js'
-      - 'admin-*.css'
-      - 'painel-oficial-*.html'
-      - 'teste-v1/**'
-      - 'manifest*.webmanifest'
-      - 'icons/**'
-      - 'assets/**'
-      - '.github/workflows/atualizar-versao-portal-tacs.yml'
   workflow_dispatch:
 
 permissions:
