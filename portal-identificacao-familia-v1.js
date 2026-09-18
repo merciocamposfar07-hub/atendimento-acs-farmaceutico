@@ -117,15 +117,15 @@
   }
   function seedMemberCacheFromSnapshot(item,familiaId){
     if(!item||!item.token)return false;
-    var key=text(item.token),local=text(item.localidade||item.comunidade||item.endereco||item['endereço']||'');
+    var key=text(item.token),doc=digits(item.documentoAcesso||''),local=text(item.localidade||item.comunidade||item.endereco||item['endereço']||'');
     if(!key||!text(item.nome)||!text(item.nascimento)||!local)return false;
     memberResolvedCache[key]={
       ok:true,
       snapshot:true,
       membroToken:key,
-      documentoAcesso:'',
+      documentoAcesso:docType(doc)?doc:'',
       tipoDocumento:text(item.tipoDocumento||''),
-      temDocumento:Boolean(item.temDocumento),
+      temDocumento:Boolean(item.temDocumento&&docType(doc)),
       identidadeToken:text(item.identidadeToken||''),
       acessoPreparado:Boolean(item.acessoPreparado&&item.identidadeToken),
       nome:text(item.nome),
@@ -229,9 +229,9 @@
     var input=document.getElementById('cpf'),d=digits(input&&input.value),fam=normalizeFamily(currentResident&&(currentResident.familiaBeneficiario||currentResident.familiaId)||'');
     if(residentSessionToken())return;
 
-    /* FAMILIA_SNAPSHOT_SEM_SEGUNDA_BUSCA_2026_09_18_V1
-       Se a família já entregou identidadeToken, o PIN é preparado localmente.
-       Nenhuma chamada conecta_morador_identificar é feita após o toque. */
+    /* FAMILIA_SNAPSHOT_COMPLETO_2026_09_18_V2
+       A família já entrega documento + identidadeToken no snapshot. O toque reutiliza ambos localmente,
+       preenchendo CPF/CNS, nome, nascimento e localidade sem nova consulta do cidadão. */
     if(!pendingMissing&&currentResident&&currentResident.identidadeToken){
       residentIdentityToken=text(currentResident.identidadeToken);
       renderResidentPinCreate({identidadeToken:residentIdentityToken},'');

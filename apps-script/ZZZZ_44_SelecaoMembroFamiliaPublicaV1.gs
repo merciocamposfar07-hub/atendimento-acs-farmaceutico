@@ -7,7 +7,7 @@
  * não exige nova leitura da planilha nem nova busca do cidadão.
  */
 var TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1=Object.freeze({
-  VERSAO:'1.1.0',
+  VERSAO:'1.2.0',
   TOKEN_PREFIX:'tacs_familia_membro_v1_',
   TOKEN_SECONDS:900
 });
@@ -67,7 +67,7 @@ function selecaoMembroFamiliaPublicaV1CriarLista_(familia,contexto){
       );
     }
 
-    /* O documento real fica somente no token servidor; nunca é devolvido na lista. */
+    /* O documento vem no snapshot autorizado da família para cache local e troca imediata no formulário. Ele não é renderizado na lista de integrantes. */
     var dados={
       areaId:contexto.areaId,
       familiaId:familia,
@@ -86,6 +86,7 @@ function selecaoMembroFamiliaPublicaV1CriarLista_(familia,contexto){
       nome:item.nome,
       nascimento:item.nascimento,
       localidade:localidade,
+      documentoAcesso:documento,
       temDocumento:Boolean(documento),
       tipoDocumento:cpf?'CPF':(/^\d{15}$/.test(cns)?'CNS':''),
       acessoPreparado:Boolean(identidadeToken),

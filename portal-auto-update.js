@@ -305,7 +305,7 @@
     var script=document.createElement('script');
     script.id='portalTacsIdentificacaoFamiliaScriptV1';
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260918-pin-cache-first-v7';
+    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260918-familia-documento-cache-v8';
     (document.head||document.documentElement).appendChild(script);
   }
 
