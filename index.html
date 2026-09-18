@@ -8,11 +8,11 @@
   <meta http-equiv="Expires" content="0">
   <meta name="theme-color" content="#062c46">
   <meta name="color-scheme" content="light only">
-  <meta name="portal-release" content="1b02e0eec325">
+  <meta name="portal-release" content="639f1067f02f">
   <meta name="description" content="Canal do TACS - Técnico Agente Comunitário de Saúde Mércio José Campos dos Santos, vinculado à Unidade de Saúde Posto Matias, para moradores do Sítio Japaranduba, Chã Grande/PE.">
-  <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial.svg?v=1b02e0eec325">
-  <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=1b02e0eec325">
-  <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest.webmanifest?v=1b02e0eec325">
+  <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial.svg?v=639f1067f02f">
+  <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=639f1067f02f">
+  <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest.webmanifest?v=639f1067f02f">
   <meta name="apple-mobile-web-app-title" content="Portal TACS">
   <link rel="preconnect" href="https://script.google.com">
   <link rel="preconnect" href="https://script.googleusercontent.com">
@@ -102,157 +102,475 @@
     @media(min-resolution:2dppx){.panel,.purpose,.form-panel,.notice-board,.notice-card,.dental,.slot,input,textarea,select{backface-visibility:hidden}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   
+    /* CSC_PORTAL_TACS_APP_SKIN_20260918_V3
+       SOMENTE LAYOUT. Nenhum fluxo, evento, ID, script ou regra funcional é alterado. */
+    :root{
+      --app-blue:#062c46;
+      --app-blue-2:#073a55;
+      --app-blue-3:#0a4565;
+      --app-line:rgba(255,255,255,.18);
+      --app-line-soft:rgba(255,255,255,.10);
+      --app-text:#f7fbfd;
+      --app-muted:#bed0da;
+      --app-green:#70e39f;
+      --app-field:#0b405f;
+      --app-field-focus:#0d5278;
+    }
 
-    /* CSC_PORTAL_MORADOR_NATIVE_APP_20260918_V2
-       Interface por telas. Mantém IDs e regras funcionais existentes. */
-    :root{--csc-appbar-h:64px}
-    html{overflow-x:hidden}
-    body{overflow-x:hidden;background:#eef3f6}
-    .csc-resident-appbar{
-      position:sticky;top:0;z-index:2500;display:flex;align-items:center;gap:11px;
-      min-height:var(--csc-appbar-h);padding:calc(9px + env(safe-area-inset-top)) 15px 9px;
-      background:#062c46;color:#fff;border-bottom:1px solid rgba(255,255,255,.12);
-      box-shadow:0 5px 18px rgba(2,27,44,.16)
+    html,body{
+      background:var(--app-blue)!important;
+      color:var(--app-text)!important;
     }
-    .csc-resident-appbar img{width:40px;height:40px;flex:0 0 40px;border-radius:11px;object-fit:cover}
-    .csc-resident-appbar-copy{min-width:0;display:grid;gap:1px}
-    .csc-resident-appbar-copy small{color:#79dfa5;font-size:10px;font-weight:950;letter-spacing:.08em}
-    .csc-resident-appbar-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px;line-height:1.2}
-    .csc-resident-back{
-      width:40px;height:40px;flex:0 0 40px;border:0;border-radius:12px;background:rgba(255,255,255,.11);
-      color:#fff;font-size:33px;line-height:36px;font-weight:500;padding:0 0 3px;cursor:pointer;
-      -webkit-tap-highlight-color:transparent;touch-action:manipulation
+    body{
+      min-height:100svh!important;
+      overflow-x:hidden!important;
     }
-    .csc-resident-back:active{transform:scale(.94);background:rgba(255,255,255,.18)}
-    body:not([data-csc-screen="home"]) .csc-resident-appbar img{display:none}
-    body:not([data-csc-screen="home"]) .csc-resident-back{display:block!important}
-    .shell{width:min(100%,760px);margin:0 auto;padding:0}
-    .panel{border:0;border-radius:0;box-shadow:none;background:#f1f5f7;overflow:visible}
+    .shell{
+      width:min(100%,980px)!important;
+      margin:0 auto!important;
+      padding:0!important;
+      background:var(--app-blue)!important;
+    }
+    .panel{
+      overflow:visible!important;
+      border:0!important;
+      border-radius:0!important;
+      background:var(--app-blue)!important;
+      box-shadow:none!important;
+    }
+
+    /* Cabeçalho contínuo, como tela de aplicativo */
     .hero{
-      border-radius:0;padding:20px 18px 21px;background:linear-gradient(145deg,#062c46 0%,#084b6b 100%);
-      box-shadow:none
+      padding:calc(18px + env(safe-area-inset-top)) clamp(17px,4vw,34px) 22px!important;
+      border:0!important;
+      border-radius:0!important;
+      background:linear-gradient(180deg,#062c46 0%,#073a55 100%)!important;
+      box-shadow:none!important;
     }
-    .hero::after{width:220px;height:220px;right:-100px;bottom:-110px}
-    .hero-top{display:grid;gap:12px}
-    .identity{gap:10px}.mark{display:none}
-    .identity strong{font-size:12px;letter-spacing:.045em;line-height:1.35}
-    .identity span{font-size:12px;line-height:1.35;margin-top:2px}
-    .hours{width:100%;min-width:0;margin:0;display:flex;justify-content:space-between;align-items:center;
-      min-height:45px;padding:9px 12px;border-radius:12px;text-align:left}
-    .hours small{font-size:9px}.hours strong{margin:0;font-size:17px}
-    h1{margin:17px 0 8px;font-size:28px;line-height:1.04;letter-spacing:-.035em}
-    .exclusive{margin:0;color:#d9e7ee;font-size:13px;line-height:1.45}
-    .responsible{margin-top:11px;font-size:12px;gap:7px}.responsible-icon{width:24px;height:24px}
-    .hero-actions{display:none!important}
-    .csc-app-home{display:none;padding:16px 13px 22px;background:#f1f5f7;min-height:calc(100svh - 290px)}
-    body[data-csc-screen="home"] .csc-app-home{display:block;animation:cscScreenIn .16s ease-out}
-    .csc-home-area{
-      display:flex;align-items:center;gap:11px;padding:13px 14px;margin:0 0 14px;border:1px solid #b9cbd5;
-      border-radius:17px;background:#fff;box-shadow:0 5px 15px rgba(4,44,70,.055)
+    .hero::after{opacity:.42!important}
+    .hero-top{gap:14px!important}
+    .mark{
+      width:52px!important;height:52px!important;
+      border:1px solid rgba(112,227,159,.75)!important;
+      border-radius:14px!important;
+      box-shadow:none!important;
+      background:#05263c!important;
     }
-    .csc-home-area-icon{width:37px;height:37px;display:grid;place-items:center;flex:0 0 37px;border-radius:12px;
-      background:#e5f4eb;color:#06763a;font-size:20px;font-weight:950}
-    .csc-home-area small{display:block;color:#507080;font-size:10px;font-weight:950;letter-spacing:.07em;text-transform:uppercase}
-    .csc-home-area strong{display:block;margin-top:2px;color:#0c2e49;font-size:15px;line-height:1.3}
-    .csc-home-heading{padding:3px 3px 11px}
-    .csc-home-heading>small{color:#087a45;font-size:10px;font-weight:950;letter-spacing:.08em}
-    .csc-home-heading h2{margin:4px 0 3px;color:#102f43;font-size:25px;letter-spacing:-.035em}
-    .csc-home-heading p{margin:0;color:#5c7380;font-size:13px;line-height:1.4}
-    .csc-home-grid{display:grid;gap:10px}
-    .csc-home-tile{
-      width:100%;min-height:82px;display:grid;grid-template-columns:48px 1fr 22px;gap:12px;align-items:center;
-      padding:13px;border:1px solid #bbcad2;border-radius:18px;background:#fff;color:#123246;text-align:left;
-      box-shadow:0 6px 16px rgba(4,44,70,.055);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation
+    .identity strong{color:#fff!important}
+    .identity span{color:#c9dce5!important}
+    .hours{
+      border:1px solid var(--app-line)!important;
+      border-radius:12px!important;
+      background:rgba(255,255,255,.055)!important;
+      box-shadow:none!important;
     }
-    .csc-home-tile:active{transform:scale(.985);background:#f6f9fa}
-    .csc-home-tile-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:15px;background:#e8f1f5;
-      color:#073a55;font-size:23px;font-weight:900}
-    .csc-home-tile>span:nth-child(2){min-width:0}
-    .csc-home-tile strong{display:block;font-size:16px;line-height:1.25}
-    .csc-home-tile small{display:block;margin-top:3px;color:#647b87;font-size:12px;line-height:1.35}
-    .csc-home-tile b{color:#6f8793;font-size:28px;font-weight:400;text-align:right}
-    .csc-home-tile-primary{border-color:#1b7d55;background:#f5fbf7}
-    .csc-home-tile-primary .csc-home-tile-icon{background:#daf3e4;color:#087a45}
-    .content{padding:0;background:#f1f5f7}
-    body[data-csc-screen="home"] .content{display:none!important}
-    body[data-csc-screen="request"] .hero,
-    body[data-csc-screen="community"] .hero,
-    body[data-csc-screen="info"] .hero,
-    body[data-csc-screen="request"] .csc-app-home,
-    body[data-csc-screen="community"] .csc-app-home,
-    body[data-csc-screen="info"] .csc-app-home{display:none!important}
-    body[data-csc-screen="request"] .content,
-    body[data-csc-screen="community"] .content,
-    body[data-csc-screen="info"] .content{
-      display:block!important;min-height:calc(100svh - var(--csc-appbar-h));padding:14px 12px 28px;
-      animation:cscScreenIn .16s ease-out
+    .hours small,.hours span{color:var(--app-green)!important}
+    h1{
+      margin-top:24px!important;
+      max-width:760px!important;
+      font-size:clamp(31px,6vw,52px)!important;
+      letter-spacing:-.045em!important;
     }
-    body[data-csc-screen="request"] .content>*,
-    body[data-csc-screen="community"] .content>*,
-    body[data-csc-screen="info"] .content>*{display:none!important}
-    body[data-csc-screen="request"] .content>.form-panel{display:block!important}
-    body[data-csc-screen="request"] .content>#scheduleInfo:not([hidden]){display:block!important}
-    body[data-csc-screen="community"] .content>#integralPublicArea{display:block!important}
-    body[data-csc-screen="community"] .content>#noticeArea:not([hidden]){display:block!important}
-    body[data-csc-screen="info"] .content>.purpose{display:flex!important}
-    body[data-csc-screen="community"] #cscCommunityEmpty{display:block}
-    body[data-csc-screen="community"] #cscCommunityEmpty[hidden]{display:none!important}
-    .csc-community-empty{
-      display:none;margin:14px 12px;padding:18px;border:1px solid #bdd0d9;border-radius:18px;background:#fff;
-      color:#4e6977;font-size:14px;font-weight:800;line-height:1.45
+    .exclusive{color:#d8e7ee!important}
+    .exclusive strong{color:var(--app-green)!important}
+    .responsible{color:#fff!important}
+
+    /* Remove o aspecto de cartão entre cabeçalho e conteúdo */
+    .hero-actions{
+      margin:0!important;
+      border:0!important;
+      border-top:1px solid var(--app-line-soft)!important;
+      border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:var(--app-blue-2)!important;
+      box-shadow:none!important;
     }
-    .form-panel{margin:0;padding:19px 14px 22px;border:1px solid #c1cfd6;border-radius:20px;box-shadow:none;background:#fff}
-    .section-title{margin:0 0 20px;font-size:27px}.section-icon{width:40px;height:40px;font-size:18px}
-    .grid{grid-template-columns:1fr;gap:16px}.full{grid-column:auto}
-    label{gap:7px;font-size:15px}
-    input,textarea,select{min-height:56px;border-width:1.5px;border-radius:13px;padding:13px 14px;font-size:17px}
-    textarea{min-height:122px}.help{min-height:17px;font-size:12px}
-    .purpose{margin:0;padding:20px 17px;border-radius:20px;box-shadow:none}
-    .purpose-icon{display:none}.purpose h2{font-size:14px}.purpose p{font-size:15px;line-height:1.55}
-    .integral-area{margin:0!important}
-    footer{display:none!important}
-    .slot,.send,.tacs-petroleum-button,.portal-service-card,.csc-home-tile{
-      -webkit-tap-highlight-color:transparent;touch-action:manipulation
+    .action-card{
+      padding:15px clamp(17px,4vw,34px)!important;
+      background:transparent!important;
     }
-    .toast{bottom:max(18px,env(safe-area-inset-bottom))}
-    @keyframes cscScreenIn{from{opacity:.72;transform:translateX(10px)}to{opacity:1;transform:none}}
+    .action-icon{
+      width:42px!important;height:42px!important;
+      border-radius:12px!important;
+      background:rgba(112,227,159,.13)!important;
+      color:var(--app-green)!important;
+    }
+    .action-card small{color:var(--app-green)!important}
+    .action-card strong{color:#fff!important}
+    .action-card p{color:#c7d9e2!important}
+
+    /* Conteúdo é a continuação da mesma tela azul */
+    .content{
+      padding:0 clamp(17px,4vw,34px) 28px!important;
+      background:var(--app-blue)!important;
+    }
+
+    /* Recados/campanhas deixam de parecer balões independentes */
+    .notice-area{
+      margin:0!important;
+      padding:0!important;
+      background:transparent!important;
+    }
+    .notice-board{
+      padding:20px 0!important;
+      border:0!important;
+      border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      color:#fff!important;
+    }
+    .notice-board h2{color:#fff!important}
+    .notice-updated{color:var(--app-muted)!important}
+    .notice-list{gap:0!important}
+    .notice-card{
+      padding:16px 0!important;
+      border:0!important;
+      border-left:0!important;
+      border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      color:#fff!important;
+    }
+    .notice-card.important,.notice-card.urgent{
+      background:transparent!important;
+      border-left:0!important;
+    }
+    .notice-card small{color:var(--app-green)!important}
+    .notice-card strong{color:#fff!important}
+    .notice-card p{color:#d2e1e8!important}
+
+    /* "Finalidade do portal" vira seção nativa, não cartão */
+    .purpose{
+      display:flex!important;
+      gap:14px!important;
+      margin:0!important;
+      padding:22px 0!important;
+      border:0!important;
+      border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      color:#fff!important;
+    }
+    .purpose-icon{
+      width:42px!important;height:42px!important;
+      border-radius:12px!important;
+      background:rgba(255,255,255,.08)!important;
+      color:#fff!important;
+    }
+    .purpose h2{color:var(--app-green)!important}
+    .purpose p{color:#e4eef3!important}
+
+    /* Formulário sem caixa branca */
+    .form-panel{
+      margin:0!important;
+      padding:24px 0 8px!important;
+      border:0!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+    }
+    .section-title{
+      margin-bottom:22px!important;
+      color:#fff!important;
+      font-size:clamp(27px,5vw,38px)!important;
+    }
+    .section-icon{
+      width:42px!important;height:42px!important;
+      border-radius:12px!important;
+      background:rgba(255,255,255,.09)!important;
+      color:#fff!important;
+    }
+    label{color:#fff!important}
+
+    /* Campos integrados no azul do app */
+    input,textarea,select{
+      min-height:58px!important;
+      border:1px solid rgba(255,255,255,.24)!important;
+      border-radius:13px!important;
+      background:var(--app-field)!important;
+      color:#fff!important;
+      box-shadow:none!important;
+      -webkit-appearance:none;
+      appearance:none;
+    }
+    textarea{min-height:132px!important}
+    input::placeholder,textarea::placeholder{
+      color:#b7cbd6!important;
+      opacity:1!important;
+    }
+    input:focus,textarea:focus,select:focus{
+      border-color:rgba(112,227,159,.88)!important;
+      background:var(--app-field-focus)!important;
+      box-shadow:0 0 0 3px rgba(112,227,159,.12)!important;
+    }
+    select option{color:#102b3c;background:#fff}
+    .help{color:#b8ccd6!important}
+    .help.valid{color:var(--app-green)!important}
+    .help.invalid{color:#ffb2ad!important}
+
+    /* Agenda odontológica integrada */
+    .dental{
+      padding:19px 0!important;
+      border:0!important;
+      border-top:1px solid var(--app-line-soft)!important;
+      border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+    }
+    .dental-head span{color:var(--app-green)!important}
+    .dental-head h3{color:#fff!important}
+    .dental-head p,.dental-status{color:#bfd2dc!important}
+    .dental-status.error{color:#ffb2ad!important}
+    .slots{gap:0!important}
+    .slot{
+      min-height:86px!important;
+      padding:14px 2px!important;
+      border:0!important;
+      border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:transparent!important;
+      color:#fff!important;
+      box-shadow:none!important;
+    }
+    .slot strong{color:#fff!important}
+    .slot span{color:#bfd2dc!important}
+    .slot b{color:var(--app-green)!important}
+    .slot.selected{
+      padding-left:12px!important;
+      border-left:3px solid var(--app-green)!important;
+      background:rgba(112,227,159,.07)!important;
+      box-shadow:none!important;
+    }
+
+    /* Avisos continuam semanticamente visíveis, porém sem "balões" */
+    .info,.routing,.before-send{
+      border-radius:0!important;
+      box-shadow:none!important;
+    }
+    .info.amber{
+      margin-top:0!important;
+      padding:16px 0!important;
+      border:0!important;
+      border-bottom:1px solid rgba(255,210,126,.35)!important;
+      background:transparent!important;
+      color:#ffe0a6!important;
+    }
+    .info.danger,.routing{
+      padding:16px 0!important;
+      border:0!important;
+      border-bottom:1px solid rgba(255,159,153,.35)!important;
+      background:transparent!important;
+      color:#ffc4c0!important;
+    }
+    .before-send{
+      margin-top:18px!important;
+      padding:17px 0!important;
+      border:0!important;
+      border-top:1px solid rgba(255,210,126,.28)!important;
+      border-bottom:1px solid rgba(255,210,126,.28)!important;
+      background:transparent!important;
+      color:#f4e2bd!important;
+    }
+    .before-send strong{color:#ffd17e!important}
+    .warning-icon{
+      border-radius:10px!important;
+      background:rgba(242,155,0,.18)!important;
+      color:#ffd17e!important;
+    }
+
+    .send,.tacs-petroleum-button{
+      border-radius:13px!important;
+      box-shadow:none!important;
+      touch-action:manipulation!important;
+      -webkit-tap-highlight-color:transparent!important;
+    }
+    .privacy{color:#adc4d0!important}
+
+    footer{
+      margin:0!important;
+      padding:20px clamp(17px,4vw,34px) calc(24px + env(safe-area-inset-bottom))!important;
+      border-top:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:var(--app-blue)!important;
+      color:#d7e5eb!important;
+    }
+    footer div+div{border-left-color:var(--app-line)!important}
+
+    /* Elementos injetados pelos scripts: remove cartões/balões sem tocar na lógica */
+    #integralPublicArea,.integral-area{
+      margin:0!important;
+      padding:0!important;
+      background:transparent!important;
+    }
+    .integral-balloon{
+      margin:0!important;
+      padding:17px 0!important;
+      border:0!important;
+      border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      color:#fff!important;
+    }
+    .integral-balloon small{color:var(--app-green)!important}
+    .integral-balloon strong{color:#fff!important}
+    .integral-balloon p{color:#d2e1e8!important}
+
+    .campaign-group{
+      margin:0!important;
+      padding:0!important;
+      border:0!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+    }
+    .campaign-group-head{
+      padding:18px 0 8px!important;
+      color:#fff!important;
+    }
+    .campaign-card,.integral-campaign{
+      margin:0!important;
+      padding:17px 0!important;
+      border:0!important;
+      border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      color:#fff!important;
+    }
+    .campaign-label,.campaign-status{color:var(--app-green)!important}
+    .campaign-title,.campaign-subtitle{color:#fff!important}
+    .campaign-description,.campaign-meta{color:#d2e1e8!important}
+    .campaign-art{opacity:.9!important}
+
+    /* Seletor de serviços: lista integrada em vez de cartões */
+    .portal-service-picker{
+      margin:0!important;
+      padding:0!important;
+      background:transparent!important;
+    }
+    .portal-service-picker-toggle{
+      min-height:58px!important;
+      border:1px solid rgba(255,255,255,.24)!important;
+      border-radius:13px!important;
+      background:var(--app-field)!important;
+      color:#fff!important;
+      box-shadow:none!important;
+    }
+    .portal-service-picker-panel{
+      border:1px solid rgba(255,255,255,.18)!important;
+      border-radius:13px!important;
+      background:#083854!important;
+      box-shadow:0 14px 32px rgba(0,0,0,.18)!important;
+      overflow:hidden!important;
+    }
+    .portal-service-choice{
+      margin:0!important;
+      border:0!important;
+      border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      color:#fff!important;
+    }
+
+    .portal-attachment-box{
+      margin-top:12px!important;
+      padding:15px 0!important;
+      border:0!important;
+      border-top:1px solid var(--app-line-soft)!important;
+      border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:transparent!important;
+      color:#fff!important;
+      box-shadow:none!important;
+    }
+    .portal-attachment-choose{
+      border-radius:12px!important;
+      box-shadow:none!important;
+    }
+
+    /* Busca familiar/PIN preserva toda a lógica e perde somente a aparência de cartão */
+    .tacs-family-action,.tacs-doc-action,.tacs-family-member,.tacs-family-confirm,
+    .tacs-pin-action{
+      border-radius:12px!important;
+      box-shadow:none!important;
+    }
+    .tacs-family-member{
+      border-color:rgba(255,255,255,.20)!important;
+      background:rgba(255,255,255,.055)!important;
+      color:#fff!important;
+    }
+    .tacs-family-title{color:#fff!important}
+    .tacs-family-help{color:#bfd2dc!important}
+    .tacs-family-ok{color:var(--app-green)!important}
+    .tacs-family-warn{color:#ffd17e!important}
+    .tacs-pin-box{
+      border:0!important;
+      border-top:1px solid var(--app-line-soft)!important;
+      border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+    }
+
+    /* Guias continuam funcionando sem criar blocos adicionais */
+    .portal-flow-arrow,.portal-alert-guide,.portal-attachment-guide{
+      color:var(--app-green)!important;
+    }
+
     @media(max-width:720px){
-      .shell{width:100%;padding:0}
-      .panel{min-height:100svh}
-      .notice-board{border-radius:18px}
-      .dental{border-radius:17px}
-      .before-send{padding:15px 13px}
-      .send{min-height:62px;font-size:18px}
+      .shell{width:100%!important}
+      .hero{padding-left:16px!important;padding-right:16px!important}
+      .hero-top{display:block!important}
+      .hours{
+        width:100%!important;
+        margin-top:14px!important;
+        display:flex!important;
+        align-items:center!important;
+        justify-content:space-between!important;
+      }
+      .identity{align-items:flex-start!important}
+      .mark{width:48px!important;height:48px!important;border-radius:13px!important}
+      h1{font-size:30px!important;margin-top:20px!important}
+      .exclusive{font-size:14px!important}
+      .responsible{font-size:14px!important}
+      .hero-actions{grid-template-columns:1fr!important}
+      .action-card{padding:14px 16px!important}
+      .content{padding-left:16px!important;padding-right:16px!important}
+      .purpose{padding:20px 0!important}
+      .purpose-icon{display:none!important}
+      .purpose p{font-size:15px!important}
+      .form-panel{padding:22px 0 6px!important}
+      .grid{grid-template-columns:1fr!important;gap:17px!important}
+      .full{grid-column:auto!important}
+      .section-title{font-size:28px!important}
+      .slots{grid-template-columns:1fr!important}
+      footer{
+        grid-template-columns:1fr!important;
+        padding-left:16px!important;
+        padding-right:16px!important;
+      }
+      footer div+div{
+        border-left:0!important;
+        border-top:1px solid var(--app-line-soft)!important;
+        padding:14px 0 0!important;
+      }
     }
-    @media(min-width:721px){
-      .csc-resident-appbar{max-width:760px;margin:0 auto}
-      .panel{min-height:calc(100svh - var(--csc-appbar-h))}
-      .csc-app-home{padding-left:18px;padding-right:18px}
-      .csc-home-grid{grid-template-columns:1fr 1fr}
-      .csc-home-tile-primary{grid-column:1/-1}
-      body[data-csc-screen="request"] .content,
-      body[data-csc-screen="community"] .content,
-      body[data-csc-screen="info"] .content{padding-left:18px;padding-right:18px}
-    }
-    @media(prefers-reduced-motion:reduce){.csc-app-home,body[data-csc-screen] .content{animation:none!important}}
 
   </style>
 </head>
 <body class="tema-petroleo">
-  <div class="csc-resident-appbar" id="cscResidentAppbar" role="banner">
-    <button type="button" class="csc-resident-back" id="cscResidentBack" aria-label="Voltar para a tela inicial" hidden>‹</button>
-    <img src="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=1b02e0eec325" alt="">
-    <div class="csc-resident-appbar-copy">
-      <small>PORTAL TACS</small>
-      <strong id="cscResidentTitle">Portal do Morador</strong>
-    </div>
-  </div>
   <main class="shell">
     <section class="panel">
       <header class="hero">
         <div class="hero-top">
           <div class="identity">
-            <div class="mark" aria-hidden="true"><img src="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=1b02e0eec325" alt=""></div>
+            <div class="mark" aria-hidden="true"><img src="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=639f1067f02f" alt=""></div>
             <div>
               <strong>TACS - Técnico Agente Comunitário de Saúde</strong>
               <span>Serviço vinculado à Unidade de Saúde Posto Matias</span>
@@ -269,37 +587,6 @@
       <section class="hero-actions" aria-label="Envio da solicitação">
         <div class="action-card whatsapp-action"><span class="action-icon" aria-hidden="true">☎</span><div><small>Envio pelo WhatsApp</small><p>Após o preenchimento, sua solicitação será enviada ao TACS - Técnico Agente Comunitário de Saúde.</p></div></div>
       </section>
-
-
-      <section class="csc-app-home" id="cscResidentHome" aria-label="Início do Portal do Morador">
-        <div class="csc-home-area">
-          <span class="csc-home-area-icon" aria-hidden="true">⌖</span>
-          <div><small>Minha área</small><strong id="cscHomeAreaName">Área de atendimento</strong></div>
-        </div>
-        <div class="csc-home-heading">
-          <small>PORTAL DO MORADOR</small>
-          <h2>O que você precisa?</h2>
-          <p>Escolha uma função para abrir a tela correspondente.</p>
-        </div>
-        <div class="csc-home-grid">
-          <button type="button" class="csc-home-tile csc-home-tile-primary" data-csc-open-screen="request">
-            <span class="csc-home-tile-icon" aria-hidden="true">＋</span>
-            <span><strong>Solicitar serviço</strong><small>Faça uma solicitação à sua unidade de saúde</small></span>
-            <b aria-hidden="true">›</b>
-          </button>
-          <button type="button" class="csc-home-tile" data-csc-open-screen="community">
-            <span class="csc-home-tile-icon" aria-hidden="true">●</span>
-            <span><strong>Recados e campanhas</strong><small>Veja as informações ativas da sua área</small></span>
-            <b aria-hidden="true">›</b>
-          </button>
-          <button type="button" class="csc-home-tile" data-csc-open-screen="info">
-            <span class="csc-home-tile-icon" aria-hidden="true">i</span>
-            <span><strong>Informações do portal</strong><small>Entenda a finalidade e o atendimento</small></span>
-            <b aria-hidden="true">›</b>
-          </button>
-        </div>
-      </section>
-      <div class="csc-community-empty" id="cscCommunityEmpty" hidden role="status">Carregando as informações disponíveis da sua área…</div>
 
       <div class="content">
         <section class="notice-area" id="noticeArea" hidden aria-live="polite"></section>
@@ -382,13 +669,15 @@
         <div><strong>Serviço da Unidade de Saúde Posto Matias</strong>Sítio Japaranduba • Chã Grande/PE</div>
       </footer>
     </section>
-  </main><script src="agenda-config.js?v=1b02e0eec325"></script>
-  <script src="portal-area-resolver.js?v=1b02e0eec325"></script>
-  <script src="portal-public-data.js?v=1b02e0eec325"></script>
-  <script src="portal-manutencao.js?v=1b02e0eec325"></script>
-  <script src="agenda-enfermeira.js?v=1b02e0eec325"></script>
-  <script src="portal-notification-health.js?v=1b02e0eec325"></script>
-  <script src="portal-notification-repair-v9.js?v=1b02e0eec325"></script>
+  </main>
+
+  <script src="agenda-config.js?v=639f1067f02f"></script>
+  <script src="portal-area-resolver.js?v=639f1067f02f"></script>
+  <script src="portal-public-data.js?v=639f1067f02f"></script>
+  <script src="portal-manutencao.js?v=639f1067f02f"></script>
+  <script src="agenda-enfermeira.js?v=639f1067f02f"></script>
+  <script src="portal-notification-health.js?v=639f1067f02f"></script>
+  <script src="portal-notification-repair-v9.js?v=639f1067f02f"></script>
   <script>
   (function(){
     'use strict';
@@ -451,87 +740,17 @@
     setTimeout(function(){if(!window.__PORTAL_TACS_ODONTOLOGIA_V98__)loadDental()},3000);
   }());
   </script>
-  <script src="moradores-autofill.js?v=1b02e0eec325"></script>
-<script src="portal-identificacao-familia-v1.js?v=1b02e0eec325"></script>
-  <script src="portal-auto-update.js?v=1b02e0eec325"></script>
-  <script src="portal-controle-integral.js?v=1b02e0eec325"></script>
-  <script src="portal-ajustes-finais.js?v=1b02e0eec325"></script>
-  <script src="portal-odontologia-segunda-sexta.js?v=1b02e0eec325"></script>
-  <script src="portal-orientacao-morador.js?v=1b02e0eec325"></script>
-  <script src="portal-servicos-coloridos-anexos-v1.js?v=1b02e0eec325"></script>
-  <script src="portal-aposentadoria-destinatario-v1.js?v=1b02e0eec325"></script>
-<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=1b02e0eec325"></script>
-<script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=1b02e0eec325"></script>
-<script src="/atendimento-acs-farmaceutico/conecta-morador-session-v1.js?v=1b02e0eec325"></script>
-
-<script id="cscPortalMoradorNativeApp20260918V2">
-(function(){
-  'use strict';
-  if(window.__CSC_PORTAL_MORADOR_NATIVE_APP_20260918_V2__)return;
-  window.__CSC_PORTAL_MORADOR_NATIVE_APP_20260918_V2__=true;
-
-  var titles={home:'Portal do Morador',request:'Solicitar serviço',community:'Recados e campanhas',info:'Informações do portal'};
-  var body=document.body,title=document.getElementById('cscResidentTitle'),back=document.getElementById('cscResidentBack');
-  var empty=document.getElementById('cscCommunityEmpty');
-
-  function setAreaName(){
-    var out=document.getElementById('cscHomeAreaName');
-    if(!out)return;
-    var spans=document.querySelectorAll('.identity span'),value='';
-    if(spans.length)value=String(spans[spans.length-1].textContent||'').trim();
-    if(value)out.textContent=value;
-  }
-
-  function syncCommunityEmpty(){
-    if(!empty)return;
-    var area=document.getElementById('integralPublicArea');
-    var notice=document.getElementById('noticeArea');
-    var hasArea=!!(area&&area.textContent&&area.textContent.trim());
-    var hasNotice=!!(notice&&!notice.hidden&&notice.textContent&&notice.textContent.trim());
-    empty.hidden=hasArea||hasNotice;
-  }
-
-  function openScreen(name){
-    if(!titles[name])name='home';
-    body.setAttribute('data-csc-screen',name);
-    if(title)title.textContent=titles[name];
-    if(back)back.hidden=name==='home';
-    window.scrollTo(0,0);
-    if(name==='community')syncCommunityEmpty();
-  }
-
-  document.addEventListener('pointerdown',function(e){
-    var b=e.target&&e.target.closest?e.target.closest('[data-csc-open-screen]'):null;
-    if(b)b.classList.add('is-pressed');
-  },{passive:true});
-  document.addEventListener('pointerup',function(e){
-    var b=e.target&&e.target.closest?e.target.closest('[data-csc-open-screen]'):null;
-    if(b)b.classList.remove('is-pressed');
-  },{passive:true});
-
-  document.addEventListener('click',function(e){
-    var b=e.target&&e.target.closest?e.target.closest('[data-csc-open-screen]'):null;
-    if(!b)return;
-    e.preventDefault();
-    openScreen(b.getAttribute('data-csc-open-screen'));
-  });
-
-  if(back)back.addEventListener('click',function(){openScreen('home')});
-
-  var mo=new MutationObserver(function(){setAreaName();syncCommunityEmpty()});
-  mo.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['hidden']});
-
-  setAreaName();
-  syncCommunityEmpty();
-  openScreen('home');
-
-  window.CscPortalMoradorApp={
-    open:openScreen,
-    home:function(){openScreen('home')},
-    screen:function(){return body.getAttribute('data-csc-screen')||'home'}
-  };
-}());
-</script>
-
+  <script src="moradores-autofill.js?v=639f1067f02f"></script>
+<script src="portal-identificacao-familia-v1.js?v=639f1067f02f"></script>
+  <script src="portal-auto-update.js?v=639f1067f02f"></script>
+  <script src="portal-controle-integral.js?v=639f1067f02f"></script>
+  <script src="portal-ajustes-finais.js?v=639f1067f02f"></script>
+  <script src="portal-odontologia-segunda-sexta.js?v=639f1067f02f"></script>
+  <script src="portal-orientacao-morador.js?v=639f1067f02f"></script>
+  <script src="portal-servicos-coloridos-anexos-v1.js?v=639f1067f02f"></script>
+  <script src="portal-aposentadoria-destinatario-v1.js?v=639f1067f02f"></script>
+<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=639f1067f02f"></script>
+<script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=639f1067f02f"></script>
+<script src="/atendimento-acs-farmaceutico/conecta-morador-session-v1.js?v=639f1067f02f"></script>
 </body>
 </html>
