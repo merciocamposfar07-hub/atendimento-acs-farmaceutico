@@ -1,12 +1,13 @@
 /**
- * Portal TACS — Seleção segura de integrante da família V1.0.1
+ * Portal TACS — Seleção segura de integrante da família V1.1.0
  *
- * Não expõe CPF/CNS na lista familiar. Cada integrante recebe um token opaco
- * temporário e o documento de acesso só é devolvido após a seleção daquele
- * integrante, com nova validação de área, família e situação ativa.
+ * Não expõe CPF/CNS na lista familiar. A consulta da família já entrega o
+ * snapshot visual necessário ao formulário e, quando houver CPF válido, um
+ * identidadeToken opaco preparado no servidor. Assim, o toque no integrante
+ * não exige nova leitura da planilha nem nova busca do cidadão.
  */
 var TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1=Object.freeze({
-  VERSAO:'1.0.1',
+  VERSAO:'1.1.0',
   TOKEN_PREFIX:'tacs_familia_membro_v1_',
   TOKEN_SECONDS:900
 });
@@ -35,12 +36,61 @@ function selecaoMembroFamiliaPublicaV1CriarLista_(familia,contexto){
     var cpf=moradoresAdminV1Digitos_(item.cpf),cns=moradoresAdminV1Digitos_(item.cns),documento='';
     if(cpf&&moradoresAdminV1CpfValido_(cpf))documento=cpf;
     else if(/^\d{15}$/.test(cns))documento=cns;
-    /* DOCUMENTO_VALIDADO_NO_TOKEN_FAMILIAR_2026_09_16_V1
-       O documento não é exposto ao navegador na lista. Fica apenas no token
-       temporário do servidor para evitar divergência na releitura da mesma linha. */
-    var dados={areaId:contexto.areaId,familiaId:familia,origemAba:String(item.origemAba||''),origemLinha:Number(item.origemLinha||0),documentoAcesso:documento};
+
+    var localidade=String(item.localidade||item.endereco||item['endereço']||item.comunidade||'').trim();
+    var moradorChave='';
+    try{moradorChave=String(moradoresAdminV1ChaveRegistro_(item)||'').trim();}catch(ignoreChave){}
+    var identidadeToken='';
+
+    /* SNAPSHOT_FAMILIA_PRONTO_NO_PRIMEIRO_RETORNO_2026_09_18_V1
+       CPF/CNS continuam protegidos no servidor. Para integrantes com CPF válido,
+       criamos aqui o mesmo token opaco usado pelo fluxo de criação do PIN. */
+    if(cpf&&typeof conectaAcessoV1TokenCache_==='function'&&typeof TACS_CONECTA_ACESSO_V1!=='undefined'){
+      var identidadePayload={
+        cpf:cpf,
+        areaId:String(contexto.areaId||''),
+        areaNome:String(contexto.areaNome||contexto.areaId||''),
+        unidadeId:String(contexto.unidadeId||''),
+        nome:String(item.nome||'').trim(),
+        nascimento:String(item.nascimento||'').trim(),
+        endereco:localidade,
+        moradorChave:moradorChave,
+        idPortal:String(item.idPortal||item.id||'').trim(),
+        provisorio:false,
+        pendenciaId:''
+      };
+      identidadeToken=conectaAcessoV1TokenCache_(
+        'ci1',
+        TACS_CONECTA_ACESSO_V1.IDENTITY_PREFIX,
+        identidadePayload,
+        TACS_CONECTA_ACESSO_V1.IDENTITY_SECONDS
+      );
+    }
+
+    /* O documento real fica somente no token servidor; nunca é devolvido na lista. */
+    var dados={
+      areaId:contexto.areaId,
+      familiaId:familia,
+      origemAba:String(item.origemAba||''),
+      origemLinha:Number(item.origemLinha||0),
+      documentoAcesso:documento,
+      nome:String(item.nome||'').trim(),
+      nascimento:String(item.nascimento||'').trim(),
+      localidade:localidade,
+      identidadeToken:identidadeToken
+    };
     cache.put(TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1.TOKEN_PREFIX+token,JSON.stringify(dados),TACS_SELECAO_MEMBRO_FAMILIA_PUBLICA_V1.TOKEN_SECONDS);
-    return {token:token,nome:item.nome,nascimento:item.nascimento,temDocumento:Boolean(documento)};
+
+    return {
+      token:token,
+      nome:item.nome,
+      nascimento:item.nascimento,
+      localidade:localidade,
+      temDocumento:Boolean(documento),
+      tipoDocumento:cpf?'CPF':(/^\d{15}$/.test(cns)?'CNS':''),
+      acessoPreparado:Boolean(identidadeToken),
+      identidadeToken:identidadeToken
+    };
   });
 }
 

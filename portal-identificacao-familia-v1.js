@@ -116,9 +116,23 @@
   }
   function seedMemberCacheFromSnapshot(item,familiaId){
     if(!item||!item.token)return false;
-    var key=text(item.token),doc=digits(item.documentoAcesso||item.documento||item.cpf||item.cns||item.cartaoSus||item.cartaoSUS||''),local=text(item.localidade||item.comunidade||item.endereco||item['endereço']||'');
-    if(!key||!docType(doc)||!text(item.nome)||!text(item.nascimento)||!local)return false;
-    memberResolvedCache[key]={ok:true,documentoAcesso:doc,nome:text(item.nome),nascimento:text(item.nascimento),localidade:local,areaId:text(item.areaId||areaId()),familiaId:normalizeFamily(item.familiaId||familiaId||activeFamilyId)};
+    var key=text(item.token),local=text(item.localidade||item.comunidade||item.endereco||item['endereço']||'');
+    if(!key||!text(item.nome)||!text(item.nascimento)||!local)return false;
+    memberResolvedCache[key]={
+      ok:true,
+      snapshot:true,
+      membroToken:key,
+      documentoAcesso:'',
+      tipoDocumento:text(item.tipoDocumento||''),
+      temDocumento:Boolean(item.temDocumento),
+      identidadeToken:text(item.identidadeToken||''),
+      acessoPreparado:Boolean(item.acessoPreparado&&item.identidadeToken),
+      nome:text(item.nome),
+      nascimento:text(item.nascimento),
+      localidade:local,
+      areaId:text(item.areaId||areaId()),
+      familiaId:normalizeFamily(item.familiaId||familiaId||activeFamilyId)
+    };
     return true;
   }
   function resolveMemberToken(token,maxAttempts){var key=text(token);if(!key)return Promise.reject(new Error('Integrante inválido.'));if(memberResolvedCache[key])return Promise.resolve(memberResolvedCache[key]);if(memberResolvePromises[key])return memberResolvePromises[key];memberResolvePromises[key]=jsonpRetry({action:'publico_familia_membro',areaId:areaId(),token:key},maxAttempts||2).then(function(r){if(!r||r.ok!==true||!r.documentoAcesso)throw new Error(r&&r.message||'Não foi possível carregar este integrante.');memberResolvedCache[key]=r;return r}).finally(function(){delete memberResolvePromises[key]});return memberResolvePromises[key]}
@@ -152,8 +166,30 @@
   }
   function memberButton(target){return target&&target.closest?target.closest('[data-member-token]'):null}
   function releaseMemberButton(token){var b=document.querySelector('[data-member-token="'+String(token).replace(/"/g,'')+'"]');if(b){b.classList.remove('tacs-family-pressed');b.removeAttribute('aria-busy');b.removeAttribute('aria-disabled');b.removeAttribute('data-loading');b.disabled=false}}
-  function activateMemberButton(button,e){if(!button)return false;var token=text(button.getAttribute('data-member-token'));if(!token)return false;if(e&&typeof e.preventDefault==='function')e.preventDefault();if(button.disabled||button.getAttribute('aria-busy')==='true')return true;var now=Date.now();if(lastMemberActivation.token===token&&now-lastMemberActivation.at<1200)return true;lastMemberActivation={token:token,at:now};button.classList.add('tacs-family-pressed');var cached=memberResolvedCache[token];if(cached){applyResolvedMember(token,cached,pendingMissing,pendingType);return true}button.setAttribute('aria-busy','true');button.setAttribute('aria-disabled','true');button.setAttribute('data-loading','1');button.disabled=true;var nome=text(button.getAttribute('data-member-name'))||'este familiar';setDocBox('<strong class="tacs-family-title">Aguarde, buscando morador…</strong><p class="tacs-family-help">Carregando os dados de <strong>'+escapeHtml(nome)+'</strong>.</p>','tacs-family-ok');selectMember(token);return true}
-  function applyMemberWithoutSecondLookup(r){var api=window.TacsMoradoresAutofillV1;if(!api||typeof api.applyResolved!=='function')return false;return api.applyResolved(r.documentoAcesso,{nome:r.nome||'',nascimento:r.nascimento||'',localidade:r.localidade||'',endereco:r.localidade||'',areaId:r.areaId||areaId()},r.familiaId||activeFamilyId)}
+  function activateMemberButton(button,e){if(!button)return false;var token=text(button.getAttribute('data-member-token'));if(!token)return false;if(e&&typeof e.preventDefault==='function')e.preventDefault();if(button.disabled||button.getAttribute('aria-busy')==='true')return true;var now=Date.now();if(lastMemberActivation.token===token&&now-lastMemberActivation.at<1200)return true;lastMemberActivation={token:token,at:now};button.classList.add('tacs-family-pressed');var cached=memberResolvedCache[token];if(cached&&!(pendingMissing&&pendingType&&!docType(cached.documentoAcesso))){applyResolvedMember(token,cached,pendingMissing,pendingType);return true}if(cached&&pendingMissing&&pendingType&&!docType(cached.documentoAcesso))delete memberResolvedCache[token];button.setAttribute('aria-busy','true');button.setAttribute('aria-disabled','true');button.setAttribute('data-loading','1');button.disabled=true;var nome=text(button.getAttribute('data-member-name'))||'este familiar';setDocBox('<strong class="tacs-family-title">Aguarde, buscando morador…</strong><p class="tacs-family-help">Carregando os dados de <strong>'+escapeHtml(nome)+'</strong>.</p>','tacs-family-ok');selectMember(token);return true}
+  function applyMemberWithoutSecondLookup(r){
+    var api=window.TacsMoradoresAutofillV1;
+    if(!api)return false;
+    var resident={
+      nome:r.nome||'',
+      nascimento:r.nascimento||'',
+      localidade:r.localidade||'',
+      endereco:r.localidade||'',
+      areaId:r.areaId||areaId(),
+      membroToken:r.membroToken||'',
+      tipoDocumento:r.tipoDocumento||'',
+      temDocumento:Boolean(r.temDocumento),
+      identidadeToken:r.identidadeToken||'',
+      acessoPreparado:Boolean(r.acessoPreparado)
+    };
+    if(docType(r.documentoAcesso)&&typeof api.applyResolved==='function'){
+      return api.applyResolved(r.documentoAcesso,resident,r.familiaId||activeFamilyId);
+    }
+    if(typeof api.applyFamilySnapshot==='function'){
+      return api.applyFamilySnapshot(resident,r.familiaId||activeFamilyId);
+    }
+    return false;
+  }
   function applyResolvedMember(token,r,candidate,candidateType){var localizer=digits(r.documentoAcesso),localizerType=docType(localizer);if(candidate&&candidateType&&localizerType&&candidateType!==localizerType){setDocBox('<strong class="tacs-family-title">'+escapeHtml(r.nome||'Cadastro selecionado')+'</strong><p class="tacs-family-help">Vinculando o '+escapeHtml(pendingLabel())+' à pessoa selecionada…</p>','tacs-family-ok');return complementDocument(localizer,candidate,function(){fillSelectedDocument(candidate,r.nome)}).finally(function(){releaseMemberButton(token)})}if(candidate&&candidateType&&localizerType===candidateType){pendingMissing='';pendingType='';pendingOwnerLookup='';setDocBox('<strong class="tacs-family-title">Documento não alterado</strong><p class="tacs-family-help">Este cadastro já possui '+escapeHtml(candidateType)+' registrado. Documento existente nunca é substituído automaticamente.</p>','tacs-family-warn')}if(!applyMemberWithoutSecondLookup(r))fillSelectedDocument(r.documentoAcesso,r.nome);else hideDoc();ensureFamilySelectorVisible();releaseMemberButton(token);return r}
   function selectMember(token){var candidate=pendingMissing,candidateType=pendingType;wantedMemberToken=token;return resolveMemberToken(token,2).then(function(r){if(wantedMemberToken!==token){releaseMemberButton(token);return null}return applyResolvedMember(token,r,candidate,candidateType)}).catch(function(e){releaseMemberButton(token);if(wantedMemberToken!==token)return null;setDocBox('<strong class="tacs-family-title">Não foi possível carregar este familiar agora.</strong><p class="tacs-family-help">'+escapeHtml(e&&e.message?e.message:'Tente novamente.')+' Toque no nome novamente para repetir.</p>','tacs-family-warn');return null})}
   function complementRequestId(){return 'doc_publico_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
@@ -187,7 +223,33 @@
     }
   });
   document.addEventListener('click',function(e){var b=memberButton(e.target);if(b){activateMemberButton(b,e);return}var t=e.target&&e.target.closest?e.target.closest('[data-family-search],[data-doc-save],[data-resident-pin-create],[data-resident-pin-login],[data-resident-cpf-pin-start],[data-resident-birth-confirm],[data-resident-name-confirm],[data-resident-cpf-review-confirm],[data-resident-cpf-review-correct]'):e.target;if(!t||!t.getAttribute)return;if(t.getAttribute('data-resident-pin-create')==='1'){createResidentPinFromPortal();return}if(t.getAttribute('data-resident-pin-login')==='1'){loginResidentPinFromPortal();return}if(t.getAttribute('data-resident-cpf-pin-start')==='1'){startResidentCpfForPin();return}if(t.getAttribute('data-resident-birth-confirm')==='1'){confirmMissingCpfBirth();return}if(t.getAttribute('data-resident-name-confirm')==='1'){confirmMissingCpfName();return}if(t.getAttribute('data-resident-cpf-review-confirm')==='1'){confirmReviewedMissingCpf();return}if(t.getAttribute('data-resident-cpf-review-correct')==='1'){correctMissingCpf();return}var f=t.getAttribute('data-family-search');if(f){activateFamilySearchButton(t,e);return}if(t.getAttribute('data-doc-save')==='1'){var input=document.getElementById('cpf');complementDocument(digits(input&&input.value),pendingMissing).catch(function(){})}});
-  document.addEventListener('tacs:morador',function(e){currentResident=e&&e.detail||null;setTimeout(function(){maybeOfferComplement();var input=document.getElementById('cpf'),d=digits(input&&input.value),fam=normalizeFamily(currentResident&&(currentResident.familiaBeneficiario||currentResident.familiaId)||'');if(residentSessionToken())return;if(!pendingMissing&&docType(d)){if(docType(d)==='CPF')beginResidentPinEnrollment(d);else if(docType(d)==='CNS')renderResidentCpfForPin();if(fam&&activeFamilyId===fam&&familySnapshot){ensureFamilySelectorVisible();hideDoc();return}if(fam)searchFamilyResolved(fam,d);else searchFamilyByDocument(d)}},80)});
+  document.addEventListener('tacs:morador',function(e){currentResident=e&&e.detail||null;setTimeout(function(){
+    maybeOfferComplement();
+    var input=document.getElementById('cpf'),d=digits(input&&input.value),fam=normalizeFamily(currentResident&&(currentResident.familiaBeneficiario||currentResident.familiaId)||'');
+    if(residentSessionToken())return;
+
+    /* FAMILIA_SNAPSHOT_SEM_SEGUNDA_BUSCA_2026_09_18_V1
+       Se a família já entregou identidadeToken, o PIN é preparado localmente.
+       Nenhuma chamada conecta_morador_identificar é feita após o toque. */
+    if(!pendingMissing&&currentResident&&currentResident.identidadeToken){
+      residentIdentityToken=text(currentResident.identidadeToken);
+      renderResidentPinCreate({identidadeToken:residentIdentityToken},'');
+      if(fam&&activeFamilyId===fam&&familySnapshot){ensureFamilySelectorVisible();hideDoc()}
+      return;
+    }
+    if(!pendingMissing&&currentResident&&currentResident.tipoDocumento==='CNS'&&currentResident.temDocumento){
+      renderResidentCpfForPin();
+      if(fam&&activeFamilyId===fam&&familySnapshot){ensureFamilySelectorVisible();hideDoc()}
+      return;
+    }
+
+    if(!pendingMissing&&docType(d)){
+      if(docType(d)==='CPF')beginResidentPinEnrollment(d);
+      else if(docType(d)==='CNS')renderResidentCpfForPin();
+      if(fam&&activeFamilyId===fam&&familySnapshot){ensureFamilySelectorVisible();hideDoc();return}
+      if(fam)searchFamilyResolved(fam,d);else searchFamilyByDocument(d)
+    }
+  },0)});
   document.addEventListener('tacs:documento-nao-localizado',function(e){var d=e&&e.detail||{};documentoNaoLocalizado(d.documento,d.tipoDocumento||d.tipo)});
   window.OneSignalDeferred=window.OneSignalDeferred||[];window.OneSignalDeferred.push(function(o){oneSignal=o});
   window.PortalTacsIdentificacaoFamilia={instalar:install,buscarFamilia:searchFamily,buscarPorDocumento:searchFamilyByDocument,documentoNaoLocalizado:documentoNaoLocalizado,resgatarModoTacsTeste:resgatarModoTacsTeste,modoTacsAtivo:tacsTeste};

@@ -490,6 +490,28 @@
       return applyResidentPayload(payload, doc, true);
     };
 
+    window.TacsMoradoresAutofillV1.applyFamilySnapshot = function (resident, familia) {
+      if (!resident || typeof resident !== 'object') return false;
+      var family = String(familia || '').trim().toUpperCase();
+      var payload = {
+        ok: true,
+        encontrado: true,
+        familiaId: family,
+        familiaBeneficiario: family,
+        morador: resident
+      };
+      requestId++;
+      completedRequestId = requestId;
+      cleanupTransport();
+      if (!fillFields(payload)) {
+        setStatus(status, 'Os dados deste integrante estão incompletos. Procure seu TACS.', 'invalid');
+        return false;
+      }
+      applyFamilyContext(payload);
+      setStatus(status, 'Morador selecionado ✓ Dados prontos para uso. Confira nome, nascimento e localidade antes de continuar.', 'valid');
+      return true;
+    };
+
     function complete(payload, token, proofKey, jsonpAttempt) {
       if (token !== requestId || token === completedRequestId) return;
 
