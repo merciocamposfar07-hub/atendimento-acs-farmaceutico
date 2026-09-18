@@ -5,6 +5,7 @@ window.PortalTacsCentralSuporteMoradoresV1=true;
 
 var TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1';
 var ADMIN_TOKEN_KEY='portalTacsAdminTokenV1';
+var UBS_TOKEN_KEY='portalConectaUbsTokenV1';
 var AREA_KEY='portalTacsCentralAreaV1';
 var RETURN_KEY='portalTacsCentralReturnUrlV1';
 var RETURN_FLAG_KEY='portalTacsRetornoCentralV1';
@@ -24,7 +25,7 @@ function hasTerritorySession(){
   try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN_KEY)||''))}catch(e){return false}
 }
 function hasAnySession(){
-  try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'')||text(sessionStorage.getItem(ADMIN_TOKEN_KEY)||''))}catch(e){return false}
+  try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'')||text(sessionStorage.getItem(ADMIN_TOKEN_KEY)||'')||text(sessionStorage.getItem(UBS_TOKEN_KEY)||''))}catch(e){return false}
 }
 
 /* Evita mostrar novamente o formulário de login ao retornar de um painel. */
