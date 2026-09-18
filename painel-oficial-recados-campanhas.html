@@ -2766,6 +2766,40 @@ function carregar(msg,cb,silencioso){syncCoreSession();contextoPronto=false;manu
 
 
 var saudeNotificacoesDados=null,saudeFiltroAtivo='';
+var SAUDE_RESUMO_CACHE_PREFIX='portalConectaSaudeResumoV1:';
+function saudeResumoCacheKey(){return SAUDE_RESUMO_CACHE_PREFIX+txt(areaId).toUpperCase()}
+function saudeSetText(id,value){var n=document.getElementById(id),v=txt(value);if(n&&n.textContent!==v)n.textContent=v}
+function salvarSaudeResumo(r){
+  if(!r||r.ok!==true)return;
+  try{
+    var c=r.contagens||{};
+    localStorage.setItem(saudeResumoCacheKey(),JSON.stringify({
+      areaId:txt(r.areaId||areaId).toUpperCase(),
+      areaNome:txt(r.areaNome),
+      contagens:{
+        ativos:Number(c.ativos||0),inativos:Number(c.inativos||0),
+        reparo:Number(c.reparo||0),semConfirmacao:Number(c.semConfirmacao||0)
+      },
+      salvoEm:Date.now()
+    }));
+  }catch(e){}
+}
+function restaurarSaudeResumo(){
+  try{
+    var raw=localStorage.getItem(saudeResumoCacheKey());if(!raw)return false;
+    var saved=JSON.parse(raw),age=Date.now()-Number(saved&&saved.salvoEm||0);
+    if(!saved||!saved.contagens||age<0||age>86400000)return false;
+    var c=saved.contagens;
+    document.getElementById('saudeNotificacoes').classList.remove('oculto');
+    saudeSetText('saudeTitulo','Saúde das notificações — '+txt(saved.areaNome||areaId));
+    saudeSetText('saudeAtivos',Number(c.ativos||0));
+    saudeSetText('saudeInativos',Number(c.inativos||0));
+    saudeSetText('saudeReparo',Number(c.reparo||0));
+    saudeSetText('saudeSemConfirmacao',Number(c.semConfirmacao||0));
+    status('saudeNotificacoesStatus','Última confirmação exibida • conferindo atualização em segundo plano.','aviso');
+    return true;
+  }catch(e){return false}
+}
 function esconderSaudeNotificacoes(){
   var box=document.getElementById('saudeNotificacoes'),lista=document.getElementById('saudeNotificacoesLista');
   if(box)box.classList.add('oculto');
@@ -2807,11 +2841,12 @@ function renderSaudeNotificacoes(r){
   var box=document.getElementById('saudeNotificacoes'),c=r.contagens||{},aparelhos=Array.isArray(r.aparelhos)?r.aparelhos:[],confirmado=r.oneSignalConsultado===true;
   saudeNotificacoesDados=r;
   box.classList.remove('oculto');
-  document.getElementById('saudeTitulo').textContent='Saúde das notificações — '+txt(r.areaNome||areaId);
-  document.getElementById('saudeAtivos').textContent=Number(c.ativos||0);
-  document.getElementById('saudeInativos').textContent=Number(c.inativos||0);
-  document.getElementById('saudeReparo').textContent=Number(c.reparo||0);
-  document.getElementById('saudeSemConfirmacao').textContent=Number(c.semConfirmacao||0);
+  saudeSetText('saudeTitulo','Saúde das notificações — '+txt(r.areaNome||areaId));
+  saudeSetText('saudeAtivos',Number(c.ativos||0));
+  saudeSetText('saudeInativos',Number(c.inativos||0));
+  saudeSetText('saudeReparo',Number(c.reparo||0));
+  saudeSetText('saudeSemConfirmacao',Number(c.semConfirmacao||0));
+  salvarSaudeResumo(r);
   renderSaudeLista();
   if(!confirmado){
     status('saudeNotificacoesStatus','Dados carregados. Conferindo o estado atual no OneSignal em segundo plano…','aviso');
@@ -2829,8 +2864,11 @@ function prepararSaudeSemNumeroProvisorio(){
 function carregarSaudeNotificacoes(){
   if(!(token||territorioToken)||ativa)return;
   document.getElementById('saudeNotificacoes').classList.remove('oculto');
-  prepararSaudeSemNumeroProvisorio();
-  status('saudeNotificacoesStatus','Carregando a situação das notificações…','aviso');
+  var resumoCache=restaurarSaudeResumo();
+  if(!resumoCache){
+    prepararSaudeSemNumeroProvisorio();
+    status('saudeNotificacoesStatus','Carregando a situação das notificações…','aviso');
+  }
   post('admin_notificacoes_saude_rapida',sessao(),function(r){
     if(r&&r.ok===true)renderSaudeNotificacoes(r);
     else status('saudeNotificacoesStatus',txt(r&&r.message||'Não foi possível carregar a situação das notificações agora.'),'aviso');
