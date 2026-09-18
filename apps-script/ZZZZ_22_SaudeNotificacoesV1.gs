@@ -617,7 +617,21 @@ function saudeNotificacoesV1ViewUser_(appId,apiKey,onesignalId){var cache=CacheS
 function saudeNotificacoesV1EncontrarSubscription_(user,subscriptionId){var lista=user&&Array.isArray(user.subscriptions)?user.subscriptions:[];for(var i=0;i<lista.length;i++)if(saudeNotificacoesV1Texto_(lista[i].id).toLowerCase()===subscriptionId.toLowerCase())return lista[i];return null;}
 function saudeNotificacoesV1FetchOneSignal_(url,apiKey){var resp=UrlFetchApp.fetch(url,{method:'get',headers:{Authorization:'Key '+apiKey},muteHttpExceptions:true});var code=Number(resp.getResponseCode()),body=resp.getContentText(),data={};try{data=JSON.parse(body||'{}');}catch(e){}if(code<200||code>=300)throw new Error('Consulta técnica ao OneSignal indisponível (HTTP '+code+').');return data;}
 function saudeNotificacoesV1EstadoLocal_(permission,optedIn,tokenAtivo,areaConfirmada){if(!permission)return 'SEM_PERMISSAO';if(!optedIn)return 'SEM_INSCRICAO';if(!tokenAtivo)return 'SEM_TOKEN';if(!areaConfirmada)return 'SEM_AREA';return 'ATIVO_LOCAL';}
-function saudeNotificacoesV1ExigirAcesso_(acesso){if(acesso&&acesso.perfil==='TACS'){if((acesso.permissoes||[]).indexOf('PUBLICACOES_GERENCIAR')===-1)throw new Error('Seu cadastro não possui permissão para gerenciar notificações.');return true;}tacsTerritorioV1ExigirAdmin_(acesso);return true;}
+function saudeNotificacoesV1ExigirAcesso_(acesso){
+  var perfil=saudeNotificacoesV1Texto_(acesso&&acesso.perfil).toUpperCase(),permissoes=acesso&&Array.isArray(acesso.permissoes)?acesso.permissoes:[];
+  if(perfil==='TACS'){
+    if(permissoes.indexOf('PUBLICACOES_GERENCIAR')===-1)throw new Error('Seu cadastro não possui permissão para gerenciar notificações.');
+    return true;
+  }
+  /* UBS_DIAGNOSTICO_AUTORIZADO_20260917:
+     a UBS já recebeu MORADORES_LER do administrador e o próprio painel Suporte
+     é exibido por essa permissão. Permitir diagnóstico/reparo somente nesse escopo. */
+  if(perfil==='UBS'){
+    if(permissoes.indexOf('MORADORES_LER')===-1)throw new Error('A UBS não possui permissão para diagnosticar aparelhos desta área.');
+    return true;
+  }
+  tacsTerritorioV1ExigirAdmin_(acesso);return true;
+}
 function saudeNotificacoesV1GarantirSheet_(ss,nome,headers){var sheet=ss.getSheetByName(nome);if(!sheet)sheet=ss.insertSheet(nome);if(sheet.getLastRow()===0){sheet.getRange(1,1,1,headers.length).setValues([headers.slice()]);sheet.setFrozenRows(1);}var atual=sheet.getRange(1,1,1,headers.length).getDisplayValues()[0];if(headers.some(function(v,i){return atual[i]!==v;}))throw new Error('A estrutura da planilha '+nome+' é diferente da versão esperada.');return sheet;}
 function saudeNotificacoesV1PrimeiraPropriedade_(props,nomes){for(var i=0;i<nomes.length;i++){var v=saudeNotificacoesV1Texto_(props.getProperty(nomes[i]));if(v)return v;}return '';}
 function saudeNotificacoesV1Booleano_(v){if(v===true||v===1)return true;return ['true','1','sim','yes','ativo'].indexOf(saudeNotificacoesV1Texto_(v).toLowerCase())!==-1;}
