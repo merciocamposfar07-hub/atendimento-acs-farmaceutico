@@ -32,7 +32,7 @@
     var b=box(),st=b&&b.querySelector('.apt-status');if(st)st.textContent='Preparando abertura segura do Portal TACS…';
     executar('TRANSFERIR').then(function(r){
       if(!paginaAtiva())return;if(!r||r.ok!==true||!r.codigoTransferencia)throw new Error(txt(r&&r.message)||'Não foi possível criar a autorização temporária.');
-      var destino='/atendimento-acs-farmaceutico/?area='+encodeURIComponent(areaAtual())+'#tacsTeste='+encodeURIComponent(r.codigoTransferencia);
+      var destino='/atendimento-acs-farmaceutico/?area='+encodeURIComponent(areaAtual())+'&from=central#tacsTeste='+encodeURIComponent(r.codigoTransferencia);
       window.location.href=destino;
     }).catch(function(e){operando=false;if(paginaAtiva())render(ultimoEstado,e.message||'Não foi possível abrir o Portal em modo TACS / teste.')});
   }
