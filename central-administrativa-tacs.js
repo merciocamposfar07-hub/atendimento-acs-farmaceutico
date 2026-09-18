@@ -447,6 +447,41 @@ function updateCentralWelcome(area,tacs){
   var adminPerfil=accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN');
   node.innerHTML='<small>Identidade autenticada</small><h1>'+esc(adminNome+' — '+adminPerfil)+'</h1><p>Gestão administrativa da área selecionada.</p>';
 }
+function stableArray(v){return Array.isArray(v)?v:[]}
+function stablePermissions(v){return stableArray(v).map(function(x){return text(x)}).filter(Boolean).sort()}
+function centralContextVisualSignature(ctx,ctxMode,areaId){
+  ctx=ctx||{};
+  function areaShape(a){return{
+    areaId:normArea(a&&a.areaId),areaNome:text(a&&a.areaNome),unidadeId:text(a&&a.unidadeId),
+    unidadeNome:text(a&&a.unidadeNome),tacsId:text(a&&a.tacsId),ativa:!(a&&a.ativa===false)
+  }}
+  function profileShape(p){return{
+    tacsId:text(p&&p.tacsId),nomeCompleto:text(p&&p.nomeCompleto),perfil:text(p&&p.perfil),
+    unidadeId:text(p&&p.unidadeId),funcaoUbs:text(p&&p.funcaoUbs),ativo:!(p&&p.ativo===false),
+    permissoes:stablePermissions(p&&p.permissoes)
+  }}
+  return JSON.stringify({
+    mode:text(ctxMode),perfil:text(ctx.perfil),podeAdministrar:ctx.podeAdministrar===true,
+    areaId:normArea(areaId),areas:stableArray(ctx.areas).map(areaShape),
+    tacs:stableArray(ctx.tacs).map(profileShape),
+    ubsAtual:profileShape(ctx.ubsAtual||{}),
+    administradores:stableArray(ctx.administradores).map(profileShape),
+    administradorAtual:profileShape(ctx.administradorAtual||{})
+  })
+}
+function centralRememberScroll(){
+  try{centralScrollY=Math.max(0,Math.round(window.scrollY||document.documentElement.scrollTop||0))}catch(e){centralScrollY=0}
+}
+function centralRestoreScroll(){
+  var y=Math.max(0,Number(centralScrollY||0));
+  var restore=function(){try{window.scrollTo({top:y,left:0,behavior:'auto'})}catch(e){try{window.scrollTo(0,y)}catch(x){}}};
+  if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(function(){window.requestAnimationFrame(restore)});
+  else setTimeout(restore,0);
+}
+function centralDomAlreadyRendered(){
+  var identity=el('identityPanel'),modules=el('modulesPanel'),login=el('loginPanel');
+  return Boolean(identity&&modules&&login&&!identity.hidden&&!modules.hidden&&login.hidden)
+}
 function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId})){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(mode==='admin'&&areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):(mode==='ubs'?accessProfileLabel(ubs&&ubs.perfil||'UBS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN'));el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(mode==='ubs'?(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'UBS'):(text(admin&&admin.nomeCompleto)||'Administrador'));el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=mode==='ubs';el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=(mode!=='admin'&&mode!=='ubs')||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;if(mode!=='ubs'){renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm();renderHealthInstant(selectedAreaId);if(!skipHealth)scheduleHealthRefresh(false,1800)}else{renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm()}}
 function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
 function markHealth(id,label,state){var n=el(id),s=n.querySelector('span');n.className='health-card'+(state?' '+state:'');s.textContent=label}
@@ -1374,6 +1409,9 @@ function showPortalTacs(title,routeId,url){
   }
 }
 function openModule(name,title,options){
+  /* CENTRAL_SCROLL_PRESERVE_20260917:
+     abrir um painel não pode alterar a posição da Central que ficará por baixo. */
+  if(!shellActiveModule)centralRememberScroll();
   if(name==='ubs'){if(mode==='admin')showAdminUbs(title||'UBS');return}
   var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
   if(name==='portal'){showPortalTacs(title||'Portal TACS',routeId,url);return}
@@ -1457,6 +1495,7 @@ function closeViewer(){
   var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-shell-viewer','csc-native-viewer','csc-frame-viewer','csc-frame-opening','csc-agendas-native-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   shellActiveModule='';shellActiveRoute='';shellActiveNative='';moduloPendente=null;
+  centralRestoreScroll();
   if(mode!=='ubs')scheduleHealthRefresh(false,900);return true;
 }
 function loadContext(message){
@@ -1475,14 +1514,25 @@ function loadContext(message){
       el('loginPanel').hidden=false;el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;
       setStatus(falhaMsg||'A sessão foi recusada pelo servidor. Entre novamente.','warn');return;
     }
-    context=r;mode=r.perfil==='TACS'?'tacs':(r.perfil==='UBS'?'ubs':'admin');saveContextCache();
+    var nextMode=r.perfil==='TACS'?'tacs':(r.perfil==='UBS'?'ubs':'admin');
+    var beforeSignature=centralContextVisualSignature(context,mode,selectedAreaId);
+    var afterSignature=centralContextVisualSignature(r,nextMode,selectedAreaId);
+    var visualChanged=beforeSignature!==afterSignature||!centralDomAlreadyRendered();
+    context=r;mode=nextMode;saveContextCache();
     var pin=pinLocalPendente,scope=pinLocalPerfil||mode;
     pinLocalPendente='';pinLocalPerfil='';acessoLocalAberto='';
     if(pin)guardarAcessoLocal(scope,pin);
-    setStatus(message||'Acesso validado.','ok');renderContext(false);
+    setStatus(message||'Acesso validado.','ok');
+    /* CONTEXTO_SEM_REPAINT_20260917:
+       confirmação em segundo plano não reconstrói a tela inteira se nenhum dado visual mudou. */
+    if(visualChanged)renderContext(false);
+    else{
+      syncAppState();publishModuleCore();renderHealthInstant(selectedAreaId);scheduleHealthRefresh(false,1800);
+    }
     resumePendingModule();
   });
 }
+var centralScrollY=0;
 var logoutEmCurso=false;
 /* LOGOFF_RESILIENTE_V5:
    Proteção isolada do botão Logoff. Em sessão ativa ele nunca pode permanecer
@@ -1874,8 +1924,12 @@ window.addEventListener('pageshow',function(){
   var viewer=el('viewer');if(viewer)viewer.hidden=true;
   shellActiveModule='';
   if(token||territoryToken||ubsToken){
-    if(context&&mode!=='ubs')renderContext(true);
-    else restoreContextCache();
+    /* PAGESHOW_SEM_TREMOR_20260917:
+       BFCache já devolve a DOM pronta. Só reconstruir se ela realmente não estiver montada. */
+    if(context&&mode!=='ubs'){
+      if(!centralDomAlreadyRendered())renderContext(true);
+      else{syncAppState();publishModuleCore();renderHealthInstant(selectedAreaId)}
+    }else restoreContextCache();
     setTimeout(function(){if(!active)loadContext('Sessão existente validada.')},140);
   }
 });
