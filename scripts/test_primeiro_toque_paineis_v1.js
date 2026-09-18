@@ -19,7 +19,7 @@ const closeStart=central.indexOf('function closeViewer()',openStart);
 assert.ok(openStart>=0&&closeStart>openStart,'openModule não encontrado');
 const block=central.slice(openStart,closeStart);
 
-assert.match(block,/var remoteReady=Boolean\(token\|\|territoryToken\),localReady=localPanelAccessReady\(\)/);
+assert.match(block,/var remoteReady=Boolean\(token\|\|territoryToken\|\|ubsToken\),localReady=localPanelAccessReady\(\)/);
 assert.match(block,/if\(!remoteReady&&!localReady\)/);
 assert.match(block,/if\(!remoteReady\)\{/);
 assert.match(block,/showPendingModuleShell\(name,title\|\|'Painel',routeId\)/);
