@@ -1461,6 +1461,13 @@ function openModule(name,title,options){
     );
     if(legacyCacheFirst){
       if(name==='territorio')priorizarSincronizacaoTerritorioPendente();
+      try{
+        var localUrl=new URL(url,location.href);
+        localUrl.searchParams.set('localfirst','1');
+        url=localUrl.pathname+localUrl.search+localUrl.hash;
+      }catch(e){
+        url+=(url.indexOf('?')===-1?'?':'&')+'localfirst=1';
+      }
       var localFrame=ensureShellFrame(name,url,title||'Painel',routeId);
       localFrame.dataset.shellLocalFirst='1';
       showShellFrame(name,localFrame,title||'Painel',routeId);
