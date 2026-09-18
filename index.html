@@ -8,11 +8,11 @@
   <meta http-equiv="Expires" content="0">
   <meta name="theme-color" content="#062c46">
   <meta name="color-scheme" content="light only">
-  <meta name="portal-release" content="f65d7f28b4da">
+  <meta name="portal-release" content="1b02e0eec325">
   <meta name="description" content="Canal do TACS - Técnico Agente Comunitário de Saúde Mércio José Campos dos Santos, vinculado à Unidade de Saúde Posto Matias, para moradores do Sítio Japaranduba, Chã Grande/PE.">
-  <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial.svg?v=f65d7f28b4da">
-  <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=f65d7f28b4da">
-  <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest.webmanifest?v=f65d7f28b4da">
+  <link rel="icon" type="image/svg+xml" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial.svg?v=1b02e0eec325">
+  <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=1b02e0eec325">
+  <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest.webmanifest?v=1b02e0eec325">
   <meta name="apple-mobile-web-app-title" content="Portal TACS">
   <link rel="preconnect" href="https://script.google.com">
   <link rel="preconnect" href="https://script.googleusercontent.com">
@@ -102,12 +102,13 @@
     @media(min-resolution:2dppx){.panel,.purpose,.form-panel,.notice-board,.notice-card,.dental,.slot,input,textarea,select{backface-visibility:hidden}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   
-    /* CSC_PORTAL_TACS_APP_SKIN_20260918_V3
+
+  
+    /* CSC_PORTAL_TACS_APP_SKIN_20260918_V4
        SOMENTE LAYOUT. Nenhum fluxo, evento, ID, script ou regra funcional é alterado. */
     :root{
       --app-blue:#062c46;
       --app-blue-2:#073a55;
-      --app-blue-3:#0a4565;
       --app-line:rgba(255,255,255,.18);
       --app-line-soft:rgba(255,255,255,.10);
       --app-text:#f7fbfd;
@@ -116,461 +117,236 @@
       --app-field:#0b405f;
       --app-field-focus:#0d5278;
     }
+    html,body{background:var(--app-blue)!important;color:var(--app-text)!important}
+    body{min-height:100svh!important;overflow-x:hidden!important}
+    .shell{width:min(100%,980px)!important;margin:0 auto!important;padding:0!important;background:var(--app-blue)!important}
+    .panel{overflow:visible!important;border:0!important;border-radius:0!important;background:var(--app-blue)!important;box-shadow:none!important}
 
-    html,body{
-      background:var(--app-blue)!important;
-      color:var(--app-text)!important;
-    }
-    body{
-      min-height:100svh!important;
-      overflow-x:hidden!important;
-    }
-    .shell{
-      width:min(100%,980px)!important;
-      margin:0 auto!important;
-      padding:0!important;
-      background:var(--app-blue)!important;
-    }
-    .panel{
-      overflow:visible!important;
-      border:0!important;
-      border-radius:0!important;
-      background:var(--app-blue)!important;
-      box-shadow:none!important;
-    }
-
-    /* Cabeçalho contínuo, como tela de aplicativo */
     .hero{
       padding:calc(18px + env(safe-area-inset-top)) clamp(17px,4vw,34px) 22px!important;
-      border:0!important;
-      border-radius:0!important;
+      border:0!important;border-radius:0!important;
       background:linear-gradient(180deg,#062c46 0%,#073a55 100%)!important;
-      box-shadow:none!important;
+      box-shadow:none!important
     }
-    .hero::after{opacity:.42!important}
+    .hero::after{opacity:.36!important}
     .hero-top{gap:14px!important}
     .mark{
-      width:52px!important;height:52px!important;
-      border:1px solid rgba(112,227,159,.75)!important;
-      border-radius:14px!important;
-      box-shadow:none!important;
-      background:#05263c!important;
+      width:52px!important;height:52px!important;border:1px solid rgba(112,227,159,.7)!important;
+      border-radius:14px!important;box-shadow:none!important;background:#05263c!important
     }
     .identity strong{color:#fff!important}
     .identity span{color:#c9dce5!important}
     .hours{
-      border:1px solid var(--app-line)!important;
-      border-radius:12px!important;
-      background:rgba(255,255,255,.055)!important;
-      box-shadow:none!important;
+      border:1px solid var(--app-line)!important;border-radius:12px!important;
+      background:rgba(255,255,255,.05)!important;box-shadow:none!important
     }
     .hours small,.hours span{color:var(--app-green)!important}
-    h1{
-      margin-top:24px!important;
-      max-width:760px!important;
-      font-size:clamp(31px,6vw,52px)!important;
-      letter-spacing:-.045em!important;
-    }
-    .exclusive{color:#d8e7ee!important}
-    .exclusive strong{color:var(--app-green)!important}
+    h1{margin-top:24px!important;max-width:760px!important;font-size:clamp(31px,6vw,52px)!important;letter-spacing:-.045em!important}
+    .exclusive{color:#d8e7ee!important}.exclusive strong{color:var(--app-green)!important}
     .responsible{color:#fff!important}
 
-    /* Remove o aspecto de cartão entre cabeçalho e conteúdo */
     .hero-actions{
-      margin:0!important;
-      border:0!important;
-      border-top:1px solid var(--app-line-soft)!important;
-      border-bottom:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:var(--app-blue-2)!important;
-      box-shadow:none!important;
+      margin:0!important;border:0!important;border-top:1px solid var(--app-line-soft)!important;
+      border-bottom:1px solid var(--app-line-soft)!important;border-radius:0!important;
+      background:var(--app-blue-2)!important;box-shadow:none!important
     }
-    .action-card{
-      padding:15px clamp(17px,4vw,34px)!important;
-      background:transparent!important;
-    }
+    .action-card{padding:15px clamp(17px,4vw,34px)!important;background:transparent!important}
     .action-icon{
-      width:42px!important;height:42px!important;
-      border-radius:12px!important;
-      background:rgba(112,227,159,.13)!important;
-      color:var(--app-green)!important;
+      width:42px!important;height:42px!important;border-radius:12px!important;
+      background:rgba(112,227,159,.12)!important;color:var(--app-green)!important
     }
     .action-card small{color:var(--app-green)!important}
     .action-card strong{color:#fff!important}
     .action-card p{color:#c7d9e2!important}
 
-    /* Conteúdo é a continuação da mesma tela azul */
-    .content{
-      padding:0 clamp(17px,4vw,34px) 28px!important;
-      background:var(--app-blue)!important;
-    }
+    .content{padding:0 clamp(17px,4vw,34px) 28px!important;background:var(--app-blue)!important}
 
-    /* Recados/campanhas deixam de parecer balões independentes */
-    .notice-area{
-      margin:0!important;
-      padding:0!important;
-      background:transparent!important;
-    }
+    .notice-area{margin:0!important;padding:0!important;background:transparent!important}
     .notice-board{
-      padding:20px 0!important;
-      border:0!important;
-      border-bottom:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:transparent!important;
-      box-shadow:none!important;
-      color:#fff!important;
+      padding:20px 0!important;border:0!important;border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#fff!important
     }
-    .notice-board h2{color:#fff!important}
-    .notice-updated{color:var(--app-muted)!important}
+    .notice-board h2{color:#fff!important}.notice-updated{color:var(--app-muted)!important}
     .notice-list{gap:0!important}
-    .notice-card{
-      padding:16px 0!important;
-      border:0!important;
-      border-left:0!important;
-      border-bottom:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:transparent!important;
-      box-shadow:none!important;
-      color:#fff!important;
-    }
-    .notice-card.important,.notice-card.urgent{
-      background:transparent!important;
-      border-left:0!important;
+    .notice-card,.notice-card.important,.notice-card.urgent{
+      padding:16px 0!important;border:0!important;border-left:0!important;
+      border-bottom:1px solid var(--app-line-soft)!important;border-radius:0!important;
+      background:transparent!important;box-shadow:none!important;color:#fff!important
     }
     .notice-card small{color:var(--app-green)!important}
-    .notice-card strong{color:#fff!important}
-    .notice-card p{color:#d2e1e8!important}
+    .notice-card strong{color:#fff!important}.notice-card p{color:#d2e1e8!important}
 
-    /* "Finalidade do portal" vira seção nativa, não cartão */
     .purpose{
-      display:flex!important;
-      gap:14px!important;
-      margin:0!important;
-      padding:22px 0!important;
-      border:0!important;
-      border-bottom:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:transparent!important;
-      box-shadow:none!important;
-      color:#fff!important;
+      display:flex!important;gap:14px!important;margin:0!important;padding:22px 0!important;
+      border:0!important;border-bottom:1px solid var(--app-line-soft)!important;border-radius:0!important;
+      background:transparent!important;box-shadow:none!important;color:#fff!important
     }
     .purpose-icon{
-      width:42px!important;height:42px!important;
-      border-radius:12px!important;
-      background:rgba(255,255,255,.08)!important;
-      color:#fff!important;
+      width:42px!important;height:42px!important;border-radius:12px!important;
+      background:rgba(255,255,255,.08)!important;color:#fff!important
     }
-    .purpose h2{color:var(--app-green)!important}
-    .purpose p{color:#e4eef3!important}
+    .purpose h2{color:var(--app-green)!important}.purpose p{color:#e4eef3!important}
 
-    /* Formulário sem caixa branca */
     .form-panel{
-      margin:0!important;
-      padding:24px 0 8px!important;
-      border:0!important;
-      border-radius:0!important;
-      background:transparent!important;
-      box-shadow:none!important;
+      margin:0!important;padding:24px 0 8px!important;border:0!important;border-radius:0!important;
+      background:transparent!important;box-shadow:none!important
     }
-    .section-title{
-      margin-bottom:22px!important;
-      color:#fff!important;
-      font-size:clamp(27px,5vw,38px)!important;
-    }
+    .section-title{margin-bottom:22px!important;color:#fff!important;font-size:clamp(27px,5vw,38px)!important}
     .section-icon{
-      width:42px!important;height:42px!important;
-      border-radius:12px!important;
-      background:rgba(255,255,255,.09)!important;
-      color:#fff!important;
+      width:42px!important;height:42px!important;border-radius:12px!important;
+      background:rgba(255,255,255,.09)!important;color:#fff!important
     }
     label{color:#fff!important}
-
-    /* Campos integrados no azul do app */
     input,textarea,select{
-      min-height:58px!important;
-      border:1px solid rgba(255,255,255,.24)!important;
-      border-radius:13px!important;
-      background:var(--app-field)!important;
-      color:#fff!important;
-      box-shadow:none!important;
-      -webkit-appearance:none;
-      appearance:none;
+      min-height:58px!important;border:1px solid rgba(255,255,255,.24)!important;border-radius:13px!important;
+      background:var(--app-field)!important;color:#fff!important;box-shadow:none!important
     }
     textarea{min-height:132px!important}
-    input::placeholder,textarea::placeholder{
-      color:#b7cbd6!important;
-      opacity:1!important;
-    }
+    input::placeholder,textarea::placeholder{color:#b7cbd6!important;opacity:1!important}
     input:focus,textarea:focus,select:focus{
-      border-color:rgba(112,227,159,.88)!important;
-      background:var(--app-field-focus)!important;
-      box-shadow:0 0 0 3px rgba(112,227,159,.12)!important;
+      border-color:rgba(112,227,159,.88)!important;background:var(--app-field-focus)!important;
+      box-shadow:0 0 0 3px rgba(112,227,159,.12)!important
     }
     select option{color:#102b3c;background:#fff}
-    .help{color:#b8ccd6!important}
-    .help.valid{color:var(--app-green)!important}
-    .help.invalid{color:#ffb2ad!important}
+    .help{color:#b8ccd6!important}.help.valid{color:var(--app-green)!important}.help.invalid{color:#ffb2ad!important}
 
-    /* Agenda odontológica integrada */
     .dental{
-      padding:19px 0!important;
-      border:0!important;
-      border-top:1px solid var(--app-line-soft)!important;
-      border-bottom:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:transparent!important;
-      box-shadow:none!important;
+      padding:19px 0!important;border:0!important;border-top:1px solid var(--app-line-soft)!important;
+      border-bottom:1px solid var(--app-line-soft)!important;border-radius:0!important;
+      background:transparent!important;box-shadow:none!important
     }
-    .dental-head span{color:var(--app-green)!important}
-    .dental-head h3{color:#fff!important}
-    .dental-head p,.dental-status{color:#bfd2dc!important}
-    .dental-status.error{color:#ffb2ad!important}
+    .dental-head span{color:var(--app-green)!important}.dental-head h3{color:#fff!important}
+    .dental-head p,.dental-status{color:#bfd2dc!important}.dental-status.error{color:#ffb2ad!important}
     .slots{gap:0!important}
     .slot{
-      min-height:86px!important;
-      padding:14px 2px!important;
-      border:0!important;
-      border-bottom:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:transparent!important;
-      color:#fff!important;
-      box-shadow:none!important;
+      min-height:86px!important;padding:14px 2px!important;border:0!important;
+      border-bottom:1px solid var(--app-line-soft)!important;border-radius:0!important;
+      background:transparent!important;color:#fff!important;box-shadow:none!important
     }
-    .slot strong{color:#fff!important}
-    .slot span{color:#bfd2dc!important}
-    .slot b{color:var(--app-green)!important}
+    .slot strong{color:#fff!important}.slot span{color:#bfd2dc!important}.slot b{color:var(--app-green)!important}
     .slot.selected{
-      padding-left:12px!important;
-      border-left:3px solid var(--app-green)!important;
-      background:rgba(112,227,159,.07)!important;
-      box-shadow:none!important;
+      padding-left:12px!important;border-left:3px solid var(--app-green)!important;
+      background:rgba(112,227,159,.07)!important;box-shadow:none!important
     }
 
-    /* Avisos continuam semanticamente visíveis, porém sem "balões" */
-    .info,.routing,.before-send{
-      border-radius:0!important;
-      box-shadow:none!important;
-    }
+    .info,.routing,.before-send{border-radius:0!important;box-shadow:none!important}
     .info.amber{
-      margin-top:0!important;
-      padding:16px 0!important;
-      border:0!important;
-      border-bottom:1px solid rgba(255,210,126,.35)!important;
-      background:transparent!important;
-      color:#ffe0a6!important;
+      margin-top:0!important;padding:16px 0!important;border:0!important;
+      border-bottom:1px solid rgba(255,210,126,.35)!important;background:transparent!important;color:#ffe0a6!important
     }
     .info.danger,.routing{
-      padding:16px 0!important;
-      border:0!important;
-      border-bottom:1px solid rgba(255,159,153,.35)!important;
-      background:transparent!important;
-      color:#ffc4c0!important;
+      padding:16px 0!important;border:0!important;border-bottom:1px solid rgba(255,159,153,.35)!important;
+      background:transparent!important;color:#ffc4c0!important
     }
     .before-send{
-      margin-top:18px!important;
-      padding:17px 0!important;
-      border:0!important;
-      border-top:1px solid rgba(255,210,126,.28)!important;
-      border-bottom:1px solid rgba(255,210,126,.28)!important;
-      background:transparent!important;
-      color:#f4e2bd!important;
+      margin-top:18px!important;padding:17px 0!important;border:0!important;
+      border-top:1px solid rgba(255,210,126,.28)!important;border-bottom:1px solid rgba(255,210,126,.28)!important;
+      background:transparent!important;color:#f4e2bd!important
     }
     .before-send strong{color:#ffd17e!important}
-    .warning-icon{
-      border-radius:10px!important;
-      background:rgba(242,155,0,.18)!important;
-      color:#ffd17e!important;
-    }
-
-    .send,.tacs-petroleum-button{
-      border-radius:13px!important;
-      box-shadow:none!important;
-      touch-action:manipulation!important;
-      -webkit-tap-highlight-color:transparent!important;
-    }
+    .warning-icon{border-radius:10px!important;background:rgba(242,155,0,.18)!important;color:#ffd17e!important}
+    .send,.tacs-petroleum-button{border-radius:13px!important;box-shadow:none!important}
     .privacy{color:#adc4d0!important}
 
     footer{
-      margin:0!important;
-      padding:20px clamp(17px,4vw,34px) calc(24px + env(safe-area-inset-bottom))!important;
-      border-top:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:var(--app-blue)!important;
-      color:#d7e5eb!important;
+      margin:0!important;padding:20px clamp(17px,4vw,34px) calc(24px + env(safe-area-inset-bottom))!important;
+      border-top:1px solid var(--app-line-soft)!important;border-radius:0!important;
+      background:var(--app-blue)!important;color:#d7e5eb!important
     }
     footer div+div{border-left-color:var(--app-line)!important}
 
-    /* Elementos injetados pelos scripts: remove cartões/balões sem tocar na lógica */
-    #integralPublicArea,.integral-area{
-      margin:0!important;
-      padding:0!important;
-      background:transparent!important;
-    }
+    #integralPublicArea,.integral-area{margin:0!important;padding:0!important;background:transparent!important}
     .integral-balloon{
-      margin:0!important;
-      padding:17px 0!important;
-      border:0!important;
-      border-bottom:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:transparent!important;
-      box-shadow:none!important;
-      color:#fff!important;
+      margin:0!important;padding:17px 0!important;border:0!important;
+      border-bottom:1px solid var(--app-line-soft)!important;border-radius:0!important;
+      background:transparent!important;box-shadow:none!important;color:#fff!important
     }
     .integral-balloon small{color:var(--app-green)!important}
-    .integral-balloon strong{color:#fff!important}
-    .integral-balloon p{color:#d2e1e8!important}
+    .integral-balloon strong{color:#fff!important}.integral-balloon p{color:#d2e1e8!important}
 
     .campaign-group{
-      margin:0!important;
-      padding:0!important;
-      border:0!important;
-      border-radius:0!important;
-      background:transparent!important;
-      box-shadow:none!important;
+      margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+      background:transparent!important;box-shadow:none!important
     }
-    .campaign-group-head{
-      padding:18px 0 8px!important;
-      color:#fff!important;
-    }
+    .campaign-group-head{padding:18px 0 8px!important;color:#fff!important}
     .campaign-card,.integral-campaign{
-      margin:0!important;
-      padding:17px 0!important;
-      border:0!important;
-      border-bottom:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:transparent!important;
-      box-shadow:none!important;
-      color:#fff!important;
+      margin:0!important;padding:17px 0!important;border:0!important;
+      border-bottom:1px solid var(--app-line-soft)!important;border-radius:0!important;
+      background:transparent!important;box-shadow:none!important;color:#fff!important
     }
     .campaign-label,.campaign-status{color:var(--app-green)!important}
     .campaign-title,.campaign-subtitle{color:#fff!important}
     .campaign-description,.campaign-meta{color:#d2e1e8!important}
-    .campaign-art{opacity:.9!important}
 
-    /* Seletor de serviços: lista integrada em vez de cartões */
-    .portal-service-picker{
-      margin:0!important;
-      padding:0!important;
-      background:transparent!important;
-    }
+    .portal-service-picker{margin:0!important;padding:0!important;background:transparent!important}
     .portal-service-picker-toggle{
-      min-height:58px!important;
-      border:1px solid rgba(255,255,255,.24)!important;
-      border-radius:13px!important;
-      background:var(--app-field)!important;
-      color:#fff!important;
-      box-shadow:none!important;
+      min-height:58px!important;border:1px solid rgba(255,255,255,.24)!important;border-radius:13px!important;
+      background:var(--app-field)!important;color:#fff!important;box-shadow:none!important
     }
     .portal-service-picker-panel{
-      border:1px solid rgba(255,255,255,.18)!important;
-      border-radius:13px!important;
-      background:#083854!important;
-      box-shadow:0 14px 32px rgba(0,0,0,.18)!important;
-      overflow:hidden!important;
+      border:1px solid rgba(255,255,255,.18)!important;border-radius:13px!important;
+      background:#083854!important;box-shadow:0 14px 32px rgba(0,0,0,.18)!important;overflow:hidden!important
     }
     .portal-service-choice{
-      margin:0!important;
-      border:0!important;
-      border-bottom:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:transparent!important;
-      box-shadow:none!important;
-      color:#fff!important;
+      margin:0!important;border:0!important;border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#fff!important
     }
-
     .portal-attachment-box{
-      margin-top:12px!important;
-      padding:15px 0!important;
-      border:0!important;
-      border-top:1px solid var(--app-line-soft)!important;
-      border-bottom:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:transparent!important;
-      color:#fff!important;
-      box-shadow:none!important;
+      margin-top:12px!important;padding:15px 0!important;border:0!important;
+      border-top:1px solid var(--app-line-soft)!important;border-bottom:1px solid var(--app-line-soft)!important;
+      border-radius:0!important;background:transparent!important;color:#fff!important;box-shadow:none!important
     }
-    .portal-attachment-choose{
-      border-radius:12px!important;
-      box-shadow:none!important;
-    }
+    .portal-attachment-choose{border-radius:12px!important;box-shadow:none!important}
 
-    /* Busca familiar/PIN preserva toda a lógica e perde somente a aparência de cartão */
-    .tacs-family-action,.tacs-doc-action,.tacs-family-member,.tacs-family-confirm,
-    .tacs-pin-action{
-      border-radius:12px!important;
-      box-shadow:none!important;
+    .tacs-family-action,.tacs-doc-action,.tacs-family-member,.tacs-family-confirm,.tacs-pin-action{
+      border-radius:12px!important;box-shadow:none!important
     }
     .tacs-family-member{
-      border-color:rgba(255,255,255,.20)!important;
-      background:rgba(255,255,255,.055)!important;
-      color:#fff!important;
+      border-color:rgba(255,255,255,.20)!important;background:rgba(255,255,255,.055)!important;color:#fff!important
     }
-    .tacs-family-title{color:#fff!important}
-    .tacs-family-help{color:#bfd2dc!important}
-    .tacs-family-ok{color:var(--app-green)!important}
-    .tacs-family-warn{color:#ffd17e!important}
+    .tacs-family-title{color:#fff!important}.tacs-family-help{color:#bfd2dc!important}
+    .tacs-family-ok{color:var(--app-green)!important}.tacs-family-warn{color:#ffd17e!important}
     .tacs-pin-box{
-      border:0!important;
-      border-top:1px solid var(--app-line-soft)!important;
-      border-bottom:1px solid var(--app-line-soft)!important;
-      border-radius:0!important;
-      background:transparent!important;
-      box-shadow:none!important;
+      border:0!important;border-top:1px solid var(--app-line-soft)!important;
+      border-bottom:1px solid var(--app-line-soft)!important;border-radius:0!important;
+      background:transparent!important;box-shadow:none!important
     }
-
-    /* Guias continuam funcionando sem criar blocos adicionais */
-    .portal-flow-arrow,.portal-alert-guide,.portal-attachment-guide{
-      color:var(--app-green)!important;
-    }
+    .portal-flow-arrow,.portal-alert-guide,.portal-attachment-guide{color:var(--app-green)!important}
 
     @media(max-width:720px){
       .shell{width:100%!important}
       .hero{padding-left:16px!important;padding-right:16px!important}
       .hero-top{display:block!important}
       .hours{
-        width:100%!important;
-        margin-top:14px!important;
-        display:flex!important;
-        align-items:center!important;
-        justify-content:space-between!important;
+        width:100%!important;margin-top:14px!important;display:flex!important;
+        align-items:center!important;justify-content:space-between!important
       }
       .identity{align-items:flex-start!important}
       .mark{width:48px!important;height:48px!important;border-radius:13px!important}
       h1{font-size:30px!important;margin-top:20px!important}
-      .exclusive{font-size:14px!important}
-      .responsible{font-size:14px!important}
+      .exclusive{font-size:14px!important}.responsible{font-size:14px!important}
       .hero-actions{grid-template-columns:1fr!important}
       .action-card{padding:14px 16px!important}
       .content{padding-left:16px!important;padding-right:16px!important}
-      .purpose{padding:20px 0!important}
-      .purpose-icon{display:none!important}
-      .purpose p{font-size:15px!important}
+      .purpose{padding:20px 0!important}.purpose-icon{display:none!important}.purpose p{font-size:15px!important}
       .form-panel{padding:22px 0 6px!important}
-      .grid{grid-template-columns:1fr!important;gap:17px!important}
-      .full{grid-column:auto!important}
+      .grid{grid-template-columns:1fr!important;gap:17px!important}.full{grid-column:auto!important}
       .section-title{font-size:28px!important}
       .slots{grid-template-columns:1fr!important}
-      footer{
-        grid-template-columns:1fr!important;
-        padding-left:16px!important;
-        padding-right:16px!important;
-      }
+      footer{grid-template-columns:1fr!important;padding-left:16px!important;padding-right:16px!important}
       footer div+div{
-        border-left:0!important;
-        border-top:1px solid var(--app-line-soft)!important;
-        padding:14px 0 0!important;
+        border-left:0!important;border-top:1px solid var(--app-line-soft)!important;padding:14px 0 0!important
       }
     }
 
   </style>
 </head>
-<body class="tema-petroleo">
-  <main class="shell">
+<body class="tema-petroleo"><main class="shell">
     <section class="panel">
       <header class="hero">
         <div class="hero-top">
           <div class="identity">
-            <div class="mark" aria-hidden="true"><img src="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=f65d7f28b4da" alt=""></div>
+            <div class="mark" aria-hidden="true"><img src="/atendimento-acs-farmaceutico/icons/portal-tacs-oficial-512.png?v=1b02e0eec325" alt=""></div>
             <div>
               <strong>TACS - Técnico Agente Comunitário de Saúde</strong>
               <span>Serviço vinculado à Unidade de Saúde Posto Matias</span>
@@ -586,9 +362,7 @@
 
       <section class="hero-actions" aria-label="Envio da solicitação">
         <div class="action-card whatsapp-action"><span class="action-icon" aria-hidden="true">☎</span><div><small>Envio pelo WhatsApp</small><p>Após o preenchimento, sua solicitação será enviada ao TACS - Técnico Agente Comunitário de Saúde.</p></div></div>
-      </section>
-
-      <div class="content">
+      </section><div class="content">
         <section class="notice-area" id="noticeArea" hidden aria-live="polite"></section>
 
         <section class="purpose">
@@ -669,15 +443,13 @@
         <div><strong>Serviço da Unidade de Saúde Posto Matias</strong>Sítio Japaranduba • Chã Grande/PE</div>
       </footer>
     </section>
-  </main>
-
-  <script src="agenda-config.js?v=f65d7f28b4da"></script>
-  <script src="portal-area-resolver.js?v=f65d7f28b4da"></script>
-  <script src="portal-public-data.js?v=f65d7f28b4da"></script>
-  <script src="portal-manutencao.js?v=f65d7f28b4da"></script>
-  <script src="agenda-enfermeira.js?v=f65d7f28b4da"></script>
-  <script src="portal-notification-health.js?v=f65d7f28b4da"></script>
-  <script src="portal-notification-repair-v9.js?v=f65d7f28b4da"></script>
+  </main>\n\n  <script src="agenda-config.js?v=1b02e0eec325"></script>
+  <script src="portal-area-resolver.js?v=1b02e0eec325"></script>
+  <script src="portal-public-data.js?v=1b02e0eec325"></script>
+  <script src="portal-manutencao.js?v=1b02e0eec325"></script>
+  <script src="agenda-enfermeira.js?v=1b02e0eec325"></script>
+  <script src="portal-notification-health.js?v=1b02e0eec325"></script>
+  <script src="portal-notification-repair-v9.js?v=1b02e0eec325"></script>
   <script>
   (function(){
     'use strict';
@@ -740,17 +512,16 @@
     setTimeout(function(){if(!window.__PORTAL_TACS_ODONTOLOGIA_V98__)loadDental()},3000);
   }());
   </script>
-  <script src="moradores-autofill.js?v=f65d7f28b4da"></script>
-<script src="portal-identificacao-familia-v1.js?v=f65d7f28b4da"></script>
-  <script src="portal-auto-update.js?v=f65d7f28b4da"></script>
-  <script src="portal-controle-integral.js?v=f65d7f28b4da"></script>
-  <script src="portal-ajustes-finais.js?v=f65d7f28b4da"></script>
-  <script src="portal-odontologia-segunda-sexta.js?v=f65d7f28b4da"></script>
-  <script src="portal-orientacao-morador.js?v=f65d7f28b4da"></script>
-  <script src="portal-servicos-coloridos-anexos-v1.js?v=f65d7f28b4da"></script>
-  <script src="portal-aposentadoria-destinatario-v1.js?v=f65d7f28b4da"></script>
-<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=f65d7f28b4da"></script>
-<script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=f65d7f28b4da"></script>
-<script src="/atendimento-acs-farmaceutico/conecta-morador-session-v1.js?v=f65d7f28b4da"></script>
-</body>
+  <script src="moradores-autofill.js?v=1b02e0eec325"></script>
+<script src="portal-identificacao-familia-v1.js?v=1b02e0eec325"></script>
+  <script src="portal-auto-update.js?v=1b02e0eec325"></script>
+  <script src="portal-controle-integral.js?v=1b02e0eec325"></script>
+  <script src="portal-ajustes-finais.js?v=1b02e0eec325"></script>
+  <script src="portal-odontologia-segunda-sexta.js?v=1b02e0eec325"></script>
+  <script src="portal-orientacao-morador.js?v=1b02e0eec325"></script>
+  <script src="portal-servicos-coloridos-anexos-v1.js?v=1b02e0eec325"></script>
+  <script src="portal-aposentadoria-destinatario-v1.js?v=1b02e0eec325"></script>
+<script src="/atendimento-acs-farmaceutico/central-back-button-v1.js?v=1b02e0eec325"></script>
+<script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=1b02e0eec325"></script>
+<script src="/atendimento-acs-farmaceutico/conecta-morador-session-v1.js?v=1b02e0eec325"></script></body>
 </html>
