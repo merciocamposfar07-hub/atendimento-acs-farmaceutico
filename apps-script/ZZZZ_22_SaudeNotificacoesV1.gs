@@ -317,14 +317,24 @@ function saudeNotificacoesV1SaudeAdmin_(contexto,acesso){
 }
 
 function saudeNotificacoesV1ExportarSubscriptions_(appId,apiKey){
-  var resposta=UrlFetchApp.fetch(
-    TACS_SAUDE_NOTIFICACOES_V1.EXPORT_ENDPOINT+'?app_id='+encodeURIComponent(appId),
-    {
-      method:'post',contentType:'application/json',
-      payload:JSON.stringify({extra_fields:['onesignal_id','notification_types']}),
-      headers:{Authorization:'Key '+apiKey},muteHttpExceptions:true
-    }
-  );
+  var opcoes={
+    method:'post',contentType:'application/json',
+    payload:JSON.stringify({extra_fields:['onesignal_id','notification_types']}),
+    headers:{Authorization:'Key '+apiKey},muteHttpExceptions:true
+  };
+  var atual=TACS_SAUDE_NOTIFICACOES_V1.EXPORT_ENDPOINT+'?app_id='+encodeURIComponent(appId);
+  var legado='https://onesignal.com/api/v1/players/csv_export?app_id='+encodeURIComponent(appId);
+  var resposta=null,erroRede=null;
+  /* ONESIGNAL_EXPORT_REDE_FALLBACK_20260917:
+     UrlFetchApp pode falhar antes de existir resposta HTTP ("Endereço não disponível").
+     Tenta primeiro o endpoint oficial atual; só em falha de transporte tenta o endpoint
+     legado equivalente. Nunca devolve a URL interna/erro bruto para a interface. */
+  try{resposta=UrlFetchApp.fetch(atual,opcoes);}
+  catch(e1){
+    erroRede=e1;
+    try{resposta=UrlFetchApp.fetch(legado,opcoes);}
+    catch(e2){throw new Error('A conferência remota do OneSignal está temporariamente indisponível. Os últimos dados confirmados permanecem válidos.');}
+  }
   var code=Number(resposta.getResponseCode()),dados={};
   try{dados=JSON.parse(resposta.getContentText()||'{}');}catch(e){}
   if(code<200||code>=300||!dados.csv_file_url){
