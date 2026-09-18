@@ -50,7 +50,7 @@ function brandSvg(){return '<img src="/atendimento-acs-farmaceutico/conecta-saud
 function institutionalFooter(){
   var footer=document.querySelector('footer');if(!footer)return;
   footer.className='portal-institutional-footer';
-  footer.innerHTML='<nav class="portal-footer-links" aria-label="Informações institucionais"><button class="portal-footer-link" type="button" data-portal-info="privacy">Privacidade</button><button class="portal-footer-link" type="button" data-portal-info="accessibility">Acessibilidade</button><button class="portal-footer-link" type="button" data-portal-info="about">Sobre</button><button class="portal-footer-link" type="button" data-portal-info="support">Suporte</button></nav><div class="portal-footer-brand">'+brandSvg()+'<div class="portal-footer-brand-copy"><span class="portal-footer-brand-name">CONECTA SAÚDE COMUNITÁRIA</span><strong class="portal-footer-brand-title">Portal CSC</strong></div><span class="portal-footer-version" id="portalFooterVersionV1">Versão atual</span></div>';
+  footer.innerHTML='<nav class="portal-footer-links" aria-label="Informações institucionais"><button class="portal-footer-link" type="button" data-portal-info="privacy">Privacidade</button><button class="portal-footer-link" type="button" data-portal-info="accessibility">Acessibilidade</button><button class="portal-footer-link" type="button" data-portal-info="about">Sobre</button><button class="portal-footer-link" type="button" data-portal-info="support">Suporte</button></nav><div class="portal-footer-brand"><div class="portal-footer-brand-main">'+brandSvg()+'<div class="portal-footer-brand-copy"><span class="portal-footer-brand-name">CONECTA SAÚDE COMUNITÁRIA</span><strong class="portal-footer-brand-title">Portal CSC</strong></div></div><span class="portal-footer-version" id="portalFooterVersionV1">Versão atual</span></div>';
   var oldPrivacy=document.querySelector('.privacy');if(oldPrivacy)oldPrivacy.hidden=true;
   try{window.dispatchEvent(new CustomEvent('portal-tacs-institutional-footer-ready'))}catch(e){}
 }
@@ -122,4 +122,21 @@ window.addEventListener('pageshow',install);
   ].join('');
   document.head.appendChild(s);
 }());
+
+(function(){
+  var s=document.createElement('style');
+  s.id='portalCscFooterBrandRowV3';
+  s.textContent=[
+    '.portal-footer-brand{display:block!important;padding-top:0!important}',
+    '.portal-footer-brand-main{display:flex!important;align-items:center!important;gap:16px!important;min-width:0!important;width:100%!important}',
+    '.portal-footer-brand-main>img,.portal-footer-brand-main>svg{width:104px!important;height:104px!important;min-width:104px!important;flex:0 0 104px!important;object-fit:contain!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;filter:none!important}',
+    '.portal-footer-brand-copy{min-width:0!important;display:flex!important;flex:1 1 auto!important;flex-direction:column!important;align-items:flex-start!important}',
+    '.portal-footer-brand-name{display:block!important;color:#8ff0ae!important;font-size:1.08rem!important;line-height:1.16!important;font-weight:950!important;letter-spacing:.045em!important;text-transform:uppercase!important}',
+    '.portal-footer-brand-title{display:block!important;margin-top:5px!important;color:#fff!important;font-size:1.36rem!important;line-height:1.12!important;font-weight:900!important;letter-spacing:-.025em!important}',
+    '.portal-footer-version{display:block!important;width:auto!important;margin:12px 0 0 120px!important;color:#a9c4d0!important;font-size:12px!important;font-weight:800!important;white-space:nowrap!important}',
+    '@media(max-width:430px){.portal-footer-brand-main{gap:13px!important}.portal-footer-brand-main>img,.portal-footer-brand-main>svg{width:94px!important;height:94px!important;min-width:94px!important;flex-basis:94px!important}.portal-footer-brand-name{font-size:1rem!important;line-height:1.15!important;letter-spacing:.035em!important}.portal-footer-brand-title{font-size:1.25rem!important}.portal-footer-version{margin:10px 0 0 107px!important}}'
+  ].join('');
+  document.head.appendChild(s);
+}());
+
 

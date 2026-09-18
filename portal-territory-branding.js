@@ -54,9 +54,10 @@
     });
 
     var identityBox=document.querySelector('.hero .identity');
-    var spans=identityBox?identityBox.querySelectorAll('span'):[];
-    if(spans[0])spans[0].textContent='Serviço vinculado à '+identity.unidadeNome;
-    if(spans[1])spans[1].textContent=identity.areaNome+' • Chã Grande/PE';
+    var unitLine=identityBox?identityBox.querySelector('.portal-unit-line'):null;
+    var areaLine=identityBox?identityBox.querySelector('.portal-area-line'):null;
+    if(unitLine)unitLine.textContent='Serviço vinculado à '+identity.unidadeNome;
+    if(areaLine)areaLine.textContent=identity.areaNome+' • Chã Grande/PE';
 
     var exclusive=document.querySelector('.hero .exclusive');
     if(exclusive){
