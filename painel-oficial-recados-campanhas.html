@@ -2794,7 +2794,7 @@ function restaurarSaudeResumo(){
     saudeSetText('saudeInativos',Number(c.inativos||0));
     saudeSetText('saudeReparo',Number(c.reparo||0));
     saudeSetText('saudeSemConfirmacao',Number(c.semConfirmacao||0));
-    status('saudeNotificacoesStatus','Última confirmação exibida • conferindo atualização em segundo plano.','aviso');
+    status('saudeNotificacoesStatus','Últimos dados disponíveis.','ok');
     return true;
   }catch(e){return false}
 }
@@ -2847,7 +2847,7 @@ function renderSaudeNotificacoes(r){
   salvarSaudeResumo(r);
   renderSaudeLista();
   if(!confirmado){
-    status('saudeNotificacoesStatus','Dados carregados. Conferindo o estado atual no OneSignal em segundo plano…','aviso');
+    status('saudeNotificacoesStatus','Dados carregados.','ok');
     return true;
   }
   if(!aparelhos.length){status('saudeNotificacoesStatus','Consulta técnica confirmada: nenhum aparelho identificado nesta área.','ok');return true}
