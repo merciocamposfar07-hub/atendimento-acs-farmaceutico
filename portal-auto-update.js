@@ -305,7 +305,7 @@
     var script=document.createElement('script');
     script.id='portalTacsIdentificacaoFamiliaScriptV1';
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260916-seletor-familiar-persistente-v1';
+    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260918-cpf-data-padronizados-v4';
     (document.head||document.documentElement).appendChild(script);
   }
 
