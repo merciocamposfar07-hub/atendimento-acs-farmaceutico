@@ -242,7 +242,9 @@ function syncTerritoryWriteState(){
 }
 function loadData(message,operationMessage,backgroundRetry){
   var localFirst=localFirstWithoutRemote(),cached=null,wasConfirmed=territoryConfirmed;
-  if(el('dashboard').classList.contains('hidden'))panelLoading(true,'Aguarde enquanto os dados carregam…');
+  /* CACHE_FIRST_TERRITORIO_ORDEM_VISUAL_20260917:
+     tenta snapshot/contexto ANTES de pintar "Aguarde". Se já existe dado conhecido,
+     o primeiro quadro útil aparece direto e a rede confirma em segundo plano. */
   if(!backgroundRetry&&modulePerf&&typeof modulePerf.prime==='function'){
     cached=modulePerf.prime('territorio',function(saved){
       data=territoryPerformancePayload(saved);territoryConfirmed=false;render();el('dashboard').classList.remove('hidden');el('logoutButton').disabled=false;panelLoading(false);
@@ -255,6 +257,7 @@ function loadData(message,operationMessage,backgroundRetry){
   if(!backgroundRetry&&!cached&&el('dashboard').classList.contains('hidden')){
     cached=primeTerritoryFromCentralContext()?{source:'central-context'}:null;
   }
+  if(el('dashboard').classList.contains('hidden')&&!cached)panelLoading(true,'Aguarde enquanto os dados carregam…');
   if(localFirst){
     if(!cached)primeTerritoryFromCentralContext();
     scheduleLocalFirstRemoteSync();
