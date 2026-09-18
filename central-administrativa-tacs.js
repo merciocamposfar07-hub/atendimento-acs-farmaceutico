@@ -1138,11 +1138,22 @@ function applyAdminUbsRemoteMode(root){
   if(!root)return;
   var doc=root.ownerDocument||document,view=Boolean(adminUbsContext&&adminUbsContext.mode==='view'&&shellActiveModule!=='ubs');
   try{
-    root.querySelectorAll('[data-csc-ubs-readonly-disabled="1"]').forEach(function(n){n.disabled=false;n.removeAttribute('data-csc-ubs-readonly-disabled')});
-    var old=doc.getElementById('cscUbsRemoteModeNotice');if(old)old.remove();
-    if(!view)return;
-    var notice=doc.createElement('div');notice.id='cscUbsRemoteModeNotice';notice.className='csc-ubs-remote-notice';notice.textContent='Modo apenas visualizar — alterações estão bloqueadas.';
-    if(root.firstChild)root.insertBefore(notice,root.firstChild);else root.appendChild(notice);
+    var notice=doc.getElementById('cscUbsRemoteModeNotice');
+    if(!view){
+      root.querySelectorAll('[data-csc-ubs-readonly-disabled="1"]').forEach(function(n){n.disabled=false;n.removeAttribute('data-csc-ubs-readonly-disabled')});
+      if(notice)notice.remove();
+      return;
+    }
+    /* UBS_ATALHO_SEM_TREMOR_20260917:
+       não remover/reinserir o aviso a cada mutação do painel. O MutationObserver
+       estava reagindo à própria reinserção do aviso e provocava o sobe/desce visível. */
+    if(!notice){
+      notice=doc.createElement('div');
+      notice.id='cscUbsRemoteModeNotice';
+      notice.className='csc-ubs-remote-notice';
+      notice.textContent='Modo apenas visualizar — alterações estão bloqueadas.';
+      if(root.firstChild)root.insertBefore(notice,root.firstChild);else root.appendChild(notice);
+    }
     root.querySelectorAll('input,select,textarea,button').forEach(function(n){
       if(adminUbsReadonlyNavigationControl(n))return;
       if(!n.disabled){n.disabled=true;n.setAttribute('data-csc-ubs-readonly-disabled','1')}
