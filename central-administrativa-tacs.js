@@ -841,7 +841,7 @@ function ensureTask16AgendaAssets(callback){
     if(!ok){finish(false);return}
     task16LoadScript('cscAgendaTransportTask16','/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js?v=20260917-data-br-v2',function(){return Boolean(window.ConectaAgendasTransportV1)},function(ok2){
       if(!ok2){finish(false);return}
-      task16LoadScript('cscAgendaNativeTask16','/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260917-data-br-compare-v2&load=20260917-data-br-compare-v2',function(){return Boolean(window.ConectaAgendasNativeV1)},function(ok3){
+      task16LoadScript('cscAgendaNativeTask16','/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260918-cache-first-v3&load=20260918-cache-first-v3',function(){return Boolean(window.ConectaAgendasNativeV1)},function(ok3){
         if(!ok3){finish(false);return}
         task16LoadScript('cscAgendaWhatsappTask16','/atendimento-acs-farmaceutico/agenda-whatsapp-card-v1.js?v=20260913-agendas-ios-mount-v1',function(){return Boolean(window.PortalTacsAgendaWhatsAppV2API)},finish);
       });

@@ -5,7 +5,7 @@
    Agendas e vagas é montado diretamente no shell da Central.
    A página painel-oficial-agendas-vagas.html permanece apenas como fallback histórico.
 */
-var UNDO_KEY='portalTacsUndoAgendaV1',instance=null;
+var UNDO_KEY='portalTacsUndoAgendaV1',SNAPSHOT_PREFIX='portalConectaAgendasLastConfirmedV1:',LEGACY_SNAPSHOT_PREFIX='portalTacsAdminSnapshotV1:agendas:',instance=null;
 
 function text(v){return String(v==null?'':v)}
 function bool(v){if(v===true||v===1)return true;return ['true','1','sim','yes','ativo'].indexOf(text(v).trim().toLowerCase())!==-1}
@@ -28,7 +28,8 @@ function create(host){
   if(!transportFactory||typeof transportFactory.create!=='function')throw new Error('Transporte nativo de Agendas indisponível.');
   var perf=core.performance,requests=core.requests,policy=core.sessionPolicy;
   var areaId=normalId(core.areaId&&core.areaId())||'JAPARANDUBA';
-  var scope=(core.mode&&core.mode()||'')+'|'+areaId;
+  var snapshotMode=text(core.mode&&core.mode()).trim().toLowerCase()||'anon';
+  var scope=snapshotMode+'|'+areaId;
   var transport=transportFactory.create({requests:requests});
   var state={profissionais:[],agendas:[]},confirmed=false,dirty=false,visible=false,initialized=false,dentalBusy=false,syncTimer=null;
 
@@ -106,15 +107,57 @@ function create(host){
   function lockWrites(){host.querySelectorAll('.csc-ag-save').forEach(function(b){b.disabled=!confirmed});q('undo').disabled=!confirmed}
 
   function performancePayload(r){return{ok:true,profissionais:objectRows(r&&r.profissionais),agendas:objectRows(r&&r.agendas)}}
-  function prime(){
-    if(!perf||typeof perf.prime!=='function')return false;
+  /* CORRECAO_CACHE_FIRST_AGENDAS_20260918_V1:
+     a última leitura confirmada da Agenda também fica em uma chave estável por perfil + área.
+     Ela não guarda token/PIN e não autoriza escrita; serve somente para pintar a tela no primeiro
+     toque enquanto o Apps Script confirma em segundo plano. Também migra o snapshot legado mais
+     recente da mesma área, evitando voltar para 0/0/0/0 após renovação de sessão ou versão. */
+  function snapshotKey(){return SNAPSHOT_PREFIX+snapshotMode+':'+areaId}
+  function snapshotDataValido(data){return Boolean(data&&typeof data==='object'&&Array.isArray(data.profissionais)&&Array.isArray(data.agendas))}
+  function lerSnapshotPersistente(){
     try{
-      var item=perf.prime('agendas',function(data){applyData(data,false)});
-      if(item){clearLoadingStatus();return true}
-    }catch(e){
-      try{if(typeof perf.forget==='function')perf.forget('agendas')}catch(x){}
+      var item=JSON.parse(localStorage.getItem(snapshotKey())||'null');
+      if(item&&item.v===1&&item.mode===snapshotMode&&item.areaId===areaId&&snapshotDataValido(item.data))return item;
+    }catch(e){}
+    return lerSnapshotLegado();
+  }
+  function lerSnapshotLegado(){
+    if(snapshotMode!=='admin'&&snapshotMode!=='tacs')return null;
+    var melhor=null,marcador=':'+snapshotMode+':',sufixo=':'+areaId;
+    try{
+      for(var i=0;i<localStorage.length;i++){
+        var key=text(localStorage.key(i));
+        if(key.indexOf(LEGACY_SNAPSHOT_PREFIX)!==0||key.indexOf(marcador)<0||key.slice(-sufixo.length)!==sufixo)continue;
+        var antigo=JSON.parse(localStorage.getItem(key)||'null'),data=antigo&&antigo.data;
+        if(!snapshotDataValido(data))continue;
+        var candidato={v:1,mode:snapshotMode,areaId:areaId,salvoEm:Number(antigo.salvoEm||0),data:performancePayload(data)};
+        if(!melhor||candidato.salvoEm>melhor.salvoEm)melhor=candidato;
+      }
+      if(melhor)localStorage.setItem(snapshotKey(),JSON.stringify(melhor));
+    }catch(e){}
+    return melhor;
+  }
+  function salvarSnapshotPersistente(r){
+    try{
+      localStorage.setItem(snapshotKey(),JSON.stringify({v:1,mode:snapshotMode,areaId:areaId,salvoEm:Date.now(),data:performancePayload(r)}));
+    }catch(e){}
+  }
+  function prime(){
+    var carregou=false;
+    if(perf&&typeof perf.prime==='function'){
+      try{
+        var item=perf.prime('agendas',function(data){applyData(data,false)});
+        if(item)carregou=true;
+      }catch(e){
+        try{if(typeof perf.forget==='function')perf.forget('agendas')}catch(x){}
+      }
     }
-    return false;
+    if(!carregou){
+      var persistente=lerSnapshotPersistente();
+      if(persistente&&snapshotDataValido(persistente.data)){applyData(persistente.data,false);carregou=true}
+    }
+    if(carregou)clearLoadingStatus();
+    return carregou;
   }
   function applyData(r,isConfirmed){
     confirmed=isConfirmed===true;
@@ -146,6 +189,7 @@ function create(host){
         }else setStatus(had?'Últimos dados válidos permanecem para consulta. A sessão foi preservada.':'Servidor temporariamente indisponível. A sessão foi preservada.','aviso');
         if(done)done(false,r);return;
       }
+      salvarSnapshotPersistente(r);
       var diff=perf&&typeof perf.commit==='function'?perf.commit('agendas',performancePayload(r)):{changed:true};
       if(diff.changed||!initialized||options.forceApply)applyData(r,true);else{confirmed=true;lockWrites()}
       initialized=true;
