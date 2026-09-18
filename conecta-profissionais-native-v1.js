@@ -59,7 +59,7 @@ function create(host,options){
   if(!core||typeof core.session!=='function')throw new Error('Núcleo Conecta indisponível para Profissionais.');
   var areaId=text(options&&options.areaId||core.areaId&&core.areaId()||'JAPARANDUBA').toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)||'JAPARANDUBA';
   var scope=(core.mode&&core.mode()||'')+'|'+areaId;
-  var data={profissionais:[],servicos:[]},confirmed=false,dirty=false,visible=false,bridgeReady=false,booting=false,remoteWaitTimer=null;
+  var data={profissionais:[],servicos:[]},confirmed=false,dirty=false,visible=false,bridgeReady=false,booting=false,remoteWaitTimer=null,refreshTimer=null,lastRemoteReloadAt=0;
 
   host.innerHTML=template(areaId);
   host.dataset.tacsDirty='0';
@@ -162,25 +162,53 @@ function create(host,options){
     }).join(''):'<p style="color:#adc4d2">Nenhum serviço encontrado.</p>';
   }
 
+  function ensureListsVisible(){
+    /* CORRECAO_PROFISSIONAIS_LISTA_COMPLETA_20260918:
+       a lista nativa não pode herdar recorte/altura de nenhuma superfície anterior. */
+    ['profList','servList'].forEach(function(role){
+      var list=q(role);if(!list)return;
+      list.style.maxHeight='none';list.style.height='auto';list.style.overflow='visible';
+      Array.prototype.forEach.call(list.querySelectorAll('.card'),function(card){
+        card.hidden=false;card.classList.remove('hidden');card.style.removeProperty('display');
+      });
+    });
+  }
+
   function render(){
     var visServ=data.servicos.filter(visibleService);
     q('qProf').textContent=data.profissionais.length;
     q('qServ').textContent=visServ.length;
     q('qProfAtivos').textContent=data.profissionais.filter(function(x){return bool(x.ATIVO)}).length;
     q('qServAtivos').textContent=visServ.filter(function(x){return bool(x.ATIVO)}).length;
-    renderProf();renderServ();
+    renderProf();renderServ();ensureListsVisible();
     var order=host.querySelector('[data-role="newForm"] [name="ordem"]');if(order&&!order.value)order.value=nextOrder();
     disableWrites();syncUndo();
+  }
+
+  function reloadRemote(message){
+    var api=bridge();if(!api||!visible&&lastRemoteReloadAt)return false;
+    lastRemoteReloadAt=Date.now();
+    api.reload(function(result){
+      if(result&&result.snapshot)useSnapshot(result.snapshot,message||(result.ok?'Profissionais e serviços confirmados pelo servidor.':'A leitura ainda não foi confirmada.'));
+      else setStatus('Não foi possível confirmar profissionais e serviços. A sessão da Central foi preservada.','warn');
+    });
+    return true;
+  }
+  function scheduleRefreshIfStale(){
+    if(refreshTimer||!visible||!bridgeReady||!remoteReady())return;
+    if(lastRemoteReloadAt&&Date.now()-lastRemoteReloadAt<15000)return;
+    refreshTimer=setTimeout(function(){
+      refreshTimer=null;
+      if(!visible||dirty||!remoteReady())return;
+      reloadRemote('Profissionais e serviços atualizados em segundo plano.');
+    },900);
   }
 
   function waitBridge(attempt){
     var api=bridge();
     if(api){
       bridgeReady=true;
-      api.reload(function(result){
-        if(result&&result.snapshot)useSnapshot(result.snapshot,result.ok?'Profissionais e serviços confirmados pelo servidor.':'A leitura ainda não foi confirmada.');
-        else setStatus('Não foi possível confirmar profissionais e serviços. A sessão da Central foi preservada.','warn');
-      });
+      if(visible)reloadRemote('Profissionais e serviços confirmados pelo servidor.');
       return;
     }
     if(attempt>80){setStatus('A ponte técnica de Profissionais não ficou pronta. Volte à Central e tente novamente.','err');return}
@@ -288,14 +316,14 @@ function create(host,options){
     scope:scope,
     mount:function(){
       visible=true;host.hidden=false;
-      primeCached();
+      primeCached();ensureListsVisible();
       if(!remoteReady()){confirmed=false;disableWrites();if(!data.profissionais.length&&!data.servicos.length)setStatus('Aguarde enquanto os dados carregam…','warn');scheduleRemoteReady();return}
       if(!bridgeReady)ensureBridge();
-      else{var api=bridge();if(api)api.reload(function(r){if(r&&r.snapshot)useSnapshot(r.snapshot,'Profissionais e serviços atualizados.')})}
+      else scheduleRefreshIfStale();
     },
-    hide:function(){visible=false;if(remoteWaitTimer){clearTimeout(remoteWaitTimer);remoteWaitTimer=null}host.hidden=true},
+    hide:function(){visible=false;if(remoteWaitTimer){clearTimeout(remoteWaitTimer);remoteWaitTimer=null}if(refreshTimer){clearTimeout(refreshTimer);refreshTimer=null}host.hidden=true},
     hasUnsaved:function(){return dirty},
-    reset:function(){visible=false;dirty=false;if(remoteWaitTimer){clearTimeout(remoteWaitTimer);remoteWaitTimer=null}host.dataset.tacsDirty='0';var f=q('bridge');if(f)f.src='about:blank';host.innerHTML='';host.hidden=true}
+    reset:function(){visible=false;dirty=false;if(remoteWaitTimer){clearTimeout(remoteWaitTimer);remoteWaitTimer=null}if(refreshTimer){clearTimeout(refreshTimer);refreshTimer=null}host.dataset.tacsDirty='0';var f=q('bridge');if(f)f.src='about:blank';host.innerHTML='';host.hidden=true}
   };
 }
 
