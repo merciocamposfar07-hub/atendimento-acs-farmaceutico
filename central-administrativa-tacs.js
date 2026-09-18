@@ -895,7 +895,7 @@ function ensureTask17MoradoresHost(){
 function task17LoadStyle(){
   if(document.getElementById('cscMoradoresNativeCssV1'))return;
   var link=document.createElement('link');link.id='cscMoradoresNativeCssV1';link.rel='stylesheet';
-  link.href='/atendimento-acs-farmaceutico/conecta-moradores-native-v1.css?v=20260913-apresentacao-paineis-v2';
+  link.href='/atendimento-acs-farmaceutico/conecta-moradores-native-v1.css?v=20260918-moradores-app4-v1';
   document.head.appendChild(link);
 }
 function ensureTask17MoradoresAssets(callback){
@@ -911,7 +911,7 @@ function ensureTask17MoradoresAssets(callback){
   }
   task16LoadScript('cscModuleCoreTask17','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260916-cache-persistente-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
-    task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260917-cache-visual-moradores-v1',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
+    task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260918-moradores-app-like-v1',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
   });
 }
 function showNativeMoradores(title,routeId){
@@ -955,7 +955,7 @@ function ensureTask18ProfissionaisHost(){
 function task18LoadStyle(){
   if(document.getElementById('cscProfissionaisNativeCssV1'))return;
   var link=document.createElement('link');link.id='cscProfissionaisNativeCssV1';link.rel='stylesheet';
-  link.href='/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.css?v=20260913-cards-azul-escuro-v1';
+  link.href='/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.css?v=20260918-profissionais-app4-v1';
   document.head.appendChild(link);
 }
 function ensureTask18ProfissionaisAssets(callback){
@@ -971,7 +971,7 @@ function ensureTask18ProfissionaisAssets(callback){
   }
   task16LoadScript('cscModuleCoreTask18','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260916-cache-persistente-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
-    task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260913-loading-lifecycle-v2',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
+    task16LoadScript('cscProfissionaisNativeTask18','/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js?v=20260918-profissionais-app-like-v1',function(){return Boolean(window.ConectaProfissionaisNativeV1)},finish);
   });
 }
 /* CORRECAO_CIRURGICA_ISOLAMENTO_SUPERFICIES_20260917_V1
@@ -1895,17 +1895,32 @@ function scheduleSupportRuntimePrewarm(scope){
   }
   panelRuntimePrewarmTimers.push(setTimeout(aquecerSuporte,2600));
 }
+function scheduleNativeDataPanelPrewarm(name,scope,delay){
+  var attempts=0;
+  function run(){
+    if(scope!==panelRuntimePrewarmScope||shellCurrentScope()!==scope)return;
+    if(!panelRuntimeAllowed(name))return;
+    if(!panelRuntimeRemoteReady()||active){
+      if(++attempts>24)return;
+      panelRuntimePrewarmTimers.push(setTimeout(run,400));
+      return;
+    }
+    prewarmNativePanel(name);
+  }
+  panelRuntimePrewarmTimers.push(setTimeout(run,delay));
+}
 function schedulePanelRuntimePrewarm(){
   if(!context||!selectedAreaId)return;
   var scope=shellCurrentScope();
   if(panelRuntimePrewarmScope===scope)return;
   cancelPanelRuntimePrewarm();
   panelRuntimePrewarmScope=scope;
-  /* CORRECAO_CONGELAMENTO_PREWARM_2026_09_16_V1:
-     não monta sete iframes/painéis ocultos. Arquivos continuam sendo aquecidos de forma
-     leve; somente Agendas recebe um aquecimento de DADOS isolado porque o vídeo real
-     mostrou a primeira abertura aguardando o backend por vários segundos. */
+  /* CORRECAO_PREWARM_MORADORES_PROFISSIONAIS_20260918:
+     somente estes dois painéis nativos recebem leitura antecipada, em sequência e
+     fora do toque. Agendas/Suporte e todos os demais fluxos permanecem inalterados. */
   scheduleNativePanelPrewarm();
+  scheduleNativeDataPanelPrewarm('moradores',scope,350);
+  scheduleNativeDataPanelPrewarm('profissionais',scope,1150);
   scheduleAgendaSnapshotPrewarm(scope);
   scheduleSupportRuntimePrewarm(scope);
 }
