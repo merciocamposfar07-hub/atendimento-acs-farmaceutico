@@ -36,7 +36,7 @@ assert.match(core,/function finish\(result\)\{if\(done\)return;done=true;resolve
 assert.match(central,/var authInvalida=Boolean\(r&&r\.authRecusada===true\)/);
 assert.match(central,/if\(!authInvalida\)[\s\S]*Sessão preservada\. Sincronizando os dados em segundo plano/);
 assert.match(central,/if\(acessoLocalAberto\)\{bloquearAcessoLocal/);
-assert.match(central,/resetModuleShell\(\);token='';territoryToken='';mode='';sessionStorage\.removeItem\(TOKEN_KEY\)/);
+assert.match(central,/resetModuleShell\(\);token='';territoryToken='';(?:ubsToken='';)?mode='';sessionStorage\.removeItem\(TOKEN_KEY\)/);
 assert.match(central,/CENTRAL_SESSION_AUTH_REFUSAL_RE/);
 assert.match(central,/function normalizeSessionFailure\(result\)/);
 assert.match(central,/if\(explicit\)\{out\.authRecusada=true;out\.preservarSessao=false\}[\s\S]*out\.temporario=true;out\.preservarSessao=true/);
