@@ -70,7 +70,7 @@ function loadTransport(done){
     return;
   }
   var s=document.createElement('script');s.id=id;s.async=false;
-  s.src='/atendimento-acs-farmaceutico/teste-v1/painel-moradores-transport-v2.js?v=20260916-read-concorrente-v1';
+  s.src='/atendimento-acs-farmaceutico/teste-v1/painel-moradores-transport-v2.js?v=20260918-superficie-nativa-v1';
   s.onload=function(){done(Boolean(window.PortalTacsMoradoresTransportV2))};
   s.onerror=function(){done(false)};
   document.head.appendChild(s);
@@ -86,9 +86,20 @@ function create(host,options){
   host.innerHTML=template(areaId);
   host.dataset.tacsDirty='0';
 
+  function ensureInstantSurface(){
+    /* CORRECAO_MORADORES_APP_LIKE_20260918:
+       o toque abre a superfície funcional imediatamente; cache/servidor apenas
+       preenchem e confirmam dados depois. Escrita continua protegida pelo transporte. */
+    var summary=host.querySelector('#summary'),content=host.querySelector('#content');
+    if(summary)summary.classList.remove('hidden');
+    if(content)content.classList.remove('hidden');
+  }
+  ensureInstantSurface();
+
   function setDirty(v){dirty=Boolean(v);host.dataset.tacsDirty=dirty?'1':'0'}
   function remoteReady(){return Boolean(core&&typeof core.ready==='function'&&core.ready())}
   function showWaitingSession(){
+    ensureInstantSurface();
     var transport=window.PortalTacsMoradoresTransportV2;
     if(transport&&typeof transport.showAuthenticatedShell==='function'){
       try{
@@ -133,6 +144,7 @@ function create(host,options){
     });
   }
   function remoteRebind(){
+    ensureInstantSurface();
     if(!loaded||!remoteReady()||!window.PortalTacsMoradoresTransportV2||typeof window.PortalTacsMoradoresTransportV2.rebindNativeContext!=='function')return false;
     lastRemoteBindAt=Date.now();
     window.PortalTacsMoradoresTransportV2.rebindNativeContext(config());
@@ -170,7 +182,7 @@ function create(host,options){
   return{
     scope:scope,
     mount:function(next){
-      visible=true;host.hidden=false;
+      visible=true;host.hidden=false;ensureInstantSurface();
       if(next&&next.areaId&&normArea(next.areaId)!==areaId)return false;
       window.ConectaMoradoresNativeConfigV1=config();
       if(!remoteReady())showWaitingSession();else scheduleRefreshIfStale();
