@@ -45,8 +45,13 @@ if(!device){
   localStorage.setItem(DEVICE_KEY,device);
 }
 
-function el(id){return document.getElementById(id)}
-function rootQuery(selector){var root=nativeConfig&&nativeConfig.hostId?document.getElementById(nativeConfig.hostId):null;return(root&&root.querySelector(selector))||document.querySelector(selector)}
+function nativeRoot(){return nativeConfig&&nativeConfig.hostId?document.getElementById(nativeConfig.hostId):null}
+function el(id){
+  var root=nativeRoot(),node=null;
+  try{if(root)node=root.querySelector('#'+String(id||''))}catch(e){}
+  return node||document.getElementById(id);
+}
+function rootQuery(selector){var root=nativeRoot();return(root&&root.querySelector(selector))||document.querySelector(selector)}
 function text(v){return String(v==null?'':v).trim()}
 function nativeNotify(type,payload){try{if(nativeConfig&&typeof nativeConfig.onState==='function')nativeConfig.onState(type,payload||{})}catch(e){}}
 function statusNode(id){
@@ -534,6 +539,13 @@ function confirmBaseState(r,message){
   situationEnabled=r.situacaoHabilitada===true;
   consolidationEnabled=r.consolidacaoHabilitada===true;
   backendVersion=text(r.versao);
+  /* CORRECAO_MORADORES_SUPERFICIE_20260918:
+     mesmo quando o diff remoto diz "sem mudança", a superfície funcional precisa
+     permanecer montada. Antes, esse caminho confirmava os números mas podia deixar
+     Buscar/Editar e Novo morador ainda ocultos. */
+  if(el('summary'))el('summary').classList.remove('hidden');
+  if(el('content'))el('content').classList.remove('hidden');
+  if(el('logout'))el('logout').disabled=false;
   setBaseLoading(false);updateNote();syncControls();
   if(el('write'))el('write').textContent=writesEnabled?'LIBERADO':'BLOQ.';
   if(el('consolidation'))el('consolidation').textContent=consolidationEnabled?'LIBERADA':'BLOQ.';
@@ -1326,6 +1338,6 @@ window.PortalTacsMoradoresTransportV2={
   maybeActivateSituation:maybeActivateSituation,
   rebindNativeContext:rebindNativeContext,
   nativeCompat:'task17-moradores-native-v1',
-  version:'3.6.1'
+  version:'3.6.2-superficie-nativa'
 };
 }());
