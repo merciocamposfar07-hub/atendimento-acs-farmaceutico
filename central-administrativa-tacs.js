@@ -484,7 +484,15 @@ function centralDomAlreadyRendered(){
 }
 function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId})){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(mode==='admin'&&areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):(mode==='ubs'?accessProfileLabel(ubs&&ubs.perfil||'UBS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN'));el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(mode==='ubs'?(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'UBS'):(text(admin&&admin.nomeCompleto)||'Administrador'));el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=mode==='ubs';el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=(mode!=='admin'&&mode!=='ubs')||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;if(mode!=='ubs'){renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm();renderHealthInstant(selectedAreaId);if(!skipHealth)scheduleHealthRefresh(false,1800)}else{renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm()}}
 function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
-function markHealth(id,label,state){var n=el(id),s=n.querySelector('span');n.className='health-card'+(state?' '+state:'');s.textContent=label}
+function markHealth(id,label,state){
+  var n=el(id),span=n&&n.querySelector('span');if(!n||!span)return;
+  var nextClass='health-card'+(state?' '+state:''),nextLabel=text(label);
+  if(n.className!==nextClass)n.className=nextClass;
+  if(span.textContent!==nextLabel)span.textContent=nextLabel;
+}
+function setHealthUpdated(label){
+  var n=el('healthUpdated'),next=text(label);if(n&&n.textContent!==next)n.textContent=next;
+}
 function updatePendingBadge(result){
   var badge=el('cscPendingBadge');if(!badge)return;
   var p=result&&result.pendencias?result.pendencias:{},total=Math.max(0,Number(p.total||0));
@@ -611,7 +619,7 @@ function renderHealthInstant(areaId){
   if(notificacao)renderConfirmedNotification(notificacao,areaId);
   markHealth('healthArea',(text(area&&area.areaNome)||areaId)+' • '+(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'unidade'),'ok');
   var hasCached=Boolean(used.portal||used.residents||used.agenda||used.content||notificacao);
-  if(hasCached)el('healthUpdated').textContent='Última confirmação exibida • sincronizando em segundo plano';
+  if(hasCached)setHealthUpdated('Última confirmação exibida • sincronizando em segundo plano');
   return used;
 }
 function refreshNotificationHealth(areaId,force){
@@ -657,7 +665,7 @@ function refreshHealth(force){
   if(!context)return;
   var areaId=selectedAreaId,now=Date.now();
   if(healthRefreshInFlight)return;
-  if(!force&&lastHealthRefreshArea===areaId&&now-lastHealthRefreshAt<HEALTH_REFRESH_TTL){refreshNotificationHealth(areaId,false);return}
+  if(!force&&lastHealthRefreshArea===areaId&&now-lastHealthRefreshAt<HEALTH_REFRESH_TTL)return
   healthRefreshInFlight=true;lastHealthRefreshArea=areaId;lastHealthRefreshAt=now;
   var cacheItens=renderHealthInstant(areaId),notificacaoCache=readConfirmedNotification(areaId),hasCached=Boolean(cacheItens.portal||cacheItens.residents||cacheItens.agenda||cacheItens.content||notificacaoCache);
   if(!cacheItens.portal)markHealth('healthPortal','Verificando…','');
@@ -667,7 +675,7 @@ function refreshHealth(force){
   refreshNotificationHealth(areaId,Boolean(force));
   var area=selectedArea();
   var pending=4;
-  function done(){pending--;if(pending<=0){healthRefreshInFlight=false;if(normArea(areaId)===selectedAreaId)el('healthUpdated').textContent='Atualização concluída • área '+(text(area&&area.areaNome)||areaId)}}
+  function done(){pending--;if(pending<=0){healthRefreshInFlight=false;if(normArea(areaId)===selectedAreaId)setHealthUpdated('Atualização concluída • área '+(text(area&&area.areaNome)||areaId))}}
   jsonp('portal_manutencao_status',{areaId:areaId},function(r){
     if(normArea(areaId)!==selectedAreaId){done();return}
     if(r&&r.ok===true){var label=r.ativa?'Em manutenção':'Disponível',state=r.ativa?'warn':'ok';markHealth('healthPortal',label,state);saveHealthItem(areaId,'portal',label,state)}
@@ -695,7 +703,7 @@ function refreshHealth(force){
     }
     done()
   });
-  el('healthUpdated').textContent=hasCached?'Dados carregados • sincronizando atualização em segundo plano':'Carregando a primeira confirmação dos dados • área '+(text(area&&area.areaNome)||areaId);
+  if(!hasCached)setHealthUpdated('Carregando a primeira confirmação dos dados • área '+(text(area&&area.areaNome)||areaId));
   setTimeout(function(){healthRefreshInFlight=false},12000);
 }
 /* TAREFA_15_NAVEGACAO_INTERNA_V1:
@@ -1495,8 +1503,10 @@ function closeViewer(){
   var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-shell-viewer','csc-native-viewer','csc-frame-viewer','csc-frame-opening','csc-agendas-native-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   shellActiveModule='';shellActiveRoute='';shellActiveNative='';moduloPendente=null;
-  centralRestoreScroll();
-  if(mode!=='ubs')scheduleHealthRefresh(false,900);return true;
+  /* TREMOR_RETORNO_CENTRAL_20260917:
+     não força scroll após retirar o viewer e não reinicia a Saúde geral a cada retorno.
+     Só agenda nova leitura se o snapshot realmente venceu o TTL. */
+  if(mode!=='ubs'&&(!lastHealthRefreshAt||Date.now()-lastHealthRefreshAt>=HEALTH_REFRESH_TTL))scheduleHealthRefresh(false,1800);return true;
 }
 function loadContext(message){
   post('admin_territorio_dados',session(),'admin_territorio_result',function(r){
