@@ -726,8 +726,8 @@ function moduleUrl(name,options){
   if(opts.view)extra+='&view='+encodeURIComponent(opts.view);
   if(opts.all)extra+='&all='+encodeURIComponent(opts.all);
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
-  if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
-  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-recados-cache-notificacoes-v2';
+  if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-suporte-ubs-diag-v1';
+  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-recados-onesignal-silencioso-v3';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
