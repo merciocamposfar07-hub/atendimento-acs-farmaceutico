@@ -561,7 +561,7 @@ footer,.footer{
   width:min(720px,100%);
   padding:8px 12px calc(8px + env(safe-area-inset-bottom));
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(2,1fr);
   gap:5px;
   background:rgba(9,30,48,.96);
   -webkit-backdrop-filter:blur(20px);
@@ -1714,7 +1714,7 @@ body.csc-brand-enhanced .loading{
 .csc-profile-card span{color:#d8e6ee!important;font-size:.88rem!important}
 .csc-profile-tacs{min-height:72px!important}
 .csc-profile-empty{padding:15px;background:#102d46;border:1px solid #365f78;border-radius:18px;color:#d8e6ee}
-.csc-dock{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.csc-dock{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 .csc-navitem span{font-size:.68rem!important;white-space:normal!important;text-align:center!important;line-height:1.08!important}
 
 /* RODAPE_PLATAFORMA_2026_V1 */
@@ -2292,7 +2292,7 @@ function centralContextFromCache(){
 function showCentralHome(){
   var page=document.getElementById('cscProfilePage');if(page)page.hidden=true;
   ['identityPanel','healthPanel','modulesPanel'].forEach(function(id){var n=document.getElementById(id);if(n)n.hidden=false});
-  window.scrollTo({top:0,behavior:'smooth'});
+  window.scrollTo({top:0,behavior:'auto'});
 }
 function openRecordsPage(){
   var area=encodeURIComponent(centralAreaId());
@@ -2325,7 +2325,7 @@ function openProfilePage(){
   var adminToggle=page.querySelector('.csc-profile-admin-toggle'),adminNames=page.querySelector('.csc-profile-admin-names');
   if(adminToggle&&adminNames)adminToggle.addEventListener('click',function(){var open=adminToggle.getAttribute('aria-expanded')==='true';adminToggle.setAttribute('aria-expanded',open?'false':'true');adminNames.hidden=open;adminToggle.querySelector('span').textContent=open?'Toque para ver os administradores cadastrados':'Toque para ocultar os administradores cadastrados'});
   page.querySelectorAll('.csc-profile-area-jump').forEach(function(btn){btn.addEventListener('click',function(){var area=text(btn.dataset.area);if(area){try{localStorage.setItem('portalTacsCentralAreaV1',area)}catch(e){}var select=document.getElementById('adminArea');if(select&&Array.prototype.some.call(select.options,function(o){return o.value===area})){select.value=area;select.dispatchEvent(new Event('change',{bubbles:true}))}}showCentralHome()})});
-  window.scrollTo({top:0,behavior:'smooth'});
+  window.scrollTo({top:0,behavior:'auto'});
 }
 function escapeProfile(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function buildCentralWelcome(){
@@ -2340,11 +2340,12 @@ function buildCentralWelcome(){
   }
   var existingDock=document.getElementById('cscInstitutionalDock');
   if(existingDock){
-    var existingHandlers=[showCentralHome,openRecordsPage,openPendingPage,openProfilePage];
-    Array.prototype.forEach.call(existingDock.querySelectorAll('.csc-navitem'),function(b,i){
-      if(b.dataset.cscDockWired==='1'||!existingHandlers[i])return;
+    var existingHandlers={home:showCentralHome,profile:openProfilePage};
+    Array.prototype.forEach.call(existingDock.querySelectorAll('.csc-navitem'),function(b){
+      var key=b.dataset.cscDock||'',fn=existingHandlers[key];
+      if(b.dataset.cscDockWired==='1'||!fn)return;
       b.dataset.cscDockWired='1';
-      b.addEventListener('click',function(){vibrate();existingDock.querySelectorAll('.csc-navitem').forEach(function(x){x.classList.toggle('active',x===b)});existingHandlers[i]()});
+      b.addEventListener('click',function(){vibrate();existingDock.querySelectorAll('.csc-navitem').forEach(function(x){x.classList.toggle('active',x===b)});fn()});
     });
     return;
   }
@@ -2353,17 +2354,12 @@ function buildCentralWelcome(){
   dock.className='csc-dock';
   dock.setAttribute('aria-label','Navegação da Central');
   var items=[
-    ['⌂','Início',showCentralHome],
-    ['▦','Prontuários',openRecordsPage],
-    ['🔔','Pendências',openPendingPage],
-    ['●','Perfil',openProfilePage]
+    ['⌂','Início',showCentralHome,'home'],
+    ['●','Perfil',openProfilePage,'profile']
   ];
   items.forEach(function(item,i){
-    var b=document.createElement('button');b.type='button';b.className='csc-navitem'+(i===0?' active':'');
-    if(item[1]==='Pendências'){
-      b.id='cscPendingNav';b.style.position='relative';
-      b.innerHTML='<i>'+item[0]+'</i><span>'+item[1]+'</span><em id="cscPendingBadge" hidden aria-label="Nenhuma pendência" style="position:absolute;top:4px;left:calc(50% + 7px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#d62f2f;color:#fff;font:900 11px/18px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px #071827">0</em>';
-    }else b.innerHTML='<i>'+item[0]+'</i><span>'+item[1]+'</span>';
+    var b=document.createElement('button');b.type='button';b.className='csc-navitem'+(i===0?' active':'');b.dataset.cscDock=item[3];
+    b.innerHTML='<i>'+item[0]+'</i><span>'+item[1]+'</span>';
     b.addEventListener('click',function(){vibrate();dock.querySelectorAll('.csc-navitem').forEach(function(x){x.classList.toggle('active',x===b)});item[2]()});
     dock.appendChild(b);
   });
