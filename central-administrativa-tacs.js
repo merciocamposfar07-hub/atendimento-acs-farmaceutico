@@ -722,12 +722,12 @@ function moduleRouteId(name,options){
   return id;
 }
 function moduleUrl(name,options){
-  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260916-isolamento-area-v3',territoryRevision='20260913-territorio-instant-v2',municipiosRevision='20260913-municipios-instant-v1',loadingRevision='20260913-loading-lifecycle-v2',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
+  var area=encodeURIComponent(selectedAreaId),tacsOnly=mode==='tacs'||TACS_ONLY,access=tacsOnly?'&acesso=tacs':'',revision='20260916-isolamento-area-v3',territoryRevision='20260917-territorio-cache-first-v3',municipiosRevision='20260913-municipios-instant-v1',loadingRevision='20260913-loading-lifecycle-v2',from='&from=central&load='+loadingRevision,opts=moduleRouteOptions(options),extra='';
   if(opts.view)extra+='&view='+encodeURIComponent(opts.view);
   if(opts.all)extra+='&all='+encodeURIComponent(opts.all);
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
-  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-horario-expiracao-ios-v1';
+  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-recados-cache-notificacoes-v2';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
