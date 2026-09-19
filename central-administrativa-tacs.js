@@ -1815,7 +1815,7 @@ function prefetchStaticPanels(){
     '/atendimento-acs-farmaceutico/conecta-module-core-v1.js',
     '/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js',
     '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-transport-v2.js',
-    '/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260916-safari-mount-retry-v1',
+    '/atendimento-acs-farmaceutico/conecta-agendas-native-v1.js?v=20260918-cache-first-independente-v1',
     '/atendimento-acs-farmaceutico/conecta-agendas-transport-v1.js',
     '/atendimento-acs-farmaceutico/conecta-profissionais-native-v1.js',
     '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html',
