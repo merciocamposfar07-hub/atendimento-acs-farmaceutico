@@ -381,6 +381,12 @@ function install(){
   btn.addEventListener('click',function(){
     btn.disabled=true;
     try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
+    /* RETORNO_PORTAL_PRIORIZA_RECADOS_20260918:
+       Só o Portal público sinaliza a Central para pré-montar Recados imediatamente.
+       Painéis administrativos que usam este mesmo botão não acionam essa prioridade. */
+    if(!isAdminPanel){
+      try{sessionStorage.setItem('portalTacsRetornoPortalV1','1')}catch(e){}
+    }
     /* SESSAO_PIN_FICTICIO_REENTRADA_20260918:
        Ao sair do Portal pelo retorno à Central, encerra somente a sessão temporária
        do Morador em modo TACS/teste. O quickKey/PIN fictício permanece em localStorage,
