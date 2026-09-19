@@ -32,6 +32,7 @@ function getSession(){return post('conecta_morador_sessao',{token:token,disposit
 function clearSession(){try{sessionStorage.removeItem(activeTokenKey())}catch(e){}token=''}
 
 function readBootstrap(){try{var r=JSON.parse(sessionStorage.getItem(activeBootstrapKey())||'null');return r&&typeof r==='object'?r:null}catch(e){return null}}
+function residentProfileCpf(){try{var key=testMode()?TEST_PROFILE_KEY:PROFILE_KEY,p=JSON.parse(localStorage.getItem(key)||'null'),d=digits(p&&p.cpf);return d.length===11||d.length===15?d:''}catch(e){return''}}
 function clearBackgroundRequest(){try{sessionStorage.removeItem(activeBackgroundKey())}catch(e){}}
 function hasBackgroundRequest(){try{return !!text(sessionStorage.getItem(activeBackgroundKey())||'')}catch(e){return false}}
 function removeResidentVault(){if(testMode())return;try{var v=window.ConectaPinLocalV2;if(v&&typeof v.remover==='function')v.remover('morador')}catch(e){}}
@@ -59,6 +60,7 @@ function waitBackgroundLogin(){
 }
 function applyResident(r,localOnly){
  resident=r||resident;if(!resident)return;
+ var savedCpf=residentProfileCpf();if(!digits(resident.cpf)&&savedCpf)resident.cpf=savedCpf;
  prefill(resident);
  var old=el('cscResidentBar');if(old)old.remove();
  topBar(resident);renderFamily(resident);warmFamilyMembers(Array.isArray(resident.familia)?resident.familia:[]);
@@ -87,11 +89,16 @@ function topBar(r){
  el('cscResidentLogout').onclick=logout;
  el('cscMuteToggle').onclick=toggleMute;
 }
+function familyMemberSessionDocument(m,r){
+ var direct=digits(m&&(m.documentoAcesso||m.cpf||m.cns)||'');if(direct.length===11||direct.length===15)return direct;
+ var sessionDoc=digits(r&&r.cpf||'');if(m&&m.responsavel&&(sessionDoc.length===11||sessionDoc.length===15))return sessionDoc;
+ return '';
+}
 function renderFamily(r){
  var old=el('cscFamilySession');if(old)old.remove();
  var members=Array.isArray(r.familia)?r.familia:[];if(!members.length)return;
  var box=document.createElement('section');box.id='cscFamilySession';box.className='csc-family-session';
- box.innerHTML='<h2>Quem precisa do atendimento?</h2><p>Selecione uma pessoa do vínculo familiar. O responsável deste acesso continua sendo '+esc(r.nome||'o morador autenticado')+'.</p><div class="csc-family-grid">'+members.map(function(m){return '<button type="button" class="csc-family-person'+(m.responsavel?' active':'')+'" data-csc-family-token="'+esc(m.token||'')+'" data-csc-family-name="'+esc(m.nome||'')+'" data-csc-family-birth="'+esc(m.nascimento||'')+'" data-csc-family-hasdoc="'+(m.temDocumento?'1':'0')+'">'+esc(m.nome||'Morador')+'<span>'+(m.nascimento?'Nascimento: '+esc(m.nascimento):'')+(m.temDocumento?'':' • CPF/CNS ainda não disponível')+'</span></button>'}).join('')+'</div>';
+ box.innerHTML='<h2>Quem precisa do atendimento?</h2><p>Selecione uma pessoa do vínculo familiar. O responsável deste acesso continua sendo '+esc(r.nome||'o morador autenticado')+'.</p><div class="csc-family-grid">'+members.map(function(m){var doc=familyMemberSessionDocument(m,r),has=Boolean(m.temDocumento||doc);return '<button type="button" class="csc-family-person'+(m.responsavel?' active':'')+'" data-csc-family-token="'+esc(m.token||'')+'" data-csc-family-name="'+esc(m.nome||'')+'" data-csc-family-birth="'+esc(m.nascimento||'')+'" data-csc-family-hasdoc="'+(has?'1':'0')+'" data-csc-family-doc="'+esc(doc)+'">'+esc(m.nome||'Morador')+'<span>'+(m.nascimento?'Nascimento: '+esc(m.nascimento):'')+(has?'':' • CPF/CNS ainda não disponível')+'</span></button>'}).join('')+'</div>';
  // Mantém a família na identificação, logo abaixo do PIN, inclusive na reentrada.
  var anchor=el('portalResidentPinV1'),cpf=el('cpf');
  if(!anchor&&cpf)anchor=cpf.closest('label');
@@ -140,10 +147,11 @@ function applyFamilyMemberData(r,name,birth){
  setField('birth',r.nascimento||birth);
 }
 function selectFamilyMember(button){
- var tok=text(button.getAttribute('data-csc-family-token')),name=text(button.getAttribute('data-csc-family-name')),birth=text(button.getAttribute('data-csc-family-birth')),has=button.getAttribute('data-csc-family-hasdoc')==='1';
+ var tok=text(button.getAttribute('data-csc-family-token')),name=text(button.getAttribute('data-csc-family-name')),birth=text(button.getAttribute('data-csc-family-birth')),has=button.getAttribute('data-csc-family-hasdoc')==='1',localDoc=digits(button.getAttribute('data-csc-family-doc')||'');
  /* Resposta tátil/visual primeiro: seleção e dados locais conhecidos aparecem já no toque. */
  document.querySelectorAll('.csc-family-person').forEach(function(x){x.classList.toggle('active',x===button)});
  setField('name',name);setField('birth',birth);
+ if(localDoc.length===11||localDoc.length===15){setField('cpf',localDoc);return}
  if(!has||!tok){
   if(tok){promptMemberCpf(button,tok,name,birth);return}
   showPortalToast('Este integrante ainda não possui documento disponível. A solicitação permanece acessível e o cadastro poderá ser regularizado pelo TACS.');
