@@ -133,6 +133,7 @@ function moradoresAdminV1TratarPost_(e){
   if([
     'admin_moradores_status',
     'admin_moradores_areas',
+    'admin_moradores_indice',
     'admin_moradores_buscar',
     'admin_morador_salvar',
     'admin_morador_situacao',
@@ -149,6 +150,9 @@ function moradoresAdminV1TratarPost_(e){
     }else if(action==='admin_moradores_areas'){
       moradoresAdminV1ExigirPermissao_(contexto,'MORADORES_LER');
       resultado={ok:true,areas:moradoresAdminV1AreasVisiveis_(contexto),areaId:contexto.areaId};
+    }else if(action==='admin_moradores_indice'){
+      moradoresAdminV1ExigirPermissao_(contexto,'MORADORES_LER');
+      resultado=moradoresAdminV1IndiceLocal_(contexto);
     }else if(action==='admin_moradores_buscar'){
       moradoresAdminV1ExigirPermissao_(contexto,'MORADORES_LER');
       resultado=moradoresAdminV1Buscar_(p.q||p.busca||'',contexto);
@@ -545,6 +549,29 @@ function moradoresAdminV1InvalidarResumo_(contexto){
   try{
     cache.remove(moradoresAdminV1ChaveCacheResumo_(contexto));
   }catch(erro){}
+}
+
+function moradoresAdminV1IndiceLocal_(contexto){
+  /* MORADORES_INDICE_LOCAL_APP_LIKE_20260918:
+     Leitura completa autorizada da área é preparada em segundo plano para o navegador
+     administrativo. O índice fica somente na memória da sessão do painel; não muda
+     cadastro, permissões ou isolamento entre áreas. */
+  var fonte=moradoresAdminV1LocalizarFonte_(contexto);
+  var lastRow=fonte.sheet.getLastRow(),lastCol=fonte.sheet.getLastColumn();
+  if(lastRow<=fonte.headerRow+1)return {ok:true,resultados:[],total:0,areaId:contexto.areaId};
+  var metaMap=moradoresAdminV1LerMetaMap_(fonte.ss,contexto);
+  var range=fonte.sheet.getRange(fonte.headerRow+2,1,lastRow-(fonte.headerRow+1),lastCol);
+  var raw=range.getValues(),display=range.getDisplayValues(),resultados=[];
+  for(var i=0;i<display.length;i++){
+    var morador=moradoresAdminV1MontarMorador_(display[i],raw[i],fonte.map);
+    if(!morador.nome)continue;
+    var origem={aba:fonte.sheet.getName(),linha:fonte.headerRow+2+i};
+    var chave=moradoresAdminV1ChaveRegistro_(morador);
+    var meta=metaMap.porOrigem[moradoresAdminV1ChaveOrigem_(origem)]||metaMap.porChave[chave]||null;
+    if(moradoresAdminV1EstaOculto_(morador,meta))continue;
+    resultados.push(moradoresAdminV1ComMeta_(morador,origem,meta,chave,contexto));
+  }
+  return {ok:true,resultados:resultados,total:resultados.length,areaId:contexto.areaId,modo:'INDICE_LOCAL'};
 }
 
 function moradoresAdminV1BuscarLinhasRapidas_(busca,fonte){
