@@ -564,21 +564,26 @@ function renderBase(r,message,confirmed){
     setBaseLoading(false);syncControls();setStatus('loginStatus',text(r&&r.message||'Não foi possível carregar a base.'),'err');return false;
   }
   var remoteConfirmed=confirmed!==false;
-  if(remoteConfirmed)baseConfirmed=true;
-  writesEnabled=remoteConfirmed&&r.escritaHabilitada===true;
-  situationEnabled=remoteConfirmed&&r.situacaoHabilitada===true;
-  consolidationEnabled=remoteConfirmed&&r.consolidacaoHabilitada===true;
+  /* MORADORES_LIBERACAO_IMEDIATA_CACHE_20260918:
+     O snapshot de "moradores-base" só é gravado após resposta remota válida e já vem
+     sanitizado por perfil+área. Se existe uma sessão atual da Central, esse último
+     estado confirmado pode liberar a interface imediatamente, como nos apps de
+     referência. Toda gravação continua sendo validada pelo backend no momento da ação. */
+  var cachedSessionReady=!remoteConfirmed&&Boolean(token||territoryToken||ubsToken||accessMode==='ubs');
+  if(remoteConfirmed||cachedSessionReady)baseConfirmed=true;
+  writesEnabled=(remoteConfirmed||cachedSessionReady)&&r.escritaHabilitada===true;
+  situationEnabled=(remoteConfirmed||cachedSessionReady)&&r.situacaoHabilitada===true;
+  consolidationEnabled=(remoteConfirmed||cachedSessionReady)&&r.consolidacaoHabilitada===true;
   backendVersion=text(r.versao);
   renderAreaSelector(r.areas,r.areaId,r.areaNome);
   if(el('countResidents'))el('countResidents').textContent=String(r.totalRegistros);
   if(el('schema'))el('schema').textContent=r.schemaValido?'20/20':'ERRO';
-  /* CACHE_FIRST_MORADORES_ESTADO_VISUAL_20260917:
-     snapshot mostra imediatamente o último estado conhecido, como nos apps de referência.
-     Segurança permanece intacta: writesEnabled/situationEnabled/consolidationEnabled continuam
-     falsos até a confirmação remota; somente o TEXTO visual vem do snapshot. */
-  var visualWrite=remoteConfirmed?writesEnabled:(r.escritaHabilitada===true);
-  var visualConsolidation=remoteConfirmed?consolidationEnabled:(r.consolidacaoHabilitada===true);
-  var visualSituation=remoteConfirmed?situationEnabled:(r.situacaoHabilitada===true);
+  /* CACHE_FIRST_MORADORES_ESTADO_VISUAL_20260918:
+     Snapshot confirmado + sessão atual = interface utilizável imediatamente.
+     A reconfirmação remota segue em segundo plano e substitui somente o que mudou. */
+  var visualWrite=(remoteConfirmed||cachedSessionReady)?writesEnabled:(r.escritaHabilitada===true);
+  var visualConsolidation=(remoteConfirmed||cachedSessionReady)?consolidationEnabled:(r.consolidacaoHabilitada===true);
+  var visualSituation=(remoteConfirmed||cachedSessionReady)?situationEnabled:(r.situacaoHabilitada===true);
   if(el('write'))el('write').textContent=visualWrite?'LIBERADO':'BLOQ.';
   if(el('consolidation'))el('consolidation').textContent=visualConsolidation?'LIBERADA':'BLOQ.';
   if(el('situation'))el('situation').textContent=visualSituation?'LIBERADA':'PROTEGIDA';
@@ -586,6 +591,9 @@ function renderBase(r,message,confirmed){
   if(el('content'))el('content').classList.remove('hidden');
   if(el('logout'))el('logout').disabled=false;
   ensureSituationUi();setBaseLoading(false);updateNote();syncControls();
+  if(cachedSessionReady&&writesEnabled){
+    setStatus('operationStatus','Painel liberado pelo último estado confirmado. Sincronizando atualizações em segundo plano…','ok');
+  }
   hideStatus('loginStatus');
   settleLoadingStatuses();
   if(PRONTUARIOS_VIEW){
@@ -1343,6 +1351,6 @@ window.PortalTacsMoradoresTransportV2={
   maybeActivateSituation:maybeActivateSituation,
   rebindNativeContext:rebindNativeContext,
   nativeCompat:'task17-moradores-native-v1',
-  version:'3.6.3-aviso-verde'
+  version:'3.6.4-liberacao-imediata-cache'
 };
 }());
