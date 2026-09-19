@@ -7,7 +7,7 @@
  * Se o cadastro não puder ser conciliado, cria pendência e NÃO bloqueia o serviço.
  */
 var TACS_CONECTA_ACESSO_V1 = Object.freeze({
-  VERSAO:'1.0.0',
+  VERSAO:'1.0.1',
   ACCESS_SHEET:'TACS_CONECTA_ACESSO_MORADOR',
   PENDING_SHEET:'TACS_CONECTA_PENDENCIAS',
   TRUST_SHEET:'TACS_CONECTA_APARELHOS_CONFIAVEIS',
@@ -430,7 +430,7 @@ function conectaAcessoV1CriarPin_(p){
       registro?conectaAcessoV1Bool_(registro.values[12]):false,
       Boolean(identidade.provisorio),identidade.pendenciaId||'',true,criado,agora
     ];
-    if(registro)sheet.getRange(registro.row,1,1,vals.length).setValues([vals]);else sheet.appendRow(vals);
+    var linhaAcesso=registro?registro.row:sheet.getLastRow()+1;if(linhaAcesso>sheet.getMaxRows())sheet.insertRowsAfter(sheet.getMaxRows(),1);sheet.getRange(linhaAcesso,4).setNumberFormat('@');sheet.getRange(linhaAcesso,1,1,vals.length).setValues([vals]);
     var session=conectaAcessoV1CriarSessao_(vals,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(vals);
     return {ok:true,token:session.token,quickKey:quick,perfil:'MORADOR',areaId:identidade.areaId,areaNome:identidade.areaNome||identidade.areaId,nome:identidade.nome,cpf:identidade.cpf,notificacoesAtivas:Boolean(vals[10]),provisorio:Boolean(vals[13]),pendenciaId:vals[14],familiaId:nucleo.familiaId,familia:nucleo.membros,message:'PIN criado e salvo.'};
   }finally{lock.releaseLock();}
@@ -1212,7 +1212,7 @@ function conectaAcessoV1AtualizarAcesso_(id,updates){
   var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),r=conectaAcessoV1AcessoPorId_(sh,id);if(!r)throw new Error('Acesso não localizado.');
   Object.keys(updates).forEach(function(k){sh.getRange(r.row,Number(k)+1).setValue(updates[k]);});sh.getRange(r.row,18).setValue(new Date());
 }
-function conectaAcessoV1AcessoPorCpf_(sh,cpf){return conectaAcessoV1AcessoBusca_(sh,function(v){return conectaAcessoV1Texto_(v[3]).replace(/\D/g,'')===cpf;});}
+function conectaAcessoV1AcessoPorCpf_(sh,cpf){return conectaAcessoV1AcessoBusca_(sh,function(v){var gravado=conectaAcessoV1Texto_(v[3]).replace(/\D/g,''),chave=conectaAcessoV1Texto_(v[2]).toUpperCase();return gravado===cpf||chave==='CPF:'+cpf;});}
 function conectaAcessoV1AcessoPorId_(sh,id){return conectaAcessoV1AcessoBusca_(sh,function(v){return conectaAcessoV1Texto_(v[0])===id;});}
 function conectaAcessoV1AcessoPorQuick_(sh,quick){var h=conectaAcessoV1Hash_(quick);return conectaAcessoV1AcessoBusca_(sh,function(v){return conectaAcessoV1Seguro_(v[8],h);});}
 function conectaAcessoV1AcessoBusca_(sh,fn){
