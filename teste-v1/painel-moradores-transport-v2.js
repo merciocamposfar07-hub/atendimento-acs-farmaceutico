@@ -33,6 +33,7 @@ var residentIndex=[];
 var residentIndexArea='';
 var residentIndexReady=false;
 var residentIndexLoading=false;
+var residentIndexGeneration=0;
 var PRONTUARIOS_VIEW=(function(){if(nativeConfig&&nativeConfig.view)return String(nativeConfig.view).toLowerCase()==='prontuarios';try{return String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='prontuarios'}catch(e){return false}})();
 
 var COMPARISON_FIELDS=[
@@ -433,14 +434,19 @@ function residentIndexHay(item){
     item&&item.microarea,item&&item.equipe,item&&item.status,item&&item.observacoes
   ].join(' '));
 }
-function invalidateResidentIndex(){residentIndex=[];residentIndexArea='';residentIndexReady=false;residentIndexLoading=false}
+function invalidateResidentIndex(){
+  residentIndexGeneration++;
+  residentIndex=[];residentIndexArea='';residentIndexReady=false;residentIndexLoading=false;
+}
 function warmResidentIndex(force){
   var area=text(selectedAreaId);
   if(!area||!refreshRemoteCredentials())return false;
   if(!force&&residentIndexReady&&residentIndexArea===area)return true;
   if(residentIndexLoading)return false;
+  var generation=residentIndexGeneration;
   residentIndexLoading=true;
   readFramePostConcurrent('admin_moradores_indice',cloneSession({areaId:area}),function(r){
+    if(generation!==residentIndexGeneration)return;
     residentIndexLoading=false;
     if(!r||r.ok!==true||text(r.areaId||area)!==area)return;
     residentIndex=Array.isArray(r.resultados)?r.resultados:[];
@@ -1073,6 +1079,7 @@ function consolidateGroup(principal,redundantes){
       var conflicts=totalConflicts.length?' Conflitos preservados no principal: '+Array.from(new Set(totalConflicts)).join(', ')+'.':'';
       var completionMessage='Consolidação concluída sem apagar linhas.'+complement+conflicts+' A lista e a contagem foram atualizadas automaticamente.';
       setStatus('operationStatus',completionMessage,'ok');
+      warmResidentIndex(true);
       loadBase(null,function(){
         if(lastSearchQuery){
           doSearch(lastSearchQuery,{successMessage:completionMessage});
@@ -1086,7 +1093,7 @@ function consolidateGroup(principal,redundantes){
     setStatus('operationStatus','Consolidando '+itemLabel(redundante)+' em '+itemLabel(principal)+'…','warn');
     post('admin_morador_consolidar',cloneSession({payload:JSON.stringify(consolidationPayload(principal,redundante))}),'admin_moradores_result',function(r){
       if(!r||r.ok!==true){duplicateLock=false;syncControls();setStatus('operationStatus',text(r&&r.message||'O servidor recusou a consolidação.'),'err');return}
-      nativeNotify('write-confirmed',{action:'admin_morador_consolidar'});invalidateResidentIndex();warmResidentIndex(true);
+      nativeNotify('write-confirmed',{action:'admin_morador_consolidar'});invalidateResidentIndex();
       if(r.principal&&typeof r.principal==='object')principal=r.principal;
       totalFilled=totalFilled.concat(Array.isArray(r.camposPreenchidos)?r.camposPreenchidos:[]);
       totalConflicts=totalConflicts.concat(Array.isArray(r.conflitosPreservadosNoPrincipal)?r.conflitosPreservadosNoPrincipal:[]);
