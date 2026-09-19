@@ -405,20 +405,31 @@ function install(){
       }
     }catch(e){}
 
-    /* RETORNO_CENTRAL_POPUP_V1:
-       versões anteriores da Central abriam o Portal em nova aba com _blank + noopener.
-       Essa nova aba não herda sessionStorage. Se esse fluxo ainda estiver aberto no
-       Safari/iPhone, fechar a aba do Portal devolve o usuário à Central original,
-       que continua autenticada. Se o navegador bloquear window.close(), usamos a
-       navegação direta como fallback. */
-    if(fromCentral&&window.parent===window){
+    /* RETORNO_CENTRAL_BFCACHE_20260918:
+       O Portal é aberto pela Central na MESMA aba com location.assign(). Voltar usando
+       outro location.assign() criava uma Central nova e descartava DOM, iframes e
+       painéis já aquecidos. No iPhone isso explica a prévia azul de Recados.
+       Para o Portal público, voltamos pela pilha de histórico: o Safari pode restaurar
+       a Central inteira pelo BFCache. A navegação direta fica somente como contingência. */
+    if(fromCentral&&!isAdminPanel&&window.parent===window){
+      var saiu=false,hrefAntes=location.href;
+      try{
+        if(history.length>1){
+          history.back();
+          saiu=true;
+        }
+      }catch(e){}
+      if(saiu){
+        setTimeout(function(){
+          try{if(location.href===hrefAntes)location.assign(centralUrl())}catch(e){}
+        },900);
+        return;
+      }
       try{
         window.close();
         if(window.closed)return;
       }catch(e){}
-      setTimeout(function(){
-        try{location.assign(centralUrl())}catch(e){}
-      },180);
+      location.assign(centralUrl());
       return;
     }
 

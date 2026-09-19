@@ -33,10 +33,44 @@
   function box(){return makeBox(FAMILY_BOX)}
   function docBox(){return makeBox(DOC_BOX)}
   function pinBox(){var b=document.getElementById(PIN_BOX);if(b)return b;var family=box();if(!family||!family.parentNode)return null;b=document.createElement('div');b.id=PIN_BOX;b.hidden=true;b.setAttribute('role','status');family.parentNode.insertBefore(b,family);return b}
-  function residentProfile(){try{var p=JSON.parse(localStorage.getItem(residentProfileKey())||'null'),q=text(p&&p.quickKey);if(tacsTeste())return p&&/^cmtq1\./.test(q)?p:null;return p&&/^cmq1\./.test(q)?p:null}catch(e){return null}}
+  function readResidentProfileKey(key,prefix){try{var p=JSON.parse(localStorage.getItem(key)||'null'),q=text(p&&p.quickKey);return p&&prefix.test(q)?p:null}catch(e){return null}}
+  function residentProfile(){
+    try{
+      if(tacsTeste()){
+        var teste=readResidentProfileKey(TEST_PROFILE_KEY,/^cmtq1\./);
+        if(teste)return teste;
+        /* PIN_TESTE_MIGRACAO_PERFIL_20260918:
+           recupera PIN fictício criado quando o estado técnico ainda estava terminando
+           de ser reconhecido e o quickKey cmtq1 foi salvo acidentalmente na chave real. */
+        var deslocado=readResidentProfileKey(PROFILE_KEY,/^cmtq1\./);
+        if(deslocado){
+          localStorage.setItem(TEST_PROFILE_KEY,JSON.stringify(deslocado));
+          try{localStorage.removeItem(PROFILE_KEY)}catch(ignore){}
+          return deslocado;
+        }
+        return null;
+      }
+      return readResidentProfileKey(PROFILE_KEY,/^cmq1\./);
+    }catch(e){return null}
+  }
   function residentSessionToken(){try{return text(sessionStorage.getItem(residentTokenKey())||'')}catch(e){return''}}
   function administrativeDeviceLocal(){try{var v=window.ConectaPinLocalV2,localAdmin=Boolean(v&&typeof v.existe==='function'&&v.existe('admin')),trusted=Boolean(text(localStorage.getItem(ADMIN_TRUST_KEY)||''));return localAdmin||trusted}catch(e){return false}}
-  function saveResidentAccess(r){try{if(r&&r.quickKey)localStorage.setItem(residentProfileKey(),JSON.stringify({quickKey:r.quickKey,areaId:r.areaId||areaId(),areaNome:r.areaNome||'',nome:r.nome||'',cpf:r.cpf||residentEnrollmentCpf||''}));if(r&&r.token)sessionStorage.setItem(residentTokenKey(),r.token);if(r&&r.areaId)localStorage.setItem(AREA_KEY,r.areaId);localStorage.setItem(LAST_ROLE_KEY,'MORADOR')}catch(e){}}
+  function saveResidentAccess(r){
+    try{
+      var quick=text(r&&r.quickKey),tok=text(r&&r.token),profileKey=residentProfileKey(),tokenStoreKey=residentTokenKey();
+      if(/^cmtq1\./.test(quick))profileKey=TEST_PROFILE_KEY;
+      else if(/^cmq1\./.test(quick))profileKey=PROFILE_KEY;
+      if(/^cmts1\./.test(tok))tokenStoreKey=TEST_TOKEN_KEY;
+      else if(/^cms1\./.test(tok))tokenStoreKey=TOKEN_KEY;
+      if(quick)localStorage.setItem(profileKey,JSON.stringify({
+        quickKey:quick,areaId:r.areaId||areaId(),areaNome:r.areaNome||'',nome:r.nome||'',
+        cpf:r.cpf||residentEnrollmentCpf||'',familiaId:normalizeFamily(r.familiaId||activeFamilyId||'')
+      }));
+      if(tok)sessionStorage.setItem(tokenStoreKey,tok);
+      if(r&&r.areaId)localStorage.setItem(AREA_KEY,r.areaId);
+      localStorage.setItem(LAST_ROLE_KEY,'MORADOR');
+    }catch(e){}
+  }
   function setPinBox(html,cls){var b=pinBox();if(!b)return;b.className=cls||'tacs-pin-box';b.innerHTML=html;b.hidden=false}
   function hidePin(){var b=pinBox();if(b){b.hidden=true;b.innerHTML='';b.className=''}}
   function setBox(html,cls){var b=box();if(!b)return;b.className=cls||'';b.innerHTML=html;b.hidden=false}
