@@ -28,6 +28,11 @@ var availableAreas=[];
 var statusActivationAttempted=false;
 var backendVersion='';
 var baseConfirmed=false;
+/* Índice de Moradores fica somente em memória durante esta sessão do módulo. */
+var residentIndex=[];
+var residentIndexArea='';
+var residentIndexReady=false;
+var residentIndexLoading=false;
 var PRONTUARIOS_VIEW=(function(){if(nativeConfig&&nativeConfig.view)return String(nativeConfig.view).toLowerCase()==='prontuarios';try{return String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='prontuarios'}catch(e){return false}})();
 
 var COMPARISON_FIELDS=[
@@ -380,6 +385,83 @@ function readPost(action,payload,resultAction,cb){
   }catch(e){finishRead({ok:false,temporario:true,message:'Não foi possível iniciar a leitura agora.'})}
 }
 
+/* MORADORES_BUSCA_LOCAL_APP_LIKE_20260918
+   O servidor prepara a leitura da área fora do caminho crítico do toque.
+   Depois disso, as buscas são filtradas na memória do painel, sem aguardar
+   Apps Script a cada nome/CPF/CNS/ID/endereço/telefone. */
+function readFramePostConcurrent(action,payload,cb){
+  noteRequestAction(action);
+  var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form');
+  var frameName='mrV2ReadFrame'+Date.now()+Math.floor(Math.random()*100000),finished=false,timer=null;
+  frame.name=frameName;frame.setAttribute('name',frameName);frame.className='bridge';frame.setAttribute('aria-hidden','true');frame.src='about:blank';
+  form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.setAttribute('target',frameName);form.className='bridge';
+  var fields={};Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});fields.action=action;fields.requestId=rid;
+  Object.keys(fields).forEach(function(k){var input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(fields[k]==null?'':fields[k]);form.appendChild(input)});
+  function cleanup(result){
+    if(finished)return;finished=true;
+    clearTimeout(timer);window.removeEventListener('message',onMessage);
+    try{if(form.parentNode)form.remove()}catch(e){}
+    try{if(frame.parentNode)frame.remove()}catch(e){}
+    cb(result||{ok:false,temporario:true,message:'Leitura em segundo plano não concluída.'});
+  }
+  function onMessage(event){
+    if(event.source!==frame.contentWindow)return;
+    var data=event.data;if(typeof data==='string'){try{data=JSON.parse(data)}catch(e){return}}
+    if(!data||typeof data!=='object')return;
+    var dataRid=text(data.requestId||(data.result&&data.result.requestId));
+    if(dataRid&&dataRid!==rid)return;
+    var result=Object.prototype.hasOwnProperty.call(data,'result')?data.result:(Object.prototype.hasOwnProperty.call(data,'payload')?data.payload:null);
+    if(result)cleanup(result);
+  }
+  window.addEventListener('message',onMessage);
+  document.body.appendChild(frame);document.body.appendChild(form);
+  var sent=false;
+  function send(){if(sent||finished)return;sent=true;try{form.submit()}catch(e){cleanup({ok:false,temporario:true,message:'Não foi possível preparar a leitura local.'})}}
+  frame.addEventListener('load',function(){setTimeout(send,0)},{once:true});
+  setTimeout(send,60);
+  timer=setTimeout(function(){cleanup({ok:false,temporario:true,message:'Índice local ainda não concluído.'})},30000);
+}
+function residentIndexNormalize(v){
+  var s=text(v).toLowerCase();
+  if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return s.replace(/[^a-z0-9]+/g,' ').trim();
+}
+function residentIndexHay(item){
+  return residentIndexNormalize([
+    item&&item.idPortal,item&&item.id,item&&item.nome,item&&item.cpf,item&&item.cns,
+    item&&item.nascimento,item&&item.endereco,item&&item.celular,item&&item.telefoneContato,
+    item&&item.microarea,item&&item.equipe,item&&item.status,item&&item.observacoes
+  ].join(' '));
+}
+function invalidateResidentIndex(){residentIndex=[];residentIndexArea='';residentIndexReady=false;residentIndexLoading=false}
+function warmResidentIndex(force){
+  var area=text(selectedAreaId);
+  if(!area||!refreshRemoteCredentials())return false;
+  if(!force&&residentIndexReady&&residentIndexArea===area)return true;
+  if(residentIndexLoading)return false;
+  residentIndexLoading=true;
+  readFramePostConcurrent('admin_moradores_indice',cloneSession({areaId:area}),function(r){
+    residentIndexLoading=false;
+    if(!r||r.ok!==true||text(r.areaId||area)!==area)return;
+    residentIndex=Array.isArray(r.resultados)?r.resultados:[];
+    residentIndex.forEach(function(item){if(item&&typeof item==='object')item._areaId=area});
+    residentIndexArea=area;residentIndexReady=true;
+  });
+  return true;
+}
+function localResidentSearch(q){
+  var area=text(selectedAreaId),needle=residentIndexNormalize(q);
+  if(!residentIndexReady||residentIndexArea!==area||needle.length<2)return null;
+  var out=[];
+  for(var i=0;i<residentIndex.length;i++){
+    var item=residentIndex[i];
+    if(residentIndexHay(item).indexOf(needle)===-1)continue;
+    out.push(item);
+    if(out.length>=80)break;
+  }
+  return out;
+}
+
 function updateAreaHeading(areaName){
   var heading=el('areaHeading');
   if(heading)heading.textContent='Cadastro individual de cidadãos • '+(text(areaName)||'Área selecionada')+'.';
@@ -419,6 +501,7 @@ function changeArea(areaId){
   }
   selectedAreaId=next;
   baseConfirmed=false;
+  invalidateResidentIndex();
   lastSearchQuery='';
   duplicateLock=false;
   duplicateEditMode=false;
@@ -615,7 +698,7 @@ function confirmBaseState(r,message){
   hideStatus('loginStatus');
   clearBackgroundSyncStatus();
   settleLoadingStatuses();
-  setTimeout(function(){maybeActivateSituation(r)},0);
+  setTimeout(function(){warmResidentIndex(false);maybeActivateSituation(r)},0);
 }
 function renderBase(r,message,confirmed){
   if(!r||r.ok!==true){
@@ -1394,6 +1477,7 @@ function rebindNativeContext(config){
   accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':accessMode)));
   if(nativeConfig&&nativeConfig.areaId)selectedAreaId=String(nativeConfig.areaId);
   PRONTUARIOS_VIEW=Boolean(nativeConfig&&String(nativeConfig.view||'').toLowerCase()==='prontuarios');
+  warmResidentIndex(false);
   if(!baseConfirmed){
     showAuthenticatedShell(accessMode==='tacs'?'Sessão individual encontrada. Conferindo moradores da própria área…':'Sessão administrativa encontrada. Conferindo a base de moradores…');
   }else{
