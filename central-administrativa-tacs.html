@@ -2813,6 +2813,45 @@ body.csc-central #cscInstitutionalDock{
   max-width:100%!important;
 }
 </style>
+
+<style id="cscLegacySingleHeader20260918">
+/* LEGADOS_CABECALHO_UNICO_20260918
+   Escopo exclusivo do viewer de iframe legado. O shell mantém um único cabeçalho
+   durante e depois do carregamento; o iframe ocupa somente a área abaixo dele. */
+html body .viewer.csc-frame-viewer:not([hidden]){
+  display:flex!important;
+  flex-direction:column!important;
+}
+html body .viewer.csc-frame-viewer:not([hidden])>.viewer-bar{
+  display:flex!important;
+  flex:0 0 auto!important;
+  position:static!important;
+  width:min(720px,100%)!important;
+  margin:0 auto!important;
+}
+html body .viewer.csc-frame-viewer:not([hidden])>#cscModuleOpening:not([hidden]){
+  display:block!important;
+  flex:1 1 auto!important;
+  overflow:auto!important;
+}
+html body .viewer.csc-frame-viewer:not([hidden])>iframe:not([hidden]){
+  display:block!important;
+  flex:1 1 auto!important;
+  width:100%!important;
+  min-height:0!important;
+  height:auto!important;
+  position:static!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+html body .viewer.csc-frame-viewer.csc-frame-opening>iframe:not([hidden]){
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+</style>
 </head>
 <body class="csc-brand-enhanced csc-central">
 <div id="cscInstitutionalAppbar" class="csc-appbar" role="banner"><img class="csc-appbar-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=69a1f1ba696e" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="csc-appbar-title"><small>CONECTA SAÚDE COMUNITÁRIA</small><strong>Central Administrativa</strong></div></div>
@@ -2867,7 +2906,7 @@ body.csc-central #cscInstitutionalDock{
 <div id="viewer" class="viewer" hidden><div class="viewer-bar" role="banner"><img class="viewer-official-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=69a1f1ba696e" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="viewer-heading"><small>CONECTA SAÚDE COMUNITÁRIA</small><div id="viewerTitle" class="viewer-title">Painel</div></div><button id="viewerBack" class="viewer-back" type="button" aria-label="Voltar à Central">‹</button></div><div id="nativeModuleHost" class="csc-native-module-host" hidden></div><iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe><footer id="viewerFooter" class="viewer-platform-footer" hidden><strong>Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</strong><small>Plataforma institucional de saúde comunitária.</small></footer></div>
 <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=69a1f1ba696e"></script>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260918-isolamento-legado-v1"></script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260918-legados-cabecalho-loader-v2"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=69a1f1ba696e"></script>

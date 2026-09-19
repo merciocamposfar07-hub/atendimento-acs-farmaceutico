@@ -1222,14 +1222,19 @@ function normalizeEmbeddedPanelFrame(frame){
     if(!style){
       style=doc.createElement('style');style.id='cscEmbeddedApp4SingleHeaderV1';
       style.textContent=[
-        '#cscInstitutionalAppbar{display:flex!important;position:static!important;top:auto!important;inset:auto!important;background:#071827!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}',
-        (frame&&frame.dataset&&frame.dataset.shellModule==='portal')?'#portalTacsBackCentralV1{display:none!important}#portalTacsAtualizarPaginaV1{display:inline-flex!important}':'#portalTacsBackCentralV1{display:none!important}',
+        /* CABECALHO_UNICO_LEGADOS_20260918:
+           Dentro da Central, o cabeçalho pertence ao shell. O iframe legado não desenha
+           um segundo ícone/título durante a transição. */
+        '#cscInstitutionalAppbar{display:none!important;visibility:hidden!important;pointer-events:none!important}',
+        '#portalTacsBackCentralV1,#portalTacsAtualizarPaginaV1{display:none!important}',
         'html,body,main,footer,.footer{background:#071827!important;background-image:none!important;border-top:0!important}',
-        '#cscPlatformFooter{display:flex!important;position:static!important;background:#071827!important;border:0!important;box-shadow:none!important}'
+        '#cscPlatformFooter{display:none!important}'
       ].join('');
       (doc.head||doc.documentElement).appendChild(style);
     }
-    var internal=doc.getElementById('cscInstitutionalAppbar');if(internal)internal.removeAttribute('aria-hidden');
+    var internal=doc.getElementById('cscInstitutionalAppbar');
+    if(internal){internal.hidden=true;internal.setAttribute('aria-hidden','true')}
+    doc.documentElement.classList.add('csc-embedded-legacy-panel');
   }catch(e){}
 }
 /* CORRECAO_FRAME_PREPAINT_CANONICO_V1
@@ -1258,15 +1263,44 @@ function setLegacyFrameOpening(frame,visible){
     setShellOpeningPreview('', '', false);
   }
 }
+function revealLegacyFrameDom(frame){
+  if(!frame||!shellFrameAtTarget(frame))return false;
+  try{
+    var doc=frame.contentDocument;
+    if(!doc||!doc.body||doc.readyState==='loading')return false;
+    frame.dataset.shellDomReady='1';
+    try{applyUiStandard(doc)}catch(e){}
+    normalizeEmbeddedPanelFrame(frame);
+    applyAdminUbsRemoteToFrame(frame);
+    if(shellActiveFrame()===frame){
+      setLegacyFrameOpening(frame,false);
+      setShellOpening('',false);
+    }
+    return true;
+  }catch(e){return false}
+}
+function armLegacyFrameEarlyReveal(frame){
+  if(!frame)return;
+  var seq=String((Number(frame.dataset.shellRevealSeq||0)+1));frame.dataset.shellRevealSeq=seq;
+  var tries=0;
+  function probe(){
+    if(frame.dataset.shellRevealSeq!==seq)return;
+    if(revealLegacyFrameDom(frame))return;
+    if(++tries<80)setTimeout(probe,50);
+  }
+  setTimeout(probe,0);
+}
 function enhanceShellFrame(frame){
   if(!frame||frame.dataset.shellEnhanced==='1')return;
   frame.dataset.shellEnhanced='1';
   frame.addEventListener('load',function(){
     if(!shellFrameAtTarget(frame)){
       frame.dataset.shellReady='0';
+      frame.dataset.shellDomReady='0';
       return;
     }
     frame.dataset.shellReady='1';
+    frame.dataset.shellDomReady='1';
     try{applyUiStandard(frame.contentDocument)}catch(e){}
     normalizeEmbeddedPanelFrame(frame);
     applyAdminUbsRemoteToFrame(frame);
@@ -1337,7 +1371,7 @@ function showShellFrame(name,frame,title,routeId){
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer','csc-frame-viewer');viewer.classList.remove('csc-native-viewer');viewer.hidden=false;
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   document.body.classList.add('viewer-open');
-  var shellReady=frame.dataset.shellReady==='1'&&shellFrameAtTarget(frame);
+  var shellReady=(frame.dataset.shellReady==='1'||frame.dataset.shellDomReady==='1')&&shellFrameAtTarget(frame);
   if(shellReady)applyAdminUbsRemoteToFrame(frame);
   /* TAREFA_11_RESPOSTA_VISUAL_IMEDIATA_V1 + PREPAINT_CANONICO_V1:
      o shell responde no mesmo toque, mas a rota HTML antiga não é exibida durante
@@ -1347,8 +1381,14 @@ function showShellFrame(name,frame,title,routeId){
      módulos ainda não migrados continuam carregando somente depois que o shell está visível. */
   if(frame.dataset.shellLoaded!=='1'){
     frame.dataset.shellLoaded='1';
-    var carregar=function(){var url=frame.dataset.shellUrl||'about:blank';if(frame.src!==url)frame.src=url};
+    var carregar=function(){
+      var url=frame.dataset.shellUrl||'about:blank';
+      if(frame.src!==url)frame.src=url;
+      armLegacyFrameEarlyReveal(frame);
+    };
     if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(carregar);else setTimeout(carregar,0);
+  }else if(!shellReady){
+    armLegacyFrameEarlyReveal(frame);
   }
 }
 /* CORRECAO_PRIMEIRO_TOQUE_PAINEIS_V1
