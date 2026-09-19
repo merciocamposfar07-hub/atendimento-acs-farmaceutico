@@ -1086,7 +1086,7 @@ function consolidateGroup(principal,redundantes){
     setStatus('operationStatus','Consolidando '+itemLabel(redundante)+' em '+itemLabel(principal)+'…','warn');
     post('admin_morador_consolidar',cloneSession({payload:JSON.stringify(consolidationPayload(principal,redundante))}),'admin_moradores_result',function(r){
       if(!r||r.ok!==true){duplicateLock=false;syncControls();setStatus('operationStatus',text(r&&r.message||'O servidor recusou a consolidação.'),'err');return}
-      nativeNotify('write-confirmed',{action:'admin_morador_consolidar'});
+      nativeNotify('write-confirmed',{action:'admin_morador_consolidar'});invalidateResidentIndex();warmResidentIndex(true);
       if(r.principal&&typeof r.principal==='object')principal=r.principal;
       totalFilled=totalFilled.concat(Array.isArray(r.camposPreenchidos)?r.camposPreenchidos:[]);
       totalConflicts=totalConflicts.concat(Array.isArray(r.conflitosPreservadosNoPrincipal)?r.conflitosPreservadosNoPrincipal:[]);
@@ -1209,12 +1209,28 @@ function doSearch(query,options){
   options=options&&typeof options==='object'?options:{};
   var q=text(query!=null?query:(el('query')&&el('query').value));
   if(q.length<2){setStatus('operationStatus','Digite pelo menos 2 caracteres.','err');return}
-  if(!refreshRemoteCredentials()){
-    return waitForRemoteSession('Busca pronta. Sincronizando a sessão para consultar a base…',function(){doSearch(q,options)});
-  }
   lastSearchQuery=q;
   duplicateLock=false;
   syncControls();
+
+  /* BUSCA_LOCAL_MORADORES_20260918:
+     quando o índice de fundo já chegou, o resultado aparece no mesmo toque.
+     A rede deixa de fazer parte do caminho crítico da busca diária. */
+  if(!PRONTUARIOS_VIEW){
+    var localResults=localResidentSearch(q);
+    if(localResults){
+      var area=availableAreas.filter(function(x){return text(x.areaId)===selectedAreaId})[0];
+      localResults.forEach(function(item){item._areaId=selectedAreaId;item._areaNome=text(area&&area.areaNome||selectedAreaId)});
+      renderSearchResults(localResults);
+      if(options.successMessage)setStatus('operationStatus',options.successMessage,'ok');
+      return;
+    }
+  }
+
+  if(!refreshRemoteCredentials()){
+    return waitForRemoteSession('Busca pronta. Sincronizando a sessão para consultar a base…',function(){doSearch(q,options)});
+  }
+  warmResidentIndex(false);
   setStatus('operationStatus','Buscando na base real…','warn');
   readPost('admin_moradores_buscar',cloneSession({q:q,areaId:selectedAreaId}),'admin_moradores_result',function(r){
     if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'Busca recusada.'),'err');return}
@@ -1289,7 +1305,7 @@ function saveResident(){
       if(el('residentSituation'))el('residentSituation').value=currentSituation;
     }
     var message=text(r.message||(isEdit?'Cadastro atualizado.':'Morador cadastrado.'));
-    nativeNotify('write-confirmed',{action:'admin_morador_salvar',morador:r.morador||null});
+    nativeNotify('write-confirmed',{action:'admin_morador_salvar',morador:r.morador||null});invalidateResidentIndex();warmResidentIndex(true);
     setStatus('operationStatus',message,'ok');
     if(wasDuplicateEdit){
       var refreshQuery=lastSearchQuery||payload.nome||payload.cpf||payload.cns;
@@ -1331,7 +1347,7 @@ function saveSituation(){
   post('admin_morador_situacao',cloneSession({payload:JSON.stringify(payload)}),'admin_moradores_result',function(r){
     if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'O servidor recusou a alteração de situação.'),'err');return}
     currentSituation=situacao;
-    nativeNotify('write-confirmed',{action:'admin_morador_situacao'});
+    nativeNotify('write-confirmed',{action:'admin_morador_situacao'});invalidateResidentIndex();warmResidentIndex(true);
     setStatus('operationStatus',text(r.message||'Situação cadastral atualizada.'),'ok');
     loadBase();
   });
@@ -1506,6 +1522,6 @@ window.PortalTacsMoradoresTransportV2={
   maybeActivateSituation:maybeActivateSituation,
   rebindNativeContext:rebindNativeContext,
   nativeCompat:'task17-moradores-native-v1',
-  version:'3.6.6-sync-silencioso'
+  version:'3.7.0-busca-local-app-like'
 };
 }());
