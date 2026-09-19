@@ -90,6 +90,17 @@ function settleLoadingStatuses(){
     hideLoadingStatus('operationStatus');
   },120);
 }
+function clearBackgroundSyncStatus(){
+  var node=statusNode('operationStatus');
+  if(!node)return;
+  var value=text(node.textContent).toLowerCase();
+  if(
+    value.indexOf('sessão remota está sincronizando')!==-1||
+    value.indexOf('sessao remota esta sincronizando')!==-1||
+    value.indexOf('sincronizando atualizações em segundo plano')!==-1||
+    value.indexOf('sincronizando atualizacoes em segundo plano')!==-1
+  )hideStatus('operationStatus');
+}
 function requestId(action){
   return 'morv2_'+String(action||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
 }
@@ -602,6 +613,7 @@ function confirmBaseState(r,message){
   if(el('consolidation'))el('consolidation').textContent=consolidationEnabled?'LIBERADA':'BLOQ.';
   if(el('situation'))el('situation').textContent=situationEnabled?'LIBERADA':'PROTEGIDA';
   hideStatus('loginStatus');
+  clearBackgroundSyncStatus();
   settleLoadingStatuses();
   setTimeout(function(){maybeActivateSituation(r)},0);
 }
@@ -638,7 +650,11 @@ function renderBase(r,message,confirmed){
   if(el('logout'))el('logout').disabled=false;
   ensureSituationUi();setBaseLoading(false);updateNote();syncControls();
   if(cachedSessionReady&&writesEnabled){
-    setStatus('operationStatus','Painel liberado pelo último estado confirmado. A sessão remota está sincronizando em segundo plano…','ok');
+    /* MORADORES_SEM_BANNER_DE_SINCRONIZACAO_20260918:
+       dados e permissões já confirmados aparecem como estado normal do aplicativo.
+       A reconfirmação remota continua silenciosa; não mantém uma faixa de "carregando"
+       durante minutos quando a tela já está pronta para uso. */
+    hideStatus('operationStatus');
   }
   hideStatus('loginStatus');
   settleLoadingStatuses();
@@ -1406,6 +1422,6 @@ window.PortalTacsMoradoresTransportV2={
   maybeActivateSituation:maybeActivateSituation,
   rebindNativeContext:rebindNativeContext,
   nativeCompat:'task17-moradores-native-v1',
-  version:'3.6.5-local-first-sessao'
+  version:'3.6.6-sync-silencioso'
 };
 }());
