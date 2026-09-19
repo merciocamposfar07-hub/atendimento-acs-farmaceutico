@@ -416,9 +416,18 @@ function updateNote(){
     note.style.setProperty('color','#08723a','important');
   }else if(writesEnabled){
     note.textContent='PAINEL DE MORADORES: novo cadastro, edição e consolidação de duplicidades estão liberados. Situação cadastral permanece protegida pelo servidor.';
-    note.style.background='#e7f3f7';
-    note.style.borderColor='#4f8da3';
-    note.style.color='#073a55';
+    note.style.setProperty('background','#e7f3f7','important');
+    note.style.setProperty('background-image','none','important');
+    note.style.setProperty('border-color','#4f8da3','important');
+    note.style.setProperty('color','#073a55','important');
+  }else{
+    /* Se a reconfirmação remota revogar a permissão, o estado verde não pode ficar
+       preso na tela por causa do cache anterior. */
+    note.textContent='PAINEL DE MORADORES: as permissões e a consolidação de duplicidades são controladas pelo servidor após o login.';
+    note.style.setProperty('background','#153b58','important');
+    note.style.setProperty('background-image','linear-gradient(145deg,#153b58,#102d46)','important');
+    note.style.setProperty('border-color','#2b5a76','important');
+    note.style.setProperty('color','#f7fcff','important');
   }
 }
 
