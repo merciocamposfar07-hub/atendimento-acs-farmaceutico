@@ -107,6 +107,43 @@ function cloneSession(extra){
   Object.keys(extra||{}).forEach(function(k){out[k]=extra[k]});
   return out;
 }
+function refreshRemoteCredentials(){
+  try{
+    var s=moduleCore&&typeof moduleCore.session==='function'?moduleCore.session({escopo:'moradores'}):null;
+    token=text(s&&s.token)||text(sessionStorage.getItem(TOKEN_KEY))||token||'';
+    territoryToken=text(s&&s.territorioToken)||text(sessionStorage.getItem(TERRITORY_TOKEN_KEY))||territoryToken||'';
+    ubsToken=text(s&&s.ubsToken)||text(sessionStorage.getItem(UBS_TOKEN_KEY))||ubsToken||'';
+    accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':accessMode)));
+  }catch(e){}
+  return Boolean(token||territoryToken||ubsToken);
+}
+function localCentralUnlocked(){
+  try{
+    var st=moduleCore&&typeof moduleCore.state==='function'?moduleCore.state():null;
+    var appOpen=document.documentElement&&document.documentElement.classList.contains('csc-central-state-app');
+    return Boolean(appOpen&&st&&/^(admin|tacs|ubs)$/.test(text(st.mode).toLowerCase())&&selectedAreaId);
+  }catch(e){return false}
+}
+function waitForRemoteSession(label,fn){
+  var started=Date.now(),done=false;
+  setStatus('operationStatus',label||'Sincronizando a sessão atual…','warn');
+  function check(){
+    if(done)return;
+    if(refreshRemoteCredentials()){
+      done=true;
+      if(typeof fn==='function')setTimeout(fn,0);
+      return;
+    }
+    if(Date.now()-started>=12000){
+      done=true;
+      setStatus('operationStatus','A sessão remota ainda está sincronizando. O painel permanece aberto; tente a ação novamente em instantes.','warn');
+      return;
+    }
+    setTimeout(check,120);
+  }
+  check();
+  return false;
+}
 function coreRead(action,payload,runner,cb){if(moduleRequests&&typeof moduleRequests.read==='function'){moduleRequests.read(action,payload,function(done){runner(done)},function(result,meta){cb(result,meta)}).catch(function(e){cb({ok:false,temporario:true,message:text(e&&e.message)||'Falha na leitura compartilhada.'},{shared:false,source:'broker-error'})});return}runner(function(result){cb(result,{shared:false,source:'legacy'})})}
 function noteRequestAction(action){if(moduleRequests&&typeof moduleRequests.noteAction==='function')moduleRequests.noteAction(action)}
 
@@ -578,7 +615,7 @@ function renderBase(r,message,confirmed){
      sanitizado por perfil+área. Se existe uma sessão atual da Central, esse último
      estado confirmado pode liberar a interface imediatamente, como nos apps de
      referência. Toda gravação continua sendo validada pelo backend no momento da ação. */
-  var cachedSessionReady=!remoteConfirmed&&Boolean(token||territoryToken||ubsToken||accessMode==='ubs');
+  var cachedSessionReady=!remoteConfirmed&&localCentralUnlocked();
   if(remoteConfirmed||cachedSessionReady)baseConfirmed=true;
   writesEnabled=(remoteConfirmed||cachedSessionReady)&&r.escritaHabilitada===true;
   situationEnabled=(remoteConfirmed||cachedSessionReady)&&r.situacaoHabilitada===true;
@@ -601,7 +638,7 @@ function renderBase(r,message,confirmed){
   if(el('logout'))el('logout').disabled=false;
   ensureSituationUi();setBaseLoading(false);updateNote();syncControls();
   if(cachedSessionReady&&writesEnabled){
-    setStatus('operationStatus','Painel liberado pelo último estado confirmado. Sincronizando atualizações em segundo plano…','ok');
+    setStatus('operationStatus','Painel liberado pelo último estado confirmado. A sessão remota está sincronizando em segundo plano…','ok');
   }
   hideStatus('loginStatus');
   settleLoadingStatuses();
@@ -918,6 +955,9 @@ function consolidationPayload(principal,redundante){
 function consolidateGroup(principal,redundantes){
   if(!consolidationEnabled){setStatus('operationStatus','A consolidação está bloqueada pelo servidor.','warn');return}
   if(!redundantes.length)return;
+  if(!refreshRemoteCredentials()){
+    return waitForRemoteSession('Consolidação pronta. Sincronizando a sessão antes de confirmar…',function(){consolidateGroup(principal,redundantes)});
+  }
   if(groupHasLegacyCpf([principal].concat(redundantes))&&!serverVersionAtLeast(1,4,2)){
     setStatus('operationStatus','A unificação deste CPF com zero inicial perdido exige o backend de moradores 1.4.2 ou superior. Atualize a implantação do Apps Script e entre novamente.','err');
     return;
@@ -1070,9 +1110,9 @@ function doSearch(query,options){
   options=options&&typeof options==='object'?options:{};
   var q=text(query!=null?query:(el('query')&&el('query').value));
   if(q.length<2){setStatus('operationStatus','Digite pelo menos 2 caracteres.','err');return}
-  token=sessionStorage.getItem(TOKEN_KEY)||token||'';
-  territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||territoryToken||'';
-  if(!(token||territoryToken||ubsToken||accessMode==='ubs')){setStatus('operationStatus','Sessão administrativa ausente. Entre novamente.','err');return}
+  if(!refreshRemoteCredentials()){
+    return waitForRemoteSession('Busca pronta. Sincronizando a sessão para consultar a base…',function(){doSearch(q,options)});
+  }
   lastSearchQuery=q;
   duplicateLock=false;
   syncControls();
@@ -1125,6 +1165,9 @@ function validateResidentPayload(p){
 function saveResident(){
   if(duplicateLock){setStatus('operationStatus','Gravação bloqueada: consolide primeiro a duplicidade confirmada.','warn');return}
   if(!writesEnabled){setStatus('operationStatus','A gravação está bloqueada pelo servidor.','warn');return}
+  if(!refreshRemoteCredentials()){
+    return waitForRemoteSession('Cadastro pronto. Sincronizando a sessão para salvar…',function(){saveResident()});
+  }
   var payload=collectResidentPayload();
   var error=validateResidentPayload(payload);
   if(error){setStatus('operationStatus',error,'err');return}
@@ -1169,6 +1212,9 @@ function saveSituation(){
   if(duplicateLock){setStatus('operationStatus','Situação bloqueada: consolide primeiro a duplicidade confirmada.','warn');return}
   if(duplicateEditMode){setStatus('operationStatus','Salve ou cancele a correção anterior à unificação antes de alterar a situação.','warn');return}
   if(!situationEnabled){setStatus('operationStatus','A alteração de situação ainda está bloqueada pelo servidor.','warn');return}
+  if(!refreshRemoteCredentials()){
+    return waitForRemoteSession('Alteração pronta. Sincronizando a sessão para atualizar a situação…',function(){saveSituation()});
+  }
   var origemAba=text(el('originSheet')&&el('originSheet').value);
   var origemLinha=text(el('originRow')&&el('originRow').value);
   if(!origemAba||!origemLinha){setStatus('operationStatus','Abra um morador existente antes de alterar a situação.','err');return}
@@ -1360,6 +1406,6 @@ window.PortalTacsMoradoresTransportV2={
   maybeActivateSituation:maybeActivateSituation,
   rebindNativeContext:rebindNativeContext,
   nativeCompat:'task17-moradores-native-v1',
-  version:'3.6.4-liberacao-imediata-cache'
+  version:'3.6.5-local-first-sessao'
 };
 }());
