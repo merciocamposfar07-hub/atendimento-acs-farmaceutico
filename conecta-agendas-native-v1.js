@@ -31,7 +31,7 @@ function create(host){
   var snapshotMode=text(core.mode&&core.mode()).trim().toLowerCase()||'anon';
   var scope=snapshotMode+'|'+areaId;
   var transport=transportFactory.create({requests:requests});
-  var state={profissionais:[],agendas:[]},confirmed=false,dirty=false,visible=false,initialized=false,dentalBusy=false,syncTimer=null;
+  var state={profissionais:[],agendas:[]},confirmed=false,dirty=false,visible=false,initialized=false,dentalBusy=false,syncTimer=null,remoteReadyTimer=null;
 
   host.innerHTML=
     '<section class="csc-ag-native" data-role="root">'+
@@ -169,12 +169,32 @@ function create(host){
     if(policy&&typeof policy.classify==='function')return policy.classify(r);
     return{explicitAuthRefusal:false,temporary:true,preserveSession:true};
   }
+  function scheduleRemoteReady(){
+    if(remoteReadyTimer||!visible)return;
+    var started=Date.now();
+    function wait(){
+      remoteReadyTimer=null;
+      if(!visible)return;
+      if(ready()){
+        load('Agendas e vagas confirmadas pelo servidor.',null,{skipPrime:true,silent:true});
+        return;
+      }
+      if(Date.now()-started>15000)return;
+      remoteReadyTimer=setTimeout(wait,120);
+    }
+    remoteReadyTimer=setTimeout(wait,120);
+  }
   function load(message,done,options){
     options=options||{};
     var had=options.skipPrime?false:prime();
     if(!ready()){
       confirmed=false;lockWrites();
-      setStatus('Aguarde enquanto os dados carregam…','aviso');
+      /* AGENDAS_CACHE_FIRST_INDEPENDENTE_20260918:
+         se já existe snapshot confirmado, ele permanece visível e utilizável para
+         consulta; a sessão remota chega em paralelo sem transformar o painel em loader. */
+      if(had)setStatus('Dados já disponíveis. Sincronizando atualizações em segundo plano…','ok');
+      else setStatus('Aguarde enquanto os dados carregam…','aviso');
+      scheduleRemoteReady();
       if(done)done(false,{ok:false,aguardandoSessao:true});
       return;
     }
@@ -333,11 +353,11 @@ function create(host){
 
   return{
     scope:scope,
-    mount:function(){visible=true;host.hidden=false;if(!initialized)load('Agendas e vagas confirmadas pelo servidor.',null,{silent:true});else setTimeout(syncDental,100)},
-    hide:function(){visible=false;host.hidden=true},
+    mount:function(){visible=true;host.hidden=false;if(!initialized)load('Agendas e vagas confirmadas pelo servidor.',null,{silent:true});else{setTimeout(syncDental,100);if(!ready())scheduleRemoteReady()}},
+    hide:function(){visible=false;if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}host.hidden=true},
     hasUnsaved:function(){return dirty},
     reload:function(){load('Agendas e vagas atualizadas e confirmadas.',null,{skipPrime:true,forceApply:true})},
-    reset:function(){visible=false;if(syncTimer)clearInterval(syncTimer);syncTimer=null;transport.destroy();host.innerHTML='';host.hidden=true;host.dataset.tacsDirty='0'}
+    reset:function(){visible=false;if(syncTimer)clearInterval(syncTimer);syncTimer=null;if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}transport.destroy();host.innerHTML='';host.hidden=true;host.dataset.tacsDirty='0'}
   };
 }
 
