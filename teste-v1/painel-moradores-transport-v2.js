@@ -28,6 +28,12 @@ var availableAreas=[];
 var statusActivationAttempted=false;
 var backendVersion='';
 var baseConfirmed=false;
+/* Índice de Moradores fica somente em memória durante esta sessão do módulo. */
+var residentIndex=[];
+var residentIndexArea='';
+var residentIndexReady=false;
+var residentIndexLoading=false;
+var residentIndexGeneration=0;
 var PRONTUARIOS_VIEW=(function(){if(nativeConfig&&nativeConfig.view)return String(nativeConfig.view).toLowerCase()==='prontuarios';try{return String(new URLSearchParams(location.search||'').get('view')||'').toLowerCase()==='prontuarios'}catch(e){return false}})();
 
 var COMPARISON_FIELDS=[
@@ -89,6 +95,17 @@ function settleLoadingStatuses(){
     hideLoadingStatus('loginStatus');
     hideLoadingStatus('operationStatus');
   },120);
+}
+function clearBackgroundSyncStatus(){
+  var node=statusNode('operationStatus');
+  if(!node)return;
+  var value=text(node.textContent).toLowerCase();
+  if(
+    value.indexOf('sessão remota está sincronizando')!==-1||
+    value.indexOf('sessao remota esta sincronizando')!==-1||
+    value.indexOf('sincronizando atualizações em segundo plano')!==-1||
+    value.indexOf('sincronizando atualizacoes em segundo plano')!==-1
+  )hideStatus('operationStatus');
 }
 function requestId(action){
   return 'morv2_'+String(action||'op').replace(/[^a-z0-9]/gi,'')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
@@ -369,6 +386,88 @@ function readPost(action,payload,resultAction,cb){
   }catch(e){finishRead({ok:false,temporario:true,message:'Não foi possível iniciar a leitura agora.'})}
 }
 
+/* MORADORES_BUSCA_LOCAL_APP_LIKE_20260918
+   O servidor prepara a leitura da área fora do caminho crítico do toque.
+   Depois disso, as buscas são filtradas na memória do painel, sem aguardar
+   Apps Script a cada nome/CPF/CNS/ID/endereço/telefone. */
+function readFramePostConcurrent(action,payload,cb){
+  noteRequestAction(action);
+  var rid=requestId(action),frame=document.createElement('iframe'),form=document.createElement('form');
+  var frameName='mrV2ReadFrame'+Date.now()+Math.floor(Math.random()*100000),finished=false,timer=null;
+  frame.name=frameName;frame.setAttribute('name',frameName);frame.className='bridge';frame.setAttribute('aria-hidden','true');frame.src='about:blank';
+  form.method='POST';form.action=API+'?_='+Date.now();form.target=frameName;form.setAttribute('target',frameName);form.className='bridge';
+  var fields={};Object.keys(payload||{}).forEach(function(k){fields[k]=payload[k]});fields.action=action;fields.requestId=rid;
+  Object.keys(fields).forEach(function(k){var input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(fields[k]==null?'':fields[k]);form.appendChild(input)});
+  function cleanup(result){
+    if(finished)return;finished=true;
+    clearTimeout(timer);window.removeEventListener('message',onMessage);
+    try{if(form.parentNode)form.remove()}catch(e){}
+    try{if(frame.parentNode)frame.remove()}catch(e){}
+    cb(result||{ok:false,temporario:true,message:'Leitura em segundo plano não concluída.'});
+  }
+  function onMessage(event){
+    if(event.source!==frame.contentWindow)return;
+    var data=event.data;if(typeof data==='string'){try{data=JSON.parse(data)}catch(e){return}}
+    if(!data||typeof data!=='object')return;
+    var dataRid=text(data.requestId||(data.result&&data.result.requestId));
+    if(dataRid&&dataRid!==rid)return;
+    var result=Object.prototype.hasOwnProperty.call(data,'result')?data.result:(Object.prototype.hasOwnProperty.call(data,'payload')?data.payload:null);
+    if(result)cleanup(result);
+  }
+  window.addEventListener('message',onMessage);
+  document.body.appendChild(frame);document.body.appendChild(form);
+  var sent=false;
+  function send(){if(sent||finished)return;sent=true;try{form.submit()}catch(e){cleanup({ok:false,temporario:true,message:'Não foi possível preparar a leitura local.'})}}
+  frame.addEventListener('load',function(){setTimeout(send,0)},{once:true});
+  setTimeout(send,60);
+  timer=setTimeout(function(){cleanup({ok:false,temporario:true,message:'Índice local ainda não concluído.'})},30000);
+}
+function residentIndexNormalize(v){
+  var s=text(v).toLowerCase();
+  if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return s.replace(/[^a-z0-9]+/g,' ').trim();
+}
+function residentIndexHay(item){
+  return residentIndexNormalize([
+    item&&item.idPortal,item&&item.id,item&&item.nome,item&&item.cpf,item&&item.cns,
+    item&&item.nascimento,item&&item.endereco,item&&item.celular,item&&item.telefoneContato,
+    item&&item.microarea,item&&item.equipe,item&&item.status,item&&item.observacoes
+  ].join(' '));
+}
+function invalidateResidentIndex(){
+  residentIndexGeneration++;
+  residentIndex=[];residentIndexArea='';residentIndexReady=false;residentIndexLoading=false;
+}
+function warmResidentIndex(force){
+  var area=text(selectedAreaId);
+  if(!area||!refreshRemoteCredentials())return false;
+  if(!force&&residentIndexReady&&residentIndexArea===area)return true;
+  if(residentIndexLoading)return false;
+  var generation=residentIndexGeneration;
+  residentIndexLoading=true;
+  readFramePostConcurrent('admin_moradores_indice',cloneSession({areaId:area}),function(r){
+    if(generation!==residentIndexGeneration)return;
+    residentIndexLoading=false;
+    if(!r||r.ok!==true||text(r.areaId||area)!==area)return;
+    residentIndex=Array.isArray(r.resultados)?r.resultados:[];
+    residentIndex.forEach(function(item){if(item&&typeof item==='object')item._areaId=area});
+    residentIndexArea=area;residentIndexReady=true;
+  });
+  return true;
+}
+function localResidentSearch(q){
+  var area=text(selectedAreaId),needle=residentIndexNormalize(q);
+  if(!residentIndexReady||residentIndexArea!==area||needle.length<2)return null;
+  var out=[];
+  for(var i=0;i<residentIndex.length;i++){
+    var item=residentIndex[i];
+    if(residentIndexHay(item).indexOf(needle)===-1)continue;
+    out.push(item);
+    if(out.length>=80)break;
+  }
+  return out;
+}
+
 function updateAreaHeading(areaName){
   var heading=el('areaHeading');
   if(heading)heading.textContent='Cadastro individual de cidadãos • '+(text(areaName)||'Área selecionada')+'.';
@@ -408,6 +507,7 @@ function changeArea(areaId){
   }
   selectedAreaId=next;
   baseConfirmed=false;
+  invalidateResidentIndex();
   lastSearchQuery='';
   duplicateLock=false;
   duplicateEditMode=false;
@@ -602,8 +702,9 @@ function confirmBaseState(r,message){
   if(el('consolidation'))el('consolidation').textContent=consolidationEnabled?'LIBERADA':'BLOQ.';
   if(el('situation'))el('situation').textContent=situationEnabled?'LIBERADA':'PROTEGIDA';
   hideStatus('loginStatus');
+  clearBackgroundSyncStatus();
   settleLoadingStatuses();
-  setTimeout(function(){maybeActivateSituation(r)},0);
+  setTimeout(function(){warmResidentIndex(false);maybeActivateSituation(r)},0);
 }
 function renderBase(r,message,confirmed){
   if(!r||r.ok!==true){
@@ -638,7 +739,11 @@ function renderBase(r,message,confirmed){
   if(el('logout'))el('logout').disabled=false;
   ensureSituationUi();setBaseLoading(false);updateNote();syncControls();
   if(cachedSessionReady&&writesEnabled){
-    setStatus('operationStatus','Painel liberado pelo último estado confirmado. A sessão remota está sincronizando em segundo plano…','ok');
+    /* MORADORES_SEM_BANNER_DE_SINCRONIZACAO_20260918:
+       dados e permissões já confirmados aparecem como estado normal do aplicativo.
+       A reconfirmação remota continua silenciosa; não mantém uma faixa de "carregando"
+       durante minutos quando a tela já está pronta para uso. */
+    hideStatus('operationStatus');
   }
   hideStatus('loginStatus');
   settleLoadingStatuses();
@@ -974,6 +1079,7 @@ function consolidateGroup(principal,redundantes){
       var conflicts=totalConflicts.length?' Conflitos preservados no principal: '+Array.from(new Set(totalConflicts)).join(', ')+'.':'';
       var completionMessage='Consolidação concluída sem apagar linhas.'+complement+conflicts+' A lista e a contagem foram atualizadas automaticamente.';
       setStatus('operationStatus',completionMessage,'ok');
+      warmResidentIndex(true);
       loadBase(null,function(){
         if(lastSearchQuery){
           doSearch(lastSearchQuery,{successMessage:completionMessage});
@@ -987,7 +1093,7 @@ function consolidateGroup(principal,redundantes){
     setStatus('operationStatus','Consolidando '+itemLabel(redundante)+' em '+itemLabel(principal)+'…','warn');
     post('admin_morador_consolidar',cloneSession({payload:JSON.stringify(consolidationPayload(principal,redundante))}),'admin_moradores_result',function(r){
       if(!r||r.ok!==true){duplicateLock=false;syncControls();setStatus('operationStatus',text(r&&r.message||'O servidor recusou a consolidação.'),'err');return}
-      nativeNotify('write-confirmed',{action:'admin_morador_consolidar'});
+      nativeNotify('write-confirmed',{action:'admin_morador_consolidar'});invalidateResidentIndex();
       if(r.principal&&typeof r.principal==='object')principal=r.principal;
       totalFilled=totalFilled.concat(Array.isArray(r.camposPreenchidos)?r.camposPreenchidos:[]);
       totalConflicts=totalConflicts.concat(Array.isArray(r.conflitosPreservadosNoPrincipal)?r.conflitosPreservadosNoPrincipal:[]);
@@ -1110,12 +1216,28 @@ function doSearch(query,options){
   options=options&&typeof options==='object'?options:{};
   var q=text(query!=null?query:(el('query')&&el('query').value));
   if(q.length<2){setStatus('operationStatus','Digite pelo menos 2 caracteres.','err');return}
-  if(!refreshRemoteCredentials()){
-    return waitForRemoteSession('Busca pronta. Sincronizando a sessão para consultar a base…',function(){doSearch(q,options)});
-  }
   lastSearchQuery=q;
   duplicateLock=false;
   syncControls();
+
+  /* BUSCA_LOCAL_MORADORES_20260918:
+     quando o índice de fundo já chegou, o resultado aparece no mesmo toque.
+     A rede deixa de fazer parte do caminho crítico da busca diária. */
+  if(!PRONTUARIOS_VIEW){
+    var localResults=localResidentSearch(q);
+    if(localResults){
+      var area=availableAreas.filter(function(x){return text(x.areaId)===selectedAreaId})[0];
+      localResults.forEach(function(item){item._areaId=selectedAreaId;item._areaNome=text(area&&area.areaNome||selectedAreaId)});
+      renderSearchResults(localResults);
+      if(options.successMessage)setStatus('operationStatus',options.successMessage,'ok');
+      return;
+    }
+  }
+
+  if(!refreshRemoteCredentials()){
+    return waitForRemoteSession('Busca pronta. Sincronizando a sessão para consultar a base…',function(){doSearch(q,options)});
+  }
+  warmResidentIndex(false);
   setStatus('operationStatus','Buscando na base real…','warn');
   readPost('admin_moradores_buscar',cloneSession({q:q,areaId:selectedAreaId}),'admin_moradores_result',function(r){
     if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'Busca recusada.'),'err');return}
@@ -1190,7 +1312,7 @@ function saveResident(){
       if(el('residentSituation'))el('residentSituation').value=currentSituation;
     }
     var message=text(r.message||(isEdit?'Cadastro atualizado.':'Morador cadastrado.'));
-    nativeNotify('write-confirmed',{action:'admin_morador_salvar',morador:r.morador||null});
+    nativeNotify('write-confirmed',{action:'admin_morador_salvar',morador:r.morador||null});invalidateResidentIndex();warmResidentIndex(true);
     setStatus('operationStatus',message,'ok');
     if(wasDuplicateEdit){
       var refreshQuery=lastSearchQuery||payload.nome||payload.cpf||payload.cns;
@@ -1232,7 +1354,7 @@ function saveSituation(){
   post('admin_morador_situacao',cloneSession({payload:JSON.stringify(payload)}),'admin_moradores_result',function(r){
     if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'O servidor recusou a alteração de situação.'),'err');return}
     currentSituation=situacao;
-    nativeNotify('write-confirmed',{action:'admin_morador_situacao'});
+    nativeNotify('write-confirmed',{action:'admin_morador_situacao'});invalidateResidentIndex();warmResidentIndex(true);
     setStatus('operationStatus',text(r.message||'Situação cadastral atualizada.'),'ok');
     loadBase();
   });
@@ -1378,6 +1500,7 @@ function rebindNativeContext(config){
   accessMode=moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():(territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':accessMode)));
   if(nativeConfig&&nativeConfig.areaId)selectedAreaId=String(nativeConfig.areaId);
   PRONTUARIOS_VIEW=Boolean(nativeConfig&&String(nativeConfig.view||'').toLowerCase()==='prontuarios');
+  warmResidentIndex(false);
   if(!baseConfirmed){
     showAuthenticatedShell(accessMode==='tacs'?'Sessão individual encontrada. Conferindo moradores da própria área…':'Sessão administrativa encontrada. Conferindo a base de moradores…');
   }else{
@@ -1406,6 +1529,6 @@ window.PortalTacsMoradoresTransportV2={
   maybeActivateSituation:maybeActivateSituation,
   rebindNativeContext:rebindNativeContext,
   nativeCompat:'task17-moradores-native-v1',
-  version:'3.6.5-local-first-sessao'
+  version:'3.7.0-busca-local-app-like'
 };
 }());

@@ -133,6 +133,7 @@ function moradoresAdminV1TratarPost_(e){
   if([
     'admin_moradores_status',
     'admin_moradores_areas',
+    'admin_moradores_indice',
     'admin_moradores_buscar',
     'admin_morador_salvar',
     'admin_morador_situacao',
@@ -149,6 +150,9 @@ function moradoresAdminV1TratarPost_(e){
     }else if(action==='admin_moradores_areas'){
       moradoresAdminV1ExigirPermissao_(contexto,'MORADORES_LER');
       resultado={ok:true,areas:moradoresAdminV1AreasVisiveis_(contexto),areaId:contexto.areaId};
+    }else if(action==='admin_moradores_indice'){
+      moradoresAdminV1ExigirPermissao_(contexto,'MORADORES_LER');
+      resultado=moradoresAdminV1IndiceLocal_(contexto);
     }else if(action==='admin_moradores_buscar'){
       moradoresAdminV1ExigirPermissao_(contexto,'MORADORES_LER');
       resultado=moradoresAdminV1Buscar_(p.q||p.busca||'',contexto);
@@ -547,13 +551,107 @@ function moradoresAdminV1InvalidarResumo_(contexto){
   }catch(erro){}
 }
 
+function moradoresAdminV1IndiceLocal_(contexto){
+  /* MORADORES_INDICE_LOCAL_APP_LIKE_20260918:
+     Leitura completa autorizada da área é preparada em segundo plano para o navegador
+     administrativo. O índice fica somente na memória da sessão do painel; não muda
+     cadastro, permissões ou isolamento entre áreas. */
+  var fonte=moradoresAdminV1LocalizarFonte_(contexto);
+  var lastRow=fonte.sheet.getLastRow(),lastCol=fonte.sheet.getLastColumn();
+  if(lastRow<=fonte.headerRow+1)return {ok:true,resultados:[],total:0,areaId:contexto.areaId};
+  var metaMap=moradoresAdminV1LerMetaMap_(fonte.ss,contexto);
+  var range=fonte.sheet.getRange(fonte.headerRow+2,1,lastRow-(fonte.headerRow+1),lastCol);
+  var raw=range.getValues(),display=range.getDisplayValues(),resultados=[];
+  for(var i=0;i<display.length;i++){
+    var morador=moradoresAdminV1MontarMorador_(display[i],raw[i],fonte.map);
+    if(!morador.nome)continue;
+    var origem={aba:fonte.sheet.getName(),linha:fonte.headerRow+2+i};
+    var chave=moradoresAdminV1ChaveRegistro_(morador);
+    var meta=metaMap.porOrigem[moradoresAdminV1ChaveOrigem_(origem)]||metaMap.porChave[chave]||null;
+    if(moradoresAdminV1EstaOculto_(morador,meta))continue;
+    resultados.push(moradoresAdminV1ComMeta_(morador,origem,meta,chave,contexto));
+  }
+  return {ok:true,resultados:resultados,total:resultados.length,areaId:contexto.areaId,modo:'INDICE_LOCAL'};
+}
+
+function moradoresAdminV1BuscarLinhasRapidas_(busca,fonte){
+  /* MORADORES_BUSCA_TEXTFINDER_INSTANT_V1:
+     A busca diária não precisa transportar as 20 colunas de todos os moradores.
+     Primeiro o Sheets localiza, no servidor, somente as linhas candidatas nas colunas
+     realmente pesquisáveis. O varrimento completo permanece apenas como fallback de
+     compatibilidade (acentos/formatações legadas). Escopo exclusivo de Moradores. */
+  var termo=moradoresAdminV1Texto_(busca),primeira=fonte.headerRow+2,ultima=fonte.sheet.getLastRow();
+  if(!termo||ultima<primeira)return [];
+  var campos=['nome','cpf','cns','idPortal','id','endereco','celular','telefoneContato'];
+  var linhas={},ordem=[];
+  campos.forEach(function(campo){
+    var col=Number(fonte.map&&fonte.map[campo]);
+    if(!isFinite(col)||col<0)return;
+    var achados=[];
+    try{
+      achados=fonte.sheet.getRange(primeira,col+1,ultima-primeira+1,1)
+        .createTextFinder(termo)
+        .matchCase(false)
+        .useRegularExpression(false)
+        .findAll()||[];
+    }catch(e){achados=[];}
+    achados.forEach(function(celula){
+      var row=celula.getRow();
+      if(linhas[row])return;
+      linhas[row]=true;ordem.push(row);
+    });
+  });
+  ordem.sort(function(a,b){return a-b;});
+  return ordem;
+}
+
+function moradoresAdminV1BuscarResultadosLinhas_(linhas,busca,fonte,metaMap,contexto){
+  var q=moradoresAdminV1NormalizarBusca_(busca),lastCol=fonte.sheet.getLastColumn(),resultados=[];
+  for(var i=0;i<linhas.length;i++){
+    var row=Number(linhas[i]);
+    if(row<=fonte.headerRow+1||row>fonte.sheet.getLastRow())continue;
+    var faixa=fonte.sheet.getRange(row,1,1,lastCol);
+    var raw=faixa.getValues()[0],display=faixa.getDisplayValues()[0];
+    var morador=moradoresAdminV1MontarMorador_(display,raw,fonte.map);
+    if(!morador.nome)continue;
+    var origem={aba:fonte.sheet.getName(),linha:row};
+    var chave=moradoresAdminV1ChaveRegistro_(morador);
+    var meta=metaMap.porOrigem[moradoresAdminV1ChaveOrigem_(origem)]||metaMap.porChave[chave]||null;
+    if(moradoresAdminV1EstaOculto_(morador,meta))continue;
+    var hay=moradoresAdminV1NormalizarBusca_([
+      morador.idPortal,morador.id,morador.nome,morador.cpf,morador.cns,
+      morador.nascimento,morador.endereco,morador.celular,morador.telefoneContato,
+      morador.microarea,morador.equipe,morador.status,morador.observacoes
+    ].join(' '));
+    if(hay.indexOf(q)===-1)continue;
+    resultados.push(moradoresAdminV1ComMeta_(morador,origem,meta,chave,contexto));
+    if(resultados.length>=TACS_MORADORES_ADMIN_V1.MAX_SEARCH_RESULTS)break;
+  }
+  return resultados;
+}
+
 function moradoresAdminV1Buscar_(busca,contexto){
   var q=moradoresAdminV1NormalizarBusca_(busca);
   if(q.length<2)throw new Error('Digite pelo menos 2 caracteres para buscar.');
   var fonte=moradoresAdminV1LocalizarFonte_(contexto);
-  var metaMap=moradoresAdminV1LerMetaMap_(fonte.ss,contexto);
   var lastRow=fonte.sheet.getLastRow(),lastCol=fonte.sheet.getLastColumn();
   if(lastRow<=fonte.headerRow+1)return {ok:true,resultados:[],total:0,limitado:false,areaId:contexto.areaId};
+
+  var metaMap=moradoresAdminV1LerMetaMap_(fonte.ss,contexto);
+  var candidatas=moradoresAdminV1BuscarLinhasRapidas_(busca,fonte);
+  if(candidatas.length){
+    var rapidos=moradoresAdminV1BuscarResultadosLinhas_(candidatas,busca,fonte,metaMap,contexto);
+    if(rapidos.length){
+      return {
+        ok:true,resultados:rapidos,total:rapidos.length,
+        limitado:rapidos.length>=TACS_MORADORES_ADMIN_V1.MAX_SEARCH_RESULTS,
+        areaId:contexto.areaId,modoBusca:'TEXTFINDER'
+      };
+    }
+  }
+
+  /* Fallback compatível: somente quando o índice textual não encontrou uma linha útil.
+     Preserva buscas antigas com acentuação/formatação incomum sem penalizar o caso diário. */
   var range=fonte.sheet.getRange(fonte.headerRow+2,1,lastRow-(fonte.headerRow+1),lastCol);
   var raw=range.getValues(),display=range.getDisplayValues(),resultados=[];
   for(var i=0;i<display.length;i++){
@@ -572,7 +670,11 @@ function moradoresAdminV1Buscar_(busca,contexto){
     resultados.push(moradoresAdminV1ComMeta_(morador,origem,meta,chave,contexto));
     if(resultados.length>=TACS_MORADORES_ADMIN_V1.MAX_SEARCH_RESULTS)break;
   }
-  return {ok:true,resultados:resultados,total:resultados.length,limitado:resultados.length>=TACS_MORADORES_ADMIN_V1.MAX_SEARCH_RESULTS,areaId:contexto.areaId};
+  return {
+    ok:true,resultados:resultados,total:resultados.length,
+    limitado:resultados.length>=TACS_MORADORES_ADMIN_V1.MAX_SEARCH_RESULTS,
+    areaId:contexto.areaId,modoBusca:'FALLBACK'
+  };
 }
 
 function moradoresAdminV1Salvar_(p,contexto){
