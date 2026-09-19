@@ -1365,9 +1365,30 @@ function pendingPreviewHtml(name,routeId){
     +'<div class="csc-pending-card"><h2>Vínculos protegidos</h2><p>Chamados e diagnóstico permanecem no próprio módulo.</p></div>'
     +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Chamados dos moradores</div><div class="csc-pending-tab">Diagnóstico dos aparelhos</div></div>'
     +'<div class="csc-pending-card">'+metrics(['Novos','Em análise','Respondidos','Resolvidos'])+'</div>';
-  if(name==='recados')return wait
-    +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Recados</div><div class="csc-pending-tab">Campanhas</div></div>'
-    +'<div class="csc-pending-card">'+metrics(['Recados','Recados ativos','Campanhas','Campanhas ativas'])+'</div>';
+  if(name==='recados'){
+    /* RECADOS_PREVIEW_CACHE_CIRURGICO_20260918:
+       Somente Recados consulta o snapshot local durante o prepaint da Central.
+       Nenhum outro painel, agenda, cache ou fluxo de navegação é alterado. */
+    try{
+      var m=String(mode||'').toLowerCase(),a=String(selectedAreaId||'').toUpperCase().replace(/[^A-Z0-9_-]/g,'');
+      var key=(m&&a)?'portalConectaRecadosSnapshotEstavelV1:'+m+':'+a:'';
+      var item=key?JSON.parse(localStorage.getItem(key)||'null'):null;
+      var age=Date.now()-Number(item&&item.salvoEm||0),data=item&&item.data;
+      if(data&&age>=0&&age<=24*60*60*1000){
+        var rec=Array.isArray(data.recados)?data.recados:[],cam=Array.isArray(data.campanhas)?data.campanhas:[];
+        var ativo=function(v){if(v===true||v===1)return true;return ['true','1','sim','yes','ativo'].indexOf(String(v==null?'':v).trim().toLowerCase())!==-1};
+        var vals=[rec.length,rec.filter(function(x){return ativo(x&&x.ATIVO)}).length,cam.length,cam.filter(function(x){return ativo(x&&x.ATIVO)}).length];
+        var labels=['Recados','Recados ativos','Campanhas','Campanhas ativas'];
+        var cachedMetrics='<div class="csc-pending-metrics">'+labels.map(function(label,idx){return '<div class="csc-pending-metric"><strong>'+vals[idx]+'</strong><span>'+label+'</span></div>'}).join('')+'</div>';
+        return '<div class="csc-pending-status">Dados já disponíveis • atualizando em segundo plano…</div>'
+          +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Recados</div><div class="csc-pending-tab">Campanhas</div></div>'
+          +'<div class="csc-pending-card">'+cachedMetrics+'</div>';
+      }
+    }catch(e){}
+    return wait
+      +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Recados</div><div class="csc-pending-tab">Campanhas</div></div>'
+      +'<div class="csc-pending-card">'+metrics(['Recados','Recados ativos','Campanhas','Campanhas ativas'])+'</div>';
+  }
   if(name==='territorio')return wait
     +'<div class="csc-pending-card"><h2>Administrador / TACS / UBS</h2><p>Cadastro, perfis e permissões da área.</p></div>'
     +'<div class="csc-pending-tabs"><div class="csc-pending-tab active">Cadastros</div><div class="csc-pending-tab">Áreas</div></div>'
@@ -1782,14 +1803,13 @@ function scheduleNativePanelPrewarm(){
    começam a montar e ler seus dados em segundo plano. Ao tocar, a Central revela o
    estado já preparado em vez de iniciar o painel do zero.
    Isolamento: não altera permissões, rotas, dados, escrita nem escopo da área. */
-var panelRuntimePrewarmScope='',panelRuntimePrewarmTimers=[],agendaSnapshotPrewarmScope='',supportRuntimePrewarmScope='',recadosRuntimePrewarmScope='';
+var panelRuntimePrewarmScope='',panelRuntimePrewarmTimers=[],agendaSnapshotPrewarmScope='',supportRuntimePrewarmScope='';
 function cancelPanelRuntimePrewarm(){
   panelRuntimePrewarmTimers.forEach(function(timer){clearTimeout(timer)});
   panelRuntimePrewarmTimers=[];
   panelRuntimePrewarmScope='';
   agendaSnapshotPrewarmScope='';
   supportRuntimePrewarmScope='';
-  recadosRuntimePrewarmScope='';
 }
 function panelRuntimeAllowed(name){
   var btn=document.querySelector('#moduleGrid .module[data-module="'+name+'"]');
@@ -1896,25 +1916,6 @@ function scheduleSupportRuntimePrewarm(scope){
   }
   panelRuntimePrewarmTimers.push(setTimeout(aquecerSuporte,2600));
 }
-function scheduleRecadosRuntimePrewarm(scope){
-  if(!scope||recadosRuntimePrewarmScope===scope)return;
-  recadosRuntimePrewarmScope=scope;
-  var tentativas=0;
-  function aquecerRecados(){
-    if(scope!==panelRuntimePrewarmScope||shellCurrentScope()!==scope)return;
-    if(!panelRuntimeAllowed('recados'))return;
-    if(!panelRuntimeRemoteReady()||active){
-      if(++tentativas>40)return;
-      panelRuntimePrewarmTimers.push(setTimeout(aquecerRecados,240));
-      return;
-    }
-    /* RECADOS_QUENTE_ANTES_PORTAL_20260918:
-       Pré-monta somente Recados. Assim, quando a Central é preservada no BFCache ao
-       entrar no Portal de testes, o frame e o snapshot permanecem prontos na volta. */
-    prewarmLegacyPanel('recados');
-  }
-  panelRuntimePrewarmTimers.push(setTimeout(aquecerRecados,1450));
-}
 function scheduleNativeDataPanelPrewarm(name,scope,delay){
   var attempts=0;
   function run(){
@@ -1965,7 +1966,6 @@ function schedulePanelRuntimePrewarm(){
   scheduleNativeDataPanelPrewarm('moradores',scope,350);
   scheduleNativeDataPanelPrewarm('profissionais',scope,1150);
   scheduleAgendaSnapshotPrewarm(scope);
-  scheduleRecadosRuntimePrewarm(scope);
   scheduleSupportRuntimePrewarm(scope);
 }
 window.addEventListener('load',function(){
