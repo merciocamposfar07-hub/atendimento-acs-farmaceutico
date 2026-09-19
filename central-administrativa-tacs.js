@@ -1782,13 +1782,14 @@ function scheduleNativePanelPrewarm(){
    começam a montar e ler seus dados em segundo plano. Ao tocar, a Central revela o
    estado já preparado em vez de iniciar o painel do zero.
    Isolamento: não altera permissões, rotas, dados, escrita nem escopo da área. */
-var panelRuntimePrewarmScope='',panelRuntimePrewarmTimers=[],agendaSnapshotPrewarmScope='',supportRuntimePrewarmScope='';
+var panelRuntimePrewarmScope='',panelRuntimePrewarmTimers=[],agendaSnapshotPrewarmScope='',supportRuntimePrewarmScope='',recadosRuntimePrewarmScope='';
 function cancelPanelRuntimePrewarm(){
   panelRuntimePrewarmTimers.forEach(function(timer){clearTimeout(timer)});
   panelRuntimePrewarmTimers=[];
   panelRuntimePrewarmScope='';
   agendaSnapshotPrewarmScope='';
   supportRuntimePrewarmScope='';
+  recadosRuntimePrewarmScope='';
 }
 function panelRuntimeAllowed(name){
   var btn=document.querySelector('#moduleGrid .module[data-module="'+name+'"]');
@@ -1895,6 +1896,25 @@ function scheduleSupportRuntimePrewarm(scope){
   }
   panelRuntimePrewarmTimers.push(setTimeout(aquecerSuporte,2600));
 }
+function scheduleRecadosRuntimePrewarm(scope){
+  if(!scope||recadosRuntimePrewarmScope===scope)return;
+  recadosRuntimePrewarmScope=scope;
+  var tentativas=0;
+  function aquecerRecados(){
+    if(scope!==panelRuntimePrewarmScope||shellCurrentScope()!==scope)return;
+    if(!panelRuntimeAllowed('recados'))return;
+    if(!panelRuntimeRemoteReady()||active){
+      if(++tentativas>40)return;
+      panelRuntimePrewarmTimers.push(setTimeout(aquecerRecados,240));
+      return;
+    }
+    /* RECADOS_QUENTE_ANTES_PORTAL_20260918:
+       Pré-monta somente Recados. Assim, quando a Central é preservada no BFCache ao
+       entrar no Portal de testes, o frame e o snapshot permanecem prontos na volta. */
+    prewarmLegacyPanel('recados');
+  }
+  panelRuntimePrewarmTimers.push(setTimeout(aquecerRecados,1450));
+}
 function scheduleNativeDataPanelPrewarm(name,scope,delay){
   var attempts=0;
   function run(){
@@ -1945,6 +1965,7 @@ function schedulePanelRuntimePrewarm(){
   scheduleNativeDataPanelPrewarm('moradores',scope,350);
   scheduleNativeDataPanelPrewarm('profissionais',scope,1150);
   scheduleAgendaSnapshotPrewarm(scope);
+  scheduleRecadosRuntimePrewarm(scope);
   scheduleSupportRuntimePrewarm(scope);
 }
 window.addEventListener('load',function(){
