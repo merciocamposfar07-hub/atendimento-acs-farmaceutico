@@ -70,7 +70,7 @@ function loadTransport(done){
     return;
   }
   var s=document.createElement('script');s.id=id;s.async=false;
-  s.src='/atendimento-acs-farmaceutico/teste-v1/painel-moradores-transport-v2.js?v=20260918-liberacao-imediata-v2';
+  s.src='/atendimento-acs-farmaceutico/teste-v1/painel-moradores-transport-v2.js?v=20260918-local-first-sessao-v3';
   s.onload=function(){done(Boolean(window.PortalTacsMoradoresTransportV2))};
   s.onerror=function(){done(false)};
   document.head.appendChild(s);
@@ -81,7 +81,7 @@ function create(host,options){
   if(!core||typeof core.session!=='function')throw new Error('Núcleo Conecta indisponível para Moradores.');
   var areaId=normArea(options&&options.areaId||core.areaId&&core.areaId())||'JAPARANDUBA';
   var scope=(core.mode&&core.mode()||'')+'|'+areaId;
-  var dirty=false,visible=false,loaded=false,lastRemoteBindAt=0,refreshTimer=null;
+  var dirty=false,visible=false,loaded=false,lastRemoteBindAt=0,refreshTimer=null,remoteReadyTimer=null;
 
   host.innerHTML=template(areaId);
   host.dataset.tacsDirty='0';
@@ -150,6 +150,18 @@ function create(host,options){
     window.PortalTacsMoradoresTransportV2.rebindNativeContext(config());
     return true;
   }
+  function watchRemoteReady(){
+    if(remoteReadyTimer||!visible||!loaded)return;
+    var started=Date.now();
+    function check(){
+      remoteReadyTimer=null;
+      if(!visible||!loaded)return;
+      if(remoteReady()){remoteRebind();return}
+      if(Date.now()-started>15000)return;
+      remoteReadyTimer=setTimeout(check,120);
+    }
+    remoteReadyTimer=setTimeout(check,120);
+  }
   /* RESPOSTA_IMEDIATA_MORADORES_REENTRADA_2026_09_16_V1
      Reabrir o painel não reinicia uma leitura remota no mesmo toque. A superfície/cache
      já preparada é mostrada primeiro; uma conferência vencida só é agendada depois,
@@ -172,7 +184,7 @@ function create(host,options){
         return;
       }
       loaded=true;
-      if(remoteReady())remoteRebind();else showWaitingSession();
+      if(remoteReady())remoteRebind();else{showWaitingSession();watchRemoteReady()}
     });
   }
 
@@ -185,12 +197,12 @@ function create(host,options){
       visible=true;host.hidden=false;ensureInstantSurface();
       if(next&&next.areaId&&normArea(next.areaId)!==areaId)return false;
       window.ConectaMoradoresNativeConfigV1=config();
-      if(!remoteReady())showWaitingSession();else scheduleRefreshIfStale();
+      if(!remoteReady()){showWaitingSession();watchRemoteReady()}else scheduleRefreshIfStale();
       return true;
     },
-    hide:function(){visible=false;host.hidden=true},
+    hide:function(){visible=false;if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}host.hidden=true},
     hasUnsaved:function(){return dirty},
-    reset:function(){visible=false;dirty=false;if(refreshTimer){clearTimeout(refreshTimer);refreshTimer=null}host.dataset.tacsDirty='0';host.innerHTML='';host.hidden=true},
+    reset:function(){visible=false;dirty=false;if(refreshTimer){clearTimeout(refreshTimer);refreshTimer=null}if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}host.dataset.tacsDirty='0';host.innerHTML='';host.hidden=true},
     isVisible:function(){return visible}
   };
 }
