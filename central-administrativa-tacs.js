@@ -1909,6 +1909,28 @@ function scheduleNativeDataPanelPrewarm(name,scope,delay){
   }
   panelRuntimePrewarmTimers.push(setTimeout(run,delay));
 }
+function schedulePortalReturnRecadosPrewarm(scope){
+  var retornoPortal=false;
+  try{retornoPortal=sessionStorage.getItem('portalTacsRetornoPortalV1')==='1'}catch(e){}
+  if(!retornoPortal||!scope)return;
+  try{sessionStorage.removeItem('portalTacsRetornoPortalV1')}catch(e){}
+  var attempts=0;
+  function run(){
+    if(scope!==panelRuntimePrewarmScope||shellCurrentScope()!==scope)return;
+    if(!panelRuntimeAllowed('recados'))return;
+    if(!panelRuntimeRemoteReady()||active){
+      if(++attempts>30)return;
+      panelRuntimePrewarmTimers.push(setTimeout(run,120));
+      return;
+    }
+    /* RETORNO_PORTAL_RECADOS_QUENTE_20260918:
+       Ao voltar do Portal de testes, o frame real de Recados começa a carregar antes
+       do primeiro toque. O painel então aplica seu snapshot local e apenas reconfirma
+       o servidor em segundo plano. Nenhum outro painel recebe esta prioridade. */
+    prewarmLegacyPanel('recados');
+  }
+  panelRuntimePrewarmTimers.push(setTimeout(run,0));
+}
 function schedulePanelRuntimePrewarm(){
   if(!context||!selectedAreaId)return;
   var scope=shellCurrentScope();
@@ -1918,6 +1940,7 @@ function schedulePanelRuntimePrewarm(){
   /* CORRECAO_PREWARM_MORADORES_PROFISSIONAIS_20260918:
      somente estes dois painéis nativos recebem leitura antecipada, em sequência e
      fora do toque. Agendas/Suporte e todos os demais fluxos permanecem inalterados. */
+  schedulePortalReturnRecadosPrewarm(scope);
   scheduleNativePanelPrewarm();
   scheduleNativeDataPanelPrewarm('moradores',scope,350);
   scheduleNativeDataPanelPrewarm('profissionais',scope,1150);
