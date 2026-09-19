@@ -1278,20 +1278,51 @@ function enhanceShellFrame(frame){
     }
   });
 }
+function setLegacyFrameExclusive(activeFrame){
+  /* ISOLAMENTO_FRAME_LEGADO_20260918:
+     Cada painel legado mantém seu próprio iframe. Nenhum iframe de Recados, Suporte,
+     Municípios, TACS/áreas ou Prontuários pode permanecer pintando junto do outro.
+     Esta função não toca nos hosts nativos de Moradores, Agendas ou Profissionais. */
+  var base=el('viewerFrame');
+  if(base&&base!==activeFrame){
+    base.hidden=true;
+    base.setAttribute('aria-hidden','true');
+    try{base.style.setProperty('display','none','important');base.style.setProperty('visibility','hidden','important')}catch(e){}
+  }
+  Object.keys(shellFrames).forEach(function(key){
+    var item=shellFrames[key];if(!item)return;
+    if(item===activeFrame){
+      item.hidden=false;
+      item.setAttribute('aria-hidden','false');
+      try{item.style.removeProperty('display');item.style.removeProperty('visibility')}catch(e){}
+      return;
+    }
+    item.hidden=true;
+    item.setAttribute('aria-hidden','true');
+    try{item.style.setProperty('display','none','important');item.style.setProperty('visibility','hidden','important')}catch(e){}
+  });
+}
 function ensureShellFrame(name,url,title,routeId){
   prepareShellScope();
-  var key=shellFrameKey(routeId),frame=shellFrames[key],base=el('viewerFrame'),viewer=el('viewer');
+  var key=shellFrameKey(routeId),frame=shellFrames[key],viewer=el('viewer');
   if(frame)return frame;
-  if(base&&!base.dataset.shellKey){
-    frame=base;
-  }else{
-    frame=document.createElement('iframe');
-    frame.className='csc-module-frame';
-    frame.setAttribute('title',title||'Painel administrativo');
-    frame.src='about:blank';
-    viewer.appendChild(frame);
-  }
-  frame.dataset.shellKey=key;frame.dataset.shellModule=name;frame.dataset.shellRoute=routeId;frame.dataset.shellUrl=url;frame.hidden=true;
+  /* ISOLAMENTO_FRAME_LEGADO_20260918:
+     não reutilizar viewerFrame entre módulos. Cada rota recebe iframe próprio para
+     impedir que cabeçalho/DOM de um painel apareça durante a abertura de outro. */
+  frame=document.createElement('iframe');
+  frame.className='csc-module-frame';
+  frame.setAttribute('title',title||'Painel administrativo');
+  frame.src='about:blank';
+  frame.dataset.shellKey=key;
+  frame.dataset.shellModule=name;
+  frame.dataset.shellRoute=routeId;
+  frame.dataset.shellUrl=url;
+  frame.dataset.shellOwner='isolated:'+name;
+  frame.dataset.shellReady='0';
+  frame.hidden=true;
+  frame.setAttribute('aria-hidden','true');
+  try{frame.style.setProperty('display','none','important');frame.style.setProperty('visibility','hidden','important')}catch(e){}
+  viewer.appendChild(frame);
   enhanceShellFrame(frame);shellFrames[key]=frame;
   return frame;
 }
@@ -1300,12 +1331,12 @@ function showShellFrame(name,frame,title,routeId){
   var nativeHost=el('nativeModuleHost');if(nativeHost)nativeHost.hidden=true;
   var moradoresHost=el('nativeMoradoresHost');if(moradoresHost)moradoresHost.hidden=true;
   var profissionaisHost=el('nativeProfissionaisHost');if(profissionaisHost)profissionaisHost.hidden=true;
-  Object.keys(shellFrames).forEach(function(key){var item=shellFrames[key];if(item)item.hidden=item!==frame});
+  setLegacyFrameExclusive(frame);
   shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
   el('viewerTitle').textContent=title||'Painel';
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer','csc-frame-viewer');viewer.classList.remove('csc-native-viewer');viewer.hidden=false;
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
-  frame.hidden=false;document.body.classList.add('viewer-open');
+  document.body.classList.add('viewer-open');
   var shellReady=frame.dataset.shellReady==='1'&&shellFrameAtTarget(frame);
   if(shellReady)applyAdminUbsRemoteToFrame(frame);
   /* TAREFA_11_RESPOSTA_VISUAL_IMEDIATA_V1 + PREPAINT_CANONICO_V1:
