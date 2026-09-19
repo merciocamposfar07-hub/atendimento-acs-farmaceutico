@@ -381,6 +381,11 @@ function install(){
   btn.addEventListener('click',function(){
     btn.disabled=true;
     try{sessionStorage.setItem('portalTacsRetornoCentralV1','1')}catch(e){}
+    /* SESSAO_PIN_FICTICIO_REENTRADA_20260918:
+       Ao sair do Portal pelo retorno à Central, encerra somente a sessão temporária
+       do Morador em modo TACS/teste. O quickKey/PIN fictício permanece em localStorage,
+       portanto a próxima entrada volta a exigir o PIN. Nenhum token real é removido. */
+    try{sessionStorage.removeItem('portalConectaMoradorTokenTesteV1')}catch(e){}
     /* RETORNO_CENTRAL_SHELL_V2:
        quando o Portal TACS foi aberto pelo viewer da Central, fecha somente o viewer
        e revela novamente os painéis administrativos já autenticados.
