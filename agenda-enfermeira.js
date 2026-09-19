@@ -950,32 +950,45 @@
     var status = id('notificationStatus');
     var help = id('notificationHelp');
 
+    function notificationUiAlreadyActive(){
+      var statusText = clean(status && status.textContent).toLowerCase();
+      var buttonText = clean(button && button.textContent).toLowerCase();
+      return statusText.indexOf('avisos ativados neste aparelho') !== -1 ||
+        buttonText === 'avisos ativados';
+    }
+
     function showNotificationAfterPin(){
-      notificationPinPromptPending = true;
+      var alreadyActive = notificationUiAlreadyActive();
+      notificationPinPromptPending = !alreadyActive;
       var offer = id('notificationOffer');
-      var pin = id('portalResidentPinV1');
       if(!offer)return;
+
+      /* PIN_NOTIFICACAO_SEM_INVERSAO_20260918:
+         O bloco de notificações permanece na posição original, depois da área de
+         solicitação. Não é mais movido para depois do PIN e não provoca rolagem.
+         Se o aparelho já está ativo, o PIN não reabre onboarding nem troca o estado. */
       offer.hidden = false;
-      offer.setAttribute('data-pin-onboarding','1');
-      if(pin && pin.parentNode && offer.previousElementSibling !== pin){
-        try{pin.insertAdjacentElement('afterend',offer)}catch(moveError){}
+      if(alreadyActive){
+        offer.removeAttribute('data-pin-onboarding');
+        if(status)status.textContent = 'Avisos ativados neste aparelho.';
+        if(button){
+          button.textContent = 'Avisos ativados';
+          button.disabled = true;
+        }
+        return;
       }
+
+      offer.setAttribute('data-pin-onboarding','1');
       if(status)status.textContent = notificationSdkReady
-        ? 'PIN confirmado. Agora ative as notificações deste aparelho.'
-        : 'PIN confirmado. Preparando a ativação das notificações…';
+        ? 'PIN confirmado. Conferindo o estado das notificações deste aparelho…'
+        : 'PIN confirmado. Preparando a conferência das notificações…';
       if(help)help.textContent = notificationSdkReady
-        ? 'Toque em “Ativar avisos neste aparelho” e escolha Permitir.'
-        : 'O Portal está preparando o canal de avisos. O botão será liberado assim que estiver pronto.';
+        ? 'O Portal verificará automaticamente se este aparelho já está autorizado.'
+        : 'O Portal está preparando o canal de avisos sem interromper o restante da solicitação.';
       if(button && !notificationSdkReady){
         button.disabled = true;
-        button.textContent = 'Preparando ativação…';
-      }else if(button && button.textContent !== 'Avisos ativados'){
-        button.disabled = false;
-        button.textContent = 'Ativar avisos neste aparelho';
+        button.textContent = 'Preparando avisos…';
       }
-      setTimeout(function(){
-        try{offer.scrollIntoView({behavior:'smooth',block:'center'})}catch(scrollError){}
-      },40);
     }
 
     document.addEventListener('tacs:pin-criado-confirmado',showNotificationAfterPin);
@@ -1021,12 +1034,8 @@
           allowLocalhostAsSecureOrigin: false
         });
         notificationSdkReady = true;
-        if(notificationPinPromptPending){
-          status.textContent = 'PIN confirmado. Agora ative as notificações deste aparelho.';
-          help.textContent = 'Toque em “Ativar avisos neste aparelho” e escolha Permitir.';
-          button.disabled = false;
-          button.textContent = 'Ativar avisos neste aparelho';
-        }
+        /* O estado real será calculado por sincronizarEstado(). Não sobrescrevemos
+           antecipadamente um aparelho que já estava ativo antes da criação do PIN. */
 
         var repairInProgress = false;
 
@@ -1429,6 +1438,7 @@
         });
 
         await sincronizarEstado();
+        notificationPinPromptPending = false;
       } catch (error) {
         status.textContent =
           'O serviço de avisos não conseguiu iniciar neste navegador.';
