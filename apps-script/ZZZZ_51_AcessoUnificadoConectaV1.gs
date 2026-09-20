@@ -1135,14 +1135,49 @@ function conectaAcessoV1LoginUbs_(p){
   if(!/^\d{4,8}$/.test(pin))throw new Error('Informe o PIN de acesso com 4 a 8 números.');
   if(typeof tacsTerritorioV1PerfilTem_!=='function')throw new Error('O cadastro de perfis da UBS não está disponível.');
 
-  var referencia=conectaAcessoV1ReferenciaUbsConfiavel_(dispositivo,chave),ubs=null,novaChave='';
-  if(referencia&&typeof tacsTerritorioV1EncontrarTacs_==='function'){
-    ubs=tacsTerritorioV1EncontrarTacs_(referencia);
-    if(!ubs||ubs.ativo!==true||!tacsTerritorioV1PerfilTem_(ubs.perfil,'UBS'))ubs=null;
-    if(ubs&&(!ubs.pinSalt||!ubs.pinHash||!tacsTerritorioV1CompararSeguro_(ubs.pinHash,tacsTerritorioV1HashPin_(pin,ubs.pinSalt))))ubs=null;
+  /* UBS_LOGIN_LEITURA_UNICA: somente este login lê cada tabela em uma operação.
+     Não reutiliza hash/PIN/permissões de cache: alterações e revogações são lidas agora. */
+  var ss=tacsTerritorioV1Planilha_();
+  function ler(nome,headers){
+    var sheet=ss.getSheetByName(nome);
+    if(!sheet)return [];
+    var values=sheet.getDataRange().getValues(),head=values[0]||[];
+    for(var h=0;h<headers.length;h++){
+      if(conectaAcessoV1Chave_(head[h])!==conectaAcessoV1Chave_(headers[h]))
+        throw new Error('A estrutura da aba '+nome+' não confere. Nenhuma gravação foi feita.');
+    }
+    return values.slice(1);
+  }
+  var referencia='',ubs=null,novaChave='';
+  if(/^ctr1\./.test(chave)){
+    var trust=ler(TACS_CONECTA_ACESSO_V1.TRUST_SHEET,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS);
+    var dh=conectaAcessoV1Hash_(dispositivo),kh=conectaAcessoV1Hash_(chave);
+    for(var i=trust.length-1;i>=0;i--){
+      var row=trust[i];
+      if(conectaAcessoV1Texto_(row[1])==='UBS'&&conectaAcessoV1Bool_(row[5])&&
+         conectaAcessoV1Seguro_(conectaAcessoV1Texto_(row[3]),dh)&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(row[4]),kh)){
+        referencia=conectaAcessoV1Id_(row[2]);break;
+      }
+    }
+  }
+  var rows=ler(TACS_TERRITORIO_V1.TACS_SHEET,TACS_TERRITORIO_V1.TACS_HEADERS),map={};
+  TACS_TERRITORIO_V1.TACS_HEADERS.forEach(function(h,i){map[h]=i});
+  var tabela={map:map},lista=rows.map(function(v){
+    return tacsTerritorioV1TacsDeLinha_(tabela,{values:v,display:v});
+  }).filter(function(item){return !!item.tacsId}).slice(0,TACS_TERRITORIO_V1.MAX_TACS);
+  function confere(item){
+    return item&&item.ativo===true&&tacsTerritorioV1PerfilTem_(item.perfil,'UBS')&&item.pinSalt&&item.pinHash&&
+      tacsTerritorioV1CompararSeguro_(item.pinHash,tacsTerritorioV1HashPin_(pin,item.pinSalt));
+  }
+  if(referencia){
+    for(var j=0;j<lista.length;j++){
+      if(conectaAcessoV1Id_(lista[j].tacsId)===referencia&&confere(lista[j])){ubs=lista[j];break;}
+    }
   }
   if(!ubs){
-    ubs=conectaAcessoV1UbsPorPin_(pin);
+    var matches=lista.filter(confere);
+    if(matches.length!==1)throw new Error(matches.length>1?'Há mais de uma UBS com este PIN. O administrador precisa corrigir a duplicidade.':'PIN da UBS não localizado.');
+    ubs=matches[0];
     novaChave=conectaAcessoV1RegistrarUbsConfiavel_(ubs,dispositivo);
   }
   if(!conectaAcessoV1Texto_(ubs.unidadeId))throw new Error('O cadastro UBS precisa de uma unidade de saúde válida.');

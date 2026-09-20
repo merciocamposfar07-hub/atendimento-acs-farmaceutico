@@ -1,4 +1,4 @@
-name: Implantar correção cirúrgica UBS institucional v1
+name: Implantar correção cirúrgica UBS PIN v1
 
 on:
   push:
@@ -29,16 +29,12 @@ jobs:
           node-version: '20'
           cache: npm
 
-      - name: Validar somente os dois problemas corrigidos
+      - name: Validar sintaxe do acesso UBS
         shell: bash
         run: |
           set -euo pipefail
-          npm ci
-          node scripts/test_tarefa1_perfil_ubs.js
-          node scripts/test_primeiro_toque_paineis_v1.js
-          node scripts/test_territorio_dom.js
-          node --check central-administrativa-tacs.js
-          node --check --input-type=commonjs < apps-script/ZZZZ_17_TacsAreasAdminV1.gs
+          node --check conecta-acesso-unificado-v1.js
+          node --check --input-type=commonjs < apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs
 
       - name: Validar credenciais sem exibi-las
         env:
@@ -73,7 +69,7 @@ jobs:
           npx --yes @google/clasp@3.3.0 pull
           test -f appsscript.json
 
-      - name: Substituir somente o módulo territorial UBS
+      - name: Substituir somente a função de login UBS
         shell: bash
         run: |
           set -euo pipefail
@@ -81,44 +77,32 @@ jobs:
           export LIVE_DIR
           python3 - <<'PY'
           from pathlib import Path
-          import hashlib, json, os, shutil
-
+          import hashlib, os
           live=Path(os.environ['LIVE_DIR'])
-          source=Path('apps-script/ZZZZ_17_TacsAreasAdminV1.gs')
-          candidates=[]
-          declaration='var TACS_TERRITORIO_V1 = Object.freeze('
-          for p in live.rglob('*'):
-              if p.is_file() and p.suffix.lower() in {'.js','.gs'}:
-                  try:
-                      text=p.read_text(encoding='utf-8')
-                  except Exception:
-                      continue
-                  if declaration in text:
-                      candidates.append(p)
+          source=Path('apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs').read_text()
+          start='function conectaAcessoV1LoginUbs_(p){'
+          end='function conectaAcessoV1TacsPorCpf_'
+          def bounds(text):
+              if text.count(start)!=1 or text.count(end)!=1:
+                  raise SystemExit('Declaração UBS ausente ou duplicada; publicação bloqueada.')
+              a=text.index(start); b=text.index(end,a)
+              return a,b
+          sa,sb=bounds(source)
+          replacement=source[sa:sb]
+          candidates=[p for p in live.rglob('*') if p.is_file() and p.suffix in {'.js','.gs'} and start in p.read_text()]
           if len(candidates)!=1:
-              names=[str(p.relative_to(live)) for p in candidates]
-              raise SystemExit(f'Esperado exatamente 1 módulo que DECLARA TACS_TERRITORIO_V1; encontrados {len(candidates)}: {names}')
-          target=candidates[0]
-
-          def digest_tree():
-              out={}
-              for p in live.rglob('*'):
-                  if p.is_file() and p.name!='.clasp.json':
-                      out[str(p.relative_to(live))]=hashlib.sha256(p.read_bytes()).hexdigest()
-              return out
-
-          before=digest_tree()
-          shutil.copyfile(source,target)
-          after=digest_tree()
-          changed=sorted(k for k in set(before)|set(after) if before.get(k)!=after.get(k))
-          expected=str(target.relative_to(live))
-          if changed!=[expected]:
-              raise SystemExit(f'Escopo violado. Arquivos alterados: {changed}; esperado somente {expected}')
-          Path(os.environ['RUNNER_TEMP']).joinpath('ubs-territorio-target.txt').write_text(str(target),encoding='utf-8')
-          print(json.dumps({'ok':True,'arquivo_alterado':expected},ensure_ascii=False))
+              raise SystemExit('Esperado exatamente um módulo com o login UBS.')
+          target=candidates[0]; original=target.read_text(); a,b=bounds(original)
+          expected='5ccb8b5179d9d5bdf3e96668b604065f092fed742600b45c8884d82c3d97333d'
+          if hashlib.sha256(original[a:b].encode()).hexdigest()!=expected and original[a:b]!=replacement:
+              raise SystemExit('Login UBS em produção diverge da base analisada; publicação bloqueada.')
+          updated=original[:a]+replacement+original[b:]
+          target.write_text(updated)
+          assert updated[:a]==original[:a] and updated[a+len(replacement):]==original[b:]
+          Path(os.environ['RUNNER_TEMP'],'ubs-territorio-target.txt').write_text(str(target))
+          print('Alterada somente conectaAcessoV1LoginUbs_; demais funções preservadas.')
           PY
           TARGET="$(cat "$RUNNER_TEMP/ubs-territorio-target.txt")"
-          test -f "$TARGET"
           node --check --input-type=commonjs < "$TARGET"
 
       - name: Publicar mesma implantação e validar
@@ -134,7 +118,7 @@ jobs:
           test -n "$PREVIOUS_VERSION"
 
           npx --yes @google/clasp@3.3.0 push --force
-          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "UBS institucional sem pessoa física - ${GITHUB_SHA::7}")
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "UBS PIN leitura única - ${GITHUB_SHA::7}")
           NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
           test -n "$NEW_VERSION"
 
@@ -143,13 +127,13 @@ jobs:
             code=$?
             trap - ERR
             if [ "$DEPLOYED" = '1' ]; then
-              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático UBS institucional" "$DEPLOYMENT_ID" || true
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback automático UBS PIN" "$DEPLOYMENT_ID" || true
             fi
             exit "$code"
           }
           trap rollback ERR
 
-          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "UBS institucional sem pessoa física" "$DEPLOYMENT_ID"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "UBS PIN leitura única" "$DEPLOYMENT_ID"
           DEPLOYED=1
 
           BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
@@ -163,7 +147,7 @@ jobs:
           done
           test "$ok" = '1'
           trap - ERR
-          printf 'Correção UBS institucional implantada: versão %s\n' "$NEW_VERSION"
+          printf 'Correção UBS PIN implantada: versão %s\n' "$NEW_VERSION"
 
       - name: Remover credenciais temporárias
         if: always()

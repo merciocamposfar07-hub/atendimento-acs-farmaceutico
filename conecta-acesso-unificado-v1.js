@@ -195,7 +195,7 @@ function postUbsLogin(payload){
  return new Promise(function(resolve,reject){
   var id=requestId('conecta_ubs_login_pin'),body=new URLSearchParams(),done=false,pollTimer=null;
   var controller=typeof AbortController==='function'?new AbortController():null;
-  var deadline=setTimeout(function(){finish(null,new Error('Não foi possível confirmar o acesso da UBS a tempo. Tente novamente.'))},15000);
+  var deadline=setTimeout(function(){finish(null,new Error('Não foi possível confirmar o acesso da UBS a tempo. Tente novamente.'))},45000);
   function finish(result,error){
    if(done)return;done=true;clearTimeout(deadline);clearTimeout(pollTimer);
    if(controller)controller.abort();
