@@ -2894,7 +2894,7 @@ function carregarSaudeNotificacoes(){
   post('admin_notificacoes_saude_rapida',sessao(),function(r){
     if(r&&r.ok===true)renderSaudeNotificacoes(r);
     else status('saudeNotificacoesStatus',txt(r&&r.message||'Não foi possível carregar a situação das notificações agora.'),'aviso');
-    setTimeout(function(){atualizarSaudeNotificacoesRemota(true)},1200);
+    setTimeout(function(){atualizarSaudeNotificacoesRemota(true)},120);
   },'admin_notificacoes_saude_result');
 }
 var saudeRemotaEmCurso=false;

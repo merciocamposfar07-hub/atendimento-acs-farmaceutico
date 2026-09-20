@@ -727,7 +727,7 @@ function moduleUrl(name,options){
   if(opts.all)extra+='&all='+encodeURIComponent(opts.all);
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-suporte-ubs-diag-v1';
-  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-recados-onesignal-silencioso-v3';
+  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260919-recados-prewarm-app-v4';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
@@ -1967,6 +1967,21 @@ function scheduleAgendaSnapshotPrewarm(scope){
   }
   panelRuntimePrewarmTimers.push(setTimeout(aquecer,650));
 }
+function scheduleRecadosRuntimePrewarm(scope){
+  if(!scope)return;
+  var attempts=0;
+  function run(){
+    if(scope!==panelRuntimePrewarmScope||shellCurrentScope()!==scope)return;
+    if(!panelRuntimeAllowed('recados'))return;
+    if(!panelRuntimeRemoteReady()||active){
+      if(++attempts>30)return;
+      panelRuntimePrewarmTimers.push(setTimeout(run,180));
+      return;
+    }
+    prewarmLegacyPanel('recados');
+  }
+  panelRuntimePrewarmTimers.push(setTimeout(run,120));
+}
 function scheduleSupportRuntimePrewarm(scope){
   if(!scope||supportRuntimePrewarmScope===scope)return;
   supportRuntimePrewarmScope=scope;
@@ -2033,6 +2048,7 @@ function schedulePanelRuntimePrewarm(){
      somente estes dois painéis nativos recebem leitura antecipada, em sequência e
      fora do toque. Agendas/Suporte e todos os demais fluxos permanecem inalterados. */
   schedulePortalReturnRecadosPrewarm(scope);
+  scheduleRecadosRuntimePrewarm(scope);
   scheduleNativePanelPrewarm();
   scheduleNativeDataPanelPrewarm('moradores',scope,350);
   scheduleNativeDataPanelPrewarm('profissionais',scope,1150);
