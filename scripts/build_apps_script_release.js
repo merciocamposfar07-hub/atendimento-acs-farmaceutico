@@ -160,6 +160,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs',
     marker: 'TACS_CONECTA_ACESSO_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_52_SolicitacoesMoradoresUbsV1.gs',
+    marker: 'TACS_SOLICITACOES_UBS_V1'
   }
 ];
 
