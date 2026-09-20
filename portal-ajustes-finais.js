@@ -592,7 +592,24 @@
     return { service: service, description: raw || 'Não informada.', day: day, status: status };
   }
 
+  var CSC_CARD_ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260920-solicitacao-card-icon-v1';
+  function loadOfficialCscCardIcon() {
+    return new Promise(function (resolve, reject) {
+      var image = new Image(), done = false;
+      function finish(ok) {
+        if (done) return; done = true;
+        if (ok && image.naturalWidth) resolve(image);
+        else reject(new Error('Não foi possível carregar o ícone oficial do Conecta Saúde Comunitária.'));
+      }
+      image.onload = function () { finish(true); };
+      image.onerror = function () { finish(false); };
+      image.src = CSC_CARD_ICON;
+      if (image.complete) setTimeout(function () { finish(Boolean(image.naturalWidth)); }, 0);
+    });
+  }
+
   function createPetroleumCard(data) {
+    return loadOfficialCscCardIcon().then(function (logo) {
     var summary = corporateRequest(data);
     var canvas = document.createElement('canvas');
     canvas.width = 1080;
@@ -605,12 +622,13 @@
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1080, 1920);
 
+    ctx.drawImage(logo, 52, 34, 132, 132);
     ctx.fillStyle = '#8df0b4';
-    ctx.font = '900 36px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA', 60, 82);
+    ctx.font = '900 32px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    drawLines(ctx, 'PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA', 215, 78, 805, 38, 2);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 66px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('SOLICITAÇÃO DO MORADOR', 60, 165);
+    ctx.font = '900 52px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('SOLICITAÇÃO DO MORADOR', 215, 174);
 
     ctx.fillStyle = 'rgba(255,255,255,.12)';
     roundRect(ctx, 52, 210, 976, 350, 30);
@@ -678,6 +696,7 @@
         if (!blob) reject(new Error('Não foi possível gerar o card.'));
         else resolve(blob);
       }, 'image/png', 1);
+    });
     });
   }
 
