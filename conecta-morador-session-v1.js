@@ -61,6 +61,22 @@ function waitBackgroundLogin(){
 function removeDuplicateFamilySelector(){
  var old=el('cscFamilySession');if(old&&old.parentNode)old.parentNode.removeChild(old);
 }
+function guardDuplicateFamilySelector(){
+ removeDuplicateFamilySelector();
+ if(window.__cscDuplicateFamilyGuard)return;
+ window.__cscDuplicateFamilyGuard=true;
+ var root=document.querySelector('.form-panel')||document.body;
+ if(!root||typeof MutationObserver!=='function')return;
+ new MutationObserver(function(list){
+  for(var i=0;i<list.length;i++){
+   var nodes=list[i].addedNodes||[];
+   for(var j=0;j<nodes.length;j++){
+    var n=nodes[j];
+    if(n&&n.nodeType===1&&(n.id==='cscFamilySession'||(n.querySelector&&n.querySelector('#cscFamilySession')))){removeDuplicateFamilySelector();return}
+   }
+  }
+ }).observe(root,{childList:true,subtree:true});
+}
 function applyResident(r,localOnly){
  resident=r||resident;if(!resident)return;
  var savedCpf=residentProfileCpf();if(!digits(resident.cpf)&&savedCpf)resident.cpf=savedCpf;
@@ -119,17 +135,8 @@ function familyMemberSessionDocument(m,r){
  return '';
 }
 function renderFamily(r){
- var old=el('cscFamilySession');if(old)old.remove();
- var members=Array.isArray(r.familia)?r.familia:[];if(!members.length)return;
- var box=document.createElement('section');box.id='cscFamilySession';box.className='csc-family-session';
- box.innerHTML='<h2>Quem precisa do atendimento?</h2><p>Selecione uma pessoa do vínculo familiar. O responsável deste acesso continua sendo '+esc(r.nome||'o morador autenticado')+'.</p><div class="csc-family-grid">'+members.map(function(m){var doc=familyMemberSessionDocument(m,r),has=Boolean(m.temDocumento||doc);return '<button type="button" class="csc-family-person'+(m.responsavel?' active':'')+'" data-csc-family-token="'+esc(m.token||'')+'" data-csc-family-name="'+esc(m.nome||'')+'" data-csc-family-birth="'+esc(m.nascimento||'')+'" data-csc-family-locality="'+esc(m.localidade||'')+'" data-csc-family-hasdoc="'+(has?'1':'0')+'" data-csc-family-doc="'+esc(doc)+'">'+esc(m.nome||'Morador')+'<span>'+(m.nascimento?'Nascimento: '+esc(m.nascimento):'')+(has?'':' • CPF/CNS ainda não disponível')+'</span></button>'}).join('')+'</div>';
- // Mantém a família na identificação, logo abaixo do PIN, inclusive na reentrada.
- var anchor=el('portalResidentPinV1'),cpf=el('cpf');
- if(!anchor&&cpf)anchor=cpf.closest('label');
- if(!anchor||!anchor.parentNode)return;
- box.style.gridColumn='1 / -1';
- anchor.parentNode.insertBefore(box,anchor.nextSibling);
- box.addEventListener('click',function(e){var b=e.target.closest('[data-csc-family-token]');if(!b)return;selectFamilyMember(b)});
+ var old=el('cscFamilySession');if(old&&old.parentNode)old.parentNode.removeChild(old);
+ return;
 }
 
 function mergeResidentFamily(primary,fallback){
@@ -264,6 +271,7 @@ async function activateNotifications(){
 }
 
 function install(){
+ guardDuplicateFamilySelector();
  try{token=text(sessionStorage.getItem(activeTokenKey())||'')}catch(e){token=''}
  var local=readBootstrap(),pending=hasBackgroundRequest();
  if(!queryFlag()){
