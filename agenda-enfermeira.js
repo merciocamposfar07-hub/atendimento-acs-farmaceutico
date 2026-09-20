@@ -770,7 +770,7 @@
 
     ctx.fillStyle = '#70e39f';
     ctx.font = '900 34px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('PORTAL TACS • POSTO MATIAS', 62, 92);
+    ctx.fillText('PORTAL CSC • CONECTA SAÚDE COMUNITÁRIA', 62, 92);
 
     ctx.fillStyle = '#ffffff';
     ctx.font = '900 64px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
@@ -854,7 +854,7 @@
 
     createCard(data)
       .then(function (blob) {
-        var file = new File([blob], 'solicitacao-portal-tacs.png', {
+        var file = new File([blob], 'solicitacao-portal-csc.png', {
           type: 'image/png'
         });
 
@@ -865,7 +865,7 @@
           return navigator.share({
             title: 'Solicitação do morador',
             text:
-              'Solicitação da área TACS de ' +
+              'Solicitação do Portal CSC — Conecta Saúde Comunitária • área de ' +
               TACS_NAME +
               ' — Unidade de Saúde Posto Matias.',
             files: [file]
