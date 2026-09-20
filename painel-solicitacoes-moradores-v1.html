@@ -160,7 +160,7 @@ function detailHtml(x){
  var s=effectiveStatus(x),expired=s==='EXPIRADA',birth=birthDisplay(x.nascimento)||'Não informado',age=ageLabel(x.nascimento),expiry=expiryDisplay(x);
  var generatedArea=text(x.areaNome||area()),unit=text(x.unidadeNome||(x.unidadeId==='POSTO_MATIAS'?'Unidade de Saúde Posto Matias':x.unidadeId)||'Unidade vinculada à área');
  var body='<article class="slip"><div class="slip-inner">'+
-   '<div class="slip-brand"><img src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=69a1f1ba696e" alt=""><span>PORTAL CSC • CONECTA SAÚDE COMUNITÁRIA</span></div>'+
+   '<div class="slip-brand"><img src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=69a1f1ba696e" alt=""><span>PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA</span></div>'+
    '<h1 class="slip-title">SOLICITAÇÃO DO MORADOR</h1>'+
    '<section class="slip-card">'+
      '<span class="slip-label">Área de atendimento</span><span class="slip-value">'+esc(generatedArea)+'</span>'+
@@ -176,7 +176,7 @@ function detailHtml(x){
      '<span class="slip-label">Localidade / comunidade</span><span class="slip-value">'+esc(x.localidade||'Não informada')+'</span>'+
      '<span class="slip-label">Descrição da solicitação</span><span class="slip-value slip-description">'+esc(x.descricao||x.categoria||'Não informada')+'</span>'+
    '</section>'+
-   '<div class="slip-footer"><div class="slip-code">Código: '+esc(x.codigoSolicitacao||'Não informado')+'</div><div class="slip-generated">Gerado pelo Portal TACS • '+esc(generatedArea)+'</div></div>'+
+   '<div class="slip-footer"><div class="slip-code">Código: '+esc(x.codigoSolicitacao||'Não informado')+'</div><div class="slip-generated">Gerado pelo PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA • '+esc(generatedArea)+'</div></div>'+
  '</div></article>';
  var meta=expiry?'<div class="detail-meta">Expiração automática: '+esc(expiry)+'</div>':'<div class="detail-meta">Sem expiração automática registrada para esta solicitação.</div>';
  var actions=!expired&&s!=='CONCLUIDA'?'<div class="detail-actions"><button class="attend" type="button" data-detail-action="EM_ATENDIMENTO" '+(s==='EM_ATENDIMENTO'?'disabled':'')+'>Em atendimento</button><button class="done" type="button" data-detail-action="CONCLUIDA">Concluir</button></div>':'';
