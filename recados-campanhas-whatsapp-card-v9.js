@@ -31,7 +31,8 @@ function wrap(ctx,text,x,y,maxWidth,lineHeight,maxLines){
   lines.forEach(function(value,index){ctx.fillText(value,x,y+index*lineHeight)});
   return y+lines.length*lineHeight;
 }
-var PORTAL_TACS_STATUS_ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3';
+var PORTAL_TACS_STATUS_ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260920-card-csc-v1';
+var PORTAL_CSC_LABEL='PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA';
 var portalTacsStatusIconPromise=null;
 function loadPortalTacsStatusIcon(){
   if(portalTacsStatusIconPromise)return portalTacsStatusIconPromise;
@@ -47,7 +48,7 @@ function draw(data){
     var g=ctx.createLinearGradient(0,0,1080,1920);g.addColorStop(0,'#031b2f');g.addColorStop(.50,'#073850');g.addColorStop(1,'#0b5a7a');ctx.fillStyle=g;ctx.fillRect(0,0,1080,1920);
     ctx.globalAlpha=.10;ctx.fillStyle='#79c8e5';ctx.beginPath();ctx.arc(1010,245,300,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(100,1760,360,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
     if(portalIcon){ctx.drawImage(portalIcon,58,54,190,190)}
-    ctx.fillStyle='#72e3a0';ctx.font='900 38px -apple-system,BlinkMacSystemFont,Arial';ctx.textBaseline='alphabetic';ctx.fillText('CONECTA SAÚDE',278,112);ctx.fillText('COMUNITÁRIA',278,158);
+    ctx.fillStyle='#72e3a0';ctx.textBaseline='alphabetic';fitFont(ctx,PORTAL_CSC_LABEL,744,36,26,900);ctx.fillText(PORTAL_CSC_LABEL,278,132);
     ctx.fillStyle='#fff';ctx.font='900 34px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('RECADO DO TACS',278,207);
     var autor=txt(data.tacsName)||'Mércio José Campos dos Santos';
     ctx.fillStyle='#d8edf6';ctx.font='800 30px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(autor,278,250);
@@ -65,7 +66,7 @@ function draw(data){
     ctx.fillStyle='#0f3046';ctx.font='800 39px -apple-system,BlinkMacSystemFont,Arial';wrap(ctx,data.message,120,y,840,55,11);
     var footerY=1690;
     if(portalIcon){ctx.save();roundRect(ctx,70,footerY,158,145,28);ctx.clip();ctx.drawImage(portalIcon,70,footerY,158,145);ctx.restore()}
-    ctx.fillStyle='#72e3a0';fitFont(ctx,'PORTAL CONECTA SAÚDE COMUNITÁRIA',760,48,30,900);ctx.fillText('PORTAL CONECTA SAÚDE COMUNITÁRIA',260,1750);
+    ctx.fillStyle='#72e3a0';fitFont(ctx,PORTAL_CSC_LABEL,760,44,27,900);ctx.fillText(PORTAL_CSC_LABEL,260,1750);
     ctx.fillStyle='#fff';ctx.font='700 32px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.unitName,260,1800);ctx.fillText(data.areaName,260,1844);
     return c;
   });
@@ -86,7 +87,7 @@ function drawCampaign(data){
     var c=document.createElement('canvas');c.width=1080;c.height=1920;var ctx=c.getContext('2d'),p=campaignPalette(data.theme),bg=ctx.createLinearGradient(0,0,1080,1920);bg.addColorStop(0,'#041f34');bg.addColorStop(.60,'#073a55');bg.addColorStop(1,'#0b5878');ctx.fillStyle=bg;ctx.fillRect(0,0,1080,1920);
     ctx.globalAlpha=.10;ctx.fillStyle='#7fc9e6';ctx.beginPath();ctx.arc(990,250,300,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
     if(portalIcon){ctx.drawImage(portalIcon,58,54,150,150)}
-    ctx.fillStyle='#72e3a0';ctx.font='900 36px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('CONECTA SAÚDE',235,104);ctx.fillText('COMUNITÁRIA',235,148);
+    ctx.fillStyle='#72e3a0';fitFont(ctx,PORTAL_CSC_LABEL,790,34,24,900);ctx.fillText(PORTAL_CSC_LABEL,235,126);
     ctx.font='900 70px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('Campanhas da unidade',58,300);ctx.fillStyle='#64df9a';ctx.font='900 49px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(monthYear(data),58,372);
     var x=48,y=440,w=984,h=1040,grad=ctx.createLinearGradient(x,y,x+w,y+h);grad.addColorStop(0,p[0]);grad.addColorStop(1,p[1]);ctx.fillStyle=grad;roundRect(ctx,x,y,w,h,48);ctx.fill();ctx.strokeStyle=p[3];ctx.lineWidth=5;ctx.stroke();
     ctx.fillStyle=p[3];roundRect(ctx,84,492,405,72,30);ctx.fill();ctx.fillStyle='#fff';ctx.font='900 31px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText('CAMPANHA DO MÊS',116,540);
@@ -97,7 +98,7 @@ function drawCampaign(data){
     if(referenceArt){var ax=data.theme==='lilas'?720:700,ay=data.theme==='lilas'?640:670,aw=data.theme==='lilas'?270:310,ah=data.theme==='lilas'?520:410;ctx.save();ctx.shadowColor='rgba(45,24,6,.23)';ctx.shadowBlur=18;ctx.shadowOffsetY=8;drawImageContain(ctx,referenceArt,ax,ay,aw,ah);ctx.restore()}
     else if(data.theme==='dourado')drawMotherBaby(ctx,735,690,225,330);else drawRibbon(ctx,735,690,225,330,p[3],p[1]);
     /* A validade continua disponível como dado interno, mas não é exibida no card da campanha. */
-    ctx.fillStyle='#72e3a0';fitFont(ctx,'PORTAL CONECTA SAÚDE COMUNITÁRIA',960,35,28,900);ctx.fillText('PORTAL CONECTA SAÚDE COMUNITÁRIA',60,1710);ctx.fillStyle='#fff';ctx.font='700 32px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.unitName,60,1760);ctx.fillText(data.areaName,60,1805);
+    ctx.fillStyle='#72e3a0';fitFont(ctx,PORTAL_CSC_LABEL,960,34,24,900);ctx.fillText(PORTAL_CSC_LABEL,60,1710);ctx.fillStyle='#fff';ctx.font='700 32px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(data.unitName,60,1760);ctx.fillText(data.areaName,60,1805);
     return c;
   });
 }
