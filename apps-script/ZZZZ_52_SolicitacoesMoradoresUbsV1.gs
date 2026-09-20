@@ -10,7 +10,7 @@
  * - expiração é recalculada em toda leitura/resumo e nunca apaga o histórico.
  */
 var TACS_SOLICITACOES_UBS_V1=Object.freeze({
-  VERSAO:'1.6.0',
+  VERSAO:'1.6.1',
   SHEET:'TACS_SOLICITACOES_MORADORES',
   HEADERS:Object.freeze([
     'ID','AREA_ID','AREA_NOME','UNIDADE_ID','CODIGO_SOLICITACAO','MORADOR_ID',
@@ -396,10 +396,20 @@ function solicitacoesUbsV1Item_(r){
 }
 function solicitacoesUbsV1DadosArea_(contexto){
   var sheet=solicitacoesUbsV1Sheet_();solicitacoesUbsV1Expirar_(sheet);
-  var rows=solicitacoesUbsV1Rows_(sheet),catalogo=solicitacoesUbsV1CatalogoOficial_(contexto),items=[],counts={NOVA:0,EM_ATENDIMENTO:0,CONCLUIDA:0,EXPIRADA:0},latest=null,latestUnread=null,unread=0,patches=[];
-  for(var i=rows.length-1;i>=0;i--){
-    if(moradoresAdminV1NormalizarAreaId_(rows[i][1])!==contexto.areaId)continue;
-    var docRaw=String(rows[i][7]==null?'':rows[i][7]).replace(/\D/g,''),oficial=catalogo[docRaw]||null;
+  var rows=solicitacoesUbsV1Rows_(sheet),indices=[],precisaCatalogo=false,items=[],counts={NOVA:0,EM_ATENDIMENTO:0,CONCLUIDA:0,EXPIRADA:0},latest=null,latestUnread=null,unread=0,patches=[];
+  /* SOLICITACOES_UBS_LEITURA_RAPIDA_V1:
+     A lista não relê toda a base de moradores em toda abertura.
+     O catálogo oficial só é consultado se existir registro legado que realmente
+     precise de reconciliação (documento de 10 dígitos ou nascimento ausente/não civil). */
+  for(var ri=rows.length-1;ri>=0;ri--){
+    if(moradoresAdminV1NormalizarAreaId_(rows[ri][1])!==contexto.areaId)continue;
+    indices.push(ri);
+    var docTeste=String(rows[ri][7]==null?'':rows[ri][7]).replace(/\D/g,''),nascTeste=solicitacoesUbsV1NascimentoCivil_(rows[ri][8]);
+    if(docTeste.length===10||!/^(?:0[1-9]|[12]\d|3[01])\/(?:0[1-9]|1[0-2])\/\d{4}$/.test(nascTeste||''))precisaCatalogo=true;
+  }
+  var catalogo=precisaCatalogo?solicitacoesUbsV1CatalogoOficial_(contexto):{};
+  for(var ii=0;ii<indices.length;ii++){
+    var i=indices[ii],docRaw=String(rows[i][7]==null?'':rows[i][7]).replace(/\D/g,''),oficial=catalogo[docRaw]||null;
     if(oficial){
       var docOficial=docRaw;
       if(docRaw.length===10&&oficial.cpf&&oficial.cpf.length===11&&oficial.cpf.charAt(0)==='0'&&oficial.cpf.slice(1)===docRaw)docOficial=oficial.cpf;
