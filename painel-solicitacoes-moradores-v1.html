@@ -222,7 +222,7 @@ function call(action,extra,cb,background){
  function release(){if(finished)return;finished=true;if(background)syncBusy=false;else busy=false}
  Object.keys(payload).forEach(function(k){body.set(k,String(payload[k]==null?'':payload[k]))});body.set('action',action);body.set('requestId',id);
  try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){})}catch(e){}
- function poll(){jsonpResult(id,function(r){if(r&&r.ok===true&&r.pendente===false){release();cb(r.result||{ok:false});return}if(Date.now()-started>12000){release();cb({ok:false,temporario:true,message:'A atualização seguirá em segundo plano na próxima tentativa.'});return}setTimeout(poll,650)})}setTimeout(poll,250);
+ function poll(){jsonpResult(id,function(r){if(r&&r.ok===true&&r.pendente===false){release();cb(r.result||{ok:false});return}if(Date.now()-started>12000){release();cb({ok:false,temporario:true,message:'A atualização seguirá em segundo plano na próxima tentativa.'});return}setTimeout(poll,250)})}setTimeout(poll,100);
 }
 function refresh(silent,forceDetail){
  if(syncBusy)return;call('admin_solicitacoes_ubs_listar',{},function(r){
