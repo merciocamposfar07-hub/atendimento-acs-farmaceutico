@@ -1293,6 +1293,7 @@ function normalizeEmbeddedPanelFrame(frame){
         :'#cscInstitutionalAppbar{display:none!important;visibility:hidden!important;pointer-events:none!important}',
       '#portalTacsBackCentralV1,#portalTacsAtualizarPaginaV1{display:none!important}',
       'html,body,main,footer,.footer{background:#071827!important;background-image:none!important;border-top:0!important}',
+      ubsEmbedded?'html,body{overflow-y:auto!important;touch-action:pan-y pinch-zoom!important;overscroll-behavior-y:auto!important;-webkit-overflow-scrolling:touch!important}main{touch-action:pan-y!important;overflow:visible!important}':'',
       ubsEmbedded
         ?'#cscPlatformFooter{display:flex!important;position:static!important}'
         :'#cscPlatformFooter{display:none!important}'
