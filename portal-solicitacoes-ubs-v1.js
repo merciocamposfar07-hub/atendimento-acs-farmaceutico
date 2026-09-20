@@ -12,6 +12,7 @@ function field(id){var n=el(id);return n?text(n.value):''}
 function territoryIdentity(){var i=window.PortalTacsTerritoryIdentity||{};return{tacsResponsavel:text(i.tacsNome||''),unidadeNome:text(i.unidadeNome||'')}}
 function dentalSelection(){try{var api=window.PortalTacsOdontologiaV98;return api&&typeof api.selecao==='function'?api.selecao():null}catch(e){return null}}
 function scheduleFromDescription(value){var raw=text(value),date='',expiry='',m=raw.match(/(?:Data\s*:\s*)?(\d{2})\/(\d{2})\/(\d{4})/i);if(m)date=m[3]+'-'+m[2]+'-'+m[1];var times=[],re=/\b([01]?\d|2[0-3]):([0-5]\d)\b/g,hit;while((hit=re.exec(raw))){var h=String(Number(hit[1]));if(h.length<2)h='0'+h;times.push(h+':'+hit[2])}if(times.length)expiry=times[times.length-1];return{date:date,expiry:expiry}}
+function recifeCivilNow(){try{var parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),v={};parts.forEach(function(p){v[p.type]=p.value});return v.day+'/'+v.month+'/'+v.year+' '+v.hour+':'+v.minute}catch(e){var d=new Date();return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}}
 function send(payload){
  var body=new URLSearchParams();Object.keys(payload).forEach(function(k){if(payload[k]!=null)body.set(k,String(payload[k]))});
  var ok=false;
@@ -24,12 +25,12 @@ function registrar(options){
  if(!code||!(/^(?:\d{11}|\d{15})$/.test(doc))||name.length<2||!category)return false;
  var dsel=dentalSelection(),description=text(options.descricao||(category==='Implanon'?field('implanonChoice'):field('subject'))||category),scheduled=scheduleFromDescription(description);
  /* EXPIRACAO_PELO_CARD_V5: quando a própria solicitação informa data/horário, o card é a fonte de verdade. O último horário descrito é o fim do atendimento e, portanto, a expiração. */
- var serviceDate=text(scheduled.date||options.dataServico||(dsel&&dsel.date)||''),slotType=text(options.tipoVaga||(dsel&&dsel.type)||''),expiry=text(scheduled.expiry||options.horarioExpiracao||(dsel&&dsel.expiresAt)||'');
+ var serviceDate=text(scheduled.date||options.dataServico||(dsel&&dsel.date)||''),slotType=text(options.tipoVaga||(dsel&&dsel.type)||''),expiry=text(scheduled.expiry||options.horarioExpiracao||(dsel&&dsel.expiresAt)||'');if(serviceDate&&!expiry)expiry='00:00';
  var territory=territoryIdentity(),key='portalSolicitacaoUbsEnviadaV1:'+areaId()+':'+code;
  try{if(localStorage.getItem(key)==='1')return true;localStorage.setItem(key,'1')}catch(e){}
  send({
    action:'publico_solicitacao_ubs_criar',requestId:rid(),areaId:areaId(),codigoSolicitacao:code,
-   documento:doc,nome:name,nascimento:field('birth'),localidade:field('locality'),categoria:category,
+   documento:doc,nome:name,nascimento:field('birth'),localidade:field('locality'),categoria:category,enviadoEm:recifeCivilNow(),
    descricao:description,tipoVaga:slotType,dataServico:serviceDate,horarioExpiracao:expiry,tacsResponsavel:territory.tacsResponsavel,unidadeNome:territory.unidadeNome,origem:'PORTAL_CSC_WHATSAPP'
  });
  return true;
