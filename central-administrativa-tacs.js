@@ -2381,6 +2381,11 @@ function entrarPaineisUbs(r){
 }
 window.ConectaCentralUbsV1={entrar:entrarPaineisUbs,abrirLocal:abrirPaineisUbsLocal,bloquearLocal:bloquearPaineisUbsLocal,prepararPush:prepareUbsPushFromGesture,registrarPush:registerUbsPush};
 window.ConectaCentralModuleCoreV1={publicar:publishModuleCore,chave:MODULE_CORE_KEY};
+window.ConectaCentralProfileV1={
+  snapshot:function(){
+    return {context:context||null,mode:mode||'',selectedAreaId:selectedAreaId||''};
+  }
+};
 window.ConectaCentralShellV1={
   abrir:openModule,
   fechar:closeViewer,
