@@ -70,16 +70,36 @@ function applyResident(r,localOnly){
 function ensureStyle(){
  if(el('cscResidentSessionStyle'))return;
  var s=document.createElement('style');s.id='cscResidentSessionStyle';s.textContent=
- '.csc-resident-bar{position:sticky;top:0;z-index:9500;width:min(calc(100% - 20px),980px);margin:8px auto 0;padding:10px 12px;display:flex;align-items:center;gap:10px;border:1px solid #315d74;border-radius:18px;background:rgba(6,44,70,.96);color:#fff;box-shadow:0 10px 28px rgba(3,35,56,.25);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}.csc-resident-bar strong{display:block;min-width:0;flex:1;font-size:.95rem}.csc-resident-bar small{display:block;color:#c9dce6;font-weight:650;margin-top:2px}.csc-resident-icon{width:46px;height:46px;border:1px solid #4d7890;border-radius:15px;background:#0b4263;color:#fff;font-size:1.25rem;display:grid;place-items:center}.csc-resident-menu{display:flex;gap:7px}.csc-resident-menu button{min-height:44px;border:1px solid #4d7890;border-radius:14px;background:#0d567a;color:#fff;padding:8px 11px;font-weight:850}.csc-family-session{width:min(calc(100% - 24px),956px);margin:12px auto;padding:15px;border:1px solid #93b4c4;border-radius:20px;background:#fff;color:#102d40;box-shadow:0 10px 25px rgba(7,58,85,.09)}.csc-family-session h2{margin:0 0 5px;font-size:1.25rem;color:#073a55}.csc-family-session p{margin:0 0 10px;color:#536b78}.csc-family-grid{display:grid;gap:8px}.csc-family-person{width:100%;min-height:54px;border:1px solid #8eb0c1;border-radius:15px;background:#eef7fa;color:#073a55;text-align:left;padding:10px 12px;font-weight:900}.csc-family-person.active{border-color:#15935a;background:#e8f7ee;color:#075b31}.csc-family-person:active{transform:scale(.985);filter:brightness(1.04)}.csc-family-person[aria-busy="true"]{cursor:progress}.csc-family-person span{display:block;margin-top:2px;color:#536b78;font-size:.82rem}.csc-gate{position:fixed;inset:0;z-index:70000;display:grid;place-items:center;padding:18px;background:rgba(3,16,27,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}.csc-gate[hidden]{display:none!important}.csc-gate-card{width:min(520px,100%);padding:22px;border:1px solid #2b5a76;border-radius:26px;background:#102d46;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5)}.csc-gate-card h2{margin:0 0 9px;color:#fff}.csc-gate-card p{color:#d5e4ec;line-height:1.45}.csc-gate-card button{width:100%;min-height:56px;border:0;border-radius:16px;background:#176a48;color:#fff;font-weight:900;font-size:1rem}.csc-gate-status{margin-top:12px;padding:11px 12px;border:1px solid #3f6980;border-radius:14px;background:#0a2438;color:#dcebf2;font-weight:750}.csc-gate-status.err{border-color:#a85d64;background:#401e26;color:#ffd7da}.csc-gate-status.ok{border-color:#49a97a;background:#103b2b;color:#c8f6dc}.csc-session-hidden-doc{display:none!important}@media(max-width:560px){.csc-resident-bar{align-items:flex-start}.csc-resident-menu{flex-direction:column}.csc-resident-menu button{min-height:40px;padding:6px 9px;font-size:.82rem}}';
+ '.csc-resident-bar{position:sticky;top:0;z-index:9500;width:min(calc(100% - 20px),980px);margin:8px auto 0;padding:10px 12px;display:flex;align-items:center;gap:10px;border:1px solid #315d74;border-radius:18px;background:rgba(6,44,70,.96);color:#fff;box-shadow:0 10px 28px rgba(3,35,56,.25);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}.csc-resident-bar strong{display:block;min-width:0;flex:1;font-size:.95rem}.csc-resident-bar small{display:block;color:#c9dce6;font-weight:650;margin-top:2px}.csc-resident-icon{width:46px;height:46px;border:1px solid #4d7890;border-radius:15px;background:#0b4263;color:#fff;font-size:1.25rem;display:grid;place-items:center}.csc-resident-menu{display:flex;gap:7px}.csc-resident-menu button{min-height:44px;border:1px solid #4d7890;border-radius:14px;background:#0d567a;color:#fff;padding:8px 11px;font-weight:850}.csc-family-session{width:min(calc(100% - 24px),956px);margin:12px auto;padding:15px;border:1px solid #93b4c4;border-radius:20px;background:#fff;color:#102d40;box-shadow:0 10px 25px rgba(7,58,85,.09)}.csc-family-session h2{margin:0 0 5px;font-size:1.25rem;color:#073a55}.csc-family-session p{margin:0 0 10px;color:#536b78}.csc-family-grid{display:grid;gap:8px}.csc-family-person{width:100%;min-height:54px;border:1px solid #8eb0c1;border-radius:15px;background:#eef7fa;color:#073a55;text-align:left;padding:10px 12px;font-weight:900}.csc-family-person.active{border-color:#15935a;background:#e8f7ee;color:#075b31}.csc-family-person:active{transform:scale(.985);filter:brightness(1.04)}.csc-family-person[aria-busy="true"]{cursor:progress}.csc-family-person span{display:block;margin-top:2px;color:#536b78;font-size:.82rem}.csc-gate{position:fixed;inset:0;z-index:70000;display:grid;place-items:center;padding:18px;background:rgba(3,16,27,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}.csc-gate[hidden]{display:none!important}.csc-gate-card{width:min(520px,100%);padding:22px;border:1px solid #2b5a76;border-radius:26px;background:#102d46;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5)}.csc-gate-card h2{margin:0 0 9px;color:#fff}.csc-gate-card p{color:#d5e4ec;line-height:1.45}.csc-gate-card button{width:100%;min-height:56px;border:0;border-radius:16px;background:#176a48;color:#fff;font-weight:900;font-size:1rem}.csc-gate-status{margin-top:12px;padding:11px 12px;border:1px solid #3f6980;border-radius:14px;background:#0a2438;color:#dcebf2;font-weight:750}.csc-gate-status.err{border-color:#a85d64;background:#401e26;color:#ffd7da}.csc-gate-status.ok{border-color:#49a97a;background:#103b2b;color:#c8f6dc}@media(max-width:560px){.csc-resident-bar{align-items:flex-start}.csc-resident-menu{flex-direction:column}.csc-resident-menu button{min-height:40px;padding:6px 9px;font-size:.82rem}}';
  document.head.appendChild(s);
 }
 function setField(id,value){
  var n=el(id);if(!n||value==null||value==='')return;n.value=value;n.dispatchEvent(new Event('input',{bubbles:true}));n.dispatchEvent(new Event('change',{bubbles:true}));
 }
+function formatSessionDocument(v){
+ var d=digits(v);if(d.length===11)return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);if(d.length===15)return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,10)+'.'+d.slice(10);return d;
+}
+function ensureCpfVisible(){
+ var cpf=el('cpf');if(!cpf)return;var label=cpf.closest('label');if(!label)return;label.hidden=false;label.classList.remove('csc-session-hidden-doc');label.style.removeProperty('display');label.style.removeProperty('visibility');
+}
+function responsibleFamilyMember(r){
+ var list=Array.isArray(r&&r.familia)?r.familia:[];for(var i=0;i<list.length;i++)if(list[i]&&list[i].responsavel)return list[i];return list[0]||null;
+}
+function applyResidentInstant(doc,data,familiaId){
+ data=data||{};var d=digits(doc),name=text(data.nome),birth=text(data.nascimento),locality=text(data.localidade||data.endereco),api=window.TacsMoradoresAutofillV1;
+ ensureCpfVisible();
+ if((d.length===11||d.length===15)&&api&&typeof api.applyResolved==='function'&&name&&birth&&locality){
+  if(api.applyResolved(d,{nome:name,nascimento:birth,localidade:locality,endereco:locality,areaId:data.areaId||areaId()},familiaId||''))return true;
+ }
+ var cpf=el('cpf');if(cpf&&d){cpf.value=formatSessionDocument(d);cpf.dispatchEvent(new Event('change',{bubbles:true}))}
+ setField('birth',birth);setField('name',name);if(locality)setField('locality',locality);
+ return Boolean(d||name||birth||locality);
+}
 function prefill(r){
- setField('cpf',r.cpf||'');setField('birth',r.nascimento||'');setField('name',r.nome||'');if(r.endereco)setField('locality',r.endereco);
- var cpf=el('cpf');if(cpf){var label=cpf.closest('label');if(label)label.classList.remove('csc-session-hidden-doc')}
- document.dispatchEvent(new CustomEvent('tacs:morador',{detail:{nome:r.nome||'',nascimento:r.nascimento||'',cpf:r.cpf||'',endereco:r.endereco||'',areaId:r.areaId||areaId()}}));
+ var member=responsibleFamilyMember(r),doc=digits(r.cpf||member&&member.documentoAcesso||member&&member.cpf||''),name=r.nome||member&&member.nome||'',birth=r.nascimento||member&&member.nascimento||'',locality=r.endereco||r.localidade||member&&member.localidade||'';
+ applyResidentInstant(doc,{nome:name,nascimento:birth,localidade:locality,areaId:r.areaId||areaId()},r.familiaId||'');
+ ensureCpfVisible();
+ document.dispatchEvent(new CustomEvent('tacs:morador',{detail:{nome:name,nascimento:birth,cpf:doc,endereco:locality,areaId:r.areaId||areaId()}}));
 }
 function topBar(r){
  if(el('cscResidentBar'))return;
@@ -98,7 +118,7 @@ function renderFamily(r){
  var old=el('cscFamilySession');if(old)old.remove();
  var members=Array.isArray(r.familia)?r.familia:[];if(!members.length)return;
  var box=document.createElement('section');box.id='cscFamilySession';box.className='csc-family-session';
- box.innerHTML='<h2>Quem precisa do atendimento?</h2><p>Selecione uma pessoa do vínculo familiar. O responsável deste acesso continua sendo '+esc(r.nome||'o morador autenticado')+'.</p><div class="csc-family-grid">'+members.map(function(m){var doc=familyMemberSessionDocument(m,r),has=Boolean(m.temDocumento||doc);return '<button type="button" class="csc-family-person'+(m.responsavel?' active':'')+'" data-csc-family-token="'+esc(m.token||'')+'" data-csc-family-name="'+esc(m.nome||'')+'" data-csc-family-birth="'+esc(m.nascimento||'')+'" data-csc-family-hasdoc="'+(has?'1':'0')+'" data-csc-family-doc="'+esc(doc)+'">'+esc(m.nome||'Morador')+'<span>'+(m.nascimento?'Nascimento: '+esc(m.nascimento):'')+(has?'':' • CPF/CNS ainda não disponível')+'</span></button>'}).join('')+'</div>';
+ box.innerHTML='<h2>Quem precisa do atendimento?</h2><p>Selecione uma pessoa do vínculo familiar. O responsável deste acesso continua sendo '+esc(r.nome||'o morador autenticado')+'.</p><div class="csc-family-grid">'+members.map(function(m){var doc=familyMemberSessionDocument(m,r),has=Boolean(m.temDocumento||doc);return '<button type="button" class="csc-family-person'+(m.responsavel?' active':'')+'" data-csc-family-token="'+esc(m.token||'')+'" data-csc-family-name="'+esc(m.nome||'')+'" data-csc-family-birth="'+esc(m.nascimento||'')+'" data-csc-family-locality="'+esc(m.localidade||'')+'" data-csc-family-hasdoc="'+(has?'1':'0')+'" data-csc-family-doc="'+esc(doc)+'">'+esc(m.nome||'Morador')+'<span>'+(m.nascimento?'Nascimento: '+esc(m.nascimento):'')+(has?'':' • CPF/CNS ainda não disponível')+'</span></button>'}).join('')+'</div>';
  // Mantém a família na identificação, logo abaixo do PIN, inclusive na reentrada.
  var anchor=el('portalResidentPinV1'),cpf=el('cpf');
  if(!anchor&&cpf)anchor=cpf.closest('label');
@@ -141,27 +161,25 @@ function warmFamilyMembers(members){
  }
  setTimeout(next,30);
 }
-function applyFamilyMemberData(r,name,birth){
- setField('cpf',r.documentoAcesso);
- setField('name',r.nome||name);
- setField('birth',r.nascimento||birth);
+function applyFamilyMemberData(r,name,birth,locality){
+ applyResidentInstant(r.documentoAcesso,{nome:r.nome||name,nascimento:r.nascimento||birth,localidade:r.localidade||locality||'',areaId:r.areaId||(resident&&resident.areaId)||areaId()},r.familiaId||(resident&&resident.familiaId)||'');
 }
 function selectFamilyMember(button){
- var tok=text(button.getAttribute('data-csc-family-token')),name=text(button.getAttribute('data-csc-family-name')),birth=text(button.getAttribute('data-csc-family-birth')),has=button.getAttribute('data-csc-family-hasdoc')==='1',localDoc=digits(button.getAttribute('data-csc-family-doc')||'');
+ var tok=text(button.getAttribute('data-csc-family-token')),name=text(button.getAttribute('data-csc-family-name')),birth=text(button.getAttribute('data-csc-family-birth')),locality=text(button.getAttribute('data-csc-family-locality')),has=button.getAttribute('data-csc-family-hasdoc')==='1',localDoc=digits(button.getAttribute('data-csc-family-doc')||'');
  /* Resposta tátil/visual primeiro: seleção e dados locais conhecidos aparecem já no toque. */
  document.querySelectorAll('.csc-family-person').forEach(function(x){x.classList.toggle('active',x===button)});
- setField('name',name);setField('birth',birth);
- if(localDoc.length===11||localDoc.length===15){setField('cpf',localDoc);return}
+ setField('name',name);setField('birth',birth);if(locality)setField('locality',locality);
+ if(localDoc.length===11||localDoc.length===15){applyResidentInstant(localDoc,{nome:name,nascimento:birth,localidade:locality,areaId:(resident&&resident.areaId)||areaId()},(resident&&resident.familiaId)||'');return}
  if(!has||!tok){
   if(tok){promptMemberCpf(button,tok,name,birth);return}
   showPortalToast('Este integrante ainda não possui documento disponível. A solicitação permanece acessível e o cadastro poderá ser regularizado pelo TACS.');
   return
  }
  var key=familyMemberKey(tok),cached=familyMemberCache[key];
- if(cached){applyFamilyMemberData(cached,name,birth);return}
+ if(cached){applyFamilyMemberData(cached,name,birth,locality);return}
  button.setAttribute('aria-busy','true');
  resolveFamilyMember(tok).then(function(r){
-  applyFamilyMemberData(r,name,birth);
+  applyFamilyMemberData(r,name,birth,locality);
  }).catch(function(e){
   showPortalToast(e.message);
  }).finally(function(){button.removeAttribute('aria-busy')});
@@ -177,7 +195,7 @@ function promptMemberCpf(button,tok,name,birth){
   var cpf=digits(el('cscFamilyCpfInput').value);if(cpf.length!==11){showPortalToast('Informe um CPF válido com 11 números.');return}
   this.disabled=true;
   post('conecta_morador_membro_salvar_cpf',{token:token,dispositivo:device(),membroToken:tok,cpf:cpf}).then(function(r){
-    setField('cpf',r.documentoAcesso||cpf);setField('name',r.nome||name);setField('birth',r.nascimento||birth);
+    applyResidentInstant(r.documentoAcesso||cpf,{nome:r.nome||name,nascimento:r.nascimento||birth,localidade:r.localidade||'',areaId:r.areaId||(resident&&resident.areaId)||areaId()},r.familiaId||(resident&&resident.familiaId)||'');
     button.setAttribute('data-csc-family-hasdoc','1');var span=button.querySelector('span');if(span)span.textContent=(r.nascimento||birth?'Nascimento: '+(r.nascimento||birth):'');
     if(p.parentNode)p.remove();showPortalToast(r.message||'CPF salvo e integrante selecionado.');
   }).catch(function(e){showPortalToast(e.message)}).finally(function(){var b=el('cscFamilyCpfSave');if(b)b.disabled=false});
