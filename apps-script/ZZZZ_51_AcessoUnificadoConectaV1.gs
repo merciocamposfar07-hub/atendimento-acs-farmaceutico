@@ -7,7 +7,7 @@
  * Se o cadastro não puder ser conciliado, cria pendência e NÃO bloqueia o serviço.
  */
 var TACS_CONECTA_ACESSO_V1 = Object.freeze({
-  VERSAO:'1.0.1',
+  VERSAO:'1.0.2',
   ACCESS_SHEET:'TACS_CONECTA_ACESSO_MORADOR',
   PENDING_SHEET:'TACS_CONECTA_PENDENCIAS',
   TRUST_SHEET:'TACS_CONECTA_APARELHOS_CONFIAVEIS',
@@ -678,7 +678,7 @@ function conectaAcessoV1CriarPendencia_(areaId,cpf,nome,nascimento,dispositivo,m
  * qual integrante criou o PIN.
  */
 function conectaAcessoV1NucleoFamiliar_(v){
-  var titularUnico={nome:v[4],cpf:v[3],responsavel:true};
+  var titularUnico={nome:v[4],cpf:v[3],documentoAcesso:v[3],tipoDocumento:'CPF',nascimento:v[5]||'',temDocumento:Boolean(v[3]),responsavel:true};
   if(conectaAcessoV1Bool_(v[13]))return {familiaId:'',membros:[titularUnico]};
   try{
     var areaId=conectaAcessoV1Id_(v[1]),cpf=conectaAcessoV1Texto_(v[3]),moradorChave=conectaAcessoV1Texto_(v[2]);
@@ -695,7 +695,7 @@ function conectaAcessoV1NucleoFamiliar_(v){
     if(!familia)return {familiaId:'',membros:[titularUnico]};
     var contexto={perfil:'PUBLICO',operadorId:'PUBLICO',agenteId:area.agenteId,areaId:areaId,areaNome:area.areaNome,unidadeId:area.unidadeId,planilhaId:area.planilhaId,permissoes:[]};
     var membros=typeof selecaoMembroFamiliaPublicaV1CriarLista_==='function'?selecaoMembroFamiliaPublicaV1CriarLista_(familia,contexto):(typeof identificacaoFamiliarPublicaV1Membros_==='function'?identificacaoFamiliarPublicaV1Membros_(familia,contexto):[]);
-    membros=(membros||[]).map(function(m){return {token:m.token||'',nome:m.nome||'',nascimento:m.nascimento||'',temDocumento:Boolean(m.temDocumento),responsavel:conectaAcessoV1Nome_(m.nome)===conectaAcessoV1Nome_(v[4])};});
+    membros=(membros||[]).map(function(m){return {token:m.token||'',nome:m.nome||'',nascimento:m.nascimento||'',localidade:m.localidade||'',documentoAcesso:m.documentoAcesso||'',tipoDocumento:m.tipoDocumento||'',temDocumento:Boolean(m.temDocumento||m.documentoAcesso),identidadeToken:m.identidadeToken||'',acessoPreparado:Boolean(m.acessoPreparado),responsavel:conectaAcessoV1Nome_(m.nome)===conectaAcessoV1Nome_(v[4])};});
     return {familiaId:familia,membros:membros.length?membros:[titularUnico]};
   }catch(e){return {familiaId:'',membros:[titularUnico]};}
 }
