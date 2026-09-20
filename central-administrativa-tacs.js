@@ -994,6 +994,39 @@ function ensureTask16AgendaAssets(callback){
     });
   });
 }
+function enforcePanelHeaderScrollFlow(viewer,host){
+  /* CABECALHO_NO_FLUXO_V2:
+     o viewer é a única superfície rolável dos painéis nativos. O host não cria uma
+     segunda rolagem abaixo do cabeçalho; assim ícone, título e conteúdo sobem juntos. */
+  try{
+    if(!viewer)return;
+    viewer.style.setProperty('display','block','important');
+    viewer.style.setProperty('overflow-x','hidden','important');
+    viewer.style.setProperty('overflow-y','auto','important');
+    viewer.style.setProperty('-webkit-overflow-scrolling','touch','important');
+    viewer.style.setProperty('touch-action','pan-y pinch-zoom','important');
+    var bar=viewer.querySelector('.viewer-bar');
+    if(bar){
+      bar.style.setProperty('position','static','important');
+      bar.style.setProperty('top','auto','important');
+      bar.style.setProperty('inset','auto','important');
+      bar.style.setProperty('transform','none','important');
+    }
+    if(host){
+      host.style.setProperty('display','block','important');
+      host.style.setProperty('position','static','important');
+      host.style.setProperty('height','auto','important');
+      host.style.setProperty('max-height','none','important');
+      host.style.setProperty('min-height','0','important');
+      host.style.setProperty('overflow','visible','important');
+      host.style.setProperty('overflow-y','visible','important');
+      host.style.setProperty('flex','none','important');
+      host.style.setProperty('touch-action','pan-y pinch-zoom','important');
+    }
+    var footer=viewer.querySelector('.viewer-platform-footer');
+    if(footer)footer.style.setProperty('position','static','important');
+  }catch(e){}
+}
 function showNativeAgenda(title,routeId){
   prepareShellScope();publishModuleCore();hideAllNativeExcept('agendas');
   Object.keys(shellFrames).forEach(function(key){var frame=shellFrames[key];if(frame)frame.hidden=true});
@@ -1003,6 +1036,7 @@ function showNativeAgenda(title,routeId){
   shellActiveModule='agendas';shellActiveRoute=routeId;shellActiveNative='agendas';
   el('viewerTitle').textContent=title||'Agendas e vagas';
   viewer.classList.add('csc-shell-viewer','csc-native-viewer','csc-agendas-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;host.hidden=false;
+  enforcePanelHeaderScrollFlow(viewer,host);
   var footer=el('viewerFooter');if(footer)footer.hidden=false;
   document.body.classList.add('viewer-open');setShellOpeningPreview('agendas',routeId,true);
   ensureTask16AgendaAssets(function(ok){
@@ -1069,6 +1103,7 @@ function showNativeMoradores(title,routeId){
   shellActiveModule='moradores';shellActiveRoute=routeId;shellActiveNative='moradores';
   el('viewerTitle').textContent=title||'Moradores';
   viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;host.hidden=false;
+  enforcePanelHeaderScrollFlow(viewer,host);
   var footer=el('viewerFooter');if(footer)footer.hidden=false;
   document.body.classList.add('viewer-open');setShellOpeningPreview('moradores',routeId,true);
   ensureTask17MoradoresAssets(function(ok){
@@ -1147,6 +1182,7 @@ function showNativeProfissionais(title,routeId){
   shellActiveModule='profissionais';shellActiveRoute=routeId;shellActiveNative='profissionais';
   el('viewerTitle').textContent=title||'Profissionais e serviços';
   viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;host.hidden=false;
+  enforcePanelHeaderScrollFlow(viewer,host);
   var footer=el('viewerFooter');if(footer)footer.hidden=false;
   document.body.classList.add('viewer-open');setShellOpeningPreview('profissionais',routeId,true);
   ensureTask18ProfissionaisAssets(function(ok){
@@ -1345,7 +1381,7 @@ function showAdminUbs(title){
   shellActiveModule='ubs';shellActiveRoute='ubs';shellActiveNative='ubs';
   el('viewerTitle').textContent=title||'UBS';
   viewer.classList.add('csc-shell-viewer','csc-native-viewer');viewer.classList.remove('csc-frame-viewer');viewer.hidden=false;
-  host.hidden=false;var footer=el('viewerFooter');if(footer)footer.hidden=false;
+  host.hidden=false;enforcePanelHeaderScrollFlow(viewer,host);var footer=el('viewerFooter');if(footer)footer.hidden=false;
   document.body.classList.add('viewer-open');setShellOpening('',false);
   if(adminUbsContext)renderAdminUbsDetail(host);else renderAdminUbsList(host);
   if(host.dataset.cscUbsBound!=='1'){
@@ -1365,30 +1401,34 @@ function showAdminUbs(title){
 function normalizeEmbeddedPanelFrame(frame){
   try{
     var doc=frame&&frame.contentDocument;if(!doc)return;
-    var ubsEmbedded=mode==='ubs',style=doc.getElementById('cscEmbeddedApp4SingleHeaderV1');
+    var style=doc.getElementById('cscEmbeddedApp4SingleHeaderV1');
     if(!style){style=doc.createElement('style');style.id='cscEmbeddedApp4SingleHeaderV1';(doc.head||doc.documentElement).appendChild(style)}
     style.textContent=[
-      /* CABECALHO_UBS_ROLA_COM_CONTEUDO_V1:
-         Na sessão UBS, cabeçalho e rodapé pertencem ao próprio painel para rolarem junto
-         com a descrição. Fora da UBS, permanece o shell único já existente. */
-      ubsEmbedded
-        ?'#cscInstitutionalAppbar{display:flex!important;visibility:visible!important;pointer-events:auto!important;position:static!important;top:auto!important;inset:auto!important}'
-        :'#cscInstitutionalAppbar{display:none!important;visibility:hidden!important;pointer-events:none!important}',
+      /* CABECALHO_NO_FLUXO_V2:
+         Todo painel legado aberto pela Central usa o próprio cabeçalho institucional.
+         Ele fica dentro da página e sobe junto com a descrição; o shell não mantém
+         um cabeçalho separado preso acima do iframe. */
+      '#cscInstitutionalAppbar,.csc-appbar{display:flex!important;visibility:visible!important;pointer-events:auto!important;position:static!important;top:auto!important;inset:auto!important;transform:none!important}',
       '#portalTacsBackCentralV1,#portalTacsAtualizarPaginaV1{display:none!important}',
+      'html,body{overflow-x:hidden!important;overflow-y:auto!important;touch-action:pan-y pinch-zoom!important;overscroll-behavior-y:auto!important;-webkit-overflow-scrolling:touch!important}',
       'html,body,main,footer,.footer{background:#071827!important;background-image:none!important;border-top:0!important}',
-      ubsEmbedded?'html,body{overflow-y:auto!important;touch-action:pan-y pinch-zoom!important;overscroll-behavior-y:auto!important;-webkit-overflow-scrolling:touch!important}main{touch-action:pan-y!important;overflow:visible!important}':'',
-      ubsEmbedded
-        ?'#cscPlatformFooter{display:flex!important;position:static!important}'
-        :'#cscPlatformFooter{display:none!important}'
+      'main{touch-action:pan-y!important;overflow:visible!important}',
+      '#cscPlatformFooter{display:flex!important;position:static!important}'
     ].join('');
-    var internal=doc.getElementById('cscInstitutionalAppbar');
+    var internal=doc.getElementById('cscInstitutionalAppbar')||doc.querySelector('.csc-appbar');
+    frame.dataset.shellOwnHeader=internal?'1':'0';
     if(internal){
-      internal.hidden=!ubsEmbedded;
-      internal.setAttribute('aria-hidden',ubsEmbedded?'false':'true');
-      if(ubsEmbedded){internal.style.setProperty('position','static','important');internal.style.setProperty('top','auto','important');internal.style.setProperty('inset','auto','important')}
+      internal.hidden=false;
+      internal.setAttribute('aria-hidden','false');
+      internal.style.setProperty('position','static','important');
+      internal.style.setProperty('top','auto','important');
+      internal.style.setProperty('inset','auto','important');
+      internal.style.setProperty('transform','none','important');
+      var viewer=el('viewer'),viewerBar=viewer&&viewer.querySelector('.viewer-bar');
+      if(viewerBar&&shellActiveFrame()===frame)viewerBar.style.setProperty('display','none','important');
     }
-    doc.documentElement.classList.add('csc-embedded-legacy-panel');
-    doc.documentElement.classList.toggle('csc-embedded-ubs-panel',ubsEmbedded);
+    doc.documentElement.classList.add('csc-embedded-legacy-panel','csc-embedded-header-scroll-flow');
+    doc.documentElement.classList.toggle('csc-embedded-ubs-panel',mode==='ubs');
   }catch(e){}
 }
 /* CORRECAO_FRAME_PREPAINT_CANONICO_V1
@@ -1523,11 +1563,14 @@ function showShellFrame(name,frame,title,routeId){
   shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
   el('viewerTitle').textContent=title||'Painel';
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer','csc-frame-viewer');viewer.classList.remove('csc-native-viewer');viewer.hidden=false;
-  /* CABECALHO_UBS_ROLA_COM_CONTEUDO_V1:
-     Em qualquer painel legado da sessão UBS, o cabeçalho visível é o do próprio painel.
-     Assim ícone, título e descrição sobem juntos na rolagem; o shell não fica preso no topo. */
+  /* CABECALHO_NO_FLUXO_V2:
+     Depois que o iframe real está pronto, o cabeçalho visível é o próprio cabeçalho
+     do painel. O shell só pode aparecer durante a prévia de carregamento. */
   var viewerBar=viewer.querySelector('.viewer-bar');
-  if(viewerBar){if(mode==='ubs')viewerBar.style.setProperty('display','none','important');else viewerBar.style.removeProperty('display')}
+  if(viewerBar){
+    if(frame&&frame.dataset.shellOwnHeader==='1')viewerBar.style.setProperty('display','none','important');
+    else viewerBar.style.removeProperty('display');
+  }
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   document.body.classList.add('viewer-open');
   var shellReady=(frame.dataset.shellReady==='1'||frame.dataset.shellDomReady==='1')&&shellFrameAtTarget(frame);
