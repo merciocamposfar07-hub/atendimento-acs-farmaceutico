@@ -188,14 +188,25 @@ function guardarUbsLocal(pin,r){
  var v=window.ConectaPinLocalV2;if(!v||typeof v.guardar!=='function'||!r)return Promise.resolve(false);
  return Promise.resolve(v.guardar('ubs',pin,{device:device(),cadastroId:r.cadastroId||'',snapshot:{nome:r.nome||'',perfil:r.perfil||'UBS',funcaoUbs:r.funcaoUbs||'',unidadeId:r.unidadeId||'',permissoes:Array.isArray(r.permissoes)?r.permissoes.slice():[]},salvoRemotoEm:Date.now()})).catch(function(){return false});
 }
-/* A entrada UBS possui prazo próprio, inclusive enquanto o POST está pendente.
-   Consultar o resultado não depende de o navegador concluir a resposta opaca. */
+function abrirUbsLocal(pin){
+ var v=window.ConectaPinLocalV2,central=window.ConectaCentralUbsV1;
+ if(!v||typeof v.abrir!=='function'||!central||typeof central.abrirLocal!=='function')return Promise.resolve(false);
+ return Promise.resolve(v.abrir('ubs',pin)).then(function(saved){
+  if(!saved||text(saved.device)!==text(device()))return false;
+  var perfil=ubsProfile();
+  if(perfil&&text(perfil.cadastroId)&&text(saved.cadastroId)&&text(perfil.cadastroId)!==text(saved.cadastroId))return false;
+  return central.abrirLocal(saved)!==false;
+ }).catch(function(){return false});
+}
+/* UBS_LOCAL_FIRST_V1:
+   no aparelho já reconhecido, o PIN destrava o último contexto confirmado imediatamente.
+   A sessão remota continua sendo validada em paralelo e assume a autenticação assim que responder. */
 var ubsLoginPending=false;
 function postUbsLogin(payload){
  return new Promise(function(resolve,reject){
   var id=requestId('conecta_ubs_login_pin'),body=new URLSearchParams(),done=false,pollTimer=null;
   var controller=typeof AbortController==='function'?new AbortController():null;
-  var deadline=setTimeout(function(){finish(null,new Error('Não foi possível confirmar o acesso da UBS a tempo. Tente novamente.'))},45000);
+  var deadline=setTimeout(function(){var e=transientConfirmationError('Não foi possível confirmar o acesso da UBS a tempo. A sincronização continuará quando houver resposta.');finish(null,e)},45000);
   function finish(result,error){
    if(done)return;done=true;clearTimeout(deadline);clearTimeout(pollTimer);
    if(controller)controller.abort();
@@ -207,7 +218,7 @@ function postUbsLogin(payload){
     if(done)return;
     if(r&&r.ok===true&&r.pendente===false&&r.result){
      if(r.result.ok===true&&/^cus1\./.test(text(r.result.token)))finish(r.result,null);
-     else finish(null,new Error(r.result.message||'Não foi possível validar o PIN da UBS.'));
+     else{var e=new Error(r.result.message||'Não foi possível validar o PIN da UBS.');e.authRecusada=true;finish(null,e)}
      return;
     }
     pollTimer=setTimeout(poll,650);
@@ -231,14 +242,28 @@ function loginUbsAccess(){
  var pin=digits(el('cscUbsPin')&&el('cscUbsPin').value),proof=trustKey('UBS'),out=el('cscUbsIdentity'),button=el('cscUbsLogin');
  if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN de acesso com 4 a 8 números.','err');return}
  ubsLoginPending=true;if(button)button.disabled=true;if(out)out.hidden=true;
- setStatus('Validando o PIN da UBS…','warn');
- postUbsLogin({pin:pin,dispositivo:device(),chaveConfianca:proof}).then(function(r){
-  saveUbsProfile(r);saveUbsSession(r);
-  if(el('cscUbsPin'))el('cscUbsPin').value='';
-  if(activeRole==='ubs')openUbsPanels(r);
-  Promise.resolve().then(function(){return guardarUbsLocal(pin,r)}).catch(function(){});
- }).catch(function(e){if(out)out.hidden=true;if(activeRole==='ubs')setStatus(e.message,'err')})
- .finally(function(){ubsLoginPending=false;if(button)button.disabled=false});
+ setStatus('Liberando o acesso da UBS…','warn');
+ abrirUbsLocal(pin).then(function(localOpened){
+  if(localOpened){
+   if(el('cscUbsPin'))el('cscUbsPin').value='';
+   setStatus('Painéis da UBS disponíveis. Confirmando a sessão em segundo plano…','ok');
+  }else{
+   setStatus('Validando o PIN da UBS…','warn');
+  }
+  return postUbsLogin({pin:pin,dispositivo:device(),chaveConfianca:proof}).then(function(r){
+   saveUbsProfile(r);saveUbsSession(r);
+   if(el('cscUbsPin'))el('cscUbsPin').value='';
+   if(activeRole==='ubs')openUbsPanels(r);
+   Promise.resolve().then(function(){return guardarUbsLocal(pin,r)}).catch(function(){});
+  }).catch(function(e){
+   if(e&&e.authRecusada===true&&localOpened){
+    var central=window.ConectaCentralUbsV1;if(central&&typeof central.bloquearLocal==='function')central.bloquearLocal(e.message);
+    return;
+   }
+   if(!localOpened){if(out)out.hidden=true;if(activeRole==='ubs')setStatus(e.message,'err');return}
+   if(activeRole==='ubs')setStatus('Painéis disponíveis. A confirmação remota continuará na próxima sincronização.','warn');
+  });
+ }).finally(function(){ubsLoginPending=false;if(button)button.disabled=false});
 }
 function adminResidentDiagnostic(){return roleRecognized('ADMIN')}
 function formatCpfResident(v){

@@ -10,7 +10,7 @@
  * - expiração é recalculada em toda leitura/resumo e nunca apaga o histórico.
  */
 var TACS_SOLICITACOES_UBS_V1=Object.freeze({
-  VERSAO:'1.2.0',
+  VERSAO:'1.3.0',
   SHEET:'TACS_SOLICITACOES_MORADORES',
   HEADERS:Object.freeze([
     'ID','AREA_ID','AREA_NOME','UNIDADE_ID','CODIGO_SOLICITACAO','MORADOR_ID',
@@ -117,6 +117,18 @@ function solicitacoesUbsV1ExpiraEm_(dataServico,hora){
   var h=hora||'23:59';
   try{return Utilities.parseDate(dataServico+' '+h,TACS_SOLICITACOES_UBS_V1.FUSO,'yyyy-MM-dd HH:mm');}catch(e){return null;}
 }
+function solicitacoesUbsV1AgendaCard_(descricao){
+  var raw=solicitacoesUbsV1Texto_(descricao),data='',horaFinal='',m=raw.match(/(?:Data\s*:\s*)?(\d{2})\/(\d{2})\/(\d{4})/i);
+  if(m)data=m[3]+'-'+m[2]+'-'+m[1];
+  var re=/\b([01]?\d|2[0-3]):([0-5]\d)\b/g,hit,times=[];
+  while((hit=re.exec(raw))){var h=String(Number(hit[1]));if(h.length<2)h='0'+h;times.push(h+':'+hit[2]);}
+  if(times.length)horaFinal=times[times.length-1];
+  return {data:data,horaFinal:horaFinal};
+}
+function solicitacoesUbsV1DataValor_(v){
+  if(v&&Object.prototype.toString.call(v)==='[object Date]'&&!isNaN(v.getTime()))return Utilities.formatDate(v,TACS_SOLICITACOES_UBS_V1.FUSO,'yyyy-MM-dd');
+  return solicitacoesUbsV1Data_(v);
+}
 function solicitacoesUbsV1Id_(){
   return 'SOL-'+Utilities.formatDate(new Date(),TACS_SOLICITACOES_UBS_V1.FUSO,'yyyyMMdd')+'-'+Utilities.getUuid().replace(/-/g,'').slice(0,8).toUpperCase();
 }
@@ -141,7 +153,7 @@ function solicitacoesUbsV1CriarPublica_(p){
   if(!categoria)throw new Error('Serviço solicitado não informado.');
   var descricao=solicitacoesUbsV1Texto_(p.descricao||p.mensagem||categoria).slice(0,1800);
   var tipoVaga=solicitacoesUbsV1Texto_(p.tipoVaga).toUpperCase().replace(/[^A-Z_]/g,'').slice(0,40);
-  var dataServico=solicitacoesUbsV1Data_(p.dataServico),horaExp=solicitacoesUbsV1Hora_(p.horarioExpiracao),agora=new Date(),expira=solicitacoesUbsV1ExpiraEm_(dataServico,horaExp);
+  var agendaCard=solicitacoesUbsV1AgendaCard_(descricao),dataServico=solicitacoesUbsV1Data_(agendaCard.data||p.dataServico),horaExp=solicitacoesUbsV1Hora_(agendaCard.horaFinal||p.horarioExpiracao),agora=new Date(),expira=solicitacoesUbsV1ExpiraEm_(dataServico,horaExp);
   var status=expira&&expira.getTime()<=agora.getTime()?'EXPIRADA':'NOVA';
   var moradorId=solicitacoesUbsV1Texto_((achado.meta&&achado.meta.moradorId)||morador.idPortal||morador.id||achado.chave);
   var row=[
@@ -168,13 +180,23 @@ function solicitacoesUbsV1CriarPublica_(p){
 function solicitacoesUbsV1Expirar_(sheet){
   if(!sheet||sheet.getLastRow()<=1)return 0;
   var n=sheet.getLastRow()-1,range=sheet.getRange(2,18,n,3),values=range.getValues(),now=Date.now(),changed=0;
-  var expiraValues=sheet.getRange(2,17,n,1).getValues();
+  var agendaRange=sheet.getRange(2,13,n,5),agendaValues=agendaRange.getValues(),agendaChanged=false;
   for(var i=0;i<n;i++){
-    var st=solicitacoesUbsV1Texto_(values[i][0]).toUpperCase(),exp=expiraValues[i][0];
+    var st=solicitacoesUbsV1Texto_(values[i][0]).toUpperCase(),card=solicitacoesUbsV1AgendaCard_(agendaValues[i][0]);
+    var data=card.data||solicitacoesUbsV1DataValor_(agendaValues[i][2]),hora=card.horaFinal||solicitacoesUbsV1Hora_(agendaValues[i][3]);
+    var exp=solicitacoesUbsV1ExpiraEm_(data,hora)||agendaValues[i][4];
+    /* EXPIRACAO_PELO_CARD_V5: o horário final escrito na solicitação é a fonte de verdade.
+       Ex.: "08:00 às 11:30" expira às 11:30, nunca no horário inicial. */
+    if(card.data&&card.horaFinal){
+      var atualData=solicitacoesUbsV1DataValor_(agendaValues[i][2]),atualHora=solicitacoesUbsV1Hora_(agendaValues[i][3]),atualExp=agendaValues[i][4];
+      var expMudou=!(atualExp&&Object.prototype.toString.call(atualExp)==='[object Date]'&&!isNaN(atualExp.getTime())&&exp&&atualExp.getTime()===exp.getTime());
+      if(atualData!==data||atualHora!==hora||expMudou){agendaValues[i][2]=data;agendaValues[i][3]=hora;agendaValues[i][4]=exp;agendaChanged=true;}
+    }
     if((st==='NOVA'||st==='EM_ATENDIMENTO')&&exp&&Object.prototype.toString.call(exp)==='[object Date]'&&!isNaN(exp.getTime())&&exp.getTime()<=now){
       values[i][0]='EXPIRADA';values[i][2]=new Date();changed++;
     }
   }
+  if(agendaChanged)agendaRange.setValues(agendaValues);
   if(changed)range.setValues(values);
   return changed;
 }
