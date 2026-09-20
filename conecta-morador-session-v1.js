@@ -78,7 +78,7 @@ function setField(id,value){
 }
 function prefill(r){
  setField('cpf',r.cpf||'');setField('birth',r.nascimento||'');setField('name',r.nome||'');if(r.endereco)setField('locality',r.endereco);
- var cpf=el('cpf');if(cpf){var label=cpf.closest('label');if(label)label.classList.add('csc-session-hidden-doc')}
+ var cpf=el('cpf');if(cpf){var label=cpf.closest('label');if(label)label.classList.remove('csc-session-hidden-doc')}
  document.dispatchEvent(new CustomEvent('tacs:morador',{detail:{nome:r.nome||'',nascimento:r.nascimento||'',cpf:r.cpf||'',endereco:r.endereco||'',areaId:r.areaId||areaId()}}));
 }
 function topBar(r){
