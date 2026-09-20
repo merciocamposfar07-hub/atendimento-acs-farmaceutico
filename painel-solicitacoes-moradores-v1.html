@@ -35,6 +35,7 @@ function isoExpired(v){if(!v)return false;var d=new Date(v);return !isNaN(d.getT
 function effectiveStatus(x){var s=text(x.status).toUpperCase();if((s==='NOVA'||s==='EM_ATENDIMENTO')&&isoExpired(x.expiraEm))return'EXPIRADA';return s}
 function statusText(s){return {NOVA:'Nova',EM_ATENDIMENTO:'Em atendimento',CONCLUIDA:'Concluída',EXPIRADA:'Solicitação Expirada!'}[s]||s}
 function dateBr(v){var m=text(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:text(v)}
+function ageLabel(v){var m=text(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!m)return'';var now=new Date(),y=Number(m[3]),mo=Number(m[2])-1,d=Number(m[1]),age=now.getFullYear()-y;if(now.getMonth()<mo||(now.getMonth()===mo&&now.getDate()<d))age--;return age>=0?age+(age===1?' ano':' anos'):''}
 function formatDocument(v){var q=text(v).replace(/\D/g,'');if(q.length===11)return q.slice(0,3)+'.'+q.slice(3,6)+'.'+q.slice(6,9)+'-'+q.slice(9);if(q.length===15)return q.slice(0,3)+'.'+q.slice(3,7)+'.'+q.slice(7,11)+'.'+q.slice(11);return text(v)}
 function counts(){var c={NOVA:0,EM_ATENDIMENTO:0,CONCLUIDA:0,EXPIRADA:0};items.forEach(function(x){var s=effectiveStatus(x);if(c[s]!=null)c[s]++});return c}
 function render(){
@@ -46,11 +47,12 @@ function render(){
    return '<article class="request '+(expired?'expired':'')+'" data-id="'+esc(x.id)+'"><div class="top"><div><div class="request-brand">PORTAL CSC • CONECTA SAÚDE COMUNITÁRIA</div><div class="request-title">SOLICITAÇÃO DO MORADOR</div></div><span class="pill '+s+'">'+esc(statusText(s))+'</span></div>'+
    (expired?'<div class="expired-banner">Solicitação Expirada!</div>':'')+
    '<div class="request-info"><div class="request-field"><small>Área de atendimento</small><strong>'+esc(x.areaNome||area())+'</strong></div>'+
-   '<div class="request-field"><small>Unidade de saúde</small><strong>'+esc(x.unidadeId||'Unidade vinculada à área')+'</strong></div>'+
+   '<div class="request-field"><small>TACS responsável</small><strong>'+esc(x.tacsResponsavel||'TACS responsável pela área')+'</strong></div>'+ 
+   '<div class="request-field"><small>Unidade de saúde</small><strong>'+esc(x.unidadeNome||x.unidadeId||'Unidade vinculada à área')+'</strong></div>'+
    '<div class="request-field"><small>Serviço solicitado</small><strong>'+esc(x.categoria||'Solicitação à UBS')+'</strong></div>'+
    '<div class="request-field"><small>Nome completo</small><strong>'+esc(x.morador||'Morador')+'</strong></div>'+
    '<div class="request-field"><small>Data e horário do envio</small><strong>'+esc(x.criadoEm||'Não informado')+'</strong></div>'+
-   '<div class="request-field"><small>Nascimento</small><strong>'+esc(x.nascimento||'Não informado')+'</strong></div>'+
+   '<div class="request-field"><small>Nascimento e idade</small><strong>'+esc((x.nascimento||'Não informado')+(ageLabel(x.nascimento)?' • '+ageLabel(x.nascimento):''))+'</strong></div>'+
    '<div class="request-field"><small>CPF ou CNS</small><strong>'+esc(formatDocument(x.documento)||'Não informado')+'</strong></div>'+
    '<div class="request-field"><small>Localidade / comunidade</small><strong>'+esc(x.localidade||'Não informada')+'</strong></div>'+
    '<div class="request-field"><small>Descrição da solicitação</small><strong>'+esc(x.descricao||x.categoria||'Não informada')+'</strong></div>'+

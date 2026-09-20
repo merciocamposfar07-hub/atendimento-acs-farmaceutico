@@ -1,6 +1,6 @@
 /**
  * ZZZZ_52_SolicitacoesMoradoresUbsV1.gs
- * Conecta Saúde Comunitária — Solicitações dos moradores para a UBS V1.1.0
+ * Conecta Saúde Comunitária — Solicitações dos moradores para a UBS V1.2.0
  *
  * Fluxo:
  * - o Portal CSC registra a solicitação no mesmo toque que abre o WhatsApp do TACS;
@@ -10,13 +10,13 @@
  * - expiração é recalculada em toda leitura/resumo e nunca apaga o histórico.
  */
 var TACS_SOLICITACOES_UBS_V1=Object.freeze({
-  VERSAO:'1.1.0',
+  VERSAO:'1.2.0',
   SHEET:'TACS_SOLICITACOES_MORADORES',
   HEADERS:Object.freeze([
     'ID','AREA_ID','AREA_NOME','UNIDADE_ID','CODIGO_SOLICITACAO','MORADOR_ID',
     'MORADOR_NOME','DOCUMENTO','NASCIMENTO','LOCALIDADE','FAMILIA_ID','CATEGORIA',
     'DESCRICAO','TIPO_VAGA','DATA_SERVICO','HORARIO_EXPIRACAO','EXPIRA_EM','STATUS',
-    'CRIADO_EM','ATUALIZADO_EM','ORIGEM'
+    'CRIADO_EM','ATUALIZADO_EM','ORIGEM','TACS_RESPONSAVEL','UNIDADE_NOME'
   ]),
   STATUSES:Object.freeze(['NOVA','EM_ATENDIMENTO','CONCLUIDA','EXPIRADA']),
   RESULT_PREFIX:'tacs_solicitacoes_ubs_v1_',
@@ -149,7 +149,8 @@ function solicitacoesUbsV1CriarPublica_(p){
     solicitacoesUbsV1Texto_(morador.nome),doc,solicitacoesUbsV1Texto_(morador.nascimento),
     solicitacoesUbsV1Texto_(morador.endereco||p.localidade),solicitacoesUbsV1Familia_(morador),
     categoria,descricao,tipoVaga,dataServico,horaExp,expira||'',status,agora,agora,
-    solicitacoesUbsV1Texto_(p.origem||'PORTAL_CSC_WHATSAPP').slice(0,80)
+    solicitacoesUbsV1Texto_(p.origem||'PORTAL_CSC_WHATSAPP').slice(0,80),
+    solicitacoesUbsV1Texto_(p.tacsResponsavel).slice(0,180),solicitacoesUbsV1Texto_(p.unidadeNome||contexto.unidadeId).slice(0,180)
   ];
   var lock=LockService.getScriptLock();if(!lock.tryLock(10000))throw new Error('A fila da UBS está recebendo outra solicitação. Tente novamente.');
   try{
@@ -190,7 +191,8 @@ function solicitacoesUbsV1Item_(r){
     localidade:solicitacoesUbsV1Texto_(r[9]),familiaId:solicitacoesUbsV1Texto_(r[10]),categoria:solicitacoesUbsV1Texto_(r[11]),
     descricao:solicitacoesUbsV1Texto_(r[12]),tipoVaga:solicitacoesUbsV1Texto_(r[13]),dataServico:solicitacoesUbsV1Texto_(r[14]),
     horarioExpiracao:solicitacoesUbsV1Texto_(r[15]),expiraEm:solicitacoesUbsV1Iso_(r[16]),expiraEmTexto:solicitacoesUbsV1FormatDate_(r[16]),
-    status:st,statusTexto:solicitacoesUbsV1StatusTexto_(st),criadoEm:solicitacoesUbsV1FormatDate_(r[18]),atualizadoEm:solicitacoesUbsV1FormatDate_(r[19])
+    status:st,statusTexto:solicitacoesUbsV1StatusTexto_(st),criadoEm:solicitacoesUbsV1FormatDate_(r[18]),atualizadoEm:solicitacoesUbsV1FormatDate_(r[19]),
+    tacsResponsavel:solicitacoesUbsV1Texto_(r[21]),unidadeNome:solicitacoesUbsV1Texto_(r[22])
   };
 }
 function solicitacoesUbsV1DadosArea_(contexto){
