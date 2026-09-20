@@ -143,7 +143,8 @@ function birthCivil(v){
 function birthParts(v){var s=birthCivil(v),m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?{d:Number(m[1]),m:Number(m[2])-1,y:Number(m[3])}:null}
 function ageLabel(v){var p=birthParts(v);if(!p)return'';var parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),o={};parts.forEach(function(x){o[x.type]=x.value});var y=Number(o.year),mo=Number(o.month)-1,d=Number(o.day),age=y-p.y;if(mo<p.m||(mo===p.m&&d<p.d))age--;return age>=0?age+(age===1?' ano':' anos'):''}
 function birthDisplay(v){return birthCivil(v)}
-function formatDocument(v){var q=text(v).replace(/\D/g,'');if(q.length===11)return q.slice(0,3)+'.'+q.slice(3,6)+'.'+q.slice(6,9)+'-'+q.slice(9);if(q.length===15)return q.slice(0,3)+'.'+q.slice(3,7)+'.'+q.slice(7,11)+'.'+q.slice(11);return text(v)}
+function cpfValid(q){if(!/^\d{11}$/.test(q)||/^(\d)\1{10}$/.test(q))return false;var s=0,i;for(i=0;i<9;i++)s+=Number(q.charAt(i))*(10-i);var a=(s*10)%11;if(a===10)a=0;if(a!==Number(q.charAt(9)))return false;s=0;for(i=0;i<10;i++)s+=Number(q.charAt(i))*(11-i);var b=(s*10)%11;if(b===10)b=0;return b===Number(q.charAt(10))}
+function formatDocument(v){var q=text(v).replace(/\D/g,'');if(q.length===10&&cpfValid('0'+q))q='0'+q;if(q.length===11)return q.slice(0,3)+'.'+q.slice(3,6)+'.'+q.slice(6,9)+'-'+q.slice(9);if(q.length===15)return q.slice(0,3)+' '+q.slice(3,7)+' '+q.slice(7,11)+' '+q.slice(11);return text(v)}
 function counts(){var c={NOVA:0,EM_ATENDIMENTO:0,CONCLUIDA:0,EXPIRADA:0};items.forEach(function(x){var s=effectiveStatus(x);if(c[s]!=null)c[s]++});return c}
 function current(){for(var i=0;i<items.length;i++)if(text(items[i].id)===text(selectedId))return items[i];return null}
 function renderList(){
@@ -171,7 +172,7 @@ function detailHtml(x){
      '<span class="slip-label">Nome completo</span><span class="slip-value">'+esc(x.morador||'Morador')+'</span>'+
      '<span class="slip-label">Data e horário do envio</span><span class="slip-value">'+esc(x.criadoEm||'Não informado')+'</span>'+
      '<span class="slip-label">Nascimento e idade</span><span class="slip-value">'+esc(birth+(age?' • '+age:''))+'</span>'+
-     '<span class="slip-label">CPF ou CNS</span><span class="slip-value">'+esc(formatDocument(x.documento)||'Não informado')+'</span>'+
+     '<span class="slip-label">CPF ou CNS</span><span class="slip-value">'+esc(x.documentoFormatado||formatDocument(x.documento)||'Não informado')+'</span>'+
      '<span class="slip-label">Localidade / comunidade</span><span class="slip-value">'+esc(x.localidade||'Não informada')+'</span>'+
      '<span class="slip-label">Descrição da solicitação</span><span class="slip-value slip-description">'+esc(x.descricao||x.categoria||'Não informada')+'</span>'+
    '</section>'+
