@@ -762,50 +762,70 @@
     }
 
   
-    /* CSC_PORTAL_FUNDO_UNISSONO_PROTO4_20260920_V1
+    /* CSC_PORTAL_FUNDO_UNISSONO_PROTO4_20260920_V2
        SOMENTE PORTAL CONECTA SAÚDE COMUNITÁRIA.
-       Uma única superfície azul; separação interna por contorno, nunca por faixas de fundo. */
+       Fundo único. Sem moldura/contorno de seção envolvendo balões.
+       Cada balão/card mantém apenas o seu próprio contorno e contraste. */
     html,body,.shell,.panel,.hero,.content,footer{
       background:#062c46!important;
       background-image:none!important;
     }
     .hero::after{display:none!important}
-    .hero-actions,.notice-area,.notice-board,.notice-list,.notice-card,
-    .notice-card.important,.notice-card.urgent,.purpose,.form-panel,.dental,
-    .info,.routing,.before-send,.portal-attachment-box,.tacs-pin-box{
+
+    /* Estrutura: transparente, sem caixa externa, sem faixas e sem contorno duplo. */
+    .hero-actions,.action-card,
+    .notice-area,.notice-board,.notice-list,
+    .purpose,.form-panel,.dental,
+    .info,.routing,.before-send,
+    .portal-attachment-box,.tacs-pin-box{
       background:transparent!important;
       background-image:none!important;
+      border:0!important;
+      border-radius:0!important;
       box-shadow:none!important;
     }
-    /* Nenhuma faixa superior, inferior ou lateral: os blocos usam contorno próprio. */
+
+    /* Balões/cards: uma única moldura própria, nítida sobre o azul uníssono. */
     .hours,
+    .notice-card,.notice-card.important,.notice-card.urgent,
     #integralPublicArea,.integral-area,
     .portal-service-picker-panel,
     #portalFamilyLookupV1,
     .tacs-family-member,
     .slot,
     input,textarea,select{
+      background:#0d3b57!important;
+      background-image:none!important;
+      border:1px solid rgba(98,200,232,.72)!important;
+      box-shadow:none!important;
+    }
+    .notice-card,.notice-card.important,.notice-card.urgent,
+    #integralPublicArea,.integral-area,
+    .portal-service-picker-panel,
+    #portalFamilyLookupV1{
+      border-radius:18px!important;
+    }
+    .tacs-family-member,.slot,input,textarea,select{border-radius:13px!important}
+
+    /* Remove linhas/faixas estruturais antigas que dividiam a página. */
+    .hero-actions,.notice-board,.purpose,.form-panel,.dental,.info,.routing,.before-send,footer{
+      border-top:0!important;
+      border-bottom:0!important;
+      border-left:0!important;
+      border-right:0!important;
+    }
+    footer{
       background:#062c46!important;
       background-image:none!important;
       box-shadow:none!important;
     }
-    .hours,
-    #integralPublicArea,.integral-area,
-    .portal-service-picker-panel,
-    #portalFamilyLookupV1{
-      border:1px solid rgba(98,200,232,.62)!important;
-    }
-    .notice-board,.form-panel,.dental,.purpose,footer{
-      border-left:0!important;
-      border-right:0!important;
-      border-radius:0!important;
-    }
-    /* Contraste/nitidez sobre o azul único. */
+
+    /* Legibilidade: conteúdo continua forte e visível. */
     .hero,.content,.notice-board,.form-panel,.dental,footer{color:#f7fbfd!important}
     .notice-card strong,.section-title,.dental-head h3,label,
     #portalFamilyLookupV1 .tacs-family-title{color:#fff!important}
     .notice-card p,.notice-updated,.help,.dental-head p,.dental-status,
-    #portalFamilyLookupV1 .tacs-family-help{color:#d6e5ec!important}
+    #portalFamilyLookupV1 .tacs-family-help{color:#dceaf0!important}
     .notice-card small,.dental-head span,.help.valid,.portal-flow-arrow,
     .portal-alert-guide,.portal-attachment-guide{color:#8ff0ae!important}
 
