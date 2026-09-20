@@ -63,7 +63,8 @@ function applyResident(r,localOnly){
  var savedCpf=residentProfileCpf();if(!digits(resident.cpf)&&savedCpf)resident.cpf=savedCpf;
  prefill(resident);
  var old=el('cscResidentBar');if(old)old.remove();
- renderFamily(resident);warmFamilyMembers(Array.isArray(resident.familia)?resident.familia:[]);
+ var duplicateFamily=el('cscFamilySession');if(duplicateFamily)duplicateFamily.remove();
+ warmFamilyMembers(Array.isArray(resident.familia)?resident.familia:[]);
  if(onboardingFlag()||(!localOnly&&!resident.notificacoesAtivas))showGate();else if(!onboardingFlag())hideGate();
 }
 
