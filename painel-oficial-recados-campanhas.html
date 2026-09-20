@@ -2671,7 +2671,20 @@ function cacheFingerprint(v){var s=txt(v),a=2166136261,b=2246822519;for(var i=0;
 function cacheTacsProfile(){try{var p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');return p&&p.tacsId&&p.areaId?p:null}catch(e){return null}}
 function cacheIdentity(){if(accessMode==='ubs'){var id=moduleCore&&typeof moduleCore.identity==='function'?moduleCore.identity():null,unit=txt(id&&id.unidadeId).toUpperCase().replace(/[^A-Z0-9_-]/g,'');return'ubs:'+(unit||'UNIDADE')+':'+areaId}if(territorioToken){var p=cacheTacsProfile(),tid=txt(p&&p.tacsId).toUpperCase().replace(/[^A-Z0-9_-]/g,''),pa=txt(p&&p.areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'');if(!tid||pa!==areaId)return'';return'tacs:'+tid+':'+areaId}if(token)return'admin:'+cacheFingerprint(token)+':'+areaId;return''}
 function dataCacheKey(){var id=cacheIdentity();return id?'portalTacsAdminSnapshotV1:recados:'+CACHE_SCHEMA+':'+id:''}
-function snapshotPayload(r){return {ok:true,areaId:areaId,recados:Array.isArray(r&&r.recados)?r.recados:[],campanhas:Array.isArray(r&&r.campanhas)?r.campanhas:[]}}
+function snapshotPayload(r){
+  var m=r&&r.manutencao&&typeof r.manutencao==='object'?r.manutencao:{};
+  return {
+    ok:true,
+    areaId:txt(r&&r.areaId||areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'')||areaId,
+    areaNome:txt(r&&r.areaNome),
+    perfil:txt(r&&r.perfil),
+    podeAdministrar:Boolean(r&&r.podeAdministrar===true),
+    areas:Array.isArray(r&&r.areas)?r.areas:[],
+    manutencao:{ativa:bool(m.ativa)},
+    recados:Array.isArray(r&&r.recados)?r.recados:[],
+    campanhas:Array.isArray(r&&r.campanhas)?r.campanhas:[]
+  };
+}
 function cacheModeEstavel(){var m='';try{m=txt(moduleCore&&typeof moduleCore.mode==='function'?moduleCore.mode():accessMode).toLowerCase()}catch(e){m=txt(accessMode).toLowerCase()}return ['admin','tacs','ubs'].indexOf(m)!==-1?m:''}
 function stableCacheKey(){var m=cacheModeEstavel(),a=txt(areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'');return m&&a?STABLE_CACHE_PREFIX+m+':'+a:''}
 function lerSnapshotEstavel(){try{var key=stableCacheKey();if(!key)return null;var item=JSON.parse(localStorage.getItem(key)||'null'),age=Date.now()-Number(item&&item.salvoEm||0);if(!item||!item.data||age<0||age>SNAPSHOT_TTL)return null;return item}catch(e){return null}}
@@ -2695,13 +2708,13 @@ function aplicarSnapshotSeDisponivel(){
     A leitura visual não depende do token efêmero. O último snapshot sanitizado da
     mesma função + área volta primeiro; a sessão remota continua obrigatória para escrita. */
  if(modulePerf&&typeof modulePerf.prime==='function'){
-  var coreItem=modulePerf.prime('recados',function(data){snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;aplicar(data,true);salvarSnapshotEstavel(data)});
+  var coreItem=modulePerf.prime('recados',function(data){snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;aplicar(data,true);salvarSnapshotEstavel(data)});
   if(coreItem){limparStatusCarregamento('loginStatus');limparStatusCarregamento('statusOperacao');try{restaurarSaudeResumo()}catch(e){}return true}
  }
  var item=lerSnapshotEstavel()||lerSnapshotLegadoDaArea();
  if(!item&&(token||territorioToken||ubsToken||accessMode==='ubs'))item=lerSnapshot();
  if(!item)return false;
- snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;
+ snapshotVisivel=true;contextoPronto=false;manutencaoConhecida=false;
  aplicar(item.data,true);salvarSnapshotEstavel(item.data);
  limparStatusCarregamento('loginStatus');limparStatusCarregamento('statusOperacao');
  try{restaurarSaudeResumo()}catch(e){}
@@ -2778,7 +2791,26 @@ function listaDoTipo(tipo){return tipo==='recado'?dados.recados:dados.campanhas}
 function mapaIds(tipo){var mapa={};listaDoTipo(tipo).forEach(function(item){var id=txt(item&&item.ID);if(id)mapa[id]=true});return mapa}
 function localizarSalvo(tipo,id,p,idsAntes){if(id)return achar(tipo,id);var todos=listaDoTipo(tipo),novos=todos.filter(function(item){var itemId=txt(item&&item.ID);return itemId&&!idsAntes[itemId]}),novosIguais=novos.filter(function(item){return coincide(tipo,item,p)});if(novosIguais.length===1)return novosIguais[0];if(novos.length===1)return novos[0];return null}
 function relerAteConfirmar(verificar,cb,tentativa){var numero=Number(tentativa||0),esperas=[0,250,700,1400];if(numero===0){confirmacaoPendente=true;atualizarBloqueioMutacoes()}function concluir(ok,confirmado,r){confirmacaoPendente=false;atualizarBloqueioMutacoes();cb(ok,confirmado,r)}function executar(){post('admin_publicacoes_dados',sessao(),function(r){if(!r||r.ok!==true){concluir(false,null,r);return}aplicar(r);var confirmado=verificar();if(confirmado){concluir(true,confirmado,r);return}if(numero>=esperas.length-1){concluir(false,null,r);return}relerAteConfirmar(verificar,cb,numero+1)})}var espera=esperas[numero]||0;if(espera)setTimeout(executar,espera);else executar()}
-function aplicar(r,doSnapshot){dados.recados=Array.isArray(r.recados)?r.recados:[];dados.campanhas=Array.isArray(r.campanhas)?r.campanhas:[];document.getElementById('conteudo').classList.remove('oculto');document.getElementById('resumo').classList.remove('oculto');sair.disabled=false;if(doSnapshot){contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;document.getElementById('areaEnvioBox').classList.add('oculto');document.getElementById('manutencaoBox').classList.add('oculto');render();return}confirmarContextoSemRender(r);render();salvarSnapshot(r)}
+function aplicarContextoVisualDoSnapshot(r){
+  var snapshotAreas=Array.isArray(r&&r.areas)?r.areas:[];
+  areaId=txt(r&&r.areaId||areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'')||areaId;
+  if(snapshotAreas.length)areas=snapshotAreas;
+  if(r&&r.perfil)accessMode=r.perfil==='TACS'?'tacs':(r.perfil==='UBS'?'ubs':accessMode==='ubs'?'ubs':'admin');
+  podeAdministrar=Boolean(r&&r.podeAdministrar===true);
+  manutencaoAtiva=bool(r&&r.manutencao&&r.manutencao.ativa);
+  contextoPronto=false;
+  manutencaoConhecida=false;
+  if(areas.length){
+    document.getElementById('areaEnvioBox').classList.remove('oculto');
+    renderAreas();
+  }else{
+    document.getElementById('areaEnvioBox').classList.add('oculto');
+  }
+  document.getElementById('manutencaoBox').classList.remove('oculto');
+  renderManutencao();
+  atualizarBloqueioMutacoes();
+}
+function aplicar(r,doSnapshot){dados.recados=Array.isArray(r.recados)?r.recados:[];dados.campanhas=Array.isArray(r.campanhas)?r.campanhas:[];document.getElementById('conteudo').classList.remove('oculto');document.getElementById('resumo').classList.remove('oculto');sair.disabled=false;if(doSnapshot){var temContexto=Array.isArray(r&&r.areas)&&r.areas.length>0&&r&&r.manutencao&&typeof r.manutencao==='object';if(temContexto)aplicarContextoVisualDoSnapshot(r);else{contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;document.getElementById('areaEnvioBox').classList.add('oculto');document.getElementById('manutencaoBox').classList.add('oculto')}render();return}confirmarContextoSemRender(r);render();salvarSnapshot(r)}
 function confirmarContextoSemRender(r){areas=Array.isArray(r&&r.areas)?r.areas:[];areaId=txt(r&&r.areaId||areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'')||areaId;podeAdministrar=r&&r.podeAdministrar===true;accessMode=r&&r.perfil==='TACS'?'tacs':(r&&r.perfil==='UBS'?'ubs':accessMode==='ubs'?'ubs':'admin');var m=r&&r.manutencao||{};manutencaoAtiva=bool(m.ativa);manutencaoConhecida=true;contextoPronto=true;snapshotVisivel=false;snapshotReconexaoTentativas=0;cancelarReconexaoSnapshot();document.getElementById('manutencaoBox').classList.remove('oculto');renderAreas();renderManutencao();atualizarBloqueioMutacoes()}
 function renderAreas(){var box=document.getElementById('areaEnvioBox'),select=document.getElementById('areaEnvio');select.innerHTML=areas.map(function(a){return'<option value="'+esc(a.areaId)+'">'+esc(a.areaNome||a.areaId)+'</option>'}).join('');if(areas.some(function(a){return txt(a.areaId)===areaId}))select.value=areaId;else if(areas.length)areaId=txt(areas[0].areaId);select.value=areaId;var atual=areas.find(function(a){return txt(a.areaId)===areaId});document.getElementById('areaEnvioTexto').textContent='Envios e manutenção serão aplicados somente a '+txt(atual&&atual.areaNome||areaId)+'. O servidor confere esse escopo novamente.';box.classList.toggle('oculto',!areas.length);atualizarBloqueioMutacoes()}
 function carregarAreas(cb){post('admin_moradores_areas',sessao(),function(r){if(!r||r.ok!==true||!Array.isArray(r.areas)||!r.areas.length){areas=[];contextoPronto=false;renderAreas();manutencaoConhecida=false;status('statusOperacao','Não foi possível validar as áreas. Notificações e manutenção foram bloqueadas por segurança.','erro');if(cb)cb(false,r);return}areas=r.areas;areaId=txt(r.areaId||areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'')||areaId;renderAreas();if(cb)cb(true,r)},'admin_moradores_result')}
