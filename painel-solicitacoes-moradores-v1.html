@@ -71,7 +71,7 @@ main{width:min(720px,100%);margin:0 auto;padding:8px 16px 38px}
 <main>
 <section id="listView">
   <p class="intro">Toque em uma solicitação para abrir a ficha completa do morador.</p>
-  <div id="status" class="status">Carregando o último estado disponível…</div>
+  <div id="status" class="status ok">Painel pronto.</div>
   <section class="metrics">
     <div class="metric"><strong id="mNova">0</strong><span>Novas</span></div>
     <div class="metric"><strong id="mAtend">0</strong><span>Em atendimento</span></div>
@@ -104,7 +104,7 @@ main{width:min(720px,100%);margin:0 auto;padding:8px 16px 38px}
 (function(){
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-var core=window.ConectaModuleCoreV1,items=[],filter='',busy=false,timer=null,selectedId='';
+var core=window.ConectaModuleCoreV1,items=[],filter='',busy=false,syncBusy=false,timer=null,selectedId='';
 function text(v){return String(v==null?'':v).trim()}
 function esc(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function area(){return core&&core.areaId?core.areaId():(new URLSearchParams(location.search).get('area')||'JAPARANDUBA')}
@@ -196,17 +196,18 @@ function showList(){
  try{window.scrollTo({top:0,behavior:'auto'})}catch(e){window.scrollTo(0,0)}
 }
 function save(data){try{localStorage.setItem(cacheKey(),JSON.stringify({savedAt:Date.now(),data:data}))}catch(e){}}
-function loadCache(){try{var x=JSON.parse(localStorage.getItem(cacheKey())||'null');if(!x||!x.data||!Array.isArray(x.data.solicitacoes))return false;items=x.data.solicitacoes;renderList();setStatus('Últimos dados disponíveis • sincronizando em segundo plano…','ok');return true}catch(e){return false}}
+function loadCache(){try{var x=JSON.parse(localStorage.getItem(cacheKey())||'null');if(!x||!x.data||!Array.isArray(x.data.solicitacoes))return false;items=x.data.solicitacoes;renderList();setStatus('Dados disponíveis.','ok');return true}catch(e){return false}}
 function jsonpResult(id,cb){var name='__sol_panel_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false;function finish(r){if(done)return;done=true;try{delete window[name]}catch(e){}if(s.parentNode)s.remove();cb(r)}window[name]=finish;s.onerror=function(){finish({ok:false})};s.src=API+'?action=admin_solicitacoes_ubs_result&requestId='+encodeURIComponent(id)+'&callback='+encodeURIComponent(name)+'&_='+Date.now();document.head.appendChild(s)}
-function call(action,extra,cb){
- if(busy){cb({ok:false,temporario:true,message:'Aguarde a operação anterior.'});return}busy=true;
- var id=rid(action),payload=core&&core.session?core.session(extra||{}):Object.assign({areaId:area()},extra||{}),body=new URLSearchParams(),started=Date.now();
+function call(action,extra,cb,background){
+ if(background){if(syncBusy)return;syncBusy=true}else{if(busy){cb({ok:false,temporario:true,message:'Aguarde a operação anterior.'});return}busy=true}
+ var id=rid(action),payload=core&&core.session?core.session(extra||{}):Object.assign({areaId:area()},extra||{}),body=new URLSearchParams(),started=Date.now(),finished=false;
+ function release(){if(finished)return;finished=true;if(background)syncBusy=false;else busy=false}
  Object.keys(payload).forEach(function(k){body.set(k,String(payload[k]==null?'':payload[k]))});body.set('action',action);body.set('requestId',id);
  try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){})}catch(e){}
- function poll(){jsonpResult(id,function(r){if(r&&r.ok===true&&r.pendente===false){busy=false;cb(r.result||{ok:false});return}if(Date.now()-started>18000){busy=false;cb({ok:false,temporario:true,message:'A sincronização continuará na próxima atualização.'});return}setTimeout(poll,650)})}setTimeout(poll,250);
+ function poll(){jsonpResult(id,function(r){if(r&&r.ok===true&&r.pendente===false){release();cb(r.result||{ok:false});return}if(Date.now()-started>12000){release();cb({ok:false,temporario:true,message:'A atualização seguirá em segundo plano na próxima tentativa.'});return}setTimeout(poll,650)})}setTimeout(poll,250);
 }
 function refresh(silent,forceDetail){
- if(busy)return;call('admin_solicitacoes_ubs_listar',{},function(r){
+ if(syncBusy)return;call('admin_solicitacoes_ubs_listar',{},function(r){
   if(r&&r.ok===true&&Array.isArray(r.solicitacoes)){
    items=r.solicitacoes;save(r);renderList();
    /* SCROLL_UBS_SEM_REPAINT_V1:
@@ -215,7 +216,7 @@ function refresh(silent,forceDetail){
    if(forceDetail&&selectedId)renderDetail();
    setStatus('Solicitações atualizadas.','ok')
   }else if(!silent)setStatus(text(r&&r.message)||'Não foi possível atualizar agora.','err')
- })
+ },true)
 }
 function backCentral(){
  try{if(window.parent&&window.parent!==window&&window.parent.ConectaCentralShellV1&&typeof window.parent.ConectaCentralShellV1.voltar==='function'){window.parent.ConectaCentralShellV1.voltar();return}}catch(e){}
@@ -226,7 +227,7 @@ document.getElementById('backList').addEventListener('click',showList);
 document.querySelector('.tabs').addEventListener('click',function(e){var b=e.target.closest('[data-filter]');if(!b)return;filter=b.dataset.filter||'';document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('active',x===b)});renderList()});
 document.getElementById('list').addEventListener('click',function(e){var b=e.target.closest('[data-open-id]');if(!b)return;openDetail(b.dataset.openId)});
 document.getElementById('detailCard').addEventListener('click',function(e){var b=e.target.closest('[data-detail-action]'),x=current();if(!b||!x||busy)return;b.disabled=true;call('admin_solicitacoes_ubs_atualizar',{id:x.id,status:b.dataset.detailAction},function(r){if(r&&r.ok===true){setStatus(r.message||'Solicitação atualizada.','ok');refresh(true,true)}else{b.disabled=false;setStatus(text(r&&r.message)||'Não foi possível atualizar.','err')}})});
-loadCache();refresh(true);
+if(!loadCache()){items=[];renderList();setStatus('Painel pronto.','ok')}setTimeout(function(){refresh(true)},0);
 timer=setInterval(function(){if(!document.hidden&&!selectedId)refresh(true)},12000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&!selectedId)refresh(true)});
 }());

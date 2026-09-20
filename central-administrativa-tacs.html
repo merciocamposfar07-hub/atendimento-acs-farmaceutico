@@ -2852,12 +2852,11 @@ html body .viewer.csc-frame-viewer.csc-frame-opening>iframe:not([hidden]){
   pointer-events:none!important;
 }
 </style>
-<style id="cscHeaderScrollFlow20260920">
-/* CABECALHO_NO_FLUXO_V2
-   O cabeçalho deve fazer parte da mesma rolagem do conteúdo em todos os painéis.
-   Não existe rolagem interna separada abaixo do cabeçalho. */
+<style id="cscNativeHeaderScrollSafe20260920">
+/* CORRECAO_CIRURGICA_CABECALHO_SCROLL_V3
+   Somente painéis nativos: o viewer rola e o cabeçalho permanece no fluxo.
+   Não altera display/hidden dos hosts e não interfere no isolamento entre painéis. */
 html body .viewer.csc-native-viewer:not([hidden]){
-  display:block!important;
   overflow-x:hidden!important;
   overflow-y:auto!important;
   -webkit-overflow-scrolling:touch!important;
@@ -2870,30 +2869,15 @@ html body .viewer.csc-native-viewer>.viewer-bar{
   transform:none!important;
 }
 html body .viewer.csc-native-viewer>.csc-native-module-host:not([hidden]){
-  display:block!important;
-  position:static!important;
+  overflow:visible!important;
+  overflow-y:visible!important;
   height:auto!important;
   max-height:none!important;
   min-height:0!important;
-  overflow:visible!important;
-  overflow-y:visible!important;
-  flex:none!important;
-  touch-action:pan-y pinch-zoom!important;
+  touch-action:pan-y!important;
 }
 html body .viewer.csc-native-viewer>.viewer-platform-footer{
   position:static!important;
-}
-html body .viewer.csc-frame-viewer:not([hidden])>.viewer-bar{
-  display:none!important;
-}
-html body .viewer.csc-frame-viewer.csc-frame-opening:not([hidden])>.viewer-bar{
-  display:flex!important;
-  position:static!important;
-}
-html body .viewer.csc-frame-viewer:not(.csc-frame-opening)>iframe:not([hidden]){
-  flex:1 1 auto!important;
-  height:100dvh!important;
-  min-height:100dvh!important;
 }
 </style>
 </head>
@@ -2985,7 +2969,7 @@ html body .viewer.csc-frame-viewer:not(.csc-frame-opening)>iframe:not([hidden]){
   },true);
 })();
 </script>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260920-cabecalho-fluxo-v2"></script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260920-revert-cachefirst-v3"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=20260920-ubs-push-v2"></script>
