@@ -762,6 +762,53 @@
     }
 
   
+    /* CSC_PORTAL_FUNDO_UNISSONO_PROTO4_20260920_V1
+       SOMENTE PORTAL CONECTA SAÚDE COMUNITÁRIA.
+       Uma única superfície azul; separação interna por contorno, nunca por faixas de fundo. */
+    html,body,.shell,.panel,.hero,.content,footer{
+      background:#062c46!important;
+      background-image:none!important;
+    }
+    .hero::after{display:none!important}
+    .hero-actions,.notice-area,.notice-board,.notice-list,.notice-card,
+    .notice-card.important,.notice-card.urgent,.purpose,.form-panel,.dental,
+    .info,.routing,.before-send,.portal-attachment-box,.tacs-pin-box{
+      background:transparent!important;
+      background-image:none!important;
+      box-shadow:none!important;
+    }
+    /* Nenhuma faixa superior, inferior ou lateral: os blocos usam contorno próprio. */
+    .hours,
+    #integralPublicArea,.integral-area,
+    .portal-service-picker-panel,
+    #portalFamilyLookupV1,
+    .tacs-family-member,
+    .slot,
+    input,textarea,select{
+      background:#062c46!important;
+      background-image:none!important;
+      box-shadow:none!important;
+    }
+    .hours,
+    #integralPublicArea,.integral-area,
+    .portal-service-picker-panel,
+    #portalFamilyLookupV1{
+      border:1px solid rgba(98,200,232,.62)!important;
+    }
+    .notice-board,.form-panel,.dental,.purpose,footer{
+      border-left:0!important;
+      border-right:0!important;
+      border-radius:0!important;
+    }
+    /* Contraste/nitidez sobre o azul único. */
+    .hero,.content,.notice-board,.form-panel,.dental,footer{color:#f7fbfd!important}
+    .notice-card strong,.section-title,.dental-head h3,label,
+    #portalFamilyLookupV1 .tacs-family-title{color:#fff!important}
+    .notice-card p,.notice-updated,.help,.dental-head p,.dental-status,
+    #portalFamilyLookupV1 .tacs-family-help{color:#d6e5ec!important}
+    .notice-card small,.dental-head span,.help.valid,.portal-flow-arrow,
+    .portal-alert-guide,.portal-attachment-guide{color:#8ff0ae!important}
+
     /* CSC_REMOVE_SELETOR_FAMILIAR_DUPLICADO_20260919_V1
        O seletor oficial permanece em #portalFamilyLookupV1 (.tacs-family-member).
        Este bloco oculta somente o seletor legado/redundante da sessão. */
