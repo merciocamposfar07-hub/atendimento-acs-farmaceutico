@@ -703,7 +703,18 @@
       }
     }
 
-  </style>
+  
+    /* CSC_REMOVE_SELETOR_FAMILIAR_DUPLICADO_20260919_V1
+       O seletor oficial permanece em #portalFamilyLookupV1 (.tacs-family-member).
+       Este bloco oculta somente o seletor legado/redundante da sessão. */
+    #cscFamilySession,
+    .csc-family-session,
+    .csc-family-grid,
+    .csc-family-person{
+      display:none!important;
+    }
+
+</style>
 </head>
 <body class="tema-petroleo"><main class="shell">
     <section class="panel">
