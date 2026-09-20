@@ -4,8 +4,8 @@ if(window.PortalTacsAgendaWhatsAppV2)return;
 window.PortalTacsAgendaWhatsAppV2=true;
 
 var CARD_UNIT='Unidade de Saúde Posto Matias';
-var CARD_BRAND='PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA';
-var CARD_FOOTER='PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA';
+var CARD_BRAND='CONECTA SAÚDE COMUNITÁRIA';
+var CARD_FOOTER='CONECTA SAÚDE COMUNITÁRIA';
 var CARD_REVISION='20260920-portal-csc-oficial-v2';
 var CONECTA_OFFICIAL_ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260920-card-csc-v1';
 
@@ -56,8 +56,8 @@ function paintBackground(ctx){
 function drawBrand(ctx,logo,areaName){
   if(logo)ctx.drawImage(logo,58,58,258,258);
   ctx.fillStyle='#72e3a0';ctx.textAlign='left';
-  fitFont(ctx,CARD_BRAND,'900',44,27,665);
-  ctx.fillText(CARD_BRAND,355,166);
+  ctx.font='900 56px -apple-system,BlinkMacSystemFont,Arial';
+  wrap(ctx,CARD_BRAND,355,125,665,64,2);
   ctx.textAlign='center';
   fitFont(ctx,CARD_UNIT,'900',58,42,950);
   ctx.fillText(CARD_UNIT,540,366);

@@ -622,13 +622,13 @@
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1080, 1920);
 
-    ctx.drawImage(logo, 52, 34, 132, 132);
+    ctx.drawImage(logo, 52, 34, 160, 160);
     ctx.fillStyle = '#8df0b4';
-    ctx.font = '900 32px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    drawLines(ctx, 'PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA', 215, 78, 805, 38, 2);
+    ctx.font = '900 48px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    drawLines(ctx, 'CONECTA SAÚDE COMUNITÁRIA', 235, 78, 760, 55, 2);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 52px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('SOLICITAÇÃO DO MORADOR', 215, 174);
+    ctx.font = '900 44px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
+    ctx.fillText('SOLICITAÇÃO DO MORADOR', 235, 185);
 
     ctx.fillStyle = 'rgba(255,255,255,.12)';
     roundRect(ctx, 52, 210, 976, 350, 30);
