@@ -10,14 +10,19 @@
  * - expiração é recalculada em toda leitura/resumo e nunca apaga o histórico.
  */
 var TACS_SOLICITACOES_UBS_V1=Object.freeze({
-  VERSAO:'1.4.0',
+  VERSAO:'1.5.0',
   SHEET:'TACS_SOLICITACOES_MORADORES',
   HEADERS:Object.freeze([
     'ID','AREA_ID','AREA_NOME','UNIDADE_ID','CODIGO_SOLICITACAO','MORADOR_ID',
     'MORADOR_NOME','DOCUMENTO','NASCIMENTO','LOCALIDADE','FAMILIA_ID','CATEGORIA',
     'DESCRICAO','TIPO_VAGA','DATA_SERVICO','HORARIO_EXPIRACAO','EXPIRA_EM','STATUS',
-    'CRIADO_EM','ATUALIZADO_EM','ORIGEM','TACS_RESPONSAVEL','UNIDADE_NOME'
+    'CRIADO_EM','ATUALIZADO_EM','ORIGEM','TACS_RESPONSAVEL','UNIDADE_NOME',
+    'VISTO_UBS_EM','PUSH_UBS_EM','PUSH_UBS_ID'
   ]),
+  PUSH_SHEET:'TACS_SOLICITACOES_UBS_PUSH',
+  PUSH_HEADERS:Object.freeze(['SUBSCRIPTION_ID','CADASTRO_ID','UNIDADE_ID','AREA_ID','ATIVO','CRIADO_EM','ATUALIZADO_EM']),
+  ONESIGNAL_APP_ID:'e2294b98-c72b-4f8c-a055-de28979676dc',
+  ONESIGNAL_ENDPOINT:'https://api.onesignal.com/notifications',
   STATUSES:Object.freeze(['NOVA','EM_ATENDIMENTO','CONCLUIDA','EXPIRADA']),
   RESULT_PREFIX:'tacs_solicitacoes_ubs_v1_',
   RESULT_SECONDS:300,
@@ -49,7 +54,7 @@ function solicitacoesUbsV1TratarGet_(e){
 
 function solicitacoesUbsV1TratarPost_(e){
   var p=e&&e.parameter?e.parameter:{},action=solicitacoesUbsV1Texto_(p.action).toLowerCase();
-  var allowed=['publico_solicitacao_ubs_criar','admin_solicitacoes_ubs_listar','admin_solicitacoes_ubs_resumo','admin_solicitacoes_ubs_atualizar'];
+  var allowed=['publico_solicitacao_ubs_criar','admin_solicitacoes_ubs_listar','admin_solicitacoes_ubs_resumo','admin_solicitacoes_ubs_atualizar','admin_solicitacoes_ubs_vistas','admin_solicitacoes_ubs_push_registrar'];
   if(allowed.indexOf(action)===-1)return null;
   var requestId=solicitacoesUbsV1Texto_(p.requestId),result;
   try{
@@ -60,6 +65,8 @@ function solicitacoesUbsV1TratarPost_(e){
       var ctx=solicitacoesUbsV1ContextoAdmin_(p);
       if(action==='admin_solicitacoes_ubs_listar')result=solicitacoesUbsV1Listar_(ctx);
       else if(action==='admin_solicitacoes_ubs_resumo')result=solicitacoesUbsV1Resumo_(ctx);
+      else if(action==='admin_solicitacoes_ubs_vistas')result=solicitacoesUbsV1MarcarVistas_(ctx);
+      else if(action==='admin_solicitacoes_ubs_push_registrar')result=solicitacoesUbsV1RegistrarPush_(p,ctx);
       else result=solicitacoesUbsV1Atualizar_(p,ctx);
     }
   }catch(err){result={ok:false,message:solicitacoesUbsV1Erro_(err)};}
@@ -73,7 +80,7 @@ function solicitacoesUbsV1Sheet_(){
     s=ss.insertSheet(TACS_SOLICITACOES_UBS_V1.SHEET);
     s.getRange(1,1,1,headers.length).setValues([headers.slice()]);
     s.setFrozenRows(1);
-    s.getRange('A:U').setWrap(true);
+    s.getRange('A:Z').setWrap(true);
     return s;
   }
   if(s.getLastColumn()<headers.length)s.insertColumnsAfter(Math.max(1,s.getLastColumn()),headers.length-s.getLastColumn());
@@ -81,6 +88,81 @@ function solicitacoesUbsV1Sheet_(){
   for(var i=0;i<headers.length;i++){if(current[i]!==headers[i]){changed=true;break;}}
   if(changed)s.getRange(1,1,1,headers.length).setValues([headers.slice()]);
   return s;
+}
+
+function solicitacoesUbsV1PushSheet_(){
+  var ss=tacsTerritorioV1Planilha_(),headers=TACS_SOLICITACOES_UBS_V1.PUSH_HEADERS,s=ss.getSheetByName(TACS_SOLICITACOES_UBS_V1.PUSH_SHEET);
+  if(!s){
+    s=ss.insertSheet(TACS_SOLICITACOES_UBS_V1.PUSH_SHEET);
+    s.getRange(1,1,1,headers.length).setValues([headers.slice()]);
+    s.setFrozenRows(1);s.getRange('A:G').setWrap(true);
+    return s;
+  }
+  if(s.getLastColumn()<headers.length)s.insertColumnsAfter(Math.max(1,s.getLastColumn()),headers.length-s.getLastColumn());
+  var current=s.getRange(1,1,1,headers.length).getDisplayValues()[0],changed=false;
+  for(var i=0;i<headers.length;i++){if(current[i]!==headers[i]){changed=true;break;}}
+  if(changed)s.getRange(1,1,1,headers.length).setValues([headers.slice()]);
+  return s;
+}
+function solicitacoesUbsV1Subscription_(v){
+  var s=solicitacoesUbsV1Texto_(v).toLowerCase();
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s))throw new Error('Inscrição Push da UBS inválida.');
+  return s;
+}
+function solicitacoesUbsV1RegistrarPush_(p,ctx){
+  if(!ctx||!ctx.acesso||solicitacoesUbsV1Texto_(ctx.acesso.perfil).toUpperCase()!=='UBS')throw new Error('Somente uma sessão autenticada da UBS pode registrar este aparelho para avisos.');
+  var sub=solicitacoesUbsV1Subscription_(p.subscriptionId),areaId=moradoresAdminV1NormalizarAreaId_(ctx.contexto.areaId);
+  var unidadeId=solicitacoesUbsV1Texto_(ctx.contexto.unidadeId||ctx.acesso.unidadeId),cadastroId=solicitacoesUbsV1Texto_(ctx.acesso.cadastroId||ctx.acesso.operadorId||ctx.acesso.tacsId);
+  if(!areaId||!unidadeId)throw new Error('A UBS ou a área da sessão não pôde ser identificada.');
+  var s=solicitacoesUbsV1PushSheet_(),last=s.getLastRow(),rows=last>1?s.getRange(2,1,last-1,TACS_SOLICITACOES_UBS_V1.PUSH_HEADERS.length).getDisplayValues():[],row=-1,agora=new Date();
+  for(var i=rows.length-1;i>=0;i--)if(solicitacoesUbsV1Texto_(rows[i][0]).toLowerCase()===sub&&moradoresAdminV1NormalizarAreaId_(rows[i][3])===areaId){row=i+2;break}
+  if(row<2){
+    row=s.getLastRow()+1;
+    s.getRange(row,1,1,TACS_SOLICITACOES_UBS_V1.PUSH_HEADERS.length).setValues([[sub,cadastroId,unidadeId,areaId,'SIM',agora,agora]]);
+  }else{
+    var criado=s.getRange(row,6).getValue()||agora;
+    s.getRange(row,1,1,TACS_SOLICITACOES_UBS_V1.PUSH_HEADERS.length).setValues([[sub,cadastroId,unidadeId,areaId,'SIM',criado,agora]]);
+  }
+  s.getRange(row,1).setNumberFormat('@');s.getRange(row,6,1,2).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+  SpreadsheetApp.flush();
+  return {ok:true,registrada:true,areaId:areaId,unidadeId:unidadeId,message:'Este aparelho da UBS está apto a receber novas solicitações mesmo com a Central fechada.'};
+}
+function solicitacoesUbsV1PushAlvos_(contexto){
+  var s=solicitacoesUbsV1PushSheet_(),last=s.getLastRow(),out=[],seen={};
+  if(last<=1)return out;
+  var rows=s.getRange(2,1,last-1,TACS_SOLICITACOES_UBS_V1.PUSH_HEADERS.length).getDisplayValues(),area=moradoresAdminV1NormalizarAreaId_(contexto.areaId),unidade=solicitacoesUbsV1Texto_(contexto.unidadeId);
+  rows.forEach(function(r){
+    var sub=solicitacoesUbsV1Texto_(r[0]).toLowerCase(),rowArea=moradoresAdminV1NormalizarAreaId_(r[3]),rowUnidade=solicitacoesUbsV1Texto_(r[2]),ativo=solicitacoesUbsV1Texto_(r[4]).toUpperCase();
+    if(ativo!=='SIM'||rowArea!==area||!sub||seen[sub])return;
+    if(unidade&&rowUnidade&&rowUnidade!==unidade)return;
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(sub))return;
+    seen[sub]=true;out.push(sub);
+  });
+  return out;
+}
+function solicitacoesUbsV1OneSignalKey_(){
+  var props=PropertiesService.getScriptProperties(),keys=['TACS_ONESIGNAL_API_KEY','ONESIGNAL_APP_API_KEY','ONESIGNAL_REST_API_KEY','ONESIGNAL_API_KEY'];
+  for(var i=0;i<keys.length;i++){var v=solicitacoesUbsV1Texto_(props.getProperty(keys[i]));if(v)return v}
+  return '';
+}
+function solicitacoesUbsV1EnviarPush_(contexto,solicitacaoId){
+  try{
+    var alvos=solicitacoesUbsV1PushAlvos_(contexto),apiKey=solicitacoesUbsV1OneSignalKey_();
+    if(!alvos.length||!apiKey)return {ok:true,push:false,destinatarios:alvos.length};
+    var url='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/central-administrativa-tacs.html?acesso=ubs&abrir=solicitacoes';
+    var payload={
+      app_id:TACS_SOLICITACOES_UBS_V1.ONESIGNAL_APP_ID,target_channel:'push',
+      headings:{pt:'Nova solicitação de morador',en:'Nova solicitação de morador'},
+      contents:{pt:'Há uma nova solicitação para a UBS. Abra Solicitações dos moradores para consultar.',en:'Há uma nova solicitação para a UBS. Abra Solicitações dos moradores para consultar.'},
+      include_subscription_ids:alvos,url:url,
+      data:{tipo:'SOLICITACAO_UBS',areaId:contexto.areaId,solicitacaoId:solicitacaoId}
+    };
+    var resp=UrlFetchApp.fetch(TACS_SOLICITACOES_UBS_V1.ONESIGNAL_ENDPOINT,{method:'post',contentType:'application/json',payload:JSON.stringify(payload),headers:{Authorization:'Key '+apiKey},muteHttpExceptions:true});
+    var code=Number(resp.getResponseCode()),body={};try{body=JSON.parse(resp.getContentText()||'{}')}catch(e){}
+    var destinatarios=(body.recipients===null||typeof body.recipients==='undefined'||body.recipients==='')?null:Number(body.recipients);
+    if(code<200||code>=300||!body.id||destinatarios===0)return {ok:false,push:false,destinatarios:destinatarios||0};
+    return {ok:true,push:true,id:String(body.id),destinatarios:destinatarios==null?alvos.length:destinatarios};
+  }catch(e){return {ok:false,push:false,message:solicitacoesUbsV1Erro_(e)}}
 }
 
 function solicitacoesUbsV1ContextoAdmin_(p){
@@ -114,7 +196,7 @@ function solicitacoesUbsV1Hora_(v){
 }
 function solicitacoesUbsV1ExpiraEm_(dataServico,hora){
   if(!dataServico)return null;
-  var h=hora||'23:59';
+  var h=hora||'00:00';
   try{return Utilities.parseDate(dataServico+' '+h,TACS_SOLICITACOES_UBS_V1.FUSO,'yyyy-MM-dd HH:mm');}catch(e){return null;}
 }
 function solicitacoesUbsV1AgendaCard_(descricao){
@@ -131,6 +213,7 @@ function solicitacoesUbsV1DataValor_(v){
 }
 function solicitacoesUbsV1Civil_(descricao,dataValor,horaValor){
   var card=solicitacoesUbsV1AgendaCard_(descricao),data=solicitacoesUbsV1Data_(card.data)||solicitacoesUbsV1DataValor_(dataValor),hora=solicitacoesUbsV1Hora_(card.horaFinal)||solicitacoesUbsV1Hora_(horaValor);
+  if(data&&!hora)hora='00:00';
   return {data:data,hora:hora};
 }
 function solicitacoesUbsV1CivilChave_(data,hora){
@@ -146,6 +229,32 @@ function solicitacoesUbsV1CivilTexto_(data,hora){
 }
 function solicitacoesUbsV1CivilIso_(data,hora){
   return data&&hora?data+'T'+hora+':00-03:00':'';
+}
+function solicitacoesUbsV1DataHoraCivil_(v){
+  var s=solicitacoesUbsV1Texto_(v),m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ ,T]+(\d{1,2}):(\d{2})/);
+  if(!m)return '';
+  var d=('0'+Number(m[1])).slice(-2),mo=('0'+Number(m[2])).slice(-2),h=('0'+Number(m[4])).slice(-2);
+  if(Number(m[1])<1||Number(m[1])>31||Number(m[2])<1||Number(m[2])>12||Number(m[4])>23||Number(m[5])>59)return '';
+  return d+'/'+mo+'/'+m[3]+' '+h+':'+m[5];
+}
+function solicitacoesUbsV1NascimentoCivil_(v){
+  if(!v)return '';
+  try{if(typeof moradoresAdminV1DataBr_==='function'){var oficial=moradoresAdminV1DataBr_(v);if(oficial)return oficial}}catch(e){}
+  var s=solicitacoesUbsV1Texto_(v),m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  if(m)return ('0'+Number(m[1])).slice(-2)+'/'+('0'+Number(m[2])).slice(-2)+'/'+m[3];
+  m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:T|$)/);
+  if(m)return ('0'+Number(m[3])).slice(-2)+'/'+('0'+Number(m[2])).slice(-2)+'/'+m[1];
+  try{var d=Object.prototype.toString.call(v)==='[object Date]'?v:new Date(s);if(d&&!isNaN(d.getTime()))return Utilities.formatDate(d,TACS_SOLICITACOES_UBS_V1.FUSO,'dd/MM/yyyy')}catch(e){}
+  return s;
+}
+function solicitacoesUbsV1NascimentoOficial_(achado){
+  var morador=achado&&achado.morador||{},valor='';
+  try{
+    if(achado&&achado.fonte&&achado.origem&&achado.fonte.map&&Number(achado.fonte.map.nascimento)>=0){
+      valor=achado.fonte.sheet.getRange(Number(achado.origem.linha),Number(achado.fonte.map.nascimento)+1).getDisplayValue();
+    }
+  }catch(e){}
+  return solicitacoesUbsV1NascimentoCivil_(valor||morador.nascimento);
 }
 function solicitacoesUbsV1Id_(){
   return 'SOL-'+Utilities.formatDate(new Date(),TACS_SOLICITACOES_UBS_V1.FUSO,'yyyyMMdd')+'-'+Utilities.getUuid().replace(/-/g,'').slice(0,8).toUpperCase();
@@ -174,25 +283,35 @@ function solicitacoesUbsV1CriarPublica_(p){
   var civil=solicitacoesUbsV1Civil_(descricao,p.dataServico,p.horarioExpiracao),dataServico=civil.data,horaExp=civil.hora,agora=new Date(),expira=solicitacoesUbsV1ExpiraEm_(dataServico,horaExp);
   var status=solicitacoesUbsV1CivilChave_(dataServico,horaExp)&&solicitacoesUbsV1CivilChave_(dataServico,horaExp)<=solicitacoesUbsV1AgoraCivilChave_()?'EXPIRADA':'NOVA';
   var moradorId=solicitacoesUbsV1Texto_((achado.meta&&achado.meta.moradorId)||morador.idPortal||morador.id||achado.chave);
+  var nascimentoOficial=solicitacoesUbsV1NascimentoOficial_(achado);
+  var enviadoEm=solicitacoesUbsV1DataHoraCivil_(p.enviadoEm)||Utilities.formatDate(agora,TACS_SOLICITACOES_UBS_V1.FUSO,'dd/MM/yyyy HH:mm');
   var row=[
     solicitacoesUbsV1Id_(),contexto.areaId,contexto.areaNome,contexto.unidadeId||'',codigo,moradorId,
-    solicitacoesUbsV1Texto_(morador.nome),doc,solicitacoesUbsV1Texto_(morador.nascimento),
+    solicitacoesUbsV1Texto_(morador.nome),doc,nascimentoOficial,
     solicitacoesUbsV1Texto_(morador.endereco||p.localidade),solicitacoesUbsV1Familia_(morador),
-    categoria,descricao,tipoVaga,dataServico,horaExp,expira||'',status,agora,agora,
+    categoria,descricao,tipoVaga,dataServico,horaExp,expira||'',status,enviadoEm,agora,
     solicitacoesUbsV1Texto_(p.origem||'PORTAL_CSC_WHATSAPP').slice(0,80),
-    solicitacoesUbsV1Texto_(p.tacsResponsavel).slice(0,180),solicitacoesUbsV1Texto_(p.unidadeNome||contexto.unidadeId).slice(0,180)
+    solicitacoesUbsV1Texto_(p.tacsResponsavel).slice(0,180),solicitacoesUbsV1Texto_(p.unidadeNome||contexto.unidadeId).slice(0,180),
+    '','',''
   ];
   var lock=LockService.getScriptLock();if(!lock.tryLock(10000))throw new Error('A fila da UBS está recebendo outra solicitação. Tente novamente.');
+  var novaLinha=0;
   try{
     existing=solicitacoesUbsV1LocalizarCodigo_(sheet,contexto.areaId,codigo);
     if(existing)return {ok:true,duplicada:true,id:existing.data[0],codigoSolicitacao:codigo,status:existing.data[17],message:'Solicitação já registrada para a UBS.'};
-    sheet.getRange(sheet.getLastRow()+1,1,1,row.length).setValues([row]);
-    sheet.getRange(sheet.getLastRow(),8).setNumberFormat('@');
-    sheet.getRange(sheet.getLastRow(),17).setNumberFormat('dd/MM/yyyy HH:mm');
-    sheet.getRange(sheet.getLastRow(),19,1,2).setNumberFormat('dd/MM/yyyy HH:mm');
+    novaLinha=sheet.getLastRow()+1;
+    sheet.getRange(novaLinha,1,1,row.length).setValues([row]);
+    sheet.getRange(novaLinha,8).setNumberFormat('@');
+    sheet.getRange(novaLinha,17).setNumberFormat('dd/MM/yyyy HH:mm');
+    sheet.getRange(novaLinha,19).setNumberFormat('@');
+    sheet.getRange(novaLinha,20).setNumberFormat('dd/MM/yyyy HH:mm');
     SpreadsheetApp.flush();
   }finally{lock.releaseLock();}
-  return {ok:true,id:row[0],codigoSolicitacao:codigo,status:status,expiraEm:solicitacoesUbsV1CivilTexto_(dataServico,horaExp),message:status==='EXPIRADA'?'Solicitação registrada como expirada.':'Solicitação registrada e encaminhada à fila da UBS.'};
+  var push=solicitacoesUbsV1EnviarPush_(contexto,row[0]);
+  if(push&&push.push===true&&novaLinha>1){
+    try{sheet.getRange(novaLinha,25).setValue(new Date()).setNumberFormat('dd/MM/yyyy HH:mm:ss');sheet.getRange(novaLinha,26).setValue(push.id||'').setNumberFormat('@');SpreadsheetApp.flush()}catch(e){}
+  }
+  return {ok:true,id:row[0],codigoSolicitacao:codigo,status:status,expiraEm:solicitacoesUbsV1CivilTexto_(dataServico,horaExp),pushUbs:Boolean(push&&push.push),message:status==='EXPIRADA'?'Solicitação registrada como expirada.':'Solicitação registrada e encaminhada à fila da UBS.'};
 }
 
 function solicitacoesUbsV1Expirar_(sheet){
@@ -220,7 +339,7 @@ function solicitacoesUbsV1Expirar_(sheet){
 }
 function solicitacoesUbsV1Rows_(sheet){return sheet&&sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,TACS_SOLICITACOES_UBS_V1.HEADERS.length).getValues():[]}
 function solicitacoesUbsV1StatusTexto_(s){return {NOVA:'Nova',EM_ATENDIMENTO:'Em atendimento',CONCLUIDA:'Concluída',EXPIRADA:'Solicitação Expirada!'}[s]||s}
-function solicitacoesUbsV1FormatDate_(v){if(!v)return'';try{return Utilities.formatDate(new Date(v),TACS_SOLICITACOES_UBS_V1.FUSO,'dd/MM/yyyy HH:mm');}catch(e){return solicitacoesUbsV1Texto_(v);}}
+function solicitacoesUbsV1FormatDate_(v){if(!v)return'';var civil=solicitacoesUbsV1DataHoraCivil_(v);if(civil)return civil;try{return Utilities.formatDate(new Date(v),TACS_SOLICITACOES_UBS_V1.FUSO,'dd/MM/yyyy HH:mm');}catch(e){return solicitacoesUbsV1Texto_(v);}}
 function solicitacoesUbsV1Iso_(v){if(!v)return'';try{return Utilities.formatDate(new Date(v),TACS_SOLICITACOES_UBS_V1.FUSO,"yyyy-MM-dd'T'HH:mm:ss");}catch(e){return'';}}
 function solicitacoesUbsV1MaskDoc_(v){var d=String(v==null?'':v).replace(/\D/g,'');return d.length>=4?'••••'+d.slice(-4):''}
 function solicitacoesUbsV1Item_(r){
@@ -228,33 +347,47 @@ function solicitacoesUbsV1Item_(r){
   var expiraTexto=solicitacoesUbsV1CivilTexto_(civil.data,civil.hora),expiraIso=solicitacoesUbsV1CivilIso_(civil.data,civil.hora);
   return {
     id:solicitacoesUbsV1Texto_(r[0]),areaNome:solicitacoesUbsV1Texto_(r[2]),unidadeId:solicitacoesUbsV1Texto_(r[3]),codigoSolicitacao:solicitacoesUbsV1Texto_(r[4]),moradorId:solicitacoesUbsV1Texto_(r[5]),
-    morador:solicitacoesUbsV1Texto_(r[6]),documento:solicitacoesUbsV1Texto_(r[7]),nascimento:solicitacoesUbsV1Texto_(r[8]),
+    morador:solicitacoesUbsV1Texto_(r[6]),documento:solicitacoesUbsV1Texto_(r[7]),nascimento:solicitacoesUbsV1NascimentoCivil_(r[8]),
     localidade:solicitacoesUbsV1Texto_(r[9]),familiaId:solicitacoesUbsV1Texto_(r[10]),categoria:solicitacoesUbsV1Texto_(r[11]),
     descricao:descricao,tipoVaga:solicitacoesUbsV1Texto_(r[13]),dataServico:civil.data,
     horarioExpiracao:civil.hora,expiraEm:expiraIso,expiraEmTexto:expiraTexto,
     status:st,statusTexto:solicitacoesUbsV1StatusTexto_(st),criadoEm:solicitacoesUbsV1FormatDate_(r[18]),atualizadoEm:solicitacoesUbsV1FormatDate_(r[19]),
-    tacsResponsavel:solicitacoesUbsV1Texto_(r[21]),unidadeNome:solicitacoesUbsV1Texto_(r[22])
+    tacsResponsavel:solicitacoesUbsV1Texto_(r[21]),unidadeNome:solicitacoesUbsV1Texto_(r[22]),
+    vistoUbsEm:solicitacoesUbsV1FormatDate_(r[23]),pushUbsEm:solicitacoesUbsV1FormatDate_(r[24]),pushUbsId:solicitacoesUbsV1Texto_(r[25])
   };
 }
 function solicitacoesUbsV1DadosArea_(contexto){
   var sheet=solicitacoesUbsV1Sheet_();solicitacoesUbsV1Expirar_(sheet);
-  var rows=solicitacoesUbsV1Rows_(sheet),items=[],counts={NOVA:0,EM_ATENDIMENTO:0,CONCLUIDA:0,EXPIRADA:0},latest=null;
+  var rows=solicitacoesUbsV1Rows_(sheet),items=[],counts={NOVA:0,EM_ATENDIMENTO:0,CONCLUIDA:0,EXPIRADA:0},latest=null,latestUnread=null,unread=0;
   for(var i=rows.length-1;i>=0;i--){
     if(moradoresAdminV1NormalizarAreaId_(rows[i][1])!==contexto.areaId)continue;
     var item=solicitacoesUbsV1Item_(rows[i]);
     if(Object.prototype.hasOwnProperty.call(counts,item.status))counts[item.status]++;
+    if(item.status==='NOVA'&&!item.vistoUbsEm){unread++;if(!latestUnread)latestUnread=item}
     if(!latest)latest=item;
     if(items.length<160)items.push(item);
   }
-  return {sheet:sheet,items:items,counts:counts,latest:latest};
+  return {sheet:sheet,items:items,counts:counts,latest:latest,latestUnread:latestUnread,unread:unread};
 }
 function solicitacoesUbsV1Listar_(ctx){
   var d=solicitacoesUbsV1DadosArea_(ctx.contexto);
-  return {ok:true,versao:TACS_SOLICITACOES_UBS_V1.VERSAO,areaId:ctx.contexto.areaId,areaNome:ctx.contexto.areaNome,unidadeId:ctx.contexto.unidadeId||'',contagens:d.counts,total:d.items.length,solicitacoes:d.items,latestKey:d.latest?d.latest.id:'',latest:d.latest,podeAtualizar:true};
+  return {ok:true,versao:TACS_SOLICITACOES_UBS_V1.VERSAO,areaId:ctx.contexto.areaId,areaNome:ctx.contexto.areaNome,unidadeId:ctx.contexto.unidadeId||'',contagens:d.counts,total:d.items.length,naoVistas:d.unread,solicitacoes:d.items,latestKey:d.latest?d.latest.id:'',latest:d.latest,latestNaoVistaKey:d.latestUnread?d.latestUnread.id:'',latestNaoVista:d.latestUnread,podeAtualizar:true};
 }
 function solicitacoesUbsV1Resumo_(ctx){
   var d=solicitacoesUbsV1DadosArea_(ctx.contexto);
-  return {ok:true,areaId:ctx.contexto.areaId,areaNome:ctx.contexto.areaNome,contagens:d.counts,total:d.counts.NOVA+d.counts.EM_ATENDIMENTO+d.counts.CONCLUIDA+d.counts.EXPIRADA,pendentes:d.counts.NOVA+d.counts.EM_ATENDIMENTO,latestKey:d.latest?d.latest.id:'',latest:d.latest};
+  return {ok:true,areaId:ctx.contexto.areaId,areaNome:ctx.contexto.areaNome,contagens:d.counts,total:d.counts.NOVA+d.counts.EM_ATENDIMENTO+d.counts.CONCLUIDA+d.counts.EXPIRADA,pendentes:d.counts.NOVA+d.counts.EM_ATENDIMENTO,naoVistas:d.unread,latestKey:d.latest?d.latest.id:'',latest:d.latest,latestNaoVistaKey:d.latestUnread?d.latestUnread.id:'',latestNaoVista:d.latestUnread};
+}
+function solicitacoesUbsV1MarcarVistas_(ctx){
+  var sheet=solicitacoesUbsV1Sheet_();solicitacoesUbsV1Expirar_(sheet);
+  var rows=solicitacoesUbsV1Rows_(sheet),agora=new Date(),vistas=0;
+  for(var i=0;i<rows.length;i++){
+    if(moradoresAdminV1NormalizarAreaId_(rows[i][1])!==ctx.contexto.areaId)continue;
+    var st=solicitacoesUbsV1Texto_(rows[i][17]).toUpperCase(),visto=rows[i][23];
+    if(st!=='NOVA'||visto)continue;
+    sheet.getRange(i+2,24).setValue(agora).setNumberFormat('dd/MM/yyyy HH:mm:ss');vistas++;
+  }
+  if(vistas)SpreadsheetApp.flush();
+  return {ok:true,vistas:vistas,naoVistas:0,message:'Solicitações visualizadas pela UBS.'};
 }
 function solicitacoesUbsV1Atualizar_(p,ctx){
   var id=solicitacoesUbsV1Texto_(p.id).toUpperCase(),novo=solicitacoesUbsV1Texto_(p.status).toUpperCase();
