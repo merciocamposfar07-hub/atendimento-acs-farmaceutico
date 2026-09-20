@@ -790,7 +790,7 @@ function moduleUrl(name,options){
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-suporte-ubs-diag-v1';
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260919-recados-snapshot-completo-v5';
-  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-solicitacoes-ubs-v4';
+  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-solicitacoes-ubs-v6';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
@@ -1293,6 +1293,7 @@ function normalizeEmbeddedPanelFrame(frame){
         :'#cscInstitutionalAppbar{display:none!important;visibility:hidden!important;pointer-events:none!important}',
       '#portalTacsBackCentralV1,#portalTacsAtualizarPaginaV1{display:none!important}',
       'html,body,main,footer,.footer{background:#071827!important;background-image:none!important;border-top:0!important}',
+      ubsEmbedded?'html,body{overflow-y:auto!important;touch-action:pan-y pinch-zoom!important;overscroll-behavior-y:auto!important;-webkit-overflow-scrolling:touch!important}main{touch-action:pan-y!important;overflow:visible!important}':'',
       ubsEmbedded
         ?'#cscPlatformFooter{display:flex!important;position:static!important}'
         :'#cscPlatformFooter{display:none!important}'
