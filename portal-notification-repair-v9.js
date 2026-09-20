@@ -47,7 +47,7 @@
   function loadReadiness(){
     if(document.querySelector('script[data-notification-readiness-v1]'))return;
     var s=document.createElement('script');
-    s.src='portal-notification-readiness-v1.js?v=20260826-readiness-v1';
+    s.src='portal-notification-readiness-v1.js?v=20260920-fundo-contornos-v1';
     s.defer=true;
     s.dataset.notificationReadinessV1='1';
     document.head.appendChild(s);
