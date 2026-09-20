@@ -882,7 +882,7 @@ function moduleUrl(name,options){
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-suporte-ubs-diag-v1';
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260919-recados-snapshot-completo-v5';
-  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-header-sem-portal-v12';
+  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-header-sem-portal-v13';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
@@ -1391,6 +1391,13 @@ function normalizeEmbeddedPanelFrame(frame){
         :'#cscPlatformFooter{display:none!important}'
     ].join('');
     var internal=doc.getElementById('cscInstitutionalAppbar');
+    /* SOLICITACOES_HEADER_STALE_GUARD_V1:
+       mesmo que o Safari tenha mantido um iframe antigo, corrige apenas o rótulo
+       do cabeçalho de Solicitações sem tocar no restante do painel. */
+    if(frame&&frame.dataset&&frame.dataset.shellModule==='solicitacoes'){
+      var brand=doc.querySelector('.csc-appbar-title small');
+      if(brand&&/PORTAL\s+CSC/i.test(brand.textContent||''))brand.textContent='CONECTA SAÚDE COMUNITÁRIA';
+    }
     if(internal){
       internal.hidden=!ubsEmbedded;
       internal.setAttribute('aria-hidden',ubsEmbedded?'false':'true');
@@ -1502,7 +1509,18 @@ function setLegacyFrameExclusive(activeFrame){
 function ensureShellFrame(name,url,title,routeId){
   prepareShellScope();
   var key=shellFrameKey(routeId),frame=shellFrames[key],viewer=el('viewer');
-  if(frame)return frame;
+  if(frame){
+    /* SOLICITACOES_HEADER_STALE_GUARD_V1:
+       se a rota/cache-bust mudou, não reaproveitar o iframe antigo da sessão. */
+    if(name==='solicitacoes'&&text(frame.dataset.shellUrl)!==text(url)){
+      frame.dataset.shellUrl=url;
+      frame.dataset.shellLoaded='0';
+      frame.dataset.shellReady='0';
+      frame.dataset.shellDomReady='0';
+      try{frame.src='about:blank'}catch(e){}
+    }
+    return frame;
+  }
   /* ISOLAMENTO_FRAME_LEGADO_20260918:
      não reutilizar viewerFrame entre módulos. Cada rota recebe iframe próprio para
      impedir que cabeçalho/DOM de um painel apareça durante a abertura de outro. */
@@ -1539,6 +1557,7 @@ function showShellFrame(name,frame,title,routeId){
   if(viewerBar){if(mode==='ubs')viewerBar.style.setProperty('display','none','important');else viewerBar.style.removeProperty('display')}
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   document.body.classList.add('viewer-open');
+  if(name==='solicitacoes')normalizeEmbeddedPanelFrame(frame);
   var shellReady=(frame.dataset.shellReady==='1'||frame.dataset.shellDomReady==='1')&&shellFrameAtTarget(frame);
   if(shellReady)applyAdminUbsRemoteToFrame(frame);
   /* TAREFA_11_RESPOSTA_VISUAL_IMEDIATA_V1 + PREPAINT_CANONICO_V1:
