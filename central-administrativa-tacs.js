@@ -502,16 +502,21 @@ function updatePendingBadge(result){
 }
 
 
-/* SOLICITACOES_UBS_ALERTA_V1:
-   A UBS recebe aviso explícito e sonoro de nova solicitação sem depender do painel estar aberto.
-   Transporte isolado para não disputar a operação ativa da Central. */
-var ubsSolicitacoesTimer=null,ubsSolicitacoesInFlight=false,ubsSolicitacoesArea='',ubsSolicitacoesAudio=null;
-function ubsSolicitacoesMarkerKey(a){return 'portalConectaSolicitacoesUbsUltimaV1:'+normArea(a)}
+/* SOLICITACOES_UBS_ALERTA_V2:
+   - o número no card representa solicitações NOVAS ainda não visualizadas;
+   - cada solicitação gera no máximo um alerta local neste aparelho;
+   - se o servidor já enviou Push, a Central não toca um segundo som;
+   - ao abrir Solicitações, o aviso some e as atuais são marcadas como vistas;
+   - Push da UBS é registrado no OneSignal para continuar funcionando com a Central fechada. */
+var ubsSolicitacoesTimer=null,ubsSolicitacoesInFlight=false,ubsSolicitacoesArea='',ubsSolicitacoesAudio=null,ubsSolicitacoesLatestUnreadKey='',ubsSolicitacoesAckPending=false;
+var ubsPushOneSignal=null,ubsPushRegistering=false,ubsPushLastRegistration='',ubsPushInitStarted=false,ubsSolicitacoesDeepLinkHandled=false;
+var UBS_PUSH_APP_ID='e2294b98-c72b-4f8c-a055-de28979676dc',UBS_PUSH_SAFARI_ID='web.onesignal.auto.4bead971-106d-461b-853f-83aecbd62d40';
+function ubsSolicitacoesMarkerKey(a){return 'portalConectaSolicitacoesUbsUltimaV2:'+normArea(a)}
 function ensureUbsSolicitacoesUi(){
   var style=el('cscUbsSolicitacoesAlertStyle');
-  if(!style){style=document.createElement('style');style.id='cscUbsSolicitacoesAlertStyle';style.textContent='.csc-sol-badge{display:inline-grid;place-items:center;min-width:25px;height:25px;margin-left:auto;padding:0 7px;border-radius:999px;background:#b53645;color:#fff;font-size:.76rem;font-weight:950}.csc-sol-alert{position:fixed;z-index:2147482500;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top));max-width:680px;margin:auto;padding:14px;border:2px solid #83efa9;border-radius:20px;background:#102d46;color:#fff;box-shadow:0 18px 48px rgba(0,0,0,.42)}.csc-sol-alert strong{display:block;font-size:1.05rem}.csc-sol-alert p{margin:5px 0 10px;color:#dcebf2}.csc-sol-alert-actions{display:grid;grid-template-columns:1fr auto;gap:8px}.csc-sol-alert button{min-height:44px;border:0;border-radius:13px;padding:9px 12px;font-weight:900}.csc-sol-open{background:#176c94;color:#fff}.csc-sol-close{background:#263f51;color:#fff}';document.head.appendChild(style)}
+  if(!style){style=document.createElement('style');style.id='cscUbsSolicitacoesAlertStyle';style.textContent='#moduleGrid .module[data-module="solicitacoes"]{position:relative}.csc-sol-badge{position:absolute;right:12px;top:10px;z-index:3;display:grid;place-items:center;min-width:27px;height:27px;padding:0 7px;border:2px solid #fff;border-radius:999px;background:#b53645;color:#fff;font-size:.78rem;font-weight:950;box-shadow:0 3px 9px rgba(0,0,0,.28)}.csc-sol-alert{position:fixed;z-index:2147482500;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top));max-width:680px;margin:auto;padding:14px;border:2px solid #83efa9;border-radius:20px;background:#102d46;color:#fff;box-shadow:0 18px 48px rgba(0,0,0,.42)}.csc-sol-alert strong{display:block;font-size:1.05rem}.csc-sol-alert p{margin:5px 0 10px;color:#dcebf2}.csc-sol-alert-actions{display:grid;grid-template-columns:1fr auto;gap:8px}.csc-sol-alert button{min-height:44px;border:0;border-radius:13px;padding:9px 12px;font-weight:900}.csc-sol-open{background:#176c94;color:#fff}.csc-sol-close{background:#263f51;color:#fff}';document.head.appendChild(style)}
   var btn=document.querySelector('#moduleGrid .module[data-module="solicitacoes"]');
-  if(btn&&!btn.querySelector('.csc-sol-badge')){var b=document.createElement('span');b.className='csc-sol-badge';b.hidden=true;btn.appendChild(b)}
+  if(btn&&!btn.querySelector('.csc-sol-badge')){var b=document.createElement('span');b.className='csc-sol-badge';b.hidden=true;b.setAttribute('aria-label','Solicitações novas não visualizadas');btn.appendChild(b)}
 }
 function unlockUbsSolicitacoesAudio(){
   if(ubsSolicitacoesAudio)return;
@@ -522,47 +527,125 @@ function playUbsSolicitacoesSound(){
   try{
     unlockUbsSolicitacoesAudio();if(!ubsSolicitacoesAudio)return;
     if(ubsSolicitacoesAudio.state==='suspended')ubsSolicitacoesAudio.resume().catch(function(){});
-    [0,.24].forEach(function(delay){var o=ubsSolicitacoesAudio.createOscillator(),g=ubsSolicitacoesAudio.createGain(),t=ubsSolicitacoesAudio.currentTime+delay;o.frequency.value=880;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.11,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.16);o.connect(g);g.connect(ubsSolicitacoesAudio.destination);o.start(t);o.stop(t+.18)})
+    var o=ubsSolicitacoesAudio.createOscillator(),g=ubsSolicitacoesAudio.createGain(),t=ubsSolicitacoesAudio.currentTime;o.frequency.value=880;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.11,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.18);o.connect(g);g.connect(ubsSolicitacoesAudio.destination);o.start(t);o.stop(t+.2)
   }catch(e){}
 }
 function renderUbsSolicitacoesBadge(result){
-  ensureUbsSolicitacoesUi();var btn=document.querySelector('#moduleGrid .module[data-module="solicitacoes"]'),b=btn&&btn.querySelector('.csc-sol-badge'),c=result&&result.contagens||{},n=Math.max(0,Number(c.NOVA||0));if(!b)return;b.hidden=n<1;b.textContent=n>99?'99+':String(n)
+  ensureUbsSolicitacoesUi();
+  var btn=document.querySelector('#moduleGrid .module[data-module="solicitacoes"]'),b=btn&&btn.querySelector('.csc-sol-badge'),n=Math.max(0,Number(result&&result.naoVistas||0));
+  if(!b)return;
+  if(shellActiveModule==='solicitacoes'||ubsSolicitacoesAckPending)n=0;
+  b.hidden=n<1;b.textContent=n>99?'99+':String(n)
 }
-function showUbsSolicitacoesAlert(result){
-  ensureUbsSolicitacoesUi();var old=el('cscUbsSolicitacoesAlert');if(old)old.remove();
-  var latest=result&&result.latest||{},box=document.createElement('div');box.id='cscUbsSolicitacoesAlert';box.className='csc-sol-alert';box.setAttribute('role','alert');
+function closeUbsPushNotifications(){
+  try{
+    if(!navigator.serviceWorker||typeof navigator.serviceWorker.getRegistrations!=='function')return;
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(reg){if(!reg||typeof reg.getNotifications!=='function')return;reg.getNotifications().then(function(list){(list||[]).forEach(function(n){try{var d=n&&n.data||{},a=d.additionalData||d.data||d;if((a&&a.tipo==='SOLICITACAO_UBS')||String(n&&n.title||'').indexOf('Nova solicitação de morador')!==-1)n.close()}catch(e){}})}).catch(function(){})})
+    }).catch(function(){});
+  }catch(e){}
+}
+function clearUbsSolicitacoesAlert(){
+  var old=el('cscUbsSolicitacoesAlert');if(old)old.remove();closeUbsPushNotifications()
+}
+function showUbsSolicitacoesAlert(result,audible){
+  ensureUbsSolicitacoesUi();clearUbsSolicitacoesAlert();
+  var latest=result&&result.latestNaoVista||result&&result.latest||{},box=document.createElement('div');box.id='cscUbsSolicitacoesAlert';box.className='csc-sol-alert';box.setAttribute('role','alert');
   box.innerHTML='<strong>🔔 Nova solicitação de morador</strong><p>'+esc(text(latest.morador)||'Um morador')+' • '+esc(text(latest.categoria)||'Solicitação recebida')+'</p><div class="csc-sol-alert-actions"><button type="button" class="csc-sol-open">Abrir solicitações</button><button type="button" class="csc-sol-close" aria-label="Fechar">Fechar</button></div>';
-  box.querySelector('.csc-sol-open').addEventListener('click',function(){box.remove();openModule('solicitacoes','Solicitações dos moradores')});
+  box.querySelector('.csc-sol-open').addEventListener('click',function(){openModule('solicitacoes','Solicitações dos moradores')});
   box.querySelector('.csc-sol-close').addEventListener('click',function(){box.remove()});
-  document.body.appendChild(box);playUbsSolicitacoesSound();
+  document.body.appendChild(box);if(audible)playUbsSolicitacoesSound()
+}
+function ubsSolicitacoesPostAction(action,extra,cb){
+  if(mode!=='ubs'||!ubsToken||!selectedAreaId){cb&&cb(null);return}
+  var id=requestId(action),body=new URLSearchParams(),payload=session(Object.assign({areaId:selectedAreaId},extra||{})),started=Date.now(),done=false;
+  Object.keys(payload).forEach(function(k){body.set(k,String(payload[k]==null?'':payload[k]))});body.set('action',action);body.set('requestId',id);
+  function finish(r){if(done)return;done=true;if(cb)cb(r)}
+  function poll(){jsonp('admin_solicitacoes_ubs_result',{requestId:id},function(r){if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}if(Date.now()-started>=15000){finish(null);return}setTimeout(poll,650)})}
+  try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});setTimeout(poll,250)}catch(e){finish(null)}
 }
 function ubsSolicitacoesPostResumo(cb){
   if(ubsSolicitacoesInFlight||mode!=='ubs'||!ubsToken){cb&&cb(null);return}
-  ubsSolicitacoesInFlight=true;var id=requestId('admin_solicitacoes_ubs_resumo'),body=new URLSearchParams(),payload=session({areaId:selectedAreaId}),started=Date.now(),done=false;
-  Object.keys(payload).forEach(function(k){body.set(k,String(payload[k]==null?'':payload[k]))});body.set('action','admin_solicitacoes_ubs_resumo');body.set('requestId',id);
-  function finish(r){if(done)return;done=true;ubsSolicitacoesInFlight=false;if(cb)cb(r)}
-  function pollResult(){jsonp('admin_solicitacoes_ubs_result',{requestId:id},function(r){if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}if(Date.now()-started>=15000){finish(null);return}setTimeout(pollResult,650)})}
-  try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});setTimeout(pollResult,250)}catch(e){finish(null)}
+  ubsSolicitacoesInFlight=true;
+  ubsSolicitacoesPostAction('admin_solicitacoes_ubs_resumo',{},function(r){ubsSolicitacoesInFlight=false;if(cb)cb(r)})
+}
+function acknowledgeUbsSolicitacoes(){
+  clearUbsSolicitacoesAlert();ubsSolicitacoesAckPending=true;
+  if(ubsSolicitacoesLatestUnreadKey)try{localStorage.setItem(ubsSolicitacoesMarkerKey(selectedAreaId),ubsSolicitacoesLatestUnreadKey)}catch(e){}
+  renderUbsSolicitacoesBadge({naoVistas:0});
+  if(mode!=='ubs'||!ubsToken||!selectedAreaId)return;
+  ubsSolicitacoesPostAction('admin_solicitacoes_ubs_vistas',{},function(){ubsSolicitacoesAckPending=false;renderUbsSolicitacoesBadge({naoVistas:0})})
 }
 function checkUbsSolicitacoes(){
   if(mode!=='ubs'||!ubsToken||!selectedAreaId)return;
   var checkingArea=selectedAreaId;
   ubsSolicitacoesPostResumo(function(r){
     if(!r||r.ok!==true||mode!=='ubs'||checkingArea!==selectedAreaId)return;
+    var latest=r.latestNaoVista||null,latestKey=text(r.latestNaoVistaKey||'');
+    ubsSolicitacoesLatestUnreadKey=latestKey;
     renderUbsSolicitacoesBadge(r);
-    var latest=r.latest,latestKey=text(r.latestKey),markerKey=ubsSolicitacoesMarkerKey(checkingArea),previous='';
-    try{previous=text(localStorage.getItem(markerKey)||'')}catch(e){}
-    if(latestKey&&latest&&latest.status==='NOVA'&&latestKey!==previous){try{localStorage.setItem(markerKey,latestKey)}catch(e){}showUbsSolicitacoesAlert(r)}
-    else if(latestKey&&latestKey!==previous){try{localStorage.setItem(markerKey,latestKey)}catch(e){}}
+    if(!latestKey||!latest||shellActiveModule==='solicitacoes')return;
+    var markerKey=ubsSolicitacoesMarkerKey(checkingArea),previous='';try{previous=text(localStorage.getItem(markerKey)||'')}catch(e){}
+    if(latestKey===previous)return;
+    try{localStorage.setItem(markerKey,latestKey)}catch(e){}
+    /* Se o servidor já entregou Push, esse é o único aviso sonoro. O alerta local
+       existe somente como contingência para aparelhos ainda sem inscrição Push. */
+    if(!text(latest.pushUbsEm))showUbsSolicitacoesAlert(r,true)
+  })
+}
+function ubsPushSubscriptionId(){
+  try{var p=ubsPushOneSignal&&ubsPushOneSignal.User&&ubsPushOneSignal.User.PushSubscription,s=text(p&&p.id).toLowerCase();return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s)?s:''}catch(e){return''}
+}
+function registerUbsPush(){
+  if(ubsPushRegistering||mode!=='ubs'||!ubsToken||!selectedAreaId||!ubsPushOneSignal)return;
+  try{
+    var p=ubsPushOneSignal.User&&ubsPushOneSignal.User.PushSubscription;
+    if(!ubsPushOneSignal.Notifications||ubsPushOneSignal.Notifications.permission!==true||!p||p.optedIn!==true)return;
+    var sub=ubsPushSubscriptionId();if(!sub)return;
+    var key=sub+'|'+selectedAreaId;if(key===ubsPushLastRegistration)return;
+    ubsPushRegistering=true;
+    ubsSolicitacoesPostAction('admin_solicitacoes_ubs_push_registrar',{subscriptionId:sub},function(r){ubsPushRegistering=false;if(r&&r.ok===true)ubsPushLastRegistration=key})
+  }catch(e){ubsPushRegistering=false}
+}
+function prepareUbsPushFromGesture(){
+  try{
+    if(ubsPushOneSignal&&ubsPushOneSignal.Notifications&&ubsPushOneSignal.Notifications.permission!==true&&typeof ubsPushOneSignal.Notifications.requestPermission==='function'){
+      Promise.resolve(ubsPushOneSignal.Notifications.requestPermission()).then(function(){setTimeout(registerUbsPush,250)}).catch(function(){});return
+    }
+    if(typeof Notification!=='undefined'&&Notification.permission==='default'&&typeof Notification.requestPermission==='function'){
+      Promise.resolve(Notification.requestPermission()).then(function(){setTimeout(registerUbsPush,350)}).catch(function(){})
+    }
+  }catch(e){}
+}
+function initUbsPush(){
+  if(ubsPushInitStarted)return;ubsPushInitStarted=true;
+  window.OneSignalDeferred=window.OneSignalDeferred||[];
+  window.OneSignalDeferred.push(async function(OneSignal){
+    try{
+      await OneSignal.init({appId:UBS_PUSH_APP_ID,safari_web_id:UBS_PUSH_SAFARI_ID,serviceWorkerPath:'/atendimento-acs-farmaceutico/push/OneSignalSDKWorker.js',serviceWorkerParam:{scope:'/atendimento-acs-farmaceutico/push/'},autoResubscribe:true,notifyButton:{enable:false},allowLocalhostAsSecureOrigin:false});
+      ubsPushOneSignal=OneSignal;
+      var push=OneSignal.User&&OneSignal.User.PushSubscription;
+      if(push&&typeof push.addEventListener==='function')push.addEventListener('change',function(){ubsPushLastRegistration='';setTimeout(registerUbsPush,250)});
+      if(OneSignal.Notifications&&typeof OneSignal.Notifications.addEventListener==='function')OneSignal.Notifications.addEventListener('permissionChange',function(){ubsPushLastRegistration='';setTimeout(registerUbsPush,250)});
+      registerUbsPush()
+    }catch(e){}
   });
+  if(!document.querySelector('script[data-onesignal-sdk]')){var s=document.createElement('script');s.src='https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';s.defer=true;s.dataset.onesignalSdk='1';document.head.appendChild(s)}
+}
+function maybeOpenUbsSolicitacoesDeepLink(){
+  if(ubsSolicitacoesDeepLinkHandled||mode!=='ubs'||!ubsToken||!context)return;
+  if(text(URL_PARAMS.get('abrir')).toLowerCase()!=='solicitacoes')return;
+  ubsSolicitacoesDeepLinkHandled=true;setTimeout(function(){openModule('solicitacoes','Solicitações dos moradores')},80)
 }
 function stopUbsSolicitacoesWatch(){if(ubsSolicitacoesTimer){clearInterval(ubsSolicitacoesTimer);ubsSolicitacoesTimer=null}ubsSolicitacoesArea='';ubsSolicitacoesInFlight=false}
 function startUbsSolicitacoesWatch(){
   if(mode!=='ubs'||!ubsToken||!selectedAreaId){stopUbsSolicitacoesWatch();return}
-  if(ubsSolicitacoesTimer&&ubsSolicitacoesArea===selectedAreaId)return;
-  stopUbsSolicitacoesWatch();ubsSolicitacoesArea=selectedAreaId;ensureUbsSolicitacoesUi();checkUbsSolicitacoes();ubsSolicitacoesTimer=setInterval(checkUbsSolicitacoes,12000);
+  registerUbsPush();if(ubsSolicitacoesAckPending)acknowledgeUbsSolicitacoes();
+  if(ubsSolicitacoesTimer&&ubsSolicitacoesArea===selectedAreaId){checkUbsSolicitacoes();return}
+  stopUbsSolicitacoesWatch();ubsSolicitacoesArea=selectedAreaId;ensureUbsSolicitacoesUi();checkUbsSolicitacoes();ubsSolicitacoesTimer=setInterval(checkUbsSolicitacoes,12000)
 }
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&mode==='ubs')checkUbsSolicitacoes()});
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&mode==='ubs'){registerUbsPush();checkUbsSolicitacoes()}});
+initUbsPush();
 /* NOTIFICACOES_VERDADE_CONFIRMADA_V1
  * A Central nunca usa a leitura local/provisória como número oficial.
  * Exibe imediatamente o último snapshot confirmado neste aparelho e,
@@ -790,7 +873,7 @@ function moduleUrl(name,options){
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-suporte-ubs-diag-v1';
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260919-recados-snapshot-completo-v5';
-  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-solicitacoes-ubs-v6';
+  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-solicitacoes-ubs-v7';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
@@ -1602,6 +1685,7 @@ function openModule(name,title,options){
   if(name==='ubs'){if(mode==='admin')showAdminUbs(title||'UBS');return}
   var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
   if(name==='portal'){showPortalTacs(title||'Portal TACS',routeId,url);return}
+  if(name==='solicitacoes'&&mode==='ubs')acknowledgeUbsSolicitacoes();
   var remoteReady=Boolean(token||territoryToken||ubsToken),localReady=localPanelAccessReady();
   if(!remoteReady&&!localReady){
     moduloPendente={name:name,title:title||'Painel',options:moduleRouteOptions(options)};
@@ -1726,6 +1810,7 @@ function loadContext(message){
     else{
       syncAppState();publishModuleCore();renderHealthInstant(selectedAreaId);scheduleHealthRefresh(false,1800);
     }
+    if(mode==='ubs'){registerUbsPush();maybeOpenUbsSolicitacoesDeepLink()}
     resumePendingModule();
   });
 }
@@ -2254,7 +2339,7 @@ function entrarPaineisUbs(r){
     syncAppState();
     renderContext(true);
     setStatus('Acesso UBS validado.','ok');
-    setTimeout(function(){if(!active&&ubsToken)loadContext('Acesso UBS sincronizado.')},0);
+    setTimeout(function(){registerUbsPush();maybeOpenUbsSolicitacoesDeepLink();if(!active&&ubsToken)loadContext('Acesso UBS sincronizado.')},0);
     return true;
   }
   if(restoreUbsContextCache(r)){
@@ -2266,7 +2351,7 @@ function entrarPaineisUbs(r){
   loadContext('Acesso UBS validado.');
   return true;
 }
-window.ConectaCentralUbsV1={entrar:entrarPaineisUbs,abrirLocal:abrirPaineisUbsLocal,bloquearLocal:bloquearPaineisUbsLocal};
+window.ConectaCentralUbsV1={entrar:entrarPaineisUbs,abrirLocal:abrirPaineisUbsLocal,bloquearLocal:bloquearPaineisUbsLocal,prepararPush:prepareUbsPushFromGesture,registrarPush:registerUbsPush};
 window.ConectaCentralModuleCoreV1={publicar:publishModuleCore,chave:MODULE_CORE_KEY};
 window.ConectaCentralShellV1={
   abrir:openModule,

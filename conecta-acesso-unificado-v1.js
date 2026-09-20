@@ -241,6 +241,9 @@ function loginUbsAccess(){
  if(ubsLoginPending)return;
  var pin=digits(el('cscUbsPin')&&el('cscUbsPin').value),proof=trustKey('UBS'),out=el('cscUbsIdentity'),button=el('cscUbsLogin');
  if(!/^\d{4,8}$/.test(pin)){setStatus('Informe o PIN de acesso com 4 a 8 números.','err');return}
+ /* PUSH_UBS_GESTO_PIN_V1: aproveita o toque explícito no botão Entrar para solicitar,
+    quando necessário, a permissão nativa de avisos. O login não espera essa etapa. */
+ try{var central=window.ConectaCentralUbsV1;if(central&&typeof central.prepararPush==='function')central.prepararPush()}catch(e){}
  ubsLoginPending=true;if(button)button.disabled=true;if(out)out.hidden=true;
  setStatus('Liberando o acesso da UBS…','warn');
  abrirUbsLocal(pin).then(function(localOpened){
