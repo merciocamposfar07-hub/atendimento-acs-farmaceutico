@@ -2906,7 +2906,41 @@ html body .viewer.csc-frame-viewer.csc-frame-opening>iframe:not([hidden]){
 <div id="viewer" class="viewer" hidden><div class="viewer-bar" role="banner"><img class="viewer-official-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=69a1f1ba696e" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="viewer-heading"><small>CONECTA SAÚDE COMUNITÁRIA</small><div id="viewerTitle" class="viewer-title">Painel</div></div><button id="viewerBack" class="viewer-back" type="button" aria-label="Voltar à Central">‹</button></div><div id="nativeModuleHost" class="csc-native-module-host" hidden></div><iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe><footer id="viewerFooter" class="viewer-platform-footer" hidden><strong>Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</strong><small>Plataforma institucional de saúde comunitária.</small></footer></div>
 <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=69a1f1ba696e"></script>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260919-mascara-moradores-v6"></script>
+<script id="cscMoradoresInputMaskV1">
+(function(){
+  'use strict';
+  function digits(v){return String(v==null?'':v).replace(/\D/g,'')}
+  function formatCpf(v){
+    var d=digits(v).slice(0,11);
+    if(d.length>9)return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);
+    if(d.length>6)return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6);
+    if(d.length>3)return d.slice(0,3)+'.'+d.slice(3);
+    return d;
+  }
+  function formatPhone(v){
+    var d=digits(v).slice(0,11);
+    if(!d)return '';
+    if(d.length<3)return '('+d;
+    if(d.length<=6)return '('+d.slice(0,2)+') '+d.slice(2);
+    if(d.length<=10)return '('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6);
+    return '('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7);
+  }
+  document.addEventListener('input',function(e){
+    var t=e.target;
+    if(!t||!t.closest||!t.closest('#nativeModuleHost #residentForm'))return;
+    if(t.id==='cpf'){
+      var cpf=formatCpf(t.value);
+      if(t.value!==cpf)t.value=cpf;
+      return;
+    }
+    if(t.id==='cell'||t.id==='contact'){
+      var phone=formatPhone(t.value);
+      if(t.value!==phone)t.value=phone;
+    }
+  },true);
+})();
+</script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260918-moradores-app-like-instant-v5"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=69a1f1ba696e"></script>
