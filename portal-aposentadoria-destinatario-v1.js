@@ -13,11 +13,11 @@
     var style=document.createElement('style');
     style.id='retirementRecipientStyleV1';
     style.textContent=[
-      '#retirementRecipientBoxV1{grid-column:1/-1;display:grid;gap:11px;margin:2px 0 2px;padding:16px;border:3px solid #69c7e7;border-radius:18px;background:#eef5f8;color:#102d40;box-shadow:0 8px 18px rgba(3,35,56,.12)}',
+      '#retirementRecipientBoxV1{grid-column:1/-1;display:grid;gap:11px;margin:2px 0 2px;padding:16px 0;border:0;border-radius:0;background:#062c46;color:#fff;box-shadow:none}',
       '#retirementRecipientBoxV1[hidden]{display:none!important}',
       '#retirementRecipientBoxV1 .retirement-recipient-guide{display:flex;align-items:center;gap:10px;margin:0;padding:10px 13px;border:2px solid #70e39f;border-radius:18px;background:#073a55;color:#fff;font-size:15px;font-weight:950;line-height:1.3}',
       '#retirementRecipientBoxV1 .retirement-recipient-arrow{color:#7af0a8;font-size:25px;line-height:1;animation:retirementArrowBlink 1.1s ease-in-out infinite}',
-      '#retirementRecipientBoxV1 h3{margin:0;color:#102d40;font-size:20px;line-height:1.25}',
+      '#retirementRecipientBoxV1 h3{margin:0;color:#fff;font-size:20px;line-height:1.25}',
       '#retirementRecipientBoxV1 .retirement-recipient-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}',
       '#retirementRecipientBoxV1 .retirement-recipient-option{min-height:56px;padding:12px 14px;border:3px solid #d8eef7;border-radius:15px;background:#06445d;color:#f2f7f8;font-size:17px;font-weight:950;line-height:1.2}',
       '#retirementRecipientBoxV1 .retirement-recipient-option[data-value="Para outra pessoa"]{background:#54307e}',
