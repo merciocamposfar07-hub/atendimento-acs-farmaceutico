@@ -10,7 +10,7 @@
  * - expiração é recalculada em toda leitura/resumo e nunca apaga o histórico.
  */
 var TACS_SOLICITACOES_UBS_V1=Object.freeze({
-  VERSAO:'1.5.0',
+  VERSAO:'1.6.0',
   SHEET:'TACS_SOLICITACOES_MORADORES',
   HEADERS:Object.freeze([
     'ID','AREA_ID','AREA_NOME','UNIDADE_ID','CODIGO_SOLICITACAO','MORADOR_ID',
@@ -251,10 +251,47 @@ function solicitacoesUbsV1NascimentoOficial_(achado){
   var morador=achado&&achado.morador||{},valor='';
   try{
     if(achado&&achado.fonte&&achado.origem&&achado.fonte.map&&Number(achado.fonte.map.nascimento)>=0){
+      /* DATA_CIVIL_SEM_FUSO_V1: usa primeiro o texto exibido na célula oficial.
+         Nascimento não é instante UTC e jamais pode perder/ganhar um dia por conversão. */
       valor=achado.fonte.sheet.getRange(Number(achado.origem.linha),Number(achado.fonte.map.nascimento)+1).getDisplayValue();
     }
   }catch(e){}
   return solicitacoesUbsV1NascimentoCivil_(valor||morador.nascimento);
+}
+function solicitacoesUbsV1DocumentoOficial_(achado,documento){
+  var morador=achado&&achado.morador||{},informado=String(documento==null?'':documento).replace(/\D/g,''),cpf=String(morador.cpf||'').replace(/\D/g,''),cns=String(morador.cns||'').replace(/\D/g,'');
+  if(informado.length===15&&cns===informado)return cns;
+  if(informado.length===11&&cpf===informado)return cpf;
+  if(informado.length===10&&cpf.length===11&&cpf.charAt(0)==='0'&&cpf.slice(1)===informado)return cpf;
+  return informado;
+}
+function solicitacoesUbsV1CatalogoOficial_(contexto){
+  var key='sol_ubs_catalogo_oficial_v1_'+moradoresAdminV1NormalizarAreaId_(contexto&&contexto.areaId),cache=CacheService.getScriptCache(),salvo=null;
+  try{salvo=cache.get(key)}catch(e){}
+  if(salvo){try{return JSON.parse(salvo)}catch(e){}}
+  var out={};
+  try{
+    var fonte=moradoresAdminV1LocalizarFonte_(contexto),lastRow=fonte.sheet.getLastRow(),lastCol=fonte.sheet.getLastColumn();
+    if(lastRow>fonte.headerRow+1){
+      var range=fonte.sheet.getRange(fonte.headerRow+2,1,lastRow-(fonte.headerRow+1),lastCol),raw=range.getValues(),display=range.getDisplayValues();
+      for(var i=0;i<display.length;i++){
+        var m=moradoresAdminV1MontarMorador_(display[i],raw[i],fonte.map);
+        if(!m||!m.nome)continue;
+        var nasc=solicitacoesUbsV1NascimentoCivil_(m.nascimento),cpf=String(m.cpf||'').replace(/\D/g,''),cns=String(m.cns||'').replace(/\D/g,'');
+        var item={nascimento:nasc,cpf:cpf,cns:cns};
+        if(cpf){out[cpf]=item;if(cpf.length===11&&cpf.charAt(0)==='0')out[cpf.slice(1)]=item}
+        if(cns)out[cns]=item;
+      }
+    }
+  }catch(e){}
+  try{cache.put(key,JSON.stringify(out),300)}catch(e){}
+  return out;
+}
+function solicitacoesUbsV1DocumentoExibicao_(v){
+  var d=String(v==null?'':v).replace(/\D/g,'');
+  if(d.length===11)return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);
+  if(d.length===15)return d.slice(0,3)+' '+d.slice(3,7)+' '+d.slice(7,11)+' '+d.slice(11);
+  return d;
 }
 function solicitacoesUbsV1Id_(){
   return 'SOL-'+Utilities.formatDate(new Date(),TACS_SOLICITACOES_UBS_V1.FUSO,'yyyyMMdd')+'-'+Utilities.getUuid().replace(/-/g,'').slice(0,8).toUpperCase();
@@ -276,6 +313,7 @@ function solicitacoesUbsV1CriarPublica_(p){
   if(!achado||!achado.morador)throw new Error('Cadastro ativo do morador não encontrado.');
   var sheet=solicitacoesUbsV1Sheet_(),existing=solicitacoesUbsV1LocalizarCodigo_(sheet,contexto.areaId,codigo);
   if(existing)return {ok:true,duplicada:true,id:existing.data[0],codigoSolicitacao:codigo,status:existing.data[17],message:'Solicitação já registrada para a UBS.'};
+  doc=solicitacoesUbsV1DocumentoOficial_(achado,doc);
   var morador=achado.morador,categoria=solicitacoesUbsV1Texto_(p.categoria).slice(0,220);
   if(!categoria)throw new Error('Serviço solicitado não informado.');
   var descricao=solicitacoesUbsV1Texto_(p.descricao||p.mensagem||categoria).slice(0,1800);
@@ -347,7 +385,7 @@ function solicitacoesUbsV1Item_(r){
   var expiraTexto=solicitacoesUbsV1CivilTexto_(civil.data,civil.hora),expiraIso=solicitacoesUbsV1CivilIso_(civil.data,civil.hora);
   return {
     id:solicitacoesUbsV1Texto_(r[0]),areaNome:solicitacoesUbsV1Texto_(r[2]),unidadeId:solicitacoesUbsV1Texto_(r[3]),codigoSolicitacao:solicitacoesUbsV1Texto_(r[4]),moradorId:solicitacoesUbsV1Texto_(r[5]),
-    morador:solicitacoesUbsV1Texto_(r[6]),documento:solicitacoesUbsV1Texto_(r[7]),nascimento:solicitacoesUbsV1NascimentoCivil_(r[8]),
+    morador:solicitacoesUbsV1Texto_(r[6]),documento:solicitacoesUbsV1Texto_(r[7]),documentoFormatado:solicitacoesUbsV1DocumentoExibicao_(r[7]),nascimento:solicitacoesUbsV1NascimentoCivil_(r[8]),
     localidade:solicitacoesUbsV1Texto_(r[9]),familiaId:solicitacoesUbsV1Texto_(r[10]),categoria:solicitacoesUbsV1Texto_(r[11]),
     descricao:descricao,tipoVaga:solicitacoesUbsV1Texto_(r[13]),dataServico:civil.data,
     horarioExpiracao:civil.hora,expiraEm:expiraIso,expiraEmTexto:expiraTexto,
@@ -358,15 +396,30 @@ function solicitacoesUbsV1Item_(r){
 }
 function solicitacoesUbsV1DadosArea_(contexto){
   var sheet=solicitacoesUbsV1Sheet_();solicitacoesUbsV1Expirar_(sheet);
-  var rows=solicitacoesUbsV1Rows_(sheet),items=[],counts={NOVA:0,EM_ATENDIMENTO:0,CONCLUIDA:0,EXPIRADA:0},latest=null,latestUnread=null,unread=0;
+  var rows=solicitacoesUbsV1Rows_(sheet),catalogo=solicitacoesUbsV1CatalogoOficial_(contexto),items=[],counts={NOVA:0,EM_ATENDIMENTO:0,CONCLUIDA:0,EXPIRADA:0},latest=null,latestUnread=null,unread=0,patches=[];
   for(var i=rows.length-1;i>=0;i--){
     if(moradoresAdminV1NormalizarAreaId_(rows[i][1])!==contexto.areaId)continue;
+    var docRaw=String(rows[i][7]==null?'':rows[i][7]).replace(/\D/g,''),oficial=catalogo[docRaw]||null;
+    if(oficial){
+      var docOficial=docRaw;
+      if(docRaw.length===10&&oficial.cpf&&oficial.cpf.length===11&&oficial.cpf.charAt(0)==='0'&&oficial.cpf.slice(1)===docRaw)docOficial=oficial.cpf;
+      else if(docRaw.length===11&&oficial.cpf)docOficial=oficial.cpf;
+      else if(docRaw.length===15&&oficial.cns)docOficial=oficial.cns;
+      var nascAtual=solicitacoesUbsV1NascimentoCivil_(rows[i][8]),nascOficial=solicitacoesUbsV1NascimentoCivil_(oficial.nascimento);
+      if((docOficial&&docOficial!==docRaw)||(nascOficial&&nascOficial!==nascAtual)){
+        if(docOficial)rows[i][7]=docOficial;
+        if(nascOficial)rows[i][8]=nascOficial;
+        patches.push({row:i+2,documento:docOficial||docRaw,nascimento:nascOficial||nascAtual});
+      }
+    }
     var item=solicitacoesUbsV1Item_(rows[i]);
     if(Object.prototype.hasOwnProperty.call(counts,item.status))counts[item.status]++;
     if(item.status==='NOVA'&&!item.vistoUbsEm){unread++;if(!latestUnread)latestUnread=item}
     if(!latest)latest=item;
     if(items.length<160)items.push(item);
   }
+  patches.forEach(function(p){try{sheet.getRange(p.row,8,1,2).setValues([[p.documento,p.nascimento]]);sheet.getRange(p.row,8,1,2).setNumberFormats([['@','@']])}catch(e){}});
+  if(patches.length)try{SpreadsheetApp.flush()}catch(e){}
   return {sheet:sheet,items:items,counts:counts,latest:latest,latestUnread:latestUnread,unread:unread};
 }
 function solicitacoesUbsV1Listar_(ctx){
