@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#071827">
 <meta name="robots" content="noindex,nofollow">
+<link rel="preload" as="image" href="https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260920-card-csc-v1">
 <title>Solicitações dos moradores | Conecta Saúde Comunitária</title>
 <style>
 :root{--bg:#071827;--top:#0b263d;--card:#102d46;--card2:#153b58;--line:#2b5a76;--text:#f7fcff;--muted:#adc4d2;--accent:#83efa9;--accent2:#62c8e8;--danger:#972f3d;--warn:#8a661c;--ok:#176a48}
@@ -37,8 +38,8 @@ main{width:min(720px,100%);margin:0 auto;padding:8px 16px 38px}
 .detail-status{display:flex;align-items:center;gap:8px;justify-content:flex-end}
 .slip{overflow:hidden;border-radius:0;background:linear-gradient(180deg,#063751,#08617c);color:#fff;box-shadow:0 12px 28px rgba(0,0,0,.24)}
 .slip-inner{padding:24px 20px 20px}
-.slip-brand{display:flex;align-items:center;gap:11px;margin-bottom:7px}
-.slip-brand img{width:48px;height:48px;flex:0 0 48px;object-fit:contain}
+.slip-brand{display:flex;align-items:center;gap:14px;margin-bottom:10px;min-height:72px}
+.slip-brand img{display:block!important;width:72px;height:72px;flex:0 0 72px;object-fit:contain;visibility:visible!important;opacity:1!important}
 .slip-brand span{color:#8ff0ae;font-size:.88rem;font-weight:950;letter-spacing:.035em;line-height:1.2;text-transform:uppercase}
 .slip-title{margin:2px 0 20px;color:#fff;font-size:clamp(1.75rem,7vw,2.35rem);line-height:1.02;font-weight:950;letter-spacing:-.025em}
 .slip-card{margin-bottom:15px;padding:16px 18px;border-radius:22px;background:rgba(255,255,255,.10)}
@@ -160,7 +161,7 @@ function detailHtml(x){
  var s=effectiveStatus(x),expired=s==='EXPIRADA',birth=birthDisplay(x.nascimento)||'Não informado',age=ageLabel(x.nascimento),expiry=expiryDisplay(x);
  var generatedArea=text(x.areaNome||area()),unit=text(x.unidadeNome||(x.unidadeId==='POSTO_MATIAS'?'Unidade de Saúde Posto Matias':x.unidadeId)||'Unidade vinculada à área');
  var body='<article class="slip"><div class="slip-inner">'+
-   '<div class="slip-brand"><img src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=69a1f1ba696e" alt=""><span>PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA</span></div>'+
+   '<div class="slip-brand"><img src="https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260920-card-csc-v1" alt="Ícone oficial do Conecta Saúde Comunitária" loading="eager" decoding="sync"><span>PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA</span></div>'+
    '<h1 class="slip-title">SOLICITAÇÃO DO MORADOR</h1>'+
    '<section class="slip-card">'+
      '<span class="slip-label">Área de atendimento</span><span class="slip-value">'+esc(generatedArea)+'</span>'+

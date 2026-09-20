@@ -4,10 +4,10 @@ if(window.PortalTacsAgendaWhatsAppV2)return;
 window.PortalTacsAgendaWhatsAppV2=true;
 
 var CARD_UNIT='Unidade de Saúde Posto Matias';
-var CARD_BRAND='Conecta Saúde Comunitária';
-var CARD_FOOTER='PORTAL CONECTA SAÚDE COMUNITÁRIA';
-var CARD_REVISION='20260912-conecta-oficial-v1';
-var CONECTA_OFFICIAL_ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260909-3';
+var CARD_BRAND='PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA';
+var CARD_FOOTER='PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA';
+var CARD_REVISION='20260920-portal-csc-oficial-v2';
+var CONECTA_OFFICIAL_ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260920-card-csc-v1';
 
 function txt(v){return String(v==null?'':v).trim()}
 function field(card,name){var e=card&&card.querySelector('[name="'+name+'"]');return e?txt(e.value):''}
@@ -56,9 +56,8 @@ function paintBackground(ctx){
 function drawBrand(ctx,logo,areaName){
   if(logo)ctx.drawImage(logo,58,58,258,258);
   ctx.fillStyle='#72e3a0';ctx.textAlign='left';
-  ctx.font='900 58px -apple-system,BlinkMacSystemFont,Arial';
-  ctx.fillText('Conecta Saúde',355,150);
-  ctx.fillText('Comunitária',355,216);
+  fitFont(ctx,CARD_BRAND,'900',44,27,665);
+  ctx.fillText(CARD_BRAND,355,166);
   ctx.textAlign='center';
   fitFont(ctx,CARD_UNIT,'900',58,42,950);
   ctx.fillText(CARD_UNIT,540,366);
