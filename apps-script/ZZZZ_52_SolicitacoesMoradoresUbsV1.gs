@@ -10,7 +10,7 @@
  * - expiração é recalculada em toda leitura/resumo e nunca apaga o histórico.
  */
 var TACS_SOLICITACOES_UBS_V1=Object.freeze({
-  VERSAO:'1.3.0',
+  VERSAO:'1.4.0',
   SHEET:'TACS_SOLICITACOES_MORADORES',
   HEADERS:Object.freeze([
     'ID','AREA_ID','AREA_NOME','UNIDADE_ID','CODIGO_SOLICITACAO','MORADOR_ID',
@@ -129,6 +129,24 @@ function solicitacoesUbsV1DataValor_(v){
   if(v&&Object.prototype.toString.call(v)==='[object Date]'&&!isNaN(v.getTime()))return Utilities.formatDate(v,TACS_SOLICITACOES_UBS_V1.FUSO,'yyyy-MM-dd');
   return solicitacoesUbsV1Data_(v);
 }
+function solicitacoesUbsV1Civil_(descricao,dataValor,horaValor){
+  var card=solicitacoesUbsV1AgendaCard_(descricao),data=solicitacoesUbsV1Data_(card.data)||solicitacoesUbsV1DataValor_(dataValor),hora=solicitacoesUbsV1Hora_(card.horaFinal)||solicitacoesUbsV1Hora_(horaValor);
+  return {data:data,hora:hora};
+}
+function solicitacoesUbsV1CivilChave_(data,hora){
+  if(!data||!hora)return '';
+  return String(data).replace(/-/g,'')+String(hora).replace(':','');
+}
+function solicitacoesUbsV1AgoraCivilChave_(){
+  return Utilities.formatDate(new Date(),TACS_SOLICITACOES_UBS_V1.FUSO,'yyyyMMddHHmm');
+}
+function solicitacoesUbsV1CivilTexto_(data,hora){
+  var m=String(data||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m&&hora?m[3]+'/'+m[2]+'/'+m[1]+' '+hora:'';
+}
+function solicitacoesUbsV1CivilIso_(data,hora){
+  return data&&hora?data+'T'+hora+':00-03:00':'';
+}
 function solicitacoesUbsV1Id_(){
   return 'SOL-'+Utilities.formatDate(new Date(),TACS_SOLICITACOES_UBS_V1.FUSO,'yyyyMMdd')+'-'+Utilities.getUuid().replace(/-/g,'').slice(0,8).toUpperCase();
 }
@@ -153,8 +171,8 @@ function solicitacoesUbsV1CriarPublica_(p){
   if(!categoria)throw new Error('Serviço solicitado não informado.');
   var descricao=solicitacoesUbsV1Texto_(p.descricao||p.mensagem||categoria).slice(0,1800);
   var tipoVaga=solicitacoesUbsV1Texto_(p.tipoVaga).toUpperCase().replace(/[^A-Z_]/g,'').slice(0,40);
-  var agendaCard=solicitacoesUbsV1AgendaCard_(descricao),dataServico=solicitacoesUbsV1Data_(agendaCard.data||p.dataServico),horaExp=solicitacoesUbsV1Hora_(agendaCard.horaFinal||p.horarioExpiracao),agora=new Date(),expira=solicitacoesUbsV1ExpiraEm_(dataServico,horaExp);
-  var status=expira&&expira.getTime()<=agora.getTime()?'EXPIRADA':'NOVA';
+  var civil=solicitacoesUbsV1Civil_(descricao,p.dataServico,p.horarioExpiracao),dataServico=civil.data,horaExp=civil.hora,agora=new Date(),expira=solicitacoesUbsV1ExpiraEm_(dataServico,horaExp);
+  var status=solicitacoesUbsV1CivilChave_(dataServico,horaExp)&&solicitacoesUbsV1CivilChave_(dataServico,horaExp)<=solicitacoesUbsV1AgoraCivilChave_()?'EXPIRADA':'NOVA';
   var moradorId=solicitacoesUbsV1Texto_((achado.meta&&achado.meta.moradorId)||morador.idPortal||morador.id||achado.chave);
   var row=[
     solicitacoesUbsV1Id_(),contexto.areaId,contexto.areaNome,contexto.unidadeId||'',codigo,moradorId,
@@ -174,25 +192,25 @@ function solicitacoesUbsV1CriarPublica_(p){
     sheet.getRange(sheet.getLastRow(),19,1,2).setNumberFormat('dd/MM/yyyy HH:mm');
     SpreadsheetApp.flush();
   }finally{lock.releaseLock();}
-  return {ok:true,id:row[0],codigoSolicitacao:codigo,status:status,expiraEm:solicitacoesUbsV1FormatDate_(expira),message:status==='EXPIRADA'?'Solicitação registrada como expirada.':'Solicitação registrada e encaminhada à fila da UBS.'};
+  return {ok:true,id:row[0],codigoSolicitacao:codigo,status:status,expiraEm:solicitacoesUbsV1CivilTexto_(dataServico,horaExp),message:status==='EXPIRADA'?'Solicitação registrada como expirada.':'Solicitação registrada e encaminhada à fila da UBS.'};
 }
 
 function solicitacoesUbsV1Expirar_(sheet){
   if(!sheet||sheet.getLastRow()<=1)return 0;
-  var n=sheet.getLastRow()-1,range=sheet.getRange(2,18,n,3),values=range.getValues(),now=Date.now(),changed=0;
+  var n=sheet.getLastRow()-1,range=sheet.getRange(2,18,n,3),values=range.getValues(),nowCivil=solicitacoesUbsV1AgoraCivilChave_(),changed=0;
   var agendaRange=sheet.getRange(2,13,n,5),agendaValues=agendaRange.getValues(),agendaChanged=false;
   for(var i=0;i<n;i++){
-    var st=solicitacoesUbsV1Texto_(values[i][0]).toUpperCase(),card=solicitacoesUbsV1AgendaCard_(agendaValues[i][0]);
-    var data=card.data||solicitacoesUbsV1DataValor_(agendaValues[i][2]),hora=card.horaFinal||solicitacoesUbsV1Hora_(agendaValues[i][3]);
-    var exp=solicitacoesUbsV1ExpiraEm_(data,hora)||agendaValues[i][4];
-    /* EXPIRACAO_PELO_CARD_V5: o horário final escrito na solicitação é a fonte de verdade.
-       Ex.: "08:00 às 11:30" expira às 11:30, nunca no horário inicial. */
-    if(card.data&&card.horaFinal){
+    var st=solicitacoesUbsV1Texto_(values[i][0]).toUpperCase(),civil=solicitacoesUbsV1Civil_(agendaValues[i][0],agendaValues[i][2],agendaValues[i][3]);
+    var data=civil.data,hora=civil.hora,exp=solicitacoesUbsV1ExpiraEm_(data,hora),expKey=solicitacoesUbsV1CivilChave_(data,hora);
+    /* EXPIRACAO_CIVIL_CARD_V6:
+       data e horário escritos no card são a fonte de verdade. A comparação ocorre
+       em horário civil de America/Recife, sem conversão UTC. 08:00–11:30 => 11:30. */
+    if(data&&hora){
       var atualData=solicitacoesUbsV1DataValor_(agendaValues[i][2]),atualHora=solicitacoesUbsV1Hora_(agendaValues[i][3]),atualExp=agendaValues[i][4];
       var expMudou=!(atualExp&&Object.prototype.toString.call(atualExp)==='[object Date]'&&!isNaN(atualExp.getTime())&&exp&&atualExp.getTime()===exp.getTime());
-      if(atualData!==data||atualHora!==hora||expMudou){agendaValues[i][2]=data;agendaValues[i][3]=hora;agendaValues[i][4]=exp;agendaChanged=true;}
+      if(atualData!==data||atualHora!==hora||expMudou){agendaValues[i][2]=data;agendaValues[i][3]=hora;agendaValues[i][4]=exp||'';agendaChanged=true;}
     }
-    if((st==='NOVA'||st==='EM_ATENDIMENTO')&&exp&&Object.prototype.toString.call(exp)==='[object Date]'&&!isNaN(exp.getTime())&&exp.getTime()<=now){
+    if((st==='NOVA'||st==='EM_ATENDIMENTO')&&expKey&&expKey<=nowCivil){
       values[i][0]='EXPIRADA';values[i][2]=new Date();changed++;
     }
   }
@@ -206,13 +224,14 @@ function solicitacoesUbsV1FormatDate_(v){if(!v)return'';try{return Utilities.for
 function solicitacoesUbsV1Iso_(v){if(!v)return'';try{return Utilities.formatDate(new Date(v),TACS_SOLICITACOES_UBS_V1.FUSO,"yyyy-MM-dd'T'HH:mm:ss");}catch(e){return'';}}
 function solicitacoesUbsV1MaskDoc_(v){var d=String(v==null?'':v).replace(/\D/g,'');return d.length>=4?'••••'+d.slice(-4):''}
 function solicitacoesUbsV1Item_(r){
-  var st=solicitacoesUbsV1Texto_(r[17]).toUpperCase();
+  var st=solicitacoesUbsV1Texto_(r[17]).toUpperCase(),descricao=solicitacoesUbsV1Texto_(r[12]),civil=solicitacoesUbsV1Civil_(descricao,r[14],r[15]);
+  var expiraTexto=solicitacoesUbsV1CivilTexto_(civil.data,civil.hora),expiraIso=solicitacoesUbsV1CivilIso_(civil.data,civil.hora);
   return {
     id:solicitacoesUbsV1Texto_(r[0]),areaNome:solicitacoesUbsV1Texto_(r[2]),unidadeId:solicitacoesUbsV1Texto_(r[3]),codigoSolicitacao:solicitacoesUbsV1Texto_(r[4]),moradorId:solicitacoesUbsV1Texto_(r[5]),
     morador:solicitacoesUbsV1Texto_(r[6]),documento:solicitacoesUbsV1Texto_(r[7]),nascimento:solicitacoesUbsV1Texto_(r[8]),
     localidade:solicitacoesUbsV1Texto_(r[9]),familiaId:solicitacoesUbsV1Texto_(r[10]),categoria:solicitacoesUbsV1Texto_(r[11]),
-    descricao:solicitacoesUbsV1Texto_(r[12]),tipoVaga:solicitacoesUbsV1Texto_(r[13]),dataServico:solicitacoesUbsV1Texto_(r[14]),
-    horarioExpiracao:solicitacoesUbsV1Texto_(r[15]),expiraEm:solicitacoesUbsV1Iso_(r[16]),expiraEmTexto:solicitacoesUbsV1FormatDate_(r[16]),
+    descricao:descricao,tipoVaga:solicitacoesUbsV1Texto_(r[13]),dataServico:civil.data,
+    horarioExpiracao:civil.hora,expiraEm:expiraIso,expiraEmTexto:expiraTexto,
     status:st,statusTexto:solicitacoesUbsV1StatusTexto_(st),criadoEm:solicitacoesUbsV1FormatDate_(r[18]),atualizadoEm:solicitacoesUbsV1FormatDate_(r[19]),
     tacsResponsavel:solicitacoesUbsV1Texto_(r[21]),unidadeNome:solicitacoesUbsV1Texto_(r[22])
   };
