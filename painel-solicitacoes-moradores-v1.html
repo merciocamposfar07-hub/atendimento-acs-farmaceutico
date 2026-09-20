@@ -16,11 +16,11 @@ body{min-height:100svh;background:#071827;overflow-y:auto;-webkit-overflow-scrol
 main{touch-action:pan-y;overflow:visible}
 button{font:inherit}
 button:focus-visible{outline:3px solid #ffd54f;outline-offset:2px}
-.csc-appbar{position:static;width:min(720px,100%);min-height:108px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:14px;background:#071827;border:0;box-shadow:none}
-.csc-appbar-icon{width:80px;height:80px;flex:0 0 80px;display:block;object-fit:contain}
+.csc-appbar{position:static;width:min(720px,100%);min-height:132px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;display:flex;align-items:center;gap:16px;background:#071827;border:0;box-shadow:none}
+.csc-appbar-icon{width:104px;height:104px;min-width:104px;flex:0 0 104px;display:block;object-fit:contain;opacity:1;filter:none}
 .csc-appbar-title{min-width:0;flex:1 1 auto}
-.csc-appbar-title small{display:block;color:var(--accent);font-size:.80rem;line-height:1.16;font-weight:950;letter-spacing:.075em;text-transform:uppercase}
-.csc-appbar-title strong{display:block;margin-top:5px;color:#fff;font-size:1.20rem;line-height:1.14;font-weight:900;letter-spacing:-.02em;overflow-wrap:anywhere}
+.csc-appbar-title small{display:block;color:#8ff0ae;font-size:1.08rem;line-height:1.16;font-weight:950;letter-spacing:.045em;text-transform:uppercase;opacity:1}
+.csc-appbar-title strong{display:block;margin-top:5px;color:#fff;font-size:1.36rem;line-height:1.12;font-weight:900;letter-spacing:-.025em;overflow-wrap:anywhere}
 .csc-appbar-back{width:48px;min-width:48px;height:48px;min-height:48px;flex:0 0 48px;padding:0;display:grid;place-items:center;border:1px solid var(--line);border-radius:17px;background:var(--card);color:var(--accent2);font-size:2rem;line-height:1}
 main{width:min(720px,100%);margin:0 auto;padding:8px 16px 38px}
 .intro{margin:0 0 12px;color:var(--muted);font-size:.93rem;line-height:1.4}
@@ -60,7 +60,7 @@ main{width:min(720px,100%);margin:0 auto;padding:8px 16px 38px}
 .page-footer strong{font-size:.84rem;line-height:1.35;color:#f7fcff}.page-footer small{font-size:.76rem;color:var(--muted)}
 [hidden]{display:none!important}
 @media(min-width:640px){.metrics{grid-template-columns:repeat(4,1fr)}}
-@media(max-width:430px){.csc-appbar{min-height:100px;padding-left:13px;padding-right:13px;gap:11px}.csc-appbar-icon{width:76px;height:76px;flex-basis:76px}.csc-appbar-title small{font-size:.76rem}.csc-appbar-title strong{font-size:1.12rem}.csc-appbar-back{width:44px;min-width:44px;height:44px;min-height:44px;flex-basis:44px}.slip-inner{padding:20px 14px 18px}.slip-card{padding:15px}.slip-body{padding:18px 15px 22px}.request-row{grid-template-columns:1fr}.request-row-side{display:flex;align-items:center;justify-content:space-between}.detail-actions{grid-template-columns:1fr}}
+@media(max-width:430px){.csc-appbar{min-height:124px;padding-left:13px;padding-right:13px;gap:13px}.csc-appbar-icon{width:94px;height:94px;min-width:94px;flex-basis:94px}.csc-appbar-title small{font-size:1.00rem;line-height:1.15;letter-spacing:.035em}.csc-appbar-title strong{font-size:1.25rem}.csc-appbar-back{width:44px;min-width:44px;height:44px;min-height:44px;flex-basis:44px}.slip-inner{padding:20px 14px 18px}.slip-card{padding:15px}.slip-body{padding:18px 15px 22px}.request-row{grid-template-columns:1fr}.request-row-side{display:flex;align-items:center;justify-content:space-between}.detail-actions{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
