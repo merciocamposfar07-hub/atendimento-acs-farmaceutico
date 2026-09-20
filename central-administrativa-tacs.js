@@ -1282,23 +1282,29 @@ function showAdminUbs(title){
 function normalizeEmbeddedPanelFrame(frame){
   try{
     var doc=frame&&frame.contentDocument;if(!doc)return;
-    var style=doc.getElementById('cscEmbeddedApp4SingleHeaderV1');
-    if(!style){
-      style=doc.createElement('style');style.id='cscEmbeddedApp4SingleHeaderV1';
-      style.textContent=[
-        /* CABECALHO_UNICO_LEGADOS_20260918:
-           Dentro da Central, o cabeçalho pertence ao shell. O iframe legado não desenha
-           um segundo ícone/título durante a transição. */
-        '#cscInstitutionalAppbar{display:none!important;visibility:hidden!important;pointer-events:none!important}',
-        '#portalTacsBackCentralV1,#portalTacsAtualizarPaginaV1{display:none!important}',
-        'html,body,main,footer,.footer{background:#071827!important;background-image:none!important;border-top:0!important}',
-        '#cscPlatformFooter{display:none!important}'
-      ].join('');
-      (doc.head||doc.documentElement).appendChild(style);
-    }
+    var ubsEmbedded=mode==='ubs',style=doc.getElementById('cscEmbeddedApp4SingleHeaderV1');
+    if(!style){style=doc.createElement('style');style.id='cscEmbeddedApp4SingleHeaderV1';(doc.head||doc.documentElement).appendChild(style)}
+    style.textContent=[
+      /* CABECALHO_UBS_ROLA_COM_CONTEUDO_V1:
+         Na sessão UBS, cabeçalho e rodapé pertencem ao próprio painel para rolarem junto
+         com a descrição. Fora da UBS, permanece o shell único já existente. */
+      ubsEmbedded
+        ?'#cscInstitutionalAppbar{display:flex!important;visibility:visible!important;pointer-events:auto!important;position:static!important;top:auto!important;inset:auto!important}'
+        :'#cscInstitutionalAppbar{display:none!important;visibility:hidden!important;pointer-events:none!important}',
+      '#portalTacsBackCentralV1,#portalTacsAtualizarPaginaV1{display:none!important}',
+      'html,body,main,footer,.footer{background:#071827!important;background-image:none!important;border-top:0!important}',
+      ubsEmbedded
+        ?'#cscPlatformFooter{display:flex!important;position:static!important}'
+        :'#cscPlatformFooter{display:none!important}'
+    ].join('');
     var internal=doc.getElementById('cscInstitutionalAppbar');
-    if(internal){internal.hidden=true;internal.setAttribute('aria-hidden','true')}
+    if(internal){
+      internal.hidden=!ubsEmbedded;
+      internal.setAttribute('aria-hidden',ubsEmbedded?'false':'true');
+      if(ubsEmbedded){internal.style.setProperty('position','static','important');internal.style.setProperty('top','auto','important');internal.style.setProperty('inset','auto','important')}
+    }
     doc.documentElement.classList.add('csc-embedded-legacy-panel');
+    doc.documentElement.classList.toggle('csc-embedded-ubs-panel',ubsEmbedded);
   }catch(e){}
 }
 /* CORRECAO_FRAME_PREPAINT_CANONICO_V1
@@ -1433,9 +1439,11 @@ function showShellFrame(name,frame,title,routeId){
   shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
   el('viewerTitle').textContent=title||'Painel';
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer','csc-frame-viewer');viewer.classList.remove('csc-native-viewer');viewer.hidden=false;
-  /* SOLICITACOES_UBS_CABECALHO_PROPRIO_V1: somente este painel usa o cabeçalho institucional dentro do próprio iframe para que cabeçalho e rodapé rolem junto com o conteúdo, como os demais painéis. */
+  /* CABECALHO_UBS_ROLA_COM_CONTEUDO_V1:
+     Em qualquer painel legado da sessão UBS, o cabeçalho visível é o do próprio painel.
+     Assim ícone, título e descrição sobem juntos na rolagem; o shell não fica preso no topo. */
   var viewerBar=viewer.querySelector('.viewer-bar');
-  if(viewerBar){if(name==='solicitacoes')viewerBar.style.setProperty('display','none','important');else viewerBar.style.removeProperty('display')}
+  if(viewerBar){if(mode==='ubs')viewerBar.style.setProperty('display','none','important');else viewerBar.style.removeProperty('display')}
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   document.body.classList.add('viewer-open');
   var shellReady=(frame.dataset.shellReady==='1'||frame.dataset.shellDomReady==='1')&&shellFrameAtTarget(frame);
@@ -2188,11 +2196,45 @@ window.addEventListener('pageshow',function(){
     setTimeout(function(){if(!active)loadContext('Sessão existente validada.')},140);
   }
 });
+function abrirPaineisUbsLocal(saved){
+  if(!saved||text(saved.device)!==text(device))return false;
+  var cadastroId=text(saved.cadastroId),snapshot=saved.snapshot&&typeof saved.snapshot==='object'?saved.snapshot:{},unidadeId=text(snapshot.unidadeId),raw='';
+  try{raw=localStorage.getItem(UBS_LOCAL_CONTEXT_KEY)||''}catch(e){}
+  if(!raw)return false;
+  try{
+    var cached=JSON.parse(raw),ctx=cached&&cached.context,areas=ctx&&Array.isArray(ctx.areas)?ctx.areas.filter(function(a){return a&&a.ativa!==false&&normArea(a.areaId)}):[];
+    if(!cached||cached.mode!=='ubs'||!ctx||!areas.length)return false;
+    var atual=ctx.ubsAtual&&typeof ctx.ubsAtual==='object'?ctx.ubsAtual:{},cacheCadastro=text(atual.tacsId||atual.cadastroId),cacheUnidade=text(atual.unidadeId);
+    if(!cacheUnidade){for(var i=0;i<areas.length;i++){if(text(areas[i]&&areas[i].unidadeId)){cacheUnidade=text(areas[i].unidadeId);break}}}
+    if(cadastroId&&cacheCadastro&&cacheCadastro!==cadastroId)return false;
+    if(unidadeId&&cacheUnidade&&cacheUnidade!==unidadeId)return false;
+    try{resetModuleShell()}catch(e){}
+    token='';territoryToken='';ubsToken='';mode='ubs';context=ctx;selectedAreaId=normArea(cached.selectedAreaId||areas[0].areaId||'');acessoLocalAberto='ubs';
+    try{sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);sessionStorage.removeItem(UBS_TOKEN_KEY)}catch(e){}
+    syncAppState();renderContext(true);
+    setStatus('Painéis da UBS disponíveis. Confirmando a sessão em segundo plano…','ok');
+    return true;
+  }catch(e){return false}
+}
+function bloquearPaineisUbsLocal(message){
+  if(acessoLocalAberto!=='ubs')return false;
+  removerAcessoLocal('ubs');
+  try{resetModuleShell()}catch(e){}
+  token='';territoryToken='';ubsToken='';mode='';context=null;selectedAreaId='';acessoLocalAberto='';
+  try{sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);sessionStorage.removeItem(UBS_TOKEN_KEY)}catch(e){}
+  syncAppState();
+  el('identityPanel').hidden=true;el('healthPanel').hidden=true;el('modulesPanel').hidden=true;el('loginPanel').hidden=false;
+  try{if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.showRole==='function')window.ConectaAcessoUnificado.showRole('ubs');else showLogin('admin')}catch(e){showLogin('admin')}
+  setStatus(message||'O acesso da UBS precisa ser validado novamente.','err');
+  return true;
+}
 function entrarPaineisUbs(r){
   var novoToken=text(r&&r.token);if(!/^cus1\./.test(novoToken))return false;
+  var localJaAberto=Boolean(acessoLocalAberto==='ubs'&&mode==='ubs'&&context);
   try{cancelRemoteAuthSync()}catch(e){}
-  try{resetModuleShell()}catch(e){}
-  token='';territoryToken='';ubsToken=novoToken;mode='ubs';context=null;selectedAreaId='';
+  if(!localJaAberto)try{resetModuleShell()}catch(e){}
+  token='';territoryToken='';ubsToken=novoToken;mode='ubs';
+  if(!localJaAberto){context=null;selectedAreaId=''}
   try{sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);sessionStorage.setItem(UBS_TOKEN_KEY,ubsToken)}catch(e){}
   var areas=Array.isArray(r&&r.areas)?r.areas.filter(function(area){return area&&area.ativa!==false&&normArea(area.areaId)}):[];
   if(areas.length){
@@ -2205,7 +2247,8 @@ function entrarPaineisUbs(r){
       ok:true,perfil:'UBS',podeAdministrar:false,tacs:[],ubsAtual:ubsAtual,
       administradores:[],administradorAtual:null,areas:areas,isolamento:'UMA_UBS_SOMENTE_SUAS_AREAS'
     };
-    selectedAreaId=normArea(areas[0].areaId);
+    if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId}))selectedAreaId=normArea(areas[0].areaId);
+    acessoLocalAberto='';
     saveContextCache();
     syncAppState();
     renderContext(true);
@@ -2222,7 +2265,7 @@ function entrarPaineisUbs(r){
   loadContext('Acesso UBS validado.');
   return true;
 }
-window.ConectaCentralUbsV1={entrar:entrarPaineisUbs};
+window.ConectaCentralUbsV1={entrar:entrarPaineisUbs,abrirLocal:abrirPaineisUbsLocal,bloquearLocal:bloquearPaineisUbsLocal};
 window.ConectaCentralModuleCoreV1={publicar:publishModuleCore,chave:MODULE_CORE_KEY};
 window.ConectaCentralShellV1={
   abrir:openModule,
