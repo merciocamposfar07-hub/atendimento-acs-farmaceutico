@@ -7,7 +7,7 @@
  * Se o cadastro não puder ser conciliado, cria pendência e NÃO bloqueia o serviço.
  */
 var TACS_CONECTA_ACESSO_V1 = Object.freeze({
-  VERSAO:'1.0.2',
+  VERSAO:'1.0.3',
   ACCESS_SHEET:'TACS_CONECTA_ACESSO_MORADOR',
   PENDING_SHEET:'TACS_CONECTA_PENDENCIAS',
   TRUST_SHEET:'TACS_CONECTA_APARELHOS_CONFIAVEIS',
@@ -432,7 +432,7 @@ function conectaAcessoV1CriarPin_(p){
     ];
     var linhaAcesso=registro?registro.row:sheet.getLastRow()+1;if(linhaAcesso>sheet.getMaxRows())sheet.insertRowsAfter(sheet.getMaxRows(),1);sheet.getRange(linhaAcesso,4).setNumberFormat('@');sheet.getRange(linhaAcesso,1,1,vals.length).setValues([vals]);
     var session=conectaAcessoV1CriarSessao_(vals,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(vals);
-    return {ok:true,token:session.token,quickKey:quick,perfil:'MORADOR',areaId:identidade.areaId,areaNome:identidade.areaNome||identidade.areaId,nome:identidade.nome,cpf:identidade.cpf,notificacoesAtivas:Boolean(vals[10]),provisorio:Boolean(vals[13]),pendenciaId:vals[14],familiaId:nucleo.familiaId,familia:nucleo.membros,message:'PIN criado e salvo.'};
+    var responsavelCriacao=(nucleo.membros||[]).filter(function(m){return m&&m.responsavel;})[0]||{};return {ok:true,token:session.token,quickKey:quick,perfil:'MORADOR',areaId:identidade.areaId,areaNome:identidade.areaNome||identidade.areaId,nome:identidade.nome,cpf:identidade.cpf,nascimento:identidade.nascimento||responsavelCriacao.nascimento||'',endereco:identidade.endereco||responsavelCriacao.localidade||'',notificacoesAtivas:Boolean(vals[10]),provisorio:Boolean(vals[13]),pendenciaId:vals[14],familiaId:nucleo.familiaId,familia:nucleo.membros,message:'PIN criado e salvo.'};
   }finally{lock.releaseLock();}
 }
 
@@ -444,8 +444,8 @@ function conectaAcessoV1LoginMorador_(p){
   if(!registro||!conectaAcessoV1Bool_(registro.values[15]))throw new Error('Acesso não localizado ou inativo.');
   if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo)))throw new Error('Este acesso rápido pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
   if(!conectaAcessoV1Seguro_(registro.values[7],conectaAcessoV1Hash_(registro.values[6]+'|'+pin)))throw new Error('PIN incorreto.');
-  var session=conectaAcessoV1CriarSessao_(registro.values,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(registro.values);
-  return {ok:true,token:session.token,perfil:'MORADOR',areaId:registro.values[1],nome:registro.values[4],cpf:registro.values[3],notificacoesAtivas:conectaAcessoV1Bool_(registro.values[10]),silencioso:conectaAcessoV1Bool_(registro.values[12]),provisorio:conectaAcessoV1Bool_(registro.values[13]),pendenciaId:conectaAcessoV1Texto_(registro.values[14]),familiaId:nucleo.familiaId,familia:nucleo.membros};
+  var session=conectaAcessoV1CriarSessao_(registro.values,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(registro.values),responsavel=(nucleo.membros||[]).filter(function(m){return m&&m.responsavel;})[0]||{};
+  return {ok:true,token:session.token,perfil:'MORADOR',areaId:registro.values[1],nome:registro.values[4],cpf:registro.values[3],nascimento:registro.values[5]||responsavel.nascimento||'',endereco:responsavel.localidade||'',notificacoesAtivas:conectaAcessoV1Bool_(registro.values[10]),silencioso:conectaAcessoV1Bool_(registro.values[12]),provisorio:conectaAcessoV1Bool_(registro.values[13]),pendenciaId:conectaAcessoV1Texto_(registro.values[14]),familiaId:nucleo.familiaId,familia:nucleo.membros};
 }
 
 function conectaAcessoV1SessaoMorador_(p){
