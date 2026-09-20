@@ -790,7 +790,7 @@ function moduleUrl(name,options){
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-suporte-ubs-diag-v1';
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260919-recados-snapshot-completo-v5';
-  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-solicitacoes-ubs-v3';
+  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-solicitacoes-ubs-v4';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
@@ -1433,6 +1433,9 @@ function showShellFrame(name,frame,title,routeId){
   shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
   el('viewerTitle').textContent=title||'Painel';
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer','csc-frame-viewer');viewer.classList.remove('csc-native-viewer');viewer.hidden=false;
+  /* SOLICITACOES_UBS_CABECALHO_PROPRIO_V1: somente este painel usa o cabeçalho institucional dentro do próprio iframe para que cabeçalho e rodapé rolem junto com o conteúdo, como os demais painéis. */
+  var viewerBar=viewer.querySelector('.viewer-bar');
+  if(viewerBar){if(name==='solicitacoes')viewerBar.style.setProperty('display','none','important');else viewerBar.style.removeProperty('display')}
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   document.body.classList.add('viewer-open');
   var shellReady=(frame.dataset.shellReady==='1'||frame.dataset.shellDomReady==='1')&&shellFrameAtTarget(frame);
@@ -1675,7 +1678,7 @@ function closeViewer(){
      O frame permanece montado/cacheado, mas só reaparece por showShellFrame(). */
   Object.keys(shellFrames).forEach(function(key){var item=shellFrames[key];if(item)item.hidden=true});
   var baseFrame=el('viewerFrame');if(baseFrame)baseFrame.hidden=true;
-  var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-shell-viewer','csc-native-viewer','csc-frame-viewer','csc-frame-opening','csc-agendas-native-viewer');setShellOpening('',false);document.body.classList.remove('viewer-open');
+  var viewer=el('viewer');viewer.hidden=true;viewer.classList.remove('csc-shell-viewer','csc-native-viewer','csc-frame-viewer','csc-frame-opening','csc-agendas-native-viewer');var viewerBar=viewer&&viewer.querySelector?viewer.querySelector('.viewer-bar'):null;if(viewerBar)viewerBar.style.removeProperty('display');setShellOpening('',false);document.body.classList.remove('viewer-open');
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   shellActiveModule='';shellActiveRoute='';shellActiveNative='';moduloPendente=null;
   /* TREMOR_RETORNO_CENTRAL_20260917:
