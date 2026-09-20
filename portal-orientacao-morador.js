@@ -208,6 +208,13 @@
     return cpf && (cpf.closest('label') || cpf);
   }
 
+  function pinLoginTarget() {
+    var pin = el('portalResidentPinLogin');
+    if (!pin) return null;
+    var panel = pin.closest ? pin.closest('.tacs-pin-box') : null;
+    return panel || pin;
+  }
+
   function categoryTarget() {
     var category = el('category');
     return category && (category.closest('label') || category);
@@ -260,6 +267,12 @@
     if (!initialized) return;
     var category = el('category');
     var send = el('sendPetroleumCard') || el('send');
+    var pinTarget = pinLoginTarget();
+
+    if (pinTarget) {
+      placeArrow(pinTarget, 'Comece aqui: digite seu PIN de 4 números.', 'pin-login');
+      return;
+    }
 
     if (!residentReady) {
       placeArrow(cpfTarget(), 'Comece aqui: digite seu CPF ou Cartão SUS.', 'document');
@@ -302,7 +315,7 @@
 
   function installObservers() {
     if (!alertObserver) {
-      alertObserver = new MutationObserver(function () { decorateAlerts(); });
+      alertObserver = new MutationObserver(function () { decorateAlerts(); updateFlowGuide(); });
       alertObserver.observe(document.body, { childList: true, subtree: true });
     }
     var send = el('sendPetroleumCard') || el('send');
