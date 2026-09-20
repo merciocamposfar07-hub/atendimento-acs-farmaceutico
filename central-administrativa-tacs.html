@@ -2316,6 +2316,19 @@ function openProfilePage(){
   if(!page){page=document.createElement('section');page.id='cscProfilePage';page.className='csc-profile-page';main.appendChild(page)}
   var ctx=centralContextFromCache()||{},areas=Array.isArray(ctx.areas)?ctx.areas.filter(function(a){return a&&a.ativa!==false;}):[],tacs=Array.isArray(ctx.tacs)?ctx.tacs.filter(function(item){return !!text(item&&(item.nomeCompleto||item.nome));}):[],admins=Array.isArray(ctx.administradores)?ctx.administradores.filter(function(item){return !!text(item&&(item.nomeCompleto||item.nome));}):[];
   if(ctx.administradorAtual&&text(ctx.administradorAtual.nomeCompleto||ctx.administradorAtual.nome)&&!admins.some(function(a){return text(a.nomeCompleto||a.nome)===text(ctx.administradorAtual.nomeCompleto||ctx.administradorAtual.nome)}))admins.unshift(ctx.administradorAtual);
+  /* PERFIL_ADMIN_GERAL_REAL_V1:
+     Em sessões UBS/TACS o backend pode omitir a coleção administradores por isolamento,
+     embora o mesmo cadastro real combinado já esteja em ctx.tacs. A tela Perfil apenas
+     reaproveita esse cadastro para exibição; não cria usuário nem concede permissão. */
+  function perfilTemAdmin(p){return text(p).toUpperCase().replace(/[+\s-]+/g,'_').split('_').indexOf('ADMIN')!==-1||/^(ADMIN_GERAL|ADMINISTRADOR|ADMINISTRADOR_GERAL)$/.test(text(p).toUpperCase())}
+  function nomeAdminCanonico(v){var n=text(v);return n.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')==='MERCIO JOSE CAMPOS DOS SANTOS'?'Mércio José Campos dos Santos':n}
+  tacs.forEach(function(t){
+    if(!perfilTemAdmin(t&&t.perfil))return;
+    var nome=nomeAdminCanonico(t.nomeCompleto||t.nome);
+    if(!nome||admins.some(function(a){return nomeAdminCanonico(a.nomeCompleto||a.nome).toUpperCase()===nome.toUpperCase()}))return;
+    admins.push({nomeCompleto:nome,perfil:'ADMIN_GERAL',ativo:t.ativo!==false,origemCadastro:t.tacsId||''});
+  });
+  admins=admins.map(function(a){var x=Object.assign({},a);x.nomeCompleto=nomeAdminCanonico(x.nomeCompleto||x.nome);return x;});
   var units=[],seenUnits={};
   areas.forEach(function(a){var id=text(a&&a.unidadeId),name=text(a&&a.unidadeNome)||id;if(!id&&!name)return;var key=(id||name).toUpperCase();if(seenUnits[key])return;seenUnits[key]=true;units.push({unidadeId:id,unidadeNome:name||'Unidade de saúde'});});
   if(ctx.ubsAtual){var uid=text(ctx.ubsAtual.unidadeId),uname=text(ctx.ubsAtual.unidadeNome)||uid;if((uid||uname)&&!seenUnits[(uid||uname).toUpperCase()])units.unshift({unidadeId:uid,unidadeNome:uname||'Unidade de saúde'});}
@@ -2324,7 +2337,7 @@ function openProfilePage(){
     '<button type="button" class="csc-profile-card csc-profile-admin-toggle" aria-expanded="false" aria-controls="cscProfileAdminNames"><strong>Administrador geral</strong><span>Toque para ver os administradores cadastrados</span></button></div>'+
     '<div id="cscProfileAdminNames" class="csc-profile-list csc-profile-admin-names" hidden>';
   if(!admins.length)html+='<div class="csc-profile-empty">Administradores ainda não sincronizados.</div>';
-  admins.forEach(function(a){html+='<article class="csc-profile-card"><strong>'+escapeProfile(a.nomeCompleto||a.nome||'Administrador')+'</strong><span>'+escapeProfile(a.perfil||'ADMINISTRADOR GERAL')+(a.ativo===false?' • Inativo':' • Ativo')+'</span></article>'});
+  admins.forEach(function(a){var p=text(a.perfil).toUpperCase(),rotulo=perfilTemAdmin(p)?'Administrador Geral':(a.perfil||'Administrador Geral');html+='<article class="csc-profile-card"><strong>'+escapeProfile(nomeAdminCanonico(a.nomeCompleto||a.nome||'Administrador'))+'</strong><span>'+escapeProfile(rotulo)+(a.ativo===false?' • Inativo':' • Ativo')+'</span></article>'});
   html+='</div><h3>TACS cadastrados</h3><div class="csc-profile-list">';
   if(!tacs.length)html+='<div class="csc-profile-empty">TACS ainda não sincronizados.</div>';
   tacs.forEach(function(t){html+='<button type="button" class="csc-profile-card csc-profile-area-jump" data-area="'+escapeProfile(t.areaId||'')+'"><strong>'+escapeProfile(t.nomeCompleto||t.nome||t.tacsId||'TACS')+'</strong><span>'+escapeProfile(areaName(t.areaId))+(t.ativo===false?' • Inativo':' • Ativo')+'</span></button>'});
