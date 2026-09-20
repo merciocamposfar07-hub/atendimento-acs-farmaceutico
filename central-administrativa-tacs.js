@@ -911,7 +911,7 @@ function ensureTask17MoradoresAssets(callback){
   }
   task16LoadScript('cscModuleCoreTask17','/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260916-cache-persistente-v1',function(){return Boolean(window.ConectaModuleCoreV1)},function(ok){
     if(!ok){finish(false);return}
-    task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260918-moradores-app-like-instant-v4',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
+    task16LoadScript('cscMoradoresNativeTask17','/atendimento-acs-farmaceutico/conecta-moradores-native-v1.js?v=20260919-mascara-cpf-telefone-v5',function(){return Boolean(window.ConectaMoradoresNativeV1)},finish);
   });
 }
 function showNativeMoradores(title,routeId){

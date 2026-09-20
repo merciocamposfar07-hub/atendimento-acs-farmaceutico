@@ -9,6 +9,21 @@ var instance=null;
 
 function text(v){return String(v==null?'':v).trim()}
 function normArea(v){return text(v).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,64)}
+function formatCpfInput(v){
+  var d=String(v==null?'':v).replace(/\D/g,'').slice(0,11);
+  if(d.length>9)return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);
+  if(d.length>6)return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6);
+  if(d.length>3)return d.slice(0,3)+'.'+d.slice(3);
+  return d;
+}
+function formatPhoneInput(v){
+  var d=String(v==null?'':v).replace(/\D/g,'').slice(0,11);
+  if(!d)return '';
+  if(d.length<3)return '('+d;
+  if(d.length<=6)return '('+d.slice(0,2)+') '+d.slice(2);
+  if(d.length<=10)return '('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6);
+  return '('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7);
+}
 
 function template(areaId){
   return '<section class="csc-mor-native" data-role="root">'+
@@ -47,8 +62,8 @@ function template(areaId){
             '<div><label for="cpf">CPF</label><input id="cpf" class="field" inputmode="numeric" maxlength="14"></div>'+
             '<div><label for="cns">CNS</label><input id="cns" class="field" inputmode="numeric" maxlength="18"></div>'+
             '<div class="wide"><label for="address">Endereço</label><input id="address" class="field" maxlength="260"></div>'+
-            '<div><label for="cell">Celular</label><input id="cell" class="field" inputmode="tel"></div>'+
-            '<div><label for="contact">Telefone de contato</label><input id="contact" class="field" inputmode="tel"></div>'+
+            '<div><label for="cell">Celular</label><input id="cell" class="field" inputmode="tel" maxlength="15" placeholder="(00) 00000-0000"></div>'+
+            '<div><label for="contact">Telefone de contato</label><input id="contact" class="field" inputmode="tel" maxlength="15" placeholder="(00) 00000-0000"></div>'+
             '<div><label for="microarea">Microárea</label><input id="microarea" class="field" value="1"></div>'+
             '<div><label for="team">Equipe</label><input id="team" class="field" value="USF MATIAS CDS"></div>'+
             '<div class="wide"><label for="notes">Observações</label><textarea id="notes" class="field" maxlength="1000"></textarea></div>'+
@@ -136,7 +151,15 @@ function create(host,options){
   function bindDirty(){
     host.addEventListener('input',function(e){
       var form=e.target&&e.target.closest?e.target.closest('#residentForm'):null;
-      if(form&&e.target.type!=='hidden'&&!e.target.readOnly)setDirty(true);
+      if(!form)return;
+      if(e.target.id==='cpf'){
+        var cpf=formatCpfInput(e.target.value);
+        if(e.target.value!==cpf)e.target.value=cpf;
+      }else if(e.target.id==='cell'||e.target.id==='contact'){
+        var phone=formatPhoneInput(e.target.value);
+        if(e.target.value!==phone)e.target.value=phone;
+      }
+      if(e.target.type!=='hidden'&&!e.target.readOnly)setDirty(true);
     });
     host.addEventListener('change',function(e){
       var form=e.target&&e.target.closest?e.target.closest('#residentForm'):null;
