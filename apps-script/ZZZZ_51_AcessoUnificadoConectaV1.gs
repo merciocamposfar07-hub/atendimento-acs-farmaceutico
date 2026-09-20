@@ -7,7 +7,7 @@
  * Se o cadastro não puder ser conciliado, cria pendência e NÃO bloqueia o serviço.
  */
 var TACS_CONECTA_ACESSO_V1 = Object.freeze({
-  VERSAO:'1.0.3',
+  VERSAO:'1.0.4',
   ACCESS_SHEET:'TACS_CONECTA_ACESSO_MORADOR',
   PENDING_SHEET:'TACS_CONECTA_PENDENCIAS',
   TRUST_SHEET:'TACS_CONECTA_APARELHOS_CONFIAVEIS',
@@ -691,6 +691,12 @@ function conectaAcessoV1NucleoFamiliar_(v){
       if(peloCpf.length===1)titular=peloCpf[0];
     }
     if(!titular)return {familiaId:'',membros:[titularUnico]};
+    titularUnico.nome=conectaAcessoV1Texto_(titular.morador.nome)||titularUnico.nome;
+    titularUnico.nascimento=conectaAcessoV1Texto_(titular.morador.nascimento)||titularUnico.nascimento;
+    titularUnico.localidade=conectaAcessoV1Texto_(titular.morador.endereco||titular.morador.localidade||'');
+    titularUnico.documentoAcesso=conectaAcessoV1Texto_(titular.morador.cpf||v[3]);
+    titularUnico.cpf=titularUnico.documentoAcesso;
+    titularUnico.temDocumento=Boolean(titularUnico.documentoAcesso);
     var familia=typeof vinculoFamiliarNotifV1CodigoEndereco_==='function'?identificacaoFamiliarPublicaV1NormalizarFamilia_(vinculoFamiliarNotifV1CodigoEndereco_(titular.morador.endereco)):'';
     if(!familia)return {familiaId:'',membros:[titularUnico]};
     var contexto={perfil:'PUBLICO',operadorId:'PUBLICO',agenteId:area.agenteId,areaId:areaId,areaNome:area.areaNome,unidadeId:area.unidadeId,planilhaId:area.planilhaId,permissoes:[]};
