@@ -640,7 +640,7 @@ function maybeOpenUbsSolicitacoesDeepLink(){
 function stopUbsSolicitacoesWatch(){if(ubsSolicitacoesTimer){clearInterval(ubsSolicitacoesTimer);ubsSolicitacoesTimer=null}ubsSolicitacoesArea='';ubsSolicitacoesInFlight=false}
 function startUbsSolicitacoesWatch(){
   if(mode!=='ubs'||!ubsToken||!selectedAreaId){stopUbsSolicitacoesWatch();return}
-  registerUbsPush();
+  registerUbsPush();if(ubsSolicitacoesAckPending)acknowledgeUbsSolicitacoes();
   if(ubsSolicitacoesTimer&&ubsSolicitacoesArea===selectedAreaId){checkUbsSolicitacoes();return}
   stopUbsSolicitacoesWatch();ubsSolicitacoesArea=selectedAreaId;ensureUbsSolicitacoesUi();checkUbsSolicitacoes();ubsSolicitacoesTimer=setInterval(checkUbsSolicitacoes,12000)
 }
@@ -1810,6 +1810,7 @@ function loadContext(message){
     else{
       syncAppState();publishModuleCore();renderHealthInstant(selectedAreaId);scheduleHealthRefresh(false,1800);
     }
+    if(mode==='ubs'){registerUbsPush();maybeOpenUbsSolicitacoesDeepLink()}
     resumePendingModule();
   });
 }
