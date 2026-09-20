@@ -4,7 +4,7 @@ var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-
 var DEVICE_KEY='portalTacsDispositivoV1';
 var PROFILE_KEY='portalConectaMoradorQuickV1';
 var UBS_PROFILE_KEY='portalConectaUbsQuickV1';
-var RESIDENT_TOKEN_KEY='portalConectaMoradorTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1';
+var RESIDENT_TOKEN_KEY='portalConectaMoradorTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1',RESIDENT_BOOTSTRAP_KEY='portalConectaMoradorBootstrapV2';
 var AREA_KEY='portalTacsCentralAreaV1',LAST_ROLE_KEY='portalConectaLastRoleV1',TACS_QUICK_KEY='portalTacsAcessoRapidoV1';
 var TRUST_ADMIN_KEY='portalConectaRecoveryTrustV1:admin',TRUST_TACS_KEY='portalConectaRecoveryTrustV1:tacs',TRUST_UBS_KEY='portalConectaRecoveryTrustV1:ubs';
 var RESIDENT_CORE_REAL='MORADOR_REAL',RESIDENT_CORE_DIAGNOSTIC='DIAGNOSTICO_ADMINISTRATIVO';
@@ -39,8 +39,8 @@ function device(){var d='';try{d=localStorage.getItem(DEVICE_KEY)||''}catch(e){}
 function profile(){try{var p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');return p&&/^cmq1\./.test(text(p.quickKey))?p:null}catch(e){return null}}
 function ubsProfile(){try{var p=JSON.parse(localStorage.getItem(UBS_PROFILE_KEY)||'null');return p&&text(p.cadastroId)&&trustKey('UBS')?p:null}catch(e){return null}}
 function rememberRole(role){role=text(role).toUpperCase();if(['ADMIN','TACS','MORADOR','UBS'].indexOf(role)===-1)return;try{localStorage.setItem(LAST_ROLE_KEY,role)}catch(e){}}
-function saveProfile(r){try{localStorage.setItem(PROFILE_KEY,JSON.stringify({quickKey:r.quickKey,areaId:r.areaId||'',areaNome:r.areaNome||'',nome:r.nome||''}));rememberRole('MORADOR')}catch(e){}}
-function saveSession(r){try{if(r&&r.token)sessionStorage.setItem(RESIDENT_TOKEN_KEY,r.token);if(r&&r.areaId)localStorage.setItem(AREA_KEY,r.areaId)}catch(e){}}
+function saveProfile(r){try{var atual=profile()||{};localStorage.setItem(PROFILE_KEY,JSON.stringify({quickKey:r.quickKey||atual.quickKey||'',areaId:r.areaId||atual.areaId||'',areaNome:r.areaNome||atual.areaNome||'',nome:r.nome||atual.nome||'',cpf:r.cpf||atual.cpf||'',nascimento:r.nascimento||atual.nascimento||'',familiaId:r.familiaId||atual.familiaId||''}));rememberRole('MORADOR')}catch(e){}}
+function saveSession(r){try{if(r&&r.token)sessionStorage.setItem(RESIDENT_TOKEN_KEY,r.token);if(r&&r.areaId)localStorage.setItem(AREA_KEY,r.areaId);if(r)sessionStorage.setItem(RESIDENT_BOOTSTRAP_KEY,JSON.stringify({perfil:'MORADOR',areaId:r.areaId||'',areaNome:r.areaNome||'',cpf:r.cpf||'',nome:r.nome||'',nascimento:r.nascimento||'',endereco:r.endereco||r.localidade||'',notificacoesAtivas:Boolean(r.notificacoesAtivas),silencioso:Boolean(r.silencioso),familiaId:r.familiaId||'',familia:Array.isArray(r.familia)?r.familia:[]}))}catch(e){}}
 function saveUbsSession(r){try{if(r&&r.token)sessionStorage.setItem(UBS_TOKEN_KEY,r.token)}catch(e){}}
 function trustStorageKey(role){role=text(role).toUpperCase();return role==='TACS'?TRUST_TACS_KEY:role==='UBS'?TRUST_UBS_KEY:TRUST_ADMIN_KEY}
 function trustKey(role){try{return text(localStorage.getItem(trustStorageKey(role))||'')}catch(e){return''}}
@@ -424,8 +424,9 @@ function loginResident(){
  if(state.coreMode===RESIDENT_CORE_DIAGNOSTIC||adminResidentDiagnostic()){renderResidentStart();setStatus('Modo diagnóstico administrativo não assume sessão de Morador.','warn');return}
  var p=profile(),pin=digits(el('cscResidentPin')&&el('cscResidentPin').value);if(!p){renderResidentStart();return}
  if(!/^\d{4}$/.test(pin)){setStatus('Digite seu PIN de 4 números.','err');return}
- setStatus('Validando seu PIN…','warn');
- post('conecta_morador_login_pin',{quickKey:p.quickKey,pin:pin,dispositivo:device()}).then(function(r){saveSession(r);setStatus('Acesso validado.','ok');var hook=window.ConectaMoradorPinLocalV2;return Promise.resolve(hook&&typeof hook.registrar==='function'?hook.registrar(pin,r):null).then(function(){openResidentPortal(r,!r.notificacoesAtivas)})}).catch(function(e){setStatus(e.message,'err')});
+ setStatus('Aguarde enquanto seus dados carregam…','warn');
+ var loginBtn=el('cscResidentLogin');if(loginBtn){loginBtn.disabled=true;loginBtn.textContent='Aguarde…'}
+ post('conecta_morador_login_pin',{quickKey:p.quickKey,pin:pin,dispositivo:device()}).then(function(r){saveSession(r);setStatus('Acesso validado.','ok');var hook=window.ConectaMoradorPinLocalV2;return Promise.resolve(hook&&typeof hook.registrar==='function'?hook.registrar(pin,r):null).then(function(){openResidentPortal(r,!r.notificacoesAtivas)})}).catch(function(e){setStatus(e.message,'err');var b=el('cscResidentLogin');if(b){b.disabled=false;b.textContent='Entrar'}});
 }
 function openResidentPortal(r,onboarding){
  var area=encodeURIComponent(r.areaId||profile()&&profile().areaId||'JAPARANDUBA');
