@@ -770,7 +770,7 @@
 
     ctx.fillStyle = '#70e39f';
     ctx.font = '900 34px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('PORTAL CSC • CONECTA SAÚDE COMUNITÁRIA', 62, 92);
+    ctx.fillText('PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA', 62, 92);
 
     ctx.fillStyle = '#ffffff';
     ctx.font = '900 64px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
@@ -865,7 +865,7 @@
           return navigator.share({
             title: 'Solicitação do morador',
             text:
-              'Solicitação do Portal CSC — Conecta Saúde Comunitária • área de ' +
+              'Solicitação do Portal CSC - Conecta Saúde Comunitária • área de ' +
               TACS_NAME +
               ' — Unidade de Saúde Posto Matias.',
             files: [file]

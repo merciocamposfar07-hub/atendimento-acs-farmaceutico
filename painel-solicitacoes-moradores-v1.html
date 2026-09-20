@@ -44,11 +44,11 @@ function render(){
  if(!shown.length){list.innerHTML='<div class="empty">Nenhuma solicitação neste filtro.</div>';return}
  list.innerHTML=shown.map(function(x){
    var s=effectiveStatus(x),expired=s==='EXPIRADA',serviceDate=x.dataServico?dateBr(x.dataServico):'',expiry=x.expiraEmTexto?esc(x.expiraEmTexto):'';
-   return '<article class="request '+(expired?'expired':'')+'" data-id="'+esc(x.id)+'"><div class="top"><div><div class="request-brand">PORTAL CSC • CONECTA SAÚDE COMUNITÁRIA</div><div class="request-title">SOLICITAÇÃO DO MORADOR</div></div><span class="pill '+s+'">'+esc(statusText(s))+'</span></div>'+
+   return '<article class="request '+(expired?'expired':'')+'" data-id="'+esc(x.id)+'"><div class="top"><div><div class="request-brand">PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA</div><div class="request-title">SOLICITAÇÃO DO MORADOR</div></div><span class="pill '+s+'">'+esc(statusText(s))+'</span></div>'+
    (expired?'<div class="expired-banner">Solicitação Expirada!</div>':'')+
    '<div class="request-info"><div class="request-field"><small>Área de atendimento</small><strong>'+esc(x.areaNome||area())+'</strong></div>'+
    '<div class="request-field"><small>TACS responsável</small><strong>'+esc(x.tacsResponsavel||'TACS responsável pela área')+'</strong></div>'+ 
-   '<div class="request-field"><small>Unidade de saúde</small><strong>'+esc(x.unidadeNome||x.unidadeId||'Unidade vinculada à área')+'</strong></div>'+
+   '<div class="request-field"><small>Unidade de saúde</small><strong>'+esc(x.unidadeNome||(x.unidadeId==='POSTO_MATIAS'?'Unidade de Saúde Posto Matias':x.unidadeId)||'Unidade vinculada à área')+'</strong></div>'+
    '<div class="request-field"><small>Serviço solicitado</small><strong>'+esc(x.categoria||'Solicitação à UBS')+'</strong></div>'+
    '<div class="request-field"><small>Nome completo</small><strong>'+esc(x.morador||'Morador')+'</strong></div>'+
    '<div class="request-field"><small>Data e horário do envio</small><strong>'+esc(x.criadoEm||'Não informado')+'</strong></div>'+

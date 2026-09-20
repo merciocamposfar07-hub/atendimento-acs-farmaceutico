@@ -607,7 +607,7 @@
 
     ctx.fillStyle = '#8df0b4';
     ctx.font = '900 36px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('PORTAL CSC • CONECTA SAÚDE COMUNITÁRIA', 60, 82);
+    ctx.fillText('PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA', 60, 82);
     ctx.fillStyle = '#ffffff';
     ctx.font = '900 66px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
     ctx.fillText('SOLICITAÇÃO DO MORADOR', 60, 165);
@@ -671,7 +671,7 @@
     ctx.fillText('Código: ' + data.code, 60, 1810);
     ctx.fillStyle = '#d8e7ee';
     ctx.font = '700 26px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('Gerado pelo Portal CSC • ' + data.areaName, 60, 1855);
+    ctx.fillText('Gerado pelo Portal CSC - ' + data.areaName, 60, 1855);
 
     return new Promise(function (resolve, reject) {
       canvas.toBlob(function (blob) {
