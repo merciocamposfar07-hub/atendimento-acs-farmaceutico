@@ -1,16 +1,16 @@
 /**
  * ZZZZ_52_SolicitacoesMoradoresUbsV1.gs
- * Conecta Saúde Comunitária — Solicitações dos moradores para a UBS V1.0.0
+ * Conecta Saúde Comunitária — Solicitações dos moradores para a UBS V1.1.0
  *
  * Fluxo:
  * - o Portal CSC registra a solicitação no mesmo toque que abre o WhatsApp do TACS;
  * - a UBS lê uma fila territorial própria pela Central;
- * - solicitações odontológicas expiram exatamente na data/hora de encerramento da vaga;
- * - solicitações sem data agendada expiram após 7 dias;
+ * - consultas e vagas expiram exatamente na data/hora final do atendimento publicado;
+ * - solicitações administrativas sem data de atendimento não recebem prazo arbitrário;
  * - expiração é recalculada em toda leitura/resumo e nunca apaga o histórico.
  */
 var TACS_SOLICITACOES_UBS_V1=Object.freeze({
-  VERSAO:'1.0.0',
+  VERSAO:'1.1.0',
   SHEET:'TACS_SOLICITACOES_MORADORES',
   HEADERS:Object.freeze([
     'ID','AREA_ID','AREA_NOME','UNIDADE_ID','CODIGO_SOLICITACAO','MORADOR_ID',
@@ -21,7 +21,6 @@ var TACS_SOLICITACOES_UBS_V1=Object.freeze({
   STATUSES:Object.freeze(['NOVA','EM_ATENDIMENTO','CONCLUIDA','EXPIRADA']),
   RESULT_PREFIX:'tacs_solicitacoes_ubs_v1_',
   RESULT_SECONDS:300,
-  DEFAULT_EXPIRY_DAYS:7,
   FUSO:'America/Recife'
 });
 
@@ -113,12 +112,10 @@ function solicitacoesUbsV1Hora_(v){
   var m=solicitacoesUbsV1Texto_(v).match(/^([01]\d|2[0-3]):([0-5]\d)/);
   return m?m[1]+':'+m[2]:'';
 }
-function solicitacoesUbsV1ExpiraEm_(dataServico,hora,agora){
-  if(dataServico){
-    var h=hora||'23:59';
-    try{return Utilities.parseDate(dataServico+' '+h,TACS_SOLICITACOES_UBS_V1.FUSO,'yyyy-MM-dd HH:mm');}catch(e){}
-  }
-  return new Date((agora||new Date()).getTime()+TACS_SOLICITACOES_UBS_V1.DEFAULT_EXPIRY_DAYS*86400000);
+function solicitacoesUbsV1ExpiraEm_(dataServico,hora){
+  if(!dataServico)return null;
+  var h=hora||'23:59';
+  try{return Utilities.parseDate(dataServico+' '+h,TACS_SOLICITACOES_UBS_V1.FUSO,'yyyy-MM-dd HH:mm');}catch(e){return null;}
 }
 function solicitacoesUbsV1Id_(){
   return 'SOL-'+Utilities.formatDate(new Date(),TACS_SOLICITACOES_UBS_V1.FUSO,'yyyyMMdd')+'-'+Utilities.getUuid().replace(/-/g,'').slice(0,8).toUpperCase();
@@ -144,14 +141,14 @@ function solicitacoesUbsV1CriarPublica_(p){
   if(!categoria)throw new Error('Serviço solicitado não informado.');
   var descricao=solicitacoesUbsV1Texto_(p.descricao||p.mensagem||categoria).slice(0,1800);
   var tipoVaga=solicitacoesUbsV1Texto_(p.tipoVaga).toUpperCase().replace(/[^A-Z_]/g,'').slice(0,40);
-  var dataServico=solicitacoesUbsV1Data_(p.dataServico),horaExp=solicitacoesUbsV1Hora_(p.horarioExpiracao),agora=new Date(),expira=solicitacoesUbsV1ExpiraEm_(dataServico,horaExp,agora);
-  var status=expira.getTime()<=agora.getTime()?'EXPIRADA':'NOVA';
+  var dataServico=solicitacoesUbsV1Data_(p.dataServico),horaExp=solicitacoesUbsV1Hora_(p.horarioExpiracao),agora=new Date(),expira=solicitacoesUbsV1ExpiraEm_(dataServico,horaExp);
+  var status=expira&&expira.getTime()<=agora.getTime()?'EXPIRADA':'NOVA';
   var moradorId=solicitacoesUbsV1Texto_((achado.meta&&achado.meta.moradorId)||morador.idPortal||morador.id||achado.chave);
   var row=[
     solicitacoesUbsV1Id_(),contexto.areaId,contexto.areaNome,contexto.unidadeId||'',codigo,moradorId,
     solicitacoesUbsV1Texto_(morador.nome),doc,solicitacoesUbsV1Texto_(morador.nascimento),
     solicitacoesUbsV1Texto_(morador.endereco||p.localidade),solicitacoesUbsV1Familia_(morador),
-    categoria,descricao,tipoVaga,dataServico,horaExp,expira,status,agora,agora,
+    categoria,descricao,tipoVaga,dataServico,horaExp,expira||'',status,agora,agora,
     solicitacoesUbsV1Texto_(p.origem||'PORTAL_CSC_WHATSAPP').slice(0,80)
   ];
   var lock=LockService.getScriptLock();if(!lock.tryLock(10000))throw new Error('A fila da UBS está recebendo outra solicitação. Tente novamente.');
@@ -188,8 +185,8 @@ function solicitacoesUbsV1MaskDoc_(v){var d=String(v==null?'':v).replace(/\D/g,'
 function solicitacoesUbsV1Item_(r){
   var st=solicitacoesUbsV1Texto_(r[17]).toUpperCase();
   return {
-    id:solicitacoesUbsV1Texto_(r[0]),codigoSolicitacao:solicitacoesUbsV1Texto_(r[4]),moradorId:solicitacoesUbsV1Texto_(r[5]),
-    morador:solicitacoesUbsV1Texto_(r[6]),documento:solicitacoesUbsV1MaskDoc_(r[7]),nascimento:solicitacoesUbsV1Texto_(r[8]),
+    id:solicitacoesUbsV1Texto_(r[0]),areaNome:solicitacoesUbsV1Texto_(r[2]),unidadeId:solicitacoesUbsV1Texto_(r[3]),codigoSolicitacao:solicitacoesUbsV1Texto_(r[4]),moradorId:solicitacoesUbsV1Texto_(r[5]),
+    morador:solicitacoesUbsV1Texto_(r[6]),documento:solicitacoesUbsV1Texto_(r[7]),nascimento:solicitacoesUbsV1Texto_(r[8]),
     localidade:solicitacoesUbsV1Texto_(r[9]),familiaId:solicitacoesUbsV1Texto_(r[10]),categoria:solicitacoesUbsV1Texto_(r[11]),
     descricao:solicitacoesUbsV1Texto_(r[12]),tipoVaga:solicitacoesUbsV1Texto_(r[13]),dataServico:solicitacoesUbsV1Texto_(r[14]),
     horarioExpiracao:solicitacoesUbsV1Texto_(r[15]),expiraEm:solicitacoesUbsV1Iso_(r[16]),expiraEmTexto:solicitacoesUbsV1FormatDate_(r[16]),

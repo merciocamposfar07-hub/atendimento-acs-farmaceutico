@@ -607,7 +607,7 @@
 
     ctx.fillStyle = '#8df0b4';
     ctx.font = '900 36px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('PORTAL TACS • SOLICITAÇÃO', 60, 82);
+    ctx.fillText('PORTAL CSC • CONECTA SAÚDE COMUNITÁRIA', 60, 82);
     ctx.fillStyle = '#ffffff';
     ctx.font = '900 66px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
     ctx.fillText('SOLICITAÇÃO DO MORADOR', 60, 165);
@@ -671,7 +671,7 @@
     ctx.fillText('Código: ' + data.code, 60, 1810);
     ctx.fillStyle = '#d8e7ee';
     ctx.font = '700 26px -apple-system,BlinkMacSystemFont,Segoe UI,Arial';
-    ctx.fillText('Gerado pelo Portal TACS • ' + data.areaName, 60, 1855);
+    ctx.fillText('Gerado pelo Portal CSC • ' + data.areaName, 60, 1855);
 
     return new Promise(function (resolve, reject) {
       canvas.toBlob(function (blob) {
@@ -696,13 +696,14 @@
           }
         });
         var data = requestData(identity);
+        if(window.PortalSolicitacoesUbsV1&&typeof window.PortalSolicitacoesUbsV1.registrar==='function')window.PortalSolicitacoesUbsV1.registrar({codigoSolicitacao:data.code,categoria:data.category,descricao:data.description});
         return createPetroleumCard(data).then(function (blob) {
-          var fileName = 'solicitacao-' + normalizeArea(identity.areaId).toLowerCase() + '-portal-tacs.png';
+          var fileName = 'solicitacao-' + normalizeArea(identity.areaId).toLowerCase() + '-portal-csc.png';
           var file = new File([blob], fileName, { type: 'image/png' });
           if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
             return navigator.share({
               title: 'Solicitação do morador',
-              text: 'Solicitação do Portal TACS • ' + identity.areaName + ' • TACS ' + identity.tacsName + '.',
+              text: 'Solicitação do Portal CSC — Conecta Saúde Comunitária • ' + identity.areaName + ' • TACS ' + identity.tacsName + '.',
               files: [file]
             });
           }
