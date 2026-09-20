@@ -164,25 +164,27 @@ function warmFamilyMembers(members){
 function applyFamilyMemberData(r,name,birth,locality){
  applyResidentInstant(r.documentoAcesso,{nome:r.nome||name,nascimento:r.nascimento||birth,localidade:r.localidade||locality||'',areaId:r.areaId||(resident&&resident.areaId)||areaId()},r.familiaId||(resident&&resident.familiaId)||'');
 }
+function viewportY(){return window.pageYOffset||document.documentElement.scrollTop||document.body.scrollTop||0}
+function restoreViewport(y){var run=function(){try{window.scrollTo(0,y)}catch(e){}};if(typeof requestAnimationFrame==='function'){requestAnimationFrame(function(){run();requestAnimationFrame(run)})}else setTimeout(run,0)}
 function selectFamilyMember(button){
- var tok=text(button.getAttribute('data-csc-family-token')),name=text(button.getAttribute('data-csc-family-name')),birth=text(button.getAttribute('data-csc-family-birth')),locality=text(button.getAttribute('data-csc-family-locality')),has=button.getAttribute('data-csc-family-hasdoc')==='1',localDoc=digits(button.getAttribute('data-csc-family-doc')||'');
+ var fixedY=viewportY(),tok=text(button.getAttribute('data-csc-family-token')),name=text(button.getAttribute('data-csc-family-name')),birth=text(button.getAttribute('data-csc-family-birth')),locality=text(button.getAttribute('data-csc-family-locality')),has=button.getAttribute('data-csc-family-hasdoc')==='1',localDoc=digits(button.getAttribute('data-csc-family-doc')||'');
  /* Resposta tátil/visual primeiro: seleção e dados locais conhecidos aparecem já no toque. */
  document.querySelectorAll('.csc-family-person').forEach(function(x){x.classList.toggle('active',x===button)});
  setField('name',name);setField('birth',birth);if(locality)setField('locality',locality);
- if(localDoc.length===11||localDoc.length===15){applyResidentInstant(localDoc,{nome:name,nascimento:birth,localidade:locality,areaId:(resident&&resident.areaId)||areaId()},(resident&&resident.familiaId)||'');return}
+ if(localDoc.length===11||localDoc.length===15){applyResidentInstant(localDoc,{nome:name,nascimento:birth,localidade:locality,areaId:(resident&&resident.areaId)||areaId()},(resident&&resident.familiaId)||'');restoreViewport(fixedY);return}
  if(!has||!tok){
   if(tok){promptMemberCpf(button,tok,name,birth);return}
-  showPortalToast('Este integrante ainda não possui documento disponível. A solicitação permanece acessível e o cadastro poderá ser regularizado pelo TACS.');
+  showPortalToast('Este integrante ainda não possui documento disponível. A solicitação permanece acessível e o cadastro poderá ser regularizado pelo TACS.');restoreViewport(fixedY);
   return
  }
  var key=familyMemberKey(tok),cached=familyMemberCache[key];
- if(cached){applyFamilyMemberData(cached,name,birth,locality);return}
+ if(cached){applyFamilyMemberData(cached,name,birth,locality);restoreViewport(fixedY);return}
  button.setAttribute('aria-busy','true');
  resolveFamilyMember(tok).then(function(r){
   applyFamilyMemberData(r,name,birth,locality);
  }).catch(function(e){
   showPortalToast(e.message);
- }).finally(function(){button.removeAttribute('aria-busy')});
+ }).finally(function(){button.removeAttribute('aria-busy');restoreViewport(fixedY)});
 }
 function promptMemberCpf(button,tok,name,birth){
  var box=el('cscFamilySession');if(!box)return;
@@ -288,6 +290,22 @@ function install(){
   else showPortalToast('Sua sessão foi preservada. O servidor ainda não confirmou os dados; tente novamente sem refazer o PIN.');
  });
 }
+function openInline(r,confirmed){
+ if(!r||typeof r!=='object')return false;
+ var y=viewportY();
+ try{if(document.activeElement&&typeof document.activeElement.blur==='function')document.activeElement.blur()}catch(e){}
+ if(r.token){token=text(r.token);try{sessionStorage.setItem(activeTokenKey(),token)}catch(e){}}
+ r=mergeResidentFamily(r,readBootstrap());
+ try{sessionStorage.setItem(activeBootstrapKey(),JSON.stringify(r))}catch(e){}
+ applyResident(r,confirmed!==true);
+ var pinBox=el('portalResidentPinV1');if(pinBox){pinBox.hidden=true;pinBox.innerHTML=''}
+ restoreViewport(y);
+ return true;
+}
+window.ConectaMoradorSessionV1={
+ openInline:openInline,
+ refresh:function(r){return openInline(r,true)}
+};
 window.OneSignalDeferred=window.OneSignalDeferred||[];
 window.OneSignalDeferred.push(function(os){oneSignal=os});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
