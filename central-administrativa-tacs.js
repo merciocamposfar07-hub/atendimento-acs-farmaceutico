@@ -512,11 +512,17 @@ var ubsSolicitacoesTimer=null,ubsSolicitacoesInFlight=false,ubsSolicitacoesArea=
 var ubsPushOneSignal=null,ubsPushRegistering=false,ubsPushLastRegistration='',ubsPushInitStarted=false,ubsSolicitacoesDeepLinkHandled=false;
 var UBS_PUSH_APP_ID='e2294b98-c72b-4f8c-a055-de28979676dc',UBS_PUSH_SAFARI_ID='web.onesignal.auto.4bead971-106d-461b-853f-83aecbd62d40';
 function ubsSolicitacoesMarkerKey(a){return 'portalConectaSolicitacoesUbsUltimaV2:'+normArea(a)}
+function ubsSolicitacoesCountKey(a){return 'portalConectaSolicitacoesUbsContadorV1:'+normArea(a)}
 function ensureUbsSolicitacoesUi(){
   var style=el('cscUbsSolicitacoesAlertStyle');
   if(!style){style=document.createElement('style');style.id='cscUbsSolicitacoesAlertStyle';style.textContent='#moduleGrid .module[data-module="solicitacoes"]{position:relative}.csc-sol-badge{position:absolute;right:12px;top:10px;z-index:3;display:grid;place-items:center;min-width:27px;height:27px;padding:0 7px;border:2px solid #fff;border-radius:999px;background:#b53645;color:#fff;font-size:.78rem;font-weight:950;box-shadow:0 3px 9px rgba(0,0,0,.28)}.csc-sol-alert{position:fixed;z-index:2147482500;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top));max-width:680px;margin:auto;padding:14px;border:2px solid #83efa9;border-radius:20px;background:#102d46;color:#fff;box-shadow:0 18px 48px rgba(0,0,0,.42)}.csc-sol-alert strong{display:block;font-size:1.05rem}.csc-sol-alert p{margin:5px 0 10px;color:#dcebf2}.csc-sol-alert-actions{display:grid;grid-template-columns:1fr auto;gap:8px}.csc-sol-alert button{min-height:44px;border:0;border-radius:13px;padding:9px 12px;font-weight:900}.csc-sol-open{background:#176c94;color:#fff}.csc-sol-close{background:#263f51;color:#fff}';document.head.appendChild(style)}
-  var btn=document.querySelector('#moduleGrid .module[data-module="solicitacoes"]');
-  if(btn&&!btn.querySelector('.csc-sol-badge')){var b=document.createElement('span');b.className='csc-sol-badge';b.hidden=true;b.setAttribute('aria-label','Solicitações novas não visualizadas');btn.appendChild(b)}
+  var btn=document.querySelector('#moduleGrid .module[data-module="solicitacoes"]'),b=el('cscSolicitacoesBadge');
+  if(btn&&!b){b=document.createElement('span');b.id='cscSolicitacoesBadge';b.className='csc-sol-badge';b.hidden=true;b.setAttribute('aria-label','Solicitações novas não visualizadas');btn.appendChild(b)}
+}
+function renderCachedUbsSolicitacoesBadge(){
+  ensureUbsSolicitacoesUi();
+  var n=0;try{n=Math.max(0,Number(localStorage.getItem(ubsSolicitacoesCountKey(selectedAreaId))||0))}catch(e){}
+  var b=el('cscSolicitacoesBadge');if(!b)return;b.hidden=n<1;b.textContent=n>99?'99+':String(n)
 }
 function unlockUbsSolicitacoesAudio(){
   if(ubsSolicitacoesAudio)return;
@@ -532,10 +538,12 @@ function playUbsSolicitacoesSound(){
 }
 function renderUbsSolicitacoesBadge(result){
   ensureUbsSolicitacoesUi();
-  var btn=document.querySelector('#moduleGrid .module[data-module="solicitacoes"]'),b=btn&&btn.querySelector('.csc-sol-badge'),n=Math.max(0,Number(result&&result.naoVistas||0));
-  if(!b)return;
+  var b=el('cscSolicitacoesBadge'),n=Math.max(0,Number(result&&result.naoVistas||0));
   if(shellActiveModule==='solicitacoes'||ubsSolicitacoesAckPending)n=0;
-  b.hidden=n<1;b.textContent=n>99?'99+':String(n)
+  try{localStorage.setItem(ubsSolicitacoesCountKey(selectedAreaId),String(n))}catch(e){}
+  if(!b)return;
+  b.hidden=n<1;b.textContent=n>99?'99+':String(n);
+  b.setAttribute('aria-label',n===1?'1 nova solicitação':n+' novas solicitações')
 }
 function closeUbsPushNotifications(){
   try{
@@ -573,6 +581,7 @@ function acknowledgeUbsSolicitacoes(){
   clearUbsSolicitacoesAlert();ubsSolicitacoesAckPending=true;
   if(ubsSolicitacoesLatestUnreadKey)try{localStorage.setItem(ubsSolicitacoesMarkerKey(selectedAreaId),ubsSolicitacoesLatestUnreadKey)}catch(e){}
   renderUbsSolicitacoesBadge({naoVistas:0});
+  try{localStorage.setItem(ubsSolicitacoesCountKey(selectedAreaId),'0')}catch(e){}
   if(mode!=='ubs'||!ubsToken||!selectedAreaId)return;
   ubsSolicitacoesPostAction('admin_solicitacoes_ubs_vistas',{},function(){ubsSolicitacoesAckPending=false;renderUbsSolicitacoesBadge({naoVistas:0})})
 }
@@ -622,7 +631,7 @@ function initUbsPush(){
   window.OneSignalDeferred=window.OneSignalDeferred||[];
   window.OneSignalDeferred.push(async function(OneSignal){
     try{
-      await OneSignal.init({appId:UBS_PUSH_APP_ID,safari_web_id:UBS_PUSH_SAFARI_ID,serviceWorkerPath:'/atendimento-acs-farmaceutico/push/OneSignalSDKWorker.js',serviceWorkerParam:{scope:'/atendimento-acs-farmaceutico/push/'},autoResubscribe:true,notifyButton:{enable:false},allowLocalhostAsSecureOrigin:false});
+      await OneSignal.init({appId:UBS_PUSH_APP_ID,safari_web_id:UBS_PUSH_SAFARI_ID,serviceWorkerPath:'/atendimento-acs-farmaceutico/push/OneSignalSDKWorker.js',serviceWorkerParam:{scope:'/atendimento-acs-farmaceutico/push/'},autoResubscribe:true,notifyButton:{enable:false},allowLocalhostAsSecureOrigin:false,siteName:'PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA'});
       ubsPushOneSignal=OneSignal;
       var push=OneSignal.User&&OneSignal.User.PushSubscription;
       if(push&&typeof push.addEventListener==='function')push.addEventListener('change',function(){ubsPushLastRegistration='';setTimeout(registerUbsPush,250)});
@@ -642,7 +651,7 @@ function startUbsSolicitacoesWatch(){
   if(mode!=='ubs'||!ubsToken||!selectedAreaId){stopUbsSolicitacoesWatch();return}
   registerUbsPush();if(ubsSolicitacoesAckPending)acknowledgeUbsSolicitacoes();
   if(ubsSolicitacoesTimer&&ubsSolicitacoesArea===selectedAreaId){checkUbsSolicitacoes();return}
-  stopUbsSolicitacoesWatch();ubsSolicitacoesArea=selectedAreaId;ensureUbsSolicitacoesUi();checkUbsSolicitacoes();ubsSolicitacoesTimer=setInterval(checkUbsSolicitacoes,12000)
+  stopUbsSolicitacoesWatch();ubsSolicitacoesArea=selectedAreaId;ensureUbsSolicitacoesUi();renderCachedUbsSolicitacoesBadge();checkUbsSolicitacoes();ubsSolicitacoesTimer=setInterval(checkUbsSolicitacoes,12000)
 }
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&mode==='ubs'){registerUbsPush();checkUbsSolicitacoes()}});
 initUbsPush();
@@ -873,7 +882,7 @@ function moduleUrl(name,options){
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-suporte-ubs-diag-v1';
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260919-recados-snapshot-completo-v5';
-  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-cache-first-v8';
+  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-card-dados-v9';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;

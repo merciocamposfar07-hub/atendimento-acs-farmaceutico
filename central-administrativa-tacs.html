@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#073a55">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<meta name="apple-mobile-web-app-title" content="Admin Conecta Saúde Comunitária">
+<meta name="apple-mobile-web-app-title" content="PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA">
 <link rel="icon" type="image/png" href="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260918-app-identidade-csc-v1">
 <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260918-app-identidade-csc-v1">
-<link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-central-admin.webmanifest?v=20260918-app-identidade-csc-v1">
+<link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-central-admin.webmanifest?v=20260920-portal-csc-identidade-v2">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
-<title>Admin Conecta Saúde Comunitária</title>
+<title>PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA</title>
 <script id="cscCanonicalPrepaintBootV1">
 /* CORRECAO_CIRURGICA_PREPAINT_CANONICO_V1
    Define o estado canônico antes do primeiro paint. Não autentica, não consulta backend
@@ -2919,7 +2919,7 @@ html body .viewer.csc-native-viewer>.viewer-platform-footer{
 <div id="moduleGrid" class="module-grid">
 <button class="module available" data-module="moradores" data-permission="MORADORES_LER" type="button"><span class="icon">👥</span><div><strong>Moradores</strong><span>Buscar, cadastrar e atualizar moradores da área.</span></div></button>
 <button class="module available" data-module="suporte" data-permission="MORADORES_LER" type="button"><span class="icon">🛟</span><div><strong>Suporte aos moradores</strong><span>Diagnosticar aparelhos e orientar reparos sem alterar os vínculos existentes.</span></div></button>
-<button class="module available" data-module="solicitacoes" data-ubs-only="true" type="button"><span class="icon">📥</span><div><strong>Solicitações dos moradores</strong><span>Novas solicitações, andamento e expiração automática.</span></div></button>
+<button class="module available" data-module="solicitacoes" data-ubs-only="true" type="button"><span class="icon">📥</span><div><strong>Solicitações dos moradores</strong><span>Novas solicitações, andamento e expiração automática.</span></div><span id="cscSolicitacoesBadge" class="csc-sol-badge" hidden aria-label="Solicitações novas não visualizadas">0</span></button>
 <button class="module available" data-module="recados" data-permission="PUBLICACOES_GERENCIAR" type="button"><span class="icon">📢</span><div><strong>Recados e campanhas</strong><span>Publicar informações e acompanhar os avisos da área.</span></div></button>
 <button class="module available" data-module="agendas" data-permission="AGENDAS_GERENCIAR" type="button"><span class="icon">📅</span><div><strong>Agendas e vagas</strong><span>Dias, horários, vagas e situação dos atendimentos.</span></div></button>
 <button class="module available" data-module="profissionais" data-permission="PROFISSIONAIS_GERENCIAR" type="button"><span class="icon">🩺</span><div><strong>Profissionais e serviços</strong><span>Cadastro e disponibilidade dos profissionais da unidade.</span></div></button>
@@ -2931,7 +2931,7 @@ html body .viewer.csc-native-viewer>.viewer-platform-footer{
 <div class="actions csc-logout-actions"><button id="logout" class="btn red csc-logout-button" type="button">Logoff / Encerrar sessão</button></div>
 </section>
 </main>
-<footer>Portal TACS • Central Administrativa</footer>
+<footer>PORTAL CSC - CONECTA SAÚDE COMUNITÁRIA</footer>
 <div id="viewer" class="viewer" hidden><div class="viewer-bar" role="banner"><img class="viewer-official-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=69a1f1ba696e" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="viewer-heading"><small>CONECTA SAÚDE COMUNITÁRIA</small><div id="viewerTitle" class="viewer-title">Painel</div></div><button id="viewerBack" class="viewer-back" type="button" aria-label="Voltar à Central">‹</button></div><div id="nativeModuleHost" class="csc-native-module-host" hidden></div><iframe id="viewerFrame" title="Painel administrativo" src="about:blank"></iframe><footer id="viewerFooter" class="viewer-platform-footer" hidden><strong>Conecta Saúde Comunitária — tecnologia para tornar o acesso à saúde comunitária mais simples, organizado e acessível.</strong><small>Plataforma institucional de saúde comunitária.</small></footer></div>
 <script src="/atendimento-acs-farmaceutico/admin-warmup.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-pin-local-v2.js?v=69a1f1ba696e"></script>
@@ -2969,7 +2969,7 @@ html body .viewer.csc-native-viewer>.viewer-platform-footer{
   },true);
 })();
 </script>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260920-revert-cachefirst-v3"></script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260920-ubs-card-badge-brand-v4"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=20260920-ubs-push-v2"></script>
