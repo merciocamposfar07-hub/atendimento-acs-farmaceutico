@@ -110,7 +110,7 @@ window.addEventListener('pageshow',install);
   var s=document.createElement('style');
   s.id='portalCscFooterRefinoVisualV2';
   s.textContent=[
-    '.portal-institutional-footer{background:#071827!important;padding-top:22px!important}',
+    '.portal-institutional-footer{background:#062c46!important;background-image:none!important;border:0!important;box-shadow:none!important;padding-top:22px!important}',
     '.portal-footer-links{margin:0 0 24px!important;padding-top:0!important;border-top:0!important}',
     '.portal-footer-brand{display:flex!important;align-items:center!important;gap:16px!important;padding-top:0!important}',
     '.portal-footer-brand>img,.portal-footer-brand>svg{width:104px!important;height:104px!important;min-width:104px!important;flex:0 0 104px!important;object-fit:contain!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;filter:none!important}',
