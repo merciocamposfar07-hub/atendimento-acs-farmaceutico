@@ -1371,22 +1371,26 @@ function showAdminUbs(title){
   }
   return true;
 }
+function legacyModuleUsesOwnScrollingHeader(name){
+  return ['suporte','recados','territorio','municipios'].indexOf(text(name).toLowerCase())!==-1;
+}
 function normalizeEmbeddedPanelFrame(frame){
   try{
     var doc=frame&&frame.contentDocument;if(!doc)return;
-    var ubsEmbedded=mode==='ubs',style=doc.getElementById('cscEmbeddedApp4SingleHeaderV1');
+    var moduleName=text(frame&&frame.dataset&&frame.dataset.shellModule).toLowerCase();
+    var ubsEmbedded=mode==='ubs',ownScrollingHeader=ubsEmbedded||legacyModuleUsesOwnScrollingHeader(moduleName),style=doc.getElementById('cscEmbeddedApp4SingleHeaderV1');
     if(!style){style=doc.createElement('style');style.id='cscEmbeddedApp4SingleHeaderV1';(doc.head||doc.documentElement).appendChild(style)}
     style.textContent=[
-      /* CABECALHO_UBS_ROLA_COM_CONTEUDO_V1:
-         Na sessão UBS, cabeçalho e rodapé pertencem ao próprio painel para rolarem junto
-         com a descrição. Fora da UBS, permanece o shell único já existente. */
-      ubsEmbedded
-        ?'#cscInstitutionalAppbar{display:flex!important;visibility:visible!important;pointer-events:auto!important;position:static!important;top:auto!important;inset:auto!important}'
+      /* CABECALHO_ROLA_COM_PAINEL_VIDEO_20260920:
+         Nos painéis legados identificados no vídeo, o cabeçalho pertence ao próprio
+         documento do painel e rola na mesma superfície que o conteúdo. */
+      ownScrollingHeader
+        ?'#cscInstitutionalAppbar,.csc-appbar{display:flex!important;visibility:visible!important;pointer-events:auto!important;position:static!important;top:auto!important;inset:auto!important;transform:none!important}'
         :'#cscInstitutionalAppbar{display:none!important;visibility:hidden!important;pointer-events:none!important}',
       '#portalTacsBackCentralV1,#portalTacsAtualizarPaginaV1{display:none!important}',
       'html,body,main,footer,.footer{background:#071827!important;background-image:none!important;border-top:0!important}',
-      ubsEmbedded?'html,body{overflow-y:auto!important;touch-action:pan-y pinch-zoom!important;overscroll-behavior-y:auto!important;-webkit-overflow-scrolling:touch!important}main{touch-action:pan-y!important;overflow:visible!important}':'',
-      ubsEmbedded
+      ownScrollingHeader?'html,body{height:auto!important;min-height:100%!important;overflow-x:hidden!important;overflow-y:auto!important;touch-action:pan-y pinch-zoom!important;overscroll-behavior-y:auto!important;-webkit-overflow-scrolling:touch!important}body{position:static!important}main{height:auto!important;max-height:none!important;touch-action:pan-y!important;overflow:visible!important}':'',
+      ownScrollingHeader
         ?'#cscPlatformFooter{display:flex!important;position:static!important}'
         :'#cscPlatformFooter{display:none!important}'
     ].join('');
@@ -1399,12 +1403,22 @@ function normalizeEmbeddedPanelFrame(frame){
       if(brand&&/PORTAL\s+CSC/i.test(brand.textContent||''))brand.textContent='CONECTA SAÚDE COMUNITÁRIA';
     }
     if(internal){
-      internal.hidden=!ubsEmbedded;
-      internal.setAttribute('aria-hidden',ubsEmbedded?'false':'true');
-      if(ubsEmbedded){internal.style.setProperty('position','static','important');internal.style.setProperty('top','auto','important');internal.style.setProperty('inset','auto','important')}
+      internal.hidden=!ownScrollingHeader;
+      internal.setAttribute('aria-hidden',ownScrollingHeader?'false':'true');
+      if(ownScrollingHeader){
+        internal.style.setProperty('position','static','important');
+        internal.style.setProperty('top','auto','important');
+        internal.style.setProperty('inset','auto','important');
+        internal.style.setProperty('transform','none','important');
+        try{
+          var viewer=el('viewer'),viewerBar=viewer&&viewer.querySelector('.viewer-bar');
+          if(viewerBar&&shellActiveFrame()===frame)viewerBar.style.setProperty('display','none','important');
+        }catch(e){}
+      }
     }
     doc.documentElement.classList.add('csc-embedded-legacy-panel');
     doc.documentElement.classList.toggle('csc-embedded-ubs-panel',ubsEmbedded);
+    doc.documentElement.classList.toggle('csc-embedded-own-scroll-header',ownScrollingHeader);
   }catch(e){}
 }
 /* CORRECAO_FRAME_PREPAINT_CANONICO_V1
@@ -1550,15 +1564,18 @@ function showShellFrame(name,frame,title,routeId){
   shellActiveModule=name;shellActiveRoute=routeId;shellActiveNative='';
   el('viewerTitle').textContent=title||'Painel';
   var viewer=el('viewer');viewer.classList.add('csc-shell-viewer','csc-frame-viewer');viewer.classList.remove('csc-native-viewer');viewer.hidden=false;
-  /* CABECALHO_UBS_ROLA_COM_CONTEUDO_V1:
-     Em qualquer painel legado da sessão UBS, o cabeçalho visível é o do próprio painel.
-     Assim ícone, título e descrição sobem juntos na rolagem; o shell não fica preso no topo. */
-  var viewerBar=viewer.querySelector('.viewer-bar');
-  if(viewerBar){if(mode==='ubs')viewerBar.style.setProperty('display','none','important');else viewerBar.style.removeProperty('display')}
+  var shellReady=(frame.dataset.shellReady==='1'||frame.dataset.shellDomReady==='1')&&shellFrameAtTarget(frame);
+  /* CABECALHO_ROLA_COM_PAINEL_VIDEO_20260920:
+     Suporte, Recados, TACS/áreas e Municípios usam o próprio cabeçalho do iframe.
+     O shell só aparece enquanto o documento real ainda não está pronto. */
+  var ownScrollingHeader=mode==='ubs'||legacyModuleUsesOwnScrollingHeader(name),viewerBar=viewer.querySelector('.viewer-bar');
+  if(viewerBar){
+    if(ownScrollingHeader&&shellReady)viewerBar.style.setProperty('display','none','important');
+    else viewerBar.style.removeProperty('display');
+  }
   var footer=el('viewerFooter');if(footer)footer.hidden=true;
   document.body.classList.add('viewer-open');
-  if(name==='solicitacoes')normalizeEmbeddedPanelFrame(frame);
-  var shellReady=(frame.dataset.shellReady==='1'||frame.dataset.shellDomReady==='1')&&shellFrameAtTarget(frame);
+  if(name==='solicitacoes'||ownScrollingHeader)normalizeEmbeddedPanelFrame(frame);
   if(shellReady)applyAdminUbsRemoteToFrame(frame);
   /* TAREFA_11_RESPOSTA_VISUAL_IMEDIATA_V1 + PREPAINT_CANONICO_V1:
      o shell responde no mesmo toque, mas a rota HTML antiga não é exibida durante
