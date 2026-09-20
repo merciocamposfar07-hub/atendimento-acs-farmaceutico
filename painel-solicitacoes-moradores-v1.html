@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#071827"><meta name="robots" content="noindex,nofollow">
+<title>Solicitações dos moradores | Conecta Saúde Comunitária</title>
+<style>
+:root{--bg:#071827;--top:#0b263d;--card:#102d46;--card2:#153b58;--line:#2b5a76;--text:#f7fcff;--muted:#adc4d2;--accent:#83efa9;--accent2:#62c8e8;--danger:#b33d4b;--warn:#9a7421;--ok:#176a48}
+*{box-sizing:border-box}html,body{margin:0;max-width:100%;overflow-x:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100svh;background:linear-gradient(180deg,var(--top),var(--bg) 360px)}button,select{font:inherit}
+header{width:min(720px,100%);margin:auto;padding:18px 16px 8px}header small{color:var(--accent);font-weight:900;letter-spacing:.11em}h1{margin:6px 0;font-size:clamp(1.7rem,7vw,2.5rem)}header p{margin:0;color:var(--muted)}
+main{width:min(720px,100%);margin:auto;padding:10px 16px 44px}
+.status{margin:0 0 12px;padding:11px 13px;border:1px solid var(--line);border-radius:15px;background:var(--card);color:var(--muted);font-weight:800}.status.ok{color:var(--accent)}.status.err{color:#ffb8be}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:13px}.metric{padding:13px;border:1px solid var(--line);border-radius:18px;background:var(--card);text-align:center}.metric strong{display:block;font-size:1.55rem}.metric span{color:var(--muted);font-size:.82rem}
+.tabs{display:flex;gap:8px;overflow:auto;padding:1px 0 12px}.tab{white-space:nowrap;min-height:45px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--text);padding:9px 13px;font-weight:850}.tab.active{background:#176c94;border-color:var(--accent2)}
+.list{display:grid;gap:12px}.request{padding:15px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(145deg,var(--card2),var(--card));box-shadow:0 10px 24px rgba(0,0,0,.2)}.request.expired{border-color:#b8525f;background:linear-gradient(145deg,#4a2029,var(--card))}.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.request h2{margin:0;font-size:1.08rem}.pill{flex:0 0 auto;padding:6px 9px;border-radius:999px;background:#204e68;color:#fff;font-size:.75rem;font-weight:900}.pill.NOVA{background:#176c94}.pill.EM_ATENDIMENTO{background:#8a661c}.pill.CONCLUIDA{background:#176a48}.pill.EXPIRADA{background:#972f3d}
+.expired-banner{margin:10px 0;padding:11px;border:2px solid #e46a76;border-radius:14px;background:#5b202b;color:#fff;font-weight:950;text-align:center;font-size:1.02rem}.meta{display:flex;flex-wrap:wrap;gap:5px 12px;margin:8px 0;color:var(--muted);font-size:.84rem}.desc{margin:10px 0;padding:11px;border-radius:14px;background:#091e30;white-space:pre-wrap}.expiry{margin:8px 0;color:#ffd0d4;font-weight:850}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.actions button{min-height:48px;border:0;border-radius:14px;color:#fff;font-weight:900}.attend{background:#8a661c}.done{background:#176a48}.actions button:disabled{opacity:.42}.empty{padding:24px;text-align:center;color:var(--muted);font-weight:800;border:1px solid var(--line);border-radius:20px;background:var(--card)}
+@media(min-width:640px){.metrics{grid-template-columns:repeat(4,1fr)}}@media(max-width:430px){.actions{grid-template-columns:1fr}}
+</style></head>
+<body><header><small>CONECTA SAÚDE COMUNITÁRIA</small><h1>Solicitações dos moradores</h1><p>Fila da UBS • solicitações recebidas pelo Portal CSC</p></header>
+<main><div id="status" class="status">Carregando o último estado disponível…</div>
+<section class="metrics"><div class="metric"><strong id="mNova">0</strong><span>Novas</span></div><div class="metric"><strong id="mAtend">0</strong><span>Em atendimento</span></div><div class="metric"><strong id="mConcl">0</strong><span>Concluídas</span></div><div class="metric"><strong id="mExp">0</strong><span>Expiradas</span></div></section>
+<nav class="tabs" aria-label="Filtros"><button class="tab active" data-filter="">Todas</button><button class="tab" data-filter="NOVA">Novas</button><button class="tab" data-filter="EM_ATENDIMENTO">Em atendimento</button><button class="tab" data-filter="CONCLUIDA">Concluídas</button><button class="tab" data-filter="EXPIRADA">Expiradas</button></nav>
+<section id="list" class="list"></section></main>
+<script src="/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260916-core-perf-v1"></script>
+<script>
+(function(){
+'use strict';
+var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var core=window.ConectaModuleCoreV1,items=[],filter='',busy=false,timer=null;
+function text(v){return String(v==null?'':v).trim()}function esc(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function area(){return core&&core.areaId?core.areaId():(new URLSearchParams(location.search).get('area')||'JAPARANDUBA')}
+function mode(){return core&&core.mode?core.mode():'ubs'}
+function cacheKey(){return 'portalConectaSolicitacoesUbsPanelV1:'+mode()+':'+area()}
+function rid(a){return 'solpanel_'+a+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,9)}
+function setStatus(msg,kind){var n=document.getElementById('status');n.textContent=msg;n.className='status'+(kind?' '+kind:'')}
+function isoExpired(v){if(!v)return false;var d=new Date(v);return !isNaN(d.getTime())&&d.getTime()<=Date.now()}
+function effectiveStatus(x){var s=text(x.status).toUpperCase();if((s==='NOVA'||s==='EM_ATENDIMENTO')&&isoExpired(x.expiraEm))return'EXPIRADA';return s}
+function statusText(s){return {NOVA:'Nova',EM_ATENDIMENTO:'Em atendimento',CONCLUIDA:'Concluída',EXPIRADA:'Solicitação Expirada!'}[s]||s}
+function counts(){var c={NOVA:0,EM_ATENDIMENTO:0,CONCLUIDA:0,EXPIRADA:0};items.forEach(function(x){var s=effectiveStatus(x);if(c[s]!=null)c[s]++});return c}
+function render(){
+ var c=counts();document.getElementById('mNova').textContent=c.NOVA;document.getElementById('mAtend').textContent=c.EM_ATENDIMENTO;document.getElementById('mConcl').textContent=c.CONCLUIDA;document.getElementById('mExp').textContent=c.EXPIRADA;
+ var shown=items.filter(function(x){return !filter||effectiveStatus(x)===filter}),list=document.getElementById('list');
+ if(!shown.length){list.innerHTML='<div class="empty">Nenhuma solicitação neste filtro.</div>';return}
+ list.innerHTML=shown.map(function(x){
+   var s=effectiveStatus(x),expired=s==='EXPIRADA',service=x.dataServico?'<span>Atendimento: '+esc(x.dataServico)+(x.horarioExpiracao?' • expira '+esc(x.horarioExpiracao):'')+'</span>':'';
+   return '<article class="request '+(expired?'expired':'')+'" data-id="'+esc(x.id)+'"><div class="top"><div><h2>'+esc(x.morador||'Morador')+'</h2><div class="meta"><span>'+esc(x.codigoSolicitacao)+'</span><span>'+esc(x.documento)+'</span><span>'+esc(x.localidade)+'</span></div></div><span class="pill '+s+'">'+esc(statusText(s))+'</span></div>'+
+   (expired?'<div class="expired-banner">Solicitação Expirada!</div>':'')+
+   '<div class="meta"><span>'+esc(x.categoria)+'</span>'+service+'<span>Recebida: '+esc(x.criadoEm)+'</span></div><div class="desc">'+esc(x.descricao||x.categoria)+'</div>'+
+   '<div class="expiry">Expiração: '+esc(x.expiraEmTexto||'não informada')+'</div>'+
+   (!expired&&s!=='CONCLUIDA'?'<div class="actions"><button class="attend" data-action="EM_ATENDIMENTO" '+(s==='EM_ATENDIMENTO'?'disabled':'')+'>Em atendimento</button><button class="done" data-action="CONCLUIDA">Concluir</button></div>':'')+'</article>'
+ }).join('');
+}
+function save(data){try{localStorage.setItem(cacheKey(),JSON.stringify({savedAt:Date.now(),data:data}))}catch(e){}}
+function loadCache(){try{var x=JSON.parse(localStorage.getItem(cacheKey())||'null');if(!x||!x.data||!Array.isArray(x.data.solicitacoes))return false;items=x.data.solicitacoes;render();setStatus('Últimos dados disponíveis • sincronizando em segundo plano…','ok');return true}catch(e){return false}}
+function jsonpResult(id,cb){var name='__sol_panel_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false;function finish(r){if(done)return;done=true;try{delete window[name]}catch(e){}if(s.parentNode)s.remove();cb(r)}window[name]=finish;s.onerror=function(){finish({ok:false})};s.src=API+'?action=admin_solicitacoes_ubs_result&requestId='+encodeURIComponent(id)+'&callback='+encodeURIComponent(name)+'&_='+Date.now();document.head.appendChild(s)}
+function call(action,extra,cb){
+ if(busy){cb({ok:false,temporario:true,message:'Aguarde a operação anterior.'});return}busy=true;
+ var id=rid(action),payload=core&&core.session?core.session(extra||{}):Object.assign({areaId:area()},extra||{}),body=new URLSearchParams(),started=Date.now();
+ Object.keys(payload).forEach(function(k){body.set(k,String(payload[k]==null?'':payload[k]))});body.set('action',action);body.set('requestId',id);
+ try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){})}catch(e){}
+ function poll(){jsonpResult(id,function(r){if(r&&r.ok===true&&r.pendente===false){busy=false;cb(r.result||{ok:false});return}if(Date.now()-started>18000){busy=false;cb({ok:false,temporario:true,message:'A sincronização continuará na próxima atualização.'});return}setTimeout(poll,650)})}setTimeout(poll,250);
+}
+function refresh(silent){
+ if(busy)return;call('admin_solicitacoes_ubs_listar',{},function(r){if(r&&r.ok===true&&Array.isArray(r.solicitacoes)){items=r.solicitacoes;save(r);render();setStatus('Solicitações atualizadas.','ok')}else if(!silent)setStatus(text(r&&r.message)||'Não foi possível atualizar agora.','err')})
+}
+document.querySelector('.tabs').addEventListener('click',function(e){var b=e.target.closest('[data-filter]');if(!b)return;filter=b.dataset.filter||'';document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('active',x===b)});render()});
+document.getElementById('list').addEventListener('click',function(e){var b=e.target.closest('[data-action]'),card=e.target.closest('[data-id]');if(!b||!card||busy)return;b.disabled=true;call('admin_solicitacoes_ubs_atualizar',{id:card.dataset.id,status:b.dataset.action},function(r){if(r&&r.ok===true){setStatus(r.message||'Solicitação atualizada.','ok');refresh(true)}else{b.disabled=false;setStatus(text(r&&r.message)||'Não foi possível atualizar.','err')}})});
+loadCache();refresh(true);
+timer=setInterval(function(){render();var f=window.frameElement;if(!document.hidden&&(!f||!f.hidden))refresh(true)},12000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)refresh(true)});
+}());
+</script></body></html>

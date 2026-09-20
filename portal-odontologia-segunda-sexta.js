@@ -668,6 +668,7 @@
       date: slot.date,
       type: type,
       requestId: makeCode(),
+      expiresAt: slot.expiresAt || '',
       originalCount: Number(available),
       serverRemaining: null,
       confirmed: false,
@@ -713,6 +714,12 @@
       'Onde mora: ' + clean(el('locality').value) + '\n' +
       'Descrição: ' + clean(el('subject').value) + '\n\n' +
       'Este código é apenas uma referência para localizar a conversa.';
+    if(window.PortalSolicitacoesUbsV1&&typeof window.PortalSolicitacoesUbsV1.registrar==='function'){
+      window.PortalSolicitacoesUbsV1.registrar({
+        codigoSolicitacao:selection.requestId,categoria:category,descricao:clean(el('subject').value),
+        tipoVaga:selection.type,dataServico:selection.date,horarioExpiracao:selection.expiresAt||''
+      });
+    }
     window.location.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(message);
   }
 
@@ -811,6 +818,7 @@
         date: selection.date,
         type: selection.type,
         requestId: selection.requestId,
+        expiresAt: selection.expiresAt || '',
         confirmed: Boolean(selection.confirmed),
         slowSync: Boolean(selection.slowSync),
         explicitFailure: Boolean(selection.explicitFailure)

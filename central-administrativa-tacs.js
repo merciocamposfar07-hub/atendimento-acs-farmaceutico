@@ -482,8 +482,8 @@ function centralDomAlreadyRendered(){
   var identity=el('identityPanel'),modules=el('modulesPanel'),login=el('loginPanel');
   return Boolean(identity&&modules&&login&&!identity.hidden&&!modules.hidden&&login.hidden)
 }
-function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId})){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(mode==='admin'&&areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):(mode==='ubs'?accessProfileLabel(ubs&&ubs.perfil||'UBS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN'));el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(mode==='ubs'?(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'UBS'):(text(admin&&admin.nomeCompleto)||'Administrador'));el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=mode==='ubs';el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=(mode!=='admin'&&mode!=='ubs')||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;if(mode!=='ubs'){renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm();renderHealthInstant(selectedAreaId);if(!skipHealth)scheduleHealthRefresh(false,1800)}else{renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm()}}
-function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
+function renderContext(skipHealth){syncAppState();var areas=context&&Array.isArray(context.areas)?context.areas.filter(function(a){return a&&a.ativa!==false}):[];if(!areas.length){setStatus('Nenhuma área ativa foi devolvida pelo servidor.','err');return}var stored='';try{stored=normArea(localStorage.getItem(AREA_KEY)||'')}catch(e){}if(mode==='tacs')selectedAreaId=normArea(areas[0].areaId);else if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId})){selectedAreaId=areas.some(function(a){return normArea(a.areaId)===stored})?stored:(mode==='admin'&&areas.some(function(a){return normArea(a.areaId)==='JAPARANDUBA'})?'JAPARANDUBA':normArea(areas[0].areaId))}var area=selectedArea(),tacs=responsible(area),admin=currentAdministrator(),ubs=currentUbs();var profileIcon=el('profileIcon');if(profileIcon){profileIcon.src='/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png?v=20260818-icone-central-todos-v2';}var perfilAtual=mode==='tacs'?accessProfileLabel(tacs&&tacs.perfil||'TACS'):(mode==='ubs'?accessProfileLabel(ubs&&ubs.perfil||'UBS'):accessProfileLabel(admin&&admin.perfil||context&&context.perfil||'ADMIN'));el('profileLabel').textContent=perfilAtual;el('professionalName').textContent=mode==='tacs'?(text(tacs&&tacs.nomeCompleto)||'TACS'):(mode==='ubs'?(text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'UBS'):(text(admin&&admin.nomeCompleto)||'Administrador'));el('areaName').textContent=text(area&&area.areaNome)||selectedAreaId;el('unitName').textContent=text(area&&area.unidadeNome)||text(area&&area.unidadeId)||'Unidade não informada';updateCentralWelcome(area,tacs);publishModuleCore();el('identityPanel').hidden=false;el('healthPanel').hidden=mode==='ubs';el('modulesPanel').hidden=false;el('loginPanel').hidden=true;var box=el('adminAreaBox'),select=el('adminArea');box.hidden=(mode!=='admin'&&mode!=='ubs')||areas.length<2;select.innerHTML=areas.map(function(a){return'<option value="'+esc(normArea(a.areaId))+'">'+esc(text(a.areaNome)||a.areaId)+'</option>'}).join('');select.value=selectedAreaId;if(mode!=='ubs'){stopUbsSolicitacoesWatch();renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm();renderHealthInstant(selectedAreaId);if(!skipHealth)scheduleHealthRefresh(false,1800)}else{renderModules();scheduleNativePanelPrewarm();schedulePanelRuntimePrewarm();startUbsSolicitacoesWatch()}}
+function renderModules(){document.querySelectorAll('.module').forEach(function(btn){var adminOnly=btn.dataset.adminOnly==='true',ubsOnly=btn.dataset.ubsOnly==='true',perm=btn.dataset.permission||'',allowed=!adminOnly||mode==='admin';if(ubsOnly)allowed=mode==='ubs';if(perm)allowed=allowed&&permission(perm);if(btn.dataset.module==='portal')allowed=true;btn.hidden=!allowed;btn.classList.toggle('locked',!allowed);btn.disabled=!allowed})}
 function markHealth(id,label,state){
   var n=el(id),span=n&&n.querySelector('span');if(!n||!span)return;
   var nextClass='health-card'+(state?' '+state:''),nextLabel=text(label);
@@ -501,6 +501,68 @@ function updatePendingBadge(result){
   badge.setAttribute('aria-label',total===1?'1 pendência':total+' pendências');
 }
 
+
+/* SOLICITACOES_UBS_ALERTA_V1:
+   A UBS recebe aviso explícito e sonoro de nova solicitação sem depender do painel estar aberto.
+   Transporte isolado para não disputar a operação ativa da Central. */
+var ubsSolicitacoesTimer=null,ubsSolicitacoesInFlight=false,ubsSolicitacoesArea='',ubsSolicitacoesAudio=null;
+function ubsSolicitacoesMarkerKey(a){return 'portalConectaSolicitacoesUbsUltimaV1:'+normArea(a)}
+function ensureUbsSolicitacoesUi(){
+  var style=el('cscUbsSolicitacoesAlertStyle');
+  if(!style){style=document.createElement('style');style.id='cscUbsSolicitacoesAlertStyle';style.textContent='.csc-sol-badge{display:inline-grid;place-items:center;min-width:25px;height:25px;margin-left:auto;padding:0 7px;border-radius:999px;background:#b53645;color:#fff;font-size:.76rem;font-weight:950}.csc-sol-alert{position:fixed;z-index:2147482500;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top));max-width:680px;margin:auto;padding:14px;border:2px solid #83efa9;border-radius:20px;background:#102d46;color:#fff;box-shadow:0 18px 48px rgba(0,0,0,.42)}.csc-sol-alert strong{display:block;font-size:1.05rem}.csc-sol-alert p{margin:5px 0 10px;color:#dcebf2}.csc-sol-alert-actions{display:grid;grid-template-columns:1fr auto;gap:8px}.csc-sol-alert button{min-height:44px;border:0;border-radius:13px;padding:9px 12px;font-weight:900}.csc-sol-open{background:#176c94;color:#fff}.csc-sol-close{background:#263f51;color:#fff}';document.head.appendChild(style)}
+  var btn=document.querySelector('#moduleGrid .module[data-module="solicitacoes"]');
+  if(btn&&!btn.querySelector('.csc-sol-badge')){var b=document.createElement('span');b.className='csc-sol-badge';b.hidden=true;btn.appendChild(b)}
+}
+function unlockUbsSolicitacoesAudio(){
+  if(ubsSolicitacoesAudio)return;
+  try{var C=window.AudioContext||window.webkitAudioContext;if(!C)return;ubsSolicitacoesAudio=new C();var o=ubsSolicitacoesAudio.createOscillator(),g=ubsSolicitacoesAudio.createGain();g.gain.value=0;o.connect(g);g.connect(ubsSolicitacoesAudio.destination);o.start();o.stop(ubsSolicitacoesAudio.currentTime+.01)}catch(e){ubsSolicitacoesAudio=null}
+}
+document.addEventListener('pointerdown',unlockUbsSolicitacoesAudio,{once:true,capture:true});
+function playUbsSolicitacoesSound(){
+  try{
+    unlockUbsSolicitacoesAudio();if(!ubsSolicitacoesAudio)return;
+    if(ubsSolicitacoesAudio.state==='suspended')ubsSolicitacoesAudio.resume().catch(function(){});
+    [0,.24].forEach(function(delay){var o=ubsSolicitacoesAudio.createOscillator(),g=ubsSolicitacoesAudio.createGain(),t=ubsSolicitacoesAudio.currentTime+delay;o.frequency.value=880;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.11,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.16);o.connect(g);g.connect(ubsSolicitacoesAudio.destination);o.start(t);o.stop(t+.18)})
+  }catch(e){}
+}
+function renderUbsSolicitacoesBadge(result){
+  ensureUbsSolicitacoesUi();var btn=document.querySelector('#moduleGrid .module[data-module="solicitacoes"]'),b=btn&&btn.querySelector('.csc-sol-badge'),c=result&&result.contagens||{},n=Math.max(0,Number(c.NOVA||0));if(!b)return;b.hidden=n<1;b.textContent=n>99?'99+':String(n)
+}
+function showUbsSolicitacoesAlert(result){
+  ensureUbsSolicitacoesUi();var old=el('cscUbsSolicitacoesAlert');if(old)old.remove();
+  var latest=result&&result.latest||{},box=document.createElement('div');box.id='cscUbsSolicitacoesAlert';box.className='csc-sol-alert';box.setAttribute('role','alert');
+  box.innerHTML='<strong>🔔 Nova solicitação de morador</strong><p>'+esc(text(latest.morador)||'Um morador')+' • '+esc(text(latest.categoria)||'Solicitação recebida')+'</p><div class="csc-sol-alert-actions"><button type="button" class="csc-sol-open">Abrir solicitações</button><button type="button" class="csc-sol-close" aria-label="Fechar">Fechar</button></div>';
+  box.querySelector('.csc-sol-open').addEventListener('click',function(){box.remove();openModule('solicitacoes','Solicitações dos moradores')});
+  box.querySelector('.csc-sol-close').addEventListener('click',function(){box.remove()});
+  document.body.appendChild(box);playUbsSolicitacoesSound();
+}
+function ubsSolicitacoesPostResumo(cb){
+  if(ubsSolicitacoesInFlight||mode!=='ubs'||!ubsToken){cb&&cb(null);return}
+  ubsSolicitacoesInFlight=true;var id=requestId('admin_solicitacoes_ubs_resumo'),body=new URLSearchParams(),payload=session({areaId:selectedAreaId}),started=Date.now(),done=false;
+  Object.keys(payload).forEach(function(k){body.set(k,String(payload[k]==null?'':payload[k]))});body.set('action','admin_solicitacoes_ubs_resumo');body.set('requestId',id);
+  function finish(r){if(done)return;done=true;ubsSolicitacoesInFlight=false;if(cb)cb(r)}
+  function pollResult(){jsonp('admin_solicitacoes_ubs_result',{requestId:id},function(r){if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}if(Date.now()-started>=15000){finish(null);return}setTimeout(pollResult,650)})}
+  try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});setTimeout(pollResult,250)}catch(e){finish(null)}
+}
+function checkUbsSolicitacoes(){
+  if(mode!=='ubs'||!ubsToken||!selectedAreaId)return;
+  var checkingArea=selectedAreaId;
+  ubsSolicitacoesPostResumo(function(r){
+    if(!r||r.ok!==true||mode!=='ubs'||checkingArea!==selectedAreaId)return;
+    renderUbsSolicitacoesBadge(r);
+    var latest=r.latest,latestKey=text(r.latestKey),markerKey=ubsSolicitacoesMarkerKey(checkingArea),previous='';
+    try{previous=text(localStorage.getItem(markerKey)||'')}catch(e){}
+    if(latestKey&&latest&&latest.status==='NOVA'&&latestKey!==previous){try{localStorage.setItem(markerKey,latestKey)}catch(e){}showUbsSolicitacoesAlert(r)}
+    else if(latestKey&&latestKey!==previous){try{localStorage.setItem(markerKey,latestKey)}catch(e){}}
+  });
+}
+function stopUbsSolicitacoesWatch(){if(ubsSolicitacoesTimer){clearInterval(ubsSolicitacoesTimer);ubsSolicitacoesTimer=null}ubsSolicitacoesArea='';ubsSolicitacoesInFlight=false}
+function startUbsSolicitacoesWatch(){
+  if(mode!=='ubs'||!ubsToken||!selectedAreaId){stopUbsSolicitacoesWatch();return}
+  if(ubsSolicitacoesTimer&&ubsSolicitacoesArea===selectedAreaId)return;
+  stopUbsSolicitacoesWatch();ubsSolicitacoesArea=selectedAreaId;ensureUbsSolicitacoesUi();checkUbsSolicitacoes();ubsSolicitacoesTimer=setInterval(checkUbsSolicitacoes,12000);
+}
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&mode==='ubs')checkUbsSolicitacoes()});
 /* NOTIFICACOES_VERDADE_CONFIRMADA_V1
  * A Central nunca usa a leitura local/provisória como número oficial.
  * Exibe imediatamente o último snapshot confirmado neste aparelho e,
@@ -728,6 +790,7 @@ function moduleUrl(name,options){
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-suporte-ubs-diag-v1';
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260919-recados-snapshot-completo-v5';
+  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-solicitacoes-ubs-v1';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
@@ -1103,6 +1166,7 @@ function renderAdminUbsDetail(host){
   var panels=[
     ['moradores','Moradores','Cadastros e situação dos moradores'],
     ['suporte','Suporte aos moradores','Chamados e diagnóstico dos aparelhos'],
+    ['solicitacoes','Solicitações dos moradores','Novas solicitações, andamento e expiração'],
     ['recados','Recados e campanhas','Publicações da unidade/área'],
     ['agendas','Agendas e vagas','Agendas e disponibilidade'],
     ['profissionais','Profissionais e serviços','Equipe e serviços da unidade']
@@ -1209,7 +1273,7 @@ function showAdminUbs(title){
       if(open){var unit=text(open.getAttribute('data-unit')),groups=adminUbsGroups(),g=groups.find(function(x){return text(x.unitId)===unit});adminUbsContext={unitId:unit,mode:open.getAttribute('data-ubs-open')==='edit'?'edit':'view',areaId:g&&g.areas&&g.areas.length?normArea(g.areas[0].areaId):''};renderAdminUbsDetail(host);return}
       var modeBtn=e.target.closest('[data-ubs-mode]');if(modeBtn&&adminUbsContext){adminUbsContext.mode=modeBtn.getAttribute('data-ubs-mode')==='edit'?'edit':'view';renderAdminUbsDetail(host);return}
       var back=e.target.closest('[data-ubs-back]');if(back){renderAdminUbsList(host);return}
-      var panel=e.target.closest('[data-ubs-panel]');if(panel&&!panel.disabled){var names={moradores:'Moradores',suporte:'Suporte aos moradores',recados:'Recados e campanhas',agendas:'Agendas e vagas',profissionais:'Profissionais e serviços',territorio:'TACS e áreas'};openAdminUbsRemotePanel(panel.getAttribute('data-ubs-panel'),names[panel.getAttribute('data-ubs-panel')]||'Painel');return}
+      var panel=e.target.closest('[data-ubs-panel]');if(panel&&!panel.disabled){var names={moradores:'Moradores',suporte:'Suporte aos moradores',solicitacoes:'Solicitações dos moradores',recados:'Recados e campanhas',agendas:'Agendas e vagas',profissionais:'Profissionais e serviços',territorio:'TACS e áreas'};openAdminUbsRemotePanel(panel.getAttribute('data-ubs-panel'),names[panel.getAttribute('data-ubs-panel')]||'Painel');return}
     });
     host.addEventListener('change',function(e){if(e.target&&e.target.id==='cscAdminUbsArea'&&adminUbsContext)adminUbsContext.areaId=normArea(e.target.value)});
   }
@@ -1548,6 +1612,7 @@ function openModule(name,title,options){
       name==='territorio'||
       name==='suporte'||
       name==='recados'||
+      name==='solicitacoes'||
       name==='municipios'||
       (name==='moradores'&&moduleRouteOptions(options).view==='prontuarios')
     );
@@ -1759,6 +1824,7 @@ function invalidarSessaoServidorEmSegundoPlano(action,payload){
 }
 function logout(){
   if(logoutEmCurso)return;
+  stopUbsSolicitacoesWatch();
   logoutEmCurso=true;
   var lastMode=mode||'admin',hasSession=Boolean(token||territoryToken||ubsToken);
   var action=lastMode==='tacs'?'admin_territorio_encerrar_sessao':(lastMode==='ubs'?'conecta_ubs_encerrar':'admin_logout');
@@ -1944,7 +2010,7 @@ function prewarmNativePanel(name){
 }
 function prewarmPanelRuntime(name){
   if(name==='moradores'||name==='agendas'||name==='profissionais'){prewarmNativePanel(name);return}
-  if(name==='suporte'||name==='recados'||name==='territorio'||name==='municipios')prewarmLegacyPanel(name);
+  if(name==='suporte'||name==='recados'||name==='solicitacoes'||name==='territorio'||name==='municipios')prewarmLegacyPanel(name);
 }
 function scheduleAgendaSnapshotPrewarm(scope){
   if(!scope||agendaSnapshotPrewarmScope===scope)return;
@@ -1981,6 +2047,17 @@ function scheduleRecadosRuntimePrewarm(scope){
     prewarmLegacyPanel('recados');
   }
   panelRuntimePrewarmTimers.push(setTimeout(run,120));
+}
+function scheduleSolicitacoesRuntimePrewarm(scope){
+  if(!scope||mode!=='ubs')return;
+  var attempts=0;
+  function run(){
+    if(scope!==panelRuntimePrewarmScope||shellCurrentScope()!==scope||mode!=='ubs')return;
+    if(!panelRuntimeAllowed('solicitacoes'))return;
+    if(!panelRuntimeRemoteReady()||active){if(++attempts>30)return;panelRuntimePrewarmTimers.push(setTimeout(run,220));return}
+    prewarmLegacyPanel('solicitacoes');
+  }
+  panelRuntimePrewarmTimers.push(setTimeout(run,420));
 }
 function scheduleSupportRuntimePrewarm(scope){
   if(!scope||supportRuntimePrewarmScope===scope)return;
@@ -2049,6 +2126,7 @@ function schedulePanelRuntimePrewarm(){
      fora do toque. Agendas/Suporte e todos os demais fluxos permanecem inalterados. */
   schedulePortalReturnRecadosPrewarm(scope);
   scheduleRecadosRuntimePrewarm(scope);
+  scheduleSolicitacoesRuntimePrewarm(scope);
   scheduleNativePanelPrewarm();
   scheduleNativeDataPanelPrewarm('moradores',scope,350);
   scheduleNativeDataPanelPrewarm('profissionais',scope,1150);
