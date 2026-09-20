@@ -2266,10 +2266,34 @@ function centralAreaId(){
 }
 function centralContextFromCache(){
   try{
-    var territorial=Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''));
-    var key='portalTacsCentralContextCacheV3:'+(territorial?'tacs':'admin');
-    var raw=sessionStorage.getItem(key)||sessionStorage.getItem('portalTacsCentralContextCacheV2');
-    if(!raw)return null;var saved=JSON.parse(raw);return saved&&saved.context?saved.context:null
+    /* PERFIL_CONTEXTO_VIVO_V1:
+       Perfil usa primeiro o mesmo contexto que já alimenta a tela inicial.
+       O código antigo escolhia o cache só pelo token e, no fluxo local-first/UBS,
+       podia abrir o Perfil com um cache de outro modo e mostrar listas vazias. */
+    var bridge=window.ConectaCentralProfileV1;
+    if(bridge&&typeof bridge.snapshot==='function'){
+      var live=bridge.snapshot();
+      if(live&&live.context)return live.context;
+    }
+    var core=null,kind='';
+    try{core=JSON.parse(sessionStorage.getItem('portalConectaModuleCoreV1')||'null')}catch(e){}
+    kind=text(core&&core.mode).toLowerCase();
+    if(kind!=='admin'&&kind!=='tacs'&&kind!=='ubs'){
+      kind=isUbsSession()?'ubs':(isTerritory()?'tacs':'admin');
+    }
+    var keys=['portalTacsCentralContextCacheV3:'+kind];
+    if(kind!=='admin')keys.push('portalTacsCentralContextCacheV3:admin');
+    if(kind!=='tacs')keys.push('portalTacsCentralContextCacheV3:tacs');
+    if(kind!=='ubs')keys.push('portalTacsCentralContextCacheV3:ubs');
+    keys.push('portalTacsCentralContextCacheV2');
+    for(var i=0;i<keys.length;i++){
+      var raw=sessionStorage.getItem(keys[i]);if(!raw)continue;
+      try{var saved=JSON.parse(raw);if(saved&&saved.context)return saved.context}catch(e){}
+    }
+    if(kind==='ubs'){
+      try{var local=JSON.parse(localStorage.getItem('portalConectaUbsContextCacheV1')||'null');if(local&&local.context)return local.context}catch(e){}
+    }
+    return null;
   }catch(e){return null}
 }
 function showCentralHome(){
@@ -2290,18 +2314,25 @@ function openProfilePage(){
   ['identityPanel','healthPanel','modulesPanel'].forEach(function(id){var n=document.getElementById(id);if(n)n.hidden=true});
   var page=document.getElementById('cscProfilePage');
   if(!page){page=document.createElement('section');page.id='cscProfilePage';page.className='csc-profile-page';main.appendChild(page)}
-  var ctx=centralContextFromCache()||{},areas=Array.isArray(ctx.areas)?ctx.areas:[],tacs=Array.isArray(ctx.tacs)?ctx.tacs.filter(function(item){return !!text(item&&(item.nomeCompleto||item.nome));}):[],admins=Array.isArray(ctx.administradores)?ctx.administradores:[];
+  var ctx=centralContextFromCache()||{},areas=Array.isArray(ctx.areas)?ctx.areas.filter(function(a){return a&&a.ativa!==false;}):[],tacs=Array.isArray(ctx.tacs)?ctx.tacs.filter(function(item){return !!text(item&&(item.nomeCompleto||item.nome));}):[],admins=Array.isArray(ctx.administradores)?ctx.administradores.filter(function(item){return !!text(item&&(item.nomeCompleto||item.nome));}):[];
+  if(ctx.administradorAtual&&text(ctx.administradorAtual.nomeCompleto||ctx.administradorAtual.nome)&&!admins.some(function(a){return text(a.nomeCompleto||a.nome)===text(ctx.administradorAtual.nomeCompleto||ctx.administradorAtual.nome)}))admins.unshift(ctx.administradorAtual);
+  var units=[],seenUnits={};
+  areas.forEach(function(a){var id=text(a&&a.unidadeId),name=text(a&&a.unidadeNome)||id;if(!id&&!name)return;var key=(id||name).toUpperCase();if(seenUnits[key])return;seenUnits[key]=true;units.push({unidadeId:id,unidadeNome:name||'Unidade de saúde'});});
+  if(ctx.ubsAtual){var uid=text(ctx.ubsAtual.unidadeId),uname=text(ctx.ubsAtual.unidadeNome)||uid;if((uid||uname)&&!seenUnits[(uid||uname).toUpperCase()])units.unshift({unidadeId:uid,unidadeNome:uname||'Unidade de saúde'});}
   function areaName(id){for(var i=0;i<areas.length;i++)if(text(areas[i].areaId)===text(id))return text(areas[i].areaNome||areas[i].areaId);return text(id)||'Área não vinculada'}
   var html='<h2>Administradores e TACS</h2><p class="csc-profile-intro">Acesso rápido aos perfis cadastrados e às áreas administradas.</p><h3>Administradores</h3><div class="csc-profile-list">'+
     '<button type="button" class="csc-profile-card csc-profile-admin-toggle" aria-expanded="false" aria-controls="cscProfileAdminNames"><strong>Administrador geral</strong><span>Toque para ver os administradores cadastrados</span></button></div>'+
     '<div id="cscProfileAdminNames" class="csc-profile-list csc-profile-admin-names" hidden>';
-  if(!admins.length)html+='<div class="csc-profile-empty">Nenhum nome de administrador foi encontrado na base administrativa.</div>';
+  if(!admins.length)html+='<div class="csc-profile-empty">Administradores ainda não sincronizados.</div>';
   admins.forEach(function(a){html+='<article class="csc-profile-card"><strong>'+escapeProfile(a.nomeCompleto||a.nome||'Administrador')+'</strong><span>'+escapeProfile(a.perfil||'ADMINISTRADOR GERAL')+(a.ativo===false?' • Inativo':' • Ativo')+'</span></article>'});
   html+='</div><h3>TACS cadastrados</h3><div class="csc-profile-list">';
-  if(!tacs.length)html+='<div class="csc-profile-empty">Nenhum TACS cadastrado foi devolvido pelo servidor.</div>';
+  if(!tacs.length)html+='<div class="csc-profile-empty">TACS ainda não sincronizados.</div>';
   tacs.forEach(function(t){html+='<button type="button" class="csc-profile-card csc-profile-area-jump" data-area="'+escapeProfile(t.areaId||'')+'"><strong>'+escapeProfile(t.nomeCompleto||t.nome||t.tacsId||'TACS')+'</strong><span>'+escapeProfile(areaName(t.areaId))+(t.ativo===false?' • Inativo':' • Ativo')+'</span></button>'});
+  html+='</div><h3>Unidade de saúde</h3><div class="csc-profile-list">';
+  if(!units.length)html+='<div class="csc-profile-empty">Unidade ainda não sincronizada.</div>';
+  units.forEach(function(u){html+='<article class="csc-profile-card"><strong>'+escapeProfile(u.unidadeNome||u.unidadeId||'Unidade de saúde')+'</strong><span>'+escapeProfile(u.unidadeId||'Unidade vinculada')+'</span></article>'});
   html+='</div><h3>Áreas</h3><div class="csc-profile-list">';
-  if(!areas.length)html+='<div class="csc-profile-empty">Nenhuma área cadastrada foi devolvida pelo servidor.</div>';
+  if(!areas.length)html+='<div class="csc-profile-empty">Áreas ainda não sincronizadas.</div>';
   areas.forEach(function(a){html+='<button type="button" class="csc-profile-card csc-profile-area-jump" data-area="'+escapeProfile(a.areaId||'')+'"><strong>'+escapeProfile(a.areaNome||a.areaId||'Área')+'</strong><span>'+escapeProfile(a.unidadeNome||a.unidadeId||'Unidade não informada')+'</span></button>'});
   html+='</div>';
   page.innerHTML=html;page.hidden=false;
@@ -2969,7 +3000,7 @@ html body .viewer.csc-native-viewer>.viewer-platform-footer{
   },true);
 })();
 </script>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260920-header-stale-guard-v6"></script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20260920-perfil-contexto-v7"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=20260920-ubs-push-v2"></script>
