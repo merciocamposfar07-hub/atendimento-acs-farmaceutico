@@ -1,9 +1,9 @@
 {
-  "id": "/atendimento-acs-farmaceutico/?app=csc-morador",
+  "id": "/atendimento-acs-farmaceutico/portal-conecta-saude-comunitaria",
   "name": "Portal Conecta Saúde Comunitária",
-  "short_name": "CSC Morador",
+  "short_name": "Portal Conecta Saúde Comunitária",
   "description": "Portal Conecta Saúde Comunitária para acesso dos moradores aos serviços de saúde comunitária.",
-  "start_url": "/atendimento-acs-farmaceutico/?app=csc-morador",
+  "start_url": "/atendimento-acs-farmaceutico/index.html",
   "scope": "/atendimento-acs-farmaceutico/",
   "display": "standalone",
   "background_color": "#071827",
@@ -12,7 +12,7 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/atendimento-acs-farmaceutico/app-icons/csc-morador-oficial-20260920.png",
+      "src": "/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
