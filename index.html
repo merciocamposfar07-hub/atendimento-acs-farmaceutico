@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0">
   <meta name="theme-color" content="#062c46">
   <meta name="color-scheme" content="light only">
-  <meta name="portal-release" content="20260920-sem-azul-claro-v5">
+  <meta name="portal-release" content="20260920">
   <meta name="description" content="Canal do TACS - Técnico Agente Comunitário de Saúde Mércio José Campos dos Santos, vinculado à Unidade de Saúde Posto Matias, para moradores do Sítio Japaranduba, Chã Grande/PE.">
   <link rel="icon" type="image/png" href="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260918-app-identidade-csc-v1">
   <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260918-app-identidade-csc-v1">
@@ -1090,10 +1090,39 @@ html body main.shell section.panel .content .form-panel input,
 html body main.shell section.panel .content .form-panel textarea,
 html body main.shell section.panel .content .form-panel select,
 html body main.shell section.panel .content .form-panel .portal-service-picker-toggle,
-html body main.shell section.panel .content .form-panel .portal-service-choice{
+html body main.shell section.panel .content .form-panel .portal-service-choice,
+html body main.shell section.panel .content .form-panel .portal-attachment-choose,
+html body main.shell section.panel .content .form-panel .slot,
+html body main.shell section.panel .content .form-panel .sheet-dental-card,
+html body main.shell section.panel .content .form-panel .sheet-dental-choice,
+html body main.shell section.panel .content .form-panel .tacs-family-member,
+html body main.shell section.panel .content .form-panel .notification-offer button,
+html body main.shell section.panel .content .form-panel .notification-repair{
   background:#062c46!important;
   background-color:#062c46!important;
   background-image:none!important;
+  border:2px solid #69c7e7!important;
+  box-shadow:none!important;
+}
+
+/* Botão principal: contorno azul; quando habilitado fica mais vivo para indicar o próximo passo. */
+html body #send.send{
+  background:#062c46!important;
+  background-color:#062c46!important;
+  background-image:none!important;
+  border:2px solid #69c7e7!important;
+  box-shadow:none!important;
+  color:#fff!important;
+}
+html body #send.send:not(:disabled){
+  border-color:#7de1ff!important;
+  box-shadow:0 0 0 2px rgba(125,225,255,.20),0 0 16px rgba(105,199,231,.22)!important;
+  opacity:1!important;
+  filter:brightness(1.08)!important;
+  -webkit-filter:brightness(1.08)!important;
+}
+html body #send.send:disabled{
+  border-color:rgba(105,199,231,.58)!important;
   box-shadow:none!important;
 }
 
