@@ -766,7 +766,7 @@ function conectaAcessoV1FamiliaDiagnostico_(item){
   /* CORRECAO_CIRURGICA_DIAGNOSTICO_MORADOR_TIMEOUT_V1:
      reaproveita os registros já lidos na mesma busca e evita reler a planilha
      apenas para montar a família do morador localizado. */
-  var registros=Array.isArray(item._registrosArea)?item._registrosArea:conectaAcessoV1RegistrosFamiliaDiagnostico_(item.area,familia);
+  var registros=Array.isArray(item._registrosArea)?item._registrosArea:conectaAcessoV1RegistrosArea_(item.area);
   var membros=registros.filter(function(x){
     return conectaAcessoV1CodigoFamiliaItem_(x)===familia;
   }).map(function(x){
@@ -905,95 +905,30 @@ function conectaAcessoV1FiltrosDiagnostico_(p){
   };
 }
 
-function conectaAcessoV1ItemDiagnosticoLinha_(area,fonte,linha){
-  linha=Number(linha);
-  if(!fonte||!fonte.sheet||!linha||linha<=fonte.headerRow+1||linha>fonte.sheet.getLastRow())return null;
-  var faixa=fonte.sheet.getRange(linha,1,1,fonte.sheet.getLastColumn());
-  var raw=faixa.getValues()[0],display=faixa.getDisplayValues()[0];
-  var m=moradoresAdminV1MontarMorador_(display,raw,fonte.map);
-  var status=conectaAcessoV1Texto_(m.status||'ATIVO').toUpperCase();
-  if(!m.nome||['FORA_DA_AREA','TRANSFERIDO','FALECIDO','IMPORTACAO_DESFEITA','INATIVO'].indexOf(status)!==-1)return null;
-  return {area:area,fonte:fonte,row:linha,morador:m,chave:moradoresAdminV1ChaveRegistro_(m)};
-}
-
-function conectaAcessoV1LinhasDiagnosticoRapidas_(fonte,filtros){
-  var primeira=fonte.headerRow+2,ultima=fonte.sheet.getLastRow(),campo='',termo='',regex=false;
-  if(ultima<primeira)return [];
-  function regexDocumento(valor){
-    var d=moradoresAdminV1Digitos_(valor);
-    if(!d)return'';
-    return '^\\D*'+d.split('').join('\\D*')+'\\D*$';
-  }
-  if(filtros.cpf){campo='cpf';termo=regexDocumento(filtros.cpf);regex=true;}
-  else if(filtros.cns){campo='cns';termo=regexDocumento(filtros.cns);regex=true;}
-  else if(filtros.nascimento){campo='nascimento';termo=filtros.nascimento;}
-  else if(filtros.nome){campo='nome';termo=filtros.nome;}
-  else return [];
-  var col=Number(fonte.map&&fonte.map[campo]);
-  if(!isFinite(col)||col<0||!termo)return [];
-  var finder=fonte.sheet.getRange(primeira,col+1,ultima-primeira+1,1).createTextFinder(termo).matchCase(false);
-  if(regex)finder.useRegularExpression(true);
-  var achados=[];
-  try{achados=finder.findAll()||[];}catch(e){return [];}
-  var vistas={},linhas=[];
-  achados.forEach(function(celula){
-    var linha=celula.getRow();
-    if(vistas[linha])return;
-    vistas[linha]=true;linhas.push(linha);
-  });
-  linhas.sort(function(a,b){return a-b;});
-  return linhas;
-}
-
-function conectaAcessoV1ItemCombinaDiagnostico_(x,filtros){
-  if(!x||!x.morador)return false;
-  var m=x.morador||{};
-  if(filtros.cpf&&moradoresAdminV1Digitos_(m.cpf)!==moradoresAdminV1Digitos_(filtros.cpf))return false;
-  if(filtros.cns&&moradoresAdminV1Digitos_(m.cns)!==filtros.cns)return false;
-  if(filtros.nomeNormalizado){
-    var nomeMorador=conectaAcessoV1Nome_(m.nome);
-    if(nomeMorador!==filtros.nomeNormalizado&&nomeMorador.indexOf(filtros.nomeNormalizado)===-1)return false;
-  }
-  if(filtros.nascimento&&conectaAcessoV1Texto_(m.nascimento)!==filtros.nascimento)return false;
-  if(filtros.cadastro){
-    var familia=conectaAcessoV1CodigoFamiliaItem_(x);
-    var idPortal=conectaAcessoV1Texto_(m.idPortal).toUpperCase(),id=conectaAcessoV1Texto_(m.id).toUpperCase();
-    var cadastroOk=(filtros.familiaNormalizada&&familia===filtros.familiaNormalizada)||
-      filtros.cadastroNormalizado===idPortal||filtros.cadastroNormalizado===id;
-    if(!cadastroOk)return false;
-  }
-  return true;
-}
-
 function conectaAcessoV1BuscarDiagnostico_(filtros,excluirAreaId){
   var areas=conectaAcessoV1Areas_(),out=[];
   if(filtros.areaId)areas=areas.filter(function(a){return conectaAcessoV1Id_(a.areaId)===filtros.areaId;});
   else if(excluirAreaId)areas=areas.filter(function(a){return conectaAcessoV1Id_(a.areaId)!==conectaAcessoV1Id_(excluirAreaId);});
   areas.forEach(function(area){
-    /* BUSCA_MORADOR_DIAGNOSTICO_FAST_2026_09_21_V1:
-       o diagnóstico administrativo é somente leitura. Primeiro localiza apenas
-       as linhas candidatas na coluna mais seletiva (CPF, CNS, nascimento ou nome)
-       e só então monta esses moradores. O varrimento completo fica como fallback
-       de compatibilidade quando o TextFinder não consegue representar um dado legado. */
-    if(filtros.cadastro&&filtros.familiaNormalizada){
-      var familiares=conectaAcessoV1RegistrosFamiliaDiagnostico_(area,filtros.familiaNormalizada);
-      familiares.forEach(function(x){if(conectaAcessoV1ItemCombinaDiagnostico_(x,filtros))out.push(x);});
-      return;
-    }
-    var contexto={perfil:'PUBLICO',operadorId:'PUBLICO',agenteId:area.agenteId||'',areaId:area.areaId,areaNome:area.areaNome||area.areaId,unidadeId:area.unidadeId||'',planilhaId:area.planilhaId,permissoes:[]};
-    var fonte=moradoresAdminV1LocalizarFonte_(contexto);
-    var linhas=conectaAcessoV1LinhasDiagnosticoRapidas_(fonte,filtros);
-    if(linhas.length){
-      linhas.forEach(function(linha){
-        var x=conectaAcessoV1ItemDiagnosticoLinha_(area,fonte,linha);
-        if(x&&conectaAcessoV1ItemCombinaDiagnostico_(x,filtros))out.push(x);
-      });
-      return;
-    }
-    /* Fallback sem alterar a regra de busca anterior. */
     var registros=conectaAcessoV1RegistrosArea_(area);
     registros.forEach(function(x){
-      if(conectaAcessoV1ItemCombinaDiagnostico_(x,filtros)){x._registrosArea=registros;out.push(x);}
+      var m=x.morador||{};
+      if(filtros.cpf&&conectaAcessoV1Texto_(m.cpf)!==filtros.cpf)return;
+      if(filtros.cns&&moradoresAdminV1Digitos_(m.cns)!==filtros.cns)return;
+      if(filtros.nomeNormalizado){
+        var nomeMorador=conectaAcessoV1Nome_(m.nome);
+        if(nomeMorador!==filtros.nomeNormalizado&&nomeMorador.indexOf(filtros.nomeNormalizado)===-1)return;
+      }
+      if(filtros.nascimento&&conectaAcessoV1Texto_(m.nascimento)!==filtros.nascimento)return;
+      if(filtros.cadastro){
+        var familia=conectaAcessoV1CodigoFamiliaItem_(x);
+        var idPortal=conectaAcessoV1Texto_(m.idPortal).toUpperCase(),id=conectaAcessoV1Texto_(m.id).toUpperCase();
+        var cadastroOk=(filtros.familiaNormalizada&&familia===filtros.familiaNormalizada)||
+          filtros.cadastroNormalizado===idPortal||filtros.cadastroNormalizado===id;
+        if(!cadastroOk)return;
+      }
+      x._registrosArea=registros;
+      out.push(x);
     });
   });
   return out;

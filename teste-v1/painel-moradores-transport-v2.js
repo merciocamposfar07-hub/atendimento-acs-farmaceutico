@@ -468,6 +468,22 @@ function localResidentSearch(q){
   return out;
 }
 
+function residentDiagnosticIndexSnapshot(areaId){
+  var area=text(areaId||selectedAreaId);
+  if(!area||!residentIndexReady||residentIndexArea!==area)return null;
+  var meta=null;
+  for(var i=0;i<availableAreas.length;i++){
+    if(text(availableAreas[i]&&availableAreas[i].areaId)===area){meta=availableAreas[i];break}
+  }
+  return {
+    ready:true,
+    areaId:area,
+    areaNome:text(meta&&meta.areaNome||area),
+    unidadeId:text(meta&&meta.unidadeId||''),
+    resultados:residentIndex.slice()
+  };
+}
+
 function updateAreaHeading(areaName){
   var heading=el('areaHeading');
   if(heading)heading.textContent='Cadastro individual de cidadãos • '+(text(areaName)||'Área selecionada')+'.';
@@ -1518,6 +1534,8 @@ window.PortalTacsMoradoresTransportV2={
   saveResident:saveResident,
   saveSituation:saveSituation,
   search:doSearch,
+  warmIndex:warmResidentIndex,
+  diagnosticIndex:residentDiagnosticIndexSnapshot,
   classifyDuplicates:classifyDuplicates,
   renderSearchResults:renderSearchResults,
   loadResident:loadResident,
@@ -1529,6 +1547,6 @@ window.PortalTacsMoradoresTransportV2={
   maybeActivateSituation:maybeActivateSituation,
   rebindNativeContext:rebindNativeContext,
   nativeCompat:'task17-moradores-native-v1',
-  version:'3.7.0-busca-local-app-like'
+  version:'3.7.1-diagnostico-cache-first'
 };
 }());

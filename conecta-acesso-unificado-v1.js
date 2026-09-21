@@ -368,6 +368,107 @@ function renderResidentCoreResult(r){
  }
  renderIdentityFound(r);
 }
+function residentDiagnosticNorm(v){
+ var s=text(v).toLowerCase();
+ if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+ return s.replace(/[^a-z0-9]+/g,' ').trim();
+}
+function residentDiagnosticFamilyNorm(v){
+ var s=text(v).toUpperCase().replace(/\s+/g,''),m=s.match(/^(\d{1,4})([A-Z])?$/);
+ if(!m)return'';
+ var numero=m[1];if(numero.length<=3)numero=('000'+numero).slice(-3);
+ return numero+(m[2]||'');
+}
+function residentDiagnosticFamilyFromAddress(endereco){
+ var s=text(endereco).toUpperCase();
+ if(!s)return'';
+ if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+ var m=s.match(/,\s*([0-9]{1,4}[A-Z]?)\s*\.\s*(?:ZONA\s+RURAL\b|ZONA\b|RURAL\b)/);
+ if(!m)m=s.match(/,\s*([0-9]{1,4}[A-Z]?)\s*\./);
+ return m?residentDiagnosticFamilyNorm(m[1]):'';
+}
+function residentDiagnosticLocalKey(item){
+ return text(item&&item.idPortal||item&&item.id)||residentDiagnosticNorm(item&&item.nome)+'|'+digits(item&&item.nascimento);
+}
+function residentDiagnosticCached(payload){
+ var api=window.PortalTacsMoradoresTransportV2;
+ if(!api||typeof api.diagnosticIndex!=='function')return {available:false,ready:false,response:null};
+ var snapshot=null;
+ try{snapshot=api.diagnosticIndex(payload.areaId||'')}catch(e){snapshot=null}
+ if(!snapshot||snapshot.ready!==true||!Array.isArray(snapshot.resultados))return {available:true,ready:false,response:null};
+ var cpf=digits(payload.cpf),cns=digits(payload.cns),nomeNorm=residentDiagnosticNorm(payload.nome),birth=digits(payload.nascimento);
+ var cadastro=text(payload.cadastroArea),cadastroUpper=cadastro.toUpperCase(),familiaBusca=residentDiagnosticFamilyNorm(cadastro);
+ var list=snapshot.resultados.filter(function(item){
+  if(cpf&&digits(item&&item.cpf)!==cpf)return false;
+  if(cns&&digits(item&&item.cns)!==cns)return false;
+  if(nomeNorm){
+   var n=residentDiagnosticNorm(item&&item.nome);
+   if(n!==nomeNorm&&n.indexOf(nomeNorm)===-1)return false;
+  }
+  if(birth&&digits(item&&item.nascimento)!==birth)return false;
+  if(cadastro){
+   var fam=residentDiagnosticFamilyFromAddress(item&&item.endereco);
+   var idPortal=text(item&&item.idPortal).toUpperCase(),id=text(item&&item.id).toUpperCase();
+   if(!(familiaBusca&&fam===familiaBusca)&&cadastroUpper!==idPortal&&cadastroUpper!==id)return false;
+  }
+  return true;
+ });
+ if(!list.length)return {available:true,ready:true,response:null};
+
+ function membersForFamily(familiaId,selected){
+  var source=familiaId?snapshot.resultados.filter(function(item){return residentDiagnosticFamilyFromAddress(item&&item.endereco)===familiaId}):list;
+  return source.map(function(item){
+   return {
+    nome:text(item&&item.nome),
+    nascimento:text(item&&item.nascimento),
+    idPortal:text(item&&item.idPortal||item&&item.id),
+    selecionado:Boolean(selected[residentDiagnosticLocalKey(item)])
+   };
+  });
+ }
+ var selected={};
+ list.forEach(function(item){selected[residentDiagnosticLocalKey(item)]=true});
+ var base={
+  ok:true,encontrado:true,modo:RESIDENT_CORE_DIAGNOSTIC,coreMode:RESIDENT_CORE_DIAGNOSTIC,somenteLeitura:true,
+  documentoTipo:'BUSCA_COMBINADA',areaId:text(snapshot.areaId||payload.areaId),areaNome:text(snapshot.areaNome||snapshot.areaId||payload.areaId),
+  unidadeId:text(snapshot.unidadeId),vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,
+  notificacoesAlteradas:false,sessaoMoradorCriada:false,fonte:'INDICE_LOCAL_APP_LIKE'
+ };
+ if(list.length===1){
+  var item=list[0],familiaId=residentDiagnosticFamilyFromAddress(item&&item.endereco),sel={};
+  sel[residentDiagnosticLocalKey(item)]=true;
+  base.nome=text(item&&item.nome);base.nascimento=text(item&&item.nascimento);
+  base.cadastroArea=familiaId;base.familiaId=familiaId;base.familia=membersForFamily(familiaId,sel);
+  base.familiaTotal=base.familia.length;base.consultaFamilia=false;
+  base.message='Diagnóstico administrativo concluído pelo índice já carregado.';
+  return {available:true,ready:true,response:base};
+ }
+ var groups={},order=[];
+ list.forEach(function(item){
+  var familiaId=residentDiagnosticFamilyFromAddress(item&&item.endereco);
+  var key=familiaId||('SEM_FAMILIA|'+residentDiagnosticLocalKey(item));
+  if(!groups[key]){groups[key]={familiaId:familiaId,areaId:base.areaId,areaNome:base.areaNome,unidadeId:base.unidadeId,selected:{}};order.push(key)}
+  groups[key].selected[residentDiagnosticLocalKey(item)]=true;
+ });
+ var familias=order.map(function(key){
+  var g=groups[key];
+  return {familiaId:g.familiaId,areaId:g.areaId,areaNome:g.areaNome,unidadeId:g.unidadeId,membros:membersForFamily(g.familiaId,g.selected)};
+ });
+ var onlyCadastro=Boolean(cadastro&&!cpf&&!cns&&!payload.nome&&!payload.nascimento);
+ base.nome='';base.nascimento='';base.familias=familias;base.consultaMultipla=familias.length>1;
+ base.consultaFamilia=onlyCadastro&&familias.length===1;
+ base.familiaTotal=familias.reduce(function(total,g){return total+(g.membros||[]).length},0);
+ base.message=familias.length===1?'Cadastro e família localizados no índice já carregado.':'Cadastros compatíveis localizados no índice já carregado.';
+ return {available:true,ready:true,response:base};
+}
+function diagnoseResidentAdminRemote(payload){
+ setStatus('Conferindo o cadastro no servidor…','warn');
+ post('conecta_morador_diagnostico_admin',payload).then(function(r){
+  if(text(r.coreMode||r.modo)!==RESIDENT_CORE_DIAGNOSTIC)throw new Error('O servidor não confirmou o modo de diagnóstico administrativo.');
+  if(r.encontrado===false){setStatus(r.message||'Nenhum cadastro localizado com os dados informados.','warn');return}
+  renderResidentCoreResult(r);
+ }).catch(function(e){setStatus(e.message,'err')});
+}
 function diagnoseResidentAdmin(){
  var proof=trustKey('ADMIN'),cpf=digits(el('cscResidentCpf')&&el('cscResidentCpf').value),cns=digits(el('cscResidentCns')&&el('cscResidentCns').value);
  var nome=text(el('cscResidentNameDiagnostic')&&el('cscResidentNameDiagnostic').value),nascimento=text(el('cscResidentBirthDiagnostic')&&el('cscResidentBirthDiagnostic').value);
@@ -377,15 +478,25 @@ function diagnoseResidentAdmin(){
  if(cns&&cns.length!==15){setStatus('Confira o Cartão SUS (CNS) informado.','warn');return}
  if(nascimento&&digits(nascimento).length!==8){setStatus('Confira a data de nascimento informada.','warn');return}
  if(!proof){setStatus('Este aparelho não possui reconhecimento administrativo seguro. Entre como Administrador primeiro.','err');return}
- setStatus('Consultando o cadastro sem criar vínculo…','warn');
- post('conecta_morador_diagnostico_admin',{
+ var payload={
   cpf:cpf,cns:cns,nome:nome,nascimento:nascimento,cadastroArea:cadastro,areaId:areaId,
   coreMode:state.coreMode,dispositivo:device(),chaveConfianca:proof
- }).then(function(r){
-  if(text(r.coreMode||r.modo)!==RESIDENT_CORE_DIAGNOSTIC)throw new Error('O servidor não confirmou o modo de diagnóstico administrativo.');
-  if(r.encontrado===false){setStatus(r.message||'Nenhum cadastro localizado com os dados informados.','warn');return}
-  renderResidentCoreResult(r);
- }).catch(function(e){setStatus(e.message,'err')});
+ };
+ var first=residentDiagnosticCached(payload);
+ if(first.ready&&first.response){renderResidentCoreResult(first.response);return}
+ if(first.available&&!first.ready){
+  var api=window.PortalTacsMoradoresTransportV2,started=Date.now();
+  try{if(api&&typeof api.warmIndex==='function')api.warmIndex(false)}catch(e){}
+  setStatus('Localizando no índice de moradores já carregado…','warn');
+  (function waitLocal(){
+   var local=residentDiagnosticCached(payload);
+   if(local.ready&&local.response){renderResidentCoreResult(local.response);return}
+   if(local.ready||Date.now()-started>=1400){diagnoseResidentAdminRemote(payload);return}
+   setTimeout(waitLocal,80);
+  }());
+  return;
+ }
+ diagnoseResidentAdminRemote(payload);
 }
 function startCpf(cpf){
  cpf=digits(cpf);
