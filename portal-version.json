@@ -1,5 +1,5 @@
 {
-  "version": "20260920.2",
-  "releasedAt": "2026-09-20T21:40:00-03:00",
-  "scope": "Portal CSC — restaura cores individuais da lista de serviços"
+  "version": "20260920.3",
+  "releasedAt": "2026-09-20T21:45:00-03:00",
+  "scope": "Portal CSC — destaque e movimento do botão real de envio quando habilitado"
 }
