@@ -1,5 +1,5 @@
 {
-  "version": "20260920",
-  "releasedAt": "2026-09-20T00:15:00-03:00",
-  "scope": "Portal CSC — contornos azuis individuais e destaque do botão de envio"
+  "version": "20260920.1",
+  "releasedAt": "2026-09-20T21:30:00-03:00",
+  "scope": "Portal CSC — botão de envio vermelho quando bloqueado e verde pulsante quando habilitado"
 }

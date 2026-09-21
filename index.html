@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0">
   <meta name="theme-color" content="#062c46">
   <meta name="color-scheme" content="light only">
-  <meta name="portal-release" content="20260920">
+  <meta name="portal-release" content="20260920.1">
   <meta name="description" content="Canal do TACS - Técnico Agente Comunitário de Saúde Mércio José Campos dos Santos, vinculado à Unidade de Saúde Posto Matias, para moradores do Sítio Japaranduba, Chã Grande/PE.">
   <link rel="icon" type="image/png" href="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260918-app-identidade-csc-v1">
   <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260918-app-identidade-csc-v1">
@@ -1105,25 +1105,36 @@ html body main.shell section.panel .content .form-panel .notification-repair{
   box-shadow:none!important;
 }
 
-/* Botão principal: contorno azul; quando habilitado fica mais vivo para indicar o próximo passo. */
+/* Botão principal: vermelho enquanto bloqueado; verde e pulsante assim que a validação atual do portal o habilitar. */
+@keyframes cscSendReadyPulse{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 2px rgba(112,227,159,.18),0 0 10px rgba(112,227,159,.16)}
+  50%{transform:scale(1.018);box-shadow:0 0 0 4px rgba(112,227,159,.26),0 0 24px rgba(112,227,159,.34)}
+}
 html body #send.send{
   background:#062c46!important;
   background-color:#062c46!important;
   background-image:none!important;
-  border:2px solid #69c7e7!important;
-  box-shadow:none!important;
   color:#fff!important;
-}
-html body #send.send:not(:disabled){
-  border-color:#7de1ff!important;
-  box-shadow:0 0 0 2px rgba(125,225,255,.20),0 0 16px rgba(105,199,231,.22)!important;
-  opacity:1!important;
-  filter:brightness(1.08)!important;
-  -webkit-filter:brightness(1.08)!important;
+  transform-origin:center!important;
 }
 html body #send.send:disabled{
-  border-color:rgba(105,199,231,.58)!important;
-  box-shadow:none!important;
+  border:2px solid #ef5b57!important;
+  box-shadow:0 0 0 1px rgba(239,91,87,.10)!important;
+  opacity:.72!important;
+  animation:none!important;
+  filter:none!important;
+  -webkit-filter:none!important;
+}
+html body #send.send:not(:disabled){
+  border:2px solid #70e39f!important;
+  box-shadow:0 0 0 2px rgba(112,227,159,.18),0 0 14px rgba(112,227,159,.22)!important;
+  opacity:1!important;
+  animation:cscSendReadyPulse 1.15s ease-in-out infinite!important;
+  filter:brightness(1.10)!important;
+  -webkit-filter:brightness(1.10)!important;
+}
+@media(prefers-reduced-motion:reduce){
+  html body #send.send:not(:disabled){animation:none!important;transform:none!important}
 }
 
 /* Não cria outra moldura: o formulário continua sem painel externo próprio. */
