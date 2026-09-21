@@ -287,6 +287,42 @@ function create(host){
     return changed?true:sameExact(current,p);
   }
 
+  function verificarGravacaoReal(p,before,tentativa){
+    tentativa=Number(tentativa||0);
+    confirmed=false;lockWrites();
+    var reader=typeof transport.readFresh==='function'?transport.readFresh:transport.read;
+    reader('admin_dados',session(),function(r){
+      if(!r||r.ok!==true){
+        if(tentativa<2){
+          setStatus('Agenda salva. Confirmando a atualização no servidor…','aviso');
+          setTimeout(function(){verificarGravacaoReal(p,before,tentativa+1)},650*(tentativa+1));
+          return;
+        }
+        setDirty(true);confirmed=false;lockWrites();
+        setStatus('A agenda foi salva, mas a confirmação da releitura ainda não chegou. Aguarde antes de outra alteração.','aviso');
+        return;
+      }
+      var agendas=objectRows(r.agendas),current=agendas.find(function(a){
+        return normalId(a.MODULO)===normalId(p.modulo)&&normalDia(a.DIA)===normalDia(p.dia);
+      })||null;
+      if(sameChanges(current,p,before)){
+        salvarSnapshotPersistente(r);
+        try{if(perf&&typeof perf.commit==='function')perf.commit('agendas',performancePayload(r))}catch(e){}
+        applyData(r,true);initialized=true;setDirty(false);
+        setStatus('Agenda salva e confirmada pela releitura do servidor.','ok');
+        return;
+      }
+      if(tentativa<2){
+        setStatus('Agenda salva. Aguardando a planilha concluir a atualização…','aviso');
+        setTimeout(function(){verificarGravacaoReal(p,before,tentativa+1)},700*(tentativa+1));
+        return;
+      }
+      salvarSnapshotPersistente(r);
+      applyData(r,true);initialized=true;setDirty(true);
+      setStatus('A releitura continua diferente após novas conferências. Não faça outra alteração até revisar esta agenda.','erro');
+    });
+  }
+
   function save(card){
     if(!confirmed){setStatus('Aguarde a confirmação dos dados atuais antes de salvar.','aviso');return}
     var p=payload(card),before=clone(achar(p.modulo,p.dia));
@@ -295,12 +331,8 @@ function create(host){
     setUndo(before);setStatus('Salvando agenda e aguardando confirmação real…','aviso');
     transport.post('admin_salvar_agenda',p,function(r){
       if(!r||r.ok!==true){setStatus((text(r&&r.message)||'Não foi possível salvar a agenda.')+' A sessão foi preservada.','erro');return}
-      load('Alteração enviada. Conferindo a leitura real…',function(ok){
-        if(!ok){setDirty(true);setStatus('A alteração foi enviada, mas a releitura ainda não foi confirmada. Não faça outra alteração.','aviso');return}
-        var current=achar(p.modulo,p.dia);
-        if(!sameChanges(current,p,before)){setDirty(true);setStatus('A releitura ainda diverge do que foi salvo. Não faça outra alteração.','erro');return}
-        setDirty(false);setStatus('Agenda salva e confirmada pela releitura do servidor.','ok');
-      },{skipPrime:true,forceApply:true,silent:true});
+      setStatus('Agenda salva. Conferindo a leitura real do servidor…','aviso');
+      verificarGravacaoReal(p,before,0);
     });
   }
   function restore(){

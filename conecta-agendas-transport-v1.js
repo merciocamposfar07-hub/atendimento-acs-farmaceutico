@@ -143,13 +143,19 @@ function create(options){
     }
     post(action,payload,function(result){cb(normalizeAdminRead(action,result),{shared:false,source:'direct'})});
   }
+  /* CONFIRMACAO_POS_GRAVACAO_AGENDAS_20260920_V1:
+     após uma escrita, a conferência precisa vir do servidor e não pode reutilizar
+     leitura compartilhada/in-flight anterior à gravação. */
+  function readFresh(action,payload,cb){
+    post(action,payload,function(result){cb(normalizeAdminRead(action,result),{shared:false,source:'fresh-direct'})});
+  }
   function publicAgenda(areaId,cb){jsonp('agenda',{areaId:areaId},cb)}
   function destroy(){
     if(active){clearTimeout(active.timeout);clearTimeout(active.pollTimer);clearTimeout(active.submitTimer);active=null}
     if(messageHandler)window.removeEventListener('message',messageHandler);
     var frame=document.getElementById('cscAgendaNativeBridgeV1');if(frame)frame.remove();
   }
-  return{post:post,read:read,publicAgenda:publicAgenda,invalidatePublic:invalidatePublic,destroy:destroy,isBusy:function(){return Boolean(active)}};
+  return{post:post,read:read,readFresh:readFresh,publicAgenda:publicAgenda,invalidatePublic:invalidatePublic,destroy:destroy,isBusy:function(){return Boolean(active)}};
 }
 window.ConectaAgendasTransportV1={create:create,marker:'TAREFA_16_AGENDAS_NATIVAS_V1'};
 }());
