@@ -1,9 +1,9 @@
 {
-  "id": "/atendimento-acs-farmaceutico/portal-conecta-saude-comunitaria",
+  "id": "/atendimento-acs-farmaceutico/?app=csc-morador-2026",
   "name": "Portal Conecta Saúde Comunitária",
   "short_name": "Portal Conecta Saúde Comunitária",
   "description": "Portal Conecta Saúde Comunitária para acesso dos moradores aos serviços de saúde comunitária.",
-  "start_url": "/atendimento-acs-farmaceutico/index.html",
+  "start_url": "/atendimento-acs-farmaceutico/?app=csc-morador-2026",
   "scope": "/atendimento-acs-farmaceutico/",
   "display": "standalone",
   "background_color": "#071827",
