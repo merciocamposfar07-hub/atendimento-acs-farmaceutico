@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0">
   <meta name="theme-color" content="#062c46">
   <meta name="color-scheme" content="light only">
-  <meta name="portal-release" content="20260920-fundo-contornos-v3">
+  <meta name="portal-release" content="20260920-fundo-contornos-v4">
   <meta name="description" content="Canal do TACS - Técnico Agente Comunitário de Saúde Mércio José Campos dos Santos, vinculado à Unidade de Saúde Posto Matias, para moradores do Sítio Japaranduba, Chã Grande/PE.">
   <link rel="icon" type="image/png" href="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260918-app-identidade-csc-v1">
   <link rel="apple-touch-icon" href="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260918-app-identidade-csc-v1">
@@ -770,8 +770,8 @@
     .hero-actions,.action-card,
     .notice-area,.notice-board,.notice-list,
     .notice-card,.notice-card.important,.notice-card.urgent,
-    .purpose,.form-panel,.dental,
-    .info,.routing,.before-send,
+    .purpose,.dental,
+    .info,.routing,
     .portal-attachment-box,.tacs-pin-box,
     .hours,#integralPublicArea,.integral-area,
     .portal-service-picker-panel,#portalFamilyLookupV1,
@@ -788,8 +788,8 @@
     .hero-actions,.action-card,
     .notice-area,.notice-board,.notice-list,
     .notice-card,.notice-card.important,.notice-card.urgent,
-    .purpose,.form-panel,.dental,
-    .info,.routing,.before-send,
+    .purpose,.dental,
+    .info,.routing,
     .portal-attachment-box,.tacs-pin-box,
     .hours,#integralPublicArea,.integral-area,
     .portal-service-picker-panel,#portalFamilyLookupV1,
@@ -798,11 +798,32 @@
       box-shadow:none!important;
     }
 
-    /* Campos continuam identificáveis por sua função, sem criar molduras nos blocos. */
-    input,textarea,select{
-      background:#062c46!important;
+    /* Área Faça sua solicitação: sem painel azul-claro por trás. */
+    .form-panel{
+      background:transparent!important;
+      background-image:none!important;
+      border:0!important;
+      box-shadow:none!important;
+    }
+    .form-panel .section-icon{
+      background:transparent!important;
+      box-shadow:none!important;
+    }
+
+    /* Campos: sem preenchimento azul-claro; somente contorno individual. */
+    .form-panel input,.form-panel textarea,.form-panel select{
+      background:transparent!important;
       background-image:none!important;
       border:1px solid rgba(255,255,255,.28)!important;
+      box-shadow:none!important;
+      color:#fff!important;
+    }
+
+    /* Botão Enviar solicitação com destaque por contorno verde. */
+    #send.send{
+      background:#062c46!important;
+      background-image:none!important;
+      border:2px solid #70e39f!important;
       box-shadow:none!important;
       color:#fff!important;
     }
@@ -922,8 +943,6 @@
           <div class="info danger" id="dentalEmergency" hidden><strong>Atenção:</strong> esta opção registra a solicitação odontológica, mas não garante atendimento imediato. Em situação grave, procure uma unidade de urgência.</div>
           <div class="routing" id="routingAlert" hidden><strong>Este assunto não pertence a este canal.</strong><br>Esta página é exclusiva para serviços da Unidade de Saúde Posto Matias. Orientações clínicas sobre medicamentos, doses, receitas, exames, vitaminas, suplementos ou manipulados devem ser tratadas em um canal profissional separado.</div>
 
-          <div class="before-send"><span class="warning-icon" aria-hidden="true">!</span><div><strong>Antes de enviar</strong><ul><li>Confira seus dados.</li><li>A solicitação será enviada ao TACS - Técnico Agente Comunitário de Saúde.</li><li>Em caso de urgência, procure uma unidade de urgência ou ligue para o SAMU 192.</li></ul></div></div>
-
           <button class="send" id="send" type="button" disabled>Enviar solicitação pelo WhatsApp<small>Sua solicitação será enviada agora para o Técnico Agente Comunitário de Saúde.</small></button>
           <p class="privacy">Nome, data de nascimento, idade, CPF e solicitação serão enviados pelo WhatsApp ao TACS - Técnico Agente Comunitário de Saúde. Depois, o agente fará o encaminhamento necessário à Unidade de Saúde Posto Matias. Esses dados não ficam armazenados nesta página.</p>
         </section>
@@ -1032,7 +1051,7 @@
 <script id="portalTacsIdentificacaoFamiliaScriptV1" src="portal-identificacao-familia-v1.js?v=20260919-guia-pin-canonico-v4"></script>
   <script src="portal-auto-update.js?v=20260920-fundo-contornos-v3"></script>
   <script src="portal-controle-integral.js?v=20260918-recados-cache-first-v1"></script>
-  <script src="portal-ajustes-finais.js?v=20260920-fundo-contornos-v2"></script>
+  <script src="portal-ajustes-finais.js?v=20260920-fundo-contornos-v4"></script>
   <script src="portal-solicitacoes-ubs-v1.js?v=20260920-dados-envio-expiracao-v7"></script>
   <script src="portal-odontologia-segunda-sexta.js?v=20260920-solicitacoes-ubs-v2"></script>
   <script src="portal-orientacao-morador.js?v=20260919-pin-mesma-seta-v2"></script>

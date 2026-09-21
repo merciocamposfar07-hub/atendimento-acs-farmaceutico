@@ -1,5 +1,5 @@
 {
-  "version": "20260920-fundo-contornos-v3",
-  "releasedAt": "2026-09-20T23:58:00Z",
-  "scope": "Portal CSC — correção visual do fundo, contornos e rodapé"
+  "version": "20260920-fundo-contornos-v4",
+  "releasedAt": "2026-09-21T00:03:00Z",
+  "scope": "Portal CSC — remove Antes de enviar, retira fundo azul-claro do formulário e destaca botão Enviar"
 }
