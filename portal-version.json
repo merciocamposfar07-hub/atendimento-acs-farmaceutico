@@ -1,5 +1,5 @@
 {
-  "version": "20260920-fundo-contornos-v4",
-  "releasedAt": "2026-09-21T00:03:00Z",
-  "scope": "Portal CSC — remove Antes de enviar, retira fundo azul-claro do formulário e destaca botão Enviar"
+  "version": "20260920-sem-azul-claro-v5",
+  "releasedAt": "2026-09-21T00:10:00Z",
+  "scope": "Portal CSC — remoção total do azul-claro na área Faça sua solicitação"
 }
