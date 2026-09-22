@@ -347,14 +347,17 @@ function renderResidentCoreResult(r){
   var family=Array.isArray(r.familia)?r.familia:[],familyId=text(r.familiaId||r.cadastroArea),familyHtml='',familias=Array.isArray(r.familias)?r.familias:[];
   if(familias.length){
    familyHtml=familias.map(function(g){
-    var membros=Array.isArray(g.membros)?g.membros:[];
-    return '<div class="csc-access-note"><strong>Família'+(g.familiaId?' • cadastro '+esc(g.familiaId):'')+'</strong><br>'+
-     membros.map(function(m){return '<span style="display:block;margin-top:8px">'+(m.selecionado?'✓ ':'• ')+esc(m.nome||'Morador')+(m.nascimento?' — '+esc(m.nascimento):'')+'</span>'}).join('')+
+    var membros=Array.isArray(g.membros)?g.membros:[],areaRotulo=text(g.areaNome||g.areaId)||'Área não informada';
+    return '<div class="csc-access-note"><strong>Família'+(g.familiaId?' • cadastro '+esc(g.familiaId):'')+'</strong>'+
+     '<span style="display:block;margin-top:5px;font-weight:800;color:#7fe8bc">Área: '+esc(areaRotulo)+'</span>'+
+     membros.map(function(m){return '<span style="display:block;margin-top:8px">'+(m.selecionado?'✓ ':'• ')+esc(m.nome||'Morador')+(m.nascimento?' — '+esc(m.nascimento):'')+'<small style="display:block;margin-left:18px;margin-top:2px;color:#adc4d2">Área: '+esc(areaRotulo)+'</small></span>'}).join('')+
      '</div>';
    }).join('');
   }else if(family.length){
-   familyHtml='<div class="csc-access-note"><strong>Família'+(familyId?' • cadastro '+esc(familyId):'')+'</strong><br>'+
-    family.map(function(m){return '<span style="display:block;margin-top:8px">'+(m.selecionado?'✓ ':'• ')+esc(m.nome||'Morador')+(m.nascimento?' — '+esc(m.nascimento):'')+'</span>'}).join('')+
+   var areaRotuloUnico=text(r.areaNome||r.areaId)||'Área não informada';
+   familyHtml='<div class="csc-access-note"><strong>Família'+(familyId?' • cadastro '+esc(familyId):'')+'</strong>'+
+    '<span style="display:block;margin-top:5px;font-weight:800;color:#7fe8bc">Área: '+esc(areaRotuloUnico)+'</span>'+
+    family.map(function(m){return '<span style="display:block;margin-top:8px">'+(m.selecionado?'✓ ':'• ')+esc(m.nome||'Morador')+(m.nascimento?' — '+esc(m.nascimento):'')+'<small style="display:block;margin-left:18px;margin-top:2px;color:#adc4d2">Área: '+esc(areaRotuloUnico)+'</small></span>'}).join('')+
     '</div>';
   }
   var foundTitle=r.consultaMultipla===true?'Cadastros localizados':(r.consultaFamilia===true?'Cadastro familiar localizado':'Cadastro localizado');
