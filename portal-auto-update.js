@@ -305,7 +305,7 @@
     var script=document.createElement('script');
     script.id='portalTacsIdentificacaoFamiliaScriptV1';
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260918-pin-teste-persistente-v10';
+    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260921-pin-segundo-acesso-real-v5';
     (document.head||document.documentElement).appendChild(script);
   }
 

@@ -333,6 +333,10 @@ function conectaAcessoV1Identificar_(p){
   var cpf=conectaAcessoV1Cpf_(p.cpf),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
   if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
   if(conectaAcessoV1AparelhoAdministrativo_(dispositivo)&&!conectaAcessoV1Bool_(p.fluxoMoradorExplicito))throw new Error('Aparelho administrativo: use o diagnóstico do Morador sem criar vínculo.');
+  var acessoSheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),acesso=conectaAcessoV1AcessoPorCpf_(acessoSheet,cpf);
+  if(acesso&&conectaAcessoV1Bool_(acesso.values[15])&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(acesso.values[9]),conectaAcessoV1Hash_(dispositivo))){
+    return {ok:true,encontrado:true,jaPossuiPin:true,cpf:cpf,message:'Este aparelho já possui PIN. Entre com os quatro números ou recupere o acesso com seu CPF.'};
+  }
   var achados=conectaAcessoV1BuscarCpf_(cpf);
   if(achados.length===1)return conectaAcessoV1IdentidadeResposta_(achados[0],cpf,false,'Cadastro localizado.');
   if(achados.length>1)return {ok:true,encontrado:false,precisaNascimento:true,ambiguo:true,message:'Precisamos confirmar mais um dado para localizar seu cadastro com segurança.'};
@@ -420,6 +424,7 @@ function conectaAcessoV1CriarPin_(p){
   if(!lock.tryLock(10000))throw new Error('Seu acesso está sendo salvo. Tente novamente em instantes.');
   try{
     var registro=conectaAcessoV1AcessoPorCpf_(sheet,identidade.cpf),salt=Utilities.getUuid().replace(/-/g,''),quick=conectaAcessoV1Token_('cmq1');
+    if(registro&&conectaAcessoV1Bool_(registro.values[15])&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo)))throw new Error('O PIN já foi criado neste aparelho. Entre com o PIN atual ou use a recuperação por CPF para criar um novo.');
     var agora=new Date(),id=registro?registro.values[0]:'CMA-'+Utilities.getUuid().replace(/-/g,'').slice(0,18).toUpperCase();
     var criado=registro?registro.values[16]:agora;
     var vals=[
@@ -437,18 +442,29 @@ function conectaAcessoV1CriarPin_(p){
 }
 
 function conectaAcessoV1LoginMorador_(p){
-  var pin=conectaAcessoV1PinSomente_(p.pin),quick=conectaAcessoV1Texto_(p.quickKey),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
-  if(!/^cmq1\./.test(quick)||!dispositivo)throw new Error('Este aparelho ainda não possui um acesso de morador reconhecido.');
+  var pin=conectaAcessoV1PinSomente_(p.pin),quick=conectaAcessoV1Texto_(p.quickKey),dispositivo=conectaAcessoV1Texto_(p.dispositivo),cpf='';
+  if(!dispositivo)throw new Error('Este aparelho ainda não possui um acesso de morador reconhecido.');
   if(conectaAcessoV1AparelhoAdministrativo_(dispositivo)&&!conectaAcessoV1Bool_(p.fluxoMoradorExplicito))throw new Error('Aparelho administrativo não pode assumir sessão de Morador; use o diagnóstico sem vínculo.');
-  var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=conectaAcessoV1AcessoPorQuick_(sheet,quick);
+  var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=null,novoQuick='';
+  if(/^cmq1\./.test(quick))registro=conectaAcessoV1AcessoPorQuick_(sheet,quick);
+  else{
+    cpf=conectaAcessoV1Cpf_(p.cpf);
+    registro=conectaAcessoV1AcessoPorCpf_(sheet,cpf);
+  }
   if(!registro||!conectaAcessoV1Bool_(registro.values[15]))throw new Error('Acesso não localizado ou inativo.');
-  if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo)))throw new Error('Este acesso rápido pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
+  if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo)))throw new Error('Este acesso pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
   if(!conectaAcessoV1Seguro_(registro.values[7],conectaAcessoV1Hash_(registro.values[6]+'|'+pin)))throw new Error('PIN incorreto.');
+  if(!/^cmq1\./.test(quick)){
+    novoQuick=conectaAcessoV1Token_('cmq1');quick=novoQuick;
+    registro.values[8]=conectaAcessoV1Hash_(quick);
+    sheet.getRange(registro.row,9).setValue(registro.values[8]);
+    sheet.getRange(registro.row,18).setValue(new Date());
+  }
   var session=conectaAcessoV1CriarSessao_(registro.values,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(registro.values),responsavel=(nucleo.membros||[]).filter(function(m){return m&&m.responsavel;})[0]||{};
-  return {ok:true,token:session.token,perfil:'MORADOR',areaId:registro.values[1],nome:registro.values[4],cpf:registro.values[3],nascimento:registro.values[5]||responsavel.nascimento||'',endereco:responsavel.localidade||'',notificacoesAtivas:conectaAcessoV1Bool_(registro.values[10]),silencioso:conectaAcessoV1Bool_(registro.values[12]),provisorio:conectaAcessoV1Bool_(registro.values[13]),pendenciaId:conectaAcessoV1Texto_(registro.values[14]),familiaId:nucleo.familiaId,familia:nucleo.membros};
+  return {ok:true,token:session.token,quickKey:quick,perfil:'MORADOR',areaId:registro.values[1],nome:registro.values[4],cpf:registro.values[3],nascimento:registro.values[5]||responsavel.nascimento||'',endereco:responsavel.localidade||'',notificacoesAtivas:conectaAcessoV1Bool_(registro.values[10]),silencioso:conectaAcessoV1Bool_(registro.values[12]),provisorio:conectaAcessoV1Bool_(registro.values[13]),pendenciaId:conectaAcessoV1Texto_(registro.values[14]),familiaId:nucleo.familiaId,familia:nucleo.membros};
 }
 
-function conectaAcessoV1SessaoMorador_(p){
+function conectaAcessoV1SessaoMorador_function conectaAcessoV1SessaoMorador_(p){
   var sessao=conectaAcessoV1ValidarSessao_(p);
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=conectaAcessoV1AcessoPorId_(sheet,sessao.accessId);
   if(!registro)throw new Error('Acesso do morador não localizado.');
@@ -566,7 +582,9 @@ function conectaAcessoV1RecuperarIniciar_(p){
   if(perfil==='MORADOR'){
     var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),r=conectaAcessoV1AcessoPorCpf_(sh,cpf);
     if(!r)throw new Error('CPF não localizado em um acesso de morador.');
-    if(!/^cmq1\./.test(chave)||!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(r.values[8]),conectaAcessoV1Hash_(chave))||!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(r.values[9]),conectaAcessoV1Hash_(dispositivo))){
+    var mesmoAparelho=conectaAcessoV1Seguro_(conectaAcessoV1Texto_(r.values[9]),conectaAcessoV1Hash_(dispositivo));
+    var chaveValida=/^cmq1\./.test(chave)&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(r.values[8]),conectaAcessoV1Hash_(chave));
+    if(!mesmoAparelho){
       throw new Error('Por segurança, recupere o PIN no aparelho já reconhecido por este morador.');
     }
     payload={perfil:'MORADOR',accessId:r.values[0],cpf:cpf,dispositivoHash:conectaAcessoV1Hash_(dispositivo)};
@@ -592,7 +610,12 @@ function conectaAcessoV1RecuperarSalvar_(p){
   if(rec.perfil==='MORADOR'){
     var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),r=conectaAcessoV1AcessoPorId_(sh,rec.accessId);
     if(!r)throw new Error('Acesso do morador não localizado.');
-    var salt=Utilities.getUuid().replace(/-/g,'');sh.getRange(r.row,7,1,2).setValues([[salt,conectaAcessoV1Hash_(salt+'|'+pin)]]);sh.getRange(r.row,18).setValue(new Date());
+    var salt=Utilities.getUuid().replace(/-/g,''),quick=conectaAcessoV1Token_('cmq1');
+    r.values[6]=salt;r.values[7]=conectaAcessoV1Hash_(salt+'|'+pin);r.values[8]=conectaAcessoV1Hash_(quick);
+    sh.getRange(r.row,7,1,3).setValues([[r.values[6],r.values[7],r.values[8]]]);sh.getRange(r.row,18).setValue(new Date());
+    var session=conectaAcessoV1CriarSessao_(r.values,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(r.values),responsavel=(nucleo.membros||[]).filter(function(m){return m&&m.responsavel;})[0]||{};
+    conectaAcessoV1ApagarTokenCache_(p.recuperacaoToken,TACS_CONECTA_ACESSO_V1.RECOVERY_PREFIX);
+    return {ok:true,token:session.token,quickKey:quick,perfil:'MORADOR',areaId:r.values[1],nome:r.values[4],cpf:r.values[3],nascimento:r.values[5]||responsavel.nascimento||'',endereco:responsavel.localidade||'',notificacoesAtivas:conectaAcessoV1Bool_(r.values[10]),silencioso:conectaAcessoV1Bool_(r.values[12]),provisorio:conectaAcessoV1Bool_(r.values[13]),pendenciaId:conectaAcessoV1Texto_(r.values[14]),familiaId:nucleo.familiaId,familia:nucleo.membros,message:'Novo PIN salvo e acesso recuperado.'};
   }else if(rec.perfil==='TACS'){
     conectaAcessoV1SalvarPinTacs_(rec.tacsId,pin);
   }else{
@@ -602,7 +625,7 @@ function conectaAcessoV1RecuperarSalvar_(p){
   return {ok:true,message:'Novo PIN salvo. Volte ao acesso e entre com os quatro números.'};
 }
 
-function conectaAcessoV1ContarPendenciasArea_(areaId){
+function conectaAcessoV1ContarPendenciasArea_function conectaAcessoV1ContarPendenciasArea_(areaId){
   var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.PENDING_SHEET,TACS_CONECTA_ACESSO_V1.PENDING_HEADERS),last=sh.getLastRow(),n=0,area=conectaAcessoV1Id_(areaId);
   if(last<=1)return 0;
   sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.PENDING_HEADERS.length).getDisplayValues().forEach(function(v){

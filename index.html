@@ -10,9 +10,12 @@
   <meta name="color-scheme" content="light only">
   <meta name="portal-release" content="20260920.4">
   <meta name="description" content="Canal do TACS - Técnico Agente Comunitário de Saúde Mércio José Campos dos Santos, vinculado à Unidade de Saúde Posto Matias, para moradores do Sítio Japaranduba, Chã Grande/PE.">
-  <link rel="icon" type="image/png" sizes="120x120" href="/atendimento-acs-farmaceutico/app-icons/csc-morador-oficial-foto-120-v9.png">
-  <link rel="apple-touch-icon" sizes="120x120" href="/atendimento-acs-farmaceutico/app-icons/csc-morador-oficial-foto-120-v9.png">
-  <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-csc-morador-2026-v9.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="/atendimento-acs-farmaceutico/app-icons/csc-morador-oficial-192-20260920-v3.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/atendimento-acs-farmaceutico/app-icons/csc-morador-oficial-180-20260920-v3.png">
+  <link rel="manifest" href="/atendimento-acs-farmaceutico/manifest-csc-morador-2026-v9.webmanifest?v=20260921-install-v1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Portal Conecta Saúde Comunitária">
   <link rel="preconnect" href="https://script.google.com">
   <link rel="preconnect" href="https://script.googleusercontent.com">
@@ -1048,7 +1051,7 @@
   }());
   </script>
   <script src="moradores-autofill.js?v=20260918-familia-snapshot-autofill-v1"></script>
-<script id="portalTacsIdentificacaoFamiliaScriptV1" src="portal-identificacao-familia-v1.js?v=20260919-guia-pin-canonico-v4"></script>
+<script id="portalTacsIdentificacaoFamiliaScriptV1" src="portal-identificacao-familia-v1.js?v=20260921-pin-segundo-acesso-real-v5"></script>
   <script src="portal-auto-update.js?v=20260920-fundo-contornos-v3"></script>
   <script src="portal-controle-integral.js?v=20260918-recados-cache-first-v1"></script>
   <script src="portal-ajustes-finais.js?v=20260920.3"></script>
@@ -1146,5 +1149,14 @@ html body main.shell section.panel .content .form-panel{
   border:0!important;
   border-radius:0!important;
 }
-</style></body>
+</style>  <script>
+  (function(){
+    if(!('serviceWorker' in navigator)||location.protocol!=='https:')return;
+    window.addEventListener('load',function(){
+      var registrar=function(){navigator.serviceWorker.register('/atendimento-acs-farmaceutico/csc-morador-sw.js',{scope:'/atendimento-acs-farmaceutico/'}).catch(function(){})};
+      if('requestIdleCallback' in window)requestIdleCallback(registrar,{timeout:1800});else setTimeout(registrar,700);
+    },{once:true});
+  }());
+  </script>
+</body>
 </html>

@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-  var oneSignal=null,pendingMissing='',pendingType='',pendingOwnerLookup='',currentResident=null,complementing=false,memberPointer=null,lastMemberActivation={token:'',at:0},residentIdentityToken='',residentEnrollmentCpf='',residentBirthConfirm='',residentNameConfirm='',residentAccessBusy=false,activeFamilyId='',familySnapshot=null,memberResolvedCache={},memberResolvePromises={},wantedMemberToken='',internalMemberSwitch=false,memberCacheWarmGeneration=0;
+  var oneSignal=null,pendingMissing='',pendingType='',pendingOwnerLookup='',currentResident=null,complementing=false,memberPointer=null,lastMemberActivation={token:'',at:0},residentIdentityToken='',residentEnrollmentCpf='',residentBirthConfirm='',residentNameConfirm='',residentRecoveryToken='',residentServerCpfHint='',residentAccessBusy=false,activeFamilyId='',familySnapshot=null,memberResolvedCache={},memberResolvePromises={},wantedMemberToken='',internalMemberSwitch=false,memberCacheWarmGeneration=0;
   var FAMILY_BOX='portalFamilyLookupV1',DOC_BOX='portalDocumentComplementV1',PIN_BOX='portalResidentPinV1',STYLE_ID='portalFamilyLookupStyleV1',DEVICE_KEY='portalTacsDispositivoV1',PROFILE_KEY='portalConectaMoradorQuickV1',TOKEN_KEY='portalConectaMoradorTokenV1',TEST_PROFILE_KEY='portalConectaMoradorQuickTesteV1',TEST_TOKEN_KEY='portalConectaMoradorTokenTesteV1',BOOTSTRAP_KEY='portalConectaMoradorBootstrapV2',TEST_BOOTSTRAP_KEY='portalConectaMoradorBootstrapTesteV2',AREA_KEY='portalTacsCentralAreaV1',LAST_ROLE_KEY='portalConectaLastRoleV1',ADMIN_TRUST_KEY='portalConectaRecoveryTrustV1:admin',TECH_TOKEN_PREFIX='portalTacsAparelhoTesteTokenV3:',FAMILY_STORAGE_PREFIX='portalTacsFamiliaAutofillV1:',LEGACY_FAMILY_STORAGE_PREFIX='portalTacsFamiliaConfirmadaV1:';
   var familyQueryPromises={};
   /* BUSCA_FAMILIAR_TOQUE_RESILIENTE_2026_09_16_V1 */
@@ -34,6 +34,11 @@
   function box(){return makeBox(FAMILY_BOX)}
   function docBox(){return makeBox(DOC_BOX)}
   function pinBox(){var b=document.getElementById(PIN_BOX);if(b)return b;var family=box();if(!family||!family.parentNode)return null;b=document.createElement('div');b.id=PIN_BOX;b.hidden=true;b.setAttribute('role','status');family.parentNode.insertBefore(b,family);return b}
+  function primaryDocumentLabel(){var input=document.getElementById('cpf');return input&&input.closest?input.closest('label'):null}
+  function placePinFirst(){var b=pinBox(),label=primaryDocumentLabel();if(b&&label&&label.parentNode&&b!==label.previousSibling)label.parentNode.insertBefore(b,label);if(label)label.hidden=true}
+  function placePinDefault(){var b=pinBox(),family=box();if(b&&family&&family.parentNode&&b.nextSibling!==family)family.parentNode.insertBefore(b,family);var label=primaryDocumentLabel();if(label)label.hidden=false}
+  function residentVaultExists(){if(tacsTeste())return false;try{var v=window.ConectaPinLocalV2;return Boolean(v&&typeof v.existe==='function'&&v.existe('morador'))}catch(e){return false}}
+  function recoveryCpfHtml(){if(tacsTeste())return '';var value=residentServerCpfHint?formatCpfInput(residentServerCpfHint):'';return '<div class="tacs-family-help" style="margin-top:16px"><strong>Esqueceu ou precisa criar um novo PIN?</strong><br>Use seu CPF somente para recuperar o acesso.</div><input id="portalResidentRecoveryCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="CPF para recuperar o PIN" value="'+escapeHtml(value)+'"><div class="tacs-pin-actions"><button type="button" class="tacs-family-action" data-resident-pin-recovery="1">Recuperar / criar novo PIN com CPF</button></div>'}
 
   function readResidentProfileKey(key,prefix){try{var p=JSON.parse(localStorage.getItem(key)||'null'),q=text(p&&p.quickKey);return p&&prefix.test(q)?p:null}catch(e){return null}}
   function residentProfile(){
@@ -85,7 +90,7 @@
     }catch(e){}
   }
   function setPinBox(html,cls){var b=pinBox();if(!b)return;b.className=cls||'tacs-pin-box';b.innerHTML=html;b.hidden=false}
-  function hidePin(){var b=pinBox();if(b){b.hidden=true;b.innerHTML='';b.className=''}}
+  function hidePin(){var b=pinBox();if(b){b.hidden=true;b.innerHTML='';b.className=''}placePinDefault()}
   function setBox(html,cls){var b=box();if(!b)return;b.className=cls||'';b.innerHTML=html;b.hidden=false}
   function setDocBox(html,cls){var b=docBox();if(!b)return;b.className=cls||'';b.innerHTML=html;b.hidden=false}
   function hide(){var b=box();if(b){b.hidden=true;b.innerHTML='';b.className=''}}
@@ -124,9 +129,28 @@
   function renderMissingCpfReview(){setPinBox('<strong class="tacs-family-title">Confira seus dados antes de salvar</strong><p class="tacs-family-help">Pare um momento e verifique se os 11 números do CPF e a data de nascimento estão corretos.</p><div class="tacs-family-help"><strong>CPF:</strong> '+escapeHtml(formatDoc(residentEnrollmentCpf))+'<br><strong>Data de nascimento:</strong> '+escapeHtml(residentBirthConfirm)+'</div><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-cpf-review-confirm="1">Confirmar e continuar</button><button type="button" class="tacs-family-action" data-resident-cpf-review-correct="1">Corrigir</button></div>','tacs-pin-box')}
   function correctMissingCpf(){hidePin();residentIdentityToken='';residentBirthConfirm='';residentNameConfirm='';var input=document.getElementById('cpf');if(input){try{input.focus();input.select()}catch(e){}}}
   function confirmReviewedMissingCpf(){if(digits(residentEnrollmentCpf).length!==11||!residentIdentityToken||!residentBirthConfirm){renderMissingCpfBirth(residentEnrollmentCpf,'Confira novamente o CPF e a data de nascimento.');return}residentPost('conecta_morador_confirmar',{cpf:residentEnrollmentCpf,nascimento:residentBirthConfirm,areaId:areaId(),identidadeToken:residentIdentityToken,confirmarCpf:'SIM',dispositivo:deviceId(true)}).then(function(r){if(!r||!r.identidadeToken||r.provisorio===true)throw new Error(r&&r.message||'Não foi possível salvar o CPF.');residentIdentityToken=text(r.identidadeToken);pendingMissing='';pendingType='';pendingOwnerLookup='';renderResidentPinCreate(r,residentEnrollmentCpf);var input=document.getElementById('cpf');if(input){setTimeout(function(){input.value=formatDoc(residentEnrollmentCpf);input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}))},120)}}).catch(function(e){setPinBox('<strong class="tacs-family-title">Não foi possível salvar o CPF</strong><p class="tacs-family-help">'+escapeHtml(e.message)+'</p>','tacs-family-warn')})}
-  function renderResidentPinCreate(r,cpf){residentIdentityToken=text(r&&r.identidadeToken);residentEnrollmentCpf=digits(cpf);if(!residentIdentityToken)return;setPinBox('<strong class="tacs-family-title">Agora crie o seu PIN com quatro números.</strong><p class="tacs-family-help">Digite 4 números e confirme o mesmo PIN. Da próxima vez, este aparelho poderá acessar sua família usando o PIN.</p><input id="portalResidentPinNew" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="PIN de 4 números"><input id="portalResidentPinConfirm" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirmar PIN de 4 números"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-pin-create="1">Salvar PIN</button></div>','tacs-pin-box')}
+  function renderResidentPinCreate(r,cpf){placePinDefault();residentIdentityToken=text(r&&r.identidadeToken);residentEnrollmentCpf=digits(cpf);if(!residentIdentityToken)return;setPinBox('<strong class="tacs-family-title">Agora crie o seu PIN com quatro números.</strong><p class="tacs-family-help">Digite 4 números e confirme o mesmo PIN. Da próxima vez, este aparelho poderá acessar sua família usando o PIN.</p><input id="portalResidentPinNew" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="PIN de 4 números"><input id="portalResidentPinConfirm" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirmar PIN de 4 números"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-pin-create="1">Salvar PIN</button></div>','tacs-pin-box')}
   function preparedSelectedIdentity(cpf){var d=digits(cpf),r=wantedMemberToken&&memberResolvedCache[wantedMemberToken];if(!r||digits(r.documentoAcesso)!==d||!r.acessoPreparado||!text(r.identidadeToken))return null;return r}
-  function beginResidentPinEnrollment(cpf){var d=digits(cpf);if(!/^\d{11}$/.test(d)||residentSessionToken())return Promise.resolve(null);if(residentProfile()){renderResidentPinLogin();return Promise.resolve(null)}if(residentEnrollmentCpf&&residentEnrollmentCpf!==d)return Promise.resolve(null);residentEnrollmentCpf=d;/* PIN_CACHE_FIRST_FAMILIA_2026_09_18_V1: integrante já resolvido na família não deve ser consultado outra vez. */var prepared=preparedSelectedIdentity(d);if(prepared){renderResidentPinCreate(prepared,d);return Promise.resolve(prepared)}/* MANTER_LISTA_FAMILIAR_VISIVEL_DURANTE_PIN_2026_09_16_V1: não apagar portalFamilyLookupV1 ao iniciar o PIN. */setPinBox('<strong class="tacs-family-title">Preparando seu acesso por PIN…</strong><p class="tacs-family-help">Seu CPF foi reconhecido. Aguarde um instante.</p>','tacs-pin-box');return residentPost('conecta_morador_identificar',{cpf:d,dispositivo:deviceId(true)}).then(function(r){if(r&&r.identidadeToken&&!r.provisorio){renderResidentPinCreate(r,d);return r}if(r&&r.precisaNascimento){renderMissingCpfBirth(d,'Confirme sua data de nascimento para continuar e criar o PIN.');return r}throw new Error(r&&r.message||'Não foi possível preparar o PIN.')}).catch(function(e){setPinBox('<strong class="tacs-family-title">Não foi possível preparar o PIN agora</strong><p class="tacs-family-help">'+escapeHtml(e.message)+'</p>','tacs-family-warn');return null})}
+  function beginResidentPinEnrollment(cpf){
+    var d=digits(cpf);
+    if(!/^\d{11}$/.test(d)||residentSessionToken())return Promise.resolve(null);
+    if(residentProfile()||residentVaultExists()){renderResidentPinLogin();return Promise.resolve(null)}
+    if(residentEnrollmentCpf&&residentEnrollmentCpf!==d)return Promise.resolve(null);
+    residentEnrollmentCpf=d;
+    var prepared=preparedSelectedIdentity(d);
+    if(prepared){renderResidentPinCreate(prepared,d);return Promise.resolve(prepared)}
+    setPinBox('<strong class="tacs-family-title">Preparando seu acesso por PIN…</strong><p class="tacs-family-help">Seu CPF foi reconhecido. Aguarde um instante.</p>','tacs-pin-box');
+    return residentPost('conecta_morador_identificar',{cpf:d,dispositivo:deviceId(true)}).then(function(r){
+      if(r&&r.jaPossuiPin===true){
+        residentServerCpfHint=d;
+        renderResidentPinLogin(r.message||'Este aparelho já possui PIN.');
+        return r;
+      }
+      if(r&&r.identidadeToken&&!r.provisorio){renderResidentPinCreate(r,d);return r}
+      if(r&&r.precisaNascimento){renderMissingCpfBirth(d,'Confirme sua data de nascimento para continuar e criar o PIN.');return r}
+      throw new Error(r&&r.message||'Não foi possível preparar o PIN.');
+    }).catch(function(e){setPinBox('<strong class="tacs-family-title">Não foi possível preparar o PIN agora</strong><p class="tacs-family-help">'+escapeHtml(e.message)+'</p>','tacs-family-warn');return null});
+  }
   /* PIN_OBRIGATORIO_APOS_SELECAO_MORADOR_2026_09_16_V1
      Se o integrante vier pelo CNS porque ainda não há CPF utilizável, o primeiro
      acesso não pode seguir direto para o serviço: solicita CPF, confirma nascimento
@@ -157,9 +181,76 @@
     }
     return '<strong class="tacs-family-title">✓ PIN criado e confirmado</strong><p class="tacs-family-help">Seu acesso foi salvo. O Portal está conferindo automaticamente o estado das notificações deste aparelho.</p>';
   }
-  function createResidentPinFromPortal(){var a=digits(document.getElementById('portalResidentPinNew')&&document.getElementById('portalResidentPinNew').value),b=digits(document.getElementById('portalResidentPinConfirm')&&document.getElementById('portalResidentPinConfirm').value),btn=document.querySelector('[data-resident-pin-create]');if(!/^\d{4}$/.test(a)||a!==b){setPinBox('<strong class="tacs-family-title">Agora crie o seu PIN com quatro números.</strong><p class="tacs-family-help">Os dois campos precisam ter exatamente os mesmos 4 números.</p><input id="portalResidentPinNew" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="PIN de 4 números"><input id="portalResidentPinConfirm" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirmar PIN de 4 números"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-pin-create="1">Salvar PIN</button></div>','tacs-pin-box');return}if(!residentIdentityToken){setPinBox('<strong class="tacs-family-title">Identificação expirada</strong><p class="tacs-family-help">Digite seu CPF novamente para preparar o PIN.</p>','tacs-family-warn');return}if(btn)btn.disabled=true;residentPost('conecta_morador_criar_pin',{identidadeToken:residentIdentityToken,pin:a,confirmacao:b,dispositivo:deviceId(true)}).then(function(r){saveResidentAccess(r);setPinBox(pinCreatedConfirmation(),'tacs-pin-box');try{document.dispatchEvent(new CustomEvent('tacs:pin-criado-confirmado',{detail:{areaId:r&&r.areaId||areaId()}}))}catch(ignore){}return r}).catch(function(e){setPinBox('<strong class="tacs-family-title">Não foi possível salvar o PIN</strong><p class="tacs-family-help">'+escapeHtml(e.message)+'</p>','tacs-family-warn')}).finally(function(){var b=document.querySelector('[data-resident-pin-create]');if(b)b.disabled=false})}
-  function renderResidentPinLogin(){var p=residentProfile();if(!p||residentSessionToken())return false;setPinBox('<strong class="tacs-family-title">Acesse com seu PIN</strong><p class="tacs-family-help">Este aparelho já possui um acesso de morador. Digite o PIN de 4 números para abrir sua família.</p><input id="portalResidentPinLogin" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="PIN de 4 números"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-pin-login="1">Entrar com PIN</button></div>','tacs-pin-box');setTimeout(function(){var o=window.PortalTacsOrientacaoMoradorV1;if(o&&typeof o.refreshGuide==='function')o.refreshGuide()},0);return true}
-  function residentSnapshot(r,p){
+  function createResidentPinFromPortal(){
+    var a=digits(document.getElementById('portalResidentPinNew')&&document.getElementById('portalResidentPinNew').value),b=digits(document.getElementById('portalResidentPinConfirm')&&document.getElementById('portalResidentPinConfirm').value),btn=document.querySelector('[data-resident-pin-create]');
+    if(!/^\d{4}$/.test(a)||a!==b){renderResidentPinCreate({identidadeToken:residentIdentityToken},residentEnrollmentCpf);return}
+    if(!residentIdentityToken){setPinBox('<strong class="tacs-family-title">Identificação expirada</strong><p class="tacs-family-help">Digite seu CPF novamente para preparar o PIN.</p>','tacs-family-warn');return}
+    if(btn)btn.disabled=true;
+    residentPost('conecta_morador_criar_pin',{identidadeToken:residentIdentityToken,pin:a,confirmacao:b,dispositivo:deviceId(true)}).then(function(r){
+      saveResidentAccess(r);
+      return saveResidentVault(a,r,residentProfile()).then(function(){
+        setPinBox(pinCreatedConfirmation(),'tacs-pin-box');
+        try{document.dispatchEvent(new CustomEvent('tacs:pin-criado-confirmado',{detail:{areaId:r&&r.areaId||areaId()}}))}catch(ignore){}
+        return r;
+      });
+    }).catch(function(e){
+      var msg=text(e&&e.message);
+      if(msg.indexOf('PIN já foi criado')!==-1||msg.indexOf('já possui PIN')!==-1){
+        var input=document.getElementById('cpf'),d=digits(input&&input.value)||residentEnrollmentCpf;
+        if(/^\d{11}$/.test(d))residentServerCpfHint=d;
+        residentIdentityToken='';
+        renderResidentPinLogin(msg);
+        return;
+      }
+      setPinBox('<strong class="tacs-family-title">Não foi possível salvar o PIN</strong><p class="tacs-family-help">'+escapeHtml(msg)+'</p>','tacs-family-warn');
+    }).finally(function(){var x=document.querySelector('[data-resident-pin-create]');if(x)x.disabled=false});
+  }
+  function residentPinLoginHtml(message){
+    var note=message?'<p class="tacs-family-help">'+escapeHtml(message)+'</p>':'<p class="tacs-family-help">Este aparelho já possui um acesso de morador. Digite o PIN de 4 números para abrir sua família.</p>';
+    return '<strong class="tacs-family-title">Acesse com seu PIN</strong>'+note+'<input id="portalResidentPinLogin" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="PIN de 4 números"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-pin-login="1">Entrar com PIN</button></div>'+recoveryCpfHtml();
+  }
+  function renderResidentPinLogin(message){
+    var p=residentProfile(),disponivel=Boolean(p||residentVaultExists()||/^\d{11}$/.test(residentServerCpfHint));
+    if(!disponivel||residentSessionToken())return false;
+    placePinFirst();
+    setPinBox(residentPinLoginHtml(message),'tacs-pin-box');
+    setTimeout(function(){var o=window.PortalTacsOrientacaoMoradorV1;if(o&&typeof o.refreshGuide==='function')o.refreshGuide()},0);
+    return true;
+  }
+  function renderResidentRecoveryCpf(message){
+    if(tacsTeste()){renderResidentPinLogin();return}
+    placePinFirst();
+    var value=residentServerCpfHint?formatCpfInput(residentServerCpfHint):'';
+    setPinBox('<strong class="tacs-family-title">Recuperar ou criar novo PIN</strong><p class="tacs-family-help">'+escapeHtml(message||'Informe o CPF do morador. O acesso só será recuperado neste mesmo aparelho já reconhecido.')+'</p><input id="portalResidentRecoveryCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" value="'+escapeHtml(value)+'"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-pin-recovery="1">Continuar com CPF</button><button type="button" class="tacs-family-action" data-resident-pin-recovery-cancel="1">Voltar ao PIN</button></div>','tacs-pin-box');
+  }
+  function startResidentPinRecovery(){
+    if(tacsTeste())return;
+    var field=document.getElementById('portalResidentRecoveryCpf'),cpf=digits(field&&field.value),p=residentProfile();
+    if(!/^\d{11}$/.test(cpf)){renderResidentRecoveryCpf('Informe um CPF válido com 11 números.');return}
+    residentServerCpfHint=cpf;
+    setPinBox('<strong class="tacs-family-title">Confirmando o acesso deste aparelho…</strong><p class="tacs-family-help">Aguarde um instante.</p>','tacs-pin-box');
+    residentPost('conecta_pin_recuperar_iniciar',{perfil:'MORADOR',cpf:cpf,dispositivo:deviceId(true),quickKey:p&&p.quickKey||''}).then(function(r){
+      residentRecoveryToken=text(r&&r.recuperacaoToken);
+      if(!residentRecoveryToken)throw new Error('Não foi possível iniciar a recuperação.');
+      setPinBox('<strong class="tacs-family-title">Crie o novo PIN</strong><p class="tacs-family-help">Digite 4 números e confirme o mesmo PIN.</p><input id="portalResidentRecoveryPin" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Novo PIN de 4 números"><input id="portalResidentRecoveryConfirm" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirmar novo PIN"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-pin-recovery-save="1">Salvar novo PIN</button><button type="button" class="tacs-family-action" data-resident-pin-recovery-cancel="1">Cancelar</button></div>','tacs-pin-box');
+    }).catch(function(e){renderResidentRecoveryCpf(e&&e.message?e.message:'Não foi possível recuperar o PIN agora.')});
+  }
+  function saveResidentRecoveredPin(){
+    var a=digits(document.getElementById('portalResidentRecoveryPin')&&document.getElementById('portalResidentRecoveryPin').value),b=digits(document.getElementById('portalResidentRecoveryConfirm')&&document.getElementById('portalResidentRecoveryConfirm').value),btn=document.querySelector('[data-resident-pin-recovery-save]');
+    if(!/^\d{4}$/.test(a)||a!==b){setPinBox('<strong class="tacs-family-title">Crie o novo PIN</strong><p class="tacs-family-help">Os dois campos precisam ter exatamente os mesmos 4 números.</p><input id="portalResidentRecoveryPin" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Novo PIN de 4 números"><input id="portalResidentRecoveryConfirm" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirmar novo PIN"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-pin-recovery-save="1">Salvar novo PIN</button><button type="button" class="tacs-family-action" data-resident-pin-recovery-cancel="1">Cancelar</button></div>','tacs-pin-box');return}
+    if(!residentRecoveryToken){renderResidentRecoveryCpf('A confirmação expirou. Informe o CPF novamente.');return}
+    if(btn)btn.disabled=true;
+    residentPost('conecta_pin_recuperar_salvar',{recuperacaoToken:residentRecoveryToken,pin:a,confirmacao:b,dispositivo:deviceId(true)}).then(function(r){
+      residentRecoveryToken='';
+      saveResidentAccess(r);
+      return saveResidentVault(a,r,residentProfile()).then(function(){
+        placePinDefault();
+        if(!openResidentInline(r,true))setPinBox('<strong class="tacs-family-title">✓ Novo PIN salvo</strong><p class="tacs-family-help">Acesso recuperado e dados prontos.</p>','tacs-pin-box');
+        return r;
+      });
+    }).catch(function(e){renderResidentRecoveryCpf(e&&e.message?e.message:'Não foi possível salvar o novo PIN.')}).finally(function(){var x=document.querySelector('[data-resident-pin-recovery-save]');if(x)x.disabled=false});
+  }
+  function residentSnapshot  function residentSnapshot(r,p){
  r=r||{};p=p||residentProfile()||{};
  return {perfil:'MORADOR',areaId:r.areaId||p.areaId||areaId(),areaNome:r.areaNome||p.areaNome||'',nome:r.nome||p.nome||'',cpf:r.cpf||p.cpf||'',nascimento:normalizeBirthStored(r.nascimento||p.nascimento||''),endereco:r.endereco||r.localidade||p.localidade||'',notificacoesAtivas:Boolean(r.notificacoesAtivas===true),silencioso:Boolean(r.silencioso===true),provisorio:Boolean(r.provisorio===true),pendenciaId:text(r.pendenciaId),familiaId:normalizeFamily(r.familiaId||p.familiaId||''),familia:Array.isArray(r.familia)?r.familia.slice():[]};
 }
@@ -174,25 +265,34 @@ function openResidentInline(r,confirmed){
  return false;
 }
 function loginResidentPinFromPortal(){
- var p=residentProfile(),pin=digits(document.getElementById('portalResidentPinLogin')&&document.getElementById('portalResidentPinLogin').value),btn=document.querySelector('[data-resident-pin-login]');
- if(!p){hidePin();return}
- if(!/^\d{4}$/.test(pin)){renderResidentPinLogin();return}
+ var p=residentProfile(),pin=digits(document.getElementById('portalResidentPinLogin')&&document.getElementById('portalResidentPinLogin').value),btn=document.querySelector('[data-resident-pin-login]'),hintCpf=residentServerCpfHint;
+ if(!p&&!residentVaultExists()&&!/^\d{11}$/.test(hintCpf)){hidePin();return}
+ if(!/^\d{4}$/.test(pin)){renderResidentPinLogin('Digite os 4 números do seu PIN.');return}
  if(btn)btn.disabled=true;
- setPinBox('<strong class="tacs-family-title">Aguarde enquanto seus dados carregam…</strong><p class="tacs-family-help">Validando seu PIN e preparando sua família.</p>','tacs-pin-box');
  var v=window.ConectaPinLocalV2,local=v&&typeof v.abrir==='function'?Promise.resolve(v.abrir('morador',pin)):Promise.resolve(null);
  local.then(function(saved){
   var localOpened=false;
-  if(saved&&text(saved.device)===deviceId(true)&&(!saved.quickKey||text(saved.quickKey)===text(p.quickKey))){
-   var snap=residentSnapshot(saved.snapshot||saved,p);
-   try{sessionStorage.setItem(residentBootstrapKey(),JSON.stringify(snap))}catch(e){}
-   localOpened=openResidentInline(snap,false);
+  if(saved&&text(saved.device)===deviceId(true)){
+   if(!p&&text(saved.quickKey)){
+    var cached=residentSnapshot(saved.snapshot||saved,{});
+    saveResidentAccess({quickKey:text(saved.quickKey),areaId:cached.areaId,areaNome:cached.areaNome,nome:cached.nome,cpf:cached.cpf,nascimento:cached.nascimento,endereco:cached.endereco,familiaId:cached.familiaId,familia:cached.familia,notificacoesAtivas:cached.notificacoesAtivas,silencioso:cached.silencioso});
+    p=residentProfile();
+   }
+   if(!p||!saved.quickKey||text(saved.quickKey)===text(p.quickKey)){
+    var snap=residentSnapshot(saved.snapshot||saved,p||{});
+    try{sessionStorage.setItem(residentBootstrapKey(),JSON.stringify(snap))}catch(e){}
+    placePinDefault();
+    localOpened=openResidentInline(snap,false);
+   }
   }
-  return residentPost('conecta_morador_login_pin',{quickKey:p.quickKey,pin:pin,dispositivo:deviceId(true)}).then(function(r){
+  if(!localOpened)setPinBox('<strong class="tacs-family-title">Aguarde enquanto seus dados carregam…</strong><p class="tacs-family-help">Validando seu PIN e preparando sua família.</p>','tacs-pin-box');
+  var cpfFallback=/^\d{11}$/.test(hintCpf)?hintCpf:'';
+  return residentPost('conecta_morador_login_pin',{quickKey:p&&p.quickKey||'',cpf:cpfFallback,pin:pin,dispositivo:deviceId(true)}).then(function(r){
    saveResidentAccess(r);
+   p=residentProfile()||p;
    return saveResidentVault(pin,r,p).then(function(){
-    if(!openResidentInline(r,true)){
-     setPinBox('<strong class="tacs-family-title">✓ PIN confirmado</strong><p class="tacs-family-help">Dados prontos.</p>','tacs-pin-box');
-    }
+    placePinDefault();
+    if(!openResidentInline(r,true)&&!localOpened)setPinBox('<strong class="tacs-family-title">✓ PIN confirmado</strong><p class="tacs-family-help">Dados prontos.</p>','tacs-pin-box');
     return r;
    });
   }).catch(function(e){
@@ -201,14 +301,12 @@ function loginResidentPinFromPortal(){
     if(aviso){aviso.hidden=false;aviso.className='tacs-family-warn';aviso.innerHTML='<strong class="tacs-family-title">Sincronização pendente</strong><p class="tacs-family-help">'+escapeHtml(e.message)+'</p>'}
     return null;
    }
-   setPinBox('<strong class="tacs-family-title">PIN não confirmado</strong><p class="tacs-family-help">'+escapeHtml(e.message)+'</p><input id="portalResidentPinLogin" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="PIN de 4 números"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-pin-login="1">Tentar novamente</button></div>','tacs-family-warn');
+   renderResidentPinLogin(e&&e.message?e.message:'PIN não confirmado.');
    return null;
   });
- }).catch(function(e){
-  setPinBox('<strong class="tacs-family-title">PIN não confirmado</strong><p class="tacs-family-help">'+escapeHtml(e.message||'Não foi possível abrir o acesso local.')+'</p><input id="portalResidentPinLogin" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="PIN de 4 números"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-pin-login="1">Tentar novamente</button></div>','tacs-family-warn');
- }).finally(function(){var b=document.querySelector('[data-resident-pin-login]');if(b)b.disabled=false});
+ }).catch(function(e){renderResidentPinLogin(e&&e.message?e.message:'PIN não confirmado.');}).finally(function(){var x=document.querySelector('[data-resident-pin-login]');if(x)x.disabled=false});
 }
-  function renderStart(){var input=document.getElementById('cpf'),current=digits(input&&input.value),fam=familyCandidate(current);if(!fam){if(pendingMissing&&current===pendingMissing)return;if(docType(current)&&ensureFamilySelectorVisible())return;hide();return}var ajuda=pendingMissing?'O '+pendingLabel()+' informado será vinculado somente depois que você escolher a pessoa correta desta família.':'Ao buscar, todos os integrantes cadastrados desta família serão exibidos.';setBox('<strong class="tacs-family-title">Cadastro familiar '+escapeHtml(fam)+'</strong><button type="button" class="tacs-family-action" data-family-search="'+escapeHtml(fam)+'">👨‍👩‍👧‍👦 Buscar esta família</button><p class="tacs-family-help">'+escapeHtml(ajuda)+'</p>','')}
+  function renderStart  function renderStart(){var input=document.getElementById('cpf'),current=digits(input&&input.value),fam=familyCandidate(current);if(!fam){if(pendingMissing&&current===pendingMissing)return;if(docType(current)&&ensureFamilySelectorVisible())return;hide();return}var ajuda=pendingMissing?'O '+pendingLabel()+' informado será vinculado somente depois que você escolher a pessoa correta desta família.':'Ao buscar, todos os integrantes cadastrados desta família serão exibidos.';setBox('<strong class="tacs-family-title">Cadastro familiar '+escapeHtml(fam)+'</strong><button type="button" class="tacs-family-action" data-family-search="'+escapeHtml(fam)+'">👨‍👩‍👧‍👦 Buscar esta família</button><p class="tacs-family-help">'+escapeHtml(ajuda)+'</p>','')}
   function renderMembers(r){var m=Array.isArray(r&&r.membros)?r.membros:[],title=pendingMissing?'De quem é este '+pendingLabel()+'?':'Quem precisa do atendimento?',help=pendingMissing?'Este '+pendingLabel()+' ainda não está vinculado a nenhum morador desta família. Toque na pessoa correta para vincular com segurança.':'Família '+escapeHtml(r.familiaId)+'. Toque no nome para carregar nome, nascimento e localidade.',html='<strong class="tacs-family-title">'+escapeHtml(title)+'</strong><p class="tacs-family-help">'+help+'</p>';activeFamilyId=normalizeFamily(r&&r.familiaId||'');familySnapshot=r||null;m.forEach(function(i){seedMemberCacheFromSnapshot(i,activeFamilyId);html+='<button type="button" class="tacs-family-member" data-member-token="'+escapeHtml(i.token)+'" data-member-name="'+escapeHtml(i.nome)+'"'+(i.temDocumento?'':' disabled')+'>'+escapeHtml(i.nome)+'<span>'+(i.nascimento?'Nascimento: '+escapeHtml(i.nascimento):'')+(i.temDocumento?'':' • Sem CPF/CNS para carregamento automático')+'</span></button>'});warmMemberCache(m);setBox(html,'tacs-family-ok')}
   /* SELETOR_FAMILIAR_PERSISTENTE_2026_09_16_V1
      Enquanto houver uma família ativa e o campo principal estiver mostrando o
@@ -319,7 +417,7 @@ function loginResidentPinFromPortal(){
   document.addEventListener('input',function(e){
     var target=e&&e.target;
     if(!target||!target.id)return;
-    if(target.id==='portalResidentCpfForPin'){
+    if(target.id==='portalResidentCpfForPin'||target.id==='portalResidentRecoveryCpf'){
       var cpf=formatCpfInput(target.value);
       if(target.value!==cpf)target.value=cpf;
       return;
@@ -329,11 +427,12 @@ function loginResidentPinFromPortal(){
       if(target.value!==nascimento)target.value=nascimento;
     }
   });
-  document.addEventListener('click',function(e){var b=memberButton(e.target);if(b){activateMemberButton(b,e);return}var t=e.target&&e.target.closest?e.target.closest('[data-family-search],[data-doc-save],[data-resident-pin-create],[data-resident-pin-login],[data-resident-cpf-pin-start],[data-resident-birth-confirm],[data-resident-name-confirm],[data-resident-cpf-review-confirm],[data-resident-cpf-review-correct]'):e.target;if(!t||!t.getAttribute)return;if(t.getAttribute('data-resident-pin-create')==='1'){createResidentPinFromPortal();return}if(t.getAttribute('data-resident-pin-login')==='1'){loginResidentPinFromPortal();return}if(t.getAttribute('data-resident-cpf-pin-start')==='1'){startResidentCpfForPin();return}if(t.getAttribute('data-resident-birth-confirm')==='1'){confirmMissingCpfBirth();return}if(t.getAttribute('data-resident-name-confirm')==='1'){confirmMissingCpfName();return}if(t.getAttribute('data-resident-cpf-review-confirm')==='1'){confirmReviewedMissingCpf();return}if(t.getAttribute('data-resident-cpf-review-correct')==='1'){correctMissingCpf();return}var f=t.getAttribute('data-family-search');if(f){activateFamilySearchButton(t,e);return}if(t.getAttribute('data-doc-save')==='1'){var input=document.getElementById('cpf');complementDocument(digits(input&&input.value),pendingMissing).catch(function(){})}});
+  document.addEventListener('click',function(e){var b=memberButton(e.target);if(b){activateMemberButton(b,e);return}var t=e.target&&e.target.closest?e.target.closest('[data-family-search],[data-doc-save],[data-resident-pin-create],[data-resident-pin-login],[data-resident-pin-recovery],[data-resident-pin-recovery-save],[data-resident-pin-recovery-cancel],[data-resident-cpf-pin-start],[data-resident-birth-confirm],[data-resident-name-confirm],[data-resident-cpf-review-confirm],[data-resident-cpf-review-correct]'):e.target;if(!t||!t.getAttribute)return;if(t.getAttribute('data-resident-pin-create')==='1'){createResidentPinFromPortal();return}if(t.getAttribute('data-resident-pin-login')==='1'){loginResidentPinFromPortal();return}if(t.getAttribute('data-resident-pin-recovery')==='1'){startResidentPinRecovery();return}if(t.getAttribute('data-resident-pin-recovery-save')==='1'){saveResidentRecoveredPin();return}if(t.getAttribute('data-resident-pin-recovery-cancel')==='1'){residentRecoveryToken='';renderResidentPinLogin();return}if(t.getAttribute('data-resident-cpf-pin-start')==='1'){startResidentCpfForPin();return}if(t.getAttribute('data-resident-birth-confirm')==='1'){confirmMissingCpfBirth();return}if(t.getAttribute('data-resident-name-confirm')==='1'){confirmMissingCpfName();return}if(t.getAttribute('data-resident-cpf-review-confirm')==='1'){confirmReviewedMissingCpf();return}if(t.getAttribute('data-resident-cpf-review-correct')==='1'){correctMissingCpf();return}var f=t.getAttribute('data-family-search');if(f){activateFamilySearchButton(t,e);return}if(t.getAttribute('data-doc-save')==='1'){var input=document.getElementById('cpf');complementDocument(digits(input&&input.value),pendingMissing).catch(function(){})}});
   document.addEventListener('tacs:morador',function(e){currentResident=e&&e.detail||null;setTimeout(function(){
     maybeOfferComplement();
     var input=document.getElementById('cpf'),d=digits(input&&input.value),fam=normalizeFamily(currentResident&&(currentResident.familiaBeneficiario||currentResident.familiaId)||'');
     if(residentSessionToken())return;
+    if(residentProfile()||residentVaultExists()){renderResidentPinLogin();return}
 
     /* FAMILIA_SNAPSHOT_COMPLETO_2026_09_18_V2
        A família já entrega documento + identidadeToken no snapshot. O toque reutiliza ambos localmente,
