@@ -464,7 +464,7 @@ function conectaAcessoV1LoginMorador_(p){
   return {ok:true,token:session.token,quickKey:quick,perfil:'MORADOR',areaId:registro.values[1],nome:registro.values[4],cpf:registro.values[3],nascimento:registro.values[5]||responsavel.nascimento||'',endereco:responsavel.localidade||'',notificacoesAtivas:conectaAcessoV1Bool_(registro.values[10]),silencioso:conectaAcessoV1Bool_(registro.values[12]),provisorio:conectaAcessoV1Bool_(registro.values[13]),pendenciaId:conectaAcessoV1Texto_(registro.values[14]),familiaId:nucleo.familiaId,familia:nucleo.membros};
 }
 
-function conectaAcessoV1SessaoMorador_function conectaAcessoV1SessaoMorador_(p){
+function conectaAcessoV1SessaoMorador_(p){
   var sessao=conectaAcessoV1ValidarSessao_(p);
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=conectaAcessoV1AcessoPorId_(sheet,sessao.accessId);
   if(!registro)throw new Error('Acesso do morador não localizado.');
@@ -625,7 +625,7 @@ function conectaAcessoV1RecuperarSalvar_(p){
   return {ok:true,message:'Novo PIN salvo. Volte ao acesso e entre com os quatro números.'};
 }
 
-function conectaAcessoV1ContarPendenciasArea_function conectaAcessoV1ContarPendenciasArea_(areaId){
+function conectaAcessoV1ContarPendenciasArea_(areaId){
   var sh=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.PENDING_SHEET,TACS_CONECTA_ACESSO_V1.PENDING_HEADERS),last=sh.getLastRow(),n=0,area=conectaAcessoV1Id_(areaId);
   if(last<=1)return 0;
   sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.PENDING_HEADERS.length).getDisplayValues().forEach(function(v){
