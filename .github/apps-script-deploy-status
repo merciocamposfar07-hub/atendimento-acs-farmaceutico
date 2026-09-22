@@ -1,6 +1,6 @@
-run_id=35625448543
-head_sha=63c87d23bae35a562776483190ff9255b5092b89
-conclusion=success
-jobs=testar-e-implantar:completed:success
-failed_steps=
-recorded_at=2026-09-21T16:26:11Z
+run_id=35674615603
+head_sha=809475d1543aaae2d01953be386979a283b204cc
+conclusion=failure
+jobs=testar-e-implantar:completed:failure
+failed_steps=Substituir somente os módulos autorizados
+recorded_at=2026-09-22T01:08:09Z
