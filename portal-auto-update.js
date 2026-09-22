@@ -305,7 +305,7 @@
     var script=document.createElement('script');
     script.id='portalTacsIdentificacaoFamiliaScriptV1';
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260921-pin-real-ignora-token-teste-v6';
+    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260921-pin-dispositivo-real-v7';
     (document.head||document.documentElement).appendChild(script);
   }
 

@@ -66,8 +66,12 @@ var conectaAcessoV1PostAnterior_;
 })();
 
 function conectaAcessoV1TratarGet_(e){
-  var p=e&&e.parameter?e.parameter:{};
-  if(conectaAcessoV1Texto_(p.action).toLowerCase()!=='conecta_result')return null;
+  var p=e&&e.parameter?e.parameter:{},action=conectaAcessoV1Texto_(p.action).toLowerCase();
+  if(action==='conecta_morador_reconhecer_aparelho'){
+    try{return conectaAcessoV1ResponderJson_(conectaAcessoV1ReconhecerAparelho_(p),p.callback)}
+    catch(erro){return conectaAcessoV1ResponderJson_({ok:false,message:conectaAcessoV1Erro_(erro)},p.callback)}
+  }
+  if(action!=='conecta_result')return null;
   var id=conectaAcessoV1Texto_(p.requestId);
   if(!/^[A-Za-z0-9_-]{8,160}$/.test(id))return conectaAcessoV1ResponderJson_({ok:false,message:'Identificador inválido.'},p.callback);
   var r=conectaAcessoV1LerResultado_(id);
@@ -329,6 +333,15 @@ function conectaAcessoV1TesteEncerrar_(p){
   return {ok:true,teste:true,message:'Sessão de teste encerrada.'};
 }
 
+function conectaAcessoV1ReconhecerAparelho_(p){
+  var dispositivo=conectaAcessoV1Texto_(p.dispositivo);
+  if(!dispositivo)return {ok:true,temPin:false};
+  var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS);
+  var registro=conectaAcessoV1AcessoPorDispositivo_(sheet,dispositivo);
+  if(registro&&registro.ambiguo)return {ok:true,temPin:true,ambiguo:true};
+  return {ok:true,temPin:Boolean(registro&&conectaAcessoV1Bool_(registro.values[15]))};
+}
+
 function conectaAcessoV1Identificar_(p){
   var cpf=conectaAcessoV1Cpf_(p.cpf),dispositivo=conectaAcessoV1Texto_(p.dispositivo);
   if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
@@ -447,9 +460,12 @@ function conectaAcessoV1LoginMorador_(p){
   if(conectaAcessoV1AparelhoAdministrativo_(dispositivo)&&!conectaAcessoV1Bool_(p.fluxoMoradorExplicito))throw new Error('Aparelho administrativo não pode assumir sessão de Morador; use o diagnóstico sem vínculo.');
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=null,novoQuick='';
   if(/^cmq1\./.test(quick))registro=conectaAcessoV1AcessoPorQuick_(sheet,quick);
-  else{
+  else if(conectaAcessoV1Texto_(p.cpf)){
     cpf=conectaAcessoV1Cpf_(p.cpf);
     registro=conectaAcessoV1AcessoPorCpf_(sheet,cpf);
+  }else{
+    registro=conectaAcessoV1AcessoPorDispositivo_(sheet,dispositivo);
+    if(registro&&registro.ambiguo)throw new Error('Há mais de um acesso de morador neste aparelho. Use o CPF abaixo do PIN para recuperar o acesso correto.');
   }
   if(!registro||!conectaAcessoV1Bool_(registro.values[15]))throw new Error('Acesso não localizado ou inativo.');
   if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo)))throw new Error('Este acesso pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
@@ -1277,6 +1293,17 @@ function conectaAcessoV1AtualizarAcesso_(id,updates){
   Object.keys(updates).forEach(function(k){sh.getRange(r.row,Number(k)+1).setValue(updates[k]);});sh.getRange(r.row,18).setValue(new Date());
 }
 function conectaAcessoV1AcessoPorCpf_(sh,cpf){return conectaAcessoV1AcessoBusca_(sh,function(v){var gravado=conectaAcessoV1Texto_(v[3]).replace(/\D/g,''),chave=conectaAcessoV1Texto_(v[2]).toUpperCase();return gravado===cpf||chave==='CPF:'+cpf;});}
+function conectaAcessoV1AcessoPorDispositivo_(sh,dispositivo){
+  var hash=conectaAcessoV1Hash_(dispositivo),last=sh.getLastRow();if(last<=1)return null;
+  var rows=sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS.length).getValues(),matches=[];
+  for(var i=rows.length-1;i>=0;i--){
+    if(!conectaAcessoV1Bool_(rows[i][15]))continue;
+    if(conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][9]),hash))matches.push({row:i+2,values:rows[i]});
+  }
+  if(matches.length===1)return matches[0];
+  if(matches.length>1)return {ambiguo:true,matches:matches.length};
+  return null;
+}
 function conectaAcessoV1AcessoPorId_(sh,id){return conectaAcessoV1AcessoBusca_(sh,function(v){return conectaAcessoV1Texto_(v[0])===id;});}
 function conectaAcessoV1AcessoPorQuick_(sh,quick){var h=conectaAcessoV1Hash_(quick);return conectaAcessoV1AcessoBusca_(sh,function(v){return conectaAcessoV1Seguro_(v[8],h);});}
 function conectaAcessoV1AcessoBusca_(sh,fn){
