@@ -12,13 +12,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260921-oficial-cplus-v1",
+      "src": "/atendimento-acs-farmaceutico/app-icons/conecta-saude-comunitaria-oficial-cplus-20260921-v5.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260921-oficial-cplus-v1",
+      "src": "/atendimento-acs-farmaceutico/app-icons/conecta-saude-comunitaria-oficial-cplus-20260921-v5.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
