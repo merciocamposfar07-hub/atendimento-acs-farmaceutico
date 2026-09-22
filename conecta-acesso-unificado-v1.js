@@ -296,7 +296,8 @@ function diagnosticHash(v){var s=text(v),h=2166136261;for(var i=0;i<s.length;i++
 function diagnosticScope(){var token=diagnosticAdminToken();return token?diagnosticHash(token+'|'+device()):''}
 function diagnosticAreasCacheKey(){var scope=diagnosticScope();return scope?DIAG_FAST_AREAS_PREFIX+scope:''}
 function diagnosticIndexCacheKey(areaId){var scope=diagnosticScope();return scope?DIAG_FAST_INDEX_PREFIX+scope+':'+text(areaId).toUpperCase():''}
-function diagnosticReadConcurrent(action,payload){
+function diagnosticReadConcurrent(action,payload,resultAction){
+ resultAction=text(resultAction)||'admin_moradores_result';
  return new Promise(function(resolve,reject){
   var id=requestId('diag_'+action),body=new URLSearchParams(),started=Date.now(),wait=180,done=false;
   body.set('action',action);body.set('requestId',id);
@@ -304,7 +305,7 @@ function diagnosticReadConcurrent(action,payload){
   function finish(result,err){if(done)return;done=true;err?reject(err):resolve(result)}
   function poll(){
    if(done)return;
-   jsonp({action:'admin_moradores_result',requestId:id}).then(function(r){
+   jsonp({action:resultAction,requestId:id}).then(function(r){
     if(r&&r.ok===true&&r.pendente===false&&r.result){finish(r.result,null);return}
     if(Date.now()-started>22000){finish(null,new Error('A leitura do índice de moradores não terminou a tempo.'));return}
     wait=Math.min(420,wait+35);setTimeout(poll,wait);
@@ -591,7 +592,7 @@ function residentDiagnosticCached(payload){
 }
 function diagnoseResidentAdminRemote(payload,seq){
  setStatus('Conferindo o cadastro no servidor…','warn');
- post('conecta_morador_diagnostico_admin',payload).then(function(r){
+ diagnosticReadConcurrent('conecta_morador_diagnostico_admin',payload,'conecta_result').then(function(r){
   if(seq!==diagFastSearchSeq)return;
   if(text(r.coreMode||r.modo)!==RESIDENT_CORE_DIAGNOSTIC)throw new Error('O servidor não confirmou o modo de diagnóstico administrativo.');
   if(r.encontrado===false){setStatus(r.message||'Nenhum cadastro localizado com os dados informados.','warn');return}
@@ -599,7 +600,7 @@ function diagnoseResidentAdminRemote(payload,seq){
  }).catch(function(e){if(seq===diagFastSearchSeq)setStatus(e.message,'err')});
 }
 function diagnoseResidentAdminBackground(payload,seq){
- post('conecta_morador_diagnostico_admin',payload).then(function(r){
+ diagnosticReadConcurrent('conecta_morador_diagnostico_admin',payload,'conecta_result').then(function(r){
   if(seq!==diagFastSearchSeq)return;
   if(text(r.coreMode||r.modo)!==RESIDENT_CORE_DIAGNOSTIC)return;
   if(r.encontrado===false)return;
