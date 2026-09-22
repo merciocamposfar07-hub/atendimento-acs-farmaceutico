@@ -9,6 +9,8 @@ var AREA_KEY='portalTacsCentralAreaV1',LAST_ROLE_KEY='portalConectaLastRoleV1',T
 var TRUST_ADMIN_KEY='portalConectaRecoveryTrustV1:admin',TRUST_TACS_KEY='portalConectaRecoveryTrustV1:tacs',TRUST_UBS_KEY='portalConectaRecoveryTrustV1:ubs';
 var RESIDENT_CORE_REAL='MORADOR_REAL',RESIDENT_CORE_DIAGNOSTIC='DIAGNOSTICO_ADMINISTRATIVO';
 var activeRole='admin',busy=false,pinWarmup=false,state={cpf:'',nascimento:'',nome:'',areaId:'',identidadeToken:'',cpfNaoLocalizado:false,coreMode:RESIDENT_CORE_REAL};
+var DIAG_FAST_AREAS_PREFIX='portalConectaDiagAreasV2:',DIAG_FAST_INDEX_PREFIX='portalConectaDiagIndexV2:';
+var diagFastAreas=null,diagFastIndexes={},diagFastAreaPromise=null,diagFastIndexPromises={},diagFastSearchSeq=0;
 
 function text(v){return String(v==null?'':v).trim()}
 function digits(v){return text(v).replace(/\D/g,'')}
@@ -289,11 +291,136 @@ function formatBirthResident(v){
  var d=digits(v).slice(0,8);
  return d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;
 }
+function diagnosticAdminToken(){try{return text(sessionStorage.getItem('portalTacsAdminTokenV1')||'')}catch(e){return''}}
+function diagnosticHash(v){var s=text(v),h=2166136261;for(var i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return(h>>>0).toString(16)}
+function diagnosticScope(){var token=diagnosticAdminToken();return token?diagnosticHash(token+'|'+device()):''}
+function diagnosticAreasCacheKey(){var scope=diagnosticScope();return scope?DIAG_FAST_AREAS_PREFIX+scope:''}
+function diagnosticIndexCacheKey(areaId){var scope=diagnosticScope();return scope?DIAG_FAST_INDEX_PREFIX+scope+':'+text(areaId).toUpperCase():''}
+function diagnosticReadConcurrent(action,payload){
+ return new Promise(function(resolve,reject){
+  var id=requestId('diag_'+action),body=new URLSearchParams(),started=Date.now(),wait=180,done=false;
+  body.set('action',action);body.set('requestId',id);
+  Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});
+  function finish(result,err){if(done)return;done=true;err?reject(err):resolve(result)}
+  function poll(){
+   if(done)return;
+   jsonp({action:'admin_moradores_result',requestId:id}).then(function(r){
+    if(r&&r.ok===true&&r.pendente===false&&r.result){finish(r.result,null);return}
+    if(Date.now()-started>22000){finish(null,new Error('A leitura do índice de moradores não terminou a tempo.'));return}
+    wait=Math.min(420,wait+35);setTimeout(poll,wait);
+   }).catch(function(e){
+    if(Date.now()-started>22000){finish(null,e);return}
+    setTimeout(poll,wait);
+   });
+  }
+  fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});
+  setTimeout(poll,120);
+ });
+}
+function diagnosticCompactItem(item,meta){
+ item=item&&typeof item==='object'?item:{};meta=meta&&typeof meta==='object'?meta:{};
+ return {
+  idPortal:text(item.idPortal),id:text(item.id),nome:text(item.nome),cpf:digits(item.cpf),cns:digits(item.cns),
+  nascimento:text(item.nascimento),endereco:text(item.endereco),status:text(item.status||'ATIVO'),
+  _areaId:text(meta.areaId||item._areaId),_areaNome:text(meta.areaNome||item._areaNome||meta.areaId||item._areaId),
+  _unidadeId:text(meta.unidadeId||item._unidadeId)
+ };
+}
+function diagnosticRestoreAreas(){
+ if(Array.isArray(diagFastAreas)&&diagFastAreas.length)return diagFastAreas;
+ var key=diagnosticAreasCacheKey();if(!key)return[];
+ try{
+  var saved=JSON.parse(sessionStorage.getItem(key)||'null');
+  if(saved&&Array.isArray(saved.areas)&&saved.areas.length){
+   diagFastAreas=saved.areas.map(function(a){return{areaId:text(a.areaId),areaNome:text(a.areaNome||a.areaId),unidadeId:text(a.unidadeId)}});
+   return diagFastAreas;
+  }
+ }catch(e){}
+ return[];
+}
+function diagnosticSaveAreas(areas){
+ diagFastAreas=(Array.isArray(areas)?areas:[]).map(function(a){return{areaId:text(a.areaId),areaNome:text(a.areaNome||a.areaId),unidadeId:text(a.unidadeId)}});
+ var key=diagnosticAreasCacheKey();if(key)try{sessionStorage.setItem(key,JSON.stringify({savedAt:Date.now(),areas:diagFastAreas}))}catch(e){}
+ return diagFastAreas;
+}
+function diagnosticAreaMeta(areaId){
+ var areas=diagnosticRestoreAreas(),id=text(areaId);
+ for(var i=0;i<areas.length;i++)if(text(areas[i].areaId)===id)return areas[i];
+ return{areaId:id,areaNome:id,unidadeId:''};
+}
+function diagnosticRestoreIndex(areaId){
+ var id=text(areaId).toUpperCase();if(!id)return null;
+ if(diagFastIndexes[id]&&diagFastIndexes[id].ready===true)return diagFastIndexes[id];
+ var key=diagnosticIndexCacheKey(id);if(!key)return null;
+ try{
+  var saved=JSON.parse(sessionStorage.getItem(key)||'null');
+  if(saved&&saved.ready===true&&Array.isArray(saved.resultados)){diagFastIndexes[id]=saved;return saved}
+ }catch(e){}
+ return null;
+}
+function diagnosticSaveIndex(areaId,resultados,meta){
+ var id=text(areaId).toUpperCase();if(!id)return null;
+ meta=meta&&typeof meta==='object'?meta:diagnosticAreaMeta(id);
+ var compact=(Array.isArray(resultados)?resultados:[]).map(function(item){return diagnosticCompactItem(item,meta)});
+ var snapshot={ready:true,savedAt:Date.now(),areaId:id,areaNome:text(meta.areaNome||id),unidadeId:text(meta.unidadeId),resultados:compact};
+ diagFastIndexes[id]=snapshot;
+ var key=diagnosticIndexCacheKey(id);if(key)try{sessionStorage.setItem(key,JSON.stringify(snapshot))}catch(e){}
+ return snapshot;
+}
+function diagnosticLoadAreas(){
+ var cached=diagnosticRestoreAreas();
+ if(cached.length)return Promise.resolve(cached);
+ if(diagFastAreaPromise)return diagFastAreaPromise;
+ var token=diagnosticAdminToken();if(!token)return Promise.resolve([]);
+ diagFastAreaPromise=diagnosticReadConcurrent('admin_moradores_areas',{token:token,dispositivo:device(),areaId:diagnosticAreaId()}).then(function(r){
+  if(!r||r.ok!==true||!Array.isArray(r.areas))return[];
+  return diagnosticSaveAreas(r.areas);
+ }).catch(function(){return[]}).finally(function(){diagFastAreaPromise=null});
+ return diagFastAreaPromise;
+}
+function diagnosticWarmArea(area,force){
+ area=area&&typeof area==='object'?area:{areaId:area};
+ var id=text(area.areaId).toUpperCase();if(!id)return Promise.resolve(null);
+ var cached=diagnosticRestoreIndex(id);
+ if(cached&&!force&&Date.now()-Number(cached.savedAt||0)<90000)return Promise.resolve(cached);
+ if(diagFastIndexPromises[id])return diagFastIndexPromises[id];
+ var token=diagnosticAdminToken();if(!token)return Promise.resolve(cached);
+ diagFastIndexPromises[id]=diagnosticReadConcurrent('admin_moradores_indice',{token:token,dispositivo:device(),areaId:id}).then(function(r){
+  if(!r||r.ok!==true)return cached;
+  return diagnosticSaveIndex(id,r.resultados,area);
+ }).catch(function(){return cached}).finally(function(){delete diagFastIndexPromises[id]});
+ return diagFastIndexPromises[id];
+}
+function warmResidentDiagnosticCache(force){
+ if(!diagnosticAdminToken())return Promise.resolve(false);
+ return diagnosticLoadAreas().then(function(areas){
+  if(!areas.length)return false;
+  var jobs=areas.map(function(a){return diagnosticWarmArea(a,Boolean(force))});
+  return Promise.all(jobs.map(function(p){return p.catch(function(){return null})})).then(function(){return true});
+ });
+}
+function diagnosticFastSnapshot(areaId){
+ var requested=text(areaId).toUpperCase(),areas=diagnosticRestoreAreas();
+ if(requested){
+  var one=diagnosticRestoreIndex(requested),meta=diagnosticAreaMeta(requested);
+  return one||{ready:false,areaId:requested,areaNome:text(meta.areaNome||requested),unidadeId:text(meta.unidadeId),resultados:[]};
+ }
+ if(!areas.length)return null;
+ var all=[],missing=false;
+ areas.forEach(function(a){
+  var snap=diagnosticRestoreIndex(a.areaId);
+  if(!snap||snap.ready!==true){missing=true;return}
+  all=all.concat(snap.resultados||[]);
+ });
+ if(missing)return{ready:false,areaId:'',areaNome:areas.length>1?'Mais de uma área':text(areas[0]&&areas[0].areaNome),unidadeId:'',resultados:[]};
+ return{ready:true,areaId:'',areaNome:areas.length>1?'Mais de uma área':text(areas[0]&&areas[0].areaNome),unidadeId:'',resultados:all};
+}
 function diagnosticAreaId(){try{return text(localStorage.getItem(AREA_KEY)||'')}catch(e){return''}}
 function renderResidentDocumentEntry(){
  var stage=el('residentStage');if(!stage)return;var diagnostic=state.coreMode===RESIDENT_CORE_DIAGNOSTIC;
  if(diagnostic)try{sessionStorage.removeItem(RESIDENT_TOKEN_KEY)}catch(e){}
  if(diagnostic){
+  setTimeout(function(){warmResidentDiagnosticCache(false)},0);
   stage.innerHTML=
    '<div class="csc-access-note"><strong>Diagnóstico administrativo do Morador</strong><br>Busque por CPF, Cartão SUS (CNS), nome, data de nascimento ou número de cadastro na área. Você pode preencher um, vários ou todos os campos. Ao localizar o morador, o Conecta identifica também os integrantes da mesma família pelo vínculo já existente no CSV. Nenhum vínculo residencial será assumido por este aparelho.</div>'+
    field('cscResidentCpf','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"')+
@@ -394,20 +521,22 @@ function residentDiagnosticLocalKey(item){
  return text(item&&item.idPortal||item&&item.id)||residentDiagnosticNorm(item&&item.nome)+'|'+digits(item&&item.nascimento);
 }
 function residentDiagnosticCached(payload){
- var api=window.PortalTacsMoradoresTransportV2;
- if(!api||typeof api.diagnosticIndex!=='function')return {available:false,ready:false,response:null};
- var snapshot=null;
- try{snapshot=api.diagnosticIndex(payload.areaId||'')}catch(e){snapshot=null}
+ var snapshot=diagnosticFastSnapshot(payload.areaId||'');
+ if(!snapshot){
+  var api=window.PortalTacsMoradoresTransportV2;
+  if(api&&typeof api.diagnosticIndex==='function')try{snapshot=api.diagnosticIndex(payload.areaId||'')}catch(e){snapshot=null}
+ }
  if(!snapshot||snapshot.ready!==true||!Array.isArray(snapshot.resultados))return {available:true,ready:false,response:null};
  var cpf=digits(payload.cpf),cns=digits(payload.cns),nomeNorm=residentDiagnosticNorm(payload.nome),birth=digits(payload.nascimento);
  var cadastro=text(payload.cadastroArea),cadastroUpper=cadastro.toUpperCase(),familiaBusca=residentDiagnosticFamilyNorm(cadastro);
+ function itemMeta(item){
+  var areaId=text(item&&item._areaId||snapshot.areaId),meta=diagnosticAreaMeta(areaId);
+  return{areaId:areaId,areaNome:text(item&&item._areaNome||meta.areaNome||snapshot.areaNome||areaId),unidadeId:text(item&&item._unidadeId||meta.unidadeId||snapshot.unidadeId)};
+ }
  var list=snapshot.resultados.filter(function(item){
   if(cpf&&digits(item&&item.cpf)!==cpf)return false;
   if(cns&&digits(item&&item.cns)!==cns)return false;
-  if(nomeNorm){
-   var n=residentDiagnosticNorm(item&&item.nome);
-   if(n!==nomeNorm&&n.indexOf(nomeNorm)===-1)return false;
-  }
+  if(nomeNorm){var n=residentDiagnosticNorm(item&&item.nome);if(n!==nomeNorm&&n.indexOf(nomeNorm)===-1)return false}
   if(birth&&digits(item&&item.nascimento)!==birth)return false;
   if(cadastro){
    var fam=residentDiagnosticFamilyFromAddress(item&&item.endereco);
@@ -417,60 +546,65 @@ function residentDiagnosticCached(payload){
   return true;
  });
  if(!list.length)return {available:true,ready:true,response:null};
-
- function membersForFamily(familiaId,selected){
-  var source=familiaId?snapshot.resultados.filter(function(item){return residentDiagnosticFamilyFromAddress(item&&item.endereco)===familiaId}):list;
+ function itemSelectionKey(item){var m=itemMeta(item);return m.areaId+'|'+residentDiagnosticLocalKey(item)}
+ function membersForFamily(familiaId,selected,areaId){
+  var source=familiaId?snapshot.resultados.filter(function(item){
+   var m=itemMeta(item);return m.areaId===areaId&&residentDiagnosticFamilyFromAddress(item&&item.endereco)===familiaId;
+  }):list.filter(function(item){return itemMeta(item).areaId===areaId});
   return source.map(function(item){
-   return {
-    nome:text(item&&item.nome),
-    nascimento:text(item&&item.nascimento),
-    idPortal:text(item&&item.idPortal||item&&item.id),
-    selecionado:Boolean(selected[residentDiagnosticLocalKey(item)])
-   };
+   return{nome:text(item&&item.nome),nascimento:text(item&&item.nascimento),idPortal:text(item&&item.idPortal||item&&item.id),selecionado:Boolean(selected[itemSelectionKey(item)])};
   });
  }
- var selected={};
- list.forEach(function(item){selected[residentDiagnosticLocalKey(item)]=true});
- var base={
-  ok:true,encontrado:true,modo:RESIDENT_CORE_DIAGNOSTIC,coreMode:RESIDENT_CORE_DIAGNOSTIC,somenteLeitura:true,
-  documentoTipo:'BUSCA_COMBINADA',areaId:text(snapshot.areaId||payload.areaId),areaNome:text(snapshot.areaNome||snapshot.areaId||payload.areaId),
-  unidadeId:text(snapshot.unidadeId),vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,
-  notificacoesAlteradas:false,sessaoMoradorCriada:false,fonte:'INDICE_LOCAL_APP_LIKE'
- };
+ var selected={};list.forEach(function(item){selected[itemSelectionKey(item)]=true});
  if(list.length===1){
-  var item=list[0],familiaId=residentDiagnosticFamilyFromAddress(item&&item.endereco),sel={};
-  sel[residentDiagnosticLocalKey(item)]=true;
-  base.nome=text(item&&item.nome);base.nascimento=text(item&&item.nascimento);
-  base.cadastroArea=familiaId;base.familiaId=familiaId;base.familia=membersForFamily(familiaId,sel);
-  base.familiaTotal=base.familia.length;base.consultaFamilia=false;
-  base.message='Diagnóstico administrativo concluído pelo índice já carregado.';
-  return {available:true,ready:true,response:base};
+  var item=list[0],meta=itemMeta(item),familiaId=residentDiagnosticFamilyFromAddress(item&&item.endereco),sel={};
+  sel[itemSelectionKey(item)]=true;
+  var family=membersForFamily(familiaId,sel,meta.areaId);
+  return{available:true,ready:true,response:{
+   ok:true,encontrado:true,modo:RESIDENT_CORE_DIAGNOSTIC,coreMode:RESIDENT_CORE_DIAGNOSTIC,somenteLeitura:true,
+   documentoTipo:'BUSCA_COMBINADA',nome:text(item&&item.nome),nascimento:text(item&&item.nascimento),
+   areaId:meta.areaId,areaNome:meta.areaNome,unidadeId:meta.unidadeId,cadastroArea:familiaId,familiaId:familiaId,
+   familia:family,familiaTotal:family.length,consultaFamilia:false,vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,
+   notificacoesAlteradas:false,sessaoMoradorCriada:false,fonte:'INDICE_SESSAO_APP_LIKE',message:'Diagnóstico exibido pelo índice já carregado.'
+  }};
  }
  var groups={},order=[];
  list.forEach(function(item){
-  var familiaId=residentDiagnosticFamilyFromAddress(item&&item.endereco);
-  var key=familiaId||('SEM_FAMILIA|'+residentDiagnosticLocalKey(item));
-  if(!groups[key]){groups[key]={familiaId:familiaId,areaId:base.areaId,areaNome:base.areaNome,unidadeId:base.unidadeId,selected:{}};order.push(key)}
-  groups[key].selected[residentDiagnosticLocalKey(item)]=true;
+  var meta=itemMeta(item),familiaId=residentDiagnosticFamilyFromAddress(item&&item.endereco);
+  var key=meta.areaId+'|'+(familiaId||('SEM_FAMILIA|'+residentDiagnosticLocalKey(item)));
+  if(!groups[key]){groups[key]={familiaId:familiaId,areaId:meta.areaId,areaNome:meta.areaNome,unidadeId:meta.unidadeId,selected:{}};order.push(key)}
+  groups[key].selected[itemSelectionKey(item)]=true;
  });
  var familias=order.map(function(key){
   var g=groups[key];
-  return {familiaId:g.familiaId,areaId:g.areaId,areaNome:g.areaNome,unidadeId:g.unidadeId,membros:membersForFamily(g.familiaId,g.selected)};
+  return{familiaId:g.familiaId,areaId:g.areaId,areaNome:g.areaNome,unidadeId:g.unidadeId,membros:membersForFamily(g.familiaId,g.selected,g.areaId)};
  });
- var onlyCadastro=Boolean(cadastro&&!cpf&&!cns&&!payload.nome&&!payload.nascimento);
- base.nome='';base.nascimento='';base.familias=familias;base.consultaMultipla=familias.length>1;
- base.consultaFamilia=onlyCadastro&&familias.length===1;
- base.familiaTotal=familias.reduce(function(total,g){return total+(g.membros||[]).length},0);
- base.message=familias.length===1?'Cadastro e família localizados no índice já carregado.':'Cadastros compatíveis localizados no índice já carregado.';
- return {available:true,ready:true,response:base};
+ var onlyCadastro=Boolean(cadastro&&!cpf&&!cns&&!payload.nome&&!payload.nascimento),primeira=familias[0]||{};
+ return{available:true,ready:true,response:{
+  ok:true,encontrado:true,modo:RESIDENT_CORE_DIAGNOSTIC,coreMode:RESIDENT_CORE_DIAGNOSTIC,somenteLeitura:true,
+  documentoTipo:'BUSCA_COMBINADA',consultaMultipla:familias.length>1,consultaFamilia:onlyCadastro&&familias.length===1,
+  nome:'',nascimento:'',areaId:familias.length===1?primeira.areaId:'',areaNome:familias.length===1?primeira.areaNome:'Mais de uma área',
+  unidadeId:familias.length===1?primeira.unidadeId:'',familias:familias,familiaTotal:familias.reduce(function(total,g){return total+(g.membros||[]).length},0),
+  vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,notificacoesAlteradas:false,sessaoMoradorCriada:false,
+  fonte:'INDICE_SESSAO_APP_LIKE',message:familias.length===1?'Cadastro e família localizados no índice já carregado.':'Cadastros compatíveis localizados no índice já carregado.'
+ }};
 }
-function diagnoseResidentAdminRemote(payload){
+function diagnoseResidentAdminRemote(payload,seq){
  setStatus('Conferindo o cadastro no servidor…','warn');
  post('conecta_morador_diagnostico_admin',payload).then(function(r){
+  if(seq!==diagFastSearchSeq)return;
   if(text(r.coreMode||r.modo)!==RESIDENT_CORE_DIAGNOSTIC)throw new Error('O servidor não confirmou o modo de diagnóstico administrativo.');
   if(r.encontrado===false){setStatus(r.message||'Nenhum cadastro localizado com os dados informados.','warn');return}
   renderResidentCoreResult(r);
- }).catch(function(e){setStatus(e.message,'err')});
+ }).catch(function(e){if(seq===diagFastSearchSeq)setStatus(e.message,'err')});
+}
+function diagnoseResidentAdminBackground(payload,seq){
+ post('conecta_morador_diagnostico_admin',payload).then(function(r){
+  if(seq!==diagFastSearchSeq)return;
+  if(text(r.coreMode||r.modo)!==RESIDENT_CORE_DIAGNOSTIC)return;
+  if(r.encontrado===false)return;
+  renderResidentCoreResult(r);
+ }).catch(function(){});
 }
 function diagnoseResidentAdmin(){
  var proof=trustKey('ADMIN'),cpf=digits(el('cscResidentCpf')&&el('cscResidentCpf').value),cns=digits(el('cscResidentCns')&&el('cscResidentCns').value);
@@ -481,25 +615,32 @@ function diagnoseResidentAdmin(){
  if(cns&&cns.length!==15){setStatus('Confira o Cartão SUS (CNS) informado.','warn');return}
  if(nascimento&&digits(nascimento).length!==8){setStatus('Confira a data de nascimento informada.','warn');return}
  if(!proof){setStatus('Este aparelho não possui reconhecimento administrativo seguro. Entre como Administrador primeiro.','err');return}
- var payload={
-  cpf:cpf,cns:cns,nome:nome,nascimento:nascimento,cadastroArea:cadastro,areaId:areaId,
-  coreMode:state.coreMode,dispositivo:device(),chaveConfianca:proof
- };
+ var seq=++diagFastSearchSeq;
+ var payload={cpf:cpf,cns:cns,nome:nome,nascimento:nascimento,cadastroArea:cadastro,areaId:areaId,coreMode:state.coreMode,dispositivo:device(),chaveConfianca:proof};
  var first=residentDiagnosticCached(payload);
- if(first.ready&&first.response){renderResidentCoreResult(first.response);return}
+ if(first.ready&&first.response){
+  renderResidentCoreResult(first.response);
+  setTimeout(function(){if(seq===diagFastSearchSeq)diagnoseResidentAdminBackground(payload,seq)},0);
+  return;
+ }
+ warmResidentDiagnosticCache(false);
  if(first.available&&!first.ready){
-  var api=window.PortalTacsMoradoresTransportV2,started=Date.now();
-  try{if(api&&typeof api.warmIndex==='function')api.warmIndex(false)}catch(e){}
-  setStatus('Localizando no índice de moradores já carregado…','warn');
+  var started=Date.now();
+  setStatus('Localizando no índice de moradores…','warn');
   (function waitLocal(){
+   if(seq!==diagFastSearchSeq)return;
    var local=residentDiagnosticCached(payload);
-   if(local.ready&&local.response){renderResidentCoreResult(local.response);return}
-   if(local.ready||Date.now()-started>=1400){diagnoseResidentAdminRemote(payload);return}
-   setTimeout(waitLocal,80);
+   if(local.ready&&local.response){
+    renderResidentCoreResult(local.response);
+    setTimeout(function(){if(seq===diagFastSearchSeq)diagnoseResidentAdminBackground(payload,seq)},0);
+    return;
+   }
+   if(local.ready||Date.now()-started>=650){diagnoseResidentAdminRemote(payload,seq);return}
+   setTimeout(waitLocal,50);
   }());
   return;
  }
- diagnoseResidentAdminRemote(payload);
+ diagnoseResidentAdminRemote(payload,seq);
 }
 function startCpf(cpf){
  cpf=digits(cpf);
@@ -646,7 +787,8 @@ function install(){
  var close=el('cscRecoveryClose');if(close)close.addEventListener('click',closeRecovery);
  if(el('loginPanel')&&!el('loginPanel').hidden)showRole(tacsOnly?'tacs':recognizedRole());
  setTimeout(registerTrustedDeviceFromSession,700);
- window.addEventListener('pageshow',function(){setTabs(activeRole);setTimeout(registerTrustedDeviceFromSession,250)});
+ setTimeout(function(){warmResidentDiagnosticCache(false)},180);
+ window.addEventListener('pageshow',function(){setTabs(activeRole);setTimeout(registerTrustedDeviceFromSession,250);setTimeout(function(){warmResidentDiagnosticCache(false)},320)});
 }
 window.ConectaAcessoUnificado={showRole:showRole,profile:profile,ubsProfile:ubsProfile,registrarAparelho:registerTrustedDevice,marcarPerfil:rememberRole,perfilReconhecido:recognizedRole};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
