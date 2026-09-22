@@ -7,7 +7,7 @@
  * Se o cadastro não puder ser conciliado, cria pendência e NÃO bloqueia o serviço.
  */
 var TACS_CONECTA_ACESSO_V1 = Object.freeze({
-  VERSAO:'1.0.4',
+  VERSAO:'1.0.5',
   ACCESS_SHEET:'TACS_CONECTA_ACESSO_MORADOR',
   PENDING_SHEET:'TACS_CONECTA_PENDENCIAS',
   TRUST_SHEET:'TACS_CONECTA_APARELHOS_CONFIAVEIS',
@@ -455,11 +455,11 @@ function conectaAcessoV1CriarPin_(p){
 }
 
 function conectaAcessoV1LoginMorador_(p){
-  var pin=conectaAcessoV1PinSomente_(p.pin),quick=conectaAcessoV1Texto_(p.quickKey),dispositivo=conectaAcessoV1Texto_(p.dispositivo),cpf='';
+  var pin=conectaAcessoV1PinSomente_(p.pin),quick=conectaAcessoV1Texto_(p.quickKey),dispositivo=conectaAcessoV1Texto_(p.dispositivo),cpf='',viaQuick=false;
   if(!dispositivo)throw new Error('Este aparelho ainda não possui um acesso de morador reconhecido.');
   if(conectaAcessoV1AparelhoAdministrativo_(dispositivo)&&!conectaAcessoV1Bool_(p.fluxoMoradorExplicito))throw new Error('Aparelho administrativo não pode assumir sessão de Morador; use o diagnóstico sem vínculo.');
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=null,novoQuick='';
-  if(/^cmq1\./.test(quick))registro=conectaAcessoV1AcessoPorQuick_(sheet,quick);
+  if(/^cmq1\./.test(quick)){registro=conectaAcessoV1AcessoPorQuick_(sheet,quick);viaQuick=Boolean(registro);}
   else if(conectaAcessoV1Texto_(p.cpf)){
     cpf=conectaAcessoV1Cpf_(p.cpf);
     registro=conectaAcessoV1AcessoPorCpf_(sheet,cpf);
@@ -468,18 +468,24 @@ function conectaAcessoV1LoginMorador_(p){
     if(registro&&registro.ambiguo)throw new Error('Há mais de um acesso de morador neste aparelho. Use o CPF abaixo do PIN para recuperar o acesso correto.');
   }
   if(!registro||!conectaAcessoV1Bool_(registro.values[15]))throw new Error('Acesso não localizado ou inativo.');
-  if(!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo)))throw new Error('Este acesso pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
+  var mesmoPrincipal=conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo));
+  var mesmoConfiavel=conectaAcessoV1MoradorDispositivoConfiavel_(registro.values[0],dispositivo);
+  if(!viaQuick&&!mesmoPrincipal&&!mesmoConfiavel)throw new Error('Este acesso pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
   if(!conectaAcessoV1Seguro_(registro.values[7],conectaAcessoV1Hash_(registro.values[6]+'|'+pin)))throw new Error('PIN incorreto.');
-  if(!/^cmq1\./.test(quick)){
+  if(viaQuick&&!mesmoPrincipal&&!mesmoConfiavel){
     novoQuick=conectaAcessoV1Token_('cmq1');quick=novoQuick;
-    registro.values[8]=conectaAcessoV1Hash_(quick);
-    sheet.getRange(registro.row,9).setValue(registro.values[8]);
-    sheet.getRange(registro.row,18).setValue(new Date());
+    conectaAcessoV1RegistrarMoradorConfiavel_(registro,dispositivo,quick);
+  }else if(!/^cmq1\./.test(quick)){
+    novoQuick=conectaAcessoV1Token_('cmq1');quick=novoQuick;
+    if(mesmoPrincipal){
+      registro.values[8]=conectaAcessoV1Hash_(quick);
+      sheet.getRange(registro.row,9).setValue(registro.values[8]);
+      sheet.getRange(registro.row,18).setValue(new Date());
+    }else conectaAcessoV1RegistrarMoradorConfiavel_(registro,dispositivo,quick);
   }
   var session=conectaAcessoV1CriarSessao_(registro.values,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(registro.values),responsavel=(nucleo.membros||[]).filter(function(m){return m&&m.responsavel;})[0]||{};
   return {ok:true,token:session.token,quickKey:quick,perfil:'MORADOR',areaId:registro.values[1],nome:registro.values[4],cpf:registro.values[3],nascimento:registro.values[5]||responsavel.nascimento||'',endereco:responsavel.localidade||'',notificacoesAtivas:conectaAcessoV1Bool_(registro.values[10]),silencioso:conectaAcessoV1Bool_(registro.values[12]),provisorio:conectaAcessoV1Bool_(registro.values[13]),pendenciaId:conectaAcessoV1Texto_(registro.values[14]),familiaId:nucleo.familiaId,familia:nucleo.membros};
 }
-
 function conectaAcessoV1SessaoMorador_(p){
   var sessao=conectaAcessoV1ValidarSessao_(p);
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=conectaAcessoV1AcessoPorId_(sheet,sessao.accessId);
@@ -1293,19 +1299,67 @@ function conectaAcessoV1AtualizarAcesso_(id,updates){
   Object.keys(updates).forEach(function(k){sh.getRange(r.row,Number(k)+1).setValue(updates[k]);});sh.getRange(r.row,18).setValue(new Date());
 }
 function conectaAcessoV1AcessoPorCpf_(sh,cpf){return conectaAcessoV1AcessoBusca_(sh,function(v){var gravado=conectaAcessoV1Texto_(v[3]).replace(/\D/g,''),chave=conectaAcessoV1Texto_(v[2]).toUpperCase();return gravado===cpf||chave==='CPF:'+cpf;});}
-function conectaAcessoV1AcessoPorDispositivo_(sh,dispositivo){
-  var hash=conectaAcessoV1Hash_(dispositivo),last=sh.getLastRow();if(last<=1)return null;
-  var rows=sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS.length).getValues(),matches=[];
+function conectaAcessoV1MoradorDispositivoConfiavel_(accessId,dispositivo){
+  var referencia=conectaAcessoV1Id_(accessId),dh=conectaAcessoV1Hash_(dispositivo),trust=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.TRUST_SHEET,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS),last=trust.getLastRow();
+  if(!referencia||!dispositivo||last<=1)return false;
+  var rows=trust.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS.length).getValues();
   for(var i=rows.length-1;i>=0;i--){
-    if(!conectaAcessoV1Bool_(rows[i][15]))continue;
-    if(conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][9]),hash))matches.push({row:i+2,values:rows[i]});
+    if(conectaAcessoV1Texto_(rows[i][1])!=='MORADOR'||conectaAcessoV1Id_(rows[i][2])!==referencia||!conectaAcessoV1Bool_(rows[i][5]))continue;
+    if(conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][3]),dh))return true;
   }
-  if(matches.length===1)return matches[0];
-  if(matches.length>1)return {ambiguo:true,matches:matches.length};
+  return false;
+}
+function conectaAcessoV1RegistrarMoradorConfiavel_(registro,dispositivo,quick){
+  if(!registro||!registro.values||!dispositivo||!/^cmq1\./.test(conectaAcessoV1Texto_(quick)))return;
+  var referencia=conectaAcessoV1Id_(registro.values[0]),dh=conectaAcessoV1Hash_(dispositivo),qh=conectaAcessoV1Hash_(quick),trust=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.TRUST_SHEET,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS),last=trust.getLastRow(),row=0,agora=new Date();
+  if(last>1){
+    var rows=trust.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS.length).getValues();
+    for(var i=rows.length-1;i>=0;i--){
+      if(conectaAcessoV1Texto_(rows[i][1])==='MORADOR'&&conectaAcessoV1Id_(rows[i][2])===referencia&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][3]),dh)){row=i+2;break;}
+    }
+  }
+  var vals=['TRUST-'+Utilities.getUuid().replace(/-/g,'').slice(0,18).toUpperCase(),'MORADOR',referencia,dh,qh,true,agora,agora];
+  if(row){vals[0]=conectaAcessoV1Texto_(trust.getRange(row,1).getValue())||vals[0];vals[6]=trust.getRange(row,7).getValue()||agora;trust.getRange(row,1,1,vals.length).setValues([vals]);}
+  else trust.appendRow(vals);
+}
+function conectaAcessoV1AcessoPorDispositivo_(sh,dispositivo){
+  var hash=conectaAcessoV1Hash_(dispositivo),last=sh.getLastRow(),matches={};
+  if(!dispositivo)return null;
+  if(last>1){
+    var rows=sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS.length).getValues();
+    for(var i=rows.length-1;i>=0;i--){
+      if(!conectaAcessoV1Bool_(rows[i][15]))continue;
+      if(conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][9]),hash))matches[conectaAcessoV1Texto_(rows[i][0])]={row:i+2,values:rows[i]};
+    }
+  }
+  var trust=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.TRUST_SHEET,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS),tlast=trust.getLastRow();
+  if(tlast>1){
+    var trusted=trust.getRange(2,1,tlast-1,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS.length).getValues();
+    for(var j=trusted.length-1;j>=0;j--){
+      if(conectaAcessoV1Texto_(trusted[j][1])!=='MORADOR'||!conectaAcessoV1Bool_(trusted[j][5])||!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(trusted[j][3]),hash))continue;
+      var ref=conectaAcessoV1Id_(trusted[j][2]),registro=conectaAcessoV1AcessoPorId_(sh,ref);
+      if(registro&&conectaAcessoV1Bool_(registro.values[15]))matches[ref]=registro;
+    }
+  }
+  var ids=Object.keys(matches);
+  if(ids.length===1)return matches[ids[0]];
+  if(ids.length>1)return {ambiguo:true,matches:ids.length};
   return null;
 }
 function conectaAcessoV1AcessoPorId_(sh,id){return conectaAcessoV1AcessoBusca_(sh,function(v){return conectaAcessoV1Texto_(v[0])===id;});}
-function conectaAcessoV1AcessoPorQuick_(sh,quick){var h=conectaAcessoV1Hash_(quick);return conectaAcessoV1AcessoBusca_(sh,function(v){return conectaAcessoV1Seguro_(v[8],h);});}
+function conectaAcessoV1AcessoPorQuick_(sh,quick){
+  var h=conectaAcessoV1Hash_(quick),principal=conectaAcessoV1AcessoBusca_(sh,function(v){return conectaAcessoV1Seguro_(v[8],h);});
+  if(principal)return principal;
+  var trust=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.TRUST_SHEET,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS),last=trust.getLastRow();
+  if(last<=1)return null;
+  var rows=trust.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.TRUST_HEADERS.length).getValues();
+  for(var i=rows.length-1;i>=0;i--){
+    if(conectaAcessoV1Texto_(rows[i][1])!=='MORADOR'||!conectaAcessoV1Bool_(rows[i][5])||!conectaAcessoV1Seguro_(conectaAcessoV1Texto_(rows[i][4]),h))continue;
+    var registro=conectaAcessoV1AcessoPorId_(sh,conectaAcessoV1Id_(rows[i][2]));
+    if(registro&&conectaAcessoV1Bool_(registro.values[15]))return registro;
+  }
+  return null;
+}
 function conectaAcessoV1AcessoBusca_(sh,fn){
   var last=sh.getLastRow();if(last<=1)return null;var rows=sh.getRange(2,1,last-1,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS.length).getValues();
   for(var i=rows.length-1;i>=0;i--)if(fn(rows[i]))return {row:i+2,values:rows[i]};return null;
