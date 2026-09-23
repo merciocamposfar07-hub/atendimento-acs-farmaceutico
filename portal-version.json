@@ -1,5 +1,5 @@
 {
-  "version": "20260920.4",
-  "releasedAt": "2026-09-20T21:36:00-03:00",
-  "scope": "Portal CSC — restaura cores originais da agenda odontológica"
+  "version": "20260923-csc-unificado-pin-v1",
+  "releasedAt": "2026-09-23T19:00:41.750Z",
+  "scope": "Portal CSC — versão única do fluxo do Morador e PIN entre navegadores/PWA"
 }

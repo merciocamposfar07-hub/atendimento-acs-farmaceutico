@@ -305,7 +305,7 @@
     var script=document.createElement('script');
     script.id='portalTacsIdentificacaoFamiliaScriptV1';
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260921-pin-pwa-cookie-bridge-v8';
+    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260923-csc-unificado-pin-v1';
     (document.head||document.documentElement).appendChild(script);
   }
 
@@ -317,7 +317,7 @@
     var script=document.createElement('script');
     script.id=CONECTA_SCRIPT_ID;
     script.async=false;
-    script.src='/atendimento-acs-farmaceutico/portal-conecta-oficial-v1.js?v=20260918-footer-icon-align-v4';
+    script.src='/atendimento-acs-farmaceutico/portal-conecta-oficial-v1.js?v=20260923-csc-unificado-pin-v1';
     (document.head||document.documentElement).appendChild(script);
   }
 
@@ -338,7 +338,7 @@
       var script=document.createElement('script');
       script.id=INSTITUTIONAL_SCRIPT_ID;
       script.async=false;
-      script.src='/atendimento-acs-farmaceutico/portal-institucional-suporte-v1.js?v=20260920-fundo-contornos-v3';
+      script.src='/atendimento-acs-farmaceutico/portal-institucional-suporte-v1.js?v=20260923-csc-unificado-pin-v1';
       script.addEventListener('load',afterInstitutionalReady,{once:true});
       (document.head||document.documentElement).appendChild(script);
       return;
