@@ -86,6 +86,11 @@ assert(backend.includes("CPF_PREENCHIDO_EM_CAMPO_VAZIO"),'CPF deve ser escrito n
 assert(backend.includes("Cadastro pendente de conferência. Você pode continuar normalmente com sua solicitação."),'Morador sem correspondência segura não pode ser bloqueado');
 assert(backend.includes("function conectaAcessoV1ContarPendenciasArea_"),'Pendências cadastrais devem alimentar a Central');
 assert(backend.includes("O PIN deve ter exatamente 4 números."),'PIN do morador deve ter quatro números');
+assert(backend.includes("MORADOR_PIN_GLOBAL_POR_CPF_2026_09_23_V1"),'PIN existente deve ser reconhecido pelo CPF mesmo em navegador ou aparelho novo');
+assert(backend.includes("PIN_UNICO_POR_MORADOR_2026_09_23_V1"),'Criação não pode sobrescrever um PIN ativo só porque o navegador mudou');
+assert(backend.includes("viaQuick=false,viaCpf=false"),'Login do Morador deve distinguir autenticação por CPF em navegador novo');
+assert(backend.includes("if(!viaQuick&&!viaCpf&&!mesmoPrincipal&&!mesmoConfiavel)"),'CPF + PIN existente devem poder autenticar navegador novo antes de registrá-lo como confiável');
+assert(backend.includes("NOVO_NAVEGADOR_REUTILIZA_PIN_2026_09_23_V1"),'Novo navegador deve reutilizar o mesmo PIN e só então ganhar quickKey próprio');
 assert(build.includes("apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs"),'Módulo unificado deve entrar no release Apps Script');
 
 assert(resident.includes('Esta etapa é obrigatória.'),'Notificações devem ser obrigatórias no primeiro acesso');
