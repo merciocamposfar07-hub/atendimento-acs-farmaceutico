@@ -1153,9 +1153,25 @@ html body main.shell section.panel .content .form-panel{
 </style>  <script>
   (function(){
     if(!('serviceWorker' in navigator)||location.protocol!=='https:')return;
+    var reloadKey='cscMoradorSwReloadV1';
+    navigator.serviceWorker.addEventListener('controllerchange',function(){
+      try{
+        if(sessionStorage.getItem(reloadKey)==='1')return;
+        sessionStorage.setItem(reloadKey,'1');
+      }catch(e){}
+      location.reload();
+    });
     window.addEventListener('load',function(){
-      var registrar=function(){navigator.serviceWorker.register('/atendimento-acs-farmaceutico/csc-morador-sw.js',{scope:'/atendimento-acs-farmaceutico/'}).catch(function(){})};
-      if('requestIdleCallback' in window)requestIdleCallback(registrar,{timeout:1800});else setTimeout(registrar,700);
+      var registrar=function(){
+        navigator.serviceWorker.register('/atendimento-acs-farmaceutico/csc-morador-sw.js',{
+          scope:'/atendimento-acs-farmaceutico/',
+          updateViaCache:'none'
+        }).then(function(reg){
+          try{reg.update()}catch(e){}
+          setTimeout(function(){try{sessionStorage.removeItem(reloadKey)}catch(e){}},2500);
+        }).catch(function(){});
+      };
+      if('requestIdleCallback' in window)requestIdleCallback(registrar,{timeout:900});else setTimeout(registrar,250);
     },{once:true});
   }());
   </script>
