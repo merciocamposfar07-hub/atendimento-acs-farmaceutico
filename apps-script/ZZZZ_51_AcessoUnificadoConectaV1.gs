@@ -467,11 +467,17 @@ function conectaAcessoV1LoginMorador_(p){
   if(conectaAcessoV1AparelhoAdministrativo_(dispositivo)&&!conectaAcessoV1Bool_(p.fluxoMoradorExplicito))throw new Error('Aparelho administrativo não pode assumir sessão de Morador; use o diagnóstico sem vínculo.');
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=null,novoQuick='';
   if(/^cmq1\./.test(quick)){registro=conectaAcessoV1AcessoPorQuick_(sheet,quick);viaQuick=Boolean(registro);}
-  else if(conectaAcessoV1Texto_(p.cpf)){
+  /* QUICK_ANTIGO_RECUPERA_PELO_CPF_2026_09_23_V1
+     Navegadores que criaram o PIN antes desta correção podem carregar um quickKey
+     antigo, pois recriações indevidas sobrescreviam o vínculo principal. Se o quick
+     não resolver, o CPF já confirmado no próprio navegador permite localizar o mesmo
+     cadastro sem criar outro PIN. */
+  if(!registro&&conectaAcessoV1Texto_(p.cpf)){
     cpf=conectaAcessoV1Cpf_(p.cpf);
     registro=conectaAcessoV1AcessoPorCpf_(sheet,cpf);
     viaCpf=Boolean(registro);
-  }else{
+  }
+  if(!registro){
     registro=conectaAcessoV1AcessoPorDispositivo_(sheet,dispositivo);
     if(registro&&registro.ambiguo)throw new Error('Há mais de um acesso de morador neste aparelho. Use o CPF abaixo do PIN para recuperar o acesso correto.');
   }
@@ -486,7 +492,9 @@ function conectaAcessoV1LoginMorador_(p){
   if(viaQuick&&!mesmoPrincipal&&!mesmoConfiavel){
     novoQuick=conectaAcessoV1Token_('cmq1');quick=novoQuick;
     conectaAcessoV1RegistrarMoradorConfiavel_(registro,dispositivo,quick);
-  }else if(!/^cmq1\./.test(quick)){
+  }else if(!viaQuick||!/^cmq1\./.test(quick)){
+    /* Se o navegador chegou com quickKey antigo, o PIN + CPF já validaram o morador.
+       Emita um quick novo para este navegador e elimine a divergência nos próximos acessos. */
     novoQuick=conectaAcessoV1Token_('cmq1');quick=novoQuick;
     if(mesmoPrincipal){
       registro.values[8]=conectaAcessoV1Hash_(quick);
