@@ -212,6 +212,32 @@ function testEmptySourceWithOfficialHeader(context) {
   assert.equal(scans, 1, 'O cabeçalho da planilha vazia também deve ser reutilizado do cache.');
 }
 
+function testFastDocumentLookupContract() {
+  assert.match(
+    SOURCE,
+    /BUSCA_DOCUMENTO_TEXTFINDER_FAST_20260923_V1/,
+    'A busca pública por CPF/CNS deve manter o caminho rápido documentado.'
+  );
+  assert.match(
+    SOURCE,
+    /createTextFinder\(regex\)[\s\S]*?useRegularExpression\(true\)[\s\S]*?findAll\(\)/,
+    'CPF/CNS deve ser localizado diretamente na coluna documental.'
+  );
+  const fnStart = SOURCE.indexOf('function moradoresAdminV1LocalizarTodosPorDocumento_');
+  const fnEnd = SOURCE.indexOf('/**\n * Confirma no servidor', fnStart);
+  const body = SOURCE.slice(fnStart, fnEnd);
+  assert.doesNotMatch(
+    body,
+    /getRange\(fonte\.headerRow\+2,1,count,lastCol\)/,
+    'A busca por um documento não pode voltar a carregar a planilha inteira.'
+  );
+  assert.match(
+    SOURCE,
+    /PUBLIC_LOOKUP_CACHE_SECONDS:\s*600/,
+    'Resposta positiva recente deve ser reutilizada no backend sem reler a planilha.'
+  );
+}
+
 function main() {
   new vm.Script(SOURCE, {filename: 'ZZZZ_15_MoradoresAdminPortalV1.gs'});
   const context = makeContext();
@@ -244,7 +270,8 @@ function main() {
   testLightweightCountAndSummary(context);
   testSourceCache(context);
   testEmptySourceWithOfficialHeader(context);
-  console.log('Moradores 1.4.5: leitura leve, fonte vazia 20/20, cache e invalidação após escrita aprovados.');
+  testFastDocumentLookupContract();
+  console.log('Moradores 1.4.5: leitura leve, busca documental rápida, cache e invalidação após escrita aprovados.');
 }
 
 main();

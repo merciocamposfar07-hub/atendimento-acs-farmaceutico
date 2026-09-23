@@ -55,6 +55,8 @@ var TACS_MORADORES_ADMIN_V1 = Object.freeze({
   SOURCE_CACHE_SECONDS: 600,
   SUMMARY_CACHE_PREFIX: 'tacs_moradores_v145_resumo_',
   SUMMARY_CACHE_SECONDS: 60,
+  PUBLIC_LOOKUP_CACHE_PREFIX: 'tacs_moradores_v145_publico_doc_',
+  PUBLIC_LOOKUP_CACHE_SECONDS: 600,
   CONSOLIDATED_STATUS: 'CONSOLIDADO',
   REVERTED_IMPORT_STATUS: 'IMPORTACAO_DESFEITA',
   SCHEMA_HEADERS: Object.freeze([
@@ -334,6 +336,23 @@ function moradoresAdminV1BuscarPublico_(documento,areaSolicitada){
   var cns=/^[0-9]{15}$/.test(doc)?doc:'';
   if(!cpf&&!cns)return {ok:false,encontrado:false,message:'Informe um CPF válido ou os 15 números do CNS.'};
 
+  /* BUSCA_PUBLICA_DOCUMENTO_FAST_20260923_V1
+     Reentradas e chamadas redundantes do bridge/JSONP reutilizam por poucos minutos
+     somente respostas positivas, sempre segregadas por área + hash do documento. */
+  var areaCache=moradoresAdminV1NormalizarAreaId_(areaSolicitada)||'PUBLICA';
+  var cachePublico=moradoresAdminV1CacheScript_();
+  var chavePublica=TACS_MORADORES_ADMIN_V1.PUBLIC_LOOKUP_CACHE_PREFIX+
+    areaCache+'_'+moradoresAdminV1Hash_(doc).slice(0,32);
+  if(cachePublico){
+    try{
+      var salvoPublico=cachePublico.get(chavePublica);
+      if(salvoPublico){
+        var memoPublico=JSON.parse(salvoPublico);
+        if(memoPublico&&memoPublico.ok===true&&memoPublico.encontrado===true)return memoPublico;
+      }
+    }catch(erroCachePublico){}
+  }
+
   var areas=moradoresAdminV1AreasPublicas_(areaSolicitada);
   var encontrados=[];
 
@@ -366,7 +385,7 @@ function moradoresAdminV1BuscarPublico_(documento,areaSolicitada){
 
   var achado=encontrados[0];
   var morador=achado.registro.morador;
-  return {
+  var resposta={
     ok:true,
     encontrado:true,
     morador:{
@@ -379,6 +398,10 @@ function moradoresAdminV1BuscarPublico_(documento,areaSolicitada){
       status:'ATIVO'
     }
   };
+  if(cachePublico){
+    try{cachePublico.put(chavePublica,JSON.stringify(resposta),TACS_MORADORES_ADMIN_V1.PUBLIC_LOOKUP_CACHE_SECONDS);}catch(erroCachePublicoEscrita){}
+  }
+  return resposta;
 }
 
 function moradoresAdminV1AreasPublicas_(areaSolicitada){
@@ -1310,25 +1333,55 @@ function moradoresAdminV1LerPorOrigem_(ss,aba,row){
   return morador.nome?{origem:{aba:aba,linha:row},morador:morador}:null;
 }
 
+function moradoresAdminV1RegexDocumento_(documento){
+  var doc=moradoresAdminV1Digitos_(documento);
+  if(!doc)return '';
+  var partes=[];
+  for(var i=0;i<doc.length;i++){
+    partes.push(doc.charAt(i));
+    if(i<doc.length-1)partes.push('[^0-9]*');
+  }
+  return '^'+partes.join('')+'$';
+}
+
+function moradoresAdminV1LinhasDocumentoFast_(fonte,coluna,documento){
+  if(!documento||coluna==null||coluna<0)return [];
+  var sheet=fonte.sheet,primeira=fonte.headerRow+2,ultima=sheet.getLastRow();
+  if(ultima<primeira)return [];
+  var regex=moradoresAdminV1RegexDocumento_(documento);
+  if(!regex)return [];
+  var encontrados=sheet
+    .getRange(primeira,coluna+1,ultima-primeira+1,1)
+    .createTextFinder(regex)
+    .useRegularExpression(true)
+    .matchCase(false)
+    .findAll()||[];
+  return encontrados.map(function(celula){return celula.getRow();});
+}
+
 function moradoresAdminV1LocalizarTodosPorDocumento_(fonte,cpf,cns){
   if(!cpf&&!cns)return [];
   if(!fonte||!fonte.sheet||typeof fonte.headerRow!=='number'||!fonte.map){
     throw new Error('A fonte oficial de moradores não foi informada para a busca por documento.');
   }
+
+  /* BUSCA_DOCUMENTO_TEXTFINDER_FAST_20260923_V1
+     A consulta por CPF/CNS não lê mais todas as colunas de todos os moradores.
+     Primeiro localiza somente nas colunas documentais e depois lê apenas as linhas encontradas. */
+  var sheet=fonte.sheet,lastCol=sheet.getLastColumn(),linhas={};
+  moradoresAdminV1LinhasDocumentoFast_(fonte,fonte.map.cpf,cpf).forEach(function(row){linhas[row]=true;});
+  moradoresAdminV1LinhasDocumentoFast_(fonte,fonte.map.cns,cns).forEach(function(row){linhas[row]=true;});
+
   var out=[];
-  var sheet=fonte.sheet;
-  var lastRow=sheet.getLastRow(),lastCol=sheet.getLastColumn();
-  var count=lastRow-(fonte.headerRow+1);
-  if(count<=0)return out;
-  var range=sheet.getRange(fonte.headerRow+2,1,count,lastCol);
-  var raw=range.getValues(),display=range.getDisplayValues();
-  for(var i=0;i<display.length;i++){
-    var morador=moradoresAdminV1MontarMorador_(display[i],raw[i],fonte.map);
-    if(moradoresAdminV1SituacaoOculta_(morador.status))continue;
+  Object.keys(linhas).map(Number).sort(function(a,b){return a-b;}).forEach(function(row){
+    var range=sheet.getRange(row,1,1,lastCol);
+    var raw=range.getValues()[0],display=range.getDisplayValues()[0];
+    var morador=moradoresAdminV1MontarMorador_(display,raw,fonte.map);
+    if(moradoresAdminV1SituacaoOculta_(morador.status))return;
     if((cpf&&morador.cpf===cpf)||(cns&&morador.cns===cns)){
-      out.push({origem:{aba:sheet.getName(),linha:fonte.headerRow+2+i},morador:morador});
+      out.push({origem:{aba:sheet.getName(),linha:row},morador:morador});
     }
-  }
+  });
   return out;
 }
 
