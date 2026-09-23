@@ -306,7 +306,11 @@ function loginResidentPinFromPortal(){
    }
   }
   if(!localOpened)setPinBox('<strong class="tacs-family-title">Aguarde enquanto seus dados carregam…</strong><p class="tacs-family-help">Validando seu PIN e preparando sua família.</p>','tacs-pin-box');
-  var cpfFallback=/^\d{11}$/.test(hintCpf)?hintCpf:'',quickForLogin=text(p&&p.quickKey)||installQuick;
+  /* PIN_UNICO_MIGRACAO_NAVEGADOR_2026_09_23_V1
+     Perfis antigos podem ter quickKey já substituído por uma recriação indevida do PIN.
+     Envie também o CPF já salvo neste navegador para o backend recuperar o mesmo acesso,
+     validar o PIN existente e emitir um quickKey novo sem pedir outro cadastro. */
+  var profileCpf=digits(p&&p.cpf),cpfFallback=/^\d{11}$/.test(hintCpf)?hintCpf:(/^\d{11}$/.test(profileCpf)?profileCpf:''),quickForLogin=text(p&&p.quickKey)||installQuick;
   return residentPost('conecta_morador_login_pin',{quickKey:quickForLogin,cpf:cpfFallback,pin:pin,dispositivo:deviceId(true)}).then(function(r){
    saveResidentAccess(r);
    p=residentProfile()||p;
