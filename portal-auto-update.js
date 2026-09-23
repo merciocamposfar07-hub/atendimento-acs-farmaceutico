@@ -305,7 +305,7 @@
     var script=document.createElement('script');
     script.id='portalTacsIdentificacaoFamiliaScriptV1';
     script.async=true;
-    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260923-csc-unificado-pin-v1';
+    script.src='/atendimento-acs-farmaceutico/portal-identificacao-familia-v1.js?v=20260923-csc-unificado-pin-v2';
     (document.head||document.documentElement).appendChild(script);
   }
 
