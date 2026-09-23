@@ -229,7 +229,20 @@ function agendasProfissionaisTerritoriaisV1SalvarAgenda_(contexto,p){
     var linha=agendasProfissionaisTerritoriaisV1EncontrarAgenda_(tabela,p.modulo,p.dia,contexto.areaId);
     if(!linha)throw new Error('Agenda não encontrada nesta área.');
     agendasProfissionaisTerritoriaisV1Atualizar_(tabela,linha,{DATA:agendasProfissionaisTerritoriaisV1DataOpcional_(p.data),HORARIO:agendasProfissionaisTerritoriaisV1Texto_(p.horario),SITUACAO:agendasProfissionaisTerritoriaisV1Texto_(p.situacao),MENSAGEM:agendasProfissionaisTerritoriaisV1Texto_(p.mensagem),ENCERRA_HORARIO:agendasProfissionaisTerritoriaisV1HoraOpcional_(p.encerraHorario),ENCERRA_12H:agendasProfissionaisTerritoriaisV1HoraOpcional_(p.encerraHorario)==='12:00',VAGAS_COMUNS:agendasProfissionaisTerritoriaisV1NaoNegativo_(p.vagasComuns),VAGAS_EMERGENCIAIS:agendasProfissionaisTerritoriaisV1NaoNegativo_(p.vagasEmergenciais),DIA_EXTRA:agendasProfissionaisTerritoriaisV1Booleano_(p.diaExtra),ATIVO:agendasProfissionaisTerritoriaisV1Booleano_(p.ativo),AREA_ID:contexto.areaId,ATUALIZADO_EM:new Date()});
-    SpreadsheetApp.flush();return{ok:true,modulo:agendasProfissionaisTerritoriaisV1Texto_(p.modulo),dia:agendasProfissionaisTerritoriaisV1Texto_(p.dia),areaId:contexto.areaId,message:'Agenda salva somente nesta área.'};
+    SpreadsheetApp.flush();
+    /* CONFIRMACAO_CANONICA_AGENDA_20260923_V1:
+       após gravar, relê a própria linha no servidor e devolve o registro confirmado.
+       O painel não precisa depender de várias releituras rápidas para saber se salvou. */
+    var confirmada=agendasProfissionaisTerritoriaisV1Tabela_(
+      agendasProfissionaisTerritoriaisV1Planilha_(),
+      TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS,
+      TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.AGENDA_HEADERS,true
+    );
+    var linhaConfirmada=agendasProfissionaisTerritoriaisV1EncontrarAgenda_(confirmada,p.modulo,p.dia,contexto.areaId);
+    if(!linhaConfirmada)throw new Error('A agenda foi gravada, mas a confirmação da linha não ficou disponível.');
+    var agendaConfirmada=agendasProfissionaisTerritoriaisV1Objeto_(confirmada.headers,linhaConfirmada.values);
+    agendaConfirmada.AREA_ID=contexto.areaId;
+    return{ok:true,modulo:agendasProfissionaisTerritoriaisV1Texto_(p.modulo),dia:agendasProfissionaisTerritoriaisV1Texto_(p.dia),areaId:contexto.areaId,agenda:agendaConfirmada,confirmada:true,message:'Agenda salva e confirmada pelo servidor.'};
   }finally{lock.releaseLock();}
 }
 
