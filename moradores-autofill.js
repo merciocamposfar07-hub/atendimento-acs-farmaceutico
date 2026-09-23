@@ -25,7 +25,8 @@
   var RESIDENT_STORAGE_PREFIX = 'portalTacsMoradorCacheV2:';
   var recoveryTimer = null;
   var recoveryRound = 0;
-  var RECOVERY_MAX_DELAY_MS = 8000;
+  var RECOVERY_ACTIVE_ROUNDS = 1;
+  var RECOVERY_IDLE_DELAY_MS = 12000;
   var FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaAutofillV1:'; // FAMILIA_AUTOFILL_SEM_PUSH_V1
   var LEGACY_FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaConfirmadaV1:'; // FAMILIA_AUTOFILL_MIGRA_LEGADO_V1
 
@@ -498,19 +499,40 @@
       cleanupTransport();
       if (recoveryTimer) clearTimeout(recoveryTimer);
       recoveryRound += 1;
-      var delay = Math.min(RECOVERY_MAX_DELAY_MS, Math.round(900 * Math.pow(1.65, Math.max(0, recoveryRound - 1))));
-      setLoadingStatus(status);
 
+      if (recoveryRound > RECOVERY_ACTIVE_ROUNDS) {
+        setStatus(status, 'A conexão com o cadastro está demorando. Não redigite o CPF/CNS: o Portal tentará novamente automaticamente.', '');
+        recoveryTimer = setTimeout(function () {
+          recoveryTimer = null;
+          if (token !== requestId || token === completedRequestId) return;
+          if (onlyDigits(input.value) !== doc) return;
+          if (document.hidden) {
+            recoveryRound = RECOVERY_ACTIVE_ROUNDS;
+            scheduleRecovery(doc, token);
+            return;
+          }
+          recoveryRound = 0;
+          setLoadingStatus(status);
+          startJsonp(doc, token, 2, false);
+        }, RECOVERY_IDLE_DELAY_MS);
+        return;
+      }
+
+      setLoadingStatus(status);
       recoveryTimer = setTimeout(function () {
         recoveryTimer = null;
         if (token !== requestId || token === completedRequestId) return;
         if (onlyDigits(input.value) !== doc) return;
         if (document.hidden) {
+          recoveryRound = RECOVERY_ACTIVE_ROUNDS;
           scheduleRecovery(doc, token);
           return;
         }
-        startBridge(doc, token);
-      }, delay);
+        /* Uma única recuperação ativa evita a busca infinita. O retry usa somente
+           um JSONP final; se a rede continuar lenta, o Portal entra em espera passiva
+           e tenta novamente sem exigir recarga ou redigitação. */
+        startJsonp(doc, token, 2, false);
+      }, 900);
     }
 
     function applyResidentPayload(payload, documento, fromCache) {

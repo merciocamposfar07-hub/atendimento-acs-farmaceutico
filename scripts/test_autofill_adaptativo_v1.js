@@ -21,6 +21,9 @@ assert.match(source, /function cachedResident\(documento\)/,'Documento já resol
 assert.match(source, /var cached = cachedResident\(doc\)/,'Se houver cache válido, o autofill deve usá-lo antes de iniciar outra consulta.');
 assert.match(source, /function prefetchResident\(documento\)/,'A família pode aquecer o cache dos integrantes em segundo plano.');
 assert.match(source, /function scheduleRecovery\(doc, token\)/,'Falha transitória deve acionar nova tentativa automaticamente sem exigir toque ou redigitação.');
+assert.match(source, /var RECOVERY_ACTIVE_ROUNDS = 1;/,'A recuperação automática ativa precisa ser limitada para não manter busca infinita.');
+assert.match(source, /A conexão com o cadastro está demorando\. Não redigite o CPF\/CNS: o Portal tentará novamente automaticamente\./,'Depois da tentativa ativa, o Portal deve sair do carregamento contínuo e manter recuperação passiva.');
+assert.match(source, /startJsonp\(doc, token, 2, false\)/,'A recuperação ativa deve usar uma única tentativa final, sem reiniciar todo o ciclo de bridge.');
 assert.match(source, /var RESIDENT_PERSISTENT_CACHE_MS = 8 \* 60 \* 60 \* 1000;/,'Morador resolvido deve sobreviver a recarga/reentrada no mesmo aparelho durante o expediente.');
 assert.match(source, /localStorage\.setItem\(residentStorageKey\(doc\), JSON\.stringify\(item\)\)/,'Resposta válida deve ser persistida no aparelho para retorno instantâneo.');
 assert.doesNotMatch(source, /A consulta demorou além do esperado\. Toque novamente no CPF\/CNS para repetir\./,'Falha transitória não pode mandar o morador redigitar o documento.');
