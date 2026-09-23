@@ -21,6 +21,11 @@
   var familyMemory = '';
   var residentCache = {};
   var RESIDENT_CACHE_MS = 10 * 60 * 1000;
+  var RESIDENT_PERSISTENT_CACHE_MS = 8 * 60 * 60 * 1000;
+  var RESIDENT_STORAGE_PREFIX = 'portalTacsMoradorCacheV2:';
+  var recoveryTimer = null;
+  var recoveryRound = 0;
+  var RECOVERY_MAX_DELAY_MS = 8000;
   var FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaAutofillV1:'; // FAMILIA_AUTOFILL_SEM_PUSH_V1
   var LEGACY_FAMILY_STORAGE_PREFIX = 'portalTacsFamiliaConfirmadaV1:'; // FAMILIA_AUTOFILL_MIGRA_LEGADO_V1
 
@@ -85,21 +90,40 @@
     return portalAreaId() + ':' + onlyDigits(documento);
   }
 
+  function residentStorageKey(documento) {
+    return RESIDENT_STORAGE_PREFIX + residentCacheKey(documento);
+  }
+
   function cacheResident(documento, payload) {
     var doc = onlyDigits(documento);
     if (!(validCpf(doc) || validCns(doc)) || !payload || payload.ok !== true || payload.encontrado !== true) return false;
-    residentCache[residentCacheKey(doc)] = { at: Date.now(), payload: payload };
+    var item = { at: Date.now(), payload: payload };
+    residentCache[residentCacheKey(doc)] = item;
+    try { localStorage.setItem(residentStorageKey(doc), JSON.stringify(item)); } catch (e) {}
     return true;
   }
 
   function cachedResident(documento) {
-    var key = residentCacheKey(documento), item = residentCache[key];
-    if (!item) return null;
-    if (Date.now() - item.at > RESIDENT_CACHE_MS) {
-      delete residentCache[key];
-      return null;
-    }
-    return item.payload || null;
+    var doc = onlyDigits(documento), key = residentCacheKey(doc), item = residentCache[key];
+    if (item && Date.now() - item.at <= RESIDENT_CACHE_MS) return item.payload || null;
+    if (item) delete residentCache[key];
+
+    try {
+      var stored = JSON.parse(localStorage.getItem(residentStorageKey(doc)) || 'null');
+      if (
+        stored &&
+        Number(stored.at) > 0 &&
+        Date.now() - Number(stored.at) <= RESIDENT_PERSISTENT_CACHE_MS &&
+        stored.payload &&
+        stored.payload.ok === true &&
+        stored.payload.encontrado === true
+      ) {
+        residentCache[key] = stored;
+        return stored.payload;
+      }
+      if (stored) localStorage.removeItem(residentStorageKey(doc));
+    } catch (e) {}
+    return null;
   }
 
   function prefetchResident(documento) {
@@ -453,6 +477,42 @@
     if (label && label.firstChild) label.firstChild.textContent = 'CPF ou Cartão SUS (CNS) ';
     setStatus(status, 'Digite seu CPF ou Cartão SUS (CNS). Seus dados serão carregados automaticamente para conferência.', '');
 
+    function clearRecovery() {
+      if (recoveryTimer) clearTimeout(recoveryTimer);
+      recoveryTimer = null;
+      recoveryRound = 0;
+    }
+
+    function scheduleRecovery(doc, token) {
+      if (token !== requestId || token === completedRequestId) return;
+
+      var cached = cachedResident(doc);
+      if (cached) {
+        completedRequestId = token;
+        clearRecovery();
+        cleanupTransport();
+        applyResidentPayload(cached, doc, true);
+        return;
+      }
+
+      cleanupTransport();
+      if (recoveryTimer) clearTimeout(recoveryTimer);
+      recoveryRound += 1;
+      var delay = Math.min(RECOVERY_MAX_DELAY_MS, Math.round(900 * Math.pow(1.65, Math.max(0, recoveryRound - 1))));
+      setLoadingStatus(status);
+
+      recoveryTimer = setTimeout(function () {
+        recoveryTimer = null;
+        if (token !== requestId || token === completedRequestId) return;
+        if (onlyDigits(input.value) !== doc) return;
+        if (document.hidden) {
+          scheduleRecovery(doc, token);
+          return;
+        }
+        startBridge(doc, token);
+      }, delay);
+    }
+
     function applyResidentPayload(payload, documento, fromCache) {
       var expectedArea = portalAreaId();
       var returnedArea = normalizeArea(payload && payload.morador && payload.morador.areaId);
@@ -541,19 +601,24 @@
         }
       }
 
-      completedRequestId = token;
       cleanupTransport();
 
       if (payload && payload.ok === true && payload.encontrado === true) {
+        completedRequestId = token;
+        clearRecovery();
         applyResidentPayload(payload, onlyDigits(input.value), false);
       } else if (payload && payload.ok === true && payload.encontrado === false) {
+        completedRequestId = token;
+        clearRecovery();
         setStatus(status, validCns(input.value) ? 'Cartão SUS não localizado nesta área. Confira os 15 números ou procure seu TACS.' : 'CPF não localizado nesta área. Tente informar o Cartão SUS (CNS).', 'invalid');
       } else {
         var currentDoc = onlyDigits(input.value), cached = cachedResident(currentDoc);
         if (cached) {
+          completedRequestId = token;
+          clearRecovery();
           applyResidentPayload(cached, currentDoc, true);
         } else {
-          setStatus(status, payload && payload.message ? payload.message : 'A consulta não respondeu. Toque novamente no CPF/CNS para repetir.', 'invalid');
+          scheduleRecovery(currentDoc, token);
         }
       }
     }
@@ -572,9 +637,10 @@
         var cached = cachedResident(doc);
         if (cached) {
           completedRequestId = token;
+          clearRecovery();
           applyResidentPayload(cached, doc, true);
         } else {
-          setStatus(status, 'A consulta demorou além do esperado. Toque novamente no CPF/CNS para repetir.', 'invalid');
+          scheduleRecovery(doc, token);
         }
       }
     }
@@ -648,6 +714,7 @@
       var doc = onlyDigits(input.value);
       if (!(validCpf(doc) || validCns(doc))) return;
 
+      clearRecovery();
       var token = ++requestId;
       completedRequestId = 0;
       negativeRequestId = token;
@@ -661,6 +728,7 @@
     function refresh() {
       var doc = onlyDigits(input.value);
       clearTimeout(timer);
+      clearRecovery();
       cleanupTransport();
       requestId++;
 
@@ -675,7 +743,7 @@
         }
         clearResidentFields();
         setLoadingStatus(status);
-        timer = setTimeout(lookup, 350);
+        lookup();
       } else if (/^\d{2,4}$/.test(doc)) {
         clearResidentFields();
         setStatus(status, 'Número de cadastro familiar informado. Toque em Buscar esta família abaixo.', '');

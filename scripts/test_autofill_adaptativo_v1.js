@@ -20,8 +20,11 @@ assert.match(source, /var residentCache = \{\};/,'O autofill precisa manter cach
 assert.match(source, /function cachedResident\(documento\)/,'Documento já resolvido deve ser reutilizado sem nova consulta remota.');
 assert.match(source, /var cached = cachedResident\(doc\)/,'Se houver cache válido, o autofill deve usá-lo antes de iniciar outra consulta.');
 assert.match(source, /function prefetchResident\(documento\)/,'A família pode aquecer o cache dos integrantes em segundo plano.');
-assert.doesNotMatch(source, /function scheduleRecovery\(doc, token\)/,'O autofill não pode reiniciar indefinidamente a consulta após esgotar as tentativas normais.');
-assert.match(source, /A consulta demorou além do esperado\. Toque novamente no CPF\/CNS para repetir\./,'Após as tentativas normais, o Portal deve encerrar o ciclo e permitir nova tentativa sem carregamento infinito.');
+assert.match(source, /function scheduleRecovery\(doc, token\)/,'Falha transitória deve acionar nova tentativa automaticamente sem exigir toque ou redigitação.');
+assert.match(source, /var RESIDENT_PERSISTENT_CACHE_MS = 8 \* 60 \* 60 \* 1000;/,'Morador resolvido deve sobreviver a recarga/reentrada no mesmo aparelho durante o expediente.');
+assert.match(source, /localStorage\.setItem\(residentStorageKey\(doc\), JSON\.stringify\(item\)\)/,'Resposta válida deve ser persistida no aparelho para retorno instantâneo.');
+assert.doesNotMatch(source, /A consulta demorou além do esperado\. Toque novamente no CPF\/CNS para repetir\./,'Falha transitória não pode mandar o morador redigitar o documento.');
+assert.match(source, /setLoadingStatus\(status\);\s*lookup\(\);/s,'CPF/CNS válido deve iniciar a consulta imediatamente, sem debounce adicional.');
 assert.match(source, /AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/,'O autofill público deve usar o mesmo deployment canônico do Portal TACS.');
 assert.doesNotMatch(source, /AKfycbzvhH-x6x8Jbg6_F7nuUn1DaS7A08l97Saq5RpjeoFJsCq6wRdVUyGWBNOiboqTLd3rfQ/,'O endpoint antigo isolado não pode voltar ao autofill.');
 assert.match(source, /TacsMoradoresAutofillV1\.applyResolved/,'Integrante já validado pela família deve ser aplicado sem uma segunda busca remota.');
