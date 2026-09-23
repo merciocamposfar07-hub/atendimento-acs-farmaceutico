@@ -16,16 +16,23 @@ var TACS_BUSCA_ENVIO_FAMILIA_V1 = Object.freeze({
 });
 
 var buscaEnvioFamiliaV1BuscarAnterior_;
+var buscaEnvioFamiliaV1IndiceAnterior_;
 var buscaEnvioFamiliaV1DoGetAnterior_;
 var buscaEnvioFamiliaV1DoPostAnterior_;
 
 (function instalarBuscaEnvioFamiliaV1_(){
+  if(typeof moradoresAdminV1IndiceLocal_==='function'){
+    buscaEnvioFamiliaV1IndiceAnterior_=moradoresAdminV1IndiceLocal_;
+    moradoresAdminV1IndiceLocal_=function(contexto){
+      return buscaEnvioFamiliaV1AnotarFamilias_(buscaEnvioFamiliaV1IndiceAnterior_(contexto));
+    };
+  }
   if(typeof moradoresAdminV1Buscar_==='function'){
     buscaEnvioFamiliaV1BuscarAnterior_=moradoresAdminV1Buscar_;
     moradoresAdminV1Buscar_=function(busca,contexto){
       var familia=buscaEnvioFamiliaV1ConsultaFamilia_(busca);
-      if(!familia)return buscaEnvioFamiliaV1BuscarAnterior_(busca,contexto);
-      return buscaEnvioFamiliaV1BuscarExata_(familia,contexto);
+      if(familia)return buscaEnvioFamiliaV1BuscarExata_(familia,contexto);
+      return buscaEnvioFamiliaV1ExpandirBusca_(buscaEnvioFamiliaV1BuscarAnterior_(busca,contexto),contexto);
     };
   }
   if(typeof doGet==='function'){
@@ -65,6 +72,75 @@ function buscaEnvioFamiliaV1CodigoMorador_(morador){
   return buscaEnvioFamiliaV1NormalizarFamilia_(
     vinculoFamiliarNotifV1CodigoEndereco_(morador&&morador.endereco||'')
   );
+}
+
+/* CORRECAO_BUSCA_MORADOR_EXPANDE_FAMILIA_20260923_V1
+ * Toda busca administrativa continua localizando primeiro o morador solicitado,
+ * mas o resultado é completado com os demais integrantes do mesmo cadastro familiar.
+ * O índice de sessão também recebe familiaId para que a expansão aconteça em memória,
+ * sem nova espera no caminho crítico da busca. */
+function buscaEnvioFamiliaV1FamiliaItem_(item){
+  try{return buscaEnvioFamiliaV1CodigoMorador_(item);}catch(e){return '';}
+}
+
+function buscaEnvioFamiliaV1ChaveItem_(item){
+  item=item||{};
+  if(item.origemAba&&Number(item.origemLinha||0))return 'ORIGEM:'+String(item.origemAba)+'#'+Number(item.origemLinha);
+  if(item.moradorId)return 'MORADOR:'+String(item.moradorId);
+  if(item.chave)return 'CHAVE:'+String(item.chave);
+  if(item.idPortal)return 'PORTAL:'+String(item.idPortal);
+  if(item.cpf)return 'CPF:'+String(item.cpf);
+  if(item.cns)return 'CNS:'+String(item.cns);
+  return 'IDENT:'+[
+    String(item.nome||'').toUpperCase(),
+    String(item.nascimento||''),
+    String(item.endereco||'').toUpperCase()
+  ].join('|');
+}
+
+function buscaEnvioFamiliaV1AnotarFamilias_(resposta){
+  if(!resposta||resposta.ok!==true||!Array.isArray(resposta.resultados))return resposta;
+  resposta.resultados.forEach(function(item){
+    if(!item||typeof item!=='object')return;
+    item.familiaId=buscaEnvioFamiliaV1FamiliaItem_(item);
+  });
+  return resposta;
+}
+
+function buscaEnvioFamiliaV1ExpandirBusca_(resposta,contexto){
+  if(!resposta||resposta.ok!==true||!Array.isArray(resposta.resultados)||!resposta.resultados.length){
+    return resposta;
+  }
+  var diretos=resposta.resultados.slice(),familias=[],familiasVistas={},vistos={},saida=[];
+  diretos.forEach(function(item){
+    if(!item||typeof item!=='object')return;
+    var familia=buscaEnvioFamiliaV1FamiliaItem_(item);
+    item.familiaId=familia;
+    if(familia&&!familiasVistas[familia]){
+      familiasVistas[familia]=true;
+      familias.push(familia);
+    }
+  });
+  function adicionar(item){
+    if(!item||typeof item!=='object')return;
+    var chave=buscaEnvioFamiliaV1ChaveItem_(item);
+    if(vistos[chave])return;
+    vistos[chave]=true;
+    saida.push(item);
+  }
+  diretos.forEach(adicionar);
+  familias.forEach(function(familia){
+    var grupo=buscaEnvioFamiliaV1BuscarExata_(familia,contexto);
+    (grupo&&Array.isArray(grupo.resultados)?grupo.resultados:[]).forEach(adicionar);
+  });
+  var limite=Number(TACS_MORADORES_ADMIN_V1&&TACS_MORADORES_ADMIN_V1.MAX_SEARCH_RESULTS)||80;
+  if(saida.length>limite)saida=saida.slice(0,limite);
+  resposta.resultados=saida;
+  resposta.total=saida.length;
+  resposta.limitado=saida.length>=limite;
+  resposta.familiasExpandidas=familias;
+  resposta.buscaFamiliarAutomatica=familias.length>0;
+  return resposta;
 }
 
 function buscaEnvioFamiliaV1BuscarExata_(familia,contexto){
