@@ -377,8 +377,8 @@ function loginResidentPinFromPortal(){
 
   function consultarFamilia(fam,documento){var p={action:'publico_familia_consultar',areaId:areaId(),subscriptionId:subscriptionId(),dispositivo:deviceId(false),chaveTacsTeste:technicalToken()};if(fam)p.familia=fam;if(documento)p.documento=digits(documento);var key=p.areaId+'|'+text(p.familia||'')+'|'+text(p.documento||'');if(familyQueryPromises[key])return familyQueryPromises[key];familyQueryPromises[key]=jsonpRetry(p,2).catch(function(primaryError){return fetchFamiliaJson(p).catch(function(){throw primaryError})}).then(function(r){if(r&&r.ok===true&&r.autorizada===true){renderMembers(r);return r}setBox(escapeHtml(r&&r.message||'Não foi possível consultar a família.'),'tacs-family-warn');return r}).finally(function(){delete familyQueryPromises[key]});return familyQueryPromises[key]}
   function searchFamily(fam){hideDoc();setBox('<strong class="tacs-family-title">Aguarde, buscando moradores da família '+escapeHtml(fam)+'…</strong>','');return consultarFamilia(fam,'').catch(function(e){setBox(escapeHtml(e.message),'tacs-family-warn')})}
-  function searchFamilyResolved(fam,documento){var family=normalizeFamily(fam),d=digits(documento);if(!family||!docType(d))return searchFamilyByDocument(d);hideDoc();setBox('<strong class="tacs-family-title">Carregando os integrantes da família…</strong>','');return consultarFamilia(family,d).catch(function(e){setBox(escapeHtml(e.message),'tacs-family-warn');return null})}
-  function searchFamilyByDocument(documento){var d=digits(documento);if(!docType(d))return Promise.resolve(null);hideDoc();setBox('<strong class="tacs-family-title">Carregando os integrantes da família…</strong>','');return consultarFamilia('',d).catch(function(e){setBox(escapeHtml(e.message),'tacs-family-warn');return null})}
+  function searchFamilyResolved(fam,documento){var family=normalizeFamily(fam),d=digits(documento);if(!family||!docType(d))return searchFamilyByDocument(d);hideDoc();setBox('<strong class="tacs-family-title">Aguarde, carregando os integrantes da família…</strong>','');return consultarFamilia(family,d).catch(function(e){setBox(escapeHtml(e.message),'tacs-family-warn');return null})}
+  function searchFamilyByDocument(documento){var d=digits(documento);if(!docType(d))return Promise.resolve(null);hideDoc();setBox('<strong class="tacs-family-title">Aguarde, carregando os integrantes da família…</strong>','');return consultarFamilia('',d).catch(function(e){setBox(escapeHtml(e.message),'tacs-family-warn');return null})}
   function fillSelectedDocument(documento,nome){var input=document.getElementById('cpf');if(!input)return;internalMemberSwitch=true;input.value=documento;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));internalMemberSwitch=false;var api=window.TacsMoradoresAutofillV1;if(api&&typeof api.cached==='function'&&api.cached(documento)){hideDoc()}else setDocBox('<strong class="tacs-family-title">'+escapeHtml(nome||'Cadastro selecionado')+'</strong><p class="tacs-family-help">Carregando os dados deste integrante…</p>','tacs-family-ok')}
   function familySearchButton(target){return target&&target.closest?target.closest('[data-family-search]'):null}
   function activateFamilySearchButton(button,e){
@@ -458,6 +458,15 @@ function loginResidentPinFromPortal(){
     if(residentSessionToken())return;
     if(residentProfile()||residentVaultExists()){renderResidentPinLogin();return}
 
+    /* FAMILIA_OBRIGATORIA_POR_DOCUMENTO_2026_09_23_V1
+       Assim que qualquer CPF/CNS identifica um morador, o núcleo familiar é carregado.
+       A consulta é deduplicada por familyQueryPromises e não bloqueia o fluxo do PIN. */
+    if(!pendingMissing&&docType(d)){
+      if(fam&&activeFamilyId===fam&&familySnapshot)ensureFamilySelectorVisible();
+      else if(fam)searchFamilyResolved(fam,d);
+      else searchFamilyByDocument(d);
+    }
+
     /* FAMILIA_SNAPSHOT_COMPLETO_2026_09_18_V2
        A família já entrega documento + identidadeToken no snapshot. O toque reutiliza ambos localmente,
        preenchendo CPF/CNS, nome, nascimento e localidade sem nova consulta do cidadão. */
@@ -476,8 +485,7 @@ function loginResidentPinFromPortal(){
     if(!pendingMissing&&docType(d)){
       if(docType(d)==='CPF')beginResidentPinEnrollment(d);
       else if(docType(d)==='CNS')renderResidentCpfForPin();
-      if(fam&&activeFamilyId===fam&&familySnapshot){ensureFamilySelectorVisible();hideDoc();return}
-      if(fam)searchFamilyResolved(fam,d);else searchFamilyByDocument(d)
+      if(fam&&activeFamilyId===fam&&familySnapshot){ensureFamilySelectorVisible();hideDoc()}
     }
   },0)});
   document.addEventListener('tacs:documento-nao-localizado',function(e){var d=e&&e.detail||{};documentoNaoLocalizado(d.documento,d.tipoDocumento||d.tipo)});
