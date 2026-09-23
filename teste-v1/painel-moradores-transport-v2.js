@@ -458,12 +458,37 @@ function warmResidentIndex(force){
 function localResidentSearch(q){
   var area=text(selectedAreaId),needle=residentIndexNormalize(q);
   if(!residentIndexReady||residentIndexArea!==area||needle.length<2)return null;
-  var out=[];
+  var direct=[],families={},familyMetadataReady=true,seen={},out=[];
   for(var i=0;i<residentIndex.length;i++){
     var item=residentIndex[i];
     if(residentIndexHay(item).indexOf(needle)===-1)continue;
-    out.push(item);
-    if(out.length>=80)break;
+    direct.push(item);
+    if(!Object.prototype.hasOwnProperty.call(item,'familiaId'))familyMetadataReady=false;
+    var fam=text(item&&item.familiaId);
+    if(fam)families[fam]=true;
+    if(direct.length>=80)break;
+  }
+  if(!direct.length)return [];
+  /* Índices antigos, sem familiaId, não podem encerrar a busca local:
+     caem na consulta remota já expandida para evitar mostrar só um integrante. */
+  if(!familyMetadataReady)return null;
+  function key(item){
+    return text(item&&item.origemAba)+'#'+text(item&&item.origemLinha)+'|'+
+      text(item&&item.moradorId)+'|'+text(item&&item.chave)+'|'+
+      text(item&&item.idPortal)+'|'+text(item&&item.cpf)+'|'+text(item&&item.cns);
+  }
+  function add(item){
+    if(!item||out.length>=80)return;
+    var k=key(item);
+    if(seen[k])return;
+    seen[k]=true;out.push(item);
+  }
+  direct.forEach(add);
+  if(Object.keys(families).length){
+    for(var j=0;j<residentIndex.length&&out.length<80;j++){
+      var relative=residentIndex[j];
+      if(families[text(relative&&relative.familiaId)])add(relative);
+    }
   }
   return out;
 }
@@ -1251,10 +1276,10 @@ function doSearch(query,options){
   }
 
   if(!refreshRemoteCredentials()){
-    return waitForRemoteSession('Busca pronta. Sincronizando a sessão para consultar a base…',function(){doSearch(q,options)});
+    return waitForRemoteSession('Aguarde enquanto a sessão é sincronizada para consultar a base…',function(){doSearch(q,options)});
   }
   warmResidentIndex(false);
-  setStatus('operationStatus','Buscando na base real…','warn');
+  setStatus('operationStatus','Aguarde, buscando na base real…','warn');
   readPost('admin_moradores_buscar',cloneSession({q:q,areaId:selectedAreaId}),'admin_moradores_result',function(r){
     if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'Busca recusada.'),'err');return}
     var lista=Array.isArray(r.resultados)?r.resultados:[];
