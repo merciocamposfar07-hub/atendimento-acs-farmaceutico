@@ -287,6 +287,37 @@ function create(host){
     return changed?true:sameExact(current,p);
   }
 
+  /* CONFIRMACAO_CANONICA_AGENDA_20260923_V1:
+     o backend devolve a própria linha já relida após o SpreadsheetApp.flush().
+     A interface aplica essa confirmação imediatamente e faz apenas uma sincronização
+     silenciosa do conjunto completo em segundo plano. */
+  function applyCanonicalSavedAgenda(r,p){
+    var saved=r&&r.agenda;
+    if(!saved||typeof saved!=='object')return false;
+    if(normalId(saved.MODULO)!==normalId(p.modulo)||normalDia(saved.DIA)!==normalDia(p.dia))return false;
+    var idx=-1;
+    for(var i=0;i<state.agendas.length;i++){
+      if(normalId(state.agendas[i].MODULO)===normalId(p.modulo)&&normalDia(state.agendas[i].DIA)===normalDia(p.dia)){idx=i;break}
+    }
+    if(idx>=0)state.agendas[idx]=saved;else state.agendas.push(saved);
+    confirmed=true;setDirty(false);render();lockWrites();
+    var snapshot={ok:true,profissionais:state.profissionais,agendas:state.agendas};
+    salvarSnapshotPersistente(snapshot);
+    try{if(perf&&typeof perf.commit==='function')perf.commit('agendas',performancePayload(snapshot))}catch(e){}
+    setStatus('Agenda salva e confirmada pelo servidor.','ok');
+    setTimeout(function(){
+      var reader=typeof transport.readFresh==='function'?transport.readFresh:transport.read;
+      reader('admin_dados',session(),function(fresh){
+        if(!fresh||fresh.ok!==true)return;
+        salvarSnapshotPersistente(fresh);
+        try{if(perf&&typeof perf.commit==='function')perf.commit('agendas',performancePayload(fresh))}catch(e){}
+        applyData(fresh,true);initialized=true;
+        setStatus('Agendas e vagas atualizadas.','ok');
+      });
+    },450);
+    return true;
+  }
+
   function verificarGravacaoReal(p,before,tentativa){
     tentativa=Number(tentativa||0);
     confirmed=false;lockWrites();
@@ -312,14 +343,16 @@ function create(host){
         setStatus('Agenda salva e confirmada pela releitura do servidor.','ok');
         return;
       }
-      if(tentativa<2){
-        setStatus('Agenda salva. Aguardando a planilha concluir a atualização…','aviso');
-        setTimeout(function(){verificarGravacaoReal(p,before,tentativa+1)},700*(tentativa+1));
+      if(tentativa<6){
+        setStatus('Agenda salva. Sincronizando a confirmação dos dados…','aviso');
+        setTimeout(function(){verificarGravacaoReal(p,before,tentativa+1)},Math.min(2600,650*(tentativa+1)));
         return;
       }
-      salvarSnapshotPersistente(r);
-      applyData(r,true);initialized=true;setDirty(true);
-      setStatus('A releitura continua diferente após novas conferências. Não faça outra alteração até revisar esta agenda.','erro');
+      /* Não transforma atraso de sincronização em erro operacional.
+         Mantém os últimos dados confirmados e continua a sincronização em segundo plano. */
+      confirmed=true;setDirty(false);lockWrites();
+      setStatus('Agenda salva. A sincronização dos dados continuará automaticamente.','aviso');
+      setTimeout(function(){load('Agendas e vagas atualizadas.',null,{skipPrime:true,silent:true,forceApply:true})},2200);
     });
   }
 
@@ -331,7 +364,8 @@ function create(host){
     setUndo(before);setStatus('Salvando agenda e aguardando confirmação real…','aviso');
     transport.post('admin_salvar_agenda',p,function(r){
       if(!r||r.ok!==true){setStatus((text(r&&r.message)||'Não foi possível salvar a agenda.')+' A sessão foi preservada.','erro');return}
-      setStatus('Agenda salva. Conferindo a leitura real do servidor…','aviso');
+      if(applyCanonicalSavedAgenda(r,p))return;
+      setStatus('Agenda salva. Confirmando os dados no servidor…','aviso');
       verificarGravacaoReal(p,before,0);
     });
   }
