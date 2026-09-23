@@ -347,8 +347,14 @@ function conectaAcessoV1Identificar_(p){
   if(!dispositivo)throw new Error('Este aparelho ainda não foi identificado.');
   if(conectaAcessoV1AparelhoAdministrativo_(dispositivo)&&!conectaAcessoV1Bool_(p.fluxoMoradorExplicito))throw new Error('Aparelho administrativo: use o diagnóstico do Morador sem criar vínculo.');
   var acessoSheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),acesso=conectaAcessoV1AcessoPorCpf_(acessoSheet,cpf);
-  if(acesso&&conectaAcessoV1Bool_(acesso.values[15])&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(acesso.values[9]),conectaAcessoV1Hash_(dispositivo))){
-    return {ok:true,encontrado:true,jaPossuiPin:true,cpf:cpf,message:'Este aparelho já possui PIN. Entre com os quatro números ou recupere o acesso com seu CPF.'};
+  /* MORADOR_PIN_GLOBAL_POR_CPF_2026_09_23_V1
+     O PIN pertence ao cadastro do morador, não ao navegador/aparelho. Se já existe
+     um acesso ativo para o CPF, qualquer novo navegador deve reutilizar o mesmo PIN
+     em vez de abrir novamente a criação. O novo navegador só passa a ser confiável
+     depois que o PIN existente for validado. */
+  if(acesso&&conectaAcessoV1Bool_(acesso.values[15])){
+    var mesmoAparelho=conectaAcessoV1Seguro_(conectaAcessoV1Texto_(acesso.values[9]),conectaAcessoV1Hash_(dispositivo));
+    return {ok:true,encontrado:true,jaPossuiPin:true,novoAparelho:!mesmoAparelho,cpf:cpf,message:mesmoAparelho?'Seu PIN já está criado. Digite os quatro números para acessar sua família.':'Seu PIN já está criado. Digite o mesmo PIN de quatro números para liberar este navegador.'};
   }
   var achados=conectaAcessoV1BuscarCpf_(cpf);
   if(achados.length===1)return conectaAcessoV1IdentidadeResposta_(achados[0],cpf,false,'Cadastro localizado.');
@@ -437,7 +443,8 @@ function conectaAcessoV1CriarPin_(p){
   if(!lock.tryLock(10000))throw new Error('Seu acesso está sendo salvo. Tente novamente em instantes.');
   try{
     var registro=conectaAcessoV1AcessoPorCpf_(sheet,identidade.cpf),salt=Utilities.getUuid().replace(/-/g,''),quick=conectaAcessoV1Token_('cmq1');
-    if(registro&&conectaAcessoV1Bool_(registro.values[15])&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo)))throw new Error('O PIN já foi criado neste aparelho. Entre com o PIN atual ou use a recuperação por CPF para criar um novo.');
+    /* PIN_UNICO_POR_MORADOR_2026_09_23_V1: nunca sobrescrever o PIN ativo só porque o navegador/aparelho mudou. */
+    if(registro&&conectaAcessoV1Bool_(registro.values[15]))throw new Error('Este morador já possui PIN. Entre com o PIN atual; não é necessário criar outro PIN neste navegador ou aparelho.');
     var agora=new Date(),id=registro?registro.values[0]:'CMA-'+Utilities.getUuid().replace(/-/g,'').slice(0,18).toUpperCase();
     var criado=registro?registro.values[16]:agora;
     var vals=[
@@ -455,7 +462,7 @@ function conectaAcessoV1CriarPin_(p){
 }
 
 function conectaAcessoV1LoginMorador_(p){
-  var pin=conectaAcessoV1PinSomente_(p.pin),quick=conectaAcessoV1Texto_(p.quickKey),dispositivo=conectaAcessoV1Texto_(p.dispositivo),cpf='',viaQuick=false;
+  var pin=conectaAcessoV1PinSomente_(p.pin),quick=conectaAcessoV1Texto_(p.quickKey),dispositivo=conectaAcessoV1Texto_(p.dispositivo),cpf='',viaQuick=false,viaCpf=false;
   if(!dispositivo)throw new Error('Este aparelho ainda não possui um acesso de morador reconhecido.');
   if(conectaAcessoV1AparelhoAdministrativo_(dispositivo)&&!conectaAcessoV1Bool_(p.fluxoMoradorExplicito))throw new Error('Aparelho administrativo não pode assumir sessão de Morador; use o diagnóstico sem vínculo.');
   var sheet=conectaAcessoV1Sheet_(TACS_CONECTA_ACESSO_V1.ACCESS_SHEET,TACS_CONECTA_ACESSO_V1.ACCESS_HEADERS),registro=null,novoQuick='';
@@ -463,6 +470,7 @@ function conectaAcessoV1LoginMorador_(p){
   else if(conectaAcessoV1Texto_(p.cpf)){
     cpf=conectaAcessoV1Cpf_(p.cpf);
     registro=conectaAcessoV1AcessoPorCpf_(sheet,cpf);
+    viaCpf=Boolean(registro);
   }else{
     registro=conectaAcessoV1AcessoPorDispositivo_(sheet,dispositivo);
     if(registro&&registro.ambiguo)throw new Error('Há mais de um acesso de morador neste aparelho. Use o CPF abaixo do PIN para recuperar o acesso correto.');
@@ -470,7 +478,10 @@ function conectaAcessoV1LoginMorador_(p){
   if(!registro||!conectaAcessoV1Bool_(registro.values[15]))throw new Error('Acesso não localizado ou inativo.');
   var mesmoPrincipal=conectaAcessoV1Seguro_(conectaAcessoV1Texto_(registro.values[9]),conectaAcessoV1Hash_(dispositivo));
   var mesmoConfiavel=conectaAcessoV1MoradorDispositivoConfiavel_(registro.values[0],dispositivo);
-  if(!viaQuick&&!mesmoPrincipal&&!mesmoConfiavel)throw new Error('Este acesso pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
+  /* NOVO_NAVEGADOR_REUTILIZA_PIN_2026_09_23_V1
+     CPF + PIN existente autenticam um navegador novo. Só depois da validação do PIN
+     ele é registrado como confiável e recebe seu quickKey próprio. */
+  if(!viaQuick&&!viaCpf&&!mesmoPrincipal&&!mesmoConfiavel)throw new Error('Este acesso pertence a outro aparelho. Faça a identificação pelo CPF neste aparelho.');
   if(!conectaAcessoV1Seguro_(registro.values[7],conectaAcessoV1Hash_(registro.values[6]+'|'+pin)))throw new Error('PIN incorreto.');
   if(viaQuick&&!mesmoPrincipal&&!mesmoConfiavel){
     novoQuick=conectaAcessoV1Token_('cmq1');quick=novoQuick;
