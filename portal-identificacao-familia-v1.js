@@ -210,6 +210,7 @@
     if(btn)btn.disabled=true;
     residentPost('conecta_morador_criar_pin',{identidadeToken:residentIdentityToken,pin:a,confirmacao:b,dispositivo:deviceId(true)}).then(function(r){
       saveResidentAccess(r);
+      renderAccessFamily(r);
       return saveResidentVault(a,r,residentProfile()).then(function(){
         setPinBox(pinCreatedConfirmation(),'tacs-pin-box');
         try{document.dispatchEvent(new CustomEvent('tacs:pin-criado-confirmado',{detail:{areaId:r&&r.areaId||areaId()}}))}catch(ignore){}
@@ -265,6 +266,7 @@
     residentPost('conecta_pin_recuperar_salvar',{recuperacaoToken:residentRecoveryToken,pin:a,confirmacao:b,dispositivo:deviceId(true)}).then(function(r){
       residentRecoveryToken='';
       saveResidentAccess(r);
+      renderAccessFamily(r);
       return saveResidentVault(a,r,residentProfile()).then(function(){
         placePinDefault();
         if(!openResidentInline(r,true))setPinBox('<strong class="tacs-family-title">✓ Novo PIN salvo</strong><p class="tacs-family-help">Acesso recuperado e dados prontos.</p>','tacs-pin-box');
@@ -304,6 +306,7 @@ function loginResidentPinFromPortal(){
    if(!p||!saved.quickKey||text(saved.quickKey)===text(p.quickKey)){
     var snap=residentSnapshot(saved.snapshot||saved,p||{});
     try{sessionStorage.setItem(residentBootstrapKey(),JSON.stringify(snap))}catch(e){}
+    renderAccessFamily(snap);
     placePinDefault();
     localOpened=openResidentInline(snap,false);
    }
@@ -316,6 +319,7 @@ function loginResidentPinFromPortal(){
   var profileCpf=digits(p&&p.cpf),cpfFallback=/^\d{11}$/.test(hintCpf)?hintCpf:(/^\d{11}$/.test(profileCpf)?profileCpf:''),quickForLogin=text(p&&p.quickKey)||installQuick;
   return residentPost('conecta_morador_login_pin',{quickKey:quickForLogin,cpf:cpfFallback,pin:pin,dispositivo:deviceId(true)}).then(function(r){
    saveResidentAccess(r);
+   renderAccessFamily(r);
    p=residentProfile()||p;
    return saveResidentVault(pin,r,p).then(function(){
     placePinDefault();
@@ -335,6 +339,8 @@ function loginResidentPinFromPortal(){
 }
   function renderStart(){var input=document.getElementById('cpf'),current=digits(input&&input.value),fam=familyCandidate(current);if(!fam){if(pendingMissing&&current===pendingMissing)return;if(docType(current)&&ensureFamilySelectorVisible())return;hide();return}var ajuda=pendingMissing?'O '+pendingLabel()+' informado será vinculado somente depois que você escolher a pessoa correta desta família.':'Ao buscar, todos os integrantes cadastrados desta família serão exibidos.';setBox('<strong class="tacs-family-title">Cadastro familiar '+escapeHtml(fam)+'</strong><button type="button" class="tacs-family-action" data-family-search="'+escapeHtml(fam)+'">👨‍👩‍👧‍👦 Buscar esta família</button><p class="tacs-family-help">'+escapeHtml(ajuda)+'</p>','')}
   function renderMembers(r){var m=Array.isArray(r&&r.membros)?r.membros:[],title=pendingMissing?'De quem é este '+pendingLabel()+'?':'Quem precisa do atendimento?',help=pendingMissing?'Este '+pendingLabel()+' ainda não está vinculado a nenhum morador desta família. Toque na pessoa correta para vincular com segurança.':'Família '+escapeHtml(r.familiaId)+'. Toque no nome para carregar nome, nascimento e localidade.',html='<strong class="tacs-family-title">'+escapeHtml(title)+'</strong><p class="tacs-family-help">'+help+'</p>';activeFamilyId=normalizeFamily(r&&r.familiaId||'');familySnapshot=r||null;m.forEach(function(i){seedMemberCacheFromSnapshot(i,activeFamilyId);html+='<button type="button" class="tacs-family-member" data-member-token="'+escapeHtml(i.token)+'" data-member-name="'+escapeHtml(i.nome)+'"'+(i.temDocumento?'':' disabled')+'>'+escapeHtml(i.nome)+'<span>'+(i.nascimento?'Nascimento: '+escapeHtml(i.nascimento):'')+(i.temDocumento?'':' • Sem CPF/CNS para carregamento automático')+'</span></button>'});warmMemberCache(m);setBox(html,'tacs-family-ok')}
+  function renderAccessFamily(r){var membros=Array.isArray(r&&r.familia)?r.familia:[],familia=normalizeFamily(r&&r.familiaId||'');if(!familia||!membros.length)return false;renderMembers({ok:true,autorizada:true,familiaId:familia,membros:membros});return true}
+  function familySnapshotHasDocument(documento){var d=digits(documento),m=Array.isArray(familySnapshot&&familySnapshot.membros)?familySnapshot.membros:[];if(!docType(d))return false;for(var i=0;i<m.length;i++){if(digits(m[i]&&m[i].documentoAcesso||'')===d)return true}return false}
   /* SELETOR_FAMILIAR_PERSISTENTE_2026_09_16_V1
      Enquanto houver uma família ativa e o campo principal estiver mostrando o
      CPF/CNS do integrante escolhido, a lista familiar permanece disponível. */
@@ -458,17 +464,20 @@ function loginResidentPinFromPortal(){
   document.addEventListener('tacs:morador',function(e){currentResident=e&&e.detail||null;setTimeout(function(){
     maybeOfferComplement();
     var input=document.getElementById('cpf'),d=digits(input&&input.value),fam=normalizeFamily(currentResident&&(currentResident.familiaBeneficiario||currentResident.familiaId)||'');
-    if(residentSessionToken())return;
-    if(residentProfile()||residentVaultExists()){renderResidentPinLogin();return}
 
-    /* FAMILIA_OBRIGATORIA_POR_DOCUMENTO_2026_09_23_V1
-       Assim que qualquer CPF/CNS identifica um morador, o núcleo familiar é carregado.
-       A consulta é deduplicada por familyQueryPromises e não bloqueia o fluxo do PIN. */
+    /* FAMILIA_OBRIGATORIA_POR_DOCUMENTO_2026_09_23_V2
+       A família é resolvida ANTES de qualquer retorno por sessão/PIN já existente.
+       Portanto qualquer CPF/CNS válido mostra o núcleo completo, e o login por PIN
+       reaproveita o snapshot já devolvido pelo servidor sem nova espera. */
     if(!pendingMissing&&docType(d)){
       if(fam&&activeFamilyId===fam&&familySnapshot)ensureFamilySelectorVisible();
+      else if(!fam&&familySnapshotHasDocument(d))ensureFamilySelectorVisible();
       else if(fam)searchFamilyResolved(fam,d);
       else searchFamilyByDocument(d);
     }
+
+    if(residentSessionToken())return;
+    if(residentProfile()||residentVaultExists()){renderResidentPinLogin();return}
 
     /* FAMILIA_SNAPSHOT_COMPLETO_2026_09_18_V2
        A família já entrega documento + identidadeToken no snapshot. O toque reutiliza ambos localmente,
