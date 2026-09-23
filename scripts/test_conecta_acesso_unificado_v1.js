@@ -91,6 +91,8 @@ assert(backend.includes("PIN_UNICO_POR_MORADOR_2026_09_23_V1"),'Criação não p
 assert(backend.includes("viaQuick=false,viaCpf=false"),'Login do Morador deve distinguir autenticação por CPF em navegador novo');
 assert(backend.includes("if(!viaQuick&&!viaCpf&&!mesmoPrincipal&&!mesmoConfiavel)"),'CPF + PIN existente devem poder autenticar navegador novo antes de registrá-lo como confiável');
 assert(backend.includes("NOVO_NAVEGADOR_REUTILIZA_PIN_2026_09_23_V1"),'Novo navegador deve reutilizar o mesmo PIN e só então ganhar quickKey próprio');
+assert(backend.includes("QUICK_ANTIGO_RECUPERA_PELO_CPF_2026_09_23_V1"),'Navegadores antigos com quickKey sobrescrito devem recuperar o mesmo acesso pelo CPF já salvo');
+assert(backend.includes("else if(!viaQuick||!/^cmq1\\./.test(quick))")||backend.includes("else if(!viaQuick||!/^cmq1\./.test(quick))"),'QuickKey antigo deve ser renovado depois da validação do PIN');
 assert(build.includes("apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs"),'Módulo unificado deve entrar no release Apps Script');
 
 assert(resident.includes('Esta etapa é obrigatória.'),'Notificações devem ser obrigatórias no primeiro acesso');
@@ -99,6 +101,9 @@ assert(resident.includes("conecta_morador_notificacao_confirmar"),'Ativação pr
 assert(resident.includes("renderFamily"),'Sessão autenticada deve apresentar núcleo familiar');
 assert(backend.includes("familia:familia"),'Sessão de Morador autenticada por PIN deve devolver a família vinculada ao cadastro.');
 assert(resident.includes('Quem precisa do atendimento?'),'Após o PIN, o Portal deve apresentar os integrantes da família para seleção.');
+const portalFamily=read('portal-identificacao-familia-v1.js');
+assert(portalFamily.includes("PIN_UNICO_MIGRACAO_NAVEGADOR_2026_09_23_V1"),'Portal do Morador deve enviar o CPF já salvo ao validar PIN em navegador antigo');
+assert(portalFamily.includes("profileCpf=digits(p&&p.cpf)"),'Perfil local antigo deve fornecer CPF como fallback sem pedir nova criação de PIN');
 assert(resident.includes("portalConectaMoradorTokenV1"),'Próximos acessos devem usar sessão do morador');
 assert(resident.includes('hasBackgroundRequest()'),'Morador deve poder abrir o snapshot local enquanto uma nova sessão é confirmada');
 assert(resident.includes("if(!token){showPortalToast('Acesso aberto. Aguarde a confirmação segura do servidor"),'Alterações do morador devem esperar token remoto novo');
