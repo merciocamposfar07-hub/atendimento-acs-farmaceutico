@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-  var oneSignal=null,pendingMissing='',pendingType='',pendingOwnerLookup='',currentResident=null,complementing=false,memberPointer=null,lastMemberActivation={token:'',at:0},residentIdentityToken='',residentEnrollmentCpf='',residentBirthConfirm='',residentNameConfirm='',residentRecoveryToken='',residentServerCpfHint='',residentDeviceRecognized=false,residentAccessBusy=false,activeFamilyId='',familySnapshot=null,memberResolvedCache={},memberResolvePromises={},wantedMemberToken='',internalMemberSwitch=false,memberCacheWarmGeneration=0;
+  var oneSignal=null,pendingMissing='',pendingType='',pendingOwnerLookup='',currentResident=null,complementing=false,memberPointer=null,lastMemberActivation={token:'',at:0},residentIdentityToken='',residentEnrollmentCpf='',residentBirthConfirm='',residentNameConfirm='',residentRecoveryToken='',residentServerCpfHint='',residentFamilyAccessCpf='',residentCpfFamilyBypass=false,residentDeviceRecognized=false,residentAccessBusy=false,activeFamilyId='',familySnapshot=null,memberResolvedCache={},memberResolvePromises={},wantedMemberToken='',internalMemberSwitch=false,memberCacheWarmGeneration=0;
   var FAMILY_BOX='portalFamilyLookupV1',DOC_BOX='portalDocumentComplementV1',PIN_BOX='portalResidentPinV1',STYLE_ID='portalFamilyLookupStyleV1',DEVICE_KEY='portalTacsDispositivoV1',PROFILE_KEY='portalConectaMoradorQuickV1',TOKEN_KEY='portalConectaMoradorTokenV1',TEST_PROFILE_KEY='portalConectaMoradorQuickTesteV1',TEST_TOKEN_KEY='portalConectaMoradorTokenTesteV1',BOOTSTRAP_KEY='portalConectaMoradorBootstrapV2',TEST_BOOTSTRAP_KEY='portalConectaMoradorBootstrapTesteV2',AREA_KEY='portalTacsCentralAreaV1',LAST_ROLE_KEY='portalConectaLastRoleV1',PIN_MARKER_KEY='portalConectaMoradorPinAtivoV1',SERVER_CPF_HINT_KEY='portalConectaMoradorCpfPinV1',INSTALL_COOKIE='cscMoradorQuickV1',ADMIN_TRUST_KEY='portalConectaRecoveryTrustV1:admin',TECH_TOKEN_PREFIX='portalTacsAparelhoTesteTokenV3:',FAMILY_STORAGE_PREFIX='portalTacsFamiliaAutofillV1:',LEGACY_FAMILY_STORAGE_PREFIX='portalTacsFamiliaConfirmadaV1:';
   var familyQueryPromises={};
   /* BUSCA_FAMILIAR_TOQUE_RESILIENTE_2026_09_16_V1 */
@@ -59,7 +59,7 @@
       return false;
     }).catch(function(){return false});
   }
-  function recoveryCpfHtml(){if(tacsTeste())return '';var value=residentServerCpfHint?formatCpfInput(residentServerCpfHint):'';return '<div class="tacs-family-help" style="margin-top:16px"><strong>Esqueceu ou precisa criar um novo PIN?</strong><br>Use seu CPF somente para recuperar o acesso.</div><input id="portalResidentRecoveryCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="CPF para recuperar o PIN" value="'+escapeHtml(value)+'"><div class="tacs-pin-actions"><button type="button" class="tacs-family-action" data-resident-pin-recovery="1">Recuperar / criar novo PIN com CPF</button></div>'}
+  function recoveryCpfHtml(){if(tacsTeste())return '';var value=residentServerCpfHint?formatCpfInput(residentServerCpfHint):'';return '<div class="tacs-family-help" style="margin-top:16px"><strong>Se o PIN não funcionar, use seu CPF.</strong><br>Você pode recuperar o PIN ou acessar sua família sem alterar o PIN atual.</div><input id="portalResidentRecoveryCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="Digite seu CPF" value="'+escapeHtml(value)+'"><div class="tacs-pin-actions"><button type="button" class="tacs-family-action" data-resident-pin-recovery="1">Recuperar / criar novo PIN com CPF</button><button type="button" class="tacs-family-action" data-resident-family-cpf-start="1">Acessar minha família com CPF</button></div>'}
 
   function readResidentProfileKey(key,prefix){try{var p=JSON.parse(localStorage.getItem(key)||'null'),q=text(p&&p.quickKey);return p&&prefix.test(q)?p:null}catch(e){return null}}
   function residentProfile(){
@@ -239,6 +239,48 @@
     setPinBox(residentPinLoginHtml(message),'tacs-pin-box');
     setTimeout(function(){var o=window.PortalTacsOrientacaoMoradorV1;if(o&&typeof o.refreshGuide==='function')o.refreshGuide()},0);
     return true;
+  }
+  function renderResidentFamilyCpfBirth(message){
+    if(tacsTeste())return false;
+    placePinFirst();
+    setPinBox('<strong class="tacs-family-title">Acessar minha família com CPF</strong><p class="tacs-family-help">'+escapeHtml(message||'Confirme sua data de nascimento. Seu PIN não será alterado.')+'</p><div class="tacs-family-help"><strong>CPF:</strong> '+escapeHtml(formatCpfInput(residentFamilyAccessCpf))+'</div><input id="portalResidentFamilyBirth" type="text" inputmode="numeric" maxlength="10" autocomplete="bday" placeholder="DD/MM/AAAA"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-family-cpf-confirm="1">Acessar minha família</button><button type="button" class="tacs-family-action" data-resident-family-cpf-cancel="1">Voltar</button></div>','tacs-pin-box');
+    return true;
+  }
+  function startResidentFamilyCpfAccess(){
+    var field=document.getElementById('portalResidentRecoveryCpf'),cpf=digits(field&&field.value);
+    if(!/^\d{11}$/.test(cpf)){renderResidentPinLogin('Informe um CPF válido com 11 números para acessar sua família.');return}
+    residentFamilyAccessCpf=cpf;
+    renderResidentFamilyCpfBirth('Confirme sua data de nascimento para carregar os integrantes da sua família.');
+  }
+  function confirmResidentFamilyCpfAccess(){
+    var birth=normalizeBirthInput(document.getElementById('portalResidentFamilyBirth')&&document.getElementById('portalResidentFamilyBirth').value);
+    if(!/^\d{11}$/.test(residentFamilyAccessCpf)){renderResidentPinLogin('Digite seu CPF novamente.');return}
+    if(!birth){renderResidentFamilyCpfBirth('Informe a data completa no formato DD/MM/AAAA.');return}
+    setPinBox('<strong class="tacs-family-title">Aguarde, carregando seus dados e sua família…</strong><p class="tacs-family-help">Estamos confirmando seu CPF e preparando os integrantes para a solicitação.</p>','tacs-pin-box');
+    residentPost('conecta_morador_acessar_familia_cpf',{cpf:residentFamilyAccessCpf,nascimento:birth,areaId:areaId(),dispositivo:deviceId(true)}).then(function(r){
+      if(!r||!Array.isArray(r.familia)||!r.familia.length)throw new Error(r&&r.message||'A família ainda não pôde ser carregada.');
+      residentCpfFamilyBypass=true;
+      saveResidentServerCpf(residentFamilyAccessCpf);
+      renderAccessFamily(r);
+      placePinDefault();
+      setPinBox('<strong class="tacs-family-title">✓ Família carregada</strong><p class="tacs-family-help">Escolha abaixo quem precisa do atendimento e continue sua solicitação. Seu PIN não foi alterado.</p>','tacs-family-ok');
+      var membro=(r.familia||[]).filter(function(m){return digits(m&&m.documentoAcesso||'')===residentFamilyAccessCpf})[0]||null;
+      if(membro)applyMemberWithoutSecondLookup({
+        documentoAcesso:membro.documentoAcesso||residentFamilyAccessCpf,
+        tipoDocumento:membro.tipoDocumento||'CPF',
+        temDocumento:true,
+        identidadeToken:membro.identidadeToken||'',
+        acessoPreparado:Boolean(membro.acessoPreparado),
+        nome:membro.nome||r.nome||'',
+        nascimento:membro.nascimento||r.nascimento||'',
+        localidade:membro.localidade||r.endereco||'',
+        areaId:r.areaId||areaId(),
+        familiaId:r.familiaId||''
+      });
+      return r;
+    }).catch(function(e){
+      renderResidentFamilyCpfBirth(e&&e.message?e.message:'Não foi possível carregar sua família agora. Confira os dados e tente novamente.');
+    });
   }
   function renderResidentRecoveryCpf(message){
     if(tacsTeste()){renderResidentPinLogin();return}
@@ -455,12 +497,12 @@ function loginResidentPinFromPortal(){
       if(target.value!==cpf)target.value=cpf;
       return;
     }
-    if(target.id==='portalResidentBirthConfirm'){
+    if(target.id==='portalResidentBirthConfirm'||target.id==='portalResidentFamilyBirth'){
       var nascimento=formatBirthInput(target.value);
       if(target.value!==nascimento)target.value=nascimento;
     }
   });
-  document.addEventListener('click',function(e){var b=memberButton(e.target);if(b){activateMemberButton(b,e);return}var t=e.target&&e.target.closest?e.target.closest('[data-family-search],[data-doc-save],[data-resident-pin-create],[data-resident-pin-login],[data-resident-pin-recovery],[data-resident-pin-recovery-save],[data-resident-pin-recovery-cancel],[data-resident-cpf-pin-start],[data-resident-birth-confirm],[data-resident-name-confirm],[data-resident-cpf-review-confirm],[data-resident-cpf-review-correct]'):e.target;if(!t||!t.getAttribute)return;if(t.getAttribute('data-resident-pin-create')==='1'){createResidentPinFromPortal();return}if(t.getAttribute('data-resident-pin-login')==='1'){loginResidentPinFromPortal();return}if(t.getAttribute('data-resident-pin-recovery')==='1'){startResidentPinRecovery();return}if(t.getAttribute('data-resident-pin-recovery-save')==='1'){saveResidentRecoveredPin();return}if(t.getAttribute('data-resident-pin-recovery-cancel')==='1'){residentRecoveryToken='';renderResidentPinLogin();return}if(t.getAttribute('data-resident-cpf-pin-start')==='1'){startResidentCpfForPin();return}if(t.getAttribute('data-resident-birth-confirm')==='1'){confirmMissingCpfBirth();return}if(t.getAttribute('data-resident-name-confirm')==='1'){confirmMissingCpfName();return}if(t.getAttribute('data-resident-cpf-review-confirm')==='1'){confirmReviewedMissingCpf();return}if(t.getAttribute('data-resident-cpf-review-correct')==='1'){correctMissingCpf();return}var f=t.getAttribute('data-family-search');if(f){activateFamilySearchButton(t,e);return}if(t.getAttribute('data-doc-save')==='1'){var input=document.getElementById('cpf');complementDocument(digits(input&&input.value),pendingMissing).catch(function(){})}});
+  document.addEventListener('click',function(e){var b=memberButton(e.target);if(b){activateMemberButton(b,e);return}var t=e.target&&e.target.closest?e.target.closest('[data-family-search],[data-doc-save],[data-resident-pin-create],[data-resident-pin-login],[data-resident-pin-recovery],[data-resident-pin-recovery-save],[data-resident-pin-recovery-cancel],[data-resident-family-cpf-start],[data-resident-family-cpf-confirm],[data-resident-family-cpf-cancel],[data-resident-cpf-pin-start],[data-resident-birth-confirm],[data-resident-name-confirm],[data-resident-cpf-review-confirm],[data-resident-cpf-review-correct]'):e.target;if(!t||!t.getAttribute)return;if(t.getAttribute('data-resident-pin-create')==='1'){createResidentPinFromPortal();return}if(t.getAttribute('data-resident-pin-login')==='1'){loginResidentPinFromPortal();return}if(t.getAttribute('data-resident-pin-recovery')==='1'){startResidentPinRecovery();return}if(t.getAttribute('data-resident-pin-recovery-save')==='1'){saveResidentRecoveredPin();return}if(t.getAttribute('data-resident-pin-recovery-cancel')==='1'){residentRecoveryToken='';renderResidentPinLogin();return}if(t.getAttribute('data-resident-family-cpf-start')==='1'){startResidentFamilyCpfAccess();return}if(t.getAttribute('data-resident-family-cpf-confirm')==='1'){confirmResidentFamilyCpfAccess();return}if(t.getAttribute('data-resident-family-cpf-cancel')==='1'){residentFamilyAccessCpf='';renderResidentPinLogin();return}if(t.getAttribute('data-resident-cpf-pin-start')==='1'){startResidentCpfForPin();return}if(t.getAttribute('data-resident-birth-confirm')==='1'){confirmMissingCpfBirth();return}if(t.getAttribute('data-resident-name-confirm')==='1'){confirmMissingCpfName();return}if(t.getAttribute('data-resident-cpf-review-confirm')==='1'){confirmReviewedMissingCpf();return}if(t.getAttribute('data-resident-cpf-review-correct')==='1'){correctMissingCpf();return}var f=t.getAttribute('data-family-search');if(f){activateFamilySearchButton(t,e);return}if(t.getAttribute('data-doc-save')==='1'){var input=document.getElementById('cpf');complementDocument(digits(input&&input.value),pendingMissing).catch(function(){})}});
   document.addEventListener('tacs:morador',function(e){currentResident=e&&e.detail||null;setTimeout(function(){
     maybeOfferComplement();
     var input=document.getElementById('cpf'),d=digits(input&&input.value),fam=normalizeFamily(currentResident&&(currentResident.familiaBeneficiario||currentResident.familiaId)||'');
@@ -476,6 +518,7 @@ function loginResidentPinFromPortal(){
       else searchFamilyByDocument(d);
     }
 
+    if(residentCpfFamilyBypass){if(fam&&activeFamilyId===fam&&familySnapshot)ensureFamilySelectorVisible();return}
     if(residentSessionToken())return;
     if(residentProfile()||residentVaultExists()){renderResidentPinLogin();return}
 
