@@ -82,7 +82,7 @@ function conectaAcessoV1TratarPost_(e){
   var p=e&&e.parameter?e.parameter:{},action=conectaAcessoV1Texto_(p.action).toLowerCase();
   var aceitas=[
     'conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_criar_pin',
-    'conecta_morador_login_pin','conecta_morador_sessao','conecta_morador_notificacao_confirmar',
+    'conecta_morador_login_pin','conecta_morador_acessar_familia_cpf','conecta_morador_sessao','conecta_morador_notificacao_confirmar',
     'conecta_morador_preferencia_notificacao','conecta_morador_membro_salvar_cpf','conecta_morador_encerrar',
     'conecta_pin_recuperar_iniciar','conecta_pin_recuperar_salvar','conecta_recuperacao_registrar_aparelho',
     'conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_ubs_encerrar','conecta_morador_diagnostico_admin','conecta_pendencias_contagem'
@@ -98,11 +98,12 @@ function conectaAcessoV1TratarPost_(e){
       conectaAcessoV1Limitar_(p.dispositivo||p.cpf||action);
       resultado=conectaAcessoV1TratarMoradorTeste_(action,p);
     }else{
-      if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_pin_recuperar_iniciar','conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_morador_diagnostico_admin'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||p.documento||action);
+      if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_morador_acessar_familia_cpf','conecta_pin_recuperar_iniciar','conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_morador_diagnostico_admin'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||p.documento||action);
       if(action==='conecta_morador_identificar')resultado=conectaAcessoV1Identificar_(p);
       else if(action==='conecta_morador_confirmar')resultado=conectaAcessoV1Confirmar_(p);
       else if(action==='conecta_morador_criar_pin')resultado=conectaAcessoV1CriarPin_(p);
       else if(action==='conecta_morador_login_pin')resultado=conectaAcessoV1LoginMorador_(p);
+      else if(action==='conecta_morador_acessar_familia_cpf')resultado=conectaAcessoV1AcessarFamiliaCpf_(p);
       else if(action==='conecta_morador_sessao')resultado=conectaAcessoV1SessaoMorador_(p);
       else if(action==='conecta_morador_notificacao_confirmar')resultado=conectaAcessoV1ConfirmarNotificacao_(p);
       else if(action==='conecta_morador_preferencia_notificacao')resultado=conectaAcessoV1PreferenciaNotificacao_(p);
@@ -146,6 +147,7 @@ function conectaAcessoV1TratarMoradorTeste_(action,p){
   if(action==='conecta_morador_confirmar')return conectaAcessoV1TesteConfirmar_(p);
   if(action==='conecta_morador_criar_pin')return conectaAcessoV1TesteCriarPin_(p);
   if(action==='conecta_morador_login_pin')return conectaAcessoV1TesteLogin_(p);
+  if(action==='conecta_morador_acessar_familia_cpf')return conectaAcessoV1AcessarFamiliaCpf_(p);
   if(action==='conecta_morador_sessao')return conectaAcessoV1TesteSessao_(p);
   if(action==='conecta_morador_notificacao_confirmar')return conectaAcessoV1TesteNotificacao_(p);
   if(action==='conecta_morador_preferencia_notificacao')return conectaAcessoV1TestePreferencia_(p);
@@ -360,6 +362,36 @@ function conectaAcessoV1Identificar_(p){
   if(achados.length===1)return conectaAcessoV1IdentidadeResposta_(achados[0],cpf,false,'Cadastro localizado.');
   if(achados.length>1)return {ok:true,encontrado:false,precisaNascimento:true,ambiguo:true,message:'Precisamos confirmar mais um dado para localizar seu cadastro com segurança.'};
   return {ok:true,encontrado:false,precisaNascimento:true,ambiguo:false,message:'CPF ainda não localizado. Informe sua data de nascimento.'};
+}
+
+/* ACESSO_ALTERNATIVO_CPF_FAMILIA_20260923_V1
+ * Caminho de contingência do segundo acesso: CPF + nascimento apenas confirmam
+ * a identidade e devolvem o núcleo familiar. Não cria, troca ou recupera PIN,
+ * não cria sessão persistente e não altera o cadastro. */
+function conectaAcessoV1AcessarFamiliaCpf_(p){
+  var cpf=conectaAcessoV1Cpf_(p.cpf),nascimento=conectaAcessoV1Nascimento_(p.nascimento);
+  if(!nascimento)throw new Error('Informe sua data de nascimento no formato DD/MM/AAAA.');
+  var achados=conectaAcessoV1BuscarCpf_(cpf).filter(function(x){
+    return conectaAcessoV1Texto_(x&&x.morador&&x.morador.nascimento)===nascimento;
+  });
+  if(achados.length!==1){
+    throw new Error(achados.length>1?'Há mais de um cadastro compatível. Procure seu TACS para conferência.':'CPF e data de nascimento não conferem. Revise os dados e tente novamente.');
+  }
+  var item=achados[0],v=[
+    '',item.area.areaId,item.chave||'',cpf,item.morador.nome||'',item.morador.nascimento||'',
+    '','','','','','','',false
+  ];
+  var nucleo=conectaAcessoV1NucleoFamiliar_(v);
+  if(!nucleo||!Array.isArray(nucleo.membros)||!nucleo.membros.length){
+    throw new Error('Seu cadastro foi localizado, mas a família ainda não pôde ser carregada. Tente novamente.');
+  }
+  return {
+    ok:true,acessoAlternativoCpf:true,perfil:'MORADOR',
+    areaId:item.area.areaId,areaNome:item.area.areaNome||item.area.areaId,
+    cpf:cpf,nome:item.morador.nome||'',nascimento:item.morador.nascimento||'',
+    endereco:item.morador.endereco||'',familiaId:nucleo.familiaId||'',familia:nucleo.membros,
+    message:'Família carregada. Você pode continuar sua solicitação; seu PIN não foi alterado.'
+  };
 }
 
 function conectaAcessoV1Confirmar_(p){
