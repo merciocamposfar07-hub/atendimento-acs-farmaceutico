@@ -369,13 +369,34 @@ function conectaAcessoV1Identificar_(p){
  * a identidade e devolvem o núcleo familiar. Não cria, troca ou recupera PIN,
  * não cria sessão persistente e não altera o cadastro. */
 function conectaAcessoV1AcessarFamiliaCpf_(p){
-  var cpf=conectaAcessoV1Cpf_(p.cpf),nascimento=conectaAcessoV1Nascimento_(p.nascimento);
+  var cpf=conectaAcessoV1Cpf_(p.cpf),nascimento=conectaAcessoV1Nascimento_(p.nascimento),areaPreferida=conectaAcessoV1Id_(p.areaId);
   if(!nascimento)throw new Error('Informe sua data de nascimento no formato DD/MM/AAAA.');
+
+  /* CPF_FAMILIA_PRIORIZA_AREA_20260923_V2
+     O acesso alternativo deve seguir a mesma área do Portal. Antes a busca somava
+     ocorrências técnicas de todas as áreas e podia acusar falsa duplicidade.
+     Primeiro restringimos à área atual e depois eliminamos repetições do mesmo
+     morador físico antes de decidir se existe ambiguidade real. */
   var achados=conectaAcessoV1BuscarCpf_(cpf).filter(function(x){
     return conectaAcessoV1Texto_(x&&x.morador&&x.morador.nascimento)===nascimento;
   });
+  if(areaPreferida){
+    var locais=achados.filter(function(x){return conectaAcessoV1Id_(x&&x.area&&x.area.areaId)===areaPreferida;});
+    if(locais.length)achados=locais;
+  }
+  var unicos=[],vistos={};
+  achados.forEach(function(x){
+    var m=x&&x.morador||{},id=conectaAcessoV1Texto_(m.idPortal||m.id||x&&x.chave||''),
+        area=conectaAcessoV1Id_(x&&x.area&&x.area.areaId),
+        nome=conectaAcessoV1Nome_(m.nome||''),data=conectaAcessoV1Texto_(m.nascimento||''),
+        chave=(id?('ID:'+id):('NOME:'+nome+'|NASC:'+data))+'|AREA:'+area;
+    if(vistos[chave])return;
+    vistos[chave]=true;unicos.push(x);
+  });
+  achados=unicos;
+
   if(achados.length!==1){
-    throw new Error(achados.length>1?'Há mais de um cadastro compatível. Procure seu TACS para conferência.':'CPF e data de nascimento não conferem. Revise os dados e tente novamente.');
+    throw new Error(achados.length>1?'Há mais de um cadastro realmente distinto com esses dados nesta área. Procure seu TACS para conferência.':'CPF e data de nascimento não conferem. Revise os dados e tente novamente.');
   }
   var item=achados[0],v=[
     '',item.area.areaId,item.chave||'',cpf,item.morador.nome||'',item.morador.nascimento||'',
