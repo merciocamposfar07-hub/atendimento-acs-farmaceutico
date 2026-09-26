@@ -327,7 +327,45 @@ function diagnosticCompactItem(item,meta){
   _unidadeId:text(meta.unidadeId||item._unidadeId)
  };
 }
+function diagnosticCentralAreas(){
+ var areas=[];
+ try{
+  var bridge=window.ConectaCentralProfileV1;
+  if(bridge&&typeof bridge.snapshot==='function'){
+   var live=bridge.snapshot(),ctx=live&&live.context;
+   if(ctx&&Array.isArray(ctx.areas))areas=ctx.areas;
+  }
+ }catch(e){}
+ if(!areas.length){
+  try{
+   var select=el('adminArea');
+   if(select&&select.options&&select.options.length){
+    areas=Array.prototype.map.call(select.options,function(o){return{areaId:text(o.value),areaNome:text(o.textContent||o.label||o.value),unidadeId:''}});
+   }
+  }catch(e){}
+ }
+ if(!areas.length){
+  try{
+   var core=JSON.parse(sessionStorage.getItem('portalConectaModuleCoreV1')||'null'),kind=text(core&&core.mode).toLowerCase();
+   var keys=['portalTacsCentralContextCacheV3:'+kind,'portalTacsCentralContextCacheV3:admin','portalTacsCentralContextCacheV3:tacs','portalTacsCentralContextCacheV3:ubs','portalTacsCentralContextCacheV2'];
+   for(var i=0;i<keys.length&&!areas.length;i++){
+    if(/:$/.test(keys[i]))continue;
+    var raw=sessionStorage.getItem(keys[i]);if(!raw)continue;
+    var saved=JSON.parse(raw),ctx=saved&&saved.context;
+    if(ctx&&Array.isArray(ctx.areas))areas=ctx.areas;
+   }
+  }catch(e){}
+ }
+ var seen={};
+ return (Array.isArray(areas)?areas:[]).filter(function(a){
+  var id=text(a&&a.areaId).toUpperCase();
+  if(!id||a&&a.ativa===false||seen[id])return false;
+  seen[id]=true;return true;
+ }).map(function(a){return{areaId:text(a.areaId).toUpperCase(),areaNome:text(a.areaNome||a.areaId),unidadeId:text(a.unidadeId)}});
+}
 function diagnosticRestoreAreas(){
+ var central=diagnosticCentralAreas();
+ if(central.length){diagFastAreas=central;return diagFastAreas}
  if(Array.isArray(diagFastAreas)&&diagFastAreas.length)return diagFastAreas;
  var key=diagnosticAreasCacheKey();if(!key)return[];
  try{
@@ -435,7 +473,7 @@ function diagnosticAreaOptionsHtml(areas,selected){
 function diagnosticPopulateAreaSelect(areas){
  var s=el('cscResidentDiagnosticArea');if(!s)return;
  areas=Array.isArray(areas)?areas:[];
- var selected=text(s.value||state.areaId||diagnosticAreaId()).toUpperCase();
+ var selected=text(s.value||state.areaId).toUpperCase();
  var exists=areas.some(function(a){return text(a&&a.areaId).toUpperCase()===selected});
  if(!selected&&areas.length===1)selected=text(areas[0].areaId).toUpperCase();
  if(selected&&areas.length&&!exists)selected='';
@@ -445,13 +483,13 @@ function diagnosticPopulateAreaSelect(areas){
 }
 function diagnosticSelectedAreaId(){
  var s=el('cscResidentDiagnosticArea'),selected=s?text(s.value).toUpperCase():'';
- return selected||text(state.areaId||diagnosticAreaId()).toUpperCase();
+ return selected||text(state.areaId).toUpperCase();
 }
 function renderResidentDocumentEntry(){
  var stage=el('residentStage');if(!stage)return;var diagnostic=state.coreMode===RESIDENT_CORE_DIAGNOSTIC;
  if(diagnostic)try{sessionStorage.removeItem(RESIDENT_TOKEN_KEY)}catch(e){}
  if(diagnostic){
-  var cachedDiagnosticAreas=diagnosticRestoreAreas(),selectedDiagnosticArea=text(state.areaId||diagnosticAreaId()).toUpperCase();
+  var cachedDiagnosticAreas=diagnosticRestoreAreas(),selectedDiagnosticArea=text(state.areaId).toUpperCase();
   stage.innerHTML=
    '<div class="csc-access-note"><strong>Diagnóstico administrativo do Morador</strong><br>Busque por CPF, Cartão SUS (CNS), nome, data de nascimento ou número de cadastro na área. Você pode preencher um, vários ou todos os campos. Ao localizar o morador, o Conecta identifica também os integrantes da mesma família pelo vínculo já existente no CSV. Nenhum vínculo residencial será assumido por este aparelho.</div>'+
    '<label for="cscResidentDiagnosticArea">Área de busca</label><select class="field" id="cscResidentDiagnosticArea">'+diagnosticAreaOptionsHtml(cachedDiagnosticAreas,selectedDiagnosticArea)+'</select>'+
