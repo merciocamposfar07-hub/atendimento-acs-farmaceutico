@@ -306,7 +306,7 @@ function diagnosticReadConcurrent(action,payload,resultAction){
   function poll(){
    if(done)return;
    jsonp({action:resultAction,requestId:id}).then(function(r){
-    if(r&&r.ok===true&&r.pendente===false&&r.result){finish(r.result,null);return}
+    if(r&&r.ok===true&&r.pendente===false&&r.result){var rr=r.result;if(rr.ok===false){finish(null,new Error(rr.message||'Não foi possível concluir a leitura do diagnóstico.'));return}finish(rr,null);return}
     if(Date.now()-started>22000){finish(null,new Error('A leitura do índice de moradores não terminou a tempo.'));return}
     wait=Math.min(420,wait+35);setTimeout(poll,wait);
    }).catch(function(e){
@@ -514,8 +514,8 @@ function residentDiagnosticFamilyFromAddress(endereco){
  var s=text(endereco).toUpperCase();
  if(!s)return'';
  if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
- var m=s.match(/,\s*([0-9]{1,4}[A-Z]?)\s*\.\s*(?:ZONA\s+RURAL\b|ZONA\b|RURAL\b)/);
- if(!m)m=s.match(/,\s*([0-9]{1,4}[A-Z]?)\s*\./);
+ var m=s.match(/,\s*([0-9]{1,4}[A-Z]?)\s*(?:\.\s*)?(?:ZONA\s+RURAL\b|ZONA\b|RURAL\b|$)/);
+ if(!m)m=s.match(/,\s*([0-9]{1,4}[A-Z]?)\s*[\.;:-]/);
  return m?residentDiagnosticFamilyNorm(m[1]):'';
 }
 function residentDiagnosticLocalKey(item){
