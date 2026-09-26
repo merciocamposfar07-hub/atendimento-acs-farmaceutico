@@ -865,8 +865,16 @@ function conectaAcessoV1NormalizarFamiliaDiagnostico_(valor){
 }
 
 function conectaAcessoV1CodigoFamiliaItem_(item){
-  if(!item||!item.morador||typeof vinculoFamiliarNotifV1CodigoEndereco_!=='function')return'';
-  return conectaAcessoV1NormalizarFamiliaDiagnostico_(vinculoFamiliarNotifV1CodigoEndereco_(item.morador.endereco||''));
+  if(!item||!item.morador)return'';
+  var endereco=conectaAcessoV1Texto_(item.morador.endereco||''),codigo='';
+  if(typeof vinculoFamiliarNotifV1CodigoEndereco_==='function')codigo=vinculoFamiliarNotifV1CodigoEndereco_(endereco);
+  codigo=conectaAcessoV1NormalizarFamiliaDiagnostico_(codigo);
+  if(codigo)return codigo;
+  var texto=endereco.toUpperCase();
+  if(texto.normalize)texto=texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var match=texto.match(/,\s*([0-9]{1,4}[A-Z]?)\s*(?:\.\s*)?(?:ZONA\s+RURAL\b|ZONA\b|RURAL\b|$)/);
+  if(!match)match=texto.match(/,\s*([0-9]{1,4}[A-Z]?)\s*[\.;:-]/);
+  return match?conectaAcessoV1NormalizarFamiliaDiagnostico_(match[1]):'';
 }
 
 function conectaAcessoV1FamiliaDiagnostico_(item){
@@ -941,13 +949,22 @@ function conectaAcessoV1RegistrosFamiliaDiagnostico_(area,familia){
   if(fonte.map.endereco==null||fonte.map.endereco<0)return [];
   var primeira=fonte.headerRow+2,ultima=fonte.sheet.getLastRow(),out=[];
   if(ultima<primeira)return out;
+  var colunaEndereco=fonte.sheet.getRange(primeira,fonte.map.endereco+1,ultima-primeira+1,1);
   var expressao=',\\s*0*'+numero+sufixo+'\\s*\\.';
-  var achados=fonte.sheet
-    .getRange(primeira,fonte.map.endereco+1,ultima-primeira+1,1)
+  var achados=colunaEndereco
     .createTextFinder(expressao)
     .useRegularExpression(true)
     .matchCase(false)
     .findAll()||[];
+  /* Fallback restrito ao diagnóstico: alguns cadastros legados podem ter perdido
+     o ponto depois do número familiar. Busca candidatos pelo número e revalida
+     cada endereço abaixo antes de aceitar a família. */
+  if(!achados.length){
+    achados=colunaEndereco
+      .createTextFinder(numero+sufixo)
+      .matchCase(false)
+      .findAll()||[];
+  }
   var ultimaColuna=fonte.sheet.getLastColumn();
   achados.forEach(function(celula){
     var linha=celula.getRow(),faixa=fonte.sheet.getRange(linha,1,1,ultimaColuna);
