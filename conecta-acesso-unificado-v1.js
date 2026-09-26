@@ -417,13 +417,44 @@ function diagnosticFastSnapshot(areaId){
  return{ready:true,areaId:'',areaNome:areas.length>1?'Mais de uma área':text(areas[0]&&areas[0].areaNome),unidadeId:'',resultados:all};
 }
 function diagnosticAreaId(){try{return text(localStorage.getItem(AREA_KEY)||'')}catch(e){return''}}
+function diagnosticAreaOptionsHtml(areas,selected){
+ areas=Array.isArray(areas)?areas:[];selected=text(selected).toUpperCase();
+ var html='<option value="">Selecione a área</option>';
+ var found=false;
+ areas.forEach(function(a){
+  var id=text(a&&a.areaId).toUpperCase();if(!id)return;
+  if(id===selected)found=true;
+  html+='<option value="'+esc(id)+'"'+(id===selected?' selected':'')+'>'+esc(a.areaNome||a.areaId||id)+'</option>';
+ });
+ if(selected&&!found&&!areas.length){
+  var meta=diagnosticAreaMeta(selected);
+  html+='<option value="'+esc(selected)+'" selected>'+esc(meta.areaNome||selected)+'</option>';
+ }
+ return html;
+}
+function diagnosticPopulateAreaSelect(areas){
+ var s=el('cscResidentDiagnosticArea');if(!s)return;
+ areas=Array.isArray(areas)?areas:[];
+ var selected=text(s.value||state.areaId||diagnosticAreaId()).toUpperCase();
+ var exists=areas.some(function(a){return text(a&&a.areaId).toUpperCase()===selected});
+ if(!selected&&areas.length===1)selected=text(areas[0].areaId).toUpperCase();
+ if(selected&&areas.length&&!exists)selected='';
+ s.innerHTML=diagnosticAreaOptionsHtml(areas,selected);
+ s.value=selected||'';
+ state.areaId=s.value;
+}
+function diagnosticSelectedAreaId(){
+ var s=el('cscResidentDiagnosticArea'),selected=s?text(s.value).toUpperCase():'';
+ return selected||text(state.areaId||diagnosticAreaId()).toUpperCase();
+}
 function renderResidentDocumentEntry(){
  var stage=el('residentStage');if(!stage)return;var diagnostic=state.coreMode===RESIDENT_CORE_DIAGNOSTIC;
  if(diagnostic)try{sessionStorage.removeItem(RESIDENT_TOKEN_KEY)}catch(e){}
  if(diagnostic){
-  setTimeout(function(){warmResidentDiagnosticCache(false)},0);
+  var cachedDiagnosticAreas=diagnosticRestoreAreas(),selectedDiagnosticArea=text(state.areaId||diagnosticAreaId()).toUpperCase();
   stage.innerHTML=
    '<div class="csc-access-note"><strong>Diagnóstico administrativo do Morador</strong><br>Busque por CPF, Cartão SUS (CNS), nome, data de nascimento ou número de cadastro na área. Você pode preencher um, vários ou todos os campos. Ao localizar o morador, o Conecta identifica também os integrantes da mesma família pelo vínculo já existente no CSV. Nenhum vínculo residencial será assumido por este aparelho.</div>'+
+   '<label for="cscResidentDiagnosticArea">Área de busca</label><select class="field" id="cscResidentDiagnosticArea">'+diagnosticAreaOptionsHtml(cachedDiagnosticAreas,selectedDiagnosticArea)+'</select>'+
    field('cscResidentCpf','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"')+
    field('cscResidentCns','Cartão SUS (CNS)','type="text" inputmode="numeric" maxlength="18" autocomplete="off" placeholder="000 0000 0000 0000"')+
    field('cscResidentNameDiagnostic','Nome completo','type="text" autocomplete="name" placeholder="Nome completo do morador"')+
@@ -431,6 +462,13 @@ function renderResidentDocumentEntry(){
    field('cscResidentAreaRegistration','Número de cadastro na área','type="text" inputmode="text" maxlength="12" autocomplete="off" placeholder="Ex.: 002"')+
    '<p class="muted">Cada campo funciona de forma independente. Se mais de um campo for preenchido, o Conecta usa todos os dados informados para localizar o cadastro.</p>'+
    '<div class="csc-inline-actions"><button class="btn green" id="cscResidentDocumentNext" type="button">Continuar</button></div>';
+  setTimeout(function(){
+   diagnosticLoadAreas().then(function(areas){
+    diagnosticPopulateAreaSelect(areas);
+    var selected=diagnosticSelectedAreaId();
+    if(selected)diagnosticWarmArea(diagnosticAreaMeta(selected),false);
+   });
+  },0);
  }else{
   var note='<p class="muted">Se o CPF ainda não estiver no cadastro territorial, o Conecta localizará seu registro por data de nascimento e, quando necessário, nome completo.</p>';
   stage.innerHTML=note+field('cscResidentDocument','CPF','type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"')+'<div class="csc-inline-actions"><button class="btn green" id="cscResidentDocumentNext" type="button">Continuar</button></div>';
@@ -452,6 +490,7 @@ function bindResidentStage(){
  var cpf=el('cscResidentCpf');if(cpf)cpf.addEventListener('input',function(){this.value=formatCpfResident(this.value)});
  var cns=el('cscResidentCns');if(cns)cns.addEventListener('input',function(){this.value=formatCnsResident(this.value)});
  var nascDiag=el('cscResidentBirthDiagnostic');if(nascDiag)nascDiag.addEventListener('input',function(){this.value=formatBirthResident(this.value)});
+ var areaDiag=el('cscResidentDiagnosticArea');if(areaDiag)areaDiag.addEventListener('change',function(){state.areaId=text(this.value).toUpperCase();if(state.areaId)diagnosticWarmArea(diagnosticAreaMeta(state.areaId),false);setStatus('','')});
  var b=el('cscResidentDocumentNext');if(b)b.onclick=startResidentDocument;
  b=el('cscResidentDiagnosticAgain');if(b)b.onclick=renderResidentStart;
  b=el('cscResidentLogin');if(b)b.onclick=loginResident;
@@ -610,7 +649,12 @@ function diagnoseResidentAdminBackground(payload,seq){
 function diagnoseResidentAdmin(){
  var proof=trustKey('ADMIN'),cpf=digits(el('cscResidentCpf')&&el('cscResidentCpf').value),cns=digits(el('cscResidentCns')&&el('cscResidentCns').value);
  var nome=text(el('cscResidentNameDiagnostic')&&el('cscResidentNameDiagnostic').value),nascimento=text(el('cscResidentBirthDiagnostic')&&el('cscResidentBirthDiagnostic').value);
- var cadastro=text(el('cscResidentAreaRegistration')&&el('cscResidentAreaRegistration').value),areaId=diagnosticAreaId();
+ var cadastro=text(el('cscResidentAreaRegistration')&&el('cscResidentAreaRegistration').value),areaId=diagnosticSelectedAreaId();
+ if(!areaId){
+  var areasDisponiveis=diagnosticRestoreAreas();
+  if(areasDisponiveis.length===1){areaId=text(areasDisponiveis[0].areaId).toUpperCase();state.areaId=areaId;diagnosticPopulateAreaSelect(areasDisponiveis)}
+  else{setStatus('Selecione a área de busca antes de consultar o morador.','warn');diagnosticLoadAreas().then(diagnosticPopulateAreaSelect);return}
+ }
  if(!cpf&&!cns&&!nome&&!nascimento&&!cadastro){setStatus('Informe ao menos um dado para pesquisar o morador.','warn');return}
  if(cpf&&cpf.length!==11){setStatus('Confira o CPF informado.','warn');return}
  if(cns&&cns.length!==15){setStatus('Confira o Cartão SUS (CNS) informado.','warn');return}
