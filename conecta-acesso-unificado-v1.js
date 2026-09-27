@@ -410,7 +410,15 @@ function diagnosticLoadAreas(){
  var cached=diagnosticRestoreAreas();
  if(cached.length)return Promise.resolve(cached);
  if(diagFastAreaPromise)return diagFastAreaPromise;
- var token=diagnosticAdminToken();if(!token)return Promise.resolve([]);
+ var proof=trustKey('ADMIN'),token=diagnosticAdminToken();
+ if(proof){
+  diagFastAreaPromise=diagnosticReadConcurrent('conecta_morador_diagnostico_areas_admin',{dispositivo:device(),chaveConfianca:proof},'conecta_result').then(function(r){
+   if(!r||r.ok!==true||!Array.isArray(r.areas))return[];
+   return diagnosticSaveAreas(r.areas);
+  }).catch(function(){return[]}).finally(function(){diagFastAreaPromise=null});
+  return diagFastAreaPromise;
+ }
+ if(!token)return Promise.resolve([]);
  diagFastAreaPromise=diagnosticReadConcurrent('admin_moradores_areas',{token:token,dispositivo:device(),areaId:diagnosticAreaId()}).then(function(r){
   if(!r||r.ok!==true||!Array.isArray(r.areas))return[];
   return diagnosticSaveAreas(r.areas);
@@ -457,7 +465,7 @@ function diagnosticFastSnapshot(areaId){
 function diagnosticAreaId(){try{return text(localStorage.getItem(AREA_KEY)||'')}catch(e){return''}}
 function diagnosticAreaOptionsHtml(areas,selected){
  areas=Array.isArray(areas)?areas:[];selected=text(selected).toUpperCase();
- var html='<option value="">Selecione a área</option>';
+ var html='<option value="">'+(areas.length?'Selecione a área':'Carregando áreas…')+'</option>';
  var found=false;
  areas.forEach(function(a){
   var id=text(a&&a.areaId).toUpperCase();if(!id)return;
