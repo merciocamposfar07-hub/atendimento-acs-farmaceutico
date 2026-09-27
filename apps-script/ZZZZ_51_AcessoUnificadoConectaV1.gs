@@ -85,7 +85,7 @@ function conectaAcessoV1TratarPost_(e){
     'conecta_morador_login_pin','conecta_morador_acessar_familia_cpf','conecta_morador_sessao','conecta_morador_notificacao_confirmar',
     'conecta_morador_preferencia_notificacao','conecta_morador_membro_salvar_cpf','conecta_morador_encerrar',
     'conecta_pin_recuperar_iniciar','conecta_pin_recuperar_salvar','conecta_recuperacao_registrar_aparelho',
-    'conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_ubs_encerrar','conecta_morador_diagnostico_admin','conecta_pendencias_contagem'
+    'conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_ubs_encerrar','conecta_morador_diagnostico_admin','conecta_morador_diagnostico_areas_admin','conecta_pendencias_contagem'
   ];
   if(aceitas.indexOf(action)===-1)return null;
   var id=conectaAcessoV1Texto_(p.requestId),resultado;
@@ -98,7 +98,7 @@ function conectaAcessoV1TratarPost_(e){
       conectaAcessoV1Limitar_(p.dispositivo||p.cpf||action);
       resultado=conectaAcessoV1TratarMoradorTeste_(action,p);
     }else{
-      if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_morador_acessar_familia_cpf','conecta_pin_recuperar_iniciar','conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_morador_diagnostico_admin'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||p.documento||action);
+      if(['conecta_morador_identificar','conecta_morador_confirmar','conecta_morador_login_pin','conecta_morador_acessar_familia_cpf','conecta_pin_recuperar_iniciar','conecta_ubs_identificar_primeiro_acesso','conecta_ubs_login_pin','conecta_morador_diagnostico_admin','conecta_morador_diagnostico_areas_admin'].indexOf(action)!==-1)conectaAcessoV1Limitar_(p.dispositivo||p.cpf||p.documento||action);
       if(action==='conecta_morador_identificar')resultado=conectaAcessoV1Identificar_(p);
       else if(action==='conecta_morador_confirmar')resultado=conectaAcessoV1Confirmar_(p);
       else if(action==='conecta_morador_criar_pin')resultado=conectaAcessoV1CriarPin_(p);
@@ -116,6 +116,7 @@ function conectaAcessoV1TratarPost_(e){
     else if(action==='conecta_ubs_login_pin')resultado=conectaAcessoV1LoginUbs_(p);
     else if(action==='conecta_ubs_encerrar')resultado=conectaAcessoV1EncerrarUbs_(p);
       else if(action==='conecta_morador_diagnostico_admin')resultado=conectaAcessoV1DiagnosticoMoradorAdmin_(p);
+      else if(action==='conecta_morador_diagnostico_areas_admin')resultado=conectaAcessoV1DiagnosticoAreasAdmin_(p);
       else resultado=conectaAcessoV1PendenciasContagem_(p);
     }
   }catch(erro){
@@ -1113,6 +1114,15 @@ function conectaAcessoV1RespostaDiagnosticoLista_(lista,filtros){
     vinculoAparelhoCriado:false,vinculoMoradorAlterado:false,notificacoesAlteradas:false,sessaoMoradorCriada:false,
     message:familias.length===1?'Cadastro e família localizados.':'Cadastros compatíveis e respectivas famílias localizados.'
   };
+}
+
+function conectaAcessoV1DiagnosticoAreasAdmin_(p){
+  var dispositivo=conectaAcessoV1Texto_(p.dispositivo),chave=conectaAcessoV1Texto_(p.chaveConfianca);
+  if(!dispositivo||!conectaAcessoV1ConfiancaValida_('ADMIN','ADMIN_GERAL',dispositivo,chave))throw new Error('Aparelho administrativo não reconhecido para diagnóstico.');
+  var areas=conectaAcessoV1Areas_().map(function(a){
+    return {areaId:conectaAcessoV1Id_(a.areaId),areaNome:conectaAcessoV1Texto_(a.areaNome||a.areaId),unidadeId:conectaAcessoV1Texto_(a.unidadeId)};
+  });
+  return {ok:true,modo:'DIAGNOSTICO_ADMINISTRATIVO',coreMode:'DIAGNOSTICO_ADMINISTRATIVO',somenteLeitura:true,areas:areas};
 }
 
 function conectaAcessoV1DiagnosticoMoradorAdmin_(p){
