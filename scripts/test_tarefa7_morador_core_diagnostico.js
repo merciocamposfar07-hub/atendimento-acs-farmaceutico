@@ -28,6 +28,10 @@ assert.match(access,/id=\"cscResidentDiagnosticArea\"/,'Diagnóstico do Morador 
 assert.match(access,/function diagnosticSelectedAreaId\(\)/,'Área escolhida deve ser resolvida localmente sem alterar o contexto global da Central.');
 assert.match(access,/areaId=diagnosticSelectedAreaId\(\)/,'Busca diagnóstica deve enviar explicitamente a área escolhida ao backend.');
 assert.match(access,/Selecione a área de busca antes de consultar o morador/,'Com várias áreas, a busca não pode seguir sem delimitar o território.');
+assert.match(access,/conecta_morador_diagnostico_areas_admin/,'Lista de áreas do diagnóstico deve usar a prova administrativa quando não houver sessão remota da Central.');
+assert.match(access,/chaveConfianca:proof/,'Carregamento das áreas deve usar o mesmo aparelho administrativo confiável do diagnóstico.');
+assert.match(backend,/function conectaAcessoV1DiagnosticoAreasAdmin_\(p\)/,'Backend deve expor somente a lista de áreas ao diagnóstico administrativo.');
+assert.match(backend,/conecta_morador_diagnostico_areas_admin/,'Rota de áreas deve estar registrada no backend unificado.');
 assert.match(access,/id="cscResidentDocumentNext"/);
 assert.match(access,/function startResidentDocument\(\)/);
 assert.match(access,/state\.coreMode===RESIDENT_CORE_DIAGNOSTIC\)\{diagnoseResidentAdmin\(\);return\}/);
