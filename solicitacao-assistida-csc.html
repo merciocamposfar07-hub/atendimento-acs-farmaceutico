@@ -100,6 +100,7 @@ footer{text-align:center;color:#7899aa;font-size:.78rem;padding:8px 2px}
 </main>
 
 <script src="/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260929-assistida-v1"></script>
+<script src="/atendimento-acs-farmaceutico/portal-solicitacao-card-oficial-v1.js?v=20260929-assistida-card-v1"></script>
 <script>
 (function(){
 'use strict';
@@ -347,40 +348,79 @@ function assistedOrigin(){
   else if(m==='tacs'){label='TACS';code='CENTRAL_CSC_ATENDIMENTO_ASSISTIDO_TACS'}
   return{label:label,code:code};
 }
-function openWhatsAppOutsideModule(url){
-  try{if(window.top&&window.top!==window){window.top.location.href=url;return}}catch(e){}
-  window.location.href=url;
+function titleCaseWords(v){
+  return text(v).toLowerCase().replace(/(^|[\s_-])([a-záàâãéêíóôõúç])/g,function(_,a,b){return(a==='_'?' ':a)+b.toUpperCase()}).replace(/\s+/g,' ').trim();
+}
+function assistedTerritory(){
+  var s=coreState(),area=s.area||{},ctx=centralContext(),areas=ctx&&Array.isArray(ctx.areas)?ctx.areas:[],current=null,i;
+  for(i=0;i<areas.length;i++)if(text(areas[i]&&areas[i].areaId).toUpperCase()===areaId()){current=areas[i];break}
+  current=current||area;
+  var resp=responsible(),unitName=text(current&&current.unidadeNome),unitId=text(current&&current.unidadeId||area.unidadeId);
+  if(!unitName&&unitId)unitName='Unidade de Saúde '+titleCaseWords(unitId);
+  return{
+    areaId:areaId(),
+    areaName:text(current&&current.areaNome)||text(area.areaNome)||areaId().replace(/_/g,' '),
+    unitName:unitName||'Unidade de Saúde',
+    tacsName:text(resp&&resp.nomeCompleto)||'TACS responsável pela área'
+  };
+}
+function cardDescription(detail,schedule,category){
+  var base=text(detail),line=text(schedule&&schedule.line);
+  if(line&&base&&base.indexOf(line)===-1)return line+' — '+base;
+  if(line)return line;
+  return base||category;
+}
+function shareOfficialCard(data){
+  var api=window.PortalCscSolicitacaoCardOficialV1;
+  if(!api||typeof api.share!=='function')return Promise.reject(new Error('O gerador oficial do card não foi carregado.'));
+  return api.share(data);
 }
 function sendAssisted(){
   if(state.sending||!state.resident)return;
   var category=text(el('category').value),detail=text(el('detail').value),r=state.resident;
   if(!validDoc(r.documento)||!category||!scheduleReady()){updateSend();return}
-  state.sending=true;updateSend();setStatus('sendStatus','Registrando na Central e preparando o WhatsApp…','');
-  var code=state.requestCode||requestCode(),id=identity(),s=coreState(),area=s.area||{},resp=responsible(),professional=text(id.nome)||'Profissional da área',profile=text(id.perfil)||text(s.mode).toUpperCase(),origin=assistedOrigin(),schedule=serviceDateInfo();
+  state.sending=true;updateSend();setStatus('sendStatus','Registrando na Central e preparando o card oficial…','');
+  var code=state.requestCode||requestCode(),id=identity(),s=coreState(),area=s.area||{},professional=text(id.nome)||'Profissional da área',profile=text(id.perfil)||text(s.mode).toUpperCase(),origin=assistedOrigin(),schedule=serviceDateInfo(),territory=assistedTerritory();
   var cleanDetail=detail||category;
   var audit='Atendimento assistido — '+origin.label+' | Profissional: '+professional+(profile?' — '+profile:'');
-  var description=audit+(schedule.line?'\n'+schedule.line:'')+'\n'+cleanDetail;
+  var queueDescription=audit+(schedule.line?'\n'+schedule.line:'')+'\n'+cleanDetail;
+
+  /* O registro na Central da UBS acontece antes do compartilhamento do card. */
   queueRequest({
     action:'publico_solicitacao_ubs_criar',requestId:requestId('assistwrite'),areaId:areaId(),codigoSolicitacao:code,
     documento:digits(r.documento),nome:r.nome,nascimento:r.nascimento,localidade:r.localidade,categoria:category,
-    enviadoEm:recifeNow(),descricao:description,tipoVaga:schedule.type,dataServico:schedule.data,horarioExpiracao:schedule.expiry,
-    origem:origin.code,tacsResponsavel:text(resp&&resp.nomeCompleto)||professional,unidadeNome:text(area.unidadeNome||area.unidadeId)
+    enviadoEm:recifeNow(),descricao:queueDescription,tipoVaga:schedule.type,dataServico:schedule.data,horarioExpiracao:schedule.expiry,
+    origem:origin.code,tacsResponsavel:territory.tacsName,unidadeNome:territory.unitName
   });
-  var msg='*SOLICITAÇÃO ASSISTIDA — CONECTA SAÚDE COMUNITÁRIA*'
-    +'\nOrigem: Atendimento assistido — '+origin.label
-    +'\nProfissional: '+professional+(profile?' — '+profile:'')
-    +'\nCódigo: '+code
-    +'\nData e horário do envio: '+recifeNow()
-    +'\nCategoria: '+category
-    +(schedule.line?'\n'+schedule.line:'')
-    +'\nNome completo: '+r.nome
-    +'\nData de nascimento: '+r.nascimento
-    +'\nCPF/CNS: '+formatDoc(r.documento)
-    +'\nOnde mora: '+r.localidade
-    +'\nDescrição: '+cleanDetail;
-  var phone=whatsappNumber(),wa=phone?'https://wa.me/'+phone+'?text='+encodeURIComponent(msg):'';
-  if(wa){resetResident();openWhatsAppOutsideModule(wa)}
-  else{state.sending=false;updateSend();setStatus('sendStatus','Solicitação registrada na Central. O WhatsApp do TACS responsável desta área não está cadastrado.','warn')}
+
+  var cardApi=window.PortalCscSolicitacaoCardOficialV1;
+  var cardData={
+    code:code,
+    sentAt:recifeNow(),
+    category:category,
+    name:r.nome,
+    birth:r.nascimento,
+    age:cardApi&&typeof cardApi.detailedAge==='function'?cardApi.detailedAge(r.nascimento):(ageFromBirth(r.nascimento)?ageFromBirth(r.nascimento)+' anos':'Não informada'),
+    document:formatDoc(r.documento),
+    locality:r.localidade,
+    description:cardDescription(cleanDetail,schedule,category),
+    recipient:'',
+    areaId:territory.areaId,
+    areaName:territory.areaName,
+    unitName:territory.unitName,
+    tacsName:territory.tacsName
+  };
+
+  shareOfficialCard(cardData).then(function(){
+    resetResident();
+  }).catch(function(error){
+    state.sending=false;updateSend();
+    if(error&&error.name==='AbortError'){
+      setStatus('sendStatus','A solicitação já foi registrada na Central da UBS. O compartilhamento do card foi cancelado.','warn');
+      return;
+    }
+    setStatus('sendStatus',text(error&&error.message)||'A solicitação foi registrada na Central, mas o card não pôde ser aberto.','err');
+  });
 }
 
 el('back').addEventListener('click',function(){try{if(window.parent&&window.parent!==window&&window.parent.ConectaCentralShellV1&&typeof window.parent.ConectaCentralShellV1.voltar==='function'){window.parent.ConectaCentralShellV1.voltar();return}}catch(e){}window.location.href=core&&core.centralUrl?core.centralUrl():'/atendimento-acs-farmaceutico/central-administrativa-tacs.html'});
