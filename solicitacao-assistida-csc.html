@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#071827">
+<title>Solicitação assistida • Conecta Saúde Comunitária</title>
+<style>
+:root{color-scheme:dark;--bg:#071827;--panel:#102d46;--panel2:#0c2438;--line:#2b5a76;--text:#f7fcff;--muted:#b9cfda;--accent:#2bc56f;--blue:#1b7ca7;--warn:#ffd166;--danger:#ff7b86}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button,input,select,textarea{font:inherit}.app{width:min(760px,100%);margin:auto;padding:14px 14px 30px}
+.top{display:flex;align-items:center;gap:11px;padding:8px 2px 14px}.top img{width:42px;height:42px;object-fit:contain}.top-copy{min-width:0;flex:1}.brand{font-weight:950;color:#82e4a5;letter-spacing:.025em}.top h1{font-size:1.26rem;margin:3px 0 0}.back{border:1px solid var(--line);background:#0b2235;color:#fff;border-radius:13px;min-height:42px;padding:0 12px;font-weight:850}
+.card{border:1px solid var(--line);border-radius:21px;padding:16px;margin:0 0 13px;background:var(--panel)}.card h2{font-size:1.06rem;margin:0 0 6px}.card p{margin:4px 0;color:var(--muted);line-height:1.42}.notice{border-color:#39765a;background:#0e3429}.notice strong{color:#9af0b9}
+label{display:block;font-weight:850;margin:13px 0 6px}.field,.select,.textarea{width:100%;border:1px solid #3c7697;border-radius:14px;background:#081f31;color:#fff;padding:13px 14px;min-height:48px;outline:none}.textarea{min-height:96px;resize:vertical}.field:focus,.select:focus,.textarea:focus{border-color:#6fc9ef;box-shadow:0 0 0 2px rgba(111,201,239,.16)}
+.row{display:grid;grid-template-columns:1fr auto;gap:9px}.action{border:0;border-radius:14px;padding:12px 15px;min-height:48px;background:var(--blue);color:#fff;font-weight:950}.action:disabled{opacity:.45}.secondary{background:#183f58;border:1px solid #387091}.send{width:100%;margin-top:15px;background:#168c50;border:2px solid #77e9a1}.send:disabled{background:#243846;border-color:#a24b56}
+.status{min-height:20px;margin:10px 2px 0;color:var(--muted);font-weight:750}.status.ok{color:#8ee9ae}.status.warn{color:var(--warn)}.status.err{color:#ff9aa2}
+.results{display:grid;gap:8px;margin-top:12px}.person{width:100%;text-align:left;border:1px solid #316785;border-radius:15px;background:#0a2337;color:#fff;padding:12px}.person strong{display:block;font-size:1rem}.person span{display:block;color:var(--muted);font-size:.89rem;margin-top:3px}.person:active{transform:scale(.995)}
+.family-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.family-tag{font-size:.79rem;border:1px solid #4f87a4;border-radius:999px;padding:5px 9px;color:#d9eef7}.selected{border-color:#55c980;background:#0d3429}.selected-grid{display:grid;gap:4px}.selected-grid strong{font-size:1.03rem}.selected-grid span{color:#c9dde6;font-size:.91rem}
+.security{font-size:.86rem;color:#bdd3de;border-top:1px solid rgba(255,255,255,.08);margin-top:13px;padding-top:11px}
+footer{text-align:center;color:#7899aa;font-size:.78rem;padding:8px 2px}
+[hidden]{display:none!important}
+@media(max-width:520px){.app{padding-left:11px;padding-right:11px}.row{grid-template-columns:1fr}.action{width:100%}.top h1{font-size:1.13rem}.back{padding:0 10px}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <button id="back" class="back" type="button" aria-label="Voltar à Central">← Voltar</button>
+    <img src="/atendimento-acs-farmaceutico/icons/central-admin-saude-512.png" alt="">
+    <div class="top-copy"><div class="brand">CONECTA SAÚDE COMUNITÁRIA</div><h1>Solicitação assistida</h1></div>
+  </header>
+
+  <section class="card notice">
+    <strong>Atendimento pelo profissional da área</strong>
+    <p>Use esta via para moradores que não conseguem utilizar o Portal CSC. Esta tela não cria acesso do morador e não vincula a família a este aparelho.</p>
+  </section>
+
+  <section class="card">
+    <h2>1. Pesquisar morador</h2>
+    <p id="scope">Carregando área e profissional…</p>
+    <label for="query">Nome, CPF/CNS ou número da família</label>
+    <div class="row">
+      <input id="query" class="field" autocomplete="off" placeholder="Ex.: Maria da Silva, CPF/CNS ou 045">
+      <button id="search" class="action" type="button">Pesquisar</button>
+    </div>
+    <div id="searchStatus" class="status" aria-live="polite"></div>
+    <div id="results" class="results"></div>
+  </section>
+
+  <section id="familyCard" class="card" hidden>
+    <div class="family-head"><h2>2. Escolher integrante</h2><span id="familyTag" class="family-tag"></span></div>
+    <p>Toque na pessoa para quem o serviço será solicitado.</p>
+    <div id="familyResults" class="results"></div>
+  </section>
+
+  <section id="selectedCard" class="card selected" hidden>
+    <h2>Morador selecionado</h2>
+    <div id="selectedResident" class="selected-grid"></div>
+    <button id="changeResident" class="action secondary" type="button" style="margin-top:12px">Trocar morador</button>
+  </section>
+
+  <section id="serviceCard" class="card" hidden>
+    <h2>3. Solicitar serviço</h2>
+    <label for="category">Serviço necessário</label>
+    <select id="category" class="select">
+      <option value="">Toque para escolher</option>
+      <option>Solicitar consulta Médica</option>
+      <option>Solicitar atendimento com a Enfermeira Chefe</option>
+      <option>Solicitar atendimento com nutricionista</option>
+      <option>Solicitar atendimento odontológico (dentista)</option>
+      <option>Solicitar atendimento odontológico de emergência (dentista)</option>
+      <option value="Implanon">Implanon — informações ou solicitação do implante</option>
+      <option>Solicitar renovação de receita médica</option>
+      <option>Solicitar marcação de exames — Ultrassom / Fisioterapeuta</option>
+      <option>Solicitar visita domiciliar do TACS</option>
+      <option>Solicitar visita domiciliar com a Médica</option>
+      <option>Vacinação ou campanha de saúde</option>
+      <option>Acompanhamento de saúde do Bolsa Família</option>
+      <option>Cadastro ou atualização da família</option>
+      <option>Solicitar ficha de cadastro para Aposentadoria</option>
+      <option>Encaminhamento ou orientação para outro serviço da rede pública</option>
+      <option>Informações sobre dias, horários e funcionamento da Unidade de Saúde</option>
+      <option>Outro assunto comunitário relacionado à Unidade de Saúde</option>
+    </select>
+    <label for="detail">Descrição / observação</label>
+    <textarea id="detail" class="textarea" placeholder="Informe somente o necessário para a solicitação."></textarea>
+    <button id="send" class="action send" type="button" disabled>Enviar pelo WhatsApp</button>
+    <div id="sendStatus" class="status" aria-live="polite"></div>
+    <div class="security">Após o envio, os dados do morador são retirados desta tela. O módulo não grava família, CPF/CNS ou PIN no armazenamento do aparelho.</div>
+  </section>
+
+  <footer>PORTAL CSC • CONECTA SAÚDE COMUNITÁRIA • Solicitação assistida V1</footer>
+</main>
+
+<script src="/atendimento-acs-farmaceutico/conecta-module-core-v1.js?v=20260929-assistida-v1"></script>
+<script>
+(function(){
+'use strict';
+var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
+var core=window.ConectaModuleCoreV1;
+var state={resident:null,familyId:'',sending:false};
+function el(id){return document.getElementById(id)}
+function text(v){return String(v==null?'':v).trim()}
+function digits(v){return text(v).replace(/\D/g,'')}
+function esc(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function areaId(){return core&&core.areaId?core.areaId():text(new URLSearchParams(location.search).get('area')).toUpperCase()}
+function coreState(){return core&&core.state?core.state():{}}
+function identity(){return core&&core.identity?core.identity():{}}
+function validDoc(v){var d=digits(v);return /^\d{11}$/.test(d)||/^\d{15}$/.test(d)}
+function formatDoc(v){var d=digits(v);if(d.length===11)return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);if(d.length===15)return d.slice(0,3)+' '+d.slice(3,7)+' '+d.slice(7,11)+' '+d.slice(11);return d}
+function maskDoc(v){var d=digits(v);return d.length>=4?'••••'+d.slice(-4):''}
+function ageFromBirth(v){var m=text(v).match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(!m)return'';var now=new Date(),a=now.getFullYear()-Number(m[3]),mo=now.getMonth()+1,day=now.getDate();if(mo<Number(m[2])||(mo===Number(m[2])&&day<Number(m[1])))a--;return a>=0?String(a):''}
+function recifeNow(){try{var p=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Recife',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),o={};p.forEach(function(x){o[x.type]=x.value});return o.day+'/'+o.month+'/'+o.year+' '+o.hour+':'+o.minute}catch(e){var d=new Date();return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}}
+function requestCode(){var d=new Date(),day=d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);return 'AST-'+day+'-'+Math.random().toString(36).slice(2,8).toUpperCase()}
+function requestId(prefix){return prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
+function setStatus(id,msg,kind){var n=el(id);n.textContent=msg||'';n.className='status'+(kind?' '+kind:'')}
+function centralContext(){
+  try{
+    var s=coreState(),key=s&&s.cache&&s.cache.contextKey,raw=key?sessionStorage.getItem(key):'',saved=raw?JSON.parse(raw):null;
+    return saved&&saved.context?saved.context:null;
+  }catch(e){return null}
+}
+function responsible(){
+  var ctx=centralContext(),a=areaId(),areas=ctx&&Array.isArray(ctx.areas)?ctx.areas:[],list=ctx&&Array.isArray(ctx.tacs)?ctx.tacs:[],area=null,i;
+  for(i=0;i<areas.length;i++)if(text(areas[i]&&areas[i].areaId).toUpperCase()===a){area=areas[i];break}
+  if(area&&area.tacsId)for(i=0;i<list.length;i++)if(text(list[i]&&list[i].tacsId)===text(area.tacsId))return list[i];
+  return null;
+}
+function whatsappNumber(){
+  var r=responsible(),d=digits(r&&r.telefone);
+  if(d.length===10||d.length===11)d='55'+d;
+  if(/^55\d{10,11}$/.test(d))return d;
+  if(areaId()==='JAPARANDUBA')return '5581989613130';
+  return '';
+}
+function scopeLabels(){
+  var s=coreState(),id=identity(),area=s.area||{},who=text(id.nome)||'Profissional';
+  el('scope').textContent=(text(area.areaNome)||areaId())+' • '+who;
+}
+function jsonp(action,payload){
+  return new Promise(function(resolve,reject){
+    var cb='__cscAssist_'+Date.now()+'_'+Math.floor(Math.random()*1e6),script=document.createElement('script'),done=false;
+    var timer=setTimeout(function(){finish(new Error('A consulta demorou além do esperado.'))},12000);
+    function finish(err,data){if(done)return;done=true;clearTimeout(timer);try{delete window[cb]}catch(e){}if(script.parentNode)script.remove();err?reject(err):resolve(data)}
+    window[cb]=function(data){finish(null,data)};
+    var p=new URLSearchParams();p.set('action',action);p.set('callback',cb);Object.keys(payload||{}).forEach(function(k){if(payload[k]!=null)p.set(k,String(payload[k]))});
+    script.onerror=function(){finish(new Error('Não foi possível consultar a base agora.'))};
+    script.src=API+'?'+p.toString()+'&_='+Date.now();document.head.appendChild(script);
+  });
+}
+function adminRead(action,extra){
+  return new Promise(function(resolve){
+    var rid=requestId('assistread'),payload=core.session(Object.assign({areaId:areaId(),escopo:'solicitacao-assistida'},extra||{})),body=new URLSearchParams(),started=Date.now(),finished=false;
+    Object.keys(payload).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});body.set('action',action);body.set('requestId',rid);
+    function finish(r){if(finished)return;finished=true;resolve(r||{ok:false,message:'Resposta vazia do servidor.'})}
+    function poll(){if(finished)return;jsonp('admin_moradores_result',{requestId:rid}).then(function(r){if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}if(Date.now()-started>=18000){finish({ok:false,message:'A consulta ainda não foi confirmada. Tente novamente.'});return}setTimeout(poll,480)}).catch(function(){if(Date.now()-started>=18000)finish({ok:false,message:'A consulta não foi confirmada.'});else setTimeout(poll,650)})}
+    try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});setTimeout(poll,180)}catch(e){finish({ok:false,message:'Não foi possível iniciar a consulta.'})}
+  });
+}
+function familyLookup(params){
+  var payload={areaId:areaId()};Object.keys(params||{}).forEach(function(k){payload[k]=params[k]});
+  return jsonp('publico_familia_consultar',payload);
+}
+function clearResults(){el('results').innerHTML='';el('familyResults').innerHTML='';el('familyCard').hidden=true;el('familyTag').textContent=''}
+function renderSearchResults(list){
+  var root=el('results');root.innerHTML='';
+  if(!list.length){setStatus('searchStatus','Nenhum morador encontrado nesta área.','warn');return}
+  setStatus('searchStatus',list.length+' resultado(s). Toque no cadastro correto.','ok');
+  list.forEach(function(item){
+    var b=document.createElement('button');b.type='button';b.className='person';
+    var doc=validDoc(item.cpf)?item.cpf:(validDoc(item.cns)?item.cns:'');
+    b.innerHTML='<strong>'+esc(item.nome)+'</strong><span>'+esc(item.nascimento||'Nascimento não informado')+' • '+esc(item.endereco||'Localidade não informada')+(doc?' • '+esc(maskDoc(doc)):'')+'</span>';
+    b.addEventListener('click',function(){chooseSearchResult(item)});
+    root.appendChild(b);
+  });
+}
+function directResident(item){
+  return {nome:text(item.nome),nascimento:text(item.nascimento),localidade:text(item.localidade||item.endereco),documento:validDoc(item.documentoAcesso)?digits(item.documentoAcesso):(validDoc(item.cpf)?digits(item.cpf):(validDoc(item.cns)?digits(item.cns):''))};
+}
+function chooseSearchResult(item){
+  var r=directResident(item);
+  if(!r.documento){selectResident(r);setStatus('searchStatus','Cadastro localizado, mas sem CPF/CNS utilizável. O envio fica bloqueado até o cadastro possuir um documento válido.','warn');return}
+  setStatus('searchStatus','Aguarde, carregando a família…','');
+  familyLookup({documento:r.documento}).then(function(resp){
+    if(resp&&resp.ok===true&&resp.autorizada===true&&Array.isArray(resp.membros)&&resp.membros.length){
+      renderFamily(resp,r.documento);return;
+    }
+    selectResident(r);setStatus('searchStatus',text(resp&&resp.message)||'Morador localizado.','ok');
+  }).catch(function(){selectResident(r);setStatus('searchStatus','Morador localizado. A família não pôde ser expandida agora.','warn')});
+}
+function renderFamily(resp,locatorDoc){
+  state.familyId=text(resp.familiaId);el('familyTag').textContent=state.familyId?'Família '+state.familyId:'Família';
+  var root=el('familyResults');root.innerHTML='';el('familyCard').hidden=false;
+  resp.membros.forEach(function(m){
+    var b=document.createElement('button');b.type='button';b.className='person';
+    b.innerHTML='<strong>'+esc(m.nome)+'</strong><span>'+esc(m.nascimento||'Nascimento não informado')+' • '+esc(m.localidade||'Localidade não informada')+'</span>';
+    b.addEventListener('click',function(){selectResident(directResident(m))});root.appendChild(b);
+  });
+  setStatus('searchStatus','Família carregada. Escolha o integrante.','ok');
+  var same=resp.membros.filter(function(m){return digits(m.documentoAcesso)===digits(locatorDoc)})[0];
+  if(resp.membros.length===1&&same)selectResident(directResident(same));
+}
+function selectResident(r){
+  state.resident=r;el('selectedCard').hidden=false;el('serviceCard').hidden=false;
+  var age=ageFromBirth(r.nascimento),doc=r.documento?formatDoc(r.documento):'Documento não disponível';
+  el('selectedResident').innerHTML='<strong>'+esc(r.nome||'Morador')+'</strong><span>Nascimento: '+esc(r.nascimento||'não informado')+(age?' • '+esc(age)+' anos':'')+'</span><span>CPF/CNS: '+esc(doc)+'</span><span>'+esc(r.localidade||'Localidade não informada')+'</span>';
+  updateSend();
+  try{el('serviceCard').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}
+}
+function resetResident(){
+  state.resident=null;state.familyId='';state.sending=false;
+  clearResults();el('selectedCard').hidden=true;el('serviceCard').hidden=true;el('selectedResident').innerHTML='';
+  el('category').value='';el('detail').value='';el('send').disabled=true;setStatus('sendStatus','','');setStatus('searchStatus','','');el('query').value='';
+}
+function updateSend(){el('send').disabled=state.sending||!state.resident||!validDoc(state.resident.documento)||!text(el('category').value)}
+function performSearch(){
+  if(!core||!core.ready||!core.ready()){setStatus('searchStatus','Abra esta função pela Central CSC com sua sessão profissional ativa.','err');return}
+  if(!core.can||!core.can('MORADORES_LER')){setStatus('searchStatus','Este perfil profissional não possui acesso aos moradores desta área.','err');return}
+  var q=text(el('query').value);if(q.length<2){setStatus('searchStatus','Digite pelo menos 2 caracteres.','warn');return}
+  clearResults();state.resident=null;el('selectedCard').hidden=true;el('serviceCard').hidden=true;
+  if(/^\d{1,4}[A-Za-z]?$/.test(q.replace(/\s+/g,''))){
+    setStatus('searchStatus','Aguarde, carregando a família '+q+'…','');
+    familyLookup({familia:q}).then(function(r){if(r&&r.ok===true&&r.autorizada===true&&Array.isArray(r.membros)&&r.membros.length)renderFamily(r,'');else setStatus('searchStatus',text(r&&r.message)||'Família não localizada.','warn')}).catch(function(e){setStatus('searchStatus',text(e&&e.message)||'Não foi possível pesquisar.','err')});
+    return;
+  }
+  setStatus('searchStatus','Aguarde, buscando moradores…','');
+  adminRead('admin_moradores_buscar',{q:q}).then(function(r){
+    if(!r||r.ok!==true){setStatus('searchStatus',text(r&&r.message)||'Busca recusada.','err');return}
+    var list=Array.isArray(r.resultados)?r.resultados:[];renderSearchResults(list);
+    if(list.length===1)chooseSearchResult(list[0]);
+  });
+}
+function queueRequest(payload){
+  var body=new URLSearchParams();Object.keys(payload).forEach(function(k){if(payload[k]!=null)body.set(k,String(payload[k]))});
+  var sent=false;try{if(navigator.sendBeacon)sent=navigator.sendBeacon(API,body)}catch(e){}
+  if(!sent)try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store',keepalive:true}).catch(function(){})}catch(e){}
+}
+function sendAssisted(){
+  if(state.sending||!state.resident)return;
+  var category=text(el('category').value),detail=text(el('detail').value),r=state.resident;
+  if(!validDoc(r.documento)||!category){updateSend();return}
+  state.sending=true;updateSend();setStatus('sendStatus','Enviando para a Central e preparando o WhatsApp…','');
+  var code=requestCode(),id=identity(),s=coreState(),area=s.area||{},resp=responsible(),professional=text(id.nome)||'Profissional da área',profile=text(id.perfil)||text(s.mode).toUpperCase();
+  var cleanDetail=detail||category;
+  var audit='Atendimento assistido pelo profissional: '+professional+(profile?' — '+profile:'');
+  var description=audit+'\n'+cleanDetail;
+  queueRequest({
+    action:'publico_solicitacao_ubs_criar',requestId:requestId('assistwrite'),areaId:areaId(),codigoSolicitacao:code,
+    documento:digits(r.documento),nome:r.nome,nascimento:r.nascimento,localidade:r.localidade,categoria:category,
+    enviadoEm:recifeNow(),descricao:description,origem:'CENTRAL_CSC_ATENDIMENTO_ASSISTIDO',
+    tacsResponsavel:text(resp&&resp.nomeCompleto)||professional,unidadeNome:text(area.unidadeNome||area.unidadeId)
+  });
+  var msg='*SOLICITAÇÃO ASSISTIDA — CONECTA SAÚDE COMUNITÁRIA*'
+    +'\nOrigem: atendimento assistido por profissional da área'
+    +'\nProfissional: '+professional+(profile?' — '+profile:'')
+    +'\nCódigo: '+code
+    +'\nData e horário do envio: '+recifeNow()
+    +'\nCategoria: '+category
+    +'\nNome completo: '+r.nome
+    +'\nData de nascimento: '+r.nascimento
+    +'\nCPF/CNS: '+formatDoc(r.documento)
+    +'\nOnde mora: '+r.localidade
+    +'\nDescrição: '+cleanDetail;
+  var phone=whatsappNumber(),wa=phone?'https://wa.me/'+phone+'?text='+encodeURIComponent(msg):'';
+  resetResident();
+  if(wa){setTimeout(function(){window.location.href=wa},40)}
+  else setStatus('searchStatus','Solicitação encaminhada à Central. O WhatsApp do responsável desta área não está cadastrado.','warn');
+}
+el('back').addEventListener('click',function(){try{if(window.parent&&window.parent!==window&&window.parent.ConectaCentralShellV1&&typeof window.parent.ConectaCentralShellV1.voltar==='function'){window.parent.ConectaCentralShellV1.voltar();return}}catch(e){}window.location.href=core&&core.centralUrl?core.centralUrl():'/atendimento-acs-farmaceutico/central-administrativa-tacs.html'});
+el('search').addEventListener('click',performSearch);
+el('query').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();performSearch()}});
+el('changeResident').addEventListener('click',function(){state.resident=null;el('selectedCard').hidden=true;el('serviceCard').hidden=true;updateSend();try{el('query').focus()}catch(e){}});
+el('category').addEventListener('change',updateSend);
+el('send').addEventListener('click',sendAssisted);
+window.addEventListener('pageshow',function(e){if(e.persisted)resetResident()});
+scopeLabels();
+if(!core||!core.ready||!core.ready())setStatus('searchStatus','Acesso disponível somente a partir da Central CSC autenticada.','warn');
+})();
+</script>
+</body>
+</html>
