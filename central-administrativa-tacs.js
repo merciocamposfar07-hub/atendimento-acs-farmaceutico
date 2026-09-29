@@ -884,7 +884,7 @@ function moduleUrl(name,options){
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260919-recados-snapshot-completo-v5';
   if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20260920-loader-cache-perf-v14';
   if(name==='assistida')return '/atendimento-acs-farmaceutico/solicitacao-assistida-csc.html?area='+area+from+'&v=20260929-assistida-v4';
-  if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision;
+  if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260929-salvar-confirmacao-v1';
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='territorio')return '/atendimento-acs-farmaceutico/teste-v1/painel-tacs-areas-v1.html?from=central&localfirst=1&v='+territoryRevision;
   if(name==='municipios')return '/atendimento-acs-farmaceutico/painel-oficial-organizacoes-municipios.html?from=central&v='+municipiosRevision;
