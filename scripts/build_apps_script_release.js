@@ -164,6 +164,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_52_SolicitacoesMoradoresUbsV1.gs',
     marker: 'TACS_SOLICITACOES_UBS_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_53_SolicitacaoAssistidaV1.gs',
+    marker: 'TACS_SOLICITACAO_ASSISTIDA_V1'
   }
 ];
 
