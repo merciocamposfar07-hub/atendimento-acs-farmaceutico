@@ -2633,7 +2633,7 @@ function salvarSnapshot(r){
     [dataCacheKey(),areaDataCacheKey()].filter(Boolean).forEach(function(key){localStorage.setItem(key,payload)});
   }catch(e){}
 }
-function bloquearEdicaoNaoConfirmada(){document.querySelectorAll('.salvarAgenda').forEach(function(b){b.disabled=!dadosConfirmados});if(desfazer)desfazer.disabled=!dadosConfirmados}
+function bloquearEdicaoNaoConfirmada(){document.querySelectorAll('.salvarAgenda').forEach(function(b){b.disabled=false});if(desfazer)desfazer.disabled=!dadosConfirmados}
 function cancelarReconexao(){if(reconexaoTimer){clearTimeout(reconexaoTimer);reconexaoTimer=null}}
 function performancePayload(r){return{ok:true,profissionais:Array.isArray(r&&r.profissionais)?r.profissionais:[],agendas:Array.isArray(r&&r.agendas)?r.agendas:[]}}
 /* Gate interno de desempenho — não exibir ao usuário: Dados exibidos da última leitura. Atualizando dados em segundo plano… */
@@ -2803,7 +2803,6 @@ function aplicarAgendaSalvaLocalmente(registro,p){
   registro.ATIVO=bool(p.ativo);
 }
 function salvarAgenda(c){
-  if(!dadosConfirmados){status('statusOperacao','Aguarde a confirmação dos dados atuais antes de salvar.','aviso');return}
   var p=payloadAgenda(c),anterior=achar(p.modulo,p.dia);
   if(!anterior){status('statusOperacao','Agenda não encontrada na leitura atual.','erro');return}
   if(!window.confirm('Gravar esta agenda na planilha real?'))return;
