@@ -186,14 +186,12 @@ function directResident(item){
 }
 function chooseSearchResult(item){
   var r=directResident(item);
-  if(!r.documento){selectResident(r);setStatus('searchStatus','Cadastro localizado, mas sem CPF/CNS utilizável. O envio fica bloqueado até o cadastro possuir um documento válido.','warn');return}
-  setStatus('searchStatus','Aguarde, carregando a família…','');
-  familyLookup({documento:r.documento}).then(function(resp){
-    if(resp&&resp.ok===true&&resp.autorizada===true&&Array.isArray(resp.membros)&&resp.membros.length){
-      renderFamily(resp,r.documento);return;
-    }
-    selectResident(r);setStatus('searchStatus',text(resp&&resp.message)||'Morador localizado.','ok');
-  }).catch(function(){selectResident(r);setStatus('searchStatus','Morador localizado. A família não pôde ser expandida agora.','warn')});
+  selectResident(r);
+  if(!r.documento){
+    setStatus('searchStatus','Cadastro localizado, mas sem CPF/CNS utilizável. O envio fica bloqueado até o cadastro possuir um documento válido.','warn');
+    return;
+  }
+  setStatus('searchStatus','Morador selecionado. Escolha o serviço.','ok');
 }
 function renderFamily(resp,locatorDoc){
   state.familyId=text(resp.familiaId);el('familyTag').textContent=state.familyId?'Família '+state.familyId:'Família';
