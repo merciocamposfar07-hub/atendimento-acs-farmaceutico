@@ -18,6 +18,7 @@ label{display:block;font-weight:850;margin:13px 0 6px}.field,.select,.textarea{w
 .results{display:grid;gap:8px;margin-top:12px}.person{width:100%;text-align:left;border:1px solid #316785;border-radius:15px;background:#0a2337;color:#fff;padding:12px}.person strong{display:block;font-size:1rem}.person span{display:block;color:var(--muted);font-size:.89rem;margin-top:3px}.person:active{transform:scale(.995)}
 .family-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.family-tag{font-size:.79rem;border:1px solid #4f87a4;border-radius:999px;padding:5px 9px;color:#d9eef7}.selected{border-color:#55c980;background:#0d3429}.selected-grid{display:grid;gap:4px}.selected-grid strong{font-size:1.03rem}.selected-grid span{color:#c9dde6;font-size:.91rem}
 .security{font-size:.86rem;color:#bdd3de;border-top:1px solid rgba(255,255,255,.08);margin-top:13px;padding-top:11px}
+.assist-schedule{margin-top:14px;padding:14px;border:1px solid #3c7697;border-radius:17px;background:#081f31}.assist-schedule h3{margin:0 0 5px;font-size:1rem}.assist-schedule>p{margin:0 0 11px}.schedule-grid{display:grid;gap:9px}.schedule-choice{width:100%;text-align:left;border:1px solid #4e8ba9;border-radius:14px;background:#0d2a40;color:#fff;padding:12px}.schedule-choice strong,.schedule-choice span,.schedule-choice b{display:block}.schedule-choice strong{font-size:.98rem}.schedule-choice span{margin-top:4px;color:#bdd3de;font-size:.88rem}.schedule-choice b{margin-top:5px;color:#91e7af;font-size:.88rem}.schedule-choice.selected{border-color:#66df94;background:#103c2d;box-shadow:0 0 0 2px rgba(102,223,148,.13)}.schedule-choice:disabled{opacity:.5}.dental-card{border:1px solid #315f78;border-radius:15px;padding:12px;background:#0b2538}.dental-card>strong,.dental-card>span{display:block}.dental-card>span{color:#bdd3de;margin-top:3px}.dental-actions{display:grid;gap:8px;margin-top:10px}.dental-action{min-height:46px;border:1px solid #4e8ba9;border-radius:12px;background:#12344a;color:#fff;padding:10px;text-align:left;font-weight:850}.dental-action.selected{border-color:#66df94;background:#103c2d}.dental-action:disabled{opacity:.45}
 footer{text-align:center;color:#7899aa;font-size:.78rem;padding:8px 2px}
 [hidden]{display:none!important}
 @media(max-width:520px){.app{padding-left:11px;padding-right:11px}.row{grid-template-columns:1fr}.action{width:100%}.top h1{font-size:1.13rem}.back{padding:0 10px}}
@@ -69,7 +70,6 @@ footer{text-align:center;color:#7899aa;font-size:.78rem;padding:8px 2px}
       <option>Solicitar atendimento com a Enfermeira Chefe</option>
       <option>Solicitar atendimento com nutricionista</option>
       <option>Solicitar atendimento odontológico (dentista)</option>
-      <option>Solicitar atendimento odontológico de emergência (dentista)</option>
       <option value="Implanon">Implanon — informações ou solicitação do implante</option>
       <option>Solicitar renovação de receita médica</option>
       <option>Solicitar marcação de exames — Ultrassom / Fisioterapeuta</option>
@@ -83,6 +83,12 @@ footer{text-align:center;color:#7899aa;font-size:.78rem;padding:8px 2px}
       <option>Informações sobre dias, horários e funcionamento da Unidade de Saúde</option>
       <option>Outro assunto comunitário relacionado à Unidade de Saúde</option>
     </select>
+    <section id="scheduleBox" class="assist-schedule" hidden>
+      <h3 id="scheduleTitle">Agenda do profissional</h3>
+      <p id="scheduleHelp">Escolha um atendimento disponível.</p>
+      <div id="scheduleSlots" class="schedule-grid"></div>
+      <div id="scheduleStatus" class="status" aria-live="polite"></div>
+    </section>
     <label for="detail">Descrição / observação</label>
     <textarea id="detail" class="textarea" placeholder="Informe somente o necessário para a solicitação."></textarea>
     <button id="send" class="action send" type="button" disabled>Enviar pelo WhatsApp</button>
@@ -99,7 +105,7 @@ footer{text-align:center;color:#7899aa;font-size:.78rem;padding:8px 2px}
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var core=window.ConectaModuleCoreV1;
-var state={resident:null,familyId:'',sending:false};
+var state={resident:null,familyId:'',sending:false,publicData:null,publicLoading:false,selectedSchedule:null,dentalSlots:[],dentalLoading:false,dentalSelection:null,requestCode:''};
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
 function digits(v){return text(v).replace(/\D/g,'')}
@@ -149,12 +155,12 @@ function jsonp(action,payload){
     script.src=API+'?'+p.toString()+'&_='+Date.now();document.head.appendChild(script);
   });
 }
-function adminRead(action,extra){
+function assistedRead(action,extra){
   return new Promise(function(resolve){
     var rid=requestId('assistread'),payload=core.session(Object.assign({areaId:areaId(),escopo:'solicitacao-assistida'},extra||{})),body=new URLSearchParams(),started=Date.now(),finished=false;
     Object.keys(payload).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});body.set('action',action);body.set('requestId',rid);
     function finish(r){if(finished)return;finished=true;resolve(r||{ok:false,message:'Resposta vazia do servidor.'})}
-    function poll(){if(finished)return;jsonp('admin_moradores_result',{requestId:rid}).then(function(r){if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}if(Date.now()-started>=18000){finish({ok:false,message:'A consulta ainda não foi confirmada. Tente novamente.'});return}setTimeout(poll,480)}).catch(function(){if(Date.now()-started>=18000)finish({ok:false,message:'A consulta não foi confirmada.'});else setTimeout(poll,650)})}
+    function poll(){if(finished)return;jsonp('assistida_moradores_result',{requestId:rid}).then(function(r){if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}if(Date.now()-started>=18000){finish({ok:false,message:'A consulta ainda não foi confirmada. Tente novamente.'});return}setTimeout(poll,480)}).catch(function(){if(Date.now()-started>=18000)finish({ok:false,message:'A consulta não foi confirmada.'});else setTimeout(poll,650)})}
     try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});setTimeout(poll,180)}catch(e){finish({ok:false,message:'Não foi possível iniciar a consulta.'})}
   });
 }
@@ -209,14 +215,115 @@ function selectResident(r){
   try{el('serviceCard').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}
 }
 function resetResident(){
-  state.resident=null;state.familyId='';state.sending=false;
+  state.resident=null;state.familyId='';state.sending=false;state.selectedSchedule=null;state.dentalSelection=null;state.dentalSlots=[];state.dentalLoading=false;state.requestCode='';
   clearResults();el('selectedCard').hidden=true;el('serviceCard').hidden=true;el('selectedResident').innerHTML='';
-  el('category').value='';el('detail').value='';el('send').disabled=true;setStatus('sendStatus','','');setStatus('searchStatus','','');el('query').value='';
+  el('category').value='';el('detail').value='';el('send').disabled=true;el('scheduleBox').hidden=true;el('scheduleSlots').innerHTML='';setStatus('scheduleStatus','','');setStatus('sendStatus','','');setStatus('searchStatus','','');el('query').value='';
 }
-function updateSend(){el('send').disabled=state.sending||!state.resident||!validDoc(state.resident.documento)||!text(el('category').value)}
+function normalizeText(v){var s=text(v).toLowerCase();return s.normalize?s.normalize('NFD').replace(/[\u0300-\u036f]/g,''):s}
+function normalizeDate(v){var s=text(v),m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);return m?m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2):''}
+function formatScheduleDate(v){var n=normalizeDate(v);if(!n)return text(v);var p=n.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
+function recifeToday(){try{var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),o={};p.forEach(function(x){o[x.type]=x.value});return o.year+'-'+o.month+'-'+o.day}catch(e){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}}
+function lastClock(v){var a=[],re=/\b([01]?\d|2[0-3]):([0-5]\d)\b/g,m,s=text(v);while((m=re.exec(s)))a.push(('0'+Number(m[1])).slice(-2)+':'+m[2]);return a.length?a[a.length-1]:''}
+function categoryModule(v){var n=normalizeText(v);if(n.indexOf('odontologico')!==-1||n.indexOf('dentist')!==-1)return'odontologia';if(n.indexOf('enfermeir')!==-1)return'enfermeira';if(n.indexOf('nutric')!==-1)return'nutricionista';if(n.indexOf('medica')!==-1||n.indexOf('medico')!==-1||n.indexOf('consulta medica')!==-1)return'medica';return''}
+function unavailableStatus(v){var n=normalizeText(v);return['cancelado','sem atendimento','feriado','desativado'].indexOf(n)!==-1}
+function scheduleRequired(){return Boolean(categoryModule(el('category').value))}
+function scheduleReady(){var module=categoryModule(el('category').value);if(!module)return true;if(module==='odontologia')return Boolean(state.dentalSelection&&state.dentalSelection.confirmed);return Boolean(state.selectedSchedule&&state.selectedSchedule.module===module)}
+function professionalTitle(module){return{medica:'Agenda da Médica',enfermeira:'Agenda da Enfermeira Chefe',nutricionista:'Agenda da Nutricionista',odontologia:'Agenda da Dentista'}[module]||'Agenda do profissional'}
+function serviceDateInfo(){
+  var d=state.dentalSelection;
+  if(d&&d.confirmed)return{data:d.date||'',expiry:d.expiresAt||'',type:d.type||'',line:'Dia escolhido: '+d.day+' — '+formatScheduleDate(d.date)+'\nTipo de vaga odontológica: '+(d.type==='emergencial'?'emergencial':'comum')};
+  var s=state.selectedSchedule;
+  if(s)return{data:s.date||'',expiry:s.expiry||'',type:'',line:'Atendimento escolhido: '+s.day+(s.date?' — '+formatScheduleDate(s.date):'')+(s.time?' — '+s.time:'')+(s.service?' — '+s.service:'')};
+  return{data:'',expiry:'',type:'',line:''};
+}
+function clearSchedule(){
+  state.selectedSchedule=null;state.dentalSelection=null;state.dentalSlots=[];state.dentalLoading=false;
+  el('scheduleSlots').innerHTML='';el('scheduleBox').hidden=true;setStatus('scheduleStatus','','');
+}
+function loadPublicAgendas(){
+  if(state.publicData)return Promise.resolve(state.publicData);
+  if(state.publicLoading)return new Promise(function(resolve){var t=setInterval(function(){if(!state.publicLoading){clearInterval(t);resolve(state.publicData)}},80)});
+  state.publicLoading=true;
+  return jsonp('painel_publico',{areaId:areaId()}).then(function(r){state.publicLoading=false;if(r&&r.ok===true)state.publicData=r;return state.publicData}).catch(function(){state.publicLoading=false;return null});
+}
+function renderProfessionalAgenda(module){
+  var box=el('scheduleBox'),slots=el('scheduleSlots');box.hidden=false;el('scheduleTitle').textContent=professionalTitle(module);el('scheduleHelp').textContent='Escolha um dia publicado pela Unidade de Saúde.';slots.innerHTML='';
+  var modules=state.publicData&&state.publicData.modules||{},days=Array.isArray(modules[module])?modules[module]:[];
+  if(!days.length){setStatus('scheduleStatus','Nenhuma programação publicada para este profissional.','warn');updateSend();return}
+  var available=0;
+  days.forEach(function(item,index){
+    var active=item&&item.active===true&&item.closedNow!==true&&!unavailableStatus(item.status);
+    if(active)available++;
+    var b=document.createElement('button');b.type='button';b.className='schedule-choice';b.disabled=!active;b.dataset.index=String(index);
+    var service=text(item.service||item.message)||(active?'Atendimento disponível':'Sem atendimento');
+    b.innerHTML='<strong>'+esc(text(item.day)||'Dia informado')+'</strong><span>'+(item.date?esc(formatScheduleDate(item.date)):'')+(item.time?' • '+esc(item.time):'')+'</span><b>'+esc(service)+'</b>';
+    b.addEventListener('click',function(){
+      slots.querySelectorAll('.schedule-choice').forEach(function(x){x.classList.remove('selected')});b.classList.add('selected');
+      state.selectedSchedule={module:module,day:text(item.day),date:normalizeDate(item.date),time:text(item.time),expiry:text(item.closeAt)||lastClock(item.time),service:service};
+      var detail=el('detail');if(detail&&!text(detail.value))detail.value=serviceDateInfo().line;
+      setStatus('scheduleStatus','Atendimento selecionado.','ok');updateSend();
+    });
+    slots.appendChild(b);
+  });
+  setStatus('scheduleStatus',available?'Toque no atendimento desejado.':'Não há atendimento disponível nesta programação.',available?'':'warn');updateSend();
+}
+function dentalNumber(row,type){var vals=type==='emergencial'?[row.vagasEmergenciais,row.emergency,row.emergencial,row.vagas_emergenciais]:[row.vagasComuns,row.common,row.comum,row.vagas_comuns];for(var i=0;i<vals.length;i++)if(vals[i]!==''&&vals[i]!=null&&Number.isFinite(Number(vals[i])))return Math.max(0,Number(vals[i]));return null}
+function normalizeDentalRows(data){
+  var today=recifeToday(),out=[];
+  (Array.isArray(data&&data.dias)?data.dias:[]).forEach(function(row,index){
+    var day=text(row&& (row.dia||row.day)),date=normalizeDate(row&&(row.data||row.date));if(!date||date<today)return;
+    var expiry=text(row.expiraAs||row.encerraHorario||row.encerra_horario||row.expireAt||'');
+    if(row.ativo!==undefined&&row.ativo!==null&&row.ativo!==''&&['false','0','nao','não','inativo'].indexOf(normalizeText(row.ativo))!==-1)return;
+    out.push({id:text(row.id||row.codigo||row.row)||day+'-'+date+'-'+index,day:day,date:date,expiresAt:lastClock(expiry)||expiry,common:dentalNumber(row,'comum'),emergency:dentalNumber(row,'emergencial')});
+  });
+  out.sort(function(a,b){return a.date.localeCompare(b.date)});return out;
+}
+function renderDentalAgenda(){
+  var box=el('scheduleBox'),root=el('scheduleSlots');box.hidden=false;el('scheduleTitle').textContent='Agenda da Dentista';el('scheduleHelp').textContent='Escolha o dia e o tipo de vaga disponível.';root.innerHTML='';
+  state.dentalSlots.forEach(function(slot){
+    var card=document.createElement('div');card.className='dental-card';card.innerHTML='<strong>'+esc(slot.day||'Dia publicado')+'</strong><span>'+esc(formatScheduleDate(slot.date))+'</span>';
+    var actions=document.createElement('div');actions.className='dental-actions';
+    [['comum',slot.common],['emergencial',slot.emergency]].forEach(function(pair){
+      var type=pair[0],count=pair[1],b=document.createElement('button');b.type='button';b.className='dental-action';b.disabled=state.dentalLoading||count===null||count<=0;
+      b.textContent=type==='emergencial'?'🚨 '+(count==null?'Vaga de emergência não informada':count+' vaga(s) de emergência'):(count==null?'Vaga comum não informada':count+' vaga(s) comum(ns)');
+      if(state.dentalSelection&&state.dentalSelection.id===slot.id&&state.dentalSelection.type===type)b.classList.add('selected');
+      b.addEventListener('click',function(){reserveDental(slot,type)});actions.appendChild(b);
+    });
+    card.appendChild(actions);root.appendChild(card);
+  });
+  if(state.dentalLoading)setStatus('scheduleStatus','Confirmando a vaga na agenda…','');
+  else if(!state.dentalSlots.length)setStatus('scheduleStatus','Nenhuma vaga odontológica publicada no momento.','warn');
+  else if(state.dentalSelection&&state.dentalSelection.confirmed)setStatus('scheduleStatus','Vaga reservada. O envio está liberado.','ok');
+  else setStatus('scheduleStatus','Toque na vaga desejada. A reserva será confirmada antes do envio.','');
+  updateSend();
+}
+function loadDentalAgenda(){
+  state.dentalLoading=true;state.dentalSelection=null;state.selectedSchedule=null;renderDentalAgenda();
+  jsonp('agenda',{areaId:areaId()}).then(function(r){state.dentalSlots=normalizeDentalRows(r);state.dentalLoading=false;renderDentalAgenda()}).catch(function(){state.dentalSlots=[];state.dentalLoading=false;renderDentalAgenda();setStatus('scheduleStatus','Não foi possível carregar a agenda odontológica agora.','err')});
+}
+function reserveDental(slot,type){
+  if(state.dentalLoading||!slot)return;
+  var count=type==='emergencial'?slot.emergency:slot.common;if(count===null||count<=0)return;
+  if(!state.requestCode)state.requestCode=requestCode();
+  state.dentalLoading=true;state.dentalSelection={id:slot.id,day:slot.day,date:slot.date,type:type,expiresAt:slot.expiresAt||'',requestId:state.requestCode,confirmed:false};renderDentalAgenda();
+  jsonp('reservar_get',{areaId:areaId(),requestId:state.requestCode,date:slot.date,type:type}).then(function(r){
+    if(!r||r.ok!==true)throw new Error(text(r&&r.message)||'A vaga não foi confirmada.');
+    state.dentalLoading=false;state.dentalSelection.confirmed=true;
+    if(Number.isFinite(Number(r.remaining))){if(type==='emergencial')slot.emergency=Math.max(0,Number(r.remaining));else slot.common=Math.max(0,Number(r.remaining))}
+    var detail=el('detail');if(detail&&!text(detail.value))detail.value=serviceDateInfo().line;renderDentalAgenda();
+  }).catch(function(e){state.dentalLoading=false;state.dentalSelection=null;state.requestCode='';renderDentalAgenda();setStatus('scheduleStatus',text(e&&e.message)||'Não foi possível reservar essa vaga.','err')});
+}
+function onCategoryChange(){
+  state.selectedSchedule=null;state.dentalSelection=null;state.requestCode='';var module=categoryModule(el('category').value);
+  if(!module){clearSchedule();updateSend();return}
+  el('scheduleBox').hidden=false;el('scheduleTitle').textContent=professionalTitle(module);el('scheduleSlots').innerHTML='';setStatus('scheduleStatus','Carregando a agenda…','');
+  if(module==='odontologia'){loadDentalAgenda();return}
+  loadPublicAgendas().then(function(data){if(categoryModule(el('category').value)!==module)return;if(!data){setStatus('scheduleStatus','Não foi possível carregar a agenda agora.','err');updateSend();return}renderProfessionalAgenda(module)});
+  updateSend();
+}
+function updateSend(){el('send').disabled=state.sending||!state.resident||!validDoc(state.resident.documento)||!text(el('category').value)||!scheduleReady()}
 function performSearch(){
   if(!core||!core.ready||!core.ready()){setStatus('searchStatus','Abra esta função pela Central CSC com sua sessão profissional ativa.','err');return}
-  if(!core.can||!core.can('MORADORES_LER')){setStatus('searchStatus','Este perfil profissional não possui acesso aos moradores desta área.','err');return}
   var q=text(el('query').value);if(q.length<2){setStatus('searchStatus','Digite pelo menos 2 caracteres.','warn');return}
   clearResults();state.resident=null;el('selectedCard').hidden=true;el('serviceCard').hidden=true;
   if(/^\d{1,4}[A-Za-z]?$/.test(q.replace(/\s+/g,''))){
@@ -225,7 +332,7 @@ function performSearch(){
     return;
   }
   setStatus('searchStatus','Aguarde, buscando moradores…','');
-  adminRead('admin_moradores_buscar',{q:q}).then(function(r){
+  assistedRead('assistida_moradores_buscar',{q:q}).then(function(r){
     if(!r||r.ok!==true){setStatus('searchStatus',text(r&&r.message)||'Busca recusada.','err');return}
     var list=Array.isArray(r.resultados)?r.resultados:[];renderSearchResults(list);
     if(list.length===1)chooseSearchResult(list[0]);
@@ -236,45 +343,56 @@ function queueRequest(payload){
   var sent=false;try{if(navigator.sendBeacon)sent=navigator.sendBeacon(API,body)}catch(e){}
   if(!sent)try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store',keepalive:true}).catch(function(){})}catch(e){}
 }
+function assistedOrigin(){
+  var m=core&&core.mode?core.mode():'',label='Administrador',code='CENTRAL_CSC_ATENDIMENTO_ASSISTIDO_ADMIN';
+  if(m==='ubs'){label='UBS';code='CENTRAL_CSC_ATENDIMENTO_ASSISTIDO_UBS'}
+  else if(m==='tacs'){label='TACS';code='CENTRAL_CSC_ATENDIMENTO_ASSISTIDO_TACS'}
+  return{label:label,code:code};
+}
+function openWhatsAppOutsideModule(url){
+  try{if(window.top&&window.top!==window){window.top.location.href=url;return}}catch(e){}
+  window.location.href=url;
+}
 function sendAssisted(){
   if(state.sending||!state.resident)return;
   var category=text(el('category').value),detail=text(el('detail').value),r=state.resident;
-  if(!validDoc(r.documento)||!category){updateSend();return}
-  state.sending=true;updateSend();setStatus('sendStatus','Enviando para a Central e preparando o WhatsApp…','');
-  var code=requestCode(),id=identity(),s=coreState(),area=s.area||{},resp=responsible(),professional=text(id.nome)||'Profissional da área',profile=text(id.perfil)||text(s.mode).toUpperCase();
+  if(!validDoc(r.documento)||!category||!scheduleReady()){updateSend();return}
+  state.sending=true;updateSend();setStatus('sendStatus','Registrando na Central e preparando o WhatsApp…','');
+  var code=state.requestCode||requestCode(),id=identity(),s=coreState(),area=s.area||{},resp=responsible(),professional=text(id.nome)||'Profissional da área',profile=text(id.perfil)||text(s.mode).toUpperCase(),origin=assistedOrigin(),schedule=serviceDateInfo();
   var cleanDetail=detail||category;
-  var audit='Atendimento assistido pelo profissional: '+professional+(profile?' — '+profile:'');
-  var description=audit+'\n'+cleanDetail;
+  var audit='Atendimento assistido — '+origin.label+' | Profissional: '+professional+(profile?' — '+profile:'');
+  var description=audit+(schedule.line?'\n'+schedule.line:'')+'\n'+cleanDetail;
   queueRequest({
     action:'publico_solicitacao_ubs_criar',requestId:requestId('assistwrite'),areaId:areaId(),codigoSolicitacao:code,
     documento:digits(r.documento),nome:r.nome,nascimento:r.nascimento,localidade:r.localidade,categoria:category,
-    enviadoEm:recifeNow(),descricao:description,origem:'CENTRAL_CSC_ATENDIMENTO_ASSISTIDO',
-    tacsResponsavel:text(resp&&resp.nomeCompleto)||professional,unidadeNome:text(area.unidadeNome||area.unidadeId)
+    enviadoEm:recifeNow(),descricao:description,tipoVaga:schedule.type,dataServico:schedule.data,horarioExpiracao:schedule.expiry,
+    origem:origin.code,tacsResponsavel:text(resp&&resp.nomeCompleto)||professional,unidadeNome:text(area.unidadeNome||area.unidadeId)
   });
   var msg='*SOLICITAÇÃO ASSISTIDA — CONECTA SAÚDE COMUNITÁRIA*'
-    +'\nOrigem: atendimento assistido por profissional da área'
+    +'\nOrigem: Atendimento assistido — '+origin.label
     +'\nProfissional: '+professional+(profile?' — '+profile:'')
     +'\nCódigo: '+code
     +'\nData e horário do envio: '+recifeNow()
     +'\nCategoria: '+category
+    +(schedule.line?'\n'+schedule.line:'')
     +'\nNome completo: '+r.nome
     +'\nData de nascimento: '+r.nascimento
     +'\nCPF/CNS: '+formatDoc(r.documento)
     +'\nOnde mora: '+r.localidade
     +'\nDescrição: '+cleanDetail;
   var phone=whatsappNumber(),wa=phone?'https://wa.me/'+phone+'?text='+encodeURIComponent(msg):'';
-  resetResident();
-  if(wa){setTimeout(function(){window.location.href=wa},40)}
-  else setStatus('searchStatus','Solicitação encaminhada à Central. O WhatsApp do responsável desta área não está cadastrado.','warn');
+  if(wa){resetResident();openWhatsAppOutsideModule(wa)}
+  else{state.sending=false;updateSend();setStatus('sendStatus','Solicitação registrada na Central. O WhatsApp do TACS responsável desta área não está cadastrado.','warn')}
 }
+
 el('back').addEventListener('click',function(){try{if(window.parent&&window.parent!==window&&window.parent.ConectaCentralShellV1&&typeof window.parent.ConectaCentralShellV1.voltar==='function'){window.parent.ConectaCentralShellV1.voltar();return}}catch(e){}window.location.href=core&&core.centralUrl?core.centralUrl():'/atendimento-acs-farmaceutico/central-administrativa-tacs.html'});
 el('search').addEventListener('click',performSearch);
 el('query').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();performSearch()}});
 el('changeResident').addEventListener('click',function(){state.resident=null;el('selectedCard').hidden=true;el('serviceCard').hidden=true;updateSend();try{el('query').focus()}catch(e){}});
-el('category').addEventListener('change',updateSend);
+el('category').addEventListener('change',onCategoryChange);
 el('send').addEventListener('click',sendAssisted);
 window.addEventListener('pageshow',function(e){if(e.persisted)resetResident()});
-scopeLabels();
+scopeLabels();loadPublicAgendas();
 if(!core||!core.ready||!core.ready())setStatus('searchStatus','Acesso disponível somente a partir da Central CSC autenticada.','warn');
 })();
 </script>
