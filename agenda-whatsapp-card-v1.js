@@ -130,6 +130,35 @@ function drawGroup(data){
     ctx.fillStyle='#f8fbfb';roundRect(ctx,panelX,panelY,panelW,panelH,54);ctx.fill();
     var days=data.days.slice(0,7),rowGap=18,top=panelY+42,available=panelBottom-top-38;
     var rowH=Math.min(205,Math.max(125,Math.floor((available-rowGap*Math.max(0,days.length-1))/Math.max(1,days.length))));
+    // Apenas o card da enfermeira do Posto Matias inclui a descrição dos dias ativos.
+    var nurseMessages=norm(data.unitName||CARD_UNIT).indexOf('MATIAS')!==-1&&days.some(function(day){return norm(day.module||data.title).indexOf('ENFERMEIR')!==-1&&day.active&&txt(day.message)});
+    if(nurseMessages){
+      ctx.font='700 25px -apple-system,BlinkMacSystemFont,Arial';
+      var rows=days.map(function(day){
+        var lines=day.active?wrapLines(ctx,day.message,804).filter(Boolean):[];
+        return{day:day,lines:lines,height:136+lines.length*30};
+      });
+      var total=rows.reduce(function(sum,row){return sum+row.height},0);
+      var scale=Math.min(1,(available-rowGap*Math.max(0,rows.length-1))/Math.max(1,total)),cursor=top;
+      rows.forEach(function(row){
+        var day=row.day,height=row.height*scale;
+        ctx.fillStyle=day.active?'#ffffff':'#fff4f4';roundRect(ctx,102,cursor,876,height,30);ctx.fill();
+        ctx.strokeStyle=day.active?'#d7e4e8':'#e2b6b6';ctx.lineWidth=3;ctx.stroke();
+        ctx.save();ctx.translate(138,cursor);ctx.scale(scale,scale);
+        ctx.fillStyle='#09234a';ctx.font='900 31px -apple-system,BlinkMacSystemFont,Arial';
+        ctx.fillText((day.extra?'DIA EXTRA • ':'')+(day.day||'Dia'),0,34);
+        ctx.font='700 25px -apple-system,BlinkMacSystemFont,Arial';
+        var meta=[];if(day.date)meta.push(dateBr(day.date));if(day.time)meta.push(day.time);
+        ctx.fillText(meta.join(' • ')||'Data/horário não informado',0,63);
+        ctx.font='800 24px -apple-system,BlinkMacSystemFont,Arial';ctx.fillText(day.active?'AGENDA ATIVA':'AGENDA INATIVA',0,91);
+        ctx.fillStyle='#0a6538';ctx.fillText(day.common+' vaga(s) comum(ns)',0,119);
+        ctx.fillStyle='#8f2f2f';ctx.fillText(day.emergency+' emergência',387,119);
+        ctx.fillStyle='#09234a';ctx.font='700 25px -apple-system,BlinkMacSystemFont,Arial';
+        row.lines.forEach(function(line,index){ctx.fillText(line,0,149+index*30)});
+        ctx.restore();cursor+=height+rowGap;
+      });
+      drawFooter(ctx);return c;
+    }
     days.forEach(function(day,index){
       var ry=top+index*(rowH+rowGap),compact=rowH<170,dark='#09234a';
       ctx.fillStyle=day.active?'#ffffff':'#fff4f4';roundRect(ctx,102,ry,876,rowH,30);ctx.fill();
