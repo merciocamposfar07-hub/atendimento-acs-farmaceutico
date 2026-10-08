@@ -699,24 +699,56 @@ function renderConfirmedNotification(result,areaId){
   return true;
 }
 function notificationPostIsolated(action,areaId,cb){
-  var seq=++notificationRemoteSeq,id=requestId(action),body=new URLSearchParams(),started=Date.now(),finished=false,payload=session({areaId:areaId});
+  /* Consulta isolada: aguarda até 60s por tentativa e recupera falhas temporárias.
+     Cada tentativa usa um requestId próprio; respostas antigas não encerram a atual. */
+  var seq=++notificationRemoteSeq,finished=false,attempt=0,generation=0,maxAttempts=3,waitMs=60000;
   if(action==='admin_notificacoes_saude_remota')notificationLatestStarted[normArea(areaId)]=seq;
-  Object.keys(payload).forEach(function(k){body.set(k,payload[k])});
-  body.set('action',action);body.set('requestId',id);
-  function finish(result){if(finished)return;finished=true;cb(result||{ok:false,message:'Resposta vazia.'},seq)}
-  function pollResult(){
-    if(finished)return;
-    jsonp('admin_notificacoes_saude_result',{requestId:id},function(r){
-      if(finished)return;
-      if(r&&r.ok===true&&r.pendente===false){finish(r.result);return}
-      if(Date.now()-started>=22000){finish({ok:false,temporario:true,message:'A validação das notificações não terminou agora.'});return}
-      setTimeout(pollResult,650);
-    });
+  function current(run){return !finished&&run===generation}
+  function finish(result){if(finished)return;finished=true;generation++;cb(result||{ok:false,message:'Resposta vazia.'},seq)}
+  function temporary(result){
+    if(!result)return true;
+    if(result.temporario===true)return true;
+    return /temporariamente|indispon[ií]vel|ainda n[aã]o ficou|HTTP\s*(?:429|5\d\d)/i.test(text(result.message));
   }
-  try{
-    fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});
-    setTimeout(pollResult,280);
-  }catch(e){finish({ok:false,message:'Não foi possível iniciar a validação das notificações.'})}
+  function retry(result,run){
+    if(!current(run))return;
+    if(attempt>=maxAttempts){finish(result);return}
+    generation++; // invalida também o polling que já estiver em andamento
+    var pending=generation;
+    setTimeout(function(){if(current(pending))startAttempt()},attempt*1500);
+  }
+  function startAttempt(){
+    if(finished)return;
+    attempt++;
+    var run=++generation,id=requestId(action),body=new URLSearchParams(),started=Date.now(),payload=session({areaId:areaId});
+    Object.keys(payload).forEach(function(k){body.set(k,payload[k])});
+    body.set('action',action);body.set('requestId',id);
+    function pollResult(){
+      if(!current(run))return;
+      jsonp('admin_notificacoes_saude_result',{requestId:id},function(r){
+        if(!current(run))return;
+        if(r&&r.ok===true&&r.pendente===false){
+          var result=r.result;
+          if(result&&result.ok===true){finish(result);return}
+          if(temporary(result)){retry(result||{ok:false,temporario:true,message:'Resposta vazia.'},run);return}
+          finish(result);return;
+        }
+        if(Date.now()-started>=waitMs){
+          retry({ok:false,temporario:true,message:'A confirmação dos aparelhos demorou mesmo após as tentativas automáticas. Atualize novamente em alguns instantes.'},run);return;
+        }
+        setTimeout(pollResult,1000);
+      });
+    }
+    try{
+      fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){
+        retry({ok:false,temporario:true,message:'Falha de conexão ao consultar os aparelhos. As tentativas automáticas não conseguiram concluir.'},run);
+      });
+      setTimeout(pollResult,280);
+    }catch(e){
+      retry({ok:false,temporario:true,message:'Não foi possível iniciar a confirmação dos aparelhos após as tentativas automáticas.'},run);
+    }
+  }
+  startAttempt();
 }
 function healthPostIsolated(action,payload,resultAction,cb){
   var id=requestId(action),body=new URLSearchParams(),started=Date.now(),finished=false,wait=220;
