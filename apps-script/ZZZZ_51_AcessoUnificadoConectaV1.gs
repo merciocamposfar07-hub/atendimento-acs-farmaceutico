@@ -679,7 +679,9 @@ function conectaAcessoV1RecuperarIniciar_(p){
     if(!r)throw new Error('CPF não localizado em um acesso de morador.');
     var mesmoAparelho=conectaAcessoV1Seguro_(conectaAcessoV1Texto_(r.values[9]),conectaAcessoV1Hash_(dispositivo));
     var chaveValida=/^cmq1\./.test(chave)&&conectaAcessoV1Seguro_(conectaAcessoV1Texto_(r.values[8]),conectaAcessoV1Hash_(chave));
-    if(!mesmoAparelho){
+    /* CSC_RECUPERACAO_APARELHO_V3: reconhece vínculo confiável ou chave secreta vigente. */
+    var mesmoConfiavel=conectaAcessoV1MoradorDispositivoConfiavel_(r.values[0],dispositivo);
+    if(!mesmoAparelho&&!mesmoConfiavel&&!chaveValida){
       throw new Error('Por segurança, recupere o PIN no aparelho já reconhecido por este morador.');
     }
     payload={perfil:'MORADOR',accessId:r.values[0],cpf:cpf,dispositivoHash:conectaAcessoV1Hash_(dispositivo)};
@@ -708,6 +710,7 @@ function conectaAcessoV1RecuperarSalvar_(p){
     var salt=Utilities.getUuid().replace(/-/g,''),quick=conectaAcessoV1Token_('cmq1');
     r.values[6]=salt;r.values[7]=conectaAcessoV1Hash_(salt+'|'+pin);r.values[8]=conectaAcessoV1Hash_(quick);
     sh.getRange(r.row,7,1,3).setValues([[r.values[6],r.values[7],r.values[8]]]);sh.getRange(r.row,18).setValue(new Date());
+    conectaAcessoV1RegistrarMoradorConfiavel_(r,dispositivo,quick);
     var session=conectaAcessoV1CriarSessao_(r.values,dispositivo),nucleo=conectaAcessoV1NucleoFamiliar_(r.values),responsavel=(nucleo.membros||[]).filter(function(m){return m&&m.responsavel;})[0]||{};
     conectaAcessoV1ApagarTokenCache_(p.recuperacaoToken,TACS_CONECTA_ACESSO_V1.RECOVERY_PREFIX);
     return {ok:true,token:session.token,quickKey:quick,perfil:'MORADOR',areaId:r.values[1],nome:r.values[4],cpf:r.values[3],nascimento:r.values[5]||responsavel.nascimento||'',endereco:responsavel.localidade||'',notificacoesAtivas:conectaAcessoV1Bool_(r.values[10]),silencioso:conectaAcessoV1Bool_(r.values[12]),provisorio:conectaAcessoV1Bool_(r.values[13]),pendenciaId:conectaAcessoV1Texto_(r.values[14]),familiaId:nucleo.familiaId,familia:nucleo.membros,message:'Novo PIN salvo e acesso recuperado.'};
