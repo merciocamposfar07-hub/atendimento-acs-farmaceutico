@@ -1,0 +1,76 @@
+name: Corrigir somente recuperação PIN do Morador V3
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/csc-recuperacao-pin-v3.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+jobs:
+  recuperar-pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Preparar credenciais e copiar versão atual
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          mkdir -p "$RUNNER_TEMP/csc-pin-live"
+          node - <<'JS'
+          const fs=require('fs');const c=JSON.parse(process.env.CLASP_JSON);c.rootDir='.';fs.writeFileSync(process.env.RUNNER_TEMP+'/csc-pin-live/.clasp.json',JSON.stringify(c));
+          JS
+          cd "$RUNNER_TEMP/csc-pin-live"
+          npx --yes @google/clasp@3.3.0 pull
+      - name: Alterar exclusivamente as duas funções de recuperação
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'JS'
+          const fs=require('fs'),path=require('path'),vm=require('vm');
+          const root=process.env.RUNNER_TEMP+'/csc-pin-live';
+          function walk(p){return fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(p,e.name)):[path.join(p,e.name)]);}
+          const files=walk(root).filter(p=>/\.(js|gs)$/.test(p));
+          const target=files.filter(p=>fs.readFileSync(p,'utf8').includes('function conectaAcessoV1RecuperarIniciar_('));
+          if(target.length!==1)throw Error('Módulo de recuperação não localizado de forma única.');
+          const source=fs.readFileSync('apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs','utf8');
+          let live=fs.readFileSync(target[0],'utf8');
+          for(const name of ['conectaAcessoV1RecuperarIniciar_','conectaAcessoV1RecuperarSalvar_']){
+            const re=new RegExp('^function '+name+'\\([^]*?(?=^function |$(?![^]))','m');
+            const replacement=source.match(re);if(!replacement||!live.match(re))throw Error('Função ausente: '+name);
+            live=live.replace(re,()=>replacement[0]);
+          }
+          if(!live.includes('CSC_RECUPERACAO_APARELHO_V3'))throw Error('Correção não aplicada.');
+          new vm.Script(live);fs.writeFileSync(target[0],live);
+          console.log('Somente RecuperarIniciar e RecuperarSalvar atualizadas.');
+          JS
+      - name: Publicar na mesma implantação
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOYMENT_ID"
+          cd "$RUNNER_TEMP/csc-pin-live"
+          npx --yes @google/clasp@3.3.0 push --force
+          OUTPUT=$(npx --yes @google/clasp@3.3.0 version "CSC recuperação PIN V3 ${GITHUB_SHA::7}")
+          VERSION=$(printf '%s' "$OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description 'Recuperação PIN Morador V3' "$DEPLOYMENT_ID"
+      - name: Limpar credenciais
+        if: always()
+        shell: bash
+        run: rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/csc-pin-live/.clasp.json"
