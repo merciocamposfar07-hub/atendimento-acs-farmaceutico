@@ -81,3 +81,5 @@ jobs:
         run: rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/csc-pin-live/.clasp.json"
 
 # CSC_UBS_CONFIRMACAO_V4: recibo antes do Push e PDF privado com autorização de uso único.
+
+# CSC_PDF_BOTOES_GRANDES_V3: somente CSS dos três controles do visualizador.
