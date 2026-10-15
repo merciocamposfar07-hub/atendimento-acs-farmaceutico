@@ -2,6 +2,9 @@
 if(!Promise.withResolvers)Promise.withResolvers=function(){var resolve,reject,promise=new Promise(function(r,j){resolve=r;reject=j});return {promise:promise,resolve:resolve,reject:reject}};
 const status=document.getElementById('status'),pages=document.getElementById('pages'),record=window.CSC_UBS_PDF;
 const root='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/';
+const controlsStyle=document.createElement('style');
+controlsStyle.textContent='#download,#showDocument,#showCard{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:100%;min-height:96px;padding:22px 20px;font-size:clamp(26px,4vw,36px);font-weight:800;line-height:1.3;text-align:center;border-radius:16px}';
+document.head.appendChild(controlsStyle);
 async function start(){
  const raw=atob(record.base64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
  const file=new Blob([bytes],{type:'application/pdf'}),url=URL.createObjectURL(file),download=document.getElementById('download');download.href=url;download.download=record.nome;
