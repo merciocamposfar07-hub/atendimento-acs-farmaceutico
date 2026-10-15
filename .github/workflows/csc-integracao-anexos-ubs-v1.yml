@@ -1,0 +1,65 @@
+name: Integrar somente anexos PDF da UBS V1
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/csc-integracao-anexos-ubs-v1.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+jobs:
+  anexos-ubs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Preparar credenciais e copiar versão atual
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          mkdir -p "$RUNNER_TEMP/csc-pin-live"
+          node - <<'JS'
+          const fs=require('fs');const c=JSON.parse(process.env.CLASP_JSON);c.rootDir='.';fs.writeFileSync(process.env.RUNNER_TEMP+'/csc-pin-live/.clasp.json',JSON.stringify(c));
+          JS
+          cd "$RUNNER_TEMP/csc-pin-live"
+          npx --yes @google/clasp@3.3.0 pull
+      - name: Adicionar somente o módulo de anexos da UBS
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'JS'
+          const fs=require('fs'),vm=require('vm');
+          const text=fs.readFileSync('apps-script/ZZZZ_54_AnexosSolicitacoesUbsV1.gs','utf8');
+          new vm.Script(text);
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/csc-pin-live/ZZZZ_54_AnexosSolicitacoesUbsV1.js',text);
+          console.log('Somente o novo módulo de anexos da UBS adicionado ao projeto atual.');
+          JS
+      - name: Publicar na mesma implantação
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOYMENT_ID"
+          cd "$RUNNER_TEMP/csc-pin-live"
+          npx --yes @google/clasp@3.3.0 push --force
+          OUTPUT=$(npx --yes @google/clasp@3.3.0 version "CSC anexos UBS V1 ${GITHUB_SHA::7}")
+          VERSION=$(printf '%s' "$OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description 'Anexos PDF privados da UBS V1' "$DEPLOYMENT_ID"
+      - name: Limpar credenciais
+        if: always()
+        shell: bash
+        run: rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/csc-pin-live/.clasp.json"
