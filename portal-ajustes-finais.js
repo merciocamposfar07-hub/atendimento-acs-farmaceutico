@@ -715,39 +715,67 @@
     });
   }
 
-  function requestFingerprint(){return ['category','name','birth','cpf','locality','subject','implanonChoice'].map(function(id){return clean(el(id)&&el(id).value)}).join('\u001f')}
-  var preparedDocumentShare=null;
-  function shareDocumentPdf(file,message,fingerprint,attachment){
-    preparedDocumentShare={file:file,message:message,fingerprint:fingerprint,attachment:attachment};
-    var annex=window.PortalCscAnexosV2,old=el('cscPreparedDocumentV2');if(old){if(old.dataset.url)URL.revokeObjectURL(old.dataset.url);old.remove()}
-    var box=document.createElement('section');box.id='cscPreparedDocumentV2';box.className='portal-attachment-box';
-    var status=document.createElement('p');status.setAttribute('role','status');status.textContent='PDF pronto: card da solicitação e documento anexado.';
-    var download=document.createElement('a'),url=URL.createObjectURL(file);box.dataset.url=url;download.href=url;download.download=file.name;download.textContent='Baixar o PDF completo';download.style.color='#70e39f';
-    box.append(status,download);var send=el('sendPetroleumCard')||el('send');send.insertAdjacentElement('afterend',box);
-    var payload={title:'Solicitação CSC com documento',text:message,files:[file]};
-    function performShare(){
-      if(requestFingerprint()!==fingerprint||annex.snapshot()!==attachment){status.textContent='Os dados ou o documento mudaram. Toque novamente em Enviar solicitação para preparar o PDF atualizado.';return Promise.resolve(false)}
-      if(typeof navigator.share!=='function'||(navigator.canShare&&!navigator.canShare({files:[file]}))){status.textContent='Este navegador não permite compartilhar arquivos. Baixe o PDF completo abaixo e anexe-o no WhatsApp.';return Promise.resolve(false)}
-      setButtonsBusy(true);annex.holdForm=true;status.textContent='Escolha WhatsApp e o contato de destino para enviar o PDF completo.';
-      // Esta chamada ocorre diretamente no novo toque, preservando a ativação exigida pelo iPhone.
-      return navigator.share(payload).then(function(){
-        status.textContent='PDF compartilhado. Confira o envio na conversa do WhatsApp.';return true;
-      }).catch(function(error){
-        status.textContent=error&&error.name==='AbortError'?'Compartilhamento cancelado. Para tentar novamente, toque em Enviar solicitação.':'Não foi possível abrir o compartilhamento. Toque novamente em Enviar solicitação ou baixe o PDF completo abaixo.';return false;
-      }).finally(function(){setButtonsBusy(false);annex.holdForm=true;try{sessionStorage.removeItem('portalTacsResetAfterSendV1')}catch(ignore){}});
+  function requestFingerprint(){return ['category','name','birth','cpf','locality','subject','implanonChoice','retirementRecipientValue'].map(function(id){return clean(el(id)&&el(id).value)}).join('\u001f')}
+  var documentDraft=null,documentDraftPending=null,documentDraftSequence=0,documentSendBusy=false,documentSyncTimer=null;
+  function documentMatches(draft){var annex=window.PortalCscAnexosV2;return Boolean(draft&&annex&&annex.required()&&draft.fingerprint===requestFingerprint()&&draft.attachment===annex.snapshot())}
+  function documentMessage(message){
+    var box=el('cscPreparedDocumentV2');if(!box){box=document.createElement('section');box.id='cscPreparedDocumentV2';box.className='portal-attachment-box';var send=el('sendPetroleumCard')||el('send');send.insertAdjacentElement('afterend',box)}
+    var status=box.querySelector('[role="status"]');if(!status){status=document.createElement('p');status.setAttribute('role','status');box.appendChild(status)}status.textContent=message;return box;
+  }
+  function syncDocumentSendButton(){
+    var annex=window.PortalCscAnexosV2,button=el('sendPetroleumCard');if(!button)return;
+    if(!annex||!annex.required()){button.disabled=!formIsReady();return}
+    if(documentSendBusy){button.disabled=true;return}
+    if(!formIsReady()){button.disabled=true;return}
+    if(documentMatches(documentDraft)){button.disabled=false;button.innerHTML='📲 Enviar solicitação com documento<small>PDF com o card e todas as páginas do documento.</small>';return}
+    button.disabled=true;button.innerHTML='AGUARDE… preparando PDF<small>O botão será liberado quando estiver pronto.</small>';
+    prepareDocumentDraft();
+  }
+  function scheduleDocumentDraft(){clearTimeout(documentSyncTimer);documentSyncTimer=setTimeout(syncDocumentSendButton,120)}
+  function prepareDocumentDraft(){
+    var annex=window.PortalCscAnexosV2;if(!annex||!annex.required()||!annex.snapshot()||!formIsReady())return Promise.resolve(null);
+    if(documentMatches(documentDraft))return Promise.resolve(documentDraft);
+    if(documentMatches(documentDraftPending))return documentDraftPending.promise;
+    var draft={fingerprint:requestFingerprint(),attachment:annex.snapshot(),sequence:++documentDraftSequence};documentDraftPending=draft;
+    draft.promise=ensureTerritory().then(function(identity){
+      var data=requestData(identity),random=new Uint8Array(12);window.crypto.getRandomValues(random);
+      // Cada novo documento/dado gera seu próprio código, sem herdar uma vaga odontológica.
+      data.code=normalizeArea(identity.areaId).slice(0,18)+'-'+Array.prototype.map.call(random,function(v){return ('0'+v.toString(16)).slice(-2)}).join('').toUpperCase();
+      draft.data=data;draft.identity=identity;
+      return createPetroleumCard(data).then(function(blob){return annex.prepareRequest(blob,data,draft.attachment)});
+    }).then(function(pdf){
+      if(draft.sequence!==documentDraftSequence||!documentMatches(draft))return null;
+      draft.file=pdf;return new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){draft.encoded=String(reader.result).split(',')[1];resolve(draft)};reader.onerror=function(){reject(new Error('Não foi possível preparar a leitura do PDF.'))};reader.readAsDataURL(pdf)}).then(function(){if(draft.sequence!==documentDraftSequence||!documentMatches(draft))return null;var old=el('cscPreparedDocumentV2');if(old){if(old.dataset.url)URL.revokeObjectURL(old.dataset.url);old.remove()}draft.ubsPromise=null;draft.ubsConfirmed=false;documentDraft=draft;return draft});
+    }).catch(function(error){
+      if(draft.sequence===documentDraftSequence&&documentMatches(draft)){documentMessage('Não foi possível preparar o PDF. '+(error.message||'Tente novamente.'));var button=el('sendPetroleumCard');if(button){button.disabled=false;button.innerHTML='Tentar preparar o documento novamente'}}return null;
+    }).finally(function(){if(documentDraftPending===draft)documentDraftPending=null;if(documentMatches(documentDraft))syncDocumentSendButton()});
+    return draft.promise;
+  }
+  function sendPreparedDocument(){
+    if(documentSendBusy)return;
+    if(!documentMatches(documentDraft)){syncDocumentSendButton();return}
+    var draft=documentDraft,annex=window.PortalCscAnexosV2,ubs=window.PortalSolicitacoesUbsV1;
+    if(!ubs||typeof ubs.registrarArquivo!=='function'){alert('Atualize o portal para enviar o documento à UBS.');return}
+    annex.holdForm=true;documentSendBusy=true;var button=el('sendPetroleumCard');if(button)button.disabled=true;
+    var box=documentMessage('Abrindo o compartilhamento. A solicitação com o PDF também está sendo enviada à UBS.');
+    if(!box.querySelector('a')){var link=document.createElement('a'),url=URL.createObjectURL(draft.file);box.dataset.url=url;link.href=url;link.download=draft.file.name;link.textContent='Baixar o PDF completo';link.style.color='#70e39f';box.appendChild(link)}
+    // A confirmação da UBS ocorre em paralelo e nunca bloqueia o gesto exigido pelo iPhone.
+    if(!draft.ubsPromise&&!draft.ubsConfirmed){
+      draft.ubsPromise=ubs.registrarArquivo(draft.file,draft.data,draft.encoded).then(function(){draft.ubsConfirmed=true}).catch(function(){/* O módulo UBS mostra o erro e permite repetir o mesmo envio. */}).finally(function(){draft.ubsPromise=null});
     }
-    // O mesmo botão principal retoma o PDF pronto sem repetir o registro na UBS.
-    if(!navigator.userActivation||navigator.userActivation.isActive)return performShare();
-    status.textContent='Documento recebido na UBS. Para concluir o envio pelo WhatsApp, toque novamente em Enviar solicitação.';
-    try{box.scrollIntoView({behavior:'smooth',block:'center'})}catch(ignore){}
-    return Promise.resolve(false);
+    var sharing;
+    try{
+      if(typeof navigator.share==='function'&&(!navigator.canShare||navigator.canShare({files:[draft.file]}))){
+        // Chamada síncrona dentro do único toque, com o PDF já pronto.
+        sharing=navigator.share({title:'Solicitação CSC com documento',text:'Solicitação do Portal CSC - '+draft.identity.areaName+' - card e documento anexado.',files:[draft.file]});
+      }else{documentMessage('Baixe o PDF completo abaixo e anexe-o na conversa do TACS. O envio à UBS segue automaticamente.');sharing=Promise.resolve(false)}
+    }catch(error){sharing=Promise.reject(error)}
+    return Promise.resolve(sharing).then(function(result){if(result!==false)documentMessage('Compartilhamento concluído. Confira o envio na conversa do WhatsApp.')}).catch(function(error){documentMessage(error&&error.name==='AbortError'?'Compartilhamento cancelado. Toque em Enviar solicitação para tentar novamente.':'Não foi possível abrir o compartilhamento. Toque em Enviar solicitação para tentar novamente ou baixe o PDF completo.')}).finally(function(){documentSendBusy=false;annex.holdForm=true;try{sessionStorage.removeItem('portalTacsResetAfterSendV1')}catch(ignore){}syncDocumentSendButton()});
   }
   function sendCard() {
     if (!formIsReady()) return;
-    var annex=window.PortalCscAnexosV2,withDocument=Boolean(annex&&annex.required()),attachment=withDocument?annex.snapshot():null,fingerprint=requestFingerprint();
-    if(withDocument&&!attachment){alert('Escolha o documento e aguarde o PDF ficar pronto antes de enviar.');return}
-    if(withDocument&&preparedDocumentShare&&preparedDocumentShare.fingerprint===fingerprint&&preparedDocumentShare.attachment===attachment){return shareDocumentPdf(preparedDocumentShare.file,preparedDocumentShare.message,fingerprint,attachment)}
-    if(withDocument)annex.holdForm=true;
+    var annex=window.PortalCscAnexosV2;
+    if(annex&&annex.required())return sendPreparedDocument();
     setButtonsBusy(true);
     ensureTerritory()
       .then(function (identity) {
@@ -761,13 +789,10 @@
           }
         });
         var data = requestData(identity);
-        if(!withDocument&&window.PortalSolicitacoesUbsV1&&typeof window.PortalSolicitacoesUbsV1.registrar==='function')window.PortalSolicitacoesUbsV1.registrar({codigoSolicitacao:data.code,categoria:data.category,descricao:data.description});
+        if(window.PortalSolicitacoesUbsV1&&typeof window.PortalSolicitacoesUbsV1.registrar==='function')window.PortalSolicitacoesUbsV1.registrar({codigoSolicitacao:data.code,categoria:data.category,descricao:data.description});
         return createPetroleumCard(data).then(function (blob) {
           var fileName = 'solicitacao-' + normalizeArea(identity.areaId).toLowerCase() + '-portal-csc.png';
           var file = new File([blob], fileName, { type: 'image/png' });
-          if(withDocument){
-            return annex.prepareRequest(blob,data,attachment).then(function(pdf){var ubs=window.PortalSolicitacoesUbsV1;if(!ubs||typeof ubs.registrarArquivo!=='function')throw new Error('Atualize o portal para enviar o documento completo à UBS.');return ubs.registrarArquivo(pdf,data).then(function(){return shareDocumentPdf(pdf,'Solicitação do Portal CSC - '+identity.areaName+' - card e documento anexado.',fingerprint,attachment)})});
-          }
           if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
             return navigator.share({
               title: 'Solicitação do morador',
@@ -815,15 +840,16 @@
     wrapper.appendChild(card);
 
     function sync() {
-      card.disabled = !formIsReady();
+      syncDocumentSendButton();
     }
     new MutationObserver(sync).observe(original, {
       attributes: true,
       attributeFilter: ['disabled', 'hidden']
     });
     ['input', 'change'].forEach(function (eventName) {
-      document.addEventListener(eventName, function () { setTimeout(sync, 0); });
+      document.addEventListener(eventName, scheduleDocumentDraft);
     });
+    document.addEventListener('tacs:morador',scheduleDocumentDraft);
     sync();
   }
 
