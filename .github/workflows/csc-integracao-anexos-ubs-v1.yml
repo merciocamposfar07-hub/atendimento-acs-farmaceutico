@@ -42,6 +42,22 @@ jobs:
           node - <<'JS'
           const fs=require('fs'),vm=require('vm');
           const text=fs.readFileSync('apps-script/ZZZZ_54_AnexosSolicitacoesUbsV1.gs','utf8');
+          const path=require('path');
+          function walk(p){return fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(p,e.name)):[path.join(p,e.name)]);}
+          const candidates=walk(process.env.RUNNER_TEMP+'/csc-pin-live').filter(p=>/\.(js|gs)$/.test(p)&&fs.readFileSync(p,'utf8').includes('function solicitacoesUbsV1CriarPublica_('));
+          if(candidates.length!==1)throw Error('Módulo de solicitações não localizado de forma única.');
+          let live=fs.readFileSync(candidates[0],'utf8');
+          if(live.includes('function solicitacoesUbsV1CriarPublica_(p){'))live=live.replace('function solicitacoesUbsV1CriarPublica_(p){','function solicitacoesUbsV1CriarPublica_(p,aposRegistro){');
+          if(!live.includes("if(typeof aposRegistro==='function')aposRegistro();")){
+            const anchor='  var push=solicitacoesUbsV1EnviarPush_(contexto,row[0]);';
+            if(!live.includes(anchor))throw Error('Ponto de confirmação não localizado.');
+            live=live.replace(anchor,"  if(typeof aposRegistro==='function')aposRegistro();\n"+anchor);
+          }
+          const oldData="data:{tipo:'SOLICITACAO_UBS',areaId:contexto.areaId,solicitacaoId:solicitacaoId}";
+          const newData="data:{tipo:'SOLICITACAO_UBS',areaId:contexto.areaId,solicitacaoId:solicitacaoId,naoVistas:solicitacoesUbsV1Rows_(solicitacoesUbsV1Sheet_()).filter(function(row){return String(row[1])===String(contexto.areaId)&&String(row[17])==='NOVA'&&!row[23]}).length}";
+          if(live.includes(oldData))live=live.replace(oldData,newData);
+          if(!live.includes(newData)||!live.includes('function solicitacoesUbsV1CriarPublica_(p,aposRegistro){'))throw Error('Hooks esperados não confirmados.');
+          new vm.Script(live);fs.writeFileSync(candidates[0],live);
           new vm.Script(text);
           fs.writeFileSync(process.env.RUNNER_TEMP+'/csc-pin-live/ZZZZ_54_AnexosSolicitacoesUbsV1.js',text);
           console.log('Somente o novo módulo de anexos da UBS adicionado ao projeto atual.');
@@ -64,4 +80,4 @@ jobs:
         shell: bash
         run: rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/csc-pin-live/.clasp.json"
 
-# UBS_PDF_VIEWER_PAGES_V2_20261015: publica somente a correção da abertura do PDF privado.
+# CSC_UBS_CONFIRMACAO_V4: recibo antes do Push e PDF privado com autorização de uso único.
