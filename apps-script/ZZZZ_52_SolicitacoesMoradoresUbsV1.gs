@@ -155,7 +155,7 @@ function solicitacoesUbsV1EnviarPush_(contexto,solicitacaoId){
       headings:{pt:'Nova solicitação de morador',en:'Nova solicitação de morador'},
       contents:{pt:'Há uma nova solicitação para a UBS. Abra Solicitações dos moradores para consultar.',en:'Há uma nova solicitação para a UBS. Abra Solicitações dos moradores para consultar.'},
       include_subscription_ids:alvos,url:url,
-      data:{tipo:'SOLICITACAO_UBS',areaId:contexto.areaId,solicitacaoId:solicitacaoId}
+      data:{tipo:'SOLICITACAO_UBS',areaId:contexto.areaId,solicitacaoId:solicitacaoId,naoVistas:solicitacoesUbsV1Rows_(solicitacoesUbsV1Sheet_()).filter(function(row){return String(row[1])===String(contexto.areaId)&&String(row[17])==='NOVA'&&!row[23]}).length}
     };
     var resp=UrlFetchApp.fetch(TACS_SOLICITACOES_UBS_V1.ONESIGNAL_ENDPOINT,{method:'post',contentType:'application/json',payload:JSON.stringify(payload),headers:{Authorization:'Key '+apiKey},muteHttpExceptions:true});
     var code=Number(resp.getResponseCode()),body={};try{body=JSON.parse(resp.getContentText()||'{}')}catch(e){}
@@ -306,7 +306,7 @@ function solicitacoesUbsV1LocalizarCodigo_(sheet,areaId,codigo){
   return null;
 }
 
-function solicitacoesUbsV1CriarPublica_(p){
+function solicitacoesUbsV1CriarPublica_(p,aposRegistro){
   if(typeof identificacaoFamiliarPublicaV1Contexto_!=='function'||typeof identificacaoFamiliarPublicaV1LocalizarUnico_!=='function')throw new Error('A identificação do morador ainda não está disponível.');
   var contexto=identificacaoFamiliarPublicaV1Contexto_(p.areaId||p.area||''),doc=solicitacoesUbsV1Documento_(p.documento),codigo=solicitacoesUbsV1Codigo_(p.codigoSolicitacao||p.codigo);
   var achado=identificacaoFamiliarPublicaV1LocalizarUnico_(doc,contexto);
@@ -345,6 +345,8 @@ function solicitacoesUbsV1CriarPublica_(p){
     sheet.getRange(novaLinha,20).setNumberFormat('dd/MM/yyyy HH:mm');
     SpreadsheetApp.flush();
   }finally{lock.releaseLock();}
+  // O anexo e seu recibo ficam prontos antes da chamada externa de Push.
+  if(typeof aposRegistro==='function')aposRegistro();
   var push=solicitacoesUbsV1EnviarPush_(contexto,row[0]);
   if(push&&push.push===true&&novaLinha>1){
     try{sheet.getRange(novaLinha,25).setValue(new Date()).setNumberFormat('dd/MM/yyyy HH:mm:ss');sheet.getRange(novaLinha,26).setValue(push.id||'').setNumberFormat('@');SpreadsheetApp.flush()}catch(e){}
