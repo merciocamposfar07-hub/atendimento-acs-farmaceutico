@@ -524,6 +524,8 @@
   }
 
   function formIsReady() {
+    var annex=window.PortalCscAnexosV2;
+    if(annex&&annex.required()&&(!annex.snapshot()||annex.preparing()))return false;
     var original = el('send');
     var category = normalize(el('category') && el('category').value);
     if (category.indexOf('odontologico') !== -1) {
@@ -713,8 +715,38 @@
     });
   }
 
+  function requestFingerprint(){return ['category','name','birth','cpf','locality','subject','implanonChoice'].map(function(id){return clean(el(id)&&el(id).value)}).join('\u001f')}
+  function shareDocumentPdf(file,message,fingerprint,attachment){
+    var annex=window.PortalCscAnexosV2,old=el('cscPreparedDocumentV2');if(old){if(old.dataset.url)URL.revokeObjectURL(old.dataset.url);old.remove()}
+    var box=document.createElement('section');box.id='cscPreparedDocumentV2';box.className='portal-attachment-box';
+    var status=document.createElement('p');status.setAttribute('role','status');status.textContent='PDF pronto: card da solicitação e documento anexado.';
+    var share=document.createElement('button');share.type='button';share.className='portal-attachment-choose';share.textContent='📲 Compartilhar PDF pelo WhatsApp';
+    var download=document.createElement('a'),url=URL.createObjectURL(file);box.dataset.url=url;download.href=url;download.download=file.name;download.textContent='Baixar o PDF completo';download.style.color='#70e39f';
+    box.append(status,share,download);var send=el('sendPetroleumCard')||el('send');send.insertAdjacentElement('afterend',box);
+    var payload={title:'Solicitação CSC com documento',text:message,files:[file]};
+    function performShare(){
+      if(requestFingerprint()!==fingerprint||annex.snapshot()!==attachment){status.textContent='Os dados ou o documento mudaram. Toque novamente em Enviar solicitação para preparar o PDF atualizado.';return Promise.resolve(false)}
+      if(typeof navigator.share!=='function'||(navigator.canShare&&!navigator.canShare({files:[file]}))){status.textContent='Este navegador não permite compartilhar arquivos. Baixe o PDF completo abaixo e anexe-o no WhatsApp.';return Promise.resolve(false)}
+      share.disabled=true;annex.holdForm=true;status.textContent='Escolha WhatsApp e o contato de destino para enviar o PDF completo.';
+      // Esta chamada ocorre diretamente no novo toque, preservando a ativação exigida pelo iPhone.
+      return navigator.share(payload).then(function(){
+        status.textContent='PDF compartilhado. Confira o envio na conversa do WhatsApp.';return true;
+      }).catch(function(error){
+        status.textContent=error&&error.name==='AbortError'?'Compartilhamento cancelado. O PDF continua pronto para tentar novamente.':'Não foi possível abrir o compartilhamento. Tente novamente ou baixe o PDF completo abaixo.';return false;
+      }).finally(function(){share.disabled=false;annex.holdForm=true;try{sessionStorage.removeItem('portalTacsResetAfterSendV1')}catch(ignore){}});
+    }
+    share.addEventListener('click',performShare);
+    // Se a preparação levou mais que a janela de ativação, o botão pronto pede um novo toque.
+    if(!navigator.userActivation||navigator.userActivation.isActive)return performShare();
+    status.textContent='PDF completo pronto. Toque em Compartilhar PDF pelo WhatsApp.';
+    try{box.scrollIntoView({behavior:'smooth',block:'center'})}catch(ignore){}
+    return Promise.resolve(false);
+  }
   function sendCard() {
     if (!formIsReady()) return;
+    var annex=window.PortalCscAnexosV2,withDocument=Boolean(annex&&annex.required()),attachment=withDocument?annex.snapshot():null,fingerprint=requestFingerprint();
+    if(withDocument&&!attachment){alert('Escolha o documento e aguarde o PDF ficar pronto antes de enviar.');return}
+    if(withDocument)annex.holdForm=true;
     setButtonsBusy(true);
     ensureTerritory()
       .then(function (identity) {
@@ -732,6 +764,9 @@
         return createPetroleumCard(data).then(function (blob) {
           var fileName = 'solicitacao-' + normalizeArea(identity.areaId).toLowerCase() + '-portal-csc.png';
           var file = new File([blob], fileName, { type: 'image/png' });
+          if(withDocument){
+            return annex.prepareRequest(blob,data,attachment).then(function(pdf){return shareDocumentPdf(pdf,'Solicitação do Portal CSC - '+identity.areaName+' - card e documento anexado.',fingerprint,attachment)});
+          }
           if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
             return navigator.share({
               title: 'Solicitação do morador',
