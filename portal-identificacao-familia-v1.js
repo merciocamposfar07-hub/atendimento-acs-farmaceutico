@@ -139,6 +139,8 @@
   function startResidentLoginWait(title){
     residentLoginPending=true;
     ensureStyle();
+    var confirm=document.querySelector('[data-resident-pin-login]');
+    if(confirm){confirm.dataset.cscPinOriginalText=confirm.dataset.cscPinOriginalText||confirm.textContent;confirm.textContent='AGUARDE… reconhecendo seu PIN';confirm.setAttribute('aria-busy','true');var hint=document.getElementById('cscResidentPinInlineWait');if(!hint){hint=document.createElement('p');hint.id='cscResidentPinInlineWait';hint.className='tacs-family-help csc-resident-wait';hint.setAttribute('role','status');hint.textContent='AGUARDE… reconhecendo seu PIN.';confirm.insertAdjacentElement('afterend',hint)}}
     var box=document.getElementById('cscResidentLoginWaitV2');
     if(!box){box=document.createElement('div');box.id='cscResidentLoginWaitV2';box.setAttribute('role','status');box.setAttribute('aria-live','polite');document.body.appendChild(box)}
     box.innerHTML='<strong class="csc-resident-wait" data-login-wait-label>AGUARDE… validando seu PIN.</strong><span>Tempo decorrido: <b data-login-wait-time aria-live="off">00:00</b></span>';
@@ -151,6 +153,8 @@
   function finishResidentLoginWait(){
     clearInterval(residentLoginWaitTimer);residentLoginWaitTimer=null;residentLoginPending=false;
     var box=document.getElementById('cscResidentLoginWaitV2');if(box)box.remove();
+    var hint=document.getElementById('cscResidentPinInlineWait');if(hint)hint.remove();
+    var confirm=document.querySelector('[data-resident-pin-login]');if(confirm){confirm.removeAttribute('aria-busy');if(confirm.dataset.cscPinOriginalText){confirm.textContent=confirm.dataset.cscPinOriginalText;delete confirm.dataset.cscPinOriginalText}}
   }
   function residentWait(title,detail){
     if(residentLocalLoginVisible)return;
@@ -320,7 +324,7 @@
     return '<strong class="tacs-family-title">Acesse com seu PIN</strong>'+note+'<input id="portalResidentPinLogin" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="PIN de 4 números"><div class="tacs-pin-actions"><button type="button" class="tacs-pin-action" data-resident-pin-login="1">Entrar com PIN</button></div>'+recoveryCpfHtml();
   }
   function renderResidentPinLogin(message){
-    if(residentRecoveryActive)return false;
+    if(residentRecoveryActive||(!message&&(residentLoginPending||residentLocalLoginVisible)))return false;
     var p=residentProfile(),disponivel=Boolean(p||residentVaultExists()||residentPinMarker()||residentInstallQuick()||residentDeviceRecognized||/^\d{11}$/.test(residentServerCpfHint));
     if(!disponivel||residentSessionToken())return false;
     placePinFirst();
@@ -432,6 +436,15 @@ function openResidentInline(r,confirmed){
  return false;
 }
 var residentLocalLoginVisible=false;
+function residentPinNextPaint(){
+ return new Promise(function(resolve){if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(function(){window.requestAnimationFrame(resolve)});else setTimeout(resolve,0)});
+}
+function finishResidentPinOpen(showFamily){
+ return residentPinNextPaint().then(function(){
+  if(showFamily&&(residentLocalLoginVisible||residentSessionToken())){var pin=document.getElementById(PIN_BOX);if(pin){pin.hidden=true;pin.innerHTML=''}var family=document.getElementById(FAMILY_BOX);try{if(family&&!family.hidden&&family.querySelector('.tacs-family-member'))family.scrollIntoView({block:'start',behavior:'auto'})}catch(ignore){}}
+  finishResidentLoginWait();
+ });
+}
 function loginResidentPinFromPortal(){
  if(residentLoginPending||residentAccessBusy)return;
  var p=residentProfile(),installQuick=residentInstallQuick(),pin=digits(document.getElementById('portalResidentPinLogin')&&document.getElementById('portalResidentPinLogin').value),btn=document.querySelector('[data-resident-pin-login]'),hintCpf=residentServerCpfHint||residentServerCpfSaved();
@@ -439,7 +452,7 @@ function loginResidentPinFromPortal(){
  if(!/^\d{4}$/.test(pin)){renderResidentPinLogin('Digite os 4 números do seu PIN.');return}
  if(btn)btn.disabled=true;
  startResidentLoginWait();
- var v=window.ConectaPinLocalV2,local=v&&typeof v.abrir==='function'?Promise.resolve(v.abrir('morador',pin)):Promise.resolve(null);
+ var v=window.ConectaPinLocalV2,local=residentPinNextPaint().then(function(){return v&&typeof v.abrir==='function'?v.abrir('morador',pin):null});
  local.then(function(saved){
   var localOpened=false;
   if(saved&&text(saved.device)===deviceId(true)){
@@ -454,7 +467,7 @@ function loginResidentPinFromPortal(){
     renderAccessFamily(snap);
     placePinDefault();
     localOpened=openResidentInline(snap,false);
-    if(localOpened){resetResidentPinAttempts();finishResidentLoginWait();residentLocalLoginVisible=true}
+    if(localOpened){residentLocalLoginVisible=true;resetResidentPinAttempts();finishResidentPinOpen(true)}
    }
   }
   if(!localOpened)residentWait('AGUARDE… carregando seus dados e sua família.');
@@ -470,7 +483,7 @@ function loginResidentPinFromPortal(){
    p=residentProfile()||p;
    placePinDefault();
    if(!openResidentInline(r,true)&&!localOpened)setPinBox('<strong class="tacs-family-title">✓ PIN confirmado</strong><p class="tacs-family-help">Dados prontos.</p>','tacs-pin-box');
-   finishResidentLoginWait();saveResidentVault(pin,r,p);return r;
+   finishResidentPinOpen(!localOpened);saveResidentVault(pin,r,p);return r;
   }).catch(function(e){
    if(localOpened&&!/PIN incorreto/i.test(text(e&&e.message))){
     var aviso=document.getElementById('portalDocumentComplementV1');
