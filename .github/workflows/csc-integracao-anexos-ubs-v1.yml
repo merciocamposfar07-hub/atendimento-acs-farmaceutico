@@ -63,3 +63,5 @@ jobs:
         if: always()
         shell: bash
         run: rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/csc-pin-live/.clasp.json"
+
+# UBS_PDF_VIEWER_PAGES_V2_20261015: publica somente a correção da abertura do PDF privado.
