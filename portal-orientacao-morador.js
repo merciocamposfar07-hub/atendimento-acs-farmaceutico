@@ -380,11 +380,13 @@
 
     window.addEventListener('pagehide', function () {
       if (!sendIntent) return;
+      if(window.PortalCscAnexosV2&&window.PortalCscAnexosV2.holdForm)return;
       try { sessionStorage.setItem('portalTacsResetAfterSendV1', '1'); } catch (e) {}
       clearForm();
     });
 
     window.addEventListener('pageshow', function () {
+      if(window.PortalCscAnexosV2&&window.PortalCscAnexosV2.holdForm){try{sessionStorage.removeItem('portalTacsResetAfterSendV1')}catch(ignore){};setTimeout(updateFlowGuide,0);return}
       var reset = false;
       try {
         reset = sessionStorage.getItem('portalTacsResetAfterSendV1') === '1';
