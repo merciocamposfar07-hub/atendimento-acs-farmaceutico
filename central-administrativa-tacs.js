@@ -538,13 +538,26 @@ function playUbsSolicitacoesSound(){
 }
 function renderUbsSolicitacoesBadge(result){
   ensureUbsSolicitacoesUi();
-  var b=el('cscSolicitacoesBadge'),n=Math.max(0,Number(result&&result.naoVistas||0));
-  if(shellActiveModule==='solicitacoes'||ubsSolicitacoesAckPending)n=0;
+  var b=el('cscSolicitacoesBadge'),n=Math.max(0,Number(result&&result.contagens&&result.contagens.NOVA||0));
+  if(!result||!result.contagens){try{n=Math.max(0,Number(localStorage.getItem(ubsSolicitacoesCountKey(selectedAreaId))||0))}catch(ignore){}}
+  syncUbsAppBadge(ubsSolicitacoesAckPending?0:Math.max(0,Number(result&&result.naoVistas||0)));
   try{localStorage.setItem(ubsSolicitacoesCountKey(selectedAreaId),String(n))}catch(e){}
   if(!b)return;
   b.hidden=n<1;b.textContent=n>99?'99+':String(n);
   b.setAttribute('aria-label',n===1?'1 nova solicitação':n+' novas solicitações')
 }
+function syncUbsAppBadge(count){
+  count=Math.max(0,Number(count)||0);
+  try{if(count&&navigator.setAppBadge)navigator.setAppBadge(count).catch(function(){});else if(!count&&navigator.clearAppBadge)navigator.clearAppBadge().catch(function(){})}catch(ignore){}
+  try{if(navigator.serviceWorker)navigator.serviceWorker.getRegistration('/atendimento-acs-farmaceutico/push/').then(function(reg){if(reg&&reg.active)reg.active.postMessage({type:'CSC_UBS_BADGE_SET',areaId:selectedAreaId,count:count})}).catch(function(){})}catch(ignore){}
+}
+window.addEventListener('message',function(event){
+  if(event.origin!==location.origin||mode!=='ubs')return;
+  var frame=shellActiveFrame(),data=event.data||{};
+  if(!frame||event.source!==frame.contentWindow||data.type!=='CSC_UBS_SOLICITACOES_CARREGADAS'||normArea(data.areaId)!==normArea(selectedAreaId))return;
+  renderUbsSolicitacoesBadge({contagens:data.contagens||{},naoVistas:0});if(Number(data.naoVistas)>0)acknowledgeUbsSolicitacoes();else syncUbsAppBadge(0);
+});
+if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',function(event){var data=event.data||{};if(data.type==='CSC_UBS_PUSH_RECEIVED'&&mode==='ubs'&&normArea(data.areaId)===normArea(selectedAreaId)){checkUbsSolicitacoes()}});
 function closeUbsPushNotifications(){
   try{
     if(!navigator.serviceWorker||typeof navigator.serviceWorker.getRegistrations!=='function')return;
@@ -581,7 +594,7 @@ function acknowledgeUbsSolicitacoes(){
   clearUbsSolicitacoesAlert();ubsSolicitacoesAckPending=true;
   if(ubsSolicitacoesLatestUnreadKey)try{localStorage.setItem(ubsSolicitacoesMarkerKey(selectedAreaId),ubsSolicitacoesLatestUnreadKey)}catch(e){}
   renderUbsSolicitacoesBadge({naoVistas:0});
-  try{localStorage.setItem(ubsSolicitacoesCountKey(selectedAreaId),'0')}catch(e){}
+  syncUbsAppBadge(0);
   if(mode!=='ubs'||!ubsToken||!selectedAreaId)return;
   ubsSolicitacoesPostAction('admin_solicitacoes_ubs_vistas',{},function(){ubsSolicitacoesAckPending=false;renderUbsSolicitacoesBadge({naoVistas:0})})
 }
@@ -636,6 +649,7 @@ function initUbsPush(){
       var push=OneSignal.User&&OneSignal.User.PushSubscription;
       if(push&&typeof push.addEventListener==='function')push.addEventListener('change',function(){ubsPushLastRegistration='';setTimeout(registerUbsPush,250)});
       if(OneSignal.Notifications&&typeof OneSignal.Notifications.addEventListener==='function')OneSignal.Notifications.addEventListener('permissionChange',function(){ubsPushLastRegistration='';setTimeout(registerUbsPush,250)});
+      try{navigator.serviceWorker.getRegistration('/atendimento-acs-farmaceutico/push/').then(function(reg){if(reg)reg.update()}).catch(function(){})}catch(ignore){}
       registerUbsPush()
     }catch(e){}
   });
@@ -914,7 +928,7 @@ function moduleUrl(name,options){
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-suporte-ubs-diag-v1';
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260919-recados-snapshot-completo-v5';
-  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20261015-envio-direto-v3';
+  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20261015-ubs-confirmacao-v4';
   if(name==='assistida')return '/atendimento-acs-farmaceutico/solicitacao-assistida-csc.html?area='+area+from+'&v=20260929-assistida-v4';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260929-salvar-confirmacao-v1';
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
@@ -1428,6 +1442,7 @@ function normalizeEmbeddedPanelFrame(frame){
         :'#cscPlatformFooter{display:none!important}'
     ].join('');
     if(moduleName==='solicitacoes')style.textContent+='\n#cscInstitutionalAppbar{display:none!important;visibility:hidden!important;pointer-events:none!important}header.csc-appbar{display:flex!important}';
+    if(moduleName==='solicitacoes'&&shellActiveFrame()===frame&&shellFrameAtTarget(frame)&&doc.querySelector('header.csc-appbar')){var parentViewer=el('viewer');if(parentViewer){parentViewer.dataset.cscSingleHeader='solicitacoes';var parentBar=parentViewer.querySelector('.viewer-bar');if(parentBar)parentBar.style.setProperty('display','none','important')}}
     var internal=doc.getElementById('cscInstitutionalAppbar');
     /* SOLICITACOES_HEADER_STALE_GUARD_V1:
        mesmo que o Safari tenha mantido um iframe antigo, corrige apenas o rótulo
@@ -1594,6 +1609,7 @@ function ensureShellFrame(name,url,title,routeId){
   return frame;
 }
 function showShellFrame(name,frame,title,routeId){
+  var existingViewer=el('viewer');if(existingViewer)delete existingViewer.dataset.cscSingleHeader;
   hideAllNativeExcept('');
   var nativeHost=el('nativeModuleHost');if(nativeHost)nativeHost.hidden=true;
   var moradoresHost=el('nativeMoradoresHost');if(moradoresHost)moradoresHost.hidden=true;
@@ -1768,7 +1784,7 @@ function openModule(name,title,options){
   if(name==='ubs'){if(mode==='admin')showAdminUbs(title||'UBS');return}
   var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
   if(name==='portal'){showPortalTacs(title||'Portal TACS',routeId,url);return}
-  if(name==='solicitacoes'&&mode==='ubs')acknowledgeUbsSolicitacoes();
+  if(name==='solicitacoes'&&mode==='ubs')clearUbsSolicitacoesAlert();
   var remoteReady=Boolean(token||territoryToken||ubsToken),localReady=localPanelAccessReady();
   if(!remoteReady&&!localReady){
     moduloPendente={name:name,title:title||'Painel',options:moduleRouteOptions(options)};
