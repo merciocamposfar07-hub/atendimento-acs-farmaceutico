@@ -250,15 +250,10 @@ document.querySelector('.tabs').addEventListener('click',function(e){var b=e.tar
 document.getElementById('list').addEventListener('click',function(e){var b=e.target.closest('[data-open-id]');if(!b)return;openDetail(b.dataset.openId)});
 document.getElementById('detailCard').addEventListener('click',function(e){
  var button=e.target.closest('[data-ubs-pdf]'),item=current();if(!button||!item)return;
- var opened=window.open('about:blank','_blank');
- if(opened){try{opened.document.write('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><p role="status">AGUARDE… abrindo o PDF completo.</p>');opened.document.close()}catch(ignore){}}
- button.disabled=true;
- call('admin_solicitacao_ubs_pdf_preparar',{codigoSolicitacao:item.codigoSolicitacao},function(r){
-  button.disabled=false;
-  if(r&&r.ok&&r.ticket){var target=API+'?action=admin_solicitacao_ubs_pdf&ticket='+encodeURIComponent(r.ticket);if(opened&&!opened.closed)opened.location.replace(target);else location.assign(target);return}
-  if(opened&&!opened.closed){try{opened.close()}catch(ignore){}}
-  setStatus(text(r&&r.message)||'Não foi possível abrir o PDF. Atualize a sessão e tente novamente.','err');
- });
+ var payload=core&&core.session?core.session({codigoSolicitacao:item.codigoSolicitacao}):{areaId:area(),codigoSolicitacao:item.codigoSolicitacao};
+ var form=document.createElement('form');form.method='POST';form.action=API;form.target='_blank';form.hidden=true;
+ payload.action='admin_solicitacao_ubs_pdf';Object.keys(payload).forEach(function(key){var input=document.createElement('input');input.type='hidden';input.name=key;input.value=String(payload[key]||'');form.appendChild(input)});
+ document.body.appendChild(form);form.submit();setTimeout(function(){form.remove()},1500);
 });
 document.getElementById('detailCard').addEventListener('click',function(e){var b=e.target.closest('[data-detail-action]'),x=current();if(!b||!x||busy)return;b.disabled=true;call('admin_solicitacoes_ubs_atualizar',{id:x.id,status:b.dataset.detailAction},function(r){if(r&&r.ok===true){setStatus(r.message||'Solicitação atualizada.','ok');refresh(true,true)}else{b.disabled=false;setStatus(text(r&&r.message)||'Não foi possível atualizar.','err')}})});
 if(!loadCache()){items=[];renderList();setStatus('Aguarde enquanto os dados carregam…','warn')}setTimeout(function(){refresh(true)},0);
