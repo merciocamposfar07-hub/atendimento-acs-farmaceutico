@@ -216,14 +216,15 @@ function loadCache(){
   return true
  }catch(e){return false}
 }
-function jsonpResult(id,cb){var name='__sol_panel_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false;function finish(r){if(done)return;done=true;try{delete window[name]}catch(e){}if(s.parentNode)s.remove();cb(r)}window[name]=finish;s.onerror=function(){finish({ok:false})};s.src=API+'?action=admin_solicitacoes_ubs_result&requestId='+encodeURIComponent(id)+'&callback='+encodeURIComponent(name)+'&_='+Date.now();document.head.appendChild(s)}
+function jsonpResult(id,cb){var name='__sol_panel_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false,timeout=setTimeout(function(){finish({ok:false,temporario:true})},8000);function finish(r){if(done)return;done=true;clearTimeout(timeout);try{delete window[name]}catch(e){}if(s.parentNode)s.remove();cb(r)}window[name]=finish;s.onerror=function(){finish({ok:false,temporario:true})};s.src=API+'?action=admin_solicitacoes_ubs_result&requestId='+encodeURIComponent(id)+'&callback='+encodeURIComponent(name)+'&_='+Date.now();document.head.appendChild(s)}
 function call(action,extra,cb,background){
  if(background){if(syncBusy)return;syncBusy=true}else{if(busy){cb({ok:false,temporario:true,message:'Aguarde a operação anterior.'});return}busy=true}
  var id=rid(action),payload=core&&core.session?core.session(extra||{}):Object.assign({areaId:area()},extra||{}),body=new URLSearchParams(),started=Date.now(),finished=false;
- function release(){if(finished)return;finished=true;if(background)syncBusy=false;else busy=false}
+ var deadline=setTimeout(function(){if(finished)return;release();cb({ok:false,temporario:true,message:'A conexão demorou. Os dados já carregados foram preservados; tentando novamente em segundo plano.'})},15000);
+ function release(){if(finished)return;finished=true;clearTimeout(deadline);if(background)syncBusy=false;else busy=false}
  Object.keys(payload).forEach(function(k){body.set(k,String(payload[k]==null?'':payload[k]))});body.set('action',action);body.set('requestId',id);
  try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){})}catch(e){}
- function poll(){jsonpResult(id,function(r){if(r&&r.ok===true&&r.pendente===false){release();cb(r.result||{ok:false});return}if(Date.now()-started>12000){release();cb({ok:false,temporario:true,message:'A atualização seguirá em segundo plano na próxima tentativa.'});return}setTimeout(poll,250)})}setTimeout(poll,100);
+ function poll(){if(finished)return;jsonpResult(id,function(r){if(finished)return;if(r&&r.ok===true&&r.pendente===false){release();cb(r.result||{ok:false});return}if(Date.now()-started>12000){release();cb({ok:false,temporario:true,message:'A atualização seguirá em segundo plano na próxima tentativa.'});return}setTimeout(poll,250)})}setTimeout(poll,100);
 }
 function refresh(silent,forceDetail){
  if(syncBusy)return;call('admin_solicitacoes_ubs_listar',{},function(r){
@@ -234,7 +235,7 @@ function refresh(silent,forceDetail){
       no meio do gesto interrompia a rolagem no Safari/iPhone. */
    if(forceDetail&&selectedId)renderDetail();
    setStatus('Solicitações atualizadas.','ok')
-  }else if(!silent)setStatus(text(r&&r.message)||'Não foi possível atualizar agora.','err')
+  }else if(!silent||initialLoading)setStatus(text(r&&r.message)||'Tentando carregar as solicitações novamente…','err')
  },true)
 }
 function backCentral(){
