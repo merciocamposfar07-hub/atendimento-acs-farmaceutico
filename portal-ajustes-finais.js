@@ -760,12 +760,12 @@
           }
         });
         var data = requestData(identity);
-        if(window.PortalSolicitacoesUbsV1&&typeof window.PortalSolicitacoesUbsV1.registrar==='function')window.PortalSolicitacoesUbsV1.registrar({codigoSolicitacao:data.code,categoria:data.category,descricao:data.description});
+        if(!withDocument&&window.PortalSolicitacoesUbsV1&&typeof window.PortalSolicitacoesUbsV1.registrar==='function')window.PortalSolicitacoesUbsV1.registrar({codigoSolicitacao:data.code,categoria:data.category,descricao:data.description});
         return createPetroleumCard(data).then(function (blob) {
           var fileName = 'solicitacao-' + normalizeArea(identity.areaId).toLowerCase() + '-portal-csc.png';
           var file = new File([blob], fileName, { type: 'image/png' });
           if(withDocument){
-            return annex.prepareRequest(blob,data,attachment).then(function(pdf){return shareDocumentPdf(pdf,'Solicitação do Portal CSC - '+identity.areaName+' - card e documento anexado.',fingerprint,attachment)});
+            return annex.prepareRequest(blob,data,attachment).then(function(pdf){var ubs=window.PortalSolicitacoesUbsV1;if(!ubs||typeof ubs.registrarArquivo!=='function')throw new Error('Atualize o portal para enviar o documento completo à UBS.');return ubs.registrarArquivo(pdf,data).then(function(){return shareDocumentPdf(pdf,'Solicitação do Portal CSC - '+identity.areaName+' - card e documento anexado.',fingerprint,attachment)})});
           }
           if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
             return navigator.share({
