@@ -153,6 +153,7 @@
     var box=document.getElementById('cscResidentLoginWaitV2');if(box)box.remove();
   }
   function residentWait(title,detail){
+    if(residentLocalLoginVisible)return;
     if(residentLoginPending){var label=document.querySelector('#cscResidentLoginWaitV2 [data-login-wait-label]');if(label)label.textContent=title;return}
     setPinBox('<strong class="tacs-family-title csc-resident-wait" role="status" aria-live="polite">'+escapeHtml(title)+'</strong><p class="tacs-family-help">'+escapeHtml(detail||'Estamos preparando seu acesso. Não é necessário tocar novamente.')+'</p>','tacs-pin-box');
   }
@@ -430,6 +431,7 @@ function openResidentInline(r,confirmed){
  if(api&&typeof api.openInline==='function')return api.openInline(r,confirmed);
  return false;
 }
+var residentLocalLoginVisible=false;
 function loginResidentPinFromPortal(){
  if(residentLoginPending||residentAccessBusy)return;
  var p=residentProfile(),installQuick=residentInstallQuick(),pin=digits(document.getElementById('portalResidentPinLogin')&&document.getElementById('portalResidentPinLogin').value),btn=document.querySelector('[data-resident-pin-login]'),hintCpf=residentServerCpfHint||residentServerCpfSaved();
@@ -452,6 +454,7 @@ function loginResidentPinFromPortal(){
     renderAccessFamily(snap);
     placePinDefault();
     localOpened=openResidentInline(snap,false);
+    if(localOpened){resetResidentPinAttempts();finishResidentLoginWait();residentLocalLoginVisible=true}
    }
   }
   if(!localOpened)residentWait('AGUARDE… carregando seus dados e sua família.');
@@ -465,11 +468,9 @@ function loginResidentPinFromPortal(){
    saveResidentAccess(r);
    renderAccessFamily(r);
    p=residentProfile()||p;
-   return saveResidentVault(pin,r,p).then(function(){
-    placePinDefault();
-    if(!openResidentInline(r,true)&&!localOpened)setPinBox('<strong class="tacs-family-title">✓ PIN confirmado</strong><p class="tacs-family-help">Dados prontos.</p>','tacs-pin-box');
-    return r;
-   });
+   placePinDefault();
+   if(!openResidentInline(r,true)&&!localOpened)setPinBox('<strong class="tacs-family-title">✓ PIN confirmado</strong><p class="tacs-family-help">Dados prontos.</p>','tacs-pin-box');
+   finishResidentLoginWait();saveResidentVault(pin,r,p);return r;
   }).catch(function(e){
    if(localOpened&&!/PIN incorreto/i.test(text(e&&e.message))){
     var aviso=document.getElementById('portalDocumentComplementV1');
@@ -479,7 +480,7 @@ function loginResidentPinFromPortal(){
    handleResidentPinFailure(e);
    return null;
   });
- }).catch(function(e){handleResidentPinFailure(e);}).finally(function(){finishResidentLoginWait();var x=document.querySelector('[data-resident-pin-login]');if(x)x.disabled=false});
+ }).catch(function(e){handleResidentPinFailure(e);}).finally(function(){residentLocalLoginVisible=false;finishResidentLoginWait();var x=document.querySelector('[data-resident-pin-login]');if(x)x.disabled=false});
 }
   function renderStart(){var input=document.getElementById('cpf'),current=digits(input&&input.value),fam=familyCandidate(current);if(!fam){if(pendingMissing&&current===pendingMissing)return;if(docType(current)&&ensureFamilySelectorVisible())return;hide();return}var ajuda=pendingMissing?'O '+pendingLabel()+' informado será vinculado somente depois que você escolher a pessoa correta desta família.':'Ao buscar, todos os integrantes cadastrados desta família serão exibidos.';setBox('<strong class="tacs-family-title">Cadastro familiar '+escapeHtml(fam)+'</strong><button type="button" class="tacs-family-action" data-family-search="'+escapeHtml(fam)+'">👨‍👩‍👧‍👦 Buscar esta família</button><p class="tacs-family-help">'+escapeHtml(ajuda)+'</p>','')}
   function renderMembers(r){var m=Array.isArray(r&&r.membros)?r.membros:[],title=pendingMissing?'De quem é este '+pendingLabel()+'?':'Quem precisa do atendimento?',help=pendingMissing?'Este '+pendingLabel()+' ainda não está vinculado a nenhum morador desta família. Toque na pessoa correta para vincular com segurança.':'Família '+escapeHtml(r.familiaId)+'. Toque no nome para carregar nome, nascimento e localidade.',html='<strong class="tacs-family-title">'+escapeHtml(title)+'</strong><p class="tacs-family-help">'+help+'</p>';activeFamilyId=normalizeFamily(r&&r.familiaId||'');familySnapshot=r||null;m.forEach(function(i){seedMemberCacheFromSnapshot(i,activeFamilyId);html+='<button type="button" class="tacs-family-member" data-member-token="'+escapeHtml(i.token)+'" data-member-name="'+escapeHtml(i.nome)+'"'+(i.temDocumento?'':' disabled')+'>'+escapeHtml(i.nome)+'<span>'+(i.nascimento?'Nascimento: '+escapeHtml(i.nascimento):'')+(i.temDocumento?'':' • Sem CPF/CNS para carregamento automático')+'</span></button>'});warmMemberCache(m);setBox(html,'tacs-family-ok')}
