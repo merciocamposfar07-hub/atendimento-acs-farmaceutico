@@ -914,7 +914,7 @@ function moduleUrl(name,options){
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-suporte-ubs-diag-v1';
   if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260919-recados-snapshot-completo-v5';
-  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20261015-ubs-pdf-visualizacao-v2';
+  if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20261015-envio-direto-v3';
   if(name==='assistida')return '/atendimento-acs-farmaceutico/solicitacao-assistida-csc.html?area='+area+from+'&v=20260929-assistida-v4';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260929-salvar-confirmacao-v1';
   if(name==='profissionais')return '/atendimento-acs-farmaceutico/painel-oficial-profissionais-servicos.html?area='+area+access+extra+from+'&v='+revision;
@@ -1466,6 +1466,7 @@ function shellFrameAtTarget(frame){
     var current=text(frame.contentWindow&&frame.contentWindow.location&&frame.contentWindow.location.href);
     if(!current||current==='about:blank')return false;
     var a=new URL(current,location.href),b=new URL(expected,location.href);
+    if(frame.dataset.shellModule==='solicitacoes'){a.searchParams.delete('localfirst');b.searchParams.delete('localfirst')}
     return a.pathname===b.pathname&&a.search===b.search;
   }catch(e){
     var src=text(frame.getAttribute('src')||'');
@@ -1561,7 +1562,9 @@ function ensureShellFrame(name,url,title,routeId){
   if(frame){
     /* SOLICITACOES_HEADER_STALE_GUARD_V1:
        se a rota/cache-bust mudou, não reaproveitar o iframe antigo da sessão. */
-    if(name==='solicitacoes'&&text(frame.dataset.shellUrl)!==text(url)){
+    var sameSolicitacoesRoute=false;
+    if(name==='solicitacoes'){try{var oldRoute=new URL(frame.dataset.shellUrl,location.href),newRoute=new URL(url,location.href);oldRoute.searchParams.delete('localfirst');newRoute.searchParams.delete('localfirst');sameSolicitacoesRoute=oldRoute.href===newRoute.href}catch(ignore){}}
+    if(name==='solicitacoes'&&!sameSolicitacoesRoute&&text(frame.dataset.shellUrl)!==text(url)){
       frame.dataset.shellUrl=url;
       frame.dataset.shellLoaded='0';
       frame.dataset.shellReady='0';
@@ -1618,7 +1621,7 @@ function showShellFrame(name,frame,title,routeId){
   setLegacyFrameOpening(frame,!shellReady);
   /* TAREFA_10_AGENDA_LAZY_VISIBLE_V1:
      módulos ainda não migrados continuam carregando somente depois que o shell está visível. */
-  if(frame.dataset.shellLoaded!=='1'){
+  if(frame.dataset.shellLoaded!=='1'||(name==='solicitacoes'&&(!frame.getAttribute('src')||frame.getAttribute('src')==='about:blank'))){
     frame.dataset.shellLoaded='1';
     var carregar=function(){
       var url=frame.dataset.shellUrl||'about:blank';
@@ -2136,10 +2139,10 @@ function prewarmLegacyPanel(name){
   var frame=ensureShellFrame(name,url,(document.querySelector('#moduleGrid .module[data-module="'+name+'"] strong')||{}).textContent||'Painel',routeId);
   if(!frame||frame.dataset.shellLoaded==='1'||frame.dataset.shellReady==='1')return;
   frame.hidden=true;
-  frame.dataset.shellLoaded='1';
   var carregar=function(){
     if(!panelRuntimeRemoteReady()||shellCurrentScope()!==panelRuntimePrewarmScope)return;
     var target=frame.dataset.shellUrl||url;
+    frame.dataset.shellLoaded='1';
     try{if(!shellFrameAtTarget(frame))frame.src=target}catch(e){}
   };
   if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(carregar);else setTimeout(carregar,0);
