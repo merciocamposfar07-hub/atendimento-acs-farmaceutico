@@ -7,7 +7,7 @@
   var SERVICE_RECIPE='Solicitar renovação de receita médica';
   var SERVICE_EXAMS='Solicitar marcação de exames — Ultrassom / Fisioterapeuta';
   var currentAttachmentService='';
-  var selectedFile=null;
+  var selectedFile=null,preparedPdf=null,attachmentGeneration=0,attachmentPreparing=false,pdfLibraryPromise=null;
   var pickerObserver=null;
   var sendObserver=null;
 
@@ -60,6 +60,9 @@
 
   function normalizeOptions(){
     var select=category();if(!select)return;
+    var selectedValue=text(select.value),selectedOption=Array.prototype.find.call(select.options,function(o){return o.value===selectedValue});
+    var selectedDefinition=SERVICES.find(function(def){return selectedOption&&optionMatches(selectedOption,def.aliases)});
+    if(selectedDefinition)selectedValue=selectedDefinition.value;
     var original=Array.prototype.slice.call(select.options);
     var blank=original.find(function(o){return !text(o.value)})||null;
     var used=[];
@@ -93,6 +96,8 @@
     appendKnown(0);appendKnown(1);appendKnown(2);appendKnown(3);
     dynamic.forEach(function(o){select.appendChild(o)});
     for(var i=4;i<known.length;i++)appendKnown(i);
+    // Reconstruir opções nunca pode alterar a escolha do morador.
+    select.value=selectedValue;
   }
 
   function addStyles(){
@@ -182,20 +187,91 @@
   function attachmentFileName(){return el('portalServiceAttachmentFileV1')}
   function attachmentChoose(){return el('portalServiceAttachmentChooseV1')}
 
+  function attachmentStatus(message){var status=attachmentFileName();if(status){status.hidden=false;status.textContent=message}}
+  function loadPdfLibrary(){
+    if(window.PDFLib)return Promise.resolve(window.PDFLib);
+    if(pdfLibraryPromise)return pdfLibraryPromise;
+    pdfLibraryPromise=new Promise(function(resolve,reject){
+      var script=document.createElement('script'),timer=setTimeout(function(){script.remove();pdfLibraryPromise=null;reject(new Error('O conversor de PDF demorou. Escolha o arquivo novamente para tentar.'))},20000);
+      script.src='/atendimento-acs-farmaceutico/vendor/pdf-lib-1.17.1.min.js';
+      script.onload=function(){clearTimeout(timer);if(window.PDFLib)resolve(window.PDFLib);else{pdfLibraryPromise=null;reject(new Error('Não foi possível carregar o conversor de PDF.'))}};
+      script.onerror=function(){clearTimeout(timer);script.remove();pdfLibraryPromise=null;reject(new Error('Sem conexão para preparar o PDF. Escolha o arquivo novamente.'))};
+      document.head.appendChild(script);
+    });
+    return pdfLibraryPromise;
+  }
+  function readBytes(file){
+    if(typeof file.arrayBuffer==='function')return file.arrayBuffer();
+    return new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){resolve(reader.result)};reader.onerror=function(){reject(new Error('Não foi possível ler o arquivo.'))};reader.readAsArrayBuffer(file)});
+  }
+  function imageBytes(file){
+    return new Promise(function(resolve,reject){
+      var url=URL.createObjectURL(file),image=new Image();
+      image.onload=function(){
+        try{
+          var ratio=Math.min(1,2400/Math.max(image.naturalWidth,image.naturalHeight)),canvas=document.createElement('canvas');
+          canvas.width=Math.max(1,Math.round(image.naturalWidth*ratio));canvas.height=Math.max(1,Math.round(image.naturalHeight*ratio));
+          var ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
+          canvas.toBlob(function(blob){URL.revokeObjectURL(url);if(!blob){reject(new Error('Não foi possível converter a foto.'));return}readBytes(blob).then(resolve,reject)},'image/jpeg',.9);
+        }catch(error){URL.revokeObjectURL(url);reject(error)}
+      };
+      image.onerror=function(){URL.revokeObjectURL(url);reject(new Error('Não foi possível ler a foto. Escolha uma imagem JPEG/PNG ou um PDF.'))};image.src=url;
+    });
+  }
+  async function convertAttachment(file){
+    var library=await loadPdfLibrary();
+    if(file.type==='application/pdf'||/\.pdf$/i.test(file.name||'')){
+      var bytes=await readBytes(file),existing=await library.PDFDocument.load(bytes);
+      if(!existing.getPageCount())throw new Error('O PDF selecionado não contém páginas.');
+      return new File([bytes],'documento.pdf',{type:'application/pdf'});
+    }
+    if(!/^image\//.test(file.type||''))throw new Error('Selecione uma foto ou um arquivo PDF.');
+    var jpg=await imageBytes(file),pdf=await library.PDFDocument.create(),image=await pdf.embedJpg(jpg);
+    var landscape=image.width>image.height,page=pdf.addPage(landscape?[841.89,595.28]:[595.28,841.89]),size=page.getSize();
+    var scale=Math.min((size.width-32)/image.width,(size.height-32)/image.height),width=image.width*scale,height=image.height*scale;
+    page.drawImage(image,{x:(size.width-width)/2,y:(size.height-height)/2,width:width,height:height});
+    return new File([await pdf.save()],'documento.pdf',{type:'application/pdf'});
+  }
+  async function selectAttachment(file){
+    if(!file)return;
+    var generation=++attachmentGeneration;selectedFile=file;preparedPdf=null;attachmentPreparing=true;
+    attachmentStatus('AGUARDE… preparando o documento em PDF.');lockSendIfNeeded();
+    try{
+      var converted=await convertAttachment(file);if(generation!==attachmentGeneration)return;
+      preparedPdf=converted;attachmentStatus('PDF pronto: '+file.name+'. O envio incluirá o card e o documento.');
+      attachmentChoose().textContent='📎 Trocar arquivo / galeria';
+    }catch(error){if(generation===attachmentGeneration)attachmentStatus('Não foi possível preparar o documento. '+(error.message||'Escolha o arquivo novamente.'))}
+    finally{if(generation===attachmentGeneration){attachmentPreparing=false;updateAttachmentState(false);notifyForm()}}
+  }
+  function clearAttachment(){
+    if(window.PortalCscAnexosV2)window.PortalCscAnexosV2.holdForm=false;
+    var panel=el('cscPreparedDocumentV2');if(panel){if(panel.dataset.url)URL.revokeObjectURL(panel.dataset.url);panel.remove()}
+    attachmentGeneration++;selectedFile=null;preparedPdf=null;attachmentPreparing=false;
+    ['portalServiceAttachmentInputV1','portalServiceAttachmentCameraV2'].forEach(function(id){var input=el(id);if(input)input.value=''});
+    var status=attachmentFileName();if(status){status.hidden=true;status.textContent=''}
+    var choose=attachmentChoose();if(choose)choose.textContent='📎 Escolher arquivo / galeria';
+  }
+  async function requestPdf(cardBlob,data,attachment){
+    if(!attachment)throw new Error('Aguarde o documento ficar pronto em PDF.');
+    var library=await loadPdfLibrary(),pdf=await library.PDFDocument.create(),card=await pdf.embedPng(await readBytes(cardBlob));
+    // O card mantém exatamente o desenho e a proporção usados no envio normal.
+    var width=595.28,height=width*card.height/card.width,page=pdf.addPage([width,height]);
+    page.drawImage(card,{x:0,y:0,width:width,height:height});
+    var original=await library.PDFDocument.load(await readBytes(attachment)),pages=await pdf.copyPages(original,original.getPageIndices());
+    pages.forEach(function(p){pdf.addPage(p)});
+    pdf.setTitle('Solicitação CSC - '+text(data.code));
+    return new File([await pdf.save()],'solicitacao-'+text(data.code).replace(/[^a-z0-9_-]/gi,'-')+'-com-documento.pdf',{type:'application/pdf'});
+  }
   function installAttachmentBox(){
     if(attachmentBox())return;
     var select=category(),label=select&&select.closest('label');if(!label)return;
     var box=document.createElement('section');box.id='portalServiceAttachmentV1';box.className='portal-attachment-box';box.hidden=true;
-    box.innerHTML='<h3 id="portalServiceAttachmentTitleV1">📎 Enviar documento</h3><p id="portalServiceAttachmentHelpV1">Selecione uma foto ou arquivo no seu aparelho.</p><input id="portalServiceAttachmentInputV1" type="file" accept="image/*,application/pdf,.pdf" hidden><button id="portalServiceAttachmentChooseV1" class="portal-attachment-choose" type="button">📎 Escolher foto ou arquivo</button><div id="portalServiceAttachmentFileV1" class="portal-attachment-file" hidden></div>';
+    box.innerHTML='<h3 id="portalServiceAttachmentTitleV1">📎 Enviar documento</h3><p id="portalServiceAttachmentHelpV1">O PDF terá o card da solicitação e o documento anexado.</p><input id="portalServiceAttachmentInputV1" type="file" accept="image/*,application/pdf,.pdf" hidden><input id="portalServiceAttachmentCameraV2" type="file" accept="image/*" capture="environment" hidden><button id="portalServiceAttachmentCameraButtonV2" class="portal-attachment-choose" type="button">📷 Tirar foto agora</button><button id="portalServiceAttachmentChooseV1" class="portal-attachment-choose" type="button">📎 Escolher arquivo / galeria</button><button id="portalServiceAttachmentRemoveV2" class="tacs-family-action" type="button">Remover anexo</button><div id="portalServiceAttachmentFileV1" class="portal-attachment-file" role="status" aria-live="polite" hidden></div>';
     label.insertAdjacentElement('afterend',box);
-    attachmentChoose().addEventListener('click',function(){attachmentInput().click()});
-    attachmentInput().addEventListener('change',function(){
-      selectedFile=this.files&&this.files[0]?this.files[0]:null;
-      var f=attachmentFileName();
-      if(selectedFile){f.hidden=false;f.textContent='Arquivo selecionado: '+selectedFile.name;attachmentChoose().textContent='📎 Trocar foto ou arquivo'}
-      else{f.hidden=true;f.textContent='';attachmentChoose().textContent='📎 Escolher foto ou arquivo'}
-      updateAttachmentState(false)
-    })
+    attachmentChoose().addEventListener('click',function(){attachmentInput().value='';attachmentInput().click()});
+    el('portalServiceAttachmentCameraButtonV2').addEventListener('click',function(){el('portalServiceAttachmentCameraV2').value='';el('portalServiceAttachmentCameraV2').click()});
+    [attachmentInput(),el('portalServiceAttachmentCameraV2')].forEach(function(input){input.addEventListener('change',function(){selectAttachment(this.files&&this.files[0])})});
+    el('portalServiceAttachmentRemoveV2').addEventListener('click',function(){clearAttachment();updateAttachmentState(false);notifyForm()});
   }
 
   function removeAttachmentGuide(){var g=el('portalServiceAttachmentGuideV1');if(g)g.remove()}
@@ -217,7 +293,7 @@
     var send=getSend();if(!send)return;
     if(!send.dataset.portalAttachmentOriginalHtml)send.dataset.portalAttachmentOriginalHtml=send.innerHTML;
     if(required){
-      send.innerHTML='📲 Enviar pelo WhatsApp com arquivo<small>O arquivo selecionado será compartilhado junto com a solicitação.</small>';
+      send.innerHTML='📲 Enviar solicitação com documento<small>PDF com o card e todas as páginas do documento.</small>';
     }else if(send.dataset.portalAttachmentOriginalHtml){
       send.innerHTML=send.dataset.portalAttachmentOriginalHtml;
     }
@@ -226,7 +302,7 @@
   function lockSendIfNeeded(){
     var send=getSend();if(!send)return;
     var required=isAttachmentService(text(category()&&category().value));
-    if(required&&!selectedFile){send.dataset.portalAttachmentLock='1';send.disabled=true}
+    if(required&&(!preparedPdf||attachmentPreparing)){send.dataset.portalAttachmentLock='1';if(!send.disabled)send.disabled=true}
     else if(send.dataset.portalAttachmentLock==='1'){
       delete send.dataset.portalAttachmentLock;
       notifyForm()
@@ -236,14 +312,14 @@
   function updateAttachmentState(scroll){
     var select=category(),box=attachmentBox();if(!select||!box)return;
     var service=text(select.value),required=isAttachmentService(service);
-    if(service!==currentAttachmentService){selectedFile=null;var input=attachmentInput();if(input)input.value='';var f=attachmentFileName();if(f){f.hidden=true;f.textContent=''}var choose=attachmentChoose();if(choose)choose.textContent='📎 Escolher foto ou arquivo'}
+    if(service!==currentAttachmentService){clearAttachment()}
     currentAttachmentService=service;
     box.hidden=!required;
     removeAttachmentGuide();
     if(required){
       var title=el('portalServiceAttachmentTitleV1'),help=el('portalServiceAttachmentHelpV1');
-      if(service===SERVICE_RECIPE){title.textContent='📎 Enviar foto ou arquivo da receita';help.textContent='Selecione a foto, PDF ou arquivo da receita que será enviado junto com o pedido de renovação.'}
-      else{title.textContent='📎 Enviar foto ou arquivo da solicitação';help.textContent='Selecione a foto, PDF ou arquivo da solicitação para a marcação.'}
+      if(service===SERVICE_RECIPE){title.textContent='📎 Enviar foto ou arquivo da receita';help.textContent='Tire uma foto ou escolha um PDF ou imagem da receita. O documento será incluído no PDF da solicitação.'}
+      else{title.textContent='📎 Enviar foto ou arquivo da solicitação';help.textContent='Tire uma foto ou escolha o PDF ou imagem da requisição. O documento será incluído no PDF da solicitação.'}
       if(!selectedFile)showAttachmentGuide();
     }
     updateAttachmentSendLabel(required);lockSendIfNeeded();applySelectedColor();
@@ -256,25 +332,20 @@
     return '*SOLICITAÇÃO À UNIDADE DE SAÚDE POSTO MATIAS*\n*Portal TACS*\n\nServiço: '+service+'\nNome: '+name+'\nData de nascimento: '+birth+'\nCPF/CNS: '+doc+'\nLocalidade: '+locality+(desc?'\nDescrição: '+desc:'')+'\nArquivo selecionado: '+(selectedFile?selectedFile.name:'')
   }
 
-  async function shareAttachment(event){
+  function shareAttachment(event){
     var service=text(category()&&category().value);if(!isAttachmentService(service))return;
-    var send=getSend();if(!send||event.target.closest('#sendPetroleumCard,#send')!==send)return;
+    var send=getSend();if(!send||!event.target.closest||event.target.closest('#sendPetroleumCard,#send')!==send)return;
+    if(preparedPdf&&!attachmentPreparing)return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-    if(!selectedFile){showAttachmentGuide();return}
-    var status=attachmentFileName();
-    try{
-      var payload={title:'Solicitação Portal TACS',text:buildShareText(),files:[selectedFile]};
-      if(typeof navigator.share!=='function')throw new Error('Compartilhamento de arquivos não disponível neste navegador.');
-      if(typeof navigator.canShare==='function'&&!navigator.canShare({files:[selectedFile]}))throw new Error('Este navegador não permitiu compartilhar o arquivo selecionado.');
-      try{sessionStorage.setItem('portalTacsResetAfterSendV1','1')}catch(ignore){}
-      await navigator.share(payload);
-      if(status){status.hidden=false;status.textContent='Arquivo pronto para envio. Escolha o WhatsApp na tela de compartilhamento.'}
-    }catch(error){
-      if(error&&error.name==='AbortError'){try{sessionStorage.removeItem('portalTacsResetAfterSendV1')}catch(ignore){};return}
-      try{sessionStorage.removeItem('portalTacsResetAfterSendV1')}catch(ignore){}
-      if(status){status.hidden=false;status.textContent=(error&&error.message)||'Não foi possível compartilhar este arquivo neste aparelho.'}
-    }
+    if(attachmentPreparing)attachmentStatus('AGUARDE… preparando o documento em PDF.');else if(!selectedFile)showAttachmentGuide();
   }
+  window.PortalCscAnexosV2={
+    required:function(){return isAttachmentService(text(category()&&category().value))},
+    snapshot:function(){return preparedPdf},
+    prepareRequest:requestPdf,
+    preparing:function(){return attachmentPreparing},
+    clear:clearAttachment
+  };
 
   function installEvents(){
     var select=category();if(!select)return;
