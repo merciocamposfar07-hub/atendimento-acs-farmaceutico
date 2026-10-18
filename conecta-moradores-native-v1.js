@@ -76,6 +76,102 @@ function loadTransport(done){
   document.head.appendChild(s);
 }
 
+/* RESTAURAR_MENSAGEM_INDIVIDUAL_MORADORES_20261017
+   Exclusivo do painel nativo Moradores: reutiliza o envio individual existente.
+   Não altera buscas, cadastros, mensagens familiares ou backend. */
+var mensagemIndividualNativeCarregando=false,mensagemIndividualNativeCallbacks=[];
+function carregarMensagemIndividualNative(callback){
+  var api=window.PortalTacsMensagemIndividual;
+  if(api&&typeof api.abrir==='function'){callback(true);return}
+  mensagemIndividualNativeCallbacks.push(callback);
+  if(mensagemIndividualNativeCarregando)return;
+  mensagemIndividualNativeCarregando=true;
+  var script=document.createElement('script');
+  script.src='/atendimento-acs-farmaceutico/teste-v1/mensagem-individual-morador-v1.js?v=20261017-mensagem-individual-nativa-v1';
+  function terminar(ok){
+    mensagemIndividualNativeCarregando=false;
+    var callbacks=mensagemIndividualNativeCallbacks.splice(0);
+    callbacks.forEach(function(fn){try{fn(ok)}catch(e){}});
+    if(!ok&&script.parentNode)script.remove();
+  }
+  script.onload=function(){
+    var modulo=window.PortalTacsMensagemIndividual;
+    terminar(Boolean(modulo&&typeof modulo.abrir==='function'));
+  };
+  script.onerror=function(){terminar(false)};
+  document.head.appendChild(script);
+}
+function ativarMensagemIndividualMoradores(host){
+  var resultados=host.querySelector('#results'),formArea=host.querySelector('#formArea'),form=host.querySelector('#residentForm');
+  if(!resultados||!formArea||!form)return function(){};
+  var encerrado=false;
+  function campo(id){return host.querySelector('#'+id)}
+  function valor(id){var el=campo(id);return String(el&&el.value||'').trim()}
+  function registro(){
+    var origemAba=valor('originSheet'),origemLinha=Number(valor('originRow')),nome=valor('name');
+    if(!origemAba||origemLinha<2||!nome)return null;
+    return{
+      moradorId:valor('residentId'),origemAba:origemAba,origemLinha:origemLinha,
+      nome:nome,nascimento:valor('birth'),cpf:valor('cpf'),cns:valor('cns'),
+      endereco:valor('address')
+    };
+  }
+  function aviso(msg,tipo){
+    var status=campo('operationStatus');
+    if(status){status.textContent=msg;status.className='status '+(tipo||'warn')}
+  }
+  function abrir(){
+    var morador=registro();
+    if(!morador){aviso('Selecione um morador cadastrado antes de enviar uma mensagem.','warn');return}
+    carregarMensagemIndividualNative(function(ok){
+      if(encerrado||!host.isConnected)return;
+      var api=window.PortalTacsMensagemIndividual;
+      if(!ok||!api||typeof api.abrir!=='function'){aviso('Não foi possível carregar a mensagem individual. Reabra o painel.','err');return}
+      api.abrir(morador);
+    });
+  }
+  function criarBotao(classe){
+    var botao=document.createElement('button');
+    botao.type='button';botao.className=classe;
+    botao.textContent='🔔 Mensagem individual';
+    botao.style.cssText='display:block;width:100%;min-height:56px;margin-top:12px;padding:11px 14px;border:0;border-radius:18px;background:#135272;color:#fff;font-weight:900;text-align:center';
+    return botao;
+  }
+  function atualizar(){
+    if(encerrado)return;
+    Array.prototype.forEach.call(resultados.children,function(card){
+      if(!card.classList||!card.classList.contains('card')||card.querySelector('.msg-ind-card-button'))return;
+      var original=null;
+      Array.prototype.forEach.call(card.children,function(child){
+        if(!original&&child.tagName==='BUTTON')original=child;
+      });
+      if(!original)return;
+      var botao=criarBotao('msg-ind-card-button');
+      botao.addEventListener('click',function(event){
+        event.preventDefault();event.stopPropagation();
+        original.click();
+        abrir();
+      });
+      card.appendChild(botao);
+    });
+    var atual=form.querySelector('.msg-ind-form-button'),morador=registro();
+    if(morador&&!atual){
+      var b=criarBotao('msg-ind-form-button');
+      b.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();abrir()});
+      var grid=form.querySelector('.grid');
+      if(grid)grid.insertAdjacentElement('afterend',b);else form.appendChild(b);
+    }else if(!morador&&atual)atual.remove();
+  }
+  var observer=new MutationObserver(atualizar);
+  observer.observe(resultados,{childList:true});
+  observer.observe(formArea,{attributes:true,attributeFilter:['class']});
+  atualizar();
+  carregarMensagemIndividualNative(function(ok){
+    if(!ok&&!encerrado)aviso('O módulo de mensagem individual está indisponível. Reabra o painel para tentar novamente.','warn');
+  });
+  return function(){encerrado=true;observer.disconnect()};
+}
+
 function create(host,options){
   var core=window.ConectaModuleCoreV1;
   if(!core||typeof core.session!=='function')throw new Error('Núcleo Conecta indisponível para Moradores.');
@@ -95,6 +191,7 @@ function create(host,options){
     if(content)content.classList.remove('hidden');
   }
   ensureInstantSurface();
+  var desativarMensagemIndividual=ativarMensagemIndividualMoradores(host);
 
   function setDirty(v){dirty=Boolean(v);host.dataset.tacsDirty=dirty?'1':'0'}
   function remoteReady(){return Boolean(core&&typeof core.ready==='function'&&core.ready())}
@@ -202,7 +299,7 @@ function create(host,options){
     },
     hide:function(){visible=false;if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}host.hidden=true},
     hasUnsaved:function(){return dirty},
-    reset:function(){visible=false;dirty=false;if(refreshTimer){clearTimeout(refreshTimer);refreshTimer=null}if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}host.dataset.tacsDirty='0';host.innerHTML='';host.hidden=true},
+    reset:function(){visible=false;dirty=false;desativarMensagemIndividual();if(refreshTimer){clearTimeout(refreshTimer);refreshTimer=null}if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}host.dataset.tacsDirty='0';host.innerHTML='';host.hidden=true},
     isVisible:function(){return visible}
   };
 }
