@@ -1,0 +1,163 @@
+name: CSC - Corrigir exclusivamente envio individual no painel Moradores
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-mensagem-individual-envio-estavel-producao.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  mensagens-individuais:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configurar Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Testes de sintaxe e escopo isolado
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
+          node --check teste-v1/mensagem-individual-morador-v1.js
+          node - <<'NODE'
+          const fs=require('fs');
+          const server=fs.readFileSync('apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs','utf8');
+          const front=fs.readFileSync('teste-v1/mensagem-individual-morador-v1.js','utf8');
+          const page=fs.readFileSync('confirmar-ciencia.html','utf8');
+          for(const str of ['mensagemIndividualV1IdempotenciaPush_','mensagemIndividualV1ComprovanteExistente_','mensagemIndividualV1ConteudoPorToken_','publico_mensagem_individual_conteudo','notificacoesV8MapaVinculos_']){
+            if(!server.includes(str))throw Error('Funcao individual ausente: '+str);
+          }
+          if(!front.includes('protocoloMensagem(')||!page.includes('conteudoIndividual')||!page.includes('Li e estou ciente'))throw Error('Interface individual nao validada');
+          const match=page.match(/<script>\s*([\s\S]*?)<\/script>/);
+          if(!match)throw Error('Pagina de confirmacao sem codigo');
+          new Function(match[1]);
+          console.log('MENSAGEM_INDIVIDUAL_TESTES_ESTATICOS_OK');
+          NODE
+      - name: Credenciais privadas
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        shell: bash
+        run: |
+          test -n "$CLASPRC_JSON" && test -n "$CLASP_JSON" && test -n "$DEPLOYMENT_ID"
+      - name: Baixar versao real do Apps Script
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+        run: |
+          set -euo pipefail
+          LIVE="$RUNNER_TEMP/csc-mensagens-individuais"
+          mkdir -p "$LIVE"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE="$LIVE" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),cfg=JSON.parse(process.env.CLASP_JSON);
+          if(!cfg.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(cfg.scriptId))throw Error('Projeto Apps Script invalido');
+          cfg.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE,'.clasp.json'),JSON.stringify(cfg,null,2)+'\n');
+          NODE
+          cd "$LIVE"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+      - name: Modificar exclusivamente funcoes de mensagem individual
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE="$RUNNER_TEMP/csc-mensagens-individuais" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const liveDir=process.env.LIVE;
+          const names=fs.readdirSync(liveDir).filter(n=>/\.(?:gs|js)$/.test(n));
+          const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const saved=Object.fromEntries(names.map(n=>[n,sha(fs.readFileSync(path.join(liveDir,n)))]));
+          const candidates=names.filter(n=>fs.readFileSync(path.join(liveDir,n),'utf8').includes('var TACS_MENSAGEM_INDIVIDUAL_V1=Object.freeze'));
+          if(candidates.length!==1)throw Error('Modulo individual nao foi localizado de forma unica; cancelando para proteger outras funcoes');
+          const name=candidates[0],file=path.join(liveDir,name);
+          const src=fs.readFileSync('apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs','utf8');
+          let live=fs.readFileSync(file,'utf8');
+          function oneFunction(txt,name){
+            const re=new RegExp('function '+name+'\\([^)]*\\)\\{[\\s\\S]*?\\n\\}','g');
+            const arr=txt.match(re)||[];
+            if(arr.length!==1)throw Error('Funcao ausente ou duplicada: '+name);
+            return arr[0];
+          }
+          const helpers=['mensagemIndividualV1ComprovanteExistente_','mensagemIndividualV1IdempotenciaPush_','mensagemIndividualV1ConteudoPorToken_'];
+          const sourceStart=src.indexOf('function '+helpers[0]+'('),sourceEnd=src.indexOf('function mensagemIndividualV1Enviar_(',sourceStart);
+          if(sourceStart<0||sourceEnd<sourceStart)throw Error('Codigo auxiliar nao encontrado');
+          if(!live.includes('function '+helpers[0]+'(')){
+            const anchor='function mensagemIndividualV1Enviar_(';
+            if(live.split(anchor).length!==2)throw Error('Ponto de insercao ambiguo');
+            live=live.replace(anchor,src.slice(sourceStart,sourceEnd)+anchor);
+          }else for(const helper of helpers){
+            if(oneFunction(live,helper)!==oneFunction(src,helper))throw Error('Conflito de versao no auxiliar '+helper);
+          }
+          const funcs=['mensagemIndividualV1TratarGet_','mensagemIndividualV1TratarPost_','mensagemIndividualV1Alvos_','mensagemIndividualV1Enviar_','mensagemIndividualV1HorarioRecife_','mensagemIndividualV1Status_'];
+          for(const fn of funcs){
+            const old=oneFunction(live,fn),updated=oneFunction(src,fn);
+            if(old===updated)continue;
+            if(!old.includes('mensagemIndividualV1')&&!old.includes('notificacoesAreaV1'))throw Error('Funcao existente nao corresponde ao modulo individual: '+fn);
+            live=live.replace(old,updated);
+          }
+          if(!live.includes('publico_mensagem_individual_conteudo')||!live.includes('idempotency_key'))throw Error('Fluxo completo da mensagem nao foi instalado');
+          fs.writeFileSync(file,live,'utf8');
+          const changed=names.filter(n=>sha(fs.readFileSync(path.join(liveDir,n)))!==saved[n]);
+          if(changed.length!==1||changed[0]!==name)throw Error('Arquivo fora do escopo: '+changed.join(','));
+          new Function(live);
+          console.log('SOMENTE_MODULO_MENSAGENS_INDIVIDUAIS_MODIFICADO',name);
+          NODE
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$RUNNER_TEMP/csc-mensagens-individuais" -type f \( -name '*.js' -o -name '*.gs' \) -print0)
+      - name: Publicar mesma implantacao e testar leitura sem enviar mensagens
+        shell: bash
+        env:
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/csc-mensagens-individuais"
+          BEFORE=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS=$(printf '%s\n' "$BEFORE" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/){gsub(/^@/,"",$i);print $i;exit}}')
+          test -n "$PREVIOUS"
+          DEPLOYED=0
+          rollback(){ code=$?;trap - ERR; if [ "$DEPLOYED" = '1' ]; then npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS" --description "Rollback mensagens individuais" "$DEPLOYMENT_ID" || true; fi; exit "$code"; }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 push --force
+          OUTPUT=$(npx --yes @google/clasp@3.3.0 version "CSC somente mensagens individuais - enviar seguro e ler sem PIN")
+          VERSION=$(printf '%s\n' "$OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description "Somente mensagens individuais e entrega segura" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          OK=0
+          for attempt in 1 2 3 4; do
+            curl -L --fail --silent --show-error --connect-timeout 6 --max-time 24 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?action=publico_mensagem_individual_conteudo&t=invalido" > "$RUNNER_TEMP/csc-msg-individual-check.json" || true
+            if node - <<'NODE'
+          const fs=require('fs');
+          const text=fs.readFileSync(process.env.RUNNER_TEMP+'/csc-msg-individual-check.json','utf8');
+          const r=JSON.parse(text);
+          if(r.ok!==false||typeof r.message!=='string'||!r.message.includes('conteúdo desta mensagem'))throw Error('Novo caminho protegido nao respondeu como esperado');
+          console.log('ROTA_INDIVIDUAL_PRODUCAO_ATIVA_E_PROTEGIDA');
+          NODE
+            then OK=1;break;fi
+            sleep 6
+          done
+          test "$OK" = '1'
+          trap - ERR
+          echo "CSC_MENSAGEM_INDIVIDUAL_PRODUCAO_OK versao=$VERSION"
+      - name: Limpar credenciais
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/csc-mensagens-individuais/.clasp.json"
