@@ -857,7 +857,7 @@
 /* CSC_SPLASH_VISUAL_V1: camada visual isolada, sem alterar PIN, login, dados ou funções. */
 #csc-opening-layer{position:fixed;inset:0;width:100%;height:100%;height:100dvh;z-index:2147483647;background:#06437a;pointer-events:none;isolation:isolate;overflow:hidden;animation:csc-opening-out 2.8s linear both}
 #csc-opening-layer::before{content:"";position:absolute;inset:-22px;background-image:var(--csc-opening-url);background-position:center;background-size:cover;filter:blur(18px);opacity:.85}
-#csc-opening-layer>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+#csc-opening-layer>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;display:block}
 @keyframes csc-opening-out{0%,85.7%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
 @media(prefers-reduced-motion:reduce){#csc-opening-layer{animation-timing-function:steps(1,end)}}
 </style>
