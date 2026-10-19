@@ -60,7 +60,7 @@ function publicacoesTerritoriaisV1TratarPost_(e){
     if(action==='admin_publicacoes_dados')resultado=publicacoesTerritoriaisV1Dados_(contexto,acesso);
     else if(action==='admin_publicacoes_salvar_recado')resultado=publicacoesTerritoriaisV1Salvar_(contexto,acesso,'recado',p);
     else if(action==='admin_publicacoes_salvar_campanha')resultado=publicacoesTerritoriaisV1Salvar_(contexto,acesso,'campanha',p);
-    else if(action==='admin_publicacoes_remover_recado')resultado=publicacoesTerritoriaisV1Remover_(contexto,acesso,'recado',p.id);
+    else if(action==='admin_publicacoes_remover_recado')resultado=publicacoesTerritoriaisV1Remover_(contexto,acesso,'recado',p.id,p.refExclusaoLegado);
     else resultado=publicacoesTerritoriaisV1Remover_(contexto,acesso,'campanha',p.id);
   }catch(erro){resultado={ok:false,message:publicacoesTerritoriaisV1Erro_(erro)};}
   if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId))publicacoesTerritoriaisV1GuardarResultado_(requestId,resultado);
@@ -129,9 +129,10 @@ function publicacoesTerritoriaisV1Salvar_(contexto,acesso,tipo,p){
   }finally{lock.releaseLock();}
 }
 
-function publicacoesTerritoriaisV1Remover_(contexto,acesso,tipo,id){
+function publicacoesTerritoriaisV1Remover_(contexto,acesso,tipo,id,refExclusaoLegado){
   id=publicacoesTerritoriaisV1Id_(id);
-  if(!id)throw new Error('Identificador da publicação ausente.');
+  refExclusaoLegado=publicacoesTerritoriaisV1Texto_(refExclusaoLegado);
+  if(!id&&!(tipo==='recado'&&refExclusaoLegado))throw new Error('Identificador da publicação ausente.');
   var lock=LockService.getScriptLock();
   if(!lock.tryLock(20000))throw new Error('Outra publicação está sendo atualizada. Tente novamente.');
   try{
@@ -139,21 +140,27 @@ function publicacoesTerritoriaisV1Remover_(contexto,acesso,tipo,id){
     var nomeAba=tipo==='recado'?TACS_PUBLICACOES_TERRITORIAIS_V1.ABA_RECADOS:TACS_PUBLICACOES_TERRITORIAIS_V1.ABA_CAMPANHAS;
     var tabela=publicacoesTerritoriaisV1Tabela_(ss,nomeAba,tipo,false);
     if(!tabela)throw new Error('A publicação não foi encontrada nesta área.');
-    var linha=publicacoesTerritoriaisV1Encontrar_(tabela,id,contexto.areaId);
-    if(!linha)throw new Error('A publicação não foi encontrada nesta área.');
+    var linha=id?publicacoesTerritoriaisV1Encontrar_(tabela,id,contexto.areaId):publicacoesTerritoriaisV1EncontrarLegado_(tabela,refExclusaoLegado,contexto.areaId);
+    if(!linha)throw new Error('O registro não foi encontrado ou foi alterado. Atualize o painel antes de excluir.');
     var anterior=publicacoesTerritoriaisV1Objeto_(tabela.headers,linha.values);
     if(tipo==='campanha'&&typeof campanhasAutomaticasV1RegistrarRemocao_==='function')campanhasAutomaticasV1RegistrarRemocao_(contexto.areaId,anterior);
     tabela.sheet.deleteRow(linha.row);
     SpreadsheetApp.flush();
     publicacoesTerritoriaisV1Auditar_(ss,'REMOVER_'+tipo.toUpperCase(),contexto,acesso,anterior,null);
-    return {ok:true,id:id,areaId:contexto.areaId,message:tipo==='recado'?'Recado removido da área.':'Campanha removida da área.'};
+    return {ok:true,id:id,refExclusaoLegado:refExclusaoLegado,areaId:contexto.areaId,message:tipo==='recado'?'Recado excluído definitivamente da lista.':'Campanha removida da área.'};
   }finally{lock.releaseLock();}
 }
 
 function publicacoesTerritoriaisV1Ler_(ss,nomeAba,areaId){
   var tabela=publicacoesTerritoriaisV1Tabela_(ss,nomeAba,nomeAba===TACS_PUBLICACOES_TERRITORIAIS_V1.ABA_RECADOS?'recado':'campanha',false);
   if(!tabela)return [];
-  return tabela.rows.map(function(r){return publicacoesTerritoriaisV1Objeto_(tabela.headers,r.values);}).filter(function(item){return publicacoesTerritoriaisV1AreaRegistro_(item)===areaId;});
+  return tabela.rows.map(function(r){
+    var item=publicacoesTerritoriaisV1Objeto_(tabela.headers,r.values);
+    /* Registros antigos sem ID só recebem referência de exclusão na resposta
+       administrativa. A linha original não é modificada durante a leitura. */
+    if(nomeAba===TACS_PUBLICACOES_TERRITORIAIS_V1.ABA_RECADOS&&!publicacoesTerritoriaisV1Id_(item.ID))item.REF_EXCLUSAO_LEGADO=publicacoesTerritoriaisV1ReferenciaLegado_(r);
+    return item;
+  }).filter(function(item){return publicacoesTerritoriaisV1AreaRegistro_(item)===areaId;});
 }
 
 function publicacoesTerritoriaisV1Tabela_(ss,nomeAba,tipo,criar){
@@ -176,6 +183,26 @@ function publicacoesTerritoriaisV1Encontrar_(tabela,id,areaId){
   for(var i=0;i<tabela.rows.length;i++){
     var obj=publicacoesTerritoriaisV1Objeto_(tabela.headers,tabela.rows[i].display);
     if(publicacoesTerritoriaisV1Id_(obj.ID)===id&&publicacoesTerritoriaisV1AreaRegistro_(obj)===areaId)return tabela.rows[i];
+  }
+  return null;
+}
+function publicacoesTerritoriaisV1ReferenciaLegado_(row){
+  var payload=JSON.stringify(row.values),bytes=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,payload);
+  var hash=bytes.slice(0,12).map(function(b){return ('0'+(b&255).toString(16)).slice(-2);}).join('');
+  return 'LEGADO_'+row.row+'_'+hash;
+}
+function publicacoesTerritoriaisV1EncontrarLegado_(tabela,ref,areaId){
+  /* Confere posição, ausência de ID, área e impressão digital com a planilha
+     atual, sob lock. Nunca apaga outra linha após reordenação ou edição. */
+  var m=String(ref||'').match(/^LEGADO_(\d+)_([0-9a-f]{24})$/);
+  if(!m)return null;
+  var rowNumber=Number(m[1]);
+  for(var i=0;i<tabela.rows.length;i++){
+    var row=tabela.rows[i];
+    if(row.row!==rowNumber)continue;
+    var item=publicacoesTerritoriaisV1Objeto_(tabela.headers,row.values);
+    if(publicacoesTerritoriaisV1Id_(item.ID)||publicacoesTerritoriaisV1AreaRegistro_(item)!==areaId)return null;
+    return publicacoesTerritoriaisV1ReferenciaLegado_(row)===ref?row:null;
   }
   return null;
 }
