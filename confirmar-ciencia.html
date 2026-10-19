@@ -17,7 +17,7 @@
     #estado{margin-top:20px;padding:16px;border:2px solid #b6d3dd;border-radius:18px;background:#f5fafc;color:var(--petroleo);font-size:17px;font-weight:800;line-height:1.4}
     #estado.ok{border-color:#82d5a5;background:#eaf8ef;color:#08723d}#estado.erro{border-color:#e3a4a4;background:#fff1f1;color:#922d2d}
     #confirmar{width:100%;min-height:66px;margin-top:20px;border:3px solid var(--borda);border-radius:20px;background:linear-gradient(145deg,var(--petroleo),var(--petroleo2));color:#fff;font-size:20px;font-weight:900;padding:14px 18px}
-    #confirmar:disabled{opacity:.55}a{display:inline-block;margin-top:18px;padding:14px 20px;border-radius:16px;background:#edf6f9;color:var(--petroleo);font-size:17px;font-weight:900;text-decoration:none}[hidden]{display:none!important}
+    #confirmar:disabled{opacity:.55}#fecharNotificacao{width:100%;min-height:62px;margin-top:16px;border:2px solid #15563b;border-radius:17px;background:#15563b;color:#fff;font-size:19px;font-weight:850;padding:12px 18px}a{display:inline-block;margin-top:18px;padding:14px 20px;border-radius:16px;background:#edf6f9;color:var(--petroleo);font-size:17px;font-weight:900;text-decoration:none}[hidden]{display:none!important}
   </style>
 </head>
 <body>
@@ -28,14 +28,18 @@
     <div id="conteudoIndividual" hidden aria-label="Mensagem individual" style="margin-top:20px;padding:18px;border:2px solid #b6d3dd;border-radius:18px;background:#f5fafc;text-align:left;overflow-wrap:anywhere"><strong id="tituloIndividual" style="display:block;font-size:20px;margin-bottom:12px;color:#073f57"></strong><p id="textoIndividual" style="white-space:pre-wrap;color:#183d51;font-size:19px"></p></div>
     <div id="estado" role="status" aria-live="polite">Registrando a abertura deste aviso…</div>
     <button id="confirmar" type="button">✅ Li e estou ciente</button>
+    <button id="fecharNotificacao" type="button" hidden>✕ Fechar notificação</button>
     <a id="portal" href="./">Abrir Portal TACS</a>
+    <div id="saida" hidden role="status" aria-live="polite" style="margin-top:22px;padding:22px;background:#eaf8ef;border:1px solid #82d5a5;border-radius:18px;color:#08723d;font-size:19px;font-weight:750">✅ Notificação encerrada. Sua confirmação já foi registrada. Você pode fechar esta aba.</div>
   </main>
   <script>
   (function(){
     'use strict';
     var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
     var token=String(new URLSearchParams(location.search).get('t')||'').trim().toLowerCase();
-    var estado=document.getElementById('estado'),botao=document.getElementById('confirmar');
+    var estado=document.getElementById('estado'),botao=document.getElementById('confirmar'),fechar=document.getElementById('fecharNotificacao');
+    var individual=false,ciente=false;
+    function mostrarFechar(){if(individual&&ciente)fechar.hidden=false}
     try{history.replaceState(null,'',location.pathname)}catch(e){}
     function mostrar(msg,tipo){estado.textContent=msg;estado.className=tipo||''}
     function rid(prefix){return prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
@@ -63,6 +67,7 @@
         document.getElementById('tituloIndividual').textContent=String(v.titulo||'Mensagem individual');
         document.getElementById('textoIndividual').textContent=String(v.mensagem||'');
         document.getElementById('conteudoIndividual').hidden=false;
+        individual=true;mostrarFechar();
       }
       var timeout=setTimeout(function(){stop(null)},15000);
       window[callback]=stop;
@@ -75,9 +80,22 @@
     botao.addEventListener('click',function(){
       botao.disabled=true;mostrar('Registrando sua ciência…','');
       executar('publico_mensagem_ciente_token',function(r){
-        if(r&&r.ok===true&&r.ciente===true){mostrar('✅ Ciência registrada. O TACS poderá verificar que este aviso foi confirmado.','ok');botao.textContent='✅ Ciência confirmada';return}
+        if(r&&r.ok===true&&r.ciente===true){ciente=true;mostrar('✅ Ciência registrada. O TACS poderá verificar que este aviso foi confirmado.','ok');botao.textContent='✅ Ciência confirmada';mostrarFechar();return}
         botao.disabled=false;mostrar((r&&r.message)||'Não foi possível registrar sua ciência. Tente novamente.','erro')
       })
+    });
+    fechar.addEventListener('click',function(){
+      if(!ciente||!individual)return;
+      try{window.close()}catch(e){}
+      /* O Safari pode impedir que uma página de notificação feche sua
+         própria aba: neste caso, encerra a interface sem obrigar a abrir o Portal. */
+      setTimeout(function(){
+        document.querySelector('main').querySelectorAll(':scope > *').forEach(function(node){
+          if(node.id!=='saida')node.hidden=true;
+        });
+        document.getElementById('saida').hidden=false;
+        document.title='Notificação concluída — Portal CSC';
+      },100);
     });
   }());
   </script>
