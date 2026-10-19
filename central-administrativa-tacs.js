@@ -619,6 +619,8 @@ function applyUbsSolicitacoesResult(r,checkingArea){
 }
 function checkUbsSolicitacoes(){
   if(mode!=='ubs'||!ubsToken||!selectedAreaId)return;
+  /* Se o operador está na lista, o próprio painel atualiza os mesmos números. */
+  if(shellActiveModule==='solicitacoes')return;
   if(ubsSolicitacoesPreloadBusy&&ubsSolicitacoesPreloadArea===selectedAreaId)return;
   var checkingArea=selectedAreaId;
   ubsSolicitacoesPostResumo(function(r){applyUbsSolicitacoesResult(r,checkingArea)})
