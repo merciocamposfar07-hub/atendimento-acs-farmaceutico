@@ -2,7 +2,7 @@
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1',DEVICE_KEY='portalTacsDispositivoV1';
-var selecionado=null,ultimoEnvio=null,ativa=null,contador=0,timers=[],statusAutoAtivo=false,statusAutoGeracao=0,statusConsultaEmCurso=false,statusAssinatura='';
+var selecionado=null,ultimoEnvio=null,ativa=null,contador=0,timers=[],statusAutoAtivo=false,statusAutoGeracao=0,statusConsultaEmCurso=false,statusAssinatura='',historicoDados=[],historicoCarregando=false;
 
 function txt(v){return String(v==null?'':v).trim()}
 function esc(v){return txt(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -57,7 +57,7 @@ function finalizar(r){
 function consultar(){
  if(!ativa)return;
  var op=ativa;
- jsonp('admin_mensagem_individual_result',{requestId:op.id},function(r){
+ jsonp(op.action==='admin_mensagem_relatorio'?'admin_mensagem_comprovante_result':'admin_mensagem_individual_result',{requestId:op.id},function(r){
   if(!ativa||ativa.id!==op.id)return;
   if(r&&r.ok===true&&r.pendente===false&&r.result){
    if(r.result.pendente===true){op.poll=setTimeout(consultar,1400);return}
@@ -124,7 +124,7 @@ var overlay=document.createElement('div');overlay.id='msgIndividualMoradorV1';ov
 +'<div id="msgIndLivre" class="msg-ind-hide"><label for="msgIndMensagem">Mensagem</label><textarea id="msgIndMensagem" class="msg-ind-field" maxlength="700" placeholder="Digite uma mensagem curta e objetiva."></textarea><div class="msg-ind-note">Não coloque diagnóstico, CPF, CNS ou outra informação clínica sensível na notificação.</div></div>'
 +'<div id="msgIndPreview" class="msg-ind-preview"><strong>Prévia / mensagem a enviar</strong><textarea id="msgIndPreviewTexto" class="msg-ind-preview-edit" maxlength="700" aria-label="Prévia editável da mensagem"></textarea><small>Este é exatamente o texto que será enviado.</small><span class="msg-ind-preview-legacy"></span></div>'
 +'<div class="msg-ind-actions"><button id="msgIndEnviar" class="msg-ind-send" type="button">🔔 Enviar para este morador</button></div>'
-+'<div id="msgIndStatus" class="msg-ind-status" aria-live="polite">Confira a mensagem antes de enviar.</div>'+'<div id="msgIndRecibo" class="msg-ind-recibo msg-ind-hide" role="status" aria-live="polite"><b>Cópia do envio para o operador</b><div id="msgIndReciboTexto"></div><button id="msgIndCopiar" type="button">Copiar comprovante de encaminhamento</button></div>'
++'<section class="msg-ind-recibo" id="msgIndHistorico"><button id="msgIndHistoricoBotao" type="button">📂 Ver mensagens anteriores e comprovantes</button><div id="msgIndHistoricoLista" class="msg-ind-hide" aria-live="polite"></div></section>'+'<div id="msgIndStatus" class="msg-ind-status" aria-live="polite">Confira a mensagem antes de enviar.</div>'+'<div id="msgIndRecibo" class="msg-ind-recibo msg-ind-hide" role="status" aria-live="polite"><b>Cópia do envio para o operador</b><div id="msgIndReciboTexto"></div><button id="msgIndCopiar" type="button">Copiar comprovante de encaminhamento</button></div>'
 +'<div id="msgIndTrack" class="msg-ind-track msg-ind-hide">'
 +'<div id="msgStepEnc" class="msg-ind-step"><span class="msg-ind-icon" aria-hidden="true">◯</span><div><b>Encaminhada</b><small>O serviço Push aceitou o encaminhamento.</small></div></div>'
 +'<div id="msgStepExib" class="msg-ind-step"><span class="msg-ind-icon" aria-hidden="true">◯</span><div><b>Exibida no aparelho</b><small>O aparelho confirmou a exibição técnica.</small></div></div>'
@@ -133,7 +133,7 @@ var overlay=document.createElement('div');overlay.id='msgIndividualMoradorV1';ov
 +'<button id="msgIndAtualizar" class="msg-ind-refresh" type="button">↻ Atualizar confirmação</button></div>'
 +'</section>';document.body.appendChild(overlay);
 ['msgIndTipo','msgIndServico','msgIndData','msgIndHora'].forEach(function(id){var n=document.getElementById(id);if(n){n.addEventListener('input',atualizarFormulario);n.addEventListener('change',atualizarFormulario)}});document.getElementById('msgIndPreviewTexto').addEventListener('input',function(){document.getElementById('msgIndMensagem').value=this.value});
-document.getElementById('msgIndFechar').addEventListener('click',fechar);document.getElementById('msgIndEnviar').addEventListener('click',enviar);document.getElementById('msgIndAtualizar').addEventListener('click',atualizarStatus);document.getElementById('msgIndCopiar').addEventListener('click',function(){var text=document.getElementById('msgIndReciboTexto').textContent;if(!text)return;try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).catch(function(){})}catch(e){}});overlay.addEventListener('click',function(e){if(e.target===overlay)fechar()});
+document.getElementById('msgIndFechar').addEventListener('click',fechar);document.getElementById('msgIndEnviar').addEventListener('click',enviar);document.getElementById('msgIndAtualizar').addEventListener('click',atualizarStatus);document.getElementById('msgIndHistoricoBotao').addEventListener('click',abrirHistorico);document.getElementById('msgIndHistoricoLista').addEventListener('click',baixarHistorico);document.getElementById('msgIndCopiar').addEventListener('click',function(){var text=document.getElementById('msgIndReciboTexto').textContent;if(!text)return;try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).catch(function(){})}catch(e){}});overlay.addEventListener('click',function(e){if(e.target===overlay)fechar()});
 }
 
 function setStatus(msg,tipo){var n=document.getElementById('msgIndStatus');if(!n)return;n.textContent=msg;n.className='msg-ind-status'+(tipo?' '+tipo:'')}
@@ -271,9 +271,54 @@ function agendarAtualizacoes(){
  limparTimers();statusAutoAtivo=true;
  if(painelMensagemAberto())planejarStatus(2200);
 }
+
+function abrirHistorico(){
+ if(historicoCarregando||!selecionado)return;
+ var box=document.getElementById('msgIndHistoricoLista'),pessoa=selecionado;
+ box.classList.remove('msg-ind-hide');
+ box.textContent='Aguarde… recuperando mensagens e comprovantes anteriores.';
+ historicoCarregando=true;
+ post('admin_mensagem_relatorio',sessao({escopo:'INDIVIDUAL',origemAba:pessoa.origemAba,origemLinha:pessoa.origemLinha,moradorId:pessoa.moradorId||''}),function(r){
+   historicoCarregando=false;
+   if(selecionado!==pessoa)return;
+   if(!r||r.ok!==true){box.textContent='Falha ao consultar o histórico. Toque novamente para tentar.';return}
+   historicoDados=Array.isArray(r.historico)?r.historico:[];
+   box.replaceChildren();
+   if(!historicoDados.length){box.textContent='Nenhuma mensagem anterior encontrada para este cadastro.';return}
+   historicoDados.forEach(function(item,idx){
+     var card=document.createElement('article'),title=document.createElement('strong'),when=document.createElement('p'),msg=document.createElement('p'),button=document.createElement('button');
+     card.style.cssText='padding:12px;margin-top:12px;border:1px solid #42778a;border-radius:12px;white-space:pre-wrap';
+     title.textContent=txt(item.titulo)||'Mensagem individual';
+     when.textContent='Registro: '+txt(item.registradoEm)+' — '+txt(item.estado);
+     msg.textContent=txt(item.mensagem);
+     button.type='button';button.dataset.historicoIndice=String(idx);button.textContent='Baixar comprovante e etapas';
+     card.appendChild(title);card.appendChild(when);card.appendChild(msg);card.appendChild(button);box.appendChild(card);
+   });
+ });
+}
+function baixarHistorico(e){
+ var btn=e.target&&e.target.closest&&e.target.closest('[data-historico-indice]');
+ if(!btn)return;
+ var item=historicoDados[Number(btn.dataset.historicoIndice)];
+ if(!item)return;
+ var linhas=['PORTAL CSC — COMPROVANTE TÉCNICO DE MENSAGEM INDIVIDUAL','Protocolo: '+txt(item.eventoId),'Mensagem registrada em: '+txt(item.registradoEm),'Estado: '+txt(item.estado),'Título: '+txt(item.titulo),'Mensagem: '+txt(item.mensagem)];
+ (item.aparelhos||[]).forEach(function(a,i){
+   linhas.push('Aparelho '+(i+1)+' / referência técnica '+txt(a.referenciaTecnica));
+   linhas.push('Encaminhada: '+(txt(a.encaminhadoEm)||'Sem confirmação'));
+   linhas.push('Exibida: '+(txt(a.exibidoEm)||'Sem confirmação'));
+   linhas.push('Aberta: '+(txt(a.abertoEm)||'Sem confirmação'));
+   linhas.push('Ciência: '+(txt(a.cienteEm)||'Sem confirmação'));
+ });
+ linhas.push('Aceite de encaminhamento, exibição, abertura e ciência são estados distintos.');
+ var blob=new Blob([linhas.join('\n')],{type:'text/plain;charset=utf-8'});
+ var uri=URL.createObjectURL(blob),anchor=document.createElement('a');
+ anchor.href=uri;anchor.download='CSC-'+txt(item.eventoId).replace(/[^a-zA-Z0-9_-]/g,'')+'.txt';
+ document.body.appendChild(anchor);anchor.click();anchor.remove();
+ setTimeout(function(){URL.revokeObjectURL(uri)},5000);
+}
 function enviar(){if(!selecionado)return;var tipo=document.getElementById('msgIndTipo').value,servico=txt(document.getElementById('msgIndServico').value),data=txt(document.getElementById('msgIndData').value),hora=txt(document.getElementById('msgIndHora').value),mensagem=txt(document.getElementById('msgIndPreviewTexto').value);document.getElementById('msgIndMensagem').value=mensagem;if(tipo!=='OUTRA_MENSAGEM'&&(!servico||!data)){setStatus('Informe o serviço e a data.','err');return}if(data&&!/^(?:\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2})$/.test(data)){setStatus('Informe a data no formato DD/MM/AAAA.','err');return}if(!horarioValido(hora)){setStatus('Informe um horário como 08:00 ou 08:00 às 11:00 hs.','err');return}if(mensagem.length<3||/^Informe o serviço/.test(mensagem)){setStatus('Confira a mensagem que será enviada.','err');return}var b=document.getElementById('msgIndEnviar');b.disabled=true;setStatus('Enviando somente para o cadastro familiar deste morador…','warn');post('admin_mensagem_individual_enviar',sessao({origemAba:selecionado.origemAba,origemLinha:selecionado.origemLinha,moradorId:selecionado.moradorId||'',tipo:tipo,servico:servico,data:data,hora:hora,mensagem:mensagem}),function(r){b.disabled=false;if(!r||r.ok!==true){setStatus(txt(r&&r.message)||'O envio foi recusado pelo servidor.','err');return}if(r.enviado!==true){ultimoEnvio=null;comprovanteOperador(null);resetTrack();setStatus(txt(r.message)||'Nenhum aparelho apto foi encontrado para este morador.','warn');return}ultimoEnvio={eventoId:r.eventoId};comprovanteOperador(r.comprovante||null);document.getElementById('msgIndTrack').classList.remove('msg-ind-hide');marcar('msgStepEnc',Number(r.encaminhadas)>0,'');setStatus('📤 Mensagem encaminhada para '+Number(r.encaminhadas||0)+' aparelho(s). Acompanhando a confirmação…','ok');agendarAtualizacoes()})}
 
-function abrir(item){instalar();selecionado=item||null;ultimoEnvio=null;limparTimers();resetTrack();comprovanteOperador(null);if(!selecionado)return;var familia=txt(item.familiaId)||familiaEndereco(item.endereco);document.getElementById('msgIndPessoa').innerHTML='<strong>'+esc(item.nome||'Morador')+'</strong><span>Cadastro familiar '+esc(familia||'não identificado')+'</span>';document.getElementById('msgIndTipo').value='CONFIRMAR_ATENDIMENTO';document.getElementById('msgIndServico').value='';document.getElementById('msgIndData').value='';document.getElementById('msgIndHora').value='';document.getElementById('msgIndMensagem').value='';document.getElementById('msgIndPreviewTexto').value='';document.getElementById('msgIndividualMoradorV1').classList.remove('msg-ind-hide');setStatus('Confira a mensagem antes de enviar.','');atualizarFormulario();setTimeout(function(){document.getElementById('msgIndServico').focus()},50)}
+function abrir(item){instalar();selecionado=item||null;ultimoEnvio=null;historicoDados=[];historicoCarregando=false;var caixaHistorico=document.getElementById('msgIndHistoricoLista');if(caixaHistorico){caixaHistorico.replaceChildren();caixaHistorico.classList.add('msg-ind-hide')}limparTimers();resetTrack();comprovanteOperador(null);if(!selecionado)return;var familia=txt(item.familiaId)||familiaEndereco(item.endereco);document.getElementById('msgIndPessoa').innerHTML='<strong>'+esc(item.nome||'Morador')+'</strong><span>Cadastro familiar '+esc(familia||'não identificado')+'</span>';document.getElementById('msgIndTipo').value='CONFIRMAR_ATENDIMENTO';document.getElementById('msgIndServico').value='';document.getElementById('msgIndData').value='';document.getElementById('msgIndHora').value='';document.getElementById('msgIndMensagem').value='';document.getElementById('msgIndPreviewTexto').value='';document.getElementById('msgIndividualMoradorV1').classList.remove('msg-ind-hide');setStatus('Confira a mensagem antes de enviar.','');atualizarFormulario();setTimeout(function(){document.getElementById('msgIndServico').focus()},50)}
 window.PortalTacsMensagemIndividual={abrir:abrir};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',instalar);else instalar();
 })();
