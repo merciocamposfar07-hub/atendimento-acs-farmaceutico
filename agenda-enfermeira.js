@@ -431,6 +431,30 @@
     return [];
   }
 
+  function expiredByAgendaDate(item) {
+    var date = clean(item && item.date);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    var now = {};
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Recife',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date()).forEach(function (part) {
+      now[part.type] = part.value;
+    });
+    var today = now.year + '-' + now.month + '-' + now.day;
+    if (date < today) return true;
+    if (date > today) return false;
+    var closeAt = clean(item.closeAt || (item.closeAtNoon ? '12:00' : ''));
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(closeAt) &&
+      (now.hour + ':' + now.minute) >= closeAt;
+  }
+
+  function availableDay(item) {
+    return item && item.active === true && item.closedNow !== true &&
+      !unavailableStatus(item.status) && !expiredByAgendaDate(item);
+  }
+
   function renderModule(module) {
     var container = ensureAgendasContainer();
     if (!container) return;
@@ -447,13 +471,7 @@
     var hasPublished = days.some(function (item) {
       return item.active === true;
     });
-    var hasAvailable = days.some(function (item) {
-      return (
-        item.active === true &&
-        item.closedNow !== true &&
-        !unavailableStatus(item.status)
-      );
-    });
+    var hasAvailable = days.some(availableDay);
 
     var intro =
       module === 'enfermeira'
@@ -481,14 +499,13 @@
         '<div class="agenda-status">Nenhuma programação publicada no momento.</div>';
     } else {
       days.forEach(function (item, index) {
-        var active =
-          item.active === true &&
-          item.closedNow !== true &&
-          !unavailableStatus(item.status);
+        var active = availableDay(item);
+        var expired = item.active === true &&
+          !unavailableStatus(item.status) && expiredByAgendaDate(item);
         var service = clean(item.service || item.message);
         var date = formatDate(item.date);
         var time = clean(item.time);
-        var situation = statusLabel(item.status);
+        var situation = expired ? 'Prazo encerrado' : statusLabel(item.status);
         var icon =
           module === 'enfermeira'
             ? clean(item.icon || (active ? '✅' : '❌'))
@@ -1472,6 +1489,19 @@
     document.head.appendChild(script);
   }
 
+  function refreshExpiredAgendas() {
+    Object.keys(state.modules).forEach(function (module) {
+      var section = id('agenda-' + module);
+      if (!section) return;
+      var availableButtons = section.querySelectorAll('.agenda-day:not(:disabled)');
+      var changed = Array.prototype.some.call(availableButtons, function (button) {
+        var item = visibleDays(module)[Number(button.dataset.index)];
+        return !availableDay(item);
+      });
+      if (changed) renderModule(module);
+    });
+  }
+
   function install() {
     addStyles();
     updateFooter();
@@ -1481,6 +1511,11 @@
     installNotifications();
     loadAutofill();
     renderAgendas();
+    setInterval(refreshExpiredAgendas, 15000);
+    window.addEventListener('pageshow', refreshExpiredAgendas);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) refreshExpiredAgendas();
+    });
     if (!publicListenerInstalled) {
       publicListenerInstalled = true;
       window.addEventListener('portal-tacs-public-data', function (event) {
