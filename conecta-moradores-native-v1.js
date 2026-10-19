@@ -87,7 +87,7 @@ function carregarMensagemIndividualNative(callback){
   if(mensagemIndividualNativeCarregando)return;
   mensagemIndividualNativeCarregando=true;
   var script=document.createElement('script');
-  script.src='/atendimento-acs-farmaceutico/teste-v1/mensagem-individual-morador-v1.js?v=20261017-horario-encaminhamento-v1';
+  script.src='/atendimento-acs-farmaceutico/teste-v1/mensagem-individual-morador-v1.js?v=20261019-sessao-comprovante-v1';
   function terminar(ok){
     mensagemIndividualNativeCarregando=false;
     var callbacks=mensagemIndividualNativeCallbacks.splice(0);
