@@ -792,10 +792,12 @@ function renderConfirmedNotification(result,areaId){
 function notificationPostIsolated(action,areaId,cb){
   /* Consulta isolada: aguarda até 60s por tentativa e recupera falhas temporárias.
      Cada tentativa usa um requestId próprio; respostas antigas não encerram a atual. */
-  var seq=++notificationRemoteSeq,finished=false,attempt=0,generation=0,maxAttempts=3,waitMs=60000;
+  var seq=++notificationRemoteSeq,finished=false,attempt=0,generation=0,maxAttempts=1,waitMs=18000;
+  /* Consulta OneSignal limitada: nao manter o usuario esperando por minutos. */
+  var deadline=setTimeout(function(){finish({ok:false,temporario:true,message:'Consulta OneSignal encerrada após 20 segundos. Última situação confirmada preservada.'})},20000);
   if(action==='admin_notificacoes_saude_remota')notificationLatestStarted[normArea(areaId)]=seq;
   function current(run){return !finished&&run===generation}
-  function finish(result){if(finished)return;finished=true;generation++;cb(result||{ok:false,message:'Resposta vazia.'},seq)}
+  function finish(result){if(finished)return;finished=true;clearTimeout(deadline);generation++;cb(result||{ok:false,message:'Resposta vazia.'},seq)}
   function temporary(result){
     if(!result)return true;
     if(result.temporario===true)return true;
@@ -913,6 +915,8 @@ function refreshNotificationHealth(areaId,force){
   var confirmadoAnterior=readConfirmedNotification(areaId);
   if(confirmadoAnterior){
     renderConfirmedNotification(confirmadoAnterior,areaId);
+    /* Ao voltar à Central, não repetir consulta recém-confirmada. O botão Atualizar continua forçando nova leitura. */
+    if(!force&&Date.now()-Number(confirmadoAnterior.confirmadoEm||0)<120000){notificationRemoteArea='';return}
   }else{
     markHealth('healthNotifications','Confirmando…','');
   }
@@ -923,6 +927,7 @@ function refreshNotificationHealth(areaId,force){
     var confirmed=saveConfirmedNotification(remote,areaId);
     if(confirmed){renderConfirmedNotification(confirmed,areaId);return}
     if(areaId!==selectedAreaId)return;
+    if(confirmadoAnterior){renderConfirmedNotification(confirmadoAnterior,areaId);return}
     markHealth('healthNotifications','Sem confirmação','warn');
   });
 }
