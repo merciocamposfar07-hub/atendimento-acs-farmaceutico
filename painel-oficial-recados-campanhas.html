@@ -2730,7 +2730,19 @@ function horaInput(v){var m=txt(v).trim().match(/^([01]\d|2[0-3]):([0-5]\d)/);re
 function lerTemaVisual(){try{return localStorage.getItem(TEMA_KEY)==='petroleo'?'petroleo':'claro'}catch(e){return'claro'}}
 function aplicarTemaVisual(tema){var escuro=tema==='petroleo';document.body.classList.toggle('tema-petroleo',escuro);contraste.setAttribute('aria-pressed',escuro?'true':'false');contraste.textContent=escuro?'◐ Usar cartões claros':'◐ Usar cartões azul-petróleo'}
 function alternarTemaVisual(){var proximo=document.body.classList.contains('tema-petroleo')?'claro':'petroleo';try{localStorage.setItem(TEMA_KEY,proximo)}catch(e){}aplicarTemaVisual(proximo)}
-function status(id,msg,tipo){var e=document.getElementById(id);if(!e)return;e.hidden=false;e.textContent=msg;e.className='status'+(tipo?' '+tipo:'')}
+var avisoPublicacaoAutoOcultarTimer=null;
+function status(id,msg,tipo){
+  var e=document.getElementById(id);if(!e)return;
+  e.hidden=false;e.textContent=msg;e.className='status'+(tipo?' '+tipo:'');
+  if(id!=='statusOperacao')return;
+  if(avisoPublicacaoAutoOcultarTimer){clearTimeout(avisoPublicacaoAutoOcultarTimer);avisoPublicacaoAutoOcultarTimer=null}
+  var texto=String(msg||'');
+  if(texto.indexOf('Recado gravado e confirmado pelo servidor.')!==0&&texto.indexOf('Campanha gravada e confirmada pelo servidor.')!==0)return;
+  avisoPublicacaoAutoOcultarTimer=setTimeout(function(){
+    avisoPublicacaoAutoOcultarTimer=null;
+    if(e.textContent===texto)e.hidden=true;
+  },30000);
+}
 function limparStatusCarregamento(id){var e=document.getElementById(id);if(!e)return;if(txt(e.textContent).trim()==='Aguarde enquanto os dados carregam…'){e.textContent='';e.hidden=true}}
 function requestId(prefixo){var b=new Uint8Array(24);crypto.getRandomValues(b);return prefixo+'_'+Array.prototype.map.call(b,function(x){return('0'+x.toString(16)).slice(-2)}).join('')}
 function jsonp(action,parametros,cb){contador++;var nome='__ctv3_'+Date.now()+'_'+contador,s=document.createElement('script'),fim=false,t=setTimeout(function(){encerrar({ok:false,temporario:true,message:'Consulta temporariamente indisponível.'})},12000);function limpar(){clearTimeout(t);if(s.parentNode)s.parentNode.removeChild(s);try{delete window[nome]}catch(e){window[nome]=undefined}}function encerrar(r){if(fim)return;fim=true;limpar();cb(r)}window[nome]=function(r){encerrar(r)};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(parametros||{}).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(txt(parametros[k])))});s.src=API+'?'+q.join('&');s.onerror=function(){encerrar({ok:false,temporario:true,message:'Falha de rede ao consultar o servidor.'})};document.head.appendChild(s)}
