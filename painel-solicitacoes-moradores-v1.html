@@ -106,13 +106,16 @@ html body #cscInstitutionalAppbar{display:none!important;visibility:hidden!impor
 (function(){
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-var core=window.ConectaModuleCoreV1,items=[],filter='',busy=false,syncBusy=false,timer=null,selectedId='',initialLoading=true;
+var core=window.ConectaModuleCoreV1,items=[],filter='',busy=false,syncBusy=false,timer=null,selectedId='',initialLoading=true,lastRenderedList='',pdfAttempt=0;
+var PDF_VIEWER_READY='CSC_UBS_PDF_READY',PDF_VIEWER_ERROR='CSC_UBS_PDF_ERROR';
 function text(v){return String(v==null?'':v).trim()}
 function esc(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function area(){return core&&core.areaId?core.areaId():(new URLSearchParams(location.search).get('area')||'JAPARANDUBA')}
 function mode(){return core&&core.mode?core.mode():'ubs'}
 function cacheKey(){return 'portalConectaSolicitacoesUbsPanelV1:'+mode()+':'+area()}
 function stableCacheKey(){return 'portalConectaSolicitacoesUbsPanelAreaV2:'+area()}
+function prefetchKey(){return 'portalConectaUbsSolicitacoesPrefetchV1:'+area()}
+function loadingKey(){return 'portalConectaUbsSolicitacoesLoadingV1:'+area()}
 function rid(a){return 'solpanel_'+a+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,9)}
 function setStatus(msg,kind){var n=document.getElementById('status');n.textContent=msg;n.className='status'+(kind?' '+kind:'')}
 function scheduleFromDescription(v){
@@ -151,6 +154,9 @@ function formatDocument(v){var q=text(v).replace(/\D/g,'');if(q.length===10&&cpf
 function counts(){var c={NOVA:0,EM_ATENDIMENTO:0,CONCLUIDA:0,EXPIRADA:0};items.forEach(function(x){var s=effectiveStatus(x);if(c[s]!=null)c[s]++});return c}
 function current(){for(var i=0;i<items.length;i++)if(text(items[i].id)===text(selectedId))return items[i];return null}
 function renderList(){
+ var signature=JSON.stringify({area:area(),filter:filter,items:items.map(function(x){return [x.id,x.status,effectiveStatus(x),x.atualizadoEm,x.criadoEm,x.anexo&&x.anexo.status,x.anexo&&x.anexo.disponivel]})});
+ if(lastRenderedList===signature)return;
+ lastRenderedList=signature;
  var c=counts();document.getElementById('mNova').textContent=c.NOVA;document.getElementById('mAtend').textContent=c.EM_ATENDIMENTO;document.getElementById('mConcl').textContent=c.CONCLUIDA;document.getElementById('mExp').textContent=c.EXPIRADA;
  var shown=items.filter(function(x){return !filter||effectiveStatus(x)===filter}),list=document.getElementById('list');
  if(!shown.length){list.innerHTML='<div class="empty">Nenhuma solicitação neste filtro.</div>';return}
@@ -184,20 +190,56 @@ function detailHtml(x){
  var meta=expiry?'<div class="detail-meta">Expiração automática: '+esc(expiry)+'</div>':'<div class="detail-meta">Sem expiração automática registrada para esta solicitação.</div>';
  var actions=!expired&&s!=='CONCLUIDA'?'<div class="detail-actions"><button class="attend" type="button" data-detail-action="EM_ATENDIMENTO" '+(s==='EM_ATENDIMENTO'?'disabled':'')+'>Em atendimento</button><button class="done" type="button" data-detail-action="CONCLUIDA">Concluir</button></div>':'';
  document.getElementById('detailStatus').innerHTML='<span class="pill '+s+'">'+esc(statusText(s))+'</span>';
- var attachment=x.anexo?'<div class="detail-meta"><strong>Documento do morador</strong><p>'+esc(x.anexo.disponivel?x.anexo.nome:'Documento em envio; atualize em instantes.')+'</p>'+(x.anexo.disponivel?'<button type="button" class="done" data-ubs-pdf="1">📄 Abrir / baixar PDF completo</button>':'')+'</div>':'';
+ var attachment=x.anexo?'<div class="detail-meta"><strong>Documento do morador</strong><p>'+esc(x.anexo.disponivel?x.anexo.nome:'Documento em envio; atualize em instantes.')+'</p>'+(x.anexo.disponivel?'<section id="cscPdfInlineHost" style="min-height:170px;contain:layout"><p id="cscPdfLoading" role="status" aria-live="polite" style="padding:18px;background:#103850;color:#fff;border-radius:12px;font-weight:800">Aguarde… carregando o PDF da solicitação.</p><iframe id="cscPdfInlineFrame" title="PDF da solicitação do morador" name="csc_ubs_pdf_inline" style="display:none;width:100%;height:75vh;min-height:480px;border:1px solid #3b88a0;border-radius:12px;background:#062c46"></iframe><button type="button" class="done" data-ubs-pdf="1" style="margin-top:12px">↻ Recarregar documento</button></section>':'')+'</div>':'';
  return body+attachment+meta+actions;
 }
 function renderDetail(){
  var x=current();if(!x){showList();return}
  document.getElementById('detailCard').innerHTML=detailHtml(x);
+ if(x.anexo&&x.anexo.disponivel)startInlinePdf(x);
 }
+function startInlinePdf(item){
+ var target=document.getElementById('cscPdfInlineFrame'),loading=document.getElementById('cscPdfLoading');
+ if(!target||!loading||!item||!item.codigoSolicitacao)return;
+ var attempt=++pdfAttempt;
+ target.style.display='none';
+ loading.hidden=false;loading.textContent='Aguarde… carregando o PDF da solicitação.';
+ var payload=core&&core.session?core.session({codigoSolicitacao:item.codigoSolicitacao}):{areaId:area(),codigoSolicitacao:item.codigoSolicitacao};
+ var form=document.createElement('form');form.method='POST';form.action=API;
+ target.name='csc_ubs_pdf_inline_'+attempt;
+ form.target=target.name;form.hidden=true;
+ payload.action='admin_solicitacao_ubs_pdf';
+ Object.keys(payload).forEach(function(key){
+   var input=document.createElement('input');input.type='hidden';input.name=key;
+   input.value=String(payload[key]==null?'':payload[key]);form.appendChild(input);
+ });
+ document.body.appendChild(form);
+ form.submit();form.remove();
+ setTimeout(function(){
+   if(attempt===pdfAttempt&&loading&&!loading.hidden){
+     loading.textContent='Aguarde… o documento continua sendo preparado. Se demorar, use “Recarregar documento”.';
+   }
+ },12000);
+}
+window.addEventListener('message',function(event){
+ if(!event.data||(event.data.type!==PDF_VIEWER_READY&&event.data.type!==PDF_VIEWER_ERROR))return;
+ var frame=document.getElementById('cscPdfInlineFrame');
+ if(!frame||event.source!==frame.contentWindow||!/(^|\.)googleusercontent\.com$|(^|\.)google\.com$/.test((function(){try{return new URL(event.origin).hostname}catch(e){return''}})()))return;
+ var loading=document.getElementById('cscPdfLoading');
+ if(event.data.type===PDF_VIEWER_READY){
+   if(loading)loading.hidden=true;
+   frame.style.display='block';
+ }else{
+   if(loading){loading.hidden=false;loading.textContent='Não foi possível carregar o documento. Toque em “Recarregar documento” para tentar novamente.'}
+ }
+});
 function openDetail(id){
  selectedId=text(id);if(!current())return;
  document.getElementById('listView').hidden=true;document.getElementById('detailView').hidden=false;renderDetail();
  try{window.scrollTo({top:0,behavior:'auto'})}catch(e){window.scrollTo(0,0)}
 }
 function showList(){
- selectedId='';document.getElementById('detailView').hidden=true;document.getElementById('listView').hidden=false;renderList();
+ selectedId='';pdfAttempt++;document.getElementById('detailCard').innerHTML='';document.getElementById('detailView').hidden=true;document.getElementById('listView').hidden=false;renderList();
  try{window.scrollTo({top:0,behavior:'auto'})}catch(e){window.scrollTo(0,0)}
 }
 function save(data){
@@ -209,10 +251,10 @@ function save(data){
 }
 function loadCache(){
  try{
-  var keys=[stableCacheKey(),cacheKey(),'portalConectaSolicitacoesUbsPanelV1:ubs:'+area(),'portalConectaSolicitacoesUbsPanelV1:admin:'+area()],best=null;
-  keys.forEach(function(key){try{var x=JSON.parse(localStorage.getItem(key)||'null');if(x&&x.data&&Array.isArray(x.data.solicitacoes)&&(!best||Number(x.savedAt||0)>Number(best.savedAt||0)))best=x}catch(e){}});
+  var keys=[prefetchKey(),stableCacheKey(),cacheKey(),'portalConectaSolicitacoesUbsPanelV1:ubs:'+area(),'portalConectaSolicitacoesUbsPanelV1:admin:'+area()],best=null;
+  keys.forEach(function(key){try{var x=JSON.parse((key===prefetchKey()?sessionStorage:localStorage).getItem(key)||'null');if(x&&x.data&&Array.isArray(x.data.solicitacoes)&&(!best||Number(x.savedAt||0)>Number(best.savedAt||0)))best=x}catch(e){}});
   if(!best)return false;
-  items=best.data.solicitacoes;initialLoading=false;renderList();setStatus('Dados disponíveis.','ok');
+  items=best.data.solicitacoes;initialLoading=false;renderList();setStatus('Solicitações disponíveis. Verificando atualizações…','ok');
   try{localStorage.setItem(stableCacheKey(),JSON.stringify(best))}catch(e){}
   return true
  }catch(e){return false}
@@ -230,11 +272,14 @@ function call(action,extra,cb,background){
 function refresh(silent,forceDetail){
  if(syncBusy)return;call('admin_solicitacoes_ubs_listar',{},function(r){
   if(r&&r.ok===true&&Array.isArray(r.solicitacoes)){
-   initialLoading=false;items=r.solicitacoes;save(r);renderList();
+   initialLoading=false;
+   var oldAttachment=selectedId&&current()&&current().anexo;
+   items=r.solicitacoes;save(r);renderList();
+   var nowAttachment=selectedId&&current()&&current().anexo;
    /* SCROLL_UBS_SEM_REPAINT_V1:
       não reconstrói a ficha enquanto a atendente está lendo/rolando. Recriar o DOM
       no meio do gesto interrompia a rolagem no Safari/iPhone. */
-   if(forceDetail&&selectedId)renderDetail();
+   if(forceDetail&&selectedId&&Boolean(oldAttachment&&oldAttachment.disponivel)!==Boolean(nowAttachment&&nowAttachment.disponivel))renderDetail();
    setStatus('Solicitações atualizadas.','ok');
    try{if(window.parent!==window)window.parent.postMessage({type:'CSC_UBS_SOLICITACOES_CARREGADAS',areaId:area(),contagens:r.contagens||{},naoVistas:Number(r.naoVistas)||0},location.origin)}catch(ignore){}
   }else if(!silent||initialLoading)setStatus(text(r&&r.message)||'Tentando carregar as solicitações novamente…','err')
@@ -249,14 +294,32 @@ document.getElementById('backList').addEventListener('click',showList);
 document.querySelector('.tabs').addEventListener('click',function(e){var b=e.target.closest('[data-filter]');if(!b)return;filter=b.dataset.filter||'';document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('active',x===b)});renderList()});
 document.getElementById('list').addEventListener('click',function(e){var b=e.target.closest('[data-open-id]');if(!b)return;openDetail(b.dataset.openId)});
 document.getElementById('detailCard').addEventListener('click',function(e){
- var button=e.target.closest('[data-ubs-pdf]'),item=current();if(!button||!item)return;
- var payload=core&&core.session?core.session({codigoSolicitacao:item.codigoSolicitacao}):{areaId:area(),codigoSolicitacao:item.codigoSolicitacao};
- var form=document.createElement('form');form.method='POST';form.action=API;form.target='_blank';form.hidden=true;
- payload.action='admin_solicitacao_ubs_pdf';Object.keys(payload).forEach(function(key){var input=document.createElement('input');input.type='hidden';input.name=key;input.value=String(payload[key]||'');form.appendChild(input)});
- document.body.appendChild(form);form.submit();setTimeout(function(){form.remove()},1500);
+ var button=e.target.closest('[data-ubs-pdf]'),item=current();
+ if(button&&item&&item.anexo&&item.anexo.disponivel)startInlinePdf(item);
 });
 document.getElementById('detailCard').addEventListener('click',function(e){var b=e.target.closest('[data-detail-action]'),x=current();if(!b||!x||busy)return;b.disabled=true;call('admin_solicitacoes_ubs_atualizar',{id:x.id,status:b.dataset.detailAction},function(r){if(r&&r.ok===true){setStatus(r.message||'Solicitação atualizada.','ok');refresh(true,true)}else{b.disabled=false;setStatus(text(r&&r.message)||'Não foi possível atualizar.','err')}})});
-if(!loadCache()){items=[];renderList();setStatus('Aguarde enquanto os dados carregam…','warn')}setTimeout(function(){refresh(true)},0);
+if(!loadCache()){items=[];renderList();setStatus('Aguarde… verificando solicitações recebidas.','warn')}
+(function initialRead(){
+ var key=prefetchKey(),value=null,loading=null;
+ try{value=JSON.parse(sessionStorage.getItem(key)||'null');loading=JSON.parse(sessionStorage.getItem(loadingKey())||'null')}catch(e){}
+ if(value&&Array.isArray(value.data&&value.data.solicitacoes)&&Date.now()-Number(value.savedAt||0)<9000){
+   items=value.data.solicitacoes;initialLoading=false;renderList();setStatus('Solicitações disponíveis.','ok');
+   return;
+ }
+ if(loading&&Date.now()-Number(loading.startedAt||0)<14000){
+   var started=Date.now();
+   function wait(){
+     try{value=JSON.parse(sessionStorage.getItem(key)||'null')}catch(e){}
+     if(value&&Number(value.savedAt||0)>Number(loading.startedAt||0)&&Array.isArray(value.data&&value.data.solicitacoes)){
+       items=value.data.solicitacoes;initialLoading=false;renderList();setStatus('Solicitações disponíveis.','ok');return;
+     }
+     if(Date.now()-started<9500){setTimeout(wait,400);return}
+     refresh(true);
+   }
+   setTimeout(wait,400);return;
+ }
+ setTimeout(function(){refresh(true)},0);
+})();
 timer=setInterval(function(){var pending=current()&&current().anexo&&!current().anexo.disponivel;if(!document.hidden&&(!selectedId||pending))refresh(true,Boolean(pending))},12000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&!selectedId)refresh(true)});
 }());
