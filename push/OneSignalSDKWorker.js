@@ -23,7 +23,7 @@ self.addEventListener('push',function(event){
   var area=String(data.areaId||''),count=Number(data.naoVistas);
   event.waitUntil(Promise.all([
     Number.isFinite(count)?cscUbsSetBadge(area,count):Promise.resolve(),
-    self.clients.matchAll({type:'window',includeUncontrolled:true}).then(function(clients){clients.forEach(function(client){client.postMessage({type:'CSC_UBS_PUSH_RECEIVED',areaId:area})})})
+    self.clients.matchAll({type:'window',includeUncontrolled:true}).then(function(clients){clients.forEach(function(client){client.postMessage({type:'CSC_UBS_PUSH_RECEIVED',areaId:area,count:Number.isFinite(count)?count:null})})})
   ]));
 });
 self.addEventListener('message',function(event){
