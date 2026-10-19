@@ -30,6 +30,10 @@ var mensagemIndividualV1DoPostAnterior_;
 function mensagemIndividualV1TratarGet_(e){
   var p=e&&e.parameter?e.parameter:{};
   var action=mensagemIndividualV1Texto_(p.action).toLowerCase();
+  if(action==='publico_mensagem_individual_conteudo'){
+    try{return mensagemIndividualV1ResponderJson_(mensagemIndividualV1ConteudoPorToken_(p.t),p.callback)}
+    catch(erro){return mensagemIndividualV1ResponderJson_({ok:false,message:'Não foi possível consultar o conteúdo desta mensagem.'},p.callback)}
+  }
   if(action!=='admin_mensagem_individual_result')return null;
   var requestId=mensagemIndividualV1Texto_(p.requestId);
   if(!/^[A-Za-z0-9_-]{8,160}$/.test(requestId))return mensagemIndividualV1ResponderJson_({ok:false,message:'Identificador de consulta inválido.'},p.callback);
@@ -47,9 +51,12 @@ function mensagemIndividualV1TratarPost_(e){
     var sessao=mensagemIndividualV1Contexto_(p,action==='admin_mensagem_individual_enviar');
     if(action==='admin_mensagem_individual_buscar')resultado=mensagemIndividualV1Buscar_(p,sessao.contexto);
     else if(action==='admin_mensagem_individual_status')resultado=mensagemIndividualV1Status_(p,sessao.contexto);
-    else resultado=mensagemIndividualV1Enviar_(p,sessao.contexto,sessao.acesso,requestId);
+    else{
+      var anterior=mensagemIndividualV1LerResultado_(requestId);
+      resultado=anterior||mensagemIndividualV1Enviar_(p,sessao.contexto,sessao.acesso,requestId);
+    }
   }catch(erro){resultado={ok:false,message:mensagemIndividualV1Erro_(erro)};}
-  if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId))mensagemIndividualV1GuardarResultado_(requestId,resultado);
+  if(/^[A-Za-z0-9_-]{8,160}$/.test(requestId)&&!(resultado&&resultado.pendente===true))mensagemIndividualV1GuardarResultado_(requestId,resultado);
   return mensagemIndividualV1ResponderPost_(requestId,resultado);
 }
 
@@ -199,32 +206,100 @@ function mensagemIndividualV1ConfigOneSignal_(){
   return {appId:appId,apiKey:apiKey};
 }
 
+function mensagemIndividualV1ComprovanteExistente_(contexto,referencia,evento){
+  var sheet=tacsTerritorioV1Planilha_().getSheetByName(TACS_NOTIFICACOES_AREA_V1.RECEIPT_SHEET);
+  if(!sheet||sheet.getLastRow()<=1)return null;
+  var rows=sheet.getRange(2,1,sheet.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).getValues();
+  var total=0,aceitos=0,estado='';
+  rows.forEach(function(row){
+    if(mensagemIndividualV1Texto_(row[0])!==evento||
+       mensagemIndividualV1Texto_(row[1]).toUpperCase()!==contexto.areaId||
+       mensagemIndividualV1Texto_(row[3])!==referencia)return;
+    total++;
+    if(row[13]||['ENCAMINHADO','EXIBIDO_TECNICO','CONFIRMADO'].indexOf(mensagemIndividualV1Texto_(row[11]))!==-1)aceitos++;
+    estado=mensagemIndividualV1Texto_(row[11]);
+  });
+  if(!total)return null;
+  return {total:total,aceitos:aceitos,estado:estado};
+}
+function mensagemIndividualV1IdempotenciaPush_(evento,subscriptionId){
+  var digest=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(evento)+'|'+String(subscriptionId),Utilities.Charset.UTF_8);
+  var hex=digest.slice(0,16).map(function(n){return ('0'+((n+256)%256).toString(16)).slice(-2)}).join('');
+  return hex.slice(0,8)+'-'+hex.slice(8,12)+'-4'+hex.slice(13,16)+'-a'+hex.slice(17,20)+'-'+hex.slice(20,32);
+}
+function mensagemIndividualV1ConteudoPorToken_(token){
+  if(typeof comprovacaoMensagensV1ComprovanteToken_!=='function')throw new Error('Comprovante indisponível.');
+  var recibo=comprovacaoMensagensV1ComprovanteToken_(token);
+  if(recibo.tipo!=='MENSAGEM_INDIVIDUAL')return {ok:true,individual:false};
+  var ss=tacsTerritorioV1Planilha_();
+  var sheet=ss.getSheetByName(TACS_COMPROVACAO_MENSAGENS_V1.HISTORY_SHEET);
+  if(!sheet||sheet.getLastRow()<=1)throw new Error('Conteúdo não localizado.');
+  var rows=sheet.getRange(2,1,sheet.getLastRow()-1,6).getDisplayValues();
+  for(var i=rows.length-1;i>=0;i--){
+    var r=rows[i];
+    if(mensagemIndividualV1Texto_(r[0])===recibo.eventoId&&
+       mensagemIndividualV1Texto_(r[1]).toUpperCase()===recibo.areaId&&
+       mensagemIndividualV1Texto_(r[2]).toUpperCase()==='MENSAGEM_INDIVIDUAL'&&
+       mensagemIndividualV1Texto_(r[3])===recibo.referenciaId){
+      return {ok:true,individual:true,titulo:String(r[4]||'Mensagem individual').slice(0,220),mensagem:String(r[5]||'').slice(0,900)};
+    }
+  }
+  throw new Error('A mensagem não foi localizada.');
+}
 function mensagemIndividualV1Enviar_(p,contexto,acesso,requestId){
   if(typeof portalManutencaoV1Estado_==='function'){
     var manutencao=portalManutencaoV1Estado_(contexto.areaId);
     if(manutencao&&manutencao.ativa)return {ok:true,enviado:false,maintenance:true,message:'O Portal está em manutenção. A mensagem individual não foi enviada.'};
   }
-  var morador=mensagemIndividualV1ResolverMorador_(p,contexto),conteudo=mensagemIndividualV1Conteudo_(p,morador),cfg=mensagemIndividualV1ConfigOneSignal_();
+  var morador=mensagemIndividualV1ResolverMorador_(p,contexto),conteudo=mensagemIndividualV1Conteudo_(p,morador);
+  var anterior=mensagemIndividualV1ComprovanteExistente_(contexto,morador.referencia,requestId);
+  if(anterior){
+    return {ok:true,enviado:anterior.aceitos>0,pendente:anterior.aceitos===0,
+      eventoId:requestId,encaminhadas:anterior.aceitos,aparelhos:anterior.total,
+      message:anterior.aceitos?'Este envio já foi registrado. Verifique a confirmação.':'O envio com este protocolo ainda está sendo processado. Não é necessário reenviar.'};
+  }
+  var cfg=mensagemIndividualV1ConfigOneSignal_();
+  /* O mesmo cadastro de inscricoes ativas usado em Recados e Campanhas,
+     mais o vinculo familiar existente: nunca enviar uma mensagem privada a toda a area. */
   var alvos=mensagemIndividualV1Alvos_(cfg.appId,cfg.apiKey,contexto,morador);
-  if(!alvos.length)return {ok:true,enviado:false,semAparelho:true,morador:{nome:morador.item.nome,familiaId:morador.familiaId},message:'Este morador ainda não possui aparelho apto e vinculado ao cadastro familiar para receber a mensagem.'};
+  if(!alvos.length)return {ok:true,enviado:false,semAparelho:true,morador:{nome:morador.item.nome,familiaId:morador.familiaId},message:'Nenhum aparelho ativo foi identificado para este cadastro. Confira o vínculo individual; nenhuma mensagem foi enviada para a área.'};
   var input={titulo:conteudo.titulo,mensagem:conteudo.mensagem,tipo:'MENSAGEM_INDIVIDUAL',referencia:morador.referencia,evento:requestId};
-  var preparados=notificacoesAreaV1PrepararComprovantes_(contexto,input,alvos),respostas;
-  try{
-    respostas=UrlFetchApp.fetchAll(preparados.map(function(item){return {url:TACS_NOTIFICACOES_AREA_V1.ENDPOINT,method:'post',contentType:'application/json',payload:JSON.stringify(notificacoesAreaV1PayloadIndividual_(cfg.appId,contexto,input,item)),headers:{Authorization:'Key '+cfg.apiKey},muteHttpExceptions:true};}));
-  }catch(erroRede){
-    notificacoesAreaV1MarcarFalhaLote_(preparados,erroRede);throw new Error('A conexão com o serviço Push falhou antes de concluir o envio individual.');
+  var preparados=notificacoesAreaV1PrepararComprovantes_(contexto,input,alvos);
+  var pedidos=preparados.map(function(item){
+    var payload=notificacoesAreaV1PayloadIndividual_(cfg.appId,contexto,input,item);
+    payload.idempotency_key=mensagemIndividualV1IdempotenciaPush_(requestId,item.alvo.subscriptionId);
+    return {url:TACS_NOTIFICACOES_AREA_V1.ENDPOINT,method:'post',contentType:'application/json',
+      payload:JSON.stringify(payload),headers:{Authorization:'Key '+cfg.apiKey},muteHttpExceptions:true};
+  });
+  var respostas=new Array(preparados.length),indices=pedidos.map(function(_,i){return i});
+  for(var tentativa=0;tentativa<3&&indices.length;tentativa++){
+    var lote=[];
+    try{lote=UrlFetchApp.fetchAll(indices.map(function(i){return pedidos[i]}))}
+    catch(erroRede){
+      if(tentativa===2){
+        notificacoesAreaV1MarcarFalhaLote_(preparados,erroRede);
+        throw new Error('O serviço Push não confirmou o envio. O protocolo foi preservado para verificação.');
+      }
+      Utilities.sleep(450*(tentativa+1));
+      continue;
+    }
+    var proximos=[];
+    indices.forEach(function(idx,j){
+      var resposta=lote[j],codigo=resposta?Number(resposta.getResponseCode()):0;
+      respostas[idx]=resposta;
+      if((codigo===408||codigo===429||codigo>=500||codigo===0)&&tentativa<2)proximos.push(idx);
+    });
+    indices=proximos;
+    if(indices.length)Utilities.sleep(450*(tentativa+1));
   }
   var resumo=notificacoesAreaV1AplicarRespostasEnvio_(preparados,respostas);
   notificacoesAreaV1Auditar_(contexto,acesso,input,resumo.primeiroId||'',alvos.length,resumo.encaminhados?'ENCAMINHADA_INDIVIDUAL_MORADOR':'ERRO_ENVIO_INDIVIDUAL_MORADOR');
-  if(!resumo.encaminhados)throw new Error('O serviço Push não aceitou a mensagem para nenhum aparelho deste cadastro familiar.');
-  var dataEnvio=Utilities.formatDate(new Date(),'America/Recife','dd/MM/yyyy HH:mm:ss');
-  /* Cópia administrativa vinculada ao evento confirmado na auditoria.
-     Aceite do Push NÃO significa entregue, aberto nem lido pelo morador. */
+  if(!resumo.encaminhados)return {ok:false,enviado:false,eventoId:requestId,message:'O serviço Push não aceitou o encaminhamento para os aparelhos deste morador.'};
+  var dataEnvio=Utilities.formatDate(new Date(),'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss');
   return {ok:true,enviado:true,eventoId:requestId,referencia:morador.referencia,morador:{nome:morador.item.nome,familiaId:morador.familiaId},aparelhos:alvos.length,encaminhadas:resumo.encaminhados,falhas:resumo.falhas||0,
     comprovante:{eventoId:requestId,destinatario:morador.item.nome,titulo:conteudo.titulo,mensagem:conteudo.mensagem,encaminhadoEm:dataEnvio,aceitoPeloServico:true},
-    message:'Mensagem encaminhada para '+resumo.encaminhados+' aparelho(s). Acompanhe abaixo a exibição, abertura e confirmação.'};
+    message:'Encaminhamento aceito por '+resumo.encaminhados+' aparelho(s). Entrega, abertura e leitura são verificadas separadamente.'};
 }
-
 function mensagemIndividualV1HorarioRecife_(valor){
   if(valor===null||typeof valor==='undefined'||valor==='')return '';
   if(Object.prototype.toString.call(valor)==='[object Date]'&&!isNaN(valor.getTime())){
