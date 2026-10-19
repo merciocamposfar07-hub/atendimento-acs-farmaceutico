@@ -573,6 +573,10 @@ function saudeNotificacoesV1ReparoPendenteSubscription_(areaId,subscriptionId,re
     var reparoId=saudeNotificacoesV1Texto_(rows[i][0]);
     if(reparoId===aplicado)return null;
     var info=saudeNotificacoesV1ReparoPorId_(areaId,reparoId)||{areaId:areaId,reparoId:reparoId,solicitadoEm:rows[i][4]};
+    /* Após 14 dias sem conclusão, o pedido deixa de bloquear um novo reparo.
+       Preserva inscrições Push, vínculos familiares e histórico técnico. */
+    var solicitadoMs=saudeNotificacoesV1DataMs_(info.solicitadoEm);
+    if(solicitadoMs&&Date.now()-solicitadoMs>=14*86400000)return null;
     var expirado=saudeNotificacoesV1ReparoExpirado24h_(info.solicitadoEm);
     var vinculado=expirado?saudeNotificacoesV1SubscriptionVinculadaMorador_(areaId,id):false;
     /* REPARO_24H_V1:
