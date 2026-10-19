@@ -143,6 +143,9 @@ function comprovacaoMensagensV1ComprovanteToken_(token){
     if(comprovacaoMensagensV1Texto_(row[7]).toLowerCase()!==hash)continue;
     var tipo=comprovacaoMensagensV1Texto_(row[2]).toUpperCase();
     if(TACS_COMPROVACAO_MENSAGENS_V1.TIPOS.indexOf(tipo)===-1)throw new Error('Este comprovante não pertence a uma mensagem individual ou familiar.');
+    if(tipo==='MENSAGEM_INDIVIDUAL'&&typeof mensagemIndividualRetencaoV1Vigente_==='function'&&
+       !mensagemIndividualRetencaoV1Vigente_(row[12],row[0]))
+      throw new Error('O comprovante individual ultrapassou 30 dias e expirou.');
     return {
       row:row,
       token:token,
