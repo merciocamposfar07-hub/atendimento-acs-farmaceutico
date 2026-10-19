@@ -73,7 +73,7 @@
     botao.addEventListener('click',function(){
       botao.disabled=true;mostrar('Registrando sua ciência…','');
       executar('publico_mensagem_ciente_token',function(r){
-        if(r&&r.ok===true&&r.ciente===true){ciente=true;mostrar('✅ Ciência registrada. O TACS poderá verificar que este aviso foi confirmado.','ok');botao.hidden=true;mostrarFechar();return}
+        if(r&&r.ok===true&&r.ciente===true){ciente=true;mostrar('✓ Ciência registrada. A equipe do Portal CSC poderá consultar essa confirmação.','ok');botao.hidden=true;mostrarFechar();return}
         botao.disabled=false;mostrar((r&&r.message)||'Não foi possível registrar sua ciência. Tente novamente.','erro')
       })
     });
