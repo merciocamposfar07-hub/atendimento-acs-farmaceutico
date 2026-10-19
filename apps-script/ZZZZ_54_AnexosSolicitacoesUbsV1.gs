@@ -81,16 +81,18 @@ function cscAnexosUbsConteudo_(area,code){
 }
 function cscAnexosUbsAbrir_(p){
  try{
-  return cscAnexosUbsRender_(cscAnexosUbsLerPrivado_(p));
- }catch(e){return cscAnexosUbsErroHtml_(e)}
+  return cscAnexosUbsRender_(cscAnexosUbsLerPrivado_(p),p.viewerNonce);
+ }catch(e){return cscAnexosUbsErroHtml_(e,p.viewerNonce)}
 }
-function cscAnexosUbsRender_(pdf){
-  var payload=JSON.stringify(pdf).replace(/</g,'\\u003c');
+function cscAnexosUbsRender_(pdf,viewerNonce){
+  var nonce=/^[a-zA-Z0-9_:-]{1,120}$/.test(String(viewerNonce||''))?String(viewerNonce):'';
+  var payload=JSON.stringify({nome:pdf.nome,base64:pdf.base64,viewerNonce:nonce}).replace(/</g,'\\u003c');
   return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documento da solicitação - UBS</title><style>body{margin:0;background:#062c46;color:white;font:17px Arial;overflow-x:hidden}main{max-width:1000px;margin:auto;padding:12px}nav{display:flex;gap:8px;flex-wrap:wrap}button,a{padding:12px;border-radius:10px;color:#fff;background:#12435b;border:1px solid #62c8e8;font:inherit}button[aria-pressed="true"]{background:#176b4b}a{display:inline-block;color:#70e39f;margin:12px 0}#download,#showDocument,#showCard{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:100%;min-height:96px;padding:22px 20px;font-size:clamp(26px,4vw,36px);font-weight:800;line-height:1.3;text-align:center;border-radius:16px}[hidden]{display:none!important}</style><main><p id="status" role="status">AGUARDE… carregando todas as páginas do documento.</p><a id="download">Baixar PDF completo</a><nav><button id="showDocument" type="button" aria-pressed="true">Ver receita / requisição</button><button id="showCard" type="button" aria-pressed="false">Ver card da solicitação</button></nav><div id="pages"></div></main><script>window.CSC_UBS_PDF='+payload+';<\/script><script type="module" src="https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/ubs-pdf-viewer-v2.js?v=20261019-ubs-inline-perf-v1"><\/script>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
-function cscAnexosUbsErroHtml_(e){
+function cscAnexosUbsErroHtml_(e,viewerNonce){
+ var nonce=/^[a-zA-Z0-9_:-]{1,120}$/.test(String(viewerNonce||''))?String(viewerNonce):'';
  var message=String(e&&e.message||'Não foi possível abrir o PDF.').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]});
- return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><h2>Não foi possível abrir o PDF</h2><p>'+message+'</p><p>Volte à Central para tentar novamente.</p><script>try{parent.postMessage({type:"CSC_UBS_PDF_ERROR"},"*")}catch(e){}<\/script>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+ return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><h2>Não foi possível abrir o PDF</h2><p>'+message+'</p><p>Volte à Central para tentar novamente.</p><script>try{parent.postMessage({type:"CSC_UBS_PDF_ERROR",nonce:'+nonce+'},"*")}catch(e){}<\/script>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 function cscAnexosUbsPrepararPost_(p){
  var id=String(p.requestId||''),result;
