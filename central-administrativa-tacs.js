@@ -17,6 +17,154 @@ var mode=territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':'')),active=null,c
 var remoteAuthTimer=null,remoteAuthSeq=0,remoteAuthAttempt=0,remoteAuthScope='',remoteAuthPin='',remoteAuthHadLocal=false;
 var shellFrames={},shellActiveModule='',shellActiveRoute='',shellActiveNative='',shellScopeKey='',adminUbsContext=null,adminUbsPreviousAreaId='';
 if(!device){device='iphone-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem(DEVICE_KEY,device)}
+/* CSC_SESSAO_OCIOSA_10MIN_V1
+ * Uma sessao autenticada continua ao alternar telas e abas. Somente interacao
+ * real renova o prazo; pageshow/focus nao renovam o relogio.
+ * Nunca gravar PIN nem bearer token no localStorage. */
+var CSC_IDLE_MS=10*60*1000,
+    CSC_IDLE_KEY='portalCscCentralUltimaAtividadeV1:'+device,
+    CSC_IDLE_TAB_KEY='portalCscCentralSessaoLiberadaV1',
+    cscIdleLocked=false,cscIdleLastWrite=0,cscIdleChannel=null,cscIdleRequest='';
+function cscIdleLeitura(){
+  try{var r=Number(localStorage.getItem(CSC_IDLE_KEY)||0);return Number.isFinite(r)?r:0}catch(e){return 0}
+}
+function cscIdleTemCredencial(){
+  return Boolean(token||territoryToken||ubsToken||(acessoLocalAberto&&context&&mode));
+}
+function cscIdleVencido(){
+  var ultimo=cscIdleLeitura(),now=Date.now();
+  return !ultimo||now<ultimo-30000||now-ultimo>=CSC_IDLE_MS;
+}
+function cscIdleGravar(force){
+  if(cscIdleLocked||!cscIdleTemCredencial()||cscIdleVencido())return false;
+  var now=Date.now();
+  if(!force&&now-cscIdleLastWrite<4500)return true;
+  cscIdleLastWrite=now;
+  try{localStorage.setItem(CSC_IDLE_KEY,String(now));sessionStorage.setItem(CSC_IDLE_TAB_KEY,'1')}catch(e){}
+  return true;
+}
+function cscIdleIniciarAcesso(){
+  cscIdleLocked=false;
+  cscIdleLastWrite=0;
+  var now=Date.now();
+  try{localStorage.setItem(CSC_IDLE_KEY,String(now));sessionStorage.setItem(CSC_IDLE_TAB_KEY,'1')}catch(e){}
+  return true;
+}
+function cscIdleBloquear(){
+  if(cscIdleLocked)return;
+  cscIdleLocked=true;
+  var antigo=mode||'admin';
+  try{cancelRemoteAuthSync()}catch(e){}
+  try{cancelarOperacaoAtivaSemCallback()}catch(e){}
+  token='';territoryToken='';ubsToken='';mode='';context=null;selectedAreaId='';
+  acessoLocalAberto='';pinLocalPendente='';pinLocalPerfil='';moduloPendente=null;
+  try{
+    [TOKEN_KEY,TERRITORY_TOKEN_KEY,UBS_TOKEN_KEY,CSC_IDLE_TAB_KEY,
+      contextCacheKey('admin'),contextCacheKey('tacs'),contextCacheKey('ubs'),
+      'portalTacsPinLocalPendenteV2','portalTacsPinLocalPerfilV2',MODULE_CORE_KEY
+    ].forEach(function(k){sessionStorage.removeItem(k)});
+  }catch(e){}
+  try{resetModuleShell()}catch(e){}
+  syncAppState();
+  ['identityPanel','healthPanel','modulesPanel'].forEach(function(id){var n=el(id);if(n)n.hidden=true});
+  showLogin(antigo==='tacs'?'tacs':'admin');
+  setStatus('Sessão bloqueada após 10 minutos de inatividade. Digite seu PIN para continuar.','warn');
+}
+function cscIdleChecar(){
+  if(cscIdleLocked)return false;
+  if(!cscIdleTemCredencial())return false;
+  if(cscIdleVencido()){cscIdleBloquear();return false}
+  return true;
+}
+function cscIdleAtividade(){
+  if(!cscIdleTemCredencial()||!cscIdleChecar())return;
+  cscIdleGravar(false);
+}
+function cscIdleInicializar(){
+  /* Uma sessao existente da versao antiga inicia o novo relogio uma unica vez.
+     Depois disso, ausência da marca significa bloqueio/logoff. */
+  var migrando=false;
+  try{migrando=Boolean(cscIdleTemCredencial()&&!sessionStorage.getItem(CSC_IDLE_TAB_KEY))}catch(e){}
+  if(migrando&&!cscIdleLeitura())cscIdleIniciarAcesso();
+  if(cscIdleTemCredencial())cscIdleChecar();
+  ['pointerdown','touchstart','keydown','wheel'].forEach(function(type){
+    document.addEventListener(type,cscIdleAtividade,{capture:true,passive:true});
+  });
+  function frameActivity(e){
+    var frame=e&&e.target;
+    if(!frame||frame.tagName!=='IFRAME')return;
+    try{
+      var doc=frame.contentDocument;
+      if(!doc||doc.__cscIdleListening)return;
+      doc.__cscIdleListening=true;
+      ['pointerdown','touchstart','keydown','wheel'].forEach(function(type){
+        doc.addEventListener(type,cscIdleAtividade,{capture:true,passive:true});
+      });
+    }catch(e){}
+  }
+  document.addEventListener('load',frameActivity,true);
+  document.querySelectorAll('iframe').forEach(function(f){frameActivity({target:f})});
+  window.addEventListener('pageshow',function(){cscIdleChecar()});
+  window.addEventListener('focus',function(){cscIdleChecar()});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)cscIdleChecar()});
+  window.addEventListener('storage',function(e){
+    if(e.key!==CSC_IDLE_KEY)return;
+    if(e.newValue===null&&cscIdleTemCredencial())cscIdleBloquear();
+    else if(cscIdleTemCredencial())cscIdleChecar();
+  });
+  setInterval(function(){if(cscIdleTemCredencial())cscIdleChecar()},5000);
+  /* BroadcastChannel comunica apenas entre abas que ja compartilham a origem.
+     Não persiste credenciais e não contorna um prazo de inatividade vencido. */
+  if(typeof BroadcastChannel==='function'){
+    try{
+      cscIdleChannel=new BroadcastChannel('portalCscCentralSessaoEfemeraV1');
+      cscIdleChannel.onmessage=function(ev){
+        var m=ev&&ev.data;
+        if(!m||m.device!==device)return;
+        if(m.type==='solicitar'&&m.nonce&&cscIdleTemCredencial()&&cscIdleChecar()&&context&&mode&&
+           ((mode==='admin'&&token)||(mode==='tacs'&&territoryToken)||(mode==='ubs'&&ubsToken))){
+          cscIdleChannel.postMessage({
+            type:'restaurar',nonce:m.nonce,device:device,modo:mode,
+            credencial:mode==='tacs'?territoryToken:mode==='ubs'?ubsToken:token,
+            context:context,areaId:selectedAreaId,ultimo:cscIdleLeitura()
+          });
+        }else if(m.type==='restaurar'&&cscIdleRequest&&m.nonce===cscIdleRequest&&!cscIdleTemCredencial()&&!cscIdleLocked){
+          if(cscIdleVencido()||!m.context||!Array.isArray(m.context.areas)||!m.context.areas.length)return;
+          if(m.modo!=='admin'&&m.modo!=='tacs'&&m.modo!=='ubs')return;
+          if(typeof m.credencial!=='string'||!m.credencial)return;
+          cscIdleRequest='';
+          token=m.modo==='admin'?m.credencial:'';
+          territoryToken=m.modo==='tacs'?m.credencial:'';
+          ubsToken=m.modo==='ubs'?m.credencial:'';
+          mode=m.modo;context=m.context;selectedAreaId=normArea(m.areaId||'');
+          acessoLocalAberto='';
+          try{
+            if(token)sessionStorage.setItem(TOKEN_KEY,token);
+            if(territoryToken)sessionStorage.setItem(TERRITORY_TOKEN_KEY,territoryToken);
+            if(ubsToken)sessionStorage.setItem(UBS_TOKEN_KEY,ubsToken);
+            sessionStorage.setItem(CSC_IDLE_TAB_KEY,'1');
+          }catch(e){}
+          saveContextCache();
+          syncAppState();
+          renderContext(true);
+          setStatus('Sessão existente restaurada. Confirmando acesso em segundo plano…','ok');
+          setTimeout(function(){if(!active&&cscIdleChecar())loadContext('Sessão existente validada.')},120);
+        }
+      };
+    }catch(e){cscIdleChannel=null}
+  }
+}
+function cscIdleSolicitarOutraAba(){
+  if(!cscIdleChannel||cscIdleTemCredencial()||cscIdleVencido())return false;
+  cscIdleRequest='central_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+  try{cscIdleChannel.postMessage({type:'solicitar',device:device,nonce:cscIdleRequest})}catch(e){return false}
+  setTimeout(function(){if(cscIdleRequest){cscIdleRequest='';}},2500);
+  return true;
+}
+window.ConectaCentralSessaoOciosaV1={
+  timeoutMs:CSC_IDLE_MS,checar:cscIdleChecar,marcar:cscIdleAtividade,
+  ultimaAtividade:cscIdleLeitura,solicitarOutraAba:cscIdleSolicitarOutraAba
+};
 function el(id){return document.getElementById(id)}
 function text(v){return String(v==null?'':v).trim()}
 var CENTRAL_SESSION_AUTH_REFUSAL_RE=/(sess[aã]o|token|autentica[cç][aã]o|acesso).*(inv[aá]lid|expir|recus|revog|desativ|n[aã]o autoriz)|n[aã]o autorizado|unauthor|forbidden|pertence a outro aparelho/i;
@@ -224,6 +372,7 @@ function remoteAuthSuccess(scope,r,pin,hadLocal){
     territoryToken='';sessionStorage.removeItem(TERRITORY_TOKEN_KEY);token=text(r&&r.token);mode='admin';
     sessionStorage.setItem(TOKEN_KEY,token);
   }
+  cscIdleIniciarAcesso();
   syncAppState();
   pinLocalPendente=pin;pinLocalPerfil=scope;
   if(window.ConectaAcessoUnificado&&typeof window.ConectaAcessoUnificado.registrarAparelho==='function')window.ConectaAcessoUnificado.registrarAparelho(scope==='tacs'?'TACS':'ADMIN');
@@ -296,6 +445,7 @@ function aplicarAcessoLocal(scope,saved){
   mode=scope;context=saved.context;selectedAreaId=normArea(saved.selectedAreaId||'');
   saveContextCache();
   acessoLocalAberto=scope;
+  cscIdleIniciarAcesso();
   syncAppState();
   renderContext(true);
   setStatus('Acesso liberado. Confirmando a sessão atual em segundo plano…','ok');
@@ -2120,6 +2270,7 @@ function logout(){
   try{cancelarOperacaoAtivaSemCallback()}catch(e){}
 
   token='';territoryToken='';ubsToken='';mode='';context=null;acessoLocalAberto='';moduloPendente=null;
+  try{localStorage.removeItem(CSC_IDLE_KEY);sessionStorage.removeItem(CSC_IDLE_TAB_KEY)}catch(e){}
   try{sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);sessionStorage.removeItem(UBS_TOKEN_KEY)}catch(e){}
   try{syncAppState()}catch(e){}
 
@@ -2454,6 +2605,7 @@ window.ConectaCentralSessaoLocalAtiva=function(){
   return Boolean(acessoLocalAberto&&context&&mode===acessoLocalAberto);
 };
 window.addEventListener('pageshow',function(){
+  if(cscIdleTemCredencial()&&!cscIdleChecar())return;
   var acessoLocalNoRetorno=window.ConectaCentralSessaoLocalAtiva()?acessoLocalAberto:'';
   token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||'');
   territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'';
@@ -2493,6 +2645,7 @@ function abrirPaineisUbsLocal(saved){
     if(unidadeId&&cacheUnidade&&cacheUnidade!==unidadeId)return false;
     try{resetModuleShell()}catch(e){}
     token='';territoryToken='';ubsToken='';mode='ubs';context=ctx;selectedAreaId=normArea(cached.selectedAreaId||areas[0].areaId||'');acessoLocalAberto='ubs';
+    cscIdleIniciarAcesso();
     try{sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TERRITORY_TOKEN_KEY);sessionStorage.removeItem(UBS_TOKEN_KEY)}catch(e){}
     syncAppState();renderContext(true);
     setStatus('Painéis da UBS disponíveis. Confirmando a sessão em segundo plano…','ok');
@@ -2532,6 +2685,7 @@ function entrarPaineisUbs(r){
     };
     if(!selectedAreaId||!areas.some(function(a){return normArea(a.areaId)===selectedAreaId}))selectedAreaId=normArea(areas[0].areaId);
     acessoLocalAberto='';
+    cscIdleIniciarAcesso();
     saveContextCache();
     syncAppState();
     renderContext(true);
@@ -2583,10 +2737,12 @@ window.PortalTacsCentralPinLocalV2={
       sessionStorage.setItem(TOKEN_KEY,token);
     }
     pinLocalPendente=pin;pinLocalPerfil=scope;
+    cscIdleIniciarAcesso();
     loadContext(message||'Acesso sincronizado.');
   }
 };
 applyUiStandard(document);
+cscIdleInicializar();
 syncAppState();
 if(token||territoryToken||ubsToken){
   try{
@@ -2598,5 +2754,5 @@ if(token||territoryToken||ubsToken){
   var restored=restoreContextCache();
   if(!restored)setStatus('Conferindo a sessão existente…','warn');
   setTimeout(function(){if(!active)loadContext('Sessão existente validada.')},restored?120:0);
-}else{showLogin(TACS_ONLY?'tacs':'admin')}
+}else{showLogin(TACS_ONLY?'tacs':'admin');cscIdleSolicitarOutraAba()}
 }());
