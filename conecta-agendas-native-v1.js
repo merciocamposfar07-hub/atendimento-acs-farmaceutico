@@ -19,6 +19,21 @@ function ordemDia(v){var d=normalDia(v),m={SEGUNDA:1,TERCA:2,QUARTA:3,QUINTA:4,S
    A planilha exibe DATA em DD/MM/AAAA; o input date usa AAAA-MM-DD.
    Normaliza os dois formatos no ponto de comparação, sem alterar gravação ou regras de vagas. */
 function dataInput(v){var s=text(v).trim();if(!s)return'';var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];var br=s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s.*)?$/);if(br)return br[3]+'-'+br[2]+'-'+br[1];var d=new Date(s);if(isNaN(d.getTime()))return'';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+
+/* Data fixa de cada dia da semana, calculada pelo calendario de Recife.
+   Sabado e domingo exibem a proxima semana. */
+function semanaData(dia){
+  var nome=normalDia(dia),dias={SEGUNDA:0,TERCA:1,QUARTA:2,QUINTA:3,SEXTA:4};
+  if(!Object.prototype.hasOwnProperty.call(dias,nome))return'';
+  var partes={};
+  new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit'})
+    .formatToParts(new Date()).forEach(function(p){partes[p.type]=p.value});
+  var d=new Date(Date.UTC(Number(partes.year),Number(partes.month)-1,Number(partes.day)));
+  var n=d.getUTCDay(),deslocamento=n===0?1:n===6?2:1-n;
+  d.setUTCDate(d.getUTCDate()+deslocamento+dias[nome]);
+  return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+}
+function dataAutomatica(a){return semanaData(a&&a.DIA)||dataInput(a&&a.DATA)}
 function clone(v){try{return JSON.parse(JSON.stringify(v))}catch(e){return v}}
 function objectRows(v){return Array.isArray(v)?v.filter(function(x){return x&&typeof x==='object'}):[]}
 
@@ -31,7 +46,7 @@ function create(host){
   var snapshotMode=text(core.mode&&core.mode()).trim().toLowerCase()||'anon';
   var scope=snapshotMode+'|'+areaId;
   var transport=transportFactory.create({requests:requests});
-  var state={profissionais:[],agendas:[]},confirmed=false,dirty=false,visible=false,initialized=false,dentalBusy=false,syncTimer=null,remoteReadyTimer=null,datePickerField=null,datePickerOriginal='',datePickerDirtyBefore=false,datePickerChanged=false;
+  var state={profissionais:[],agendas:[]},confirmed=false,dirty=false,visible=false,initialized=false,dentalBusy=false,syncTimer=null,remoteReadyTimer=null,semanaExibida=semanaData('Segunda-feira');
 
   host.innerHTML=
     '<section class="csc-ag-native" data-role="root">'+
@@ -64,7 +79,7 @@ function create(host){
     var ctx=shareContext();
     return{
       module:text(a&&a.MODULO),title:text(p&&p.TITULO_PUBLICO)||text(p&&p.NOME)||text(a&&a.MODULO)||'Atendimento',
-      day:text(a&&a.DIA),date:dataInput(a&&a.DATA),time:text(a&&a.HORARIO),status:text(a&&a.SITUACAO),
+      day:text(a&&a.DIA),date:dataAutomatica(a),time:text(a&&a.HORARIO),status:text(a&&a.SITUACAO),
       message:text(a&&a.MENSAGEM),common:num(a&&a.VAGAS_COMUNS),emergency:num(a&&a.VAGAS_EMERGENCIAIS),
       active:bool(a&&a.ATIVO),extra:bool(a&&a.DIA_EXTRA),areaName:ctx.areaName,unitName:ctx.unitName,cityName:ctx.cityName
     };
@@ -160,56 +175,10 @@ function create(host){
     return carregou;
   }
 
-  /* A escolha da data no Safari nao pode ser interrompida por uma
-     sincronizacao que recria os campos da agenda. */
-  function monthInRecife(){
-    var now={};
-    new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit'})
-      .formatToParts(new Date()).forEach(function(part){now[part.type]=part.value});
-    return now.year+'-'+now.month;
-  }
-  function dateIsPending(){
-    if(datePickerField)return true;
-    return Array.prototype.some.call(q('lista').querySelectorAll('.card input[name="data"]'),function(input){
-      var card=input.closest('.card'),record=card&&state.agendas.find(function(item){return chave(item)===card.dataset.key});
-      return Boolean(record&&input.value!==dataInput(record.DATA));
-    });
-  }
-  function finishDateSelection(input,hasChanged){
-    if(!datePickerField||datePickerField!==input)return;
-    if(hasChanged)datePickerChanged=true;
-    if(!datePickerChanged){
-      input.value=datePickerOriginal;
-      setDirty(datePickerDirtyBefore);
-    }else{
-      setDirty(true);
-    }
-    datePickerField=null;
-    datePickerOriginal='';
-    datePickerChanged=false;
-  }
-  function beginDateSelection(input){
-    if(datePickerField===input)return;
-    if(datePickerField)finishDateSelection(datePickerField,false);
-    datePickerField=input;
-    datePickerOriginal=input.value;
-    datePickerDirtyBefore=dirty;
-    datePickerChanged=false;
-    /* O iPhone abre o seletor no mes da data existente. Para a troca,
-       iniciar no mes atual e restaurar a data anterior se nao houver escolha. */
-    if(input.value&&input.value.slice(0,7)!==monthInRecife())input.value='';
-    setDirty(true);
-  }
   function applyData(r,isConfirmed){
-    var keepDateSelection=dateIsPending();
     confirmed=isConfirmed===true;
     state.profissionais=objectRows(r&&r.profissionais);
     state.agendas=objectRows(r&&r.agendas);
-    if(keepDateSelection){
-      /* Atualizar os dados sem destruir a data selecionada ainda nao salva. */
-      lockWrites();
-      return;
-    }
     fillFilters();render();setDirty(false);
   }
   function classifyFailure(r){
@@ -275,7 +244,7 @@ function create(host){
     return '<details class="card" data-key="'+esc(chave(a))+'"><summary><div><h3>'+esc(a.DIA)+' • '+esc(a.HORARIO||'Sem horário')+'</h3><div class="sub">'+vagas+' vaga(s)</div></div><span class="signal '+(active?'ativo':'inativo')+'">'+(active?'Ativa':'Inativa')+'</span></summary><div class="card-body">'+
       '<label>Profissional<input name="modulo" value="'+esc(a.MODULO)+'" readonly></label>'+
       '<label>Dia<input name="dia" value="'+esc(a.DIA)+'" readonly></label>'+
-      '<label>Data específica<input name="data" type="date" value="'+esc(dataInput(a.DATA))+'"></label>'+
+      '<label>Data automática<input name="data" type="date" readonly aria-readonly="true" style="pointer-events:none" value="'+esc(dataAutomatica(a))+'"></label>'+
       '<label>Horário<input name="horario" value="'+esc(a.HORARIO)+'" placeholder="Ex.: 08:00 às 12:00"></label>'+
       '<label>Situação<select name="situacao"><option value="">SEM SITUAÇÃO DEFINIDA</option><option value="ATENDIMENTO">ATENDIMENTO</option><option value="SEM ATENDIMENTO">SEM ATENDIMENTO</option><option value="FERIADO">FERIADO</option><option value="CANCELADO">CANCELADO</option></select></label>'+
       '<label>Mensagem<textarea name="mensagem">'+esc(a.MENSAGEM)+'</textarea></label>'+
@@ -287,6 +256,7 @@ function create(host){
       '<div class="card-actions"><button class="save csc-ag-save" type="button">Salvar agenda</button><button class="share csc-ag-share-day" type="button">📲 Postar no Status do WhatsApp</button></div></div></details>';
   }
   function render(){
+    semanaExibida=semanaData('Segunda-feira');
     var filterProf=q('filtroProf').value,filterDay=q('filtroDia').value;
     var list=state.agendas.slice().filter(function(a){return(!filterProf||normalId(a.MODULO)===normalId(filterProf))&&(!filterDay||normalDia(a.DIA)===normalDia(filterDay))}).sort(function(a,b){
       var pa=prof(a.MODULO),pb=prof(b.MODULO),oa=pa?num(pa.ORDEM,999):999,ob=pb?num(pb.ORDEM,999):999;
@@ -316,12 +286,12 @@ function create(host){
   function field(card,name){var n=card.querySelector('[name="'+name+'"]');return n?n.value:''}
   function checked(card,name){var n=card.querySelector('[name="'+name+'"]');return n&&n.checked?'true':'false'}
   function payload(card){return Object.assign(session(),{
-    modulo:field(card,'modulo'),dia:field(card,'dia'),data:field(card,'data'),horario:field(card,'horario').trim(),
+    modulo:field(card,'modulo'),dia:field(card,'dia'),data:semanaData(field(card,'dia'))||field(card,'data'),horario:field(card,'horario').trim(),
     situacao:normalSituacao(field(card,'situacao')),mensagem:field(card,'mensagem').trim(),encerraHorario:field(card,'encerraHorario'),
     encerra12h:field(card,'encerraHorario')==='12:00'?'true':'false',vagasComuns:field(card,'vagasComuns'),
     vagasEmergenciais:field(card,'vagasEmergenciais'),diaExtra:checked(card,'diaExtra'),ativo:checked(card,'ativo')
   })}
-  function recordValue(r,n){if(!r)return null;if(n==='data')return dataInput(r.DATA);if(n==='horario')return text(r.HORARIO).trim();if(n==='situacao')return normalSituacao(r.SITUACAO);if(n==='mensagem')return text(r.MENSAGEM).trim();if(n==='encerraHorario')return text(r.ENCERRA_HORARIO||((bool(r.ENCERRA_12H))?'12:00':'')).trim();if(n==='vagasComuns')return num(r.VAGAS_COMUNS);if(n==='vagasEmergenciais')return num(r.VAGAS_EMERGENCIAIS);if(n==='diaExtra')return bool(r.DIA_EXTRA);if(n==='ativo')return bool(r.ATIVO);return''}
+  function recordValue(r,n){if(!r)return null;if(n==='data')return dataAutomatica(r);if(n==='horario')return text(r.HORARIO).trim();if(n==='situacao')return normalSituacao(r.SITUACAO);if(n==='mensagem')return text(r.MENSAGEM).trim();if(n==='encerraHorario')return text(r.ENCERRA_HORARIO||((bool(r.ENCERRA_12H))?'12:00':'')).trim();if(n==='vagasComuns')return num(r.VAGAS_COMUNS);if(n==='vagasEmergenciais')return num(r.VAGAS_EMERGENCIAIS);if(n==='diaExtra')return bool(r.DIA_EXTRA);if(n==='ativo')return bool(r.ATIVO);return''}
   function payloadValue(p,n){if(n==='data')return text(p.data).trim();if(n==='horario')return text(p.horario).trim();if(n==='situacao')return normalSituacao(p.situacao);if(n==='mensagem')return text(p.mensagem).trim();if(n==='encerraHorario')return text(p.encerraHorario).trim();if(n==='vagasComuns')return num(p.vagasComuns);if(n==='vagasEmergenciais')return num(p.vagasEmergenciais);if(n==='diaExtra')return bool(p.diaExtra);if(n==='ativo')return bool(p.ativo);return''}
   function sameExact(current,p){
     if(!current||normalId(current.MODULO)!==normalId(p.modulo)||normalDia(current.DIA)!==normalDia(p.dia))return false;
@@ -421,7 +391,7 @@ function create(host){
     var u=readUndo();if(!u||!u.registro)return;
     if(!window.confirm('Restaurar exatamente os valores anteriores da última agenda alterada?'))return;
     var r=u.registro,p=Object.assign(session(),{
-      modulo:r.MODULO,dia:r.DIA,data:dataInput(r.DATA),horario:text(r.HORARIO),situacao:normalSituacao(r.SITUACAO),mensagem:text(r.MENSAGEM),
+      modulo:r.MODULO,dia:r.DIA,data:dataAutomatica(r),horario:text(r.HORARIO),situacao:normalSituacao(r.SITUACAO),mensagem:text(r.MENSAGEM),
       encerraHorario:text(r.ENCERRA_HORARIO)||((bool(r.ENCERRA_12H))?'12:00':''),
       encerra12h:(text(r.ENCERRA_HORARIO)||((bool(r.ENCERRA_12H))?'12:00':''))==='12:00'?'true':'false',
       vagasComuns:num(r.VAGAS_COMUNS),vagasEmergenciais:num(r.VAGAS_EMERGENCIAIS),diaExtra:bool(r.DIA_EXTRA)?'true':'false',ativo:bool(r.ATIVO)?'true':'false'
@@ -438,7 +408,8 @@ function create(host){
   }
 
   function syncDental(){
-    if(!visible||document.hidden||dentalBusy||dirty||datePickerField||!confirmed||!ready()||transport.isBusy())return;
+    if(visible&&!dirty&&semanaExibida!==semanaData('Segunda-feira'))render();
+    if(!visible||document.hidden||dentalBusy||dirty||!confirmed||!ready()||transport.isBusy())return;
     dentalBusy=true;
     transport.publicAgenda(areaId,function(r){
       dentalBusy=false;if(!r||r.ok!==true||!Array.isArray(r.dias))return;var changed=false;
@@ -458,24 +429,8 @@ function create(host){
     var shareDayButton=e.target.closest('.csc-ag-share-day');if(shareDayButton){e.preventDefault();e.stopPropagation();shareDay(shareDayButton,shareDayButton.closest('.card'));return}
     var b=e.target.closest('.csc-ag-save');if(b)save(b.closest('.card'));
   });
-  q('lista').addEventListener('pointerdown',function(e){
-    var input=e.target&&e.target.closest&&e.target.closest('.card input[name="data"][type="date"]');
-    if(input)beginDateSelection(input);
-  },true);
-  q('lista').addEventListener('focusout',function(e){
-    var input=e.target;
-    if(input===datePickerField){
-      /* Aguarda eventos de confirmacao do seletor nativo antes de restaurar. */
-      setTimeout(function(){finishDateSelection(input,false)},0);
-    }
-  });
   ['input','change'].forEach(function(kind){q('lista').addEventListener(kind,function(e){
-    var n=e.target;
-    if(!n||!n.matches||!n.matches('input,select,textarea')||n.readOnly)return;
-    if(n.matches('input[name="data"][type="date"]')&&n===datePickerField){
-      finishDateSelection(n,true);
-    }
-    setDirty(true);
+    var n=e.target;if(n&&n.matches&&n.matches('input,select,textarea')&&!n.readOnly)setDirty(true);
   })});
   q('filtroProf').addEventListener('change',render);
   q('filtroDia').addEventListener('change',render);
@@ -488,7 +443,7 @@ function create(host){
     hide:function(){visible=false;if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}host.hidden=true},
     hasUnsaved:function(){return dirty},
     reload:function(){load('Agendas e vagas atualizadas e confirmadas.',null,{skipPrime:true,forceApply:true})},
-    reset:function(){visible=false;datePickerField=null;if(syncTimer)clearInterval(syncTimer);syncTimer=null;if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}transport.destroy();host.innerHTML='';host.hidden=true;host.dataset.tacsDirty='0'}
+    reset:function(){visible=false;if(syncTimer)clearInterval(syncTimer);syncTimer=null;if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}transport.destroy();host.innerHTML='';host.hidden=true;host.dataset.tacsDirty='0'}
   };
 }
 
