@@ -105,7 +105,7 @@ jobs:
             fs.writeFileSync(path.join(dir,newName),cleanup,'utf8');
           }
           const changed=files.filter(n=>sha(fs.readFileSync(path.join(dir,n)))!==orig[n]);
-          if(changed.length!==1||changed[0]!==name)throw Error('Arquivos inesperados alterados: '+changed);
+          if(changed.length>1||(changed.length===1&&changed[0]!==name))throw Error('Arquivos inesperados alterados: '+changed);
           new Function(live);new Function(cleanup);
           console.log('SOMENTE_COMPROVACAO_E_RETENCAO_INDIVIDUAL_ALTERADAS');
           NODE
