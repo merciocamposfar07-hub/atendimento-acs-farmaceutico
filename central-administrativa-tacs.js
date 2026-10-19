@@ -538,9 +538,11 @@ function playUbsSolicitacoesSound(){
 }
 function renderUbsSolicitacoesBadge(result){
   ensureUbsSolicitacoesUi();
-  var b=el('cscSolicitacoesBadge'),n=Math.max(0,Number(result&&result.contagens&&result.contagens.NOVA||0));
-  if(!result||!result.contagens){try{n=Math.max(0,Number(localStorage.getItem(ubsSolicitacoesCountKey(selectedAreaId))||0))}catch(ignore){}}
-  syncUbsAppBadge(ubsSolicitacoesAckPending?0:Math.max(0,Number(result&&result.naoVistas||0)));
+  var b=el('cscSolicitacoesBadge'),n=0;
+  if(result&&result.naoVistas!=null)n=Math.max(0,Number(result.naoVistas)||0);
+  else try{n=Math.max(0,Number(localStorage.getItem(ubsSolicitacoesCountKey(selectedAreaId))||0))}catch(ignore){}
+  if(ubsSolicitacoesAckPending)n=0;
+  syncUbsAppBadge(n);
   try{localStorage.setItem(ubsSolicitacoesCountKey(selectedAreaId),String(n))}catch(e){}
   if(!b)return;
   b.hidden=n<1;b.textContent=n>99?'99+':String(n);
@@ -558,7 +560,8 @@ window.addEventListener('message',function(event){
   renderUbsSolicitacoesBadge({contagens:data.contagens||{},naoVistas:Number(data.naoVistas)||0});
   /* Um frame aquecido em segundo plano nao significa que um funcionario abriu a lista. */
   if(shellActiveModule==='solicitacoes'){
-    if(Number(data.naoVistas)>0)acknowledgeUbsSolicitacoes();else syncUbsAppBadge(0);
+    if(Number(data.naoVistas)>0&&!ubsSolicitacoesAckPending)acknowledgeUbsSolicitacoes();
+    else if(!Number(data.naoVistas))syncUbsAppBadge(0);
   }
 });
 if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',function(event){var data=event.data||{};if(data.type==='CSC_UBS_PUSH_RECEIVED'&&mode==='ubs'&&normArea(data.areaId)===normArea(selectedAreaId)){checkUbsSolicitacoes()}});
