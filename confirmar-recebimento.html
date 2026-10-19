@@ -4,40 +4,45 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="theme-color" content="#073f57">
-  <title>Confirmar recebimento — Portal TACS</title>
-  <style>
-    :root{color-scheme:light;--petroleo:#073f57;--borda:#62cae6;--fundo:#e8f5f9;--verde:#12874a;--texto:#0a2e40}
-    *{box-sizing:border-box}
-    html,body{min-height:100%;margin:0}
-    body{display:grid;place-items:center;padding:24px;background:var(--fundo);color:var(--texto);font-family:Arial,Helvetica,sans-serif}
-    main{width:min(100%,560px);padding:30px;border:3px solid var(--borda);border-radius:28px;background:#fff;box-shadow:0 18px 45px rgba(5,57,79,.16);text-align:center}
-    .icone{display:grid;place-items:center;width:72px;height:72px;margin:0 auto 18px;border-radius:50%;background:var(--petroleo);color:#fff;font-size:38px;font-weight:900}
-    h1{margin:0 0 12px;font-size:clamp(29px,8vw,42px);line-height:1.08}
-    p{margin:0;color:#526d7b;font-size:19px;line-height:1.5}
-    #estado{margin-top:22px;padding:18px;border:2px solid #b6d3dd;border-radius:18px;background:#f5fafc;color:var(--petroleo);font-size:19px;font-weight:850;line-height:1.4}
-    #estado.ok{border-color:#82d5a5;background:#eaf8ef;color:#08723d}
-    #estado.erro{border-color:#e3a4a4;background:#fff1f1;color:#922d2d}
-    a{display:inline-block;margin-top:22px;padding:16px 24px;border-radius:16px;background:var(--petroleo);color:#fff;font-size:18px;font-weight:900;text-decoration:none}
-    [hidden]{display:none!important}
-  </style>
+  <meta name="theme-color" content="#072c47">
+  <title>Confirmação de recebimento — Portal CSC</title>
+  <link rel="stylesheet" href="./csc-notificacao-padrao-v1.css?v=20261019-v1">
+
 </head>
 <body>
   <main>
-    <div class="icone" aria-hidden="true">✓</div>
-    <h1>Confirmação do recado</h1>
-    <p>Estamos registrando que este aparelho recebeu e abriu a notificação.</p>
-    <div id="estado" role="status" aria-live="polite">Confirmando recebimento…</div>
-    <a id="portal" href="./" hidden>Abrir Portal TACS</a>
+    <div class="marca"><img src="./app-icons/conecta-saude-comunitaria-oficial-cplus-20260921-v5.png" alt="Ícone oficial do Portal CSC"><div><span>PORTAL CSC</span><strong>Conecta Saúde Comunitária</strong></div></div>
+    <div class="icone" aria-hidden="true">🔔</div>
+    <h1>Notificação do Portal CSC</h1>
+    <p>Recado ou campanha da sua comunidade. O recebimento é confirmado neste aparelho.</p>
+    <div id="estado" role="status" aria-live="polite">Registrando o recebimento…</div>
+    <button id="fecharNotificacao" type="button" hidden>✕ Fechar notificação</button>
+    <a id="portal" href="./">Abrir Portal CSC</a>
+    <div id="fechamentoAjuda" hidden role="status" aria-live="polite">Sua confirmação já está registrada. O Safari do iPhone não permite fechar automaticamente esta aba aberta por uma notificação. Use o controle de abas do navegador para fechá-la ou volte ao aplicativo anterior.</div>
   </main>
   <script>
   (function(){
     'use strict';
     var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-    var estado=document.getElementById('estado'),portal=document.getElementById('portal');
+    var estado=document.getElementById('estado'),portal=document.getElementById('portal'),fechar=document.getElementById('fecharNotificacao');
     var token=String(new URLSearchParams(location.search).get('t')||'').trim().toLowerCase();
     try{history.replaceState(null,'',location.pathname)}catch(e){}
-    function mostrar(texto,tipo){estado.textContent=texto;estado.className=tipo||'';if(tipo==='ok')portal.hidden=false}
+    function mostrar(texto,tipo){estado.textContent=texto;estado.className=tipo||'';if(tipo==='ok'){fechar.hidden=false;portal.hidden=false}}
+    function fecharAviso(){
+      /* O próprio gesto no botão tenta voltar sem criar uma nova página.
+         O iOS não permite fechar abas abertas por uma notificação Push. */
+      if(window.opener&&window.opener!==window){
+        try{window.close()}catch(e){}
+      }
+      var sameOrigin=false;
+      try{sameOrigin=Boolean(document.referrer&&new URL(document.referrer).origin===location.origin)}catch(e){}
+      if(sameOrigin&&history.length>1){history.back();return}
+      var ajuda=document.getElementById('fechamentoAjuda');
+      if(ajuda)ajuda.hidden=false;
+      var botaoFechar=document.getElementById('fecharNotificacao');
+      if(botaoFechar){botaoFechar.disabled=true;botaoFechar.textContent='✓ Confirmação já registrada'}
+    }
+    fechar.addEventListener('click',fecharAviso);
     if(!/^[0-9a-f]{64}$/.test(token)){mostrar('Este comprovante é inválido ou está incompleto.','erro');return}
     var requestId='confirm_receipt_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);
     var inicio=Date.now();
@@ -49,7 +54,7 @@
         try{delete window[callback]}catch(e){window[callback]=undefined}
         if(script.parentNode)script.remove();
         if(data&&data.ok===true&&data.pendente===false&&data.result){
-          if(data.result.ok===true){mostrar('Recebimento confirmado. Você já pode fechar esta página.','ok');return}
+          if(data.result.ok===true){mostrar('✓ Recebimento confirmado. Sua confirmação foi registrada.','ok');return}
           mostrar(data.result.message||'Não foi possível confirmar este recebimento.','erro');return
         }
         if(Date.now()-inicio>45000){mostrar('A confirmação demorou mais que o esperado. Toque novamente na notificação para repetir.','erro');return}
