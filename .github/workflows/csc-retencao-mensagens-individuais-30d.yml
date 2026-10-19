@@ -1,0 +1,160 @@
+name: CSC - Retencao 30 dias apenas mensagens individuais
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-retencao-mensagens-individuais-30d.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  retencao-individual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar sintaxe e escopo
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_55_RetencaoMensagensIndividuais30DiasV1.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs
+          node - <<'NODE'
+          const fs=require('fs');
+          const cleanup=fs.readFileSync('apps-script/ZZZZ_55_RetencaoMensagensIndividuais30DiasV1.gs','utf8');
+          const source=fs.readFileSync('apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs','utf8');
+          if(!cleanup.includes("MENSAGEM_INDIVIDUAL")||!cleanup.includes("DIAS:30")||
+             !source.includes("mensagemIndividualRetencaoV1Limpar_(false)")||
+             !source.includes("mensagemIndividualRetencaoV1Vigente_(row[6],row[0])"))
+            throw Error('Retencao individual nao validada');
+          console.log('RETENCAO_INDIVIDUAL_30_DIAS_TESTES_OK');
+          NODE
+      - name: Validar credenciais
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          test -n "$CLASPRC_JSON" && test -n "$CLASP_JSON" && test -n "$DEPLOYMENT_ID"
+      - name: Obter projeto Apps Script em producao
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/csc-individual-retention"
+          mkdir -p "$DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" DIR="$DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),cfg=JSON.parse(process.env.CLASP_JSON);
+          if(!cfg.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(cfg.scriptId))throw Error('Script ID invalido');
+          cfg.rootDir='.';
+          fs.writeFileSync(path.join(process.env.DIR,'.clasp.json'),JSON.stringify(cfg,null,2)+'\n');
+          NODE
+          cd "$DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+      - name: Inserir so rotina de limpeza e funcoes individuais de comprovacao
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/csc-individual-retention" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const dir=process.env.DIR,files=fs.readdirSync(dir).filter(x=>/\.(?:gs|js)$/.test(x));
+          const source=fs.readFileSync('apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs','utf8');
+          const cleanup=fs.readFileSync('apps-script/ZZZZ_55_RetencaoMensagensIndividuais30DiasV1.gs','utf8');
+          const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const orig=Object.fromEntries(files.map(n=>[n,sha(fs.readFileSync(path.join(dir,n)))]));
+          const found=files.filter(n=>fs.readFileSync(path.join(dir,n),'utf8').includes('var TACS_COMPROVACAO_MENSAGENS_V1 = Object.freeze'));
+          if(found.length!==1)throw Error('Modulo de comprovacao ausente ou ambiguo');
+          const name=found[0],filename=path.join(dir,name);
+          let live=fs.readFileSync(filename,'utf8');
+          function readFn(code,name){
+            const re=new RegExp('function '+name+'\\([^)]*\\)\\{[\\s\\S]*?\\n\\}','g'),match=code.match(re)||[];
+            if(match.length!==1)throw Error('Funcao duplicada ou ausente: '+name);
+            return match[0];
+          }
+          for(const fn of ['comprovacaoMensagensV1Relatorio_','comprovacaoMensagensV1MontarRelatorio_','comprovacaoMensagensV1ComprovanteToken_']){
+            const old=readFn(live,fn),updated=readFn(source,fn);
+            if(old===updated)continue;
+            if(fn==='comprovacaoMensagensV1Relatorio_'&&!old.includes('mensagemIndividualV1ResolverMorador_'))throw Error('Relatorio em producao divergente');
+            if(fn==='comprovacaoMensagensV1MontarRelatorio_'&&!old.includes('HISTORY_SHEET'))throw Error('Historico em producao divergente');
+            if(fn==='comprovacaoMensagensV1ComprovanteToken_'&&!old.includes('TOKEN'))throw Error('Comprovante em producao divergente');
+            live=live.replace(old,updated);
+          }
+          if(!live.includes("mensagemIndividualRetencaoV1Limpar_(false)")||
+             !live.includes("mensagemIndividualRetencaoV1Vigente_(row[6],row[0])"))throw Error('Retencao nao instalada');
+          fs.writeFileSync(filename,live,'utf8');
+          const newName='ZZZZ_55_RetencaoMensagensIndividuais30DiasV1.gs';
+          if(files.includes(newName)){
+            if(fs.readFileSync(path.join(dir,newName),'utf8')!==cleanup)throw Error('Rotina existente diverge e nao sera sobrescrita');
+          }else{
+            if(files.some(x=>x.includes('RetencaoMensagensIndividuais')))throw Error('Outra rotina de retencao existente');
+            fs.writeFileSync(path.join(dir,newName),cleanup,'utf8');
+          }
+          const changed=files.filter(n=>sha(fs.readFileSync(path.join(dir,n)))!==orig[n]);
+          if(changed.length!==1||changed[0]!==name)throw Error('Arquivos inesperados alterados: '+changed);
+          new Function(live);new Function(cleanup);
+          console.log('SOMENTE_COMPROVACAO_E_RETENCAO_INDIVIDUAL_ALTERADAS');
+          NODE
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$RUNNER_TEMP/csc-individual-retention" -type f \( -name '*.gs' -o -name '*.js' \) -print0)
+      - name: Publicar servico sem alterar outras rotas
+        shell: bash
+        env:
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/csc-individual-retention"
+          OLD=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREV=$(printf '%s\n' "$OLD" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i~/^@[0-9]+$/){gsub(/^@/,"",$i);print $i;exit}}')
+          test -n "$PREV"
+          DEPLOYED=0
+          rollback(){
+            code=$?;trap - ERR
+            if [ "$DEPLOYED" = 1 ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREV" --description "Rollback retencao de mensagens individuais" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "CSC retencao 30 dias exclusivamente individual")
+          VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description "Somente arquivo e expurgo individual apos 30 dias" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          PASS=0
+          for attempt in 1 2 3 4; do
+            curl -L --fail --silent --show-error --connect-timeout 6 --max-time 25 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?action=publico_mensagem_individual_conteudo&t=invalido" > "$RUNNER_TEMP/csc-individual-retention-health.json" || true
+            if node - <<'NODE'
+          const fs=require('fs');
+          const res=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/csc-individual-retention-health.json','utf8'));
+          if(res.ok!==false||!String(res.message||'').includes('conteúdo desta mensagem'))throw Error('Rota privada indisponivel');
+          console.log('RETENCAO_INDIVIDUAL_SERVIDOR_OK');
+          NODE
+            then PASS=1;break;fi
+            sleep 7
+          done
+          test "$PASS" = 1
+          trap - ERR
+          echo "RETENCAO_INDIVIDUAL_30DIAS_PUBLICADA versao=$VERSION"
+      - name: Limpar credenciais temporarias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/csc-individual-retention/.clasp.json"
