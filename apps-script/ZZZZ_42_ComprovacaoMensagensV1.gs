@@ -175,6 +175,9 @@ function comprovacaoMensagensV1Relatorio_(p,contexto){
   if(escopo==='INDIVIDUAL'){
     var morador=mensagemIndividualV1ResolverMorador_(p,contexto);
     tipo='MENSAGEM_INDIVIDUAL';referencia=morador.referencia;
+    /* Limpeza automática de provas vencidas, somente ao consultar arquivo individual autenticado. */
+    try{if(typeof mensagemIndividualRetencaoV1Limpar_==='function')mensagemIndividualRetencaoV1Limpar_(false)}
+    catch(erroRetencao){console.warn('Retencao de mensagem individual: '+String(erroRetencao).slice(0,160))}
     destino={escopo:'INDIVIDUAL',nome:morador.item.nome,familiaId:morador.familiaId,referencia:referencia};
   }else if(escopo==='FAMILIA'){
     if(typeof buscaEnvioFamiliaV1NormalizarFamilia_!=='function'||typeof buscaEnvioFamiliaV1BuscarExata_!=='function')throw new Error('A busca familiar ainda não está disponível.');
@@ -196,8 +199,11 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
   var eventos=[];
   if(history&&history.getLastRow()>1){
     var hr=history.getRange(2,1,history.getLastRow()-1,TACS_COMPROVACAO_MENSAGENS_V1.HISTORY_HEADERS.length).getDisplayValues();
-    for(var i=hr.length-1;i>=0&&eventos.length<TACS_COMPROVACAO_MENSAGENS_V1.MAX_EVENTOS;i--){
+    var maxEventos=tipo==='MENSAGEM_INDIVIDUAL'?200:TACS_COMPROVACAO_MENSAGENS_V1.MAX_EVENTOS;
+    for(var i=hr.length-1;i>=0&&eventos.length<maxEventos;i--){
       var row=hr[i];
+      if(tipo==='MENSAGEM_INDIVIDUAL'&&typeof mensagemIndividualRetencaoV1Vigente_==='function'&&
+         !mensagemIndividualRetencaoV1Vigente_(row[6],row[0]))continue;
       if(comprovacaoMensagensV1Texto_(row[1]).toUpperCase()!==contexto.areaId)continue;
       if(comprovacaoMensagensV1Texto_(row[2]).toUpperCase()!==tipo)continue;
       if(comprovacaoMensagensV1Texto_(row[3])!==referencia)continue;
