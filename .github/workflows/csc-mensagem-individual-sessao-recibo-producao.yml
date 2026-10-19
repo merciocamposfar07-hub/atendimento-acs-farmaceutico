@@ -1,0 +1,139 @@
+name: CSC - Mensagem individual sessao e comprovante
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-mensagem-individual-sessao-recibo-producao.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  publicar-somente-mensagem-individual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Conferir arquivos da funcao individual
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
+          node --check teste-v1/mensagem-individual-morador-v1.js
+          node - <<'NODE'
+          const fs=require('fs');
+          const src=fs.readFileSync('apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs','utf8');
+          const front=fs.readFileSync('teste-v1/mensagem-individual-morador-v1.js','utf8');
+          if(!src.includes('comprovante:{eventoId:requestId')||!src.includes("acesso.perfil).toUpperCase()==='UBS'")||!front.includes('comprovanteOperador(r.comprovante||null)'))throw Error('Escopo e copia do envio nao conferem');
+          console.log('MENSAGEM_INDIVIDUAL_TESTES_OK');
+          NODE
+      - name: Conferir credenciais
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          test -n "$CLASPRC_JSON" && test -n "$CLASP_JSON" && test -n "$DEPLOYMENT_ID"
+      - name: Ler versao real do Apps Script
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+        run: |
+          set -euo pipefail
+          LIVE="$RUNNER_TEMP/csc-individual-live"
+          mkdir -p "$LIVE"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE="$LIVE" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),c=JSON.parse(process.env.CLASP_JSON);
+          if(!c.scriptId||!/^[a-zA-Z0-9_-]{20,200}$/.test(c.scriptId))throw Error('Projeto Apps Script invalido');
+          c.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE,'.clasp.json'),JSON.stringify(c,null,2)+'\n');
+          NODE
+          cd "$LIVE"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+      - name: Atualizar duas funcoes da mensagem individual e mais nenhuma
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE="$RUNNER_TEMP/csc-individual-live" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const liveDir=process.env.LIVE,files=fs.readdirSync(liveDir).filter(n=>/\.(?:js|gs)$/.test(n));
+          const digest=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const original=Object.fromEntries(files.map(n=>[n,digest(fs.readFileSync(path.join(liveDir,n)))]));
+          const targets=files.filter(n=>fs.readFileSync(path.join(liveDir,n),'utf8').includes('var TACS_MENSAGEM_INDIVIDUAL_V1=Object.freeze'));
+          if(targets.length!==1)throw Error('Modulo individual nao encontrado uma unica vez');
+          const name=targets[0],file=path.join(liveDir,name);
+          const canonical=fs.readFileSync('apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs','utf8');
+          let live=fs.readFileSync(file,'utf8');
+          const definitions=[
+            {name:'mensagemIndividualV1Contexto_',previous:'notificacoesAreaV1ExigirPublicacao_(acesso);',required:"mensagemIndividualV1Texto_(acesso.perfil).toUpperCase()==='UBS'"},
+            {name:'mensagemIndividualV1Enviar_',previous:"message:'Mensagem encaminhada para '",required:'comprovante:{eventoId:requestId'}
+          ];
+          function matchFunction(source,name){
+            const re=new RegExp('function '+name+'\\([^)]*\\)\\{[\\s\\S]*?\\n\\}','g');
+            const matches=source.match(re)||[];
+            if(matches.length!==1)throw Error('Funcao de mensagem individual ambigua: '+name);
+            return matches[0];
+          }
+          for(const def of definitions){
+            const before=matchFunction(live,def.name),after=matchFunction(canonical,def.name);
+            if(before===after)continue;
+            if(!before.includes(def.previous)||!after.includes(def.required))throw Error('Conflito na funcao de mensagens: '+def.name);
+            live=live.replace(before,after);
+          }
+          const changed=files.filter(n=>n===name?digest(live)!==original[n]:digest(fs.readFileSync(path.join(liveDir,n)))!==original[n]);
+          if(changed.length!==1||changed[0]!==name)throw Error('Alteracao fora do modulo individual: '+changed);
+          fs.writeFileSync(file,live,'utf8');
+          new Function(live);
+          console.log('MENSAGEM_INDIVIDUAL_SOMENTE_2_FUNCOES_OK',name);
+          NODE
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$RUNNER_TEMP/csc-individual-live" -type f \( -name '*.js' -o -name '*.gs' \) -print0)
+      - name: Publicar apenas o modulo individual e validar backend
+        shell: bash
+        env:
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/csc-individual-live"
+          ALL=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS=$(printf '%s\n' "$ALL" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++)if($i~/^@[0-9]+$/){gsub(/^@/,"",$i);print $i;exit}}')
+          test -n "$PREVIOUS"
+          DEPLOYED=0
+          rollback(){ code=$?;trap - ERR; if [ "$DEPLOYED" = '1' ]; then npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS" --description "Rollback mensagem individual" "$DEPLOYMENT_ID" || true; fi; exit "$code"; }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 push --force
+          OUT=$(npx --yes @google/clasp@3.3.0 version "CSC mensagem individual sessao e comprovante")
+          VERSION=$(printf '%s\n' "$OUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description "Somente mensagem individual: sessao e recibo" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          # Nao executa envio Push real durante o teste: nenhuma mensagem sem autorizacao.
+          curl -L --fail --silent --show-error --connect-timeout 6 --max-time 25 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?action=csc_ubs_anexos_status" > "$RUNNER_TEMP/msg_health.json"
+          node - <<'NODE'
+          const r=require(process.env.RUNNER_TEMP+'/msg_health.json');
+          if(r.ok!==true)throw Error('Endpoint oficial nao respondeu corretamente');
+          console.log('MENSAGEM_INDIVIDUAL_APPS_SCRIPT_PUBLICADO');
+          NODE
+          trap - ERR
+          echo "MENSAGEM_INDIVIDUAL_PRODUCAO_OK versao=$VERSION"
+      - name: Limpar credenciais privadas
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/csc-individual-live/.clasp.json"
