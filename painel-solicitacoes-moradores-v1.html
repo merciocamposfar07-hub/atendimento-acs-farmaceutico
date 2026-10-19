@@ -322,8 +322,15 @@ if(!loadCache()){items=[];renderList();setStatus('Aguarde… verificando solicit
  }
  setTimeout(function(){refresh(true)},0);
 })();
-timer=setInterval(function(){var pending=current()&&current().anexo&&!current().anexo.disponivel;if(!document.hidden&&(!selectedId||pending))refresh(true,Boolean(pending))},12000);
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&!selectedId)refresh(true)});
+function painelUbsVisivel(){
+ if(document.hidden)return false;
+ try{return !window.frameElement||(!window.frameElement.hidden&&window.frameElement.style.display!=='none')}catch(e){return true}
+}
+timer=setInterval(function(){
+ var pending=current()&&current().anexo&&!current().anexo.disponivel;
+ if(painelUbsVisivel()&&(!selectedId||pending))refresh(true,Boolean(pending));
+},12000);
+document.addEventListener('visibilitychange',function(){if(painelUbsVisivel()&&!selectedId)refresh(true)});
 }());
 </script>
 </body>
