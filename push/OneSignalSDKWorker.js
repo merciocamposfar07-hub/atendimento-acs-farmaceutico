@@ -8,7 +8,7 @@ function cscUbsBadgeStore(area,count){
   return new Promise(function(resolve){
     var open=indexedDB.open('csc-ubs-badges-v1',1);
     open.onupgradeneeded=function(){open.result.createObjectStore('areas')};open.onerror=function(){resolve(count)};
-    open.onsuccess=function(){var db=open.result,tx=db.transaction('areas','readwrite'),store=tx.objectStore('areas');store.put(count,area);var total=0,read=store.openCursor();read.onsuccess=function(){var cursor=read.result;if(cursor){total+=Math.max(0,Number(cursor.value)||0);cursor.continue()}};tx.oncomplete=function(){db.close();resolve(total)};tx.onerror=function(){db.close();resolve(count)}};
+    open.onsuccess=function(){var db=open.result,tx=db.transaction('areas','readwrite'),store=tx.objectStore('areas');store.put({count:count,updatedAt:Date.now()},area);var total=0,read=store.openCursor();read.onsuccess=function(){var cursor=read.result;if(cursor){total+=Math.max(0,Number(cursor.value&&typeof cursor.value==='object'?cursor.value.count:cursor.value)||0);cursor.continue()}};tx.oncomplete=function(){db.close();resolve(total)};tx.onerror=function(){db.close();resolve(count)}};
   });
 }
 function cscUbsSetBadge(area,count){
