@@ -528,7 +528,7 @@ function renderCachedUbsSolicitacoesBadge(){
   b.hidden=n<1;b.textContent=n>99?'99+':String(n);
   /* O Push mantém um contador persistente mesmo com a Central fechada.
      Recupera-o se este navegador ainda não tiver uma contagem local. */
-  if(value!==null||!window.indexedDB)return;
+  if(!window.indexedDB)return;
   var area=normArea(selectedAreaId);
   try{
     var request=indexedDB.open('csc-ubs-badges-v1',1);
@@ -537,10 +537,13 @@ function renderCachedUbsSolicitacoesBadge(){
       if(!db.objectStoreNames.contains('areas')){db.close();return}
       var tx=db.transaction('areas','readonly'),get=tx.objectStore('areas').get(area);
       get.onsuccess=function(){
-        var count=Number(get.result);
+        var record=get.result,updatedAt=record&&typeof record==='object'?Number(record.updatedAt||0):0;
+        var count=Number(record&&typeof record==='object'?record.count:record);
         if(mode!=='ubs'||normArea(selectedAreaId)!==area||!Number.isFinite(count)||count<0)return;
-        /* Não sobrescreve resposta remota que tenha chegado entre as leituras. */
-        try{if(localStorage.getItem(ubsSolicitacoesCountKey(area))!==null)return}catch(e){}
+        /* O push recebido com a Central fechada pode ser mais novo que o contador local. */
+        var localValue=null,localAt=0;
+        try{localValue=localStorage.getItem(ubsSolicitacoesCountKey(area));localAt=Number(localStorage.getItem(ubsSolicitacoesCountKey(area)+':em')||0)}catch(e){}
+        if(localValue!==null&&(!updatedAt||updatedAt<=localAt))return;
         renderUbsSolicitacoesBadge({naoVistas:count});
       };
       tx.oncomplete=function(){db.close()};
@@ -567,7 +570,10 @@ function renderUbsSolicitacoesBadge(result){
   else try{n=Math.max(0,Number(localStorage.getItem(ubsSolicitacoesCountKey(selectedAreaId))||0))}catch(ignore){}
   if(ubsSolicitacoesAckPending)n=0;
   syncUbsAppBadge(n);
-  try{localStorage.setItem(ubsSolicitacoesCountKey(selectedAreaId),String(n))}catch(e){}
+  try{
+    localStorage.setItem(ubsSolicitacoesCountKey(selectedAreaId),String(n));
+    localStorage.setItem(ubsSolicitacoesCountKey(selectedAreaId)+':em',String(Date.now()));
+  }catch(e){}
   if(!b)return;
   b.hidden=n<1;b.textContent=n>99?'99+':String(n);
   b.setAttribute('aria-label',n===1?'1 nova solicitação':n+' novas solicitações')
