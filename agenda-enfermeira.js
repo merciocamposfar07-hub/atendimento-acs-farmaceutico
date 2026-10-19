@@ -450,9 +450,10 @@
       (now.hour + ':' + now.minute) >= closeAt;
   }
 
-  function availableDay(item) {
+  function availableDay(module, item) {
     return item && item.active === true && item.closedNow !== true &&
-      !unavailableStatus(item.status) && !expiredByAgendaDate(item);
+      !unavailableStatus(item.status) &&
+      (module !== 'medica' || !expiredByAgendaDate(item));
   }
 
   function renderModule(module) {
@@ -471,7 +472,7 @@
     var hasPublished = days.some(function (item) {
       return item.active === true;
     });
-    var hasAvailable = days.some(availableDay);
+    var hasAvailable = days.some(function (item) { return availableDay(module, item); });
 
     var intro =
       module === 'enfermeira'
@@ -499,8 +500,8 @@
         '<div class="agenda-status">Nenhuma programação publicada no momento.</div>';
     } else {
       days.forEach(function (item, index) {
-        var active = availableDay(item);
-        var expired = item.active === true &&
+        var active = availableDay(module, item);
+        var expired = module === 'medica' && item.active === true &&
           !unavailableStatus(item.status) && expiredByAgendaDate(item);
         var service = clean(item.service || item.message);
         var date = formatDate(item.date);
@@ -1490,16 +1491,15 @@
   }
 
   function refreshExpiredAgendas() {
-    Object.keys(state.modules).forEach(function (module) {
-      var section = id('agenda-' + module);
-      if (!section) return;
-      var availableButtons = section.querySelectorAll('.agenda-day:not(:disabled)');
-      var changed = Array.prototype.some.call(availableButtons, function (button) {
-        var item = visibleDays(module)[Number(button.dataset.index)];
-        return !availableDay(item);
-      });
-      if (changed) renderModule(module);
+    var module = 'medica';
+    var section = id('agenda-' + module);
+    if (!section) return;
+    var availableButtons = section.querySelectorAll('.agenda-day:not(:disabled)');
+    var changed = Array.prototype.some.call(availableButtons, function (button) {
+      var item = visibleDays(module)[Number(button.dataset.index)];
+      return !availableDay(module, item);
     });
+    if (changed) renderModule(module);
   }
 
   function install() {
