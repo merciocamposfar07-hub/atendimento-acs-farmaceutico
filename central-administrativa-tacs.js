@@ -508,7 +508,7 @@ function updatePendingBadge(result){
    - se o servidor já enviou Push, a Central não toca um segundo som;
    - ao abrir Solicitações, o aviso some e as atuais são marcadas como vistas;
    - Push da UBS é registrado no OneSignal para continuar funcionando com a Central fechada. */
-var ubsSolicitacoesTimer=null,ubsSolicitacoesInFlight=false,ubsSolicitacoesArea='',ubsSolicitacoesAudio=null,ubsSolicitacoesLatestUnreadKey='',ubsSolicitacoesAckPending=false;
+var ubsSolicitacoesTimer=null,ubsSolicitacoesInFlight=false,ubsSolicitacoesArea='',ubsSolicitacoesAudio=null,ubsSolicitacoesLatestUnreadKey='',ubsSolicitacoesAckPending=false,ubsSolicitacoesPreloadArea='',ubsSolicitacoesPreloadBusy=false,ubsSolicitacoesPreloadAt=0;
 var ubsPushOneSignal=null,ubsPushRegistering=false,ubsPushLastRegistration='',ubsPushInitStarted=false,ubsSolicitacoesDeepLinkHandled=false;
 var UBS_PUSH_APP_ID='e2294b98-c72b-4f8c-a055-de28979676dc',UBS_PUSH_SAFARI_ID='web.onesignal.auto.4bead971-106d-461b-853f-83aecbd62d40';
 function ubsSolicitacoesMarkerKey(a){return 'portalConectaSolicitacoesUbsUltimaV2:'+normArea(a)}
@@ -555,7 +555,11 @@ window.addEventListener('message',function(event){
   if(event.origin!==location.origin||mode!=='ubs')return;
   var frame=shellActiveFrame(),data=event.data||{};
   if(!frame||event.source!==frame.contentWindow||data.type!=='CSC_UBS_SOLICITACOES_CARREGADAS'||normArea(data.areaId)!==normArea(selectedAreaId))return;
-  renderUbsSolicitacoesBadge({contagens:data.contagens||{},naoVistas:0});if(Number(data.naoVistas)>0)acknowledgeUbsSolicitacoes();else syncUbsAppBadge(0);
+  renderUbsSolicitacoesBadge({contagens:data.contagens||{},naoVistas:Number(data.naoVistas)||0});
+  /* Um frame aquecido em segundo plano nao significa que um funcionario abriu a lista. */
+  if(shellActiveModule==='solicitacoes'){
+    if(Number(data.naoVistas)>0)acknowledgeUbsSolicitacoes();else syncUbsAppBadge(0);
+  }
 });
 if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',function(event){var data=event.data||{};if(data.type==='CSC_UBS_PUSH_RECEIVED'&&mode==='ubs'&&normArea(data.areaId)===normArea(selectedAreaId)){checkUbsSolicitacoes()}});
 function closeUbsPushNotifications(){
@@ -598,21 +602,41 @@ function acknowledgeUbsSolicitacoes(){
   if(mode!=='ubs'||!ubsToken||!selectedAreaId)return;
   ubsSolicitacoesPostAction('admin_solicitacoes_ubs_vistas',{},function(){ubsSolicitacoesAckPending=false;renderUbsSolicitacoesBadge({naoVistas:0})})
 }
+function applyUbsSolicitacoesResult(r,checkingArea){
+  if(!r||r.ok!==true||mode!=='ubs'||checkingArea!==selectedAreaId)return;
+  var latest=r.latestNaoVista||null,latestKey=text(r.latestNaoVistaKey||'');
+  ubsSolicitacoesLatestUnreadKey=latestKey;
+  renderUbsSolicitacoesBadge(r);
+  if(!latestKey||!latest||shellActiveModule==='solicitacoes')return;
+  var markerKey=ubsSolicitacoesMarkerKey(checkingArea),previous='';
+  try{previous=text(localStorage.getItem(markerKey)||'')}catch(e){}
+  if(latestKey===previous)return;
+  try{localStorage.setItem(markerKey,latestKey)}catch(e){}
+  if(!text(latest.pushUbsEm))showUbsSolicitacoesAlert(r,true)
+}
 function checkUbsSolicitacoes(){
   if(mode!=='ubs'||!ubsToken||!selectedAreaId)return;
+  if(ubsSolicitacoesPreloadBusy&&ubsSolicitacoesPreloadArea===selectedAreaId)return;
   var checkingArea=selectedAreaId;
-  ubsSolicitacoesPostResumo(function(r){
-    if(!r||r.ok!==true||mode!=='ubs'||checkingArea!==selectedAreaId)return;
-    var latest=r.latestNaoVista||null,latestKey=text(r.latestNaoVistaKey||'');
-    ubsSolicitacoesLatestUnreadKey=latestKey;
-    renderUbsSolicitacoesBadge(r);
-    if(!latestKey||!latest||shellActiveModule==='solicitacoes')return;
-    var markerKey=ubsSolicitacoesMarkerKey(checkingArea),previous='';try{previous=text(localStorage.getItem(markerKey)||'')}catch(e){}
-    if(latestKey===previous)return;
-    try{localStorage.setItem(markerKey,latestKey)}catch(e){}
-    /* Se o servidor já entregou Push, esse é o único aviso sonoro. O alerta local
-       existe somente como contingência para aparelhos ainda sem inscrição Push. */
-    if(!text(latest.pushUbsEm))showUbsSolicitacoesAlert(r,true)
+  ubsSolicitacoesPostResumo(function(r){applyUbsSolicitacoesResult(r,checkingArea)})
+}
+/* Lê a lista integral uma vez na entrada, alimentando contador e painel
+   com a mesma resposta autenticada, antes de o operador tocar no cartão. */
+function preloadUbsSolicitacoes(){
+  if(mode!=='ubs'||!ubsToken||!selectedAreaId)return;
+  var area=selectedAreaId,now=Date.now();
+  if(ubsSolicitacoesPreloadBusy&&ubsSolicitacoesPreloadArea===area)return;
+  if(ubsSolicitacoesPreloadArea===area&&now-ubsSolicitacoesPreloadAt<15000)return;
+  ubsSolicitacoesPreloadArea=area;ubsSolicitacoesPreloadBusy=true;ubsSolicitacoesPreloadAt=now;
+  var key='portalConectaUbsSolicitacoesPrefetchV1:'+area;
+  try{sessionStorage.setItem('portalConectaUbsSolicitacoesLoadingV1:'+area,JSON.stringify({startedAt:now}))}catch(e){}
+  ubsSolicitacoesPostAction('admin_solicitacoes_ubs_listar',{},function(r){
+    if(ubsSolicitacoesPreloadArea===area)ubsSolicitacoesPreloadBusy=false;
+    try{sessionStorage.removeItem('portalConectaUbsSolicitacoesLoadingV1:'+area)}catch(e){}
+    if(mode!=='ubs'||selectedAreaId!==area)return;
+    if(!r||r.ok!==true||!Array.isArray(r.solicitacoes)){checkUbsSolicitacoes();return}
+    try{sessionStorage.setItem(key,JSON.stringify({savedAt:Date.now(),data:r}))}catch(e){}
+    applyUbsSolicitacoesResult(r,area);
   })
 }
 function ubsPushSubscriptionId(){
@@ -665,7 +689,10 @@ function startUbsSolicitacoesWatch(){
   if(mode!=='ubs'||!ubsToken||!selectedAreaId){stopUbsSolicitacoesWatch();return}
   registerUbsPush();if(ubsSolicitacoesAckPending)acknowledgeUbsSolicitacoes();
   if(ubsSolicitacoesTimer&&ubsSolicitacoesArea===selectedAreaId){checkUbsSolicitacoes();return}
-  stopUbsSolicitacoesWatch();ubsSolicitacoesArea=selectedAreaId;ensureUbsSolicitacoesUi();renderCachedUbsSolicitacoesBadge();checkUbsSolicitacoes();ubsSolicitacoesTimer=setInterval(checkUbsSolicitacoes,12000)
+  stopUbsSolicitacoesWatch();ubsSolicitacoesArea=selectedAreaId;
+  ensureUbsSolicitacoesUi();renderCachedUbsSolicitacoesBadge();
+  preloadUbsSolicitacoes();
+  ubsSolicitacoesTimer=setInterval(checkUbsSolicitacoes,12000)
 }
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&mode==='ubs'){registerUbsPush();checkUbsSolicitacoes()}});
 initUbsPush();
@@ -2253,7 +2280,7 @@ function scheduleSolicitacoesRuntimePrewarm(scope){
     if(!panelRuntimeRemoteReady()||active){if(++attempts>30)return;panelRuntimePrewarmTimers.push(setTimeout(run,220));return}
     prewarmLegacyPanel('solicitacoes');
   }
-  panelRuntimePrewarmTimers.push(setTimeout(run,420));
+  panelRuntimePrewarmTimers.push(setTimeout(run,0));
 }
 function scheduleSupportRuntimePrewarm(scope){
   if(!scope||supportRuntimePrewarmScope===scope)return;
