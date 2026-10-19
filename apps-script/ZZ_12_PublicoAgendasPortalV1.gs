@@ -129,7 +129,7 @@ function publicoAgendasV1Montar_(areaId) {
       extra: publicoAgendasV1Booleano_(
         publicoAgendasV1Valor_(valores[linha], indices.diaExtra)
       ),
-      closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerraHorario),
+      closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerraHorario, modulo),
       order: publicoAgendasV1NaoNegativo_(
         publicoAgendasV1Valor_(valores[linha], indices.ordem)
       )
@@ -576,13 +576,13 @@ function publicoAgendasV1Hora_(valor) {
   return m ? m[1] + ':' + m[2] : '';
 }
 
-function publicoAgendasV1EncerradoAgora_(data, horario) {
+function publicoAgendasV1EncerradoAgora_(data, horario, modulo) {
   var hoje = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'yyyy-MM-dd');
   var dataAgenda = publicoAgendasV1DataIso_(data);
-  if (dataAgenda && dataAgenda < hoje) return true;
-  if (!dataAgenda || dataAgenda > hoje) return false;
+  if (modulo === 'medica' && dataAgenda && dataAgenda < hoje) return true;
   horario = publicoAgendasV1Hora_(horario);
   if (!horario) return false;
+  if (dataAgenda !== hoje) return false;
   var agora = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'HH:mm');
   return agora >= horario;
 }
