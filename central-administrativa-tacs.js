@@ -1009,7 +1009,7 @@ function moduleUrl(name,options){
   if(opts.all)extra+='&all='+encodeURIComponent(opts.all);
   if(name==='moradores')return '/atendimento-acs-farmaceutico/teste-v1/painel-moradores-v2.html?area='+area+access+extra+from+'&v='+revision;
   if(name==='suporte')return '/atendimento-acs-farmaceutico/painel-suporte-moradores-v2.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260917-suporte-ubs-diag-v1';
-  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20261019-onesignal-consulta-breve-v1';
+  if(name==='recados')return '/atendimento-acs-farmaceutico/painel-oficial-recados-campanhas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20261019-saude-confirmada-instant-v2';
   if(name==='solicitacoes')return '/atendimento-acs-farmaceutico/painel-solicitacoes-moradores-v1.html?area='+area+extra+from+'&v=20261019-ubs-pdf-direto-voltar-v1';
   if(name==='assistida')return '/atendimento-acs-farmaceutico/solicitacao-assistida-csc.html?area='+area+from+'&v=20260929-assistida-v4';
   if(name==='agendas')return '/atendimento-acs-farmaceutico/painel-oficial-agendas-vagas.html?area='+area+access+extra+from+'&v='+revision+'&fix=20260929-salvar-confirmacao-v1';
