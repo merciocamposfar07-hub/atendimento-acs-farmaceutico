@@ -345,41 +345,79 @@ function mensagemIndividualV1HorarioRecife_(valor){
   return Utilities.formatDate(data,'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss');
 }
 
+/* Somente mensagens individuais: o protocolo fixa o instante da operação.
+   As datas de comprovantes antigos podem ter diferença de fuso da planilha.
+   Corrigir a diferença apenas quando também há correspondência com o envio. */
+function mensagemIndividualV1InstanteStatus_(valor){
+  if(Object.prototype.toString.call(valor)==='[object Date]')return isNaN(valor.getTime())?NaN:valor.getTime();
+  var texto=mensagemIndividualV1Texto_(valor);
+  var br=texto.match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
+  if(br)return Date.parse(br[3]+'-'+br[2]+'-'+br[1]+'T'+br[4]+':'+br[5]+':'+br[6]+'-03:00');
+  var numero=Date.parse(texto);
+  return isNaN(numero)?NaN:numero;
+}
 function mensagemIndividualV1Status_(p,contexto){
   var evento=mensagemIndividualV1Texto_(p.eventoId||p.evento),morador=mensagemIndividualV1ResolverMorador_(p,contexto);
   if(!/^[A-Za-z0-9_-]{8,160}$/.test(evento))throw new Error('O envio individual não pôde ser identificado.');
+  var match=evento.match(/^msgv1_enviar_(\d{13})_[A-Za-z0-9]+$/);
+  var criadoEm=match?Number(match[1]):NaN,agora=Date.now();
+  var area=contexto.areaId,referencia=morador.referencia;
   var ss=tacsTerritorioV1Planilha_(),rec=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.RECEIPT_SHEET),open=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.OPEN_SHEET);
-  var total=0,encaminhadas=0,exibidas=0,confirmadas=0,abertas=0,ultimoEnc='',ultimoExib='',ultimoConf='',ultimoAberto='';
+  var total=0,encaminhadas=0,exibidas=0,confirmadas=0,abertas=0;
+  var ultimoEnc='',ultimoExib='',ultimoConf='',ultimoAberto='';
+  var inscritos={};
+  function hora(ms){return Utilities.formatDate(new Date(ms),'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss');}
+  function valido(ms,minimo){return isFinite(ms)&&ms>=minimo-20000&&ms<=agora+120000;}
   if(rec&&rec.getLastRow()>1){
     rec.getRange(2,1,rec.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).getValues().forEach(function(row){
-      if(mensagemIndividualV1Texto_(row[0])!==evento||mensagemIndividualV1Texto_(row[1]).toUpperCase()!==contexto.areaId||mensagemIndividualV1Texto_(row[3])!==morador.referencia)return;
+      if(mensagemIndividualV1Texto_(row[0])!==evento||
+         mensagemIndividualV1Texto_(row[1]).toUpperCase()!==area||
+         mensagemIndividualV1Texto_(row[3])!==referencia)return;
       total++;
-      if(row[13]){encaminhadas++;ultimoEnc=mensagemIndividualV1HorarioRecife_(row[13]);}
-      if(row[14]){
-        var dataEnc=row[13] instanceof Date?row[13]:null,dataExib=row[14] instanceof Date?row[14]:null;
-        /* Em registros inconsistentes, não mostrar exibição anterior ao envio.
-           Dois minutos de tolerância cobrem webhooks processados antes do recibo. */
-        if(!dataEnc||!dataExib||dataExib.getTime()>=dataEnc.getTime()-120000){
-          exibidas++;ultimoExib=mensagemIndividualV1HorarioRecife_(row[14]);
-        }
+      var sub=mensagemIndividualV1Texto_(row[5]).toLowerCase();
+      var brutoEnvio=mensagemIndividualV1InstanteStatus_(row[13]),ajuste=0;
+      if(isFinite(criadoEm)&&isFinite(brutoEnvio)){
+        var delta=criadoEm-brutoEnvio,horas=Math.round(delta/3600000);
+        if(Math.abs(horas)<=14&&Math.abs(delta-horas*3600000)<=600000)ajuste=horas*3600000;
       }
-      if(row[15]){confirmadas++;ultimoConf=mensagemIndividualV1HorarioRecife_(row[15]);}
+      var envio=brutoEnvio+ajuste;
+      var base=isFinite(criadoEm)?criadoEm:envio;
+      var encaminhada=Boolean(row[13])&&valido(envio,base);
+      if(encaminhada){
+        encaminhadas++;ultimoEnc=hora(envio);
+        if(sub)inscritos[sub]={base:Math.max(base,envio),ajuste:ajuste};
+      }
+      var registro=inscritos[sub];
+      if(!encaminhada||!registro)return;
+      var exib=mensagemIndividualV1InstanteStatus_(row[14])+ajuste;
+      if(row[14]&&valido(exib,registro.base)){
+        exibidas++;ultimoExib=hora(exib);
+      }
+      var origem=mensagemIndividualV1Texto_(row[16]).toUpperCase();
+      var conf=mensagemIndividualV1InstanteStatus_(row[15])+ajuste;
+      /* Ciência é exclusivamente o botão de confirmação, nunca envio,
+         exibição técnica nem um ícone fixo do painel. */
+      if(row[15]&&origem==='BOTAO_CIENCIA_MENSAGEM'&&valido(conf,registro.base)){
+        confirmadas++;ultimoConf=hora(conf);
+      }
     });
-  }
-  if(encaminhadas&&typeof notificacoesAreaV1AuditoriaPorEvento_==='function'){
-    try{
-      var auditoriaEnvio=notificacoesAreaV1AuditoriaPorEvento_(contexto.areaId,evento);
-      if(auditoriaEnvio&&auditoriaEnvio.registradoEm)ultimoEnc=mensagemIndividualV1Texto_(auditoriaEnvio.registradoEm);
-    }catch(erroAuditoriaEnvio){}
   }
   if(open&&open.getLastRow()>1){
     open.getRange(2,1,open.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.OPEN_HEADERS.length).getValues().forEach(function(row){
-      if(mensagemIndividualV1Texto_(row[0])!==evento||mensagemIndividualV1Texto_(row[1]).toUpperCase()!==contexto.areaId||mensagemIndividualV1Texto_(row[3])!==morador.referencia)return;
-      abertas++;ultimoAberto=mensagemIndividualV1HorarioRecife_(row[7])||ultimoAberto;
+      if(mensagemIndividualV1Texto_(row[0])!==evento||
+         mensagemIndividualV1Texto_(row[1]).toUpperCase()!==area||
+         mensagemIndividualV1Texto_(row[3])!==referencia)return;
+      var sub=mensagemIndividualV1Texto_(row[5]).toLowerCase(),registro=inscritos[sub];
+      if(!registro)return;
+      var aberto=mensagemIndividualV1InstanteStatus_(row[7])+registro.ajuste;
+      if(!valido(aberto,registro.base))return;
+      abertas++;ultimoAberto=hora(aberto);
     });
   }
   var estado=confirmadas?'CONFIRMADA':(abertas?'ABERTA':(exibidas?'EXIBIDA':(encaminhadas?'ENCAMINHADA':'AGUARDANDO')));
-  return {ok:true,eventoId:evento,morador:{nome:morador.item.nome,familiaId:morador.familiaId},aparelhos:total,encaminhadas:encaminhadas,exibidas:exibidas,abertas:abertas,confirmadas:confirmadas,estado:estado,horarios:{encaminhada:ultimoEnc,exibida:ultimoExib,aberta:ultimoAberto,confirmada:ultimoConf}};
+  return {ok:true,eventoId:evento,morador:{nome:morador.item.nome,familiaId:morador.familiaId},
+    aparelhos:total,encaminhadas:encaminhadas,exibidas:exibidas,abertas:abertas,confirmadas:confirmadas,estado:estado,
+    horarios:{encaminhada:ultimoEnc,exibida:ultimoExib,aberta:ultimoAberto,confirmada:ultimoConf}};
 }
 
 function mensagemIndividualV1ValidarRequestId_(v){var s=mensagemIndividualV1Texto_(v);if(!/^[A-Za-z0-9_-]{8,160}$/.test(s))throw new Error('Identificador da operação inválido.');return s;}
