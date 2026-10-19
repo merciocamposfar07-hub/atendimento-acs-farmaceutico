@@ -1,0 +1,161 @@
+name: CSC - Confirmacoes reais de mensagem individual
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-mensagem-individual-confirmacao-real-producao.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  somente-status-individual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validar sintaxe e evidencias
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
+          node --check teste-v1/mensagem-individual-morador-v1.js
+          node - <<'NODE'
+          const fs=require('fs'),src=fs.readFileSync('apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs','utf8');
+          const ui=fs.readFileSync('teste-v1/mensagem-individual-morador-v1.js','utf8');
+          const page=fs.readFileSync('confirmar-ciencia.html','utf8');
+          if(!src.includes("origem==='BOTAO_CIENCIA_MENSAGEM'") ||
+             !src.includes('mensagemIndividualV1InstanteStatus_') ||
+             !ui.includes("msgStepConf:'✅'") ||
+             !page.includes('id="fecharNotificacao" type="button" hidden'))
+             throw Error('Codigo de confirmacao individual incompleto');
+          console.log('MENSAGEM_INDIVIDUAL_CONFIRMACAO_TESTES_OK');
+          NODE
+
+      - name: Validar segredos
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          test -n "$CLASPRC_JSON" && test -n "$CLASP_JSON" && test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar projeto atual do Google Apps Script
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/individual-confirm-live"
+          mkdir -p "$DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" DIR="$DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),cfg=JSON.parse(process.env.CLASP_JSON);
+          if(!cfg.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(cfg.scriptId))throw Error('Script ID invalido');
+          cfg.rootDir='.';
+          fs.writeFileSync(path.join(process.env.DIR,'.clasp.json'),JSON.stringify(cfg,null,2)+'\n');
+          NODE
+          cd "$DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Atualizar apenas leitura de comprovacao individual
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/individual-confirm-live" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const dir=process.env.DIR;
+          const files=fs.readdirSync(dir).filter(n=>/\.(gs|js)$/.test(n));
+          const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const old=Object.fromEntries(files.map(n=>[n,hash(fs.readFileSync(path.join(dir,n)))]));
+          const candidates=files.filter(n=>fs.readFileSync(path.join(dir,n),'utf8').includes('var TACS_MENSAGEM_INDIVIDUAL_V1=Object.freeze'));
+          if(candidates.length!==1)throw Error('Modulo individual ausente ou duplicado');
+          const name=candidates[0],file=path.join(dir,name);
+          const src=fs.readFileSync('apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs','utf8');
+          let live=fs.readFileSync(file,'utf8');
+          function fn(s,name){
+            const re=new RegExp('function '+name+'\\([^)]*\\)\\{[\\s\\S]*?\\n\\}','g'),a=s.match(re)||[];
+            if(a.length!==1)throw Error('Funcao nao encontrada exatamente uma vez: '+name);
+            return a[0];
+          }
+          const helper='mensagemIndividualV1InstanteStatus_';
+          const code=fn(src,helper);
+          if(!live.includes('function '+helper+'(')){
+            const anchor='function mensagemIndividualV1Status_(';
+            if(live.split(anchor).length!==2)throw Error('Ponto de insercao ambiguo');
+            live=live.replace(anchor,code+'\n'+anchor);
+          }else if(fn(live,helper)!==code)throw Error('Helper em producao diverge; nao sobrescrever');
+          const current=fn(live,'mensagemIndividualV1Status_');
+          const updated=fn(src,'mensagemIndividualV1Status_');
+          if(!current.includes('TACS_NOTIFICACOES_AREA_V1.RECEIPT_SHEET'))throw Error('Funcao em producao diverge da original');
+          live=live.replace(current,updated);
+          fs.writeFileSync(file,live,'utf8');
+          const changed=files.filter(n=>hash(fs.readFileSync(path.join(dir,n)))!==old[n]);
+          if(changed.length!==1||changed[0]!==name)throw Error('Outro modulo alterado: '+changed.join(','));
+          new Function(live);
+          console.log('SOMENTE_LEITURA_CONFIRMACAO_INDIVIDUAL_ALTERADA',name);
+          NODE
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$RUNNER_TEMP/individual-confirm-live" -type f \( -name '*.gs' -o -name '*.js' \) -print0)
+
+      - name: Publicar na implantacao existente
+        shell: bash
+        env:
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/individual-confirm-live"
+          BEFORE=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS=$(printf '%s\n' "$BEFORE" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++)if($i~/^@[0-9]+$/){gsub(/^@/,"",$i);print $i;exit}}')
+          test -n "$PREVIOUS"
+          DEPLOYED=0
+          rollback(){
+            status=$?;trap - ERR
+            if [ "$DEPLOYED" = 1 ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS" --description "Rollback confirmacao individual" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$status"
+          }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUT=$(npx --yes @google/clasp@3.3.0 version "Somente status real das mensagens individuais")
+          VERSION=$(printf '%s\n' "$VERSION_OUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description "Somente confirmacao real da mensagem individual" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          OK=0
+          for attempt in 1 2 3 4; do
+            curl -L --fail --silent --show-error --connect-timeout 6 --max-time 25 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?action=publico_mensagem_individual_conteudo&t=invalido" > "$RUNNER_TEMP/csc-individual-check.json" || true
+            if node - <<'NODE'
+          const fs=require('fs');
+          const o=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/csc-individual-check.json','utf8'));
+          if(o.ok!==false||!String(o.message||'').includes('conteúdo desta mensagem'))throw Error('Rota individual nao validada');
+          console.log('ROTA_INDIVIDUAL_PRIVADA_VALIDADA');
+          NODE
+            then OK=1;break;fi
+            sleep 6
+          done
+          test "$OK" = 1
+          trap - ERR
+          echo "MENSAGEM_INDIVIDUAL_STATUS_PRODUCAO_OK versao=$VERSION"
+
+      - name: Remover credenciais temporarias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/individual-confirm-live/.clasp.json"
