@@ -1,0 +1,180 @@
+name: CSC - Publicar somente expiracao da agenda medica
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-medica-expiracao-producao.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  somente-medica:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validar codigo da agenda
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZ_12_PublicoAgendasPortalV1.gs
+          node --check agenda-enfermeira.js
+          node - <<'NODE'
+          const fs = require('fs');
+          const src = fs.readFileSync('apps-script/ZZ_12_PublicoAgendasPortalV1.gs', 'utf8');
+          const match = src.match(/function publicoAgendasV1EncerradoAgora_\(data, horario, modulo\) \{[\s\S]*?\n\}/);
+          if (!match || !src.includes('closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerraHorario, modulo),')) throw Error('Escopo medico nao confirmado');
+          const fn = new Function('Utilities','PUBLICO_AGENDAS_PORTAL_V1','publicoAgendasV1DataIso_','publicoAgendasV1Hora_',match[0]+';return publicoAgendasV1EncerradoAgora_;')({formatDate: (_d,_tz,format) => format==='yyyy-MM-dd'?'2026-10-18':'22:33'},{FUSO:'America/Recife'},x=>x,x=>/^\d{2}:\d{2}$/.test(x)?x:'');
+          for (const [dia,hora,modulo,esperado] of [['2026-10-16','11:30','medica',true],['2026-10-18','11:30','medica',true],['2026-10-18','23:30','medica',false],['2026-10-19','11:30','medica',false],['2026-10-16','11:30','enfermeira',false],['2026-10-16','11:30','odontologia',false]]) {
+            if (fn(dia,hora,modulo) !== esperado) throw Error('Teste de expiracao falhou: '+modulo+' '+dia);
+          }
+          console.log('TESTES_EXPIRACAO_MEDICA_OK');
+          NODE
+
+      - name: Conferir credenciais privadas
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar projeto real do Apps Script
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/csc-medica-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const config=JSON.parse(process.env.CLASP_JSON);
+          if (!config.scriptId || !/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId)) throw Error('ID do Apps Script invalido');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Alterar somente o fechamento da agenda medica na copia real
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/csc-medica-live" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const dir=process.env.LIVE_DIR;
+          const source=fs.readFileSync('apps-script/ZZ_12_PublicoAgendasPortalV1.gs','utf8');
+          const files=fs.readdirSync(dir).filter(n=>/\.(gs|js)$/.test(n));
+          const marker=/\bvar\s+PUBLICO_AGENDAS_PORTAL_V1\s*=\s*Object\.freeze\s*\(/;
+          const found=files.filter(n=>marker.test(fs.readFileSync(path.join(dir,n),'utf8')));
+          if(found.length!==1) throw Error('Modulo de agendas publicas nao encontrado exatamente uma vez');
+          const dest=path.join(dir,found[0]);
+          const before=fs.readFileSync(dest,'utf8');
+          const sourceFn=source.match(/function publicoAgendasV1EncerradoAgora_\(data, horario, modulo\) \{[\s\S]*?\n\}/g);
+          const currentFn=before.match(/function publicoAgendasV1EncerradoAgora_\(data, horario(?:, modulo)?\) \{[\s\S]*?\n\}/g);
+          if(!sourceFn||sourceFn.length!==1||!currentFn||currentFn.length!==1)throw Error('Funcao de expiracao ambigua no servidor');
+          const oldFn=`function publicoAgendasV1EncerradoAgora_(data, horario) {
+            horario = publicoAgendasV1Hora_(horario);
+            if (!horario) return false;
+            var hoje = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'yyyy-MM-dd');
+            if (publicoAgendasV1DataIso_(data) !== hoje) return false;
+            var agora = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'HH:mm');
+            return agora >= horario;
+          }`;
+          const trimLines=s=>s.split('\n').map(x=>x.trim()).join('\n');
+          if(trimLines(currentFn[0])!==trimLines(oldFn)&&currentFn[0]!==sourceFn[0])throw Error('Funcao em producao difere do esperado: publicacao interrompida para nao alterar outro comportamento');
+          const currentCall='closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerraHorario),';
+          const desiredCall='closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerraHorario, modulo),';
+          if((before.split(currentCall).length-1)!==1 && (before.split(desiredCall).length-1)!==1)throw Error('Chamada da funcao nao encontrada exatamente uma vez');
+          let after=before.replace(currentFn[0],sourceFn[0]).replace(currentCall,desiredCall);
+          if((after.split(desiredCall).length-1)!==1)throw Error('Falha ao limitar mudanca a agenda medica');
+          const others=files.filter(n=>n!==found[0]);
+          const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const hashes=others.map(n=>[n,hash(fs.readFileSync(path.join(dir,n)))]);
+          fs.writeFileSync(dest,after,'utf8');
+          for(const [name,digest] of hashes)if(hash(fs.readFileSync(path.join(dir,name)))!==digest)throw Error('Outro modulo modificado: '+name);
+          console.log('SOMENTE_EXPIRACAO_MEDICA_ALTERADA arquivo='+found[0]);
+          NODE
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$RUNNER_TEMP/csc-medica-live" -type f \( -name '*.js' -o -name '*.gs' \) -print0)
+
+      - name: Publicar somente alteracao medica na mesma implantacao
+        shell: bash
+        env:
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/csc-medica-live"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          DEPLOYED=0
+          rollback() {
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback: expiracao medica" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 push --force
+          OUTPUT=$(npx --yes @google/clasp@3.3.0 version "CSC expiracao agenda medica 2026-10-18")
+          NEW_VERSION=$(printf '%s\n' "$OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Correcao somente expiracao agenda medica" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          OK=0
+          for attempt in 1 2 3 4; do
+            curl -L --fail --silent --show-error --connect-timeout 6 --max-time 25 "$BASE?action=painel_publico&areaId=JAPARANDUBA" > "$RUNNER_TEMP/medica-response.json" || true
+            if node - <<'NODE'
+          const fs=require('fs');
+          const response=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/medica-response.json','utf8'));
+          if(!response.ok || !response.modules || !Array.isArray(response.modules.medica))throw Error('API de agendas nao confirmou leitura');
+          const v={};
+          new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).forEach(p=>v[p.type]=p.value);
+          const today=v.year+'-'+v.month+'-'+v.day;
+          const dates=response.modules.medica.filter(x=>x.date && x.date<today);
+          if(dates.some(x=>x.closedNow!==true))throw Error('Agenda medica vencida permanece aberta');
+          console.log('PRODUCAO_MEDICA_VALIDADA',JSON.stringify({medica:response.modules.medica.length,expiradas:dates.length,producao:true}));
+          NODE
+            then
+              OK=1
+              break
+            fi
+            sleep 7
+          done
+          test "$OK" = '1'
+          trap - ERR
+          echo "CSC_EXPIRACAO_MEDICA_PRODUCAO_OK nova_versao=$NEW_VERSION"
+
+      - name: Limpar configuracao privada
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/csc-medica-live/.clasp.json"
