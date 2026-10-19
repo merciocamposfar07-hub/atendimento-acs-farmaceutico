@@ -209,6 +209,11 @@ function startInlinePdf(item){
  var payload=core&&core.session?core.session({codigoSolicitacao:item.codigoSolicitacao}):{areaId:area(),codigoSolicitacao:item.codigoSolicitacao};
  var form=document.createElement('form');form.method='POST';form.action=API;
  target.name='csc_ubs_pdf_inline_'+attempt;
+ target.addEventListener('load',function(){
+   /* Contingência para WebKit/Google Apps Script: a ficha nunca depende
+      exclusivamente do aviso enviado pelo visualizador incorporado. */
+   if(attempt===pdfAttempt)target.style.display='block';
+ },{once:true});
  form.target=target.name;form.hidden=true;
  payload.action='admin_solicitacao_ubs_pdf';payload.viewerNonce=nonce;
  Object.keys(payload).forEach(function(key){
@@ -226,7 +231,9 @@ function startInlinePdf(item){
 window.addEventListener('message',function(event){
  if(!event.data||(event.data.type!==PDF_VIEWER_READY&&event.data.type!==PDF_VIEWER_ERROR))return;
  var frame=document.getElementById('cscPdfInlineFrame');
- if(!frame||event.data.nonce!==frame.dataset.viewerNonce||!/(^|\.)googleusercontent\.com$|(^|\.)google\.com$/.test((function(){try{return new URL(event.origin).hostname}catch(e){return''}})()))return;
+ if(!frame||event.data.nonce!==frame.dataset.viewerNonce)return;
+ var host='';try{host=new URL(event.origin).hostname}catch(e){}
+ if(event.origin!=='null'&&!/(^|\.)googleusercontent\.com$|(^|\.)google\.com$/.test(host))return;
  var loading=document.getElementById('cscPdfLoading');
  if(event.data.type===PDF_VIEWER_READY){
    if(loading)loading.hidden=true;
