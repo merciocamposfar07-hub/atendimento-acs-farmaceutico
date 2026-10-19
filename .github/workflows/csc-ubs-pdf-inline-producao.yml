@@ -1,0 +1,152 @@
+name: CSC UBS - Publicar visualizacao PDF na ficha
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-ubs-pdf-inline-producao.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  pdf-ubs-cirurgico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar somente PDF UBS
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_54_AnexosSolicitacoesUbsV1.gs
+          node --check ubs-pdf-viewer-v2.js
+          node - <<'NODE'
+          const fs=require('fs');
+          const html=fs.readFileSync('painel-solicitacoes-moradores-v1.html','utf8');
+          const code=fs.readFileSync('apps-script/ZZZZ_54_AnexosSolicitacoesUbsV1.gs','utf8');
+          if(!html.includes('startInlinePdf(x)')||!html.includes('Aguarde… carregando o PDF')||!code.includes('viewerNonce'))throw Error('Integracao PDF UBS incompleta');
+          console.log('UBS_PDF_INLINE_TESTES_OK');
+          NODE
+      - name: Validar credenciais
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        shell: bash
+        run: |
+          test -n "$CLASPRC_JSON" && test -n "$CLASP_JSON" && test -n "$DEPLOYMENT_ID"
+      - name: Baixar projeto Google Apps Script real
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE="$RUNNER_TEMP/csc-ubs-pdf-live"
+          mkdir -p "$LIVE"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE="$LIVE" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),cfg=JSON.parse(process.env.CLASP_JSON);
+          if(!cfg.scriptId||!/^[a-zA-Z0-9_-]{20,200}$/.test(cfg.scriptId))throw Error('Identificador Apps Script invalido');
+          cfg.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE,'.clasp.json'),JSON.stringify(cfg,null,2)+'\n');
+          NODE
+          cd "$LIVE"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+      - name: Atualizar apenas funcoes privadas de visualizacao de PDF UBS
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE="$RUNNER_TEMP/csc-ubs-pdf-live" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const dir=process.env.LIVE,source=fs.readFileSync('apps-script/ZZZZ_54_AnexosSolicitacoesUbsV1.gs','utf8');
+          const names=fs.readdirSync(dir).filter(n=>/\.(?:js|gs)$/.test(n));
+          const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const originals=Object.fromEntries(names.map(n=>[n,sha(fs.readFileSync(path.join(dir,n)))]));
+          const found=names.filter(n=>fs.readFileSync(path.join(dir,n),'utf8').includes('var CSC_ANEXOS_UBS_V1='));
+          if(found.length!==1)throw Error('Modulo privado do PDF nao encontrado exatamente uma vez no servidor');
+          const name=found[0],file=path.join(dir,name);
+          let live=fs.readFileSync(file,'utf8');
+          const definitions=[
+            {name:'Abrir_',args:'p',old:'return cscAnexosUbsRender_(cscAnexosUbsLerPrivado_(p));',next:'p.viewerNonce'},
+            {name:'Render_',args:'pdf',old:'ubs-pdf-viewer-v2.js?v=20261015-botoes-grandes-v3',next:'setXFrameOptionsMode'},
+            {name:'ErroHtml_',args:'e',old:'Volte à Central para tentar novamente.',next:'CSC_UBS_PDF_ERROR'}
+          ];
+          for(const def of definitions){
+            const n='cscAnexosUbs'+def.name;
+            const regex=new RegExp('function '+n+'\\([^)]*\\)\\{[\\s\\S]*?\\n\\}','g');
+            const original=live.match(regex),updated=source.match(regex);
+            if(!original||original.length!==1||!updated||updated.length!==1)throw Error('Funcao PDF ambigua: '+n);
+            if(original[0]===updated[0])continue;
+            if(!original[0].includes(def.old))throw Error('Funcao de producao divergente; preservada: '+n);
+            if(!updated[0].includes(def.next))throw Error('Mudanca PDF nao autorizada: '+n);
+            live=live.replace(original[0],updated[0]);
+          }
+          fs.writeFileSync(file,live,'utf8');
+          const changed=names.filter(n=>sha(fs.readFileSync(path.join(dir,n)))!==originals[n]);
+          if(changed.length!==1||changed[0]!==name)throw Error('Escopo alterado: '+changed.join(','));
+          if(!live.includes('viewerNonce')||!live.includes('setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)'))throw Error('PDF UBS nao modificado');
+          console.log('UBS_PDF_SOMENTE_VISUALIZADOR_ALTERADO modulo='+name);
+          NODE
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$RUNNER_TEMP/csc-ubs-pdf-live" -type f \( -name '*.js' -o -name '*.gs' \) -print0)
+      - name: Publicar no Apps Script e validar
+        shell: bash
+        env:
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/csc-ubs-pdf-live"
+          BEFORE=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$BEFORE" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          DEPLOYED=0
+          rollback(){
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback visualizador PDF UBS" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 push --force
+          CREATED=$(npx --yes @google/clasp@3.3.0 version "UBS PDF na ficha sem pagina branca")
+          VERSION=$(printf '%s\n' "$CREATED" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description "PDF UBS incorporado com status imediato" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          URL="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          OK=0
+          for i in 1 2 3 4; do
+            RESULT=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 25 "$URL?action=csc_ubs_anexos_status") || true
+            if RESULT="$RESULT" node - <<'NODE'
+          const x=JSON.parse(process.env.RESULT||'{}');
+          if(x.ok!==true||x.pdfPrivado!==true||x.visualizadorPaginas!==true)process.exit(1);
+          console.log('UBS_PDF_ENDPOINT_PRODUCAO_OK');
+          NODE
+            then OK=1;break;fi
+            sleep 6
+          done
+          test "$OK" = '1'
+          trap - ERR
+          echo "CSC_UBS_PDF_PRODUCAO_OK versao=$VERSION"
+      - name: Remover credenciais temporarias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/csc-ubs-pdf-live/.clasp.json"
