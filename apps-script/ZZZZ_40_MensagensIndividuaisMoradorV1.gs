@@ -145,14 +145,27 @@ function mensagemIndividualV1MapaFamilias_(ss,areaId){
 }
 
 function mensagemIndividualV1Alvos_(appId,apiKey,contexto,morador){
+  /* Mesma audiência ativa de Recados e Campanhas; o filtro adicional é
+     exclusivamente a família confirmada no cadastro já existente. */
   var todos=notificacoesAreaV1AlvosAtivos_(appId,apiKey,contexto,notificacoesAreaV1QuantidadeAreas_());
-  var ss=tacsTerritorioV1Planilha_(),mapa=mensagemIndividualV1MapaFamilias_(ss,contexto.areaId),vistos={};
+  var ss=tacsTerritorioV1Planilha_(),detalhes={};
+  if(typeof notificacoesV8MapaVinculos_==='function'){
+    detalhes=notificacoesV8MapaVinculos_(ss,contexto).porSub||{};
+  }else{
+    var mapa=mensagemIndividualV1MapaFamilias_(ss,contexto.areaId);
+    Object.keys(mapa).forEach(function(id){detalhes[id]={familiaId:mapa[id],idPortal:''}});
+  }
+  var vistos={};
   return todos.filter(function(alvo){
-    var id=mensagemIndividualV1Texto_(alvo&&alvo.subscriptionId).toLowerCase();
-    if(!id||vistos[id]||!mensagemIndividualV1FamiliasIguais_(mapa[id],morador.familiaId))return false;
+    var id=mensagemIndividualV1Texto_(alvo&&alvo.subscriptionId).toLowerCase(),v=detalhes[id];
+    if(!id||vistos[id]||!v||!mensagemIndividualV1FamiliasIguais_(v.familiaId,morador.familiaId))return false;
     vistos[id]=true;return true;
   }).map(function(alvo){
-    return {subscriptionId:alvo.subscriptionId,idPortal:morador.referencia,tipoAparelho:alvo.tipoAparelho,navegador:alvo.navegador,sistema:alvo.sistema};
+    var vinculo=detalhes[mensagemIndividualV1Texto_(alvo.subscriptionId).toLowerCase()]||{};
+    /* Guardar o ID Portal verdadeiro do aparelho: jamais reetiquetar o
+       aparelho de outra pessoa da família como se fosse o da moradora. */
+    return {subscriptionId:alvo.subscriptionId,idPortal:vinculo.idPortal||alvo.idPortal||'',
+      tipoAparelho:alvo.tipoAparelho,navegador:alvo.navegador,sistema:alvo.sistema};
   });
 }
 
@@ -303,11 +316,13 @@ function mensagemIndividualV1Enviar_(p,contexto,acesso,requestId){
 function mensagemIndividualV1HorarioRecife_(valor){
   if(valor===null||typeof valor==='undefined'||valor==='')return '';
   if(Object.prototype.toString.call(valor)==='[object Date]'&&!isNaN(valor.getTime())){
-    return Utilities.formatDate(valor,'America/Recife','dd/MM/yyyy HH:mm:ss');
+    return Utilities.formatDate(valor,'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss');
   }
-  var texto=mensagemIndividualV1Texto_(valor),data=new Date(texto);
+  var texto=mensagemIndividualV1Texto_(valor);
+  if(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/.test(texto))return texto;
+  var data=new Date(texto);
   if(!texto||isNaN(data.getTime()))return texto;
-  return Utilities.formatDate(data,'America/Recife','dd/MM/yyyy HH:mm:ss');
+  return Utilities.formatDate(data,'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss');
 }
 
 function mensagemIndividualV1Status_(p,contexto){
@@ -320,7 +335,14 @@ function mensagemIndividualV1Status_(p,contexto){
       if(mensagemIndividualV1Texto_(row[0])!==evento||mensagemIndividualV1Texto_(row[1]).toUpperCase()!==contexto.areaId||mensagemIndividualV1Texto_(row[3])!==morador.referencia)return;
       total++;
       if(row[13]){encaminhadas++;ultimoEnc=mensagemIndividualV1HorarioRecife_(row[13]);}
-      if(row[14]){exibidas++;ultimoExib=mensagemIndividualV1HorarioRecife_(row[14]);}
+      if(row[14]){
+        var dataEnc=row[13] instanceof Date?row[13]:null,dataExib=row[14] instanceof Date?row[14]:null;
+        /* Em registros inconsistentes, não mostrar exibição anterior ao envio.
+           Dois minutos de tolerância cobrem webhooks processados antes do recibo. */
+        if(!dataEnc||!dataExib||dataExib.getTime()>=dataEnc.getTime()-120000){
+          exibidas++;ultimoExib=mensagemIndividualV1HorarioRecife_(row[14]);
+        }
+      }
       if(row[15]){confirmadas++;ultimoConf=mensagemIndividualV1HorarioRecife_(row[15]);}
     });
   }
