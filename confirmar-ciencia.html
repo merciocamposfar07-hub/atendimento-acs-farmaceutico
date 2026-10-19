@@ -30,7 +30,7 @@
     <button id="confirmar" type="button">✅ Li e estou ciente</button>
     <button id="fecharNotificacao" type="button" hidden>✕ Fechar notificação</button>
     <a id="portal" href="./">Abrir Portal TACS</a>
-    <div id="saida" hidden role="status" aria-live="polite" style="margin-top:22px;padding:22px;background:#eaf8ef;border:1px solid #82d5a5;border-radius:18px;color:#08723d;font-size:19px;font-weight:750">✅ Notificação encerrada. Sua confirmação já foi registrada. Você pode fechar esta aba.</div>
+    <div id="saida" hidden role="status" aria-live="polite" style="margin-top:22px;padding:22px;background:#eaf8ef;border:1px solid #82d5a5;border-radius:18px;color:#08723d;font-size:19px;font-weight:750">✅ Notificação encerrada. Sua confirmação foi registrada. Não é necessário acessar o portal. Você pode voltar ao aplicativo anterior.</div>
   </main>
   <script>
   (function(){
@@ -86,16 +86,22 @@
     });
     fechar.addEventListener('click',function(){
       if(!ciente||!individual)return;
-      try{window.close()}catch(e){}
-      /* O Safari pode impedir que uma página de notificação feche sua
-         própria aba: neste caso, encerra a interface sem obrigar a abrir o Portal. */
-      setTimeout(function(){
-        document.querySelector('main').querySelectorAll(':scope > *').forEach(function(node){
-          if(node.id!=='saida')node.hidden=true;
-        });
-        document.getElementById('saida').hidden=false;
-        document.title='Notificação concluída — Portal CSC';
-      },100);
+      /* Exibir a conclusão ANTES de qualquer tentativa de fechar.
+         No Safari iOS, window.close() pode deixar uma aba inteiramente branca. */
+      var main=document.querySelector('main'),saida=document.getElementById('saida');
+      Array.prototype.forEach.call(main.children,function(node){
+        if(node!==saida)node.hidden=true;
+      });
+      saida.hidden=false;
+      document.title='Notificação encerrada — Portal CSC';
+      document.body.style.background='#e8f5f9';
+      var isIOS=/iPad|iPhone|iPod/i.test(navigator.userAgent||'')||
+        (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+      /* Apenas janelas criadas por script, em outros navegadores, podem
+         ser fechadas com segurança. A aba do Safari não é encerrável via JS. */
+      if(!isIOS&&window.opener&&window.opener!==window){
+        try{window.close()}catch(e){}
+      }
     });
   }());
   </script>
