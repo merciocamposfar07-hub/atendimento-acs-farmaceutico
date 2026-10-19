@@ -1,0 +1,107 @@
+name: CSC - Excluir recados antigos sem ID
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/csc-recados-exclusao-legado-isolada.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar codigo alterado
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_20_PublicacoesTerritoriaisV1.gs
+      - name: Ler script da producao
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON" && test -n "$CLASP_JSON" && test -n "$DEPLOYMENT_ID"
+          DIR="$RUNNER_TEMP/csc-exclusao-recados"
+          mkdir -p "$DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" DIR="$DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),cfg=JSON.parse(process.env.CLASP_JSON);
+          if(!cfg.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(cfg.scriptId))throw Error('scriptId invalido');
+          cfg.rootDir='.';
+          fs.writeFileSync(path.join(process.env.DIR,'.clasp.json'),JSON.stringify(cfg,null,2)+'\n');
+          NODE
+          cd "$DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+      - name: Corrigir somente as funcoes de exclusao
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/csc-exclusao-recados" node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const dir=process.env.DIR,files=fs.readdirSync(dir).filter(x=>/\.(?:gs|js)$/.test(x));
+          const matches=files.filter(n=>fs.readFileSync(path.join(dir,n),'utf8').includes('var TACS_PUBLICACOES_TERRITORIAIS_V1=Object.freeze'));
+          if(matches.length!==1)throw Error('Modulo unico de publicacoes nao identificado');
+          const filename=path.join(dir,matches[0]);
+          let live=fs.readFileSync(filename,'utf8');
+          const src=fs.readFileSync('apps-script/ZZZZ_20_PublicacoesTerritoriaisV1.gs','utf8');
+          function fn(s,n){
+            const k='function '+n+'(',a=s.indexOf(k),b=s.indexOf(k,a+1);
+            if(a<0||b>=0)throw Error('Funcao nao unica: '+n);
+            const end=s.indexOf('\n}\n',a);if(end<0)throw Error('Fim nao encontrado: '+n);
+            return s.slice(a,end+2);
+          }
+          const defs=[
+            ['publicacoesTerritoriaisV1TratarPost_',"else if(action==='admin_publicacoes_remover_recado')resultado=publicacoesTerritoriaisV1Remover_(contexto,acesso,'recado',p.id)"],
+            ['publicacoesTerritoriaisV1Remover_',"if(!id)throw new Error('Identificador da publicação ausente.')"],
+            ['publicacoesTerritoriaisV1Ler_','return tabela.rows.map(function(r){return publicacoesTerritoriaisV1Objeto_(tabela.headers,r.values);})']
+          ];
+          let alterado=false;
+          for(const [name,expected] of defs){
+            const old=fn(live,name),next=fn(src,name);
+            if(old===next)continue;
+            if(!old.includes(expected))throw Error('Backend divergente; nao substituir: '+name);
+            live=live.replace(old,next);alterado=true;
+          }
+          const additional=['publicacoesTerritoriaisV1ReferenciaLegado_','publicacoesTerritoriaisV1EncontrarLegado_'];
+          const count=additional.map(n=>live.split('function '+n+'(').length-1);
+          if(count.some(n=>n>1)||count.filter(n=>n===1).length===1)throw Error('Referencias legadas incompletas/duplicadas');
+          if(count.every(n=>n===0)){
+            const target='function publicacoesTerritoriaisV1AreaRegistro_(';
+            if(live.split(target).length!==2)throw Error('Ponto de insercao ambiguo');
+            live=live.replace(target,additional.map(n=>fn(src,n)).join('\n')+'\n'+target);alterado=true;
+          }
+          if(!live.includes('tabela.sheet.deleteRow(linha.row)')||!live.includes('refExclusaoLegado'))throw Error('Exclusao nao conferida');
+          new Function(live);
+          if(alterado)fs.writeFileSync(filename,live,'utf8');
+          console.log('CSC_RECADOS_LEGADOS',alterado?'corrigido':'ja atualizado');
+          NODE
+      - name: Publicar no deployment existente
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/csc-exclusao-recados"
+          npx --yes @google/clasp@3.3.0 push --force
+          OUT=$(npx --yes @google/clasp@3.3.0 version 'CSC: exclusao de recados legados')
+          VERSION=$(printf '%s\n' "$OUT" | grep -Eo '[0-9]+' | tail -n1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description 'CSC excluir recados antigos sem ID' "$DEPLOYMENT_ID"
+          echo "RECADO_EXCLUSAO_DEPLOYED version=$VERSION"
+      - name: Apagar credenciais locais
+        if: always()
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/csc-exclusao-recados/.clasp.json"
