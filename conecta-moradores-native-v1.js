@@ -87,7 +87,7 @@ function carregarMensagemIndividualNative(callback){
   if(mensagemIndividualNativeCarregando)return;
   mensagemIndividualNativeCarregando=true;
   var script=document.createElement('script');
-  script.src='/atendimento-acs-farmaceutico/teste-v1/mensagem-individual-morador-v1.js?v=20261019-envio-individual-estavel-v2';
+  script.src='/atendimento-acs-farmaceutico/teste-v1/mensagem-individual-morador-v1.js?v=20261019-confirmacoes-reais-v3';
   function terminar(ok){
     mensagemIndividualNativeCarregando=false;
     var callbacks=mensagemIndividualNativeCallbacks.splice(0);
