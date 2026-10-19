@@ -359,7 +359,9 @@ function notificacoesAreaV1EnviarConfirmacaoReparo_(appId,apiKey,subscriptionId,
 }
 
 function notificacoesAreaV1ExigirPublicacao_(acesso){
-  if(acesso&&acesso.perfil==='TACS'){
+  /* O Push exige exatamente a mesma autorização da publicação do recado.
+     Perfil UBS é permitido somente com PUBLICACOES_GERENCIAR; não eleva privilégios. */
+  if(acesso&&(acesso.perfil==='TACS'||acesso.perfil==='UBS')){
     if((acesso.permissoes||[]).indexOf('PUBLICACOES_GERENCIAR')===-1){
       throw new Error('Seu cadastro não possui permissão para publicar notificações.');
     }
