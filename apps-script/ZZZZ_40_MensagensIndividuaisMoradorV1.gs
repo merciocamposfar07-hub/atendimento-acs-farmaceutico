@@ -60,7 +60,13 @@ function mensagemIndividualV1Contexto_(p,exigirPublicacao){
   moradoresAdminV1ExigirPermissao_(contexto,'MORADORES_LER');
   if(exigirPublicacao){
     if(typeof notificacoesAreaV1ExigirPublicacao_!=='function')throw new Error('O serviço de notificações ainda não está disponível.');
-    notificacoesAreaV1ExigirPublicacao_(acesso);
+    /* Somente nesta ação individual, a UBS autenticada com acesso ao cadastro
+       pode avisar moradores da própria área. Não libera publicações gerais. */
+    if(mensagemIndividualV1Texto_(acesso.perfil).toUpperCase()==='UBS'){
+      moradoresAdminV1ExigirPermissao_(contexto,'MORADORES_LER');
+    }else{
+      notificacoesAreaV1ExigirPublicacao_(acesso);
+    }
   }
   return {acesso:acesso,contexto:contexto};
 }
@@ -211,7 +217,12 @@ function mensagemIndividualV1Enviar_(p,contexto,acesso,requestId){
   var resumo=notificacoesAreaV1AplicarRespostasEnvio_(preparados,respostas);
   notificacoesAreaV1Auditar_(contexto,acesso,input,resumo.primeiroId||'',alvos.length,resumo.encaminhados?'ENCAMINHADA_INDIVIDUAL_MORADOR':'ERRO_ENVIO_INDIVIDUAL_MORADOR');
   if(!resumo.encaminhados)throw new Error('O serviço Push não aceitou a mensagem para nenhum aparelho deste cadastro familiar.');
-  return {ok:true,enviado:true,eventoId:requestId,referencia:morador.referencia,morador:{nome:morador.item.nome,familiaId:morador.familiaId},aparelhos:alvos.length,encaminhadas:resumo.encaminhados,falhas:resumo.falhas||0,message:'Mensagem encaminhada para '+resumo.encaminhados+' aparelho(s). Acompanhe abaixo a exibição, abertura e confirmação.'};
+  var dataEnvio=Utilities.formatDate(new Date(),'America/Recife','dd/MM/yyyy HH:mm:ss');
+  /* Cópia administrativa vinculada ao evento confirmado na auditoria.
+     Aceite do Push NÃO significa entregue, aberto nem lido pelo morador. */
+  return {ok:true,enviado:true,eventoId:requestId,referencia:morador.referencia,morador:{nome:morador.item.nome,familiaId:morador.familiaId},aparelhos:alvos.length,encaminhadas:resumo.encaminhados,falhas:resumo.falhas||0,
+    comprovante:{eventoId:requestId,destinatario:morador.item.nome,titulo:conteudo.titulo,mensagem:conteudo.mensagem,encaminhadoEm:dataEnvio,aceitoPeloServico:true},
+    message:'Mensagem encaminhada para '+resumo.encaminhados+' aparelho(s). Acompanhe abaixo a exibição, abertura e confirmação.'};
 }
 
 function mensagemIndividualV1HorarioRecife_(valor){
