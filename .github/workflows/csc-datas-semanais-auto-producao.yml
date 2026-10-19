@@ -1,0 +1,197 @@
+name: CSC - Publicar somente datas semanais automaticas
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-datas-semanais-auto-producao.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  atualizar-datas-apenas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar GitHub
+        uses: actions/checkout@v4
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Checar sintaxe dos dois modulos de datas
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs
+          node --check --input-type=commonjs < apps-script/ZZ_12_PublicoAgendasPortalV1.gs
+          node --check conecta-agendas-native-v1.js
+          node - <<'NODE'
+          const fs=require('fs');
+          const t=fs.readFileSync('apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs','utf8');
+          const p=fs.readFileSync('apps-script/ZZ_12_PublicoAgendasPortalV1.gs','utf8');
+          if(!t.includes('function agendasProfissionaisTerritoriaisV1DataSemanal_')||
+             !t.includes('agendasProfissionaisTerritoriaisV1AtualizarApenasDatas_(sheet,headers)')||
+             !p.includes('date: dataPublicada,'))
+            throw Error('Codigo de datas automaticas nao localizado');
+          console.log('DATAS_SEMANAIS_CODIGO_OK');
+          NODE
+
+      - name: Validar conexao Apps Script
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          test -n "$CLASPRC_JSON" && test -n "$CLASP_JSON" && test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar copia real do servidor
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/csc-calendar-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),cfg=JSON.parse(process.env.CLASP_JSON);
+          if(!cfg.scriptId || !/^[A-Za-z0-9_-]{20,200}$/.test(cfg.scriptId))throw Error('ID do Apps Script ausente');
+          cfg.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(cfg,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Aplicar somente rotina DATA nas duas fontes reais
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/csc-calendar-live" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const live=process.env.LIVE_DIR;
+          const names=fs.readdirSync(live).filter(n=>/\.(?:js|gs)$/.test(n));
+          const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const before=Object.fromEntries(names.map(n=>[n,hash(fs.readFileSync(path.join(live,n)))]));
+          function find(marker){
+            const hits=names.filter(n=>fs.readFileSync(path.join(live,n),'utf8').includes(marker));
+            if(hits.length!==1)throw Error('Modulo no servidor nao encontrado de forma unica: '+marker);
+            return hits[0];
+          }
+          function one(input,oldCode,newCode,label){
+            const count=input.split(oldCode).length-1;
+            if(count===1)return input.replace(oldCode,newCode);
+            if(count===0&&input.includes(newCode))return input;
+            throw Error('Trecho nao localizado exatamente uma vez no servidor: '+label+'; encontrado='+count);
+          }
+          const territoryName=find('var TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1=Object.freeze');
+          const publicName=find('var PUBLICO_AGENDAS_PORTAL_V1 = Object.freeze');
+          if(territoryName===publicName)throw Error('Modulos inseparaveis em producao; cancelado');
+          const territorySource=fs.readFileSync('apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs','utf8');
+          const publicSource=fs.readFileSync('apps-script/ZZ_12_PublicoAgendasPortalV1.gs','utf8');
+          let territory=fs.readFileSync(path.join(live,territoryName),'utf8');
+          let published=fs.readFileSync(path.join(live,publicName),'utf8');
+          const helperBegin='/* Datas de segunda a sexta acompanham automaticamente a semana no fuso de Recife.';
+          const helperEnd='function agendasProfissionaisTerritoriaisV1Tabela_(ss,nome,obrigatorios,criar){';
+          const h0=territorySource.indexOf(helperBegin),h1=territorySource.indexOf(helperEnd,h0);
+          if(h0<0||h1<h0)throw Error('Funcao semanal de origem nao localizada');
+          const helper=territorySource.slice(h0,h1);
+          if(territory.includes('function agendasProfissionaisTerritoriaisV1DataSemanal_')){
+            if(!territory.includes(helper.trim()))throw Error('Servidor ja contem uma rotina semanal diferente');
+          } else {
+            territory=one(territory,helperEnd,helper+helperEnd,'inserir rotina DATA');
+          }
+          const oldRows='  var valores=sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,colunas).getValues():[];';
+          const newRows="  if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS)\n    agendasProfissionaisTerritoriaisV1AtualizarApenasDatas_(sheet,headers);\n"+oldRows;
+          territory=one(territory,oldRows,newRows,'sincronizar somente a coluna DATA');
+          const oldDate="    var dataBruta = publicoAgendasV1Valor_(exibidos[linha], indices.data);";
+          const newDate="    var dataBruta = publicoAgendasV1Valor_(exibidos[linha], indices.data);\n    var dataSemanal = typeof agendasProfissionaisTerritoriaisV1DataSemanal_ === 'function'\n      ? agendasProfissionaisTerritoriaisV1DataSemanal_(dia) : '';\n    var dataPublicada = dataSemanal || publicoAgendasV1DataIso_(dataBruta);";
+          if(!publicSource.includes(newDate))throw Error('Novo trecho publico divergente da origem');
+          published=one(published,oldDate,newDate,'data semanal no portal publico');
+          published=one(published,'      date: publicoAgendasV1DataIso_(dataBruta),','      date: dataPublicada,','data mostrada ao morador');
+          published=one(published,'      closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerraHorario, modulo),','      closedNow: publicoAgendasV1EncerradoAgora_(dataPublicada, encerraHorario, modulo),','usar data atual no fechamento existente');
+          fs.writeFileSync(path.join(live,territoryName),territory,'utf8');
+          fs.writeFileSync(path.join(live,publicName),published,'utf8');
+          const changed=names.filter(n=>hash(fs.readFileSync(path.join(live,n)))!==before[n]).sort();
+          const expected=[territoryName,publicName].sort();
+          if(JSON.stringify(changed)!==JSON.stringify(expected))throw Error('Arquivo fora do escopo: '+changed.join(','));
+          for(const file of changed){
+            new Function(fs.readFileSync(path.join(live,file),'utf8'));
+          }
+          console.log('SOMENTE_DATAS_SEMANAIS_ALTERADAS',changed.join(' | '));
+          NODE
+          while IFS= read -r -d '' file; do
+            node --check --input-type=commonjs < "$file" >/dev/null
+          done < <(find "$RUNNER_TEMP/csc-calendar-live" -type f \( -name '*.js' -o -name '*.gs' \) -print0)
+
+      - name: Publicar e testar novas datas semanais
+        shell: bash
+        env:
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/csc-calendar-live"
+          cd "$LIVE_DIR"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          DEPLOYED=0
+          rollback(){
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback datas semanais" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "CSC datas semanais automaticas")
+          VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description "Somente datas automaticas por semana" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          URL="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          OK=0
+          for attempt in 1 2 3 4; do
+            curl -L --fail --silent --show-error --connect-timeout 6 --max-time 30 "$URL?action=painel_publico&areaId=JAPARANDUBA" > "$RUNNER_TEMP/calendar-resposta.json" || true
+            if node - <<'NODE'
+          const fs=require('fs');
+          const o=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/calendar-resposta.json','utf8'));
+          if(!o.ok || !o.modules || !Array.isArray(o.modules.medica))throw Error('Agenda publica indisponivel');
+          const parts={};
+          new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).forEach(p=>parts[p.type]=p.value);
+          const d=new Date(Date.UTC(+parts.year,+parts.month-1,+parts.day));
+          const dow=d.getUTCDay();
+          d.setUTCDate(d.getUTCDate()+(dow===0?1:dow===6?2:1-dow));
+          const days={SEGUNDA:0,TERCA:1,QUARTA:2,QUINTA:3,SEXTA:4};
+          function expected(day){const label=String(day||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().split('-')[0];if(!(label in days))return null;const x=new Date(d);x.setUTCDate(x.getUTCDate()+days[label]);return x.toISOString().slice(0,10)}
+          let checked=0;
+          for(const [module,rows] of Object.entries(o.modules)){
+            if(!Array.isArray(rows))continue;
+            for(const row of rows){const desired=expected(row.day);if(!desired)continue;checked++;if(row.date!==desired)throw Error('Data incorreta '+module+' '+row.day+': '+row.date+' != '+desired);}
+          }
+          if(checked<5)throw Error('Poucas datas verificadas');
+          console.log('PRODUCAO_SEMANA_ATUAL_VALIDADA',JSON.stringify({diasConferidos:checked,primeiraData:expected('Segunda-feira'),ultimaData:expected('Sexta-feira')}));
+          NODE
+            then OK=1; break; fi
+            sleep 7
+          done
+          test "$OK" = '1'
+          trap - ERR
+          echo "CSC_DATAS_SEMANAIS_PRODUCAO_OK versao=$VERSION"
+
+      - name: Limpar configuracao privada
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/csc-calendar-live/.clasp.json"
