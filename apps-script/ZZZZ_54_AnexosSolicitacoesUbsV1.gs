@@ -92,7 +92,7 @@ function cscAnexosUbsRender_(pdf,viewerNonce){
 function cscAnexosUbsErroHtml_(e,viewerNonce){
  var nonce=/^[a-zA-Z0-9_:-]{1,120}$/.test(String(viewerNonce||''))?String(viewerNonce):'';
  var message=String(e&&e.message||'Não foi possível abrir o PDF.').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]});
- return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><h2>Não foi possível abrir o PDF</h2><p>'+message+'</p><p>Volte à Central para tentar novamente.</p><script>try{parent.postMessage({type:"CSC_UBS_PDF_ERROR",nonce:'+nonce+'},"*")}catch(e){}<\/script>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+ return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><h2>Não foi possível abrir o PDF</h2><p>'+message+'</p><p>Volte à Central para tentar novamente.</p><script>try{parent.postMessage({type:"CSC_UBS_PDF_ERROR",nonce:'+JSON.stringify(nonce)+'},"*")}catch(e){}<\/script>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 function cscAnexosUbsPrepararPost_(p){
  var id=String(p.requestId||''),result;
