@@ -2845,7 +2845,8 @@ function saudeResumoLerConfirmado(){
     ],melhor=null,agora=Date.now();
     fontes.forEach(function(fonte){
       if(!fonte.raw)return;
-      var item=JSON.parse(fonte.raw);
+      var item;
+      try{item=JSON.parse(fonte.raw)}catch(e){return}
       if(!item||txt(item.areaId||'').toUpperCase()!==txt(areaId).toUpperCase())return;
       if(fonte.tipo==='central'?item.oneSignalConsultado!==true:item.confirmadoOneSignal!==true)return;
       var tempo=Number(fonte.tipo==='central'?item.confirmadoEm:item.salvoEm),idade=agora-tempo;
