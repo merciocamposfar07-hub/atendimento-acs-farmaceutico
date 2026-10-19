@@ -1,0 +1,119 @@
+name: CSC - Correção isolada do ciclo de reparo
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-correcao-ciclo-reparo-14d.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar somente modulos de reparo
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_22_SaudeNotificacoesV1.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_47_EstabilizacaoReparosV9.gs
+          node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('apps-script/ZZZZ_22_SaudeNotificacoesV1.gs','utf8');
+          const v=fs.readFileSync('apps-script/ZZZZ_47_EstabilizacaoReparosV9.gs','utf8');
+          if(!s.includes('Date.now()-solicitadoMs>=14*86400000')||!v.includes('if(!aparelho.reparoPendente&&!ciclo.concluidoEm)return'))throw Error('Protecao de reparo nao conferida');
+          console.log('TESTES_REPARO_14D_OK');
+          NODE
+      - name: Validar credenciais sem exibir segredos
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          test -n "$CLASPRC_JSON" && test -n "$CLASP_JSON" && test -n "$DEPLOYMENT_ID"
+      - name: Obter codigo de producao
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/csc-reparo-14d"
+          mkdir -p "$DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" DIR="$DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),cfg=JSON.parse(process.env.CLASP_JSON);
+          if(!cfg.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(cfg.scriptId))throw Error('ScriptId invalido');
+          cfg.rootDir='.';
+          fs.writeFileSync(path.join(process.env.DIR,'.clasp.json'),JSON.stringify(cfg,null,2)+'\n');
+          NODE
+          cd "$DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+      - name: Atualizar somente duas funcoes de reparo
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/csc-reparo-14d" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const dir=process.env.DIR,files=fs.readdirSync(dir).filter(n=>/\.(?:js|gs)$/.test(n));
+          const sha=t=>crypto.createHash('sha256').update(t).digest('hex');
+          const initial=Object.fromEntries(files.map(n=>[n,sha(fs.readFileSync(path.join(dir,n)))]));
+          const targets=[
+            ['TACS_SAUDE_NOTIFICACOES_V1','apps-script/ZZZZ_22_SaudeNotificacoesV1.gs','saudeNotificacoesV1ReparoPendenteSubscription_','if(expirado&&!vinculado)return null;'],
+            ['TACS_ESTABILIZACAO_REPAROS_V9','apps-script/ZZZZ_47_EstabilizacaoReparosV9.gs','reparosV9EnriquecerSaude_','var classificacao=reparosV9ClassificarCiclo_']
+          ];
+          function extract(s,name){
+            const a=s.indexOf('function '+name+'(');
+            if(a<0||s.indexOf('function '+name+'(',a+1)!==-1)throw Error('Funcao ausente ou duplicada: '+name);
+            const b=s.indexOf('\n}\n',a);
+            if(b<0)throw Error('Final da funcao nao encontrado: '+name);
+            return s.slice(a,b+2);
+          }
+          const allowed=[];
+          for(const [marker,sourcePath,fn,expected] of targets){
+            const found=files.filter(n=>fs.readFileSync(path.join(dir,n),'utf8').includes('var '+marker));
+            if(found.length!==1)throw Error('Modulo de reparo nao unico: '+marker);
+            const name=found[0],filename=path.join(dir,name);allowed.push(name);
+            const original=fs.readFileSync(filename,'utf8');
+            const canonical=fs.readFileSync(sourcePath,'utf8');
+            const old=extract(original,fn),updated=extract(canonical,fn);
+            if(old!==updated){
+              if(!old.includes(expected))throw Error('Funcao em producao divergente; atualizacao interrompida: '+fn);
+              fs.writeFileSync(filename,original.replace(old,updated));
+            }
+          }
+          const changed=files.filter(n=>sha(fs.readFileSync(path.join(dir,n)))!==initial[n]);
+          if(changed.some(n=>!allowed.includes(n)))throw Error('Arquivo indevido modificado: '+changed);
+          for(const n of allowed)new Function(fs.readFileSync(path.join(dir,n),'utf8'));
+          console.log('SOMENTE_REPAROS_ATUALIZADOS',changed.join(',')||'ja atualizados');
+          NODE
+      - name: Publicar mesmo deployment preservando demais rotas
+        shell: bash
+        env:
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/csc-reparo-14d"
+          npx --yes @google/clasp@3.3.0 push --force
+          OUTPUT=$(npx --yes @google/clasp@3.3.0 version 'CSC reparos: pendencia maxima 14 dias')
+          VERSION=$(printf '%s\n' "$OUTPUT" | grep -Eo '[0-9]+' | tail -n1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description 'Reparo expiravel sem tocar inscricoes e Push' "$DEPLOYMENT_ID"
+          echo "REPARO_14D_PUBLICADO versao=$VERSION"
+      - name: Apagar credenciais temporarias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f "$RUNNER_TEMP/csc-reparo-14d/.clasp.json"
