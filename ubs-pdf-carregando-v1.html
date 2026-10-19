@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#062c46">
+<meta name="robots" content="noindex,nofollow">
+<title>Documento da solicitação | Portal CSC</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;min-height:100%;background:#062c46;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+#progress{position:fixed;inset:0;z-index:2;display:flex;flex-direction:column;gap:17px;align-items:center;justify-content:center;padding:22px;text-align:center;background:#062c46}
+#progress strong{font-size:clamp(1.14rem,4.6vw,1.65rem);letter-spacing:.02em;line-height:1.35}
+#progress p{font-size:1rem;margin:0;color:#c9e3f1}
+#progress .spinner{width:42px;height:42px;border:4px solid #37728b;border-top-color:#83efa9;border-radius:50%;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#document{display:block;width:100%;height:100dvh;min-height:100svh;border:0;background:#062c46;visibility:hidden}
+#progress.error .spinner{display:none}
+#progress.error strong{color:#ffc9cc}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div id="progress" role="status" aria-live="polite">
+  <div class="spinner" aria-hidden="true"></div>
+  <strong id="title">AGUARDE, CARREGANDO PDF</strong>
+  <p id="detail">Preparando receita ou requisição para visualização…</p>
+</div>
+<iframe id="document" title="PDF da solicitação" referrerpolicy="no-referrer"></iframe>
+<script>
+(function(){
+'use strict';
+var nonce=location.hash.slice(1),origin=location.origin,progress=document.getElementById('progress'),detail=document.getElementById('detail'),title=document.getElementById('title'),frame=document.getElementById('document');
+var started=false,done=false;
+function fail(message){if(done)return;progress.hidden=false;progress.classList.add('error');title.textContent='NÃO FOI POSSÍVEL ABRIR O PDF';detail.textContent=message||'Volte à solicitação e tente novamente.';frame.style.visibility='hidden'}
+function show(){if(done)return;done=true;frame.style.visibility='visible';progress.hidden=true}
+function allowedPdfOrigin(value){
+ if(value==='null')return true;
+ try{var host=new URL(value).hostname;return /(^|\.)googleusercontent\.com$|(^|\.)google\.com$/.test(host)}catch(e){return false}
+}
+if(!/^ubs_pdf_[a-z0-9_]{8,110}$/.test(nonce)||!window.opener){
+ fail('Volte ao painel da UBS e toque novamente em Abrir PDF.');return;
+}
+frame.name='csc_ubs_pdf_'+nonce;
+window.addEventListener('message',function(event){
+ var data=event.data||{};
+ if(data.type==='CSC_UBS_PDF_OPEN'&&event.origin===origin&&event.source===window.opener&&data.nonce===nonce&&!started){
+   var fields=data.fields||{};
+   if(fields.action!=='admin_solicitacao_ubs_pdf'||!fields.codigoSolicitacao||!data.api){fail('Dados insuficientes para abrir a solicitação.');return}
+   started=true;
+   var form=document.createElement('form');
+   form.method='POST';form.action=String(data.api);form.target=frame.name;form.hidden=true;
+   Object.keys(fields).forEach(function(key){
+     var n=document.createElement('input');n.type='hidden';n.name=key;n.value=String(fields[key]==null?'':fields[key]);form.appendChild(n);
+   });
+   document.body.appendChild(form);
+   form.submit();form.remove();
+   return;
+ }
+ if(data.nonce!==nonce||!allowedPdfOrigin(event.origin))return;
+ if(data.type==='CSC_UBS_PDF_READY')show();
+ if(data.type==='CSC_UBS_PDF_ERROR'){if(!done){progress.hidden=false;progress.classList.add('error');title.textContent='NÃO FOI POSSÍVEL CARREGAR O PDF';detail.textContent='Tente novamente pelo botão da solicitação.';frame.style.visibility='hidden'}}
+});
+frame.addEventListener('load',function(){
+ if(!started||done)return;
+ try{if(frame.contentDocument&&frame.contentDocument.location.href==='about:blank')return}catch(e){}
+ /* O HTML do servidor já contém sua própria mensagem AGUARDE enquanto renderiza o PDF.
+    Revelar a página carregada nunca deixa a janela em branco. */
+ show();
+});
+try{window.opener.postMessage({type:'CSC_UBS_PDF_PAGE_READY',nonce:nonce},origin)}
+catch(e){fail('Não foi possível comunicar com a Central da UBS.')}
+setTimeout(function(){if(!started&&!done)fail('A solicitação não foi transmitida. Volte ao painel e tente novamente.')},15000);
+setTimeout(function(){if(started&&!done){detail.textContent='O documento está demorando. Aguarde enquanto o arquivo é preparado pelo servidor.'}},12000);
+})();
+</script>
+</body>
+</html>
