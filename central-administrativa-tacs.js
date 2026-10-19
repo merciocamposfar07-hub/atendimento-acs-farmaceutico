@@ -1811,7 +1811,11 @@ function openModule(name,title,options){
   if(name==='ubs'){if(mode==='admin')showAdminUbs(title||'UBS');return}
   var routeId=moduleRouteId(name,options),url=moduleUrl(name,options);if(!url)return;
   if(name==='portal'){showPortalTacs(title||'Portal TACS',routeId,url);return}
-  if(name==='solicitacoes'&&mode==='ubs')clearUbsSolicitacoesAlert();
+  if(name==='solicitacoes'&&mode==='ubs'){
+    clearUbsSolicitacoesAlert();
+    /* Só a abertura real marca as solicitações como vistas; pré-carga não marca. */
+    if(ubsToken&&!ubsSolicitacoesAckPending)acknowledgeUbsSolicitacoes();
+  }
   var remoteReady=Boolean(token||territoryToken||ubsToken),localReady=localPanelAccessReady();
   if(!remoteReady&&!localReady){
     moduloPendente={name:name,title:title||'Painel',options:moduleRouteOptions(options)};
