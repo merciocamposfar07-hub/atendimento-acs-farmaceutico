@@ -145,9 +145,6 @@ function mensagemIndividualV1MapaFamilias_(ss,areaId){
 }
 
 function mensagemIndividualV1Alvos_(appId,apiKey,contexto,morador){
-  /* Mesma audiência ativa de Recados e Campanhas; o filtro adicional é
-     exclusivamente a família confirmada no cadastro já existente. */
-  var todos=notificacoesAreaV1AlvosAtivos_(appId,apiKey,contexto,notificacoesAreaV1QuantidadeAreas_());
   var ss=tacsTerritorioV1Planilha_(),detalhes={};
   if(typeof notificacoesV8MapaVinculos_==='function'){
     detalhes=notificacoesV8MapaVinculos_(ss,contexto).porSub||{};
@@ -155,20 +152,43 @@ function mensagemIndividualV1Alvos_(appId,apiKey,contexto,morador){
     var mapa=mensagemIndividualV1MapaFamilias_(ss,contexto.areaId);
     Object.keys(mapa).forEach(function(id){detalhes[id]={familiaId:mapa[id],idPortal:''}});
   }
-  var vistos={};
-  return todos.filter(function(alvo){
-    var id=mensagemIndividualV1Texto_(alvo&&alvo.subscriptionId).toLowerCase(),v=detalhes[id];
-    if(!id||vistos[id]||!v||!mensagemIndividualV1FamiliasIguais_(v.familiaId,morador.familiaId))return false;
+  function elegivel(sub){
+    var id=mensagemIndividualV1Texto_(sub&&sub.subscriptionId).toLowerCase(),v=detalhes[id];
+    return Boolean(id&&v&&mensagemIndividualV1FamiliasIguais_(v.familiaId,morador.familiaId));
+  }
+  var locais=[],registry=ss.getSheetByName('TACS_NOTIFICACOES_DISPOSITIVOS');
+  if(registry&&registry.getLastRow()>1){
+    var rows=registry.getRange(2,1,registry.getLastRow()-1,Math.min(16,registry.getLastColumn())).getDisplayValues();
+    rows.forEach(function(row){
+      var sub=mensagemIndividualV1Texto_(row[0]).toLowerCase();
+      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(sub))return;
+      if(mensagemIndividualV1Texto_(row[1]).toUpperCase()!==contexto.areaId)return;
+      if([row[7],row[8],row[9],row[10]].some(function(v){return mensagemIndividualV1Texto_(v).toUpperCase()!=='SIM'}))return;
+      var item={subscriptionId:sub,idPortal:row[2],tipoAparelho:row[4],navegador:row[5],sistema:row[6]};
+      if(elegivel(item))locais.push(item);
+    });
+  }
+  /* Registro e autorização já confirmados: evita exportar toda a audiência
+     remota em cada clique. Sem vínculo local ativo, recorre ao emissor geral. */
+  var todos=locais.length?locais:notificacoesAreaV1AlvosAtivos_(appId,apiKey,contexto,notificacoesAreaV1QuantidadeAreas_());
+  var vistos={},candidatos=todos.filter(function(alvo){
+    var id=mensagemIndividualV1Texto_(alvo&&alvo.subscriptionId).toLowerCase();
+    if(!elegivel(alvo)||vistos[id])return false;
     vistos[id]=true;return true;
-  }).map(function(alvo){
+  });
+  /* Havendo inscrição identificada como da moradora escolhida, não incluir
+     outros aparelhos da família por engano. */
+  var diretos=candidatos.filter(function(alvo){
+    var id=mensagemIndividualV1Texto_(alvo.subscriptionId).toLowerCase(),v=detalhes[id]||{};
+    return mensagemIndividualV1Texto_(v.idPortal||alvo.idPortal)===morador.referencia;
+  });
+  if(diretos.length)candidatos=diretos;
+  return candidatos.map(function(alvo){
     var vinculo=detalhes[mensagemIndividualV1Texto_(alvo.subscriptionId).toLowerCase()]||{};
-    /* Guardar o ID Portal verdadeiro do aparelho: jamais reetiquetar o
-       aparelho de outra pessoa da família como se fosse o da moradora. */
     return {subscriptionId:alvo.subscriptionId,idPortal:vinculo.idPortal||alvo.idPortal||'',
       tipoAparelho:alvo.tipoAparelho,navegador:alvo.navegador,sistema:alvo.sistema};
   });
 }
-
 function mensagemIndividualV1DataBr_(valor){
   var s=mensagemIndividualV1Texto_(valor),m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if(!m)throw new Error('Informe uma data válida.');
