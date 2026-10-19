@@ -2,6 +2,9 @@
 if(!Promise.withResolvers)Promise.withResolvers=function(){var resolve,reject,promise=new Promise(function(r,j){resolve=r;reject=j});return {promise:promise,resolve:resolve,reject:reject}};
 const status=document.getElementById('status'),pages=document.getElementById('pages'),record=window.CSC_UBS_PDF;
 const root='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/';
+function notifyParent(type){
+ try{if(window.parent&&window.parent!==window)window.parent.postMessage({type:type},'*')}catch(e){}
+}
 const controlsStyle=document.createElement('style');
 controlsStyle.textContent='#download,#showDocument,#showCard{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:100%;min-height:96px;padding:22px 20px;font-size:clamp(26px,4vw,36px);font-weight:800;line-height:1.3;text-align:center;border-radius:16px}';
 document.head.appendChild(controlsStyle);
@@ -37,6 +40,7 @@ async function start(){
   render(card||total===1?1:2).catch(showError);
  }
  docButton.onclick=()=>show(false);cardButton.onclick=()=>show(true);cardButton.hidden=total===1;show(false);
+ render(total>1?2:1).then(()=>notifyParent('CSC_UBS_PDF_READY')).catch(showError);
 }
-function showError(error){status.textContent='Não foi possível mostrar todas as páginas nesta tela. Use “Baixar PDF completo” para abrir o arquivo original.';console.error('UBS PDF viewer:',error&&error.message||error)}
+function showError(error){status.textContent='Não foi possível mostrar todas as páginas nesta tela. Use “Baixar PDF completo” para abrir o arquivo original.';notifyParent('CSC_UBS_PDF_ERROR');console.error('UBS PDF viewer:',error&&error.message||error)}
 start().catch(showError);
