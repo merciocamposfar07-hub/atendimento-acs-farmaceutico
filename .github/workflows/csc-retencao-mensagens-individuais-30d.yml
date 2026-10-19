@@ -91,7 +91,7 @@ jobs:
             if(old===updated)continue;
             if(fn==='comprovacaoMensagensV1Relatorio_'&&!old.includes('mensagemIndividualV1ResolverMorador_'))throw Error('Relatorio em producao divergente');
             if(fn==='comprovacaoMensagensV1MontarRelatorio_'&&!old.includes('HISTORY_SHEET'))throw Error('Historico em producao divergente');
-            if(fn==='comprovacaoMensagensV1ComprovanteToken_'&&!old.includes('TOKEN'))throw Error('Comprovante em producao divergente');
+            if(fn==='comprovacaoMensagensV1ComprovanteToken_'&&!old.includes('RECEIPT_HEADERS'))throw Error('Comprovante em producao divergente');
             live=live.replace(old,updated);
           }
           if(!live.includes("mensagemIndividualRetencaoV1Limpar_(false)")||
