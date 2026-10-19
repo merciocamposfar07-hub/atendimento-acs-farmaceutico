@@ -106,8 +106,7 @@ html body #cscInstitutionalAppbar{display:none!important;visibility:hidden!impor
 (function(){
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-var core=window.ConectaModuleCoreV1,items=[],filter='',busy=false,syncBusy=false,timer=null,selectedId='',initialLoading=true,lastRenderedList='',pdfAttempt=0;
-var PDF_VIEWER_READY='CSC_UBS_PDF_READY',PDF_VIEWER_ERROR='CSC_UBS_PDF_ERROR';
+var core=window.ConectaModuleCoreV1,items=[],filter='',busy=false,syncBusy=false,timer=null,selectedId='',initialLoading=true,lastRenderedList='';
 function text(v){return String(v==null?'':v).trim()}
 function esc(v){return text(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function area(){return core&&core.areaId?core.areaId():(new URLSearchParams(location.search).get('area')||'JAPARANDUBA')}
@@ -190,65 +189,20 @@ function detailHtml(x){
  var meta=expiry?'<div class="detail-meta">Expiração automática: '+esc(expiry)+'</div>':'<div class="detail-meta">Sem expiração automática registrada para esta solicitação.</div>';
  var actions=!expired&&s!=='CONCLUIDA'?'<div class="detail-actions"><button class="attend" type="button" data-detail-action="EM_ATENDIMENTO" '+(s==='EM_ATENDIMENTO'?'disabled':'')+'>Em atendimento</button><button class="done" type="button" data-detail-action="CONCLUIDA">Concluir</button></div>':'';
  document.getElementById('detailStatus').innerHTML='<span class="pill '+s+'">'+esc(statusText(s))+'</span>';
- var attachment=x.anexo?'<div class="detail-meta"><strong>Documento do morador</strong><p>'+esc(x.anexo.disponivel?x.anexo.nome:'Documento em envio; atualize em instantes.')+'</p>'+(x.anexo.disponivel?'<section id="cscPdfInlineHost" style="position:relative;min-height:480px;contain:layout"><p id="cscPdfLoading" role="status" aria-live="polite" style="position:absolute;top:0;right:0;left:0;bottom:72px;z-index:2;display:flex;align-items:center;justify-content:center;padding:18px;text-align:center;background:#103850;color:#fff;border-radius:12px;font-weight:800">Aguarde… carregando o PDF da solicitação.</p><iframe id="cscPdfInlineFrame" title="PDF da solicitação do morador" name="csc_ubs_pdf_inline" style="display:block;visibility:hidden;width:100%;height:75vh;min-height:480px;border:1px solid #3b88a0;border-radius:12px;background:#062c46"></iframe><button type="button" class="done" data-ubs-pdf="1" style="margin-top:12px">↻ Recarregar documento</button></section>':'')+'</div>':'';
+ var attachment=x.anexo?'<div class="detail-meta"><strong>Documento do morador</strong><p>'+esc(x.anexo.disponivel?x.anexo.nome:'Documento em envio; atualize em instantes.')+'</p>'+(x.anexo.disponivel?'<button type="button" class="done" data-ubs-pdf="1" style="display:block;width:100%;min-height:96px;margin-top:15px;padding:18px 14px;border:1px solid #83efa9;border-radius:15px;color:#fff;background:#176a48;font-size:clamp(1.17rem,4vw,1.42rem);line-height:1.25;font-weight:950;cursor:pointer">📄 Abrir / baixar PDF completo</button>':'')+'</div>':'';
  return body+attachment+meta+actions;
 }
 function renderDetail(){
  var x=current();if(!x){showList();return}
  document.getElementById('detailCard').innerHTML=detailHtml(x);
- if(x.anexo&&x.anexo.disponivel)startInlinePdf(x);
 }
-function startInlinePdf(item){
- var target=document.getElementById('cscPdfInlineFrame'),loading=document.getElementById('cscPdfLoading');
- if(!target||!loading||!item||!item.codigoSolicitacao)return;
- var attempt=++pdfAttempt;
- var nonce='ubs_pdf_'+Date.now()+'_'+Math.random().toString(36).slice(2);
- target.dataset.viewerNonce=nonce;
- target.style.visibility='hidden';
- loading.hidden=false;loading.textContent='Aguarde… carregando o PDF da solicitação.';
- var payload=core&&core.session?core.session({codigoSolicitacao:item.codigoSolicitacao}):{areaId:area(),codigoSolicitacao:item.codigoSolicitacao};
- var form=document.createElement('form');form.method='POST';form.action=API;
- target.name='csc_ubs_pdf_inline_'+attempt;
- target.addEventListener('load',function(){
-   /* Contingência para WebKit/Google Apps Script: a ficha nunca depende
-      exclusivamente do aviso enviado pelo visualizador incorporado. */
-   if(attempt===pdfAttempt){target.style.visibility='visible';if(loading&&!loading.hidden)loading.textContent='Aguarde… preparando a visualização do documento.'}
- },{once:true});
- form.target=target.name;form.hidden=true;
- payload.action='admin_solicitacao_ubs_pdf';payload.viewerNonce=nonce;
- Object.keys(payload).forEach(function(key){
-   var input=document.createElement('input');input.type='hidden';input.name=key;
-   input.value=String(payload[key]==null?'':payload[key]);form.appendChild(input);
- });
- document.body.appendChild(form);
- form.submit();form.remove();
- setTimeout(function(){
-   if(attempt===pdfAttempt&&loading&&!loading.hidden){
-     loading.textContent='Aguarde… o documento continua sendo preparado. Se demorar, use “Recarregar documento”.';
-   }
- },12000);
-}
-window.addEventListener('message',function(event){
- if(!event.data||(event.data.type!==PDF_VIEWER_READY&&event.data.type!==PDF_VIEWER_ERROR))return;
- var frame=document.getElementById('cscPdfInlineFrame');
- if(!frame||event.data.nonce!==frame.dataset.viewerNonce)return;
- var host='';try{host=new URL(event.origin).hostname}catch(e){}
- if(event.origin!=='null'&&!/(^|\.)googleusercontent\.com$|(^|\.)google\.com$/.test(host))return;
- var loading=document.getElementById('cscPdfLoading');
- if(event.data.type===PDF_VIEWER_READY){
-   if(loading)loading.hidden=true;
-   frame.style.visibility='visible';
- }else{
-   if(loading){loading.hidden=false;loading.textContent='Não foi possível carregar o documento. Toque em “Recarregar documento” para tentar novamente.'}
- }
-});
 function openDetail(id){
  selectedId=text(id);if(!current())return;
  document.getElementById('listView').hidden=true;document.getElementById('detailView').hidden=false;renderDetail();
  try{window.scrollTo({top:0,behavior:'auto'})}catch(e){window.scrollTo(0,0)}
 }
 function showList(){
- selectedId='';pdfAttempt++;document.getElementById('detailCard').innerHTML='';document.getElementById('detailView').hidden=true;document.getElementById('listView').hidden=false;renderList();
+ selectedId='';document.getElementById('detailCard').innerHTML='';document.getElementById('detailView').hidden=true;document.getElementById('listView').hidden=false;renderList();
  try{window.scrollTo({top:0,behavior:'auto'})}catch(e){window.scrollTo(0,0)}
 }
 function save(data){
@@ -302,9 +256,29 @@ document.getElementById('backCentral').addEventListener('click',backCentral);
 document.getElementById('backList').addEventListener('click',showList);
 document.querySelector('.tabs').addEventListener('click',function(e){var b=e.target.closest('[data-filter]');if(!b)return;filter=b.dataset.filter||'';document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('active',x===b)});renderList()});
 document.getElementById('list').addEventListener('click',function(e){var b=e.target.closest('[data-open-id]');if(!b)return;openDetail(b.dataset.openId)});
+/* Fluxo original: o card abre primeiro; somente o botao abaixo abre o PDF.
+   A nova aba mostra AGUARDE imediatamente, antes da resposta do Apps Script. */
 document.getElementById('detailCard').addEventListener('click',function(e){
  var button=e.target.closest('[data-ubs-pdf]'),item=current();
- if(button&&item&&item.anexo&&item.anexo.disponivel)startInlinePdf(item);
+ if(!button||!item||!item.anexo||!item.anexo.disponivel)return;
+ var nonce='ubs_pdf_'+Date.now()+'_'+Math.random().toString(36).slice(2,12);
+ var url='/atendimento-acs-farmaceutico/ubs-pdf-carregando-v1.html#'+encodeURIComponent(nonce);
+ var popup=window.open(url,'_blank');
+ if(!popup){setStatus('Permita a abertura de nova pagina para visualizar o PDF.','err');return}
+ var payload=core&&core.session?core.session({codigoSolicitacao:item.codigoSolicitacao}):{areaId:area(),codigoSolicitacao:item.codigoSolicitacao};
+ payload.action='admin_solicitacao_ubs_pdf';
+ payload.viewerNonce=nonce;
+ var sent=false;
+ function ready(event){
+   if(sent||event.source!==popup||event.origin!==location.origin||!event.data||
+     event.data.type!=='CSC_UBS_PDF_PAGE_READY'||event.data.nonce!==nonce)return;
+   sent=true;
+   window.removeEventListener('message',ready);
+   try{popup.postMessage({type:'CSC_UBS_PDF_OPEN',nonce:nonce,api:API,fields:payload},location.origin)}
+   catch(err){setStatus('Nao foi possivel enviar a requisicao ao visualizador PDF.','err')}
+ }
+ window.addEventListener('message',ready);
+ setTimeout(function(){window.removeEventListener('message',ready)},25000);
 });
 document.getElementById('detailCard').addEventListener('click',function(e){var b=e.target.closest('[data-detail-action]'),x=current();if(!b||!x||busy)return;b.disabled=true;call('admin_solicitacoes_ubs_atualizar',{id:x.id,status:b.dataset.detailAction},function(r){if(r&&r.ok===true){setStatus(r.message||'Solicitação atualizada.','ok');refresh(true,true)}else{b.disabled=false;setStatus(text(r&&r.message)||'Não foi possível atualizar.','err')}})});
 if(!loadCache()){items=[];renderList();setStatus('Aguarde… verificando solicitações recebidas.','warn')}
