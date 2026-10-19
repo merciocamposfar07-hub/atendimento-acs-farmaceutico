@@ -41,7 +41,7 @@ p{margin:0;color:var(--muted);font-size:16px;line-height:1.5}
 }
 #estado.ok{border-color:#8bcfa5;background:#eaf8ef;color:#17683a}
 #estado.erro{border-color:#dda0a0;background:#fff0f0;color:#932c30}
-#confirmar,#fecharNotificacao{display:block;width:100%;min-height:55px;margin-top:16px;padding:13px 15px;border:0;border-radius:16px;color:#fff;font:800 17px/1.35 inherit;cursor:pointer}
+#confirmar,#fecharNotificacao{display:block;width:100%;min-height:55px;margin-top:16px;padding:13px 15px;border:0;border-radius:16px;color:#fff;font-weight:800;font-size:17px;font-family:inherit;line-height:1.35;cursor:pointer}
 #confirmar{background:linear-gradient(145deg,var(--navy2),var(--navy))}
 #fecharNotificacao{background:#126449}
 #confirmar:disabled,#fecharNotificacao:disabled{opacity:.65;cursor:default}
