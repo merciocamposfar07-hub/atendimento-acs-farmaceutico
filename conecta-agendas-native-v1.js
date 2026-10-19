@@ -31,7 +31,7 @@ function create(host){
   var snapshotMode=text(core.mode&&core.mode()).trim().toLowerCase()||'anon';
   var scope=snapshotMode+'|'+areaId;
   var transport=transportFactory.create({requests:requests});
-  var state={profissionais:[],agendas:[]},confirmed=false,dirty=false,visible=false,initialized=false,dentalBusy=false,syncTimer=null,remoteReadyTimer=null;
+  var state={profissionais:[],agendas:[]},confirmed=false,dirty=false,visible=false,initialized=false,dentalBusy=false,syncTimer=null,remoteReadyTimer=null,datePickerField=null,datePickerOriginal='',datePickerDirtyBefore=false,datePickerChanged=false;
 
   host.innerHTML=
     '<section class="csc-ag-native" data-role="root">'+
@@ -159,10 +159,57 @@ function create(host){
     if(carregou)clearLoadingStatus();
     return carregou;
   }
+
+  /* A escolha da data no Safari nao pode ser interrompida por uma
+     sincronizacao que recria os campos da agenda. */
+  function monthInRecife(){
+    var now={};
+    new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit'})
+      .formatToParts(new Date()).forEach(function(part){now[part.type]=part.value});
+    return now.year+'-'+now.month;
+  }
+  function dateIsPending(){
+    if(datePickerField)return true;
+    return Array.prototype.some.call(q('lista').querySelectorAll('.card input[name="data"]'),function(input){
+      var card=input.closest('.card'),record=card&&state.agendas.find(function(item){return chave(item)===card.dataset.key});
+      return Boolean(record&&input.value!==dataInput(record.DATA));
+    });
+  }
+  function finishDateSelection(input,hasChanged){
+    if(!datePickerField||datePickerField!==input)return;
+    if(hasChanged)datePickerChanged=true;
+    if(!datePickerChanged){
+      input.value=datePickerOriginal;
+      setDirty(datePickerDirtyBefore);
+    }else{
+      setDirty(true);
+    }
+    datePickerField=null;
+    datePickerOriginal='';
+    datePickerChanged=false;
+  }
+  function beginDateSelection(input){
+    if(datePickerField===input)return;
+    if(datePickerField)finishDateSelection(datePickerField,false);
+    datePickerField=input;
+    datePickerOriginal=input.value;
+    datePickerDirtyBefore=dirty;
+    datePickerChanged=false;
+    /* O iPhone abre o seletor no mes da data existente. Para a troca,
+       iniciar no mes atual e restaurar a data anterior se nao houver escolha. */
+    if(input.value&&input.value.slice(0,7)!==monthInRecife())input.value='';
+    setDirty(true);
+  }
   function applyData(r,isConfirmed){
+    var keepDateSelection=dateIsPending();
     confirmed=isConfirmed===true;
     state.profissionais=objectRows(r&&r.profissionais);
     state.agendas=objectRows(r&&r.agendas);
+    if(keepDateSelection){
+      /* Atualizar os dados sem destruir a data selecionada ainda nao salva. */
+      lockWrites();
+      return;
+    }
     fillFilters();render();setDirty(false);
   }
   function classifyFailure(r){
@@ -391,7 +438,7 @@ function create(host){
   }
 
   function syncDental(){
-    if(!visible||document.hidden||dentalBusy||dirty||!confirmed||!ready()||transport.isBusy())return;
+    if(!visible||document.hidden||dentalBusy||dirty||datePickerField||!confirmed||!ready()||transport.isBusy())return;
     dentalBusy=true;
     transport.publicAgenda(areaId,function(r){
       dentalBusy=false;if(!r||r.ok!==true||!Array.isArray(r.dias))return;var changed=false;
@@ -411,7 +458,25 @@ function create(host){
     var shareDayButton=e.target.closest('.csc-ag-share-day');if(shareDayButton){e.preventDefault();e.stopPropagation();shareDay(shareDayButton,shareDayButton.closest('.card'));return}
     var b=e.target.closest('.csc-ag-save');if(b)save(b.closest('.card'));
   });
-  ['input','change'].forEach(function(kind){q('lista').addEventListener(kind,function(e){var n=e.target;if(n&&n.matches&&n.matches('input,select,textarea')&&!n.readOnly)setDirty(true)})});
+  q('lista').addEventListener('pointerdown',function(e){
+    var input=e.target&&e.target.closest&&e.target.closest('.card input[name="data"][type="date"]');
+    if(input)beginDateSelection(input);
+  },true);
+  q('lista').addEventListener('focusout',function(e){
+    var input=e.target;
+    if(input===datePickerField){
+      /* Aguarda eventos de confirmacao do seletor nativo antes de restaurar. */
+      setTimeout(function(){finishDateSelection(input,false)},0);
+    }
+  });
+  ['input','change'].forEach(function(kind){q('lista').addEventListener(kind,function(e){
+    var n=e.target;
+    if(!n||!n.matches||!n.matches('input,select,textarea')||n.readOnly)return;
+    if(n.matches('input[name="data"][type="date"]')&&n===datePickerField){
+      finishDateSelection(n,true);
+    }
+    setDirty(true);
+  })});
   q('filtroProf').addEventListener('change',render);
   q('filtroDia').addEventListener('change',render);
   q('undo').addEventListener('click',restore);
@@ -423,7 +488,7 @@ function create(host){
     hide:function(){visible=false;if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}host.hidden=true},
     hasUnsaved:function(){return dirty},
     reload:function(){load('Agendas e vagas atualizadas e confirmadas.',null,{skipPrime:true,forceApply:true})},
-    reset:function(){visible=false;if(syncTimer)clearInterval(syncTimer);syncTimer=null;if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}transport.destroy();host.innerHTML='';host.hidden=true;host.dataset.tacsDirty='0'}
+    reset:function(){visible=false;datePickerField=null;if(syncTimer)clearInterval(syncTimer);syncTimer=null;if(remoteReadyTimer){clearTimeout(remoteReadyTimer);remoteReadyTimer=null}transport.destroy();host.innerHTML='';host.hidden=true;host.dataset.tacsDirty='0'}
   };
 }
 
