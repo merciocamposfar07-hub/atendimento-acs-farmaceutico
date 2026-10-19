@@ -110,7 +110,7 @@ function instalar(){if(document.getElementById('msgIndividualMoradorV1'))return;
 .msg-ind-preview{margin-top:14px;padding:14px;border:0;border-radius:18px;background:linear-gradient(145deg,#153b58,#102d46);color:#f7fcff;line-height:1.45;box-shadow:none}.msg-ind-preview strong{display:block;margin-bottom:8px;color:#fff}.msg-ind-preview-edit{width:100%;min-height:128px;border:0;outline:0;resize:vertical;background:#071827;color:#f7fcff;font:inherit;line-height:1.45;box-sizing:border-box}.msg-ind-preview small{display:block;margin-top:8px;color:#adc4d2;font-weight:750}.msg-ind-preview-legacy{display:none!important}\
 .msg-ind-actions{display:grid;gap:10px;margin-top:15px}.msg-ind-send,.msg-ind-refresh{min-height:58px;border:0;border-radius:18px;background:#135272;color:#fff;font-weight:900;font-size:1.05rem;box-shadow:none}.msg-ind-send:disabled,.msg-ind-refresh:disabled{opacity:.5}\
 .msg-ind-status{margin-top:14px;padding:13px 14px;border:0;border-radius:16px;background:#102d46;color:#f7fcff;font-weight:850;box-shadow:none}.msg-ind-status.ok{border:0;background:#102d46;color:#c7f7d6}.msg-ind-status.warn{border:0;background:#102d46;color:#f5e1b7}.msg-ind-status.err{border:0;background:#102d46;color:#ffd0d5}\
-.msg-ind-track{display:grid;gap:8px;margin-top:14px}.msg-ind-step{display:grid;grid-template-columns:34px 1fr;gap:9px;align-items:center;padding:11px;border:0;border-radius:15px;background:#102d46;color:#f7fcff}.msg-ind-step.on{border:0;background:#153b58}.msg-ind-step b{display:block}.msg-ind-step small{display:block;color:#adc4d2;margin-top:2px}\
+.msg-ind-track{display:grid;gap:8px;margin-top:14px}.msg-ind-step{display:grid;grid-template-columns:34px 1fr;gap:9px;align-items:center;padding:11px;border:0;border-radius:15px;background:#102d46;color:#f7fcff}.msg-ind-step.on{border:0;background:#153b58}.msg-ind-step b{display:block}.msg-ind-step small{display:block;color:#adc4d2;margin-top:2px}.msg-ind-step .msg-ind-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#29465a;color:#bfd0d9;font-size:24px}.msg-ind-step.on .msg-ind-icon{background:#15563b;color:#a6efc3}\
 .msg-ind-recibo{padding:14px;margin-top:14px;background:#0b344b;border:1px solid #83efa9;border-radius:15px;color:#fff;white-space:pre-wrap;overflow-wrap:anywhere}.msg-ind-recibo b{display:block;color:#83efa9;margin-bottom:8px}.msg-ind-recibo button{display:block;margin-top:10px;width:100%;min-height:46px;background:#176a48;border:0;border-radius:12px;color:white;font-weight:900;font:inherit}\
 .msg-ind-note{margin-top:12px;color:#d8eef7;font-size:.9rem;font-weight:700}.msg-ind-hide{display:none!important}#msgIndLivre{display:none!important}\
 .msg-ind-card-button{width:100%;min-height:52px;margin-top:10px;border:0;border-radius:16px;background:#135272;color:#fff;font-weight:900;font-size:1rem;box-shadow:none}\
@@ -126,10 +126,10 @@ var overlay=document.createElement('div');overlay.id='msgIndividualMoradorV1';ov
 +'<div class="msg-ind-actions"><button id="msgIndEnviar" class="msg-ind-send" type="button">🔔 Enviar para este morador</button></div>'
 +'<div id="msgIndStatus" class="msg-ind-status" aria-live="polite">Confira a mensagem antes de enviar.</div>'+'<div id="msgIndRecibo" class="msg-ind-recibo msg-ind-hide" role="status" aria-live="polite"><b>Cópia do envio para o operador</b><div id="msgIndReciboTexto"></div><button id="msgIndCopiar" type="button">Copiar comprovante de encaminhamento</button></div>'
 +'<div id="msgIndTrack" class="msg-ind-track msg-ind-hide">'
-+'<div id="msgStepEnc" class="msg-ind-step"><span>📤</span><div><b>Encaminhada</b><small>O serviço Push aceitou o encaminhamento.</small></div></div>'
-+'<div id="msgStepExib" class="msg-ind-step"><span>🔔</span><div><b>Exibida no aparelho</b><small>O aparelho confirmou a exibição técnica.</small></div></div>'
-+'<div id="msgStepAberta" class="msg-ind-step"><span>👆</span><div><b>Aberta</b><small>O morador abriu a notificação.</small></div></div>'
-+'<div id="msgStepConf" class="msg-ind-step"><span>✅</span><div><b>Recebimento confirmado</b><small>O morador confirmou expressamente.</small></div></div>'
++'<div id="msgStepEnc" class="msg-ind-step"><span class="msg-ind-icon" aria-hidden="true">◯</span><div><b>Encaminhada</b><small>O serviço Push aceitou o encaminhamento.</small></div></div>'
++'<div id="msgStepExib" class="msg-ind-step"><span class="msg-ind-icon" aria-hidden="true">◯</span><div><b>Exibida no aparelho</b><small>O aparelho confirmou a exibição técnica.</small></div></div>'
++'<div id="msgStepAberta" class="msg-ind-step"><span class="msg-ind-icon" aria-hidden="true">◯</span><div><b>Aberta</b><small>O morador abriu a notificação.</small></div></div>'
++'<div id="msgStepConf" class="msg-ind-step"><span class="msg-ind-icon" aria-hidden="true">◯</span><div><b>Recebimento confirmado</b><small>O morador confirmou expressamente.</small></div></div>'
 +'<button id="msgIndAtualizar" class="msg-ind-refresh" type="button">↻ Atualizar confirmação</button></div>'
 +'</section>';document.body.appendChild(overlay);
 ['msgIndTipo','msgIndServico','msgIndData','msgIndHora'].forEach(function(id){var n=document.getElementById(id);if(n){n.addEventListener('input',atualizarFormulario);n.addEventListener('change',atualizarFormulario)}});document.getElementById('msgIndPreviewTexto').addEventListener('input',function(){document.getElementById('msgIndMensagem').value=this.value});
@@ -145,7 +145,7 @@ function horarioVisual(v){var h=txt(v).replace(/\s+/g,' '),m=h.match(/^([01]\d|2
 function horarioValido(v){var h=txt(v);return !h||/^([01]\d|2[0-3]):[0-5]\d$/.test(h)||/^([01]\d|2[0-3]):[0-5]\d\s*(?:a|as|às|-)\s*([01]\d|2[0-3]):[0-5]\d\s*(?:h|hs)?$/i.test(h)}
 function preview(){var tipo=txt(document.getElementById('msgIndTipo').value),servico=txt(document.getElementById('msgIndServico').value),data=dataVisual(document.getElementById('msgIndData').value),hora=horarioVisual(document.getElementById('msgIndHora').value),nome=txt(selecionado&&selecionado.nome).split(' ')[0]||'Morador';if(tipo==='OUTRA_MENSAGEM')return'';if(!servico||!data)return'Informe o serviço e a data para montar a mensagem.';var quando=data+(hora?', '+hora:'');if(tipo==='CONFIRMAR_ATENDIMENTO')return nome+', seu atendimento de '+servico+' está confirmado para '+quando+'.';if(tipo==='ALTERAR_DATA')return nome+', a nova data do seu atendimento de '+servico+' é '+quando+'.';if(tipo==='LEMBRETE')return nome+', lembramos que seu atendimento de '+servico+' será em '+quando+'.';return nome+', seu atendimento de '+servico+', previsto para '+quando+', foi cancelado. Aguarde nova orientação do TACS.'}
 function atualizarFormulario(event){var tipo=document.getElementById('msgIndTipo').value,livre=tipo==='OUTRA_MENSAGEM',dados=document.getElementById('msgIndDadosAtendimento'),campo=document.getElementById('msgIndPreviewTexto');if(event&&event.target&&event.target.id==='msgIndData'){var mascarada=mascararData(event.target.value);if(event.target.value!==mascarada)event.target.value=mascarada}dados.classList.toggle('msg-ind-hide',livre);document.getElementById('msgIndLivre').classList.add('msg-ind-hide');if(livre){campo.placeholder='Digite aqui a mensagem que será enviada.';if(event&&event.target&&event.target.id==='msgIndTipo')campo.value=''}else{campo.placeholder='A mensagem será montada automaticamente.';campo.value=preview()}document.getElementById('msgIndMensagem').value=campo.value}
-function resetTrack(){['msgStepEnc','msgStepExib','msgStepAberta','msgStepConf'].forEach(function(id){document.getElementById(id).classList.remove('on')});document.getElementById('msgIndTrack').classList.add('msg-ind-hide')}
+function resetTrack(){['msgStepEnc','msgStepExib','msgStepAberta','msgStepConf'].forEach(function(id){marcar(id,false,'')});document.getElementById('msgIndTrack').classList.add('msg-ind-hide')}
 /* Hora do encaminhamento: instante imutável embutido no ID deste envio.
    Usa o fuso da área (Recife) sem alterar comprovantes nem horários de leitura. */
 function horarioEnvioRecifePeloEvento(evento){
@@ -163,7 +163,30 @@ function horarioEnvioRecifePeloEvento(evento){
     return campos.day+'/'+campos.month+'/'+campos.year+' '+campos.hour+':'+campos.minute+':'+campos.second;
   }catch(e){return ''}
 }
-function marcar(id,ativo,quando){var n=document.getElementById(id);n.classList.toggle('on',Boolean(ativo));var small=n.querySelector('small');if(id==='msgStepEnc'&&ativo){var horarioEnvio=horarioEnvioRecifePeloEvento(ultimoEnvio&&ultimoEnvio.eventoId);if(horarioEnvio)quando=horarioEnvio}if(ativo&&quando)small.textContent='Confirmado em '+quando;else if(id==='msgStepEnc')small.textContent='O serviço Push aceitou o encaminhamento.';else if(id==='msgStepExib')small.textContent='O aparelho confirmou a exibição técnica.';else if(id==='msgStepAberta')small.textContent='O morador abriu a notificação.';else small.textContent='O morador confirmou expressamente.'}
+function marcar(id,ativo,quando){
+ var n=document.getElementById(id);if(!n)return;
+ n.classList.toggle('on',Boolean(ativo));
+ var simbolo=n.querySelector('.msg-ind-icon');
+ if(simbolo)simbolo.textContent=ativo?({msgStepEnc:'📤',msgStepExib:'🔔',msgStepAberta:'👆',msgStepConf:'✅'}[id]||'✓'):'◯';
+ var small=n.querySelector('small');
+ if(id==='msgStepEnc'&&ativo){
+   var horario=horarioEnvioRecifePeloEvento(ultimoEnvio&&ultimoEnvio.eventoId);
+   if(horario)quando=horario;
+ }
+ if(ativo&&quando)small.textContent='Confirmado em '+quando;
+ else if(ativo)small.textContent={
+   msgStepEnc:'O serviço Push aceitou o encaminhamento.',
+   msgStepExib:'O aparelho confirmou a exibição técnica.',
+   msgStepAberta:'A notificação foi aberta.',
+   msgStepConf:'O morador confirmou expressamente.'
+ }[id];
+ else small.textContent={
+   msgStepEnc:'Aguardando encaminhamento.',
+   msgStepExib:'Aguardando registro de exibição no aparelho.',
+   msgStepAberta:'Aguardando abertura pelo morador.',
+   msgStepConf:'Aguardando o morador tocar em “Li e estou ciente”.'
+ }[id];
+}
 function comprovanteOperador(info){
  var recibo=document.getElementById('msgIndRecibo'),campo=document.getElementById('msgIndReciboTexto');
  if(!recibo||!campo)return;
@@ -184,7 +207,19 @@ function comprovanteOperador(info){
   }else{new Notification(title,{body:body,tag:'csc-msgind-'+txt(info.eventoId)})}
  }catch(e){}
 }
-function renderStatus(r){if(!r||r.ok!==true)return;var h=r.horarios||{};document.getElementById('msgIndTrack').classList.remove('msg-ind-hide');marcar('msgStepEnc',Number(r.encaminhadas)>0,h.encaminhada);marcar('msgStepExib',Number(r.exibidas)>0,h.exibida);marcar('msgStepAberta',Number(r.abertas)>0,h.aberta);marcar('msgStepConf',Number(r.confirmadas)>0,h.confirmada);if(Number(r.confirmadas)>0)setStatus('✅ '+txt(r.morador&&r.morador.nome||selecionado&&selecionado.nome)+' confirmou o recebimento.','ok');else if(Number(r.abertas)>0)setStatus('A notificação foi aberta, mas o recebimento ainda não foi confirmado.','warn');else if(Number(r.exibidas)>0)setStatus('A notificação foi exibida no aparelho. Aguardando abertura ou confirmação.','warn');else if(Number(r.encaminhadas)>0)setStatus('Encaminhada ao Push; aguardando confirmação no aparelho.','warn')}
+function renderStatus(r){
+ if(!r||r.ok!==true||!ultimoEnvio||txt(r.eventoId)!==txt(ultimoEnvio.eventoId))return;
+ var h=r.horarios||{};
+ document.getElementById('msgIndTrack').classList.remove('msg-ind-hide');
+ marcar('msgStepEnc',Number(r.encaminhadas)>0,h.encaminhada);
+ marcar('msgStepExib',Number(r.exibidas)>0,h.exibida);
+ marcar('msgStepAberta',Number(r.abertas)>0,h.aberta);
+ marcar('msgStepConf',Number(r.confirmadas)>0,h.confirmada);
+ if(Number(r.confirmadas)>0)setStatus('✅ '+txt(r.morador&&r.morador.nome||selecionado&&selecionado.nome)+' confirmou o recebimento.','ok');
+ else if(Number(r.abertas)>0)setStatus('Notificação aberta. Aguardando confirmação expressa do morador.','warn');
+ else if(Number(r.exibidas)>0)setStatus('Notificação exibida no aparelho. Aguardando abertura pelo morador.','warn');
+ else if(Number(r.encaminhadas)>0)setStatus('Encaminhada ao Push. Aguardando confirmação no aparelho.','warn');
+}
 function atualizarStatus(){if(!ultimoEnvio||!selecionado)return;var b=document.getElementById('msgIndAtualizar');b.disabled=true;post('admin_mensagem_individual_status',sessao({eventoId:ultimoEnvio.eventoId,origemAba:selecionado.origemAba,origemLinha:selecionado.origemLinha,moradorId:selecionado.moradorId||''}),function(r){b.disabled=false;if(!r||r.ok!==true){setStatus(txt(r&&r.message)||'Não foi possível atualizar a confirmação.','err');return}renderStatus(r)})}
 function agendarAtualizacoes(){limparTimers();[4000,12000,30000].forEach(function(ms){timers.push(setTimeout(function(){if(ultimoEnvio)atualizarStatus()},ms))})}
 function enviar(){if(!selecionado)return;var tipo=document.getElementById('msgIndTipo').value,servico=txt(document.getElementById('msgIndServico').value),data=txt(document.getElementById('msgIndData').value),hora=txt(document.getElementById('msgIndHora').value),mensagem=txt(document.getElementById('msgIndPreviewTexto').value);document.getElementById('msgIndMensagem').value=mensagem;if(tipo!=='OUTRA_MENSAGEM'&&(!servico||!data)){setStatus('Informe o serviço e a data.','err');return}if(data&&!/^(?:\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2})$/.test(data)){setStatus('Informe a data no formato DD/MM/AAAA.','err');return}if(!horarioValido(hora)){setStatus('Informe um horário como 08:00 ou 08:00 às 11:00 hs.','err');return}if(mensagem.length<3||/^Informe o serviço/.test(mensagem)){setStatus('Confira a mensagem que será enviada.','err');return}var b=document.getElementById('msgIndEnviar');b.disabled=true;setStatus('Enviando somente para o cadastro familiar deste morador…','warn');post('admin_mensagem_individual_enviar',sessao({origemAba:selecionado.origemAba,origemLinha:selecionado.origemLinha,moradorId:selecionado.moradorId||'',tipo:tipo,servico:servico,data:data,hora:hora,mensagem:mensagem}),function(r){b.disabled=false;if(!r||r.ok!==true){setStatus(txt(r&&r.message)||'O envio foi recusado pelo servidor.','err');return}if(r.enviado!==true){ultimoEnvio=null;comprovanteOperador(null);resetTrack();setStatus(txt(r.message)||'Nenhum aparelho apto foi encontrado para este morador.','warn');return}ultimoEnvio={eventoId:r.eventoId};comprovanteOperador(r.comprovante||null);document.getElementById('msgIndTrack').classList.remove('msg-ind-hide');marcar('msgStepEnc',Number(r.encaminhadas)>0,'');setStatus('📤 Mensagem encaminhada para '+Number(r.encaminhadas||0)+' aparelho(s). Acompanhando a confirmação…','ok');agendarAtualizacoes()})}
