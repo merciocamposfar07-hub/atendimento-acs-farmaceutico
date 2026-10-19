@@ -154,7 +154,7 @@ function formatDocument(v){var q=text(v).replace(/\D/g,'');if(q.length===10&&cpf
 function counts(){var c={NOVA:0,EM_ATENDIMENTO:0,CONCLUIDA:0,EXPIRADA:0};items.forEach(function(x){var s=effectiveStatus(x);if(c[s]!=null)c[s]++});return c}
 function current(){for(var i=0;i<items.length;i++)if(text(items[i].id)===text(selectedId))return items[i];return null}
 function renderList(){
- var signature=JSON.stringify({area:area(),filter:filter,items:items.map(function(x){return [x.id,x.status,effectiveStatus(x),x.atualizadoEm,x.criadoEm,x.anexo&&x.anexo.status,x.anexo&&x.anexo.disponivel]})});
+ var signature=JSON.stringify({area:area(),filter:filter,items:items.map(function(x){return [x.id,x.status,effectiveStatus(x),x.atualizadoEm,x.criadoEm,x.morador,x.categoria,x.anexo&&x.anexo.status,x.anexo&&x.anexo.disponivel]})});
  if(lastRenderedList===signature)return;
  lastRenderedList=signature;
  var c=counts();document.getElementById('mNova').textContent=c.NOVA;document.getElementById('mAtend').textContent=c.EM_ATENDIMENTO;document.getElementById('mConcl').textContent=c.CONCLUIDA;document.getElementById('mExp').textContent=c.EXPIRADA;
