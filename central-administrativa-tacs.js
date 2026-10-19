@@ -2443,11 +2443,17 @@ el('adminArea').addEventListener('change',function(){if(mode!=='admin'&&mode!=='
 el('viewerFrame').addEventListener('load',function(){try{applyUiStandard(el('viewerFrame').contentDocument)}catch(e){}});
 el('moduleGrid').addEventListener('click',function(e){var btn=e.target.closest('.module');if(!btn||btn.disabled||btn.hidden)return;if(btn.dataset.module!=='ubs'){adminUbsContext=null;adminUbsPreviousAreaId=''}openModule(btn.dataset.module,btn.querySelector('strong').textContent)});
 /* CENTRAL_RETURN_R6: restaura imediatamente o conteúdo ao voltar pelo histórico/BFCache do iPhone. */
+/* Sessao local ja liberada por PIN: preserva o estado em retorno de tela/BFCache.
+   Isto nao recupera tokens do servidor, nem dispensa um novo PIN em recarga real. */
+window.ConectaCentralSessaoLocalAtiva=function(){
+  return Boolean(acessoLocalAberto&&context&&mode===acessoLocalAberto);
+};
 window.addEventListener('pageshow',function(){
+  var acessoLocalNoRetorno=window.ConectaCentralSessaoLocalAtiva()?acessoLocalAberto:'';
   token=TACS_ONLY?'':(sessionStorage.getItem(TOKEN_KEY)||'');
   territoryToken=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'';
   ubsToken=sessionStorage.getItem(UBS_TOKEN_KEY)||'';
-  mode=territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':''));
+  mode=territoryToken?'tacs':(token?'admin':(ubsToken?'ubs':acessoLocalNoRetorno));
   garantirLogoffDisponivel();
   document.body.classList.remove('viewer-open');
   var viewer=el('viewer');if(viewer)viewer.hidden=true;
@@ -2460,6 +2466,12 @@ window.addEventListener('pageshow',function(){
       else{syncAppState();publishModuleCore();renderHealthInstant(selectedAreaId)}
     }else restoreContextCache();
     setTimeout(function(){if(!active)loadContext('Sessão existente validada.')},140);
+  }else if(acessoLocalNoRetorno&&context){
+    /* BFCache sem token remoto: nao bloquear acesso local ja autenticado por PIN.
+       As operacoes remotas continuam exigindo token valido do servidor. */
+    syncAppState();
+    if(!centralDomAlreadyRendered())renderContext(true);
+    else publishModuleCore();
   }
 });
 function abrirPaineisUbsLocal(saved){
