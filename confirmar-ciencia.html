@@ -25,6 +25,7 @@
     <div class="icone" aria-hidden="true">🔔</div>
     <h1>Você abriu o aviso</h1>
     <p>Leia o conteúdo da notificação. Quando estiver ciente do recado, confirme abaixo.</p>
+    <div id="conteudoIndividual" hidden aria-label="Mensagem individual" style="margin-top:20px;padding:18px;border:2px solid #b6d3dd;border-radius:18px;background:#f5fafc;text-align:left;overflow-wrap:anywhere"><strong id="tituloIndividual" style="display:block;font-size:20px;margin-bottom:12px;color:#073f57"></strong><p id="textoIndividual" style="white-space:pre-wrap;color:#183d51;font-size:19px"></p></div>
     <div id="estado" role="status" aria-live="polite">Registrando a abertura deste aviso…</div>
     <button id="confirmar" type="button">✅ Li e estou ciente</button>
     <a id="portal" href="./">Abrir Portal TACS</a>
@@ -49,6 +50,27 @@
       }
     }
     if(!/^[0-9a-f]{64}$/.test(token)){mostrar('Este comprovante é inválido ou está incompleto.','erro');botao.disabled=true;return}
+    /* Leitura exclusiva por token do comprovante individual: sem PIN e
+       sem buscar o cadastro familiar no Portal do Morador. */
+    (function carregarMensagemIndividual(){
+      var callback='__cscConteudoIndividual_'+Date.now()+'_'+Math.floor(Math.random()*99999),
+      script=document.createElement('script'),done=false;
+      function stop(v){
+        if(done)return;done=true;clearTimeout(timeout);
+        try{delete window[callback]}catch(e){window[callback]=undefined}
+        if(script.parentNode)script.remove();
+        if(!v||v.ok!==true||v.individual!==true)return;
+        document.getElementById('tituloIndividual').textContent=String(v.titulo||'Mensagem individual');
+        document.getElementById('textoIndividual').textContent=String(v.mensagem||'');
+        document.getElementById('conteudoIndividual').hidden=false;
+      }
+      var timeout=setTimeout(function(){stop(null)},15000);
+      window[callback]=stop;
+      script.onerror=function(){stop(null)};
+      script.src=API+'?action=publico_mensagem_individual_conteudo&t='+encodeURIComponent(token)+
+        '&callback='+encodeURIComponent(callback)+'&_='+Date.now();
+      document.head.appendChild(script);
+    })();
     executar('publico_mensagem_aberta_token',function(r){if(r&&r.ok===true)mostrar('Aviso aberto. Para registrar ciência, toque em “Li e estou ciente”.','');else mostrar((r&&r.message)||'A abertura não pôde ser registrada, mas você ainda pode confirmar sua ciência.','erro')});
     botao.addEventListener('click',function(){
       botao.disabled=true;mostrar('Registrando sua ciência…','');
