@@ -2925,7 +2925,7 @@ function renderSaudeNotificacoes(r){
   return true;
 }
 function prepararSaudeSemNumeroProvisorio(){
-  if(saudeNotificacoesDados&&saudeNotificacoesDados.ok===true)return;
+  if(saudeNotificacoesDados&&saudeNotificacoesDados.ok===true&&txt(saudeNotificacoesDados.areaId||areaId)===txt(areaId))return;
   ['saudeAtivos','saudeInativos','saudeReparo','saudeSemConfirmacao'].forEach(function(id){var n=document.getElementById(id);if(n)n.textContent='—'});
   var lista=document.getElementById('saudeNotificacoesLista');if(lista){lista.innerHTML='';lista.classList.add('oculto')}
 }
@@ -2968,14 +2968,19 @@ function atualizarSaudeNotificacoesRemota(silencioso){
   if(oculto){
     /* Ao voltar ao painel, reutilizar por 2 minutos o último resultado verificado. */
     try{var ultimo=JSON.parse(localStorage.getItem(saudeResumoCacheKey())||'null');
-      if(ultimo&&ultimo.confirmadoOneSignal===true&&Date.now()-Number(ultimo.salvoEm||0)<120000)return;
+      if(ultimo&&ultimo.confirmadoOneSignal===true&&Date.now()-Number(ultimo.salvoEm||0)<120000){
+        status('saudeNotificacoesStatus','Última situação confirmada pelo OneSignal há menos de 2 minutos.','ok');
+        return;
+      }
     }catch(e){}
   }
+  var areaDaConsulta=areaId;
   saudeRemotaEmCurso=true;if(botao&&!oculto)botao.disabled=true;
   document.getElementById('saudeNotificacoes').classList.remove('oculto');
   if(!oculto)status('saudeNotificacoesStatus','Conferindo o estado atual no OneSignal…','aviso');
   postSaudeNotificacoesIsolado(sessao(),function(remoto){
     saudeRemotaEmCurso=false;if(botao)botao.disabled=false;
+    if(areaDaConsulta!==areaId)return;
     if(remoto&&remoto.ok===true){renderSaudeNotificacoes(remoto);return}
     status('saudeNotificacoesStatus',txt(remoto&&remoto.message||'A consulta ao OneSignal terminou sem confirmação. Os últimos dados verificados continuam visíveis.'),'aviso');
   });
