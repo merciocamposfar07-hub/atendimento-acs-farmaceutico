@@ -256,29 +256,32 @@ document.getElementById('backCentral').addEventListener('click',backCentral);
 document.getElementById('backList').addEventListener('click',showList);
 document.querySelector('.tabs').addEventListener('click',function(e){var b=e.target.closest('[data-filter]');if(!b)return;filter=b.dataset.filter||'';document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('active',x===b)});renderList()});
 document.getElementById('list').addEventListener('click',function(e){var b=e.target.closest('[data-open-id]');if(!b)return;openDetail(b.dataset.openId)});
-/* Fluxo original: o card abre primeiro; somente o botao abaixo abre o PDF.
-   A nova aba mostra AGUARDE imediatamente, antes da resposta do Apps Script. */
+/* Fluxo original preservado: card -> botao -> PDF em outra pagina.
+   A janela ja nasce com AGUARDE, e o POST autenticado vai diretamente para ela.
+   Nao depende de postMessage, popup intermediario ou iframe. */
 document.getElementById('detailCard').addEventListener('click',function(e){
  var button=e.target.closest('[data-ubs-pdf]'),item=current();
  if(!button||!item||!item.anexo||!item.anexo.disponivel)return;
- var nonce='ubs_pdf_'+Date.now()+'_'+Math.random().toString(36).slice(2,12);
- var url='/atendimento-acs-farmaceutico/ubs-pdf-carregando-v1.html#'+encodeURIComponent(nonce);
- var popup=window.open(url,'_blank');
- if(!popup){setStatus('Permita a abertura de nova pagina para visualizar o PDF.','err');return}
  var payload=core&&core.session?core.session({codigoSolicitacao:item.codigoSolicitacao}):{areaId:area(),codigoSolicitacao:item.codigoSolicitacao};
  payload.action='admin_solicitacao_ubs_pdf';
- payload.viewerNonce=nonce;
- var sent=false;
- function ready(event){
-   if(sent||event.source!==popup||event.origin!==location.origin||!event.data||
-     event.data.type!=='CSC_UBS_PDF_PAGE_READY'||event.data.nonce!==nonce)return;
-   sent=true;
-   window.removeEventListener('message',ready);
-   try{popup.postMessage({type:'CSC_UBS_PDF_OPEN',nonce:nonce,api:API,fields:payload},location.origin)}
-   catch(err){setStatus('Nao foi possivel enviar a requisicao ao visualizador PDF.','err')}
+ var popupName='csc_ubs_pdf_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+ var popup=window.open('',popupName);
+ if(!popup){setStatus('Permita a abertura de nova pagina para visualizar o PDF.','err');return}
+ var waitHtml='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Carregando PDF | UBS</title>'+
+ '<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#062c46;color:white;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:19px;text-align:center;padding:20px}.spinner{width:42px;height:42px;border:4px solid #366980;border-top-color:#83efa9;border-radius:50%;animation:spin .9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}h1{font-size:clamp(1.12rem,4.8vw,1.55rem);line-height:1.35;margin:0}p{color:#d5eaf4;font-size:.97rem;margin:0}button{margin-top:8px;min-height:52px;padding:13px 22px;border:1px solid #83efa9;border-radius:14px;background:#14455b;color:white;font:inherit;font-weight:800}</style></head>'+
+ '<body><div class="spinner" aria-hidden="true"></div><h1>AGUARDE, CARREGANDO PDF</h1><p>Preparando o documento da solicitação…</p>'+
+ '<button type="button" onclick="try{window.opener.focus();window.close()}catch(e){history.back()}">← Voltar às solicitações</button></body></html>';
+ try{
+   popup.document.open();popup.document.write(waitHtml);popup.document.close();
+ }catch(err){
+   try{popup.close()}catch(ignore){}
+   setStatus('Não foi possível preparar a página do PDF. Tente novamente.','err');return;
  }
- window.addEventListener('message',ready);
- setTimeout(function(){window.removeEventListener('message',ready)},25000);
+ var form=document.createElement('form');form.method='POST';form.action=API;form.target=popupName;form.hidden=true;
+ Object.keys(payload).forEach(function(key){var input=document.createElement('input');input.type='hidden';input.name=key;input.value=String(payload[key]==null?'':payload[key]);form.appendChild(input)});
+ document.body.appendChild(form);
+ try{form.submit()}catch(err){try{popup.close()}catch(ignore){}setStatus('Não foi possível solicitar o PDF. Tente novamente.','err')}
+ form.remove();
 });
 document.getElementById('detailCard').addEventListener('click',function(e){var b=e.target.closest('[data-detail-action]'),x=current();if(!b||!x||busy)return;b.disabled=true;call('admin_solicitacoes_ubs_atualizar',{id:x.id,status:b.dataset.detailAction},function(r){if(r&&r.ok===true){setStatus(r.message||'Solicitação atualizada.','ok');refresh(true,true)}else{b.disabled=false;setStatus(text(r&&r.message)||'Não foi possível atualizar.','err')}})});
 if(!loadCache()){items=[];renderList();setStatus('Aguarde… verificando solicitações recebidas.','warn')}
