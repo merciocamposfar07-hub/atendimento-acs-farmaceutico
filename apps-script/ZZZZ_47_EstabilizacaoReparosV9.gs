@@ -103,6 +103,9 @@ function reparosV9EnriquecerSaude_(resultado,contexto){
     if(!/^[0-9a-f]{8}$/.test(ref))return;
     var ciclo=mapa&&mapa.porRef?mapa.porRef[ref]:null;
     if(!ciclo||ciclo.ambiguo)return;
+    /* Não reativar um pedido histórico já encerrado ou vencido.
+       O diagnóstico atual do OneSignal prevalece sobre o histórico. */
+    if(!aparelho.reparoPendente&&!ciclo.concluidoEm)return;
     if(!aparelho.reparoFeedback)aparelho.reparoFeedback=reparosV9Feedback_(ciclo);
     var classificacao=reparosV9ClassificarCiclo_(aparelho,ciclo,agora);
     aparelho.reparoEstadoV9=classificacao.fase;
