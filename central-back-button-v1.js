@@ -336,6 +336,36 @@ function removeRedundantPinAccess(){
   }
 }
 
+/* CSC_SESSAO_OCIOSA_PAINEIS_10MIN_V1
+ * Atividade em um painel administrativo conta na sessão da Central;
+ * não é um login e não restaura tokens ausentes. */
+function cscRegistrarAtividadePainel(){
+  if(!isAdminPanel)return;
+  var device='',last=0,now=Date.now();
+  try{
+    if(window.parent&&window.parent!==window&&window.parent.ConectaCentralSessaoOciosaV1){
+      window.parent.ConectaCentralSessaoOciosaV1.marcar();
+      return;
+    }
+  }catch(e){}
+  try{
+    if(!(sessionStorage.getItem('portalTacsAdminTokenV1')||
+         sessionStorage.getItem('portalTacsTerritorioTokenV1')||
+         sessionStorage.getItem('portalConectaUbsTokenV1')))return;
+    if(sessionStorage.getItem('portalCscCentralSessaoLiberadaV1')!=='1')return;
+    device=localStorage.getItem('portalTacsDispositivoV1')||'';
+    if(!device)return;
+    var key='portalCscCentralUltimaAtividadeV1:'+device;
+    last=Number(localStorage.getItem(key)||0);
+    if(!last||now<last-30000||now-last>=600000)return;
+    if(now-last>4500)localStorage.setItem(key,String(now));
+  }catch(e){}
+}
+if(isAdminPanel){
+  ['pointerdown','touchstart','keydown','wheel'].forEach(function(type){
+    document.addEventListener(type,cscRegistrarAtividadePainel,{capture:true,passive:true});
+  });
+}
 function centralUrl(){
   var saved='';
   try{saved=sessionStorage.getItem('portalTacsCentralReturnUrlV1')||''}catch(e){}
