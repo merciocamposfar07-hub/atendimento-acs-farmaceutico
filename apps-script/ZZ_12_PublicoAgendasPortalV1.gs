@@ -93,6 +93,9 @@ function publicoAgendasV1Montar_(areaId) {
     // DATA da agenda é civil: usar exatamente o valor exibido na planilha.
     // Isso impede que 11/09/2026 seja publicado como 10/09/2026 por conversão de fuso.
     var dataBruta = publicoAgendasV1Valor_(exibidos[linha], indices.data);
+    var dataSemanal = typeof agendasProfissionaisTerritoriaisV1DataSemanal_ === 'function'
+      ? agendasProfissionaisTerritoriaisV1DataSemanal_(dia) : '';
+    var dataPublicada = dataSemanal || publicoAgendasV1DataIso_(dataBruta);
     var encerra12h = publicoAgendasV1Booleano_(
       publicoAgendasV1Valor_(valores[linha], indices.encerra12h)
     );
@@ -105,7 +108,7 @@ function publicoAgendasV1Montar_(areaId) {
       active: publicoAgendasV1Booleano_(
         publicoAgendasV1Valor_(valores[linha], indices.ativo)
       ),
-      date: publicoAgendasV1DataIso_(dataBruta),
+      date: dataPublicada,
       time: publicoAgendasV1Texto_(
         publicoAgendasV1Valor_(exibidos[linha], indices.horario)
       ),
@@ -129,7 +132,7 @@ function publicoAgendasV1Montar_(areaId) {
       extra: publicoAgendasV1Booleano_(
         publicoAgendasV1Valor_(valores[linha], indices.diaExtra)
       ),
-      closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerraHorario, modulo),
+      closedNow: publicoAgendasV1EncerradoAgora_(dataPublicada, encerraHorario, modulo),
       order: publicoAgendasV1NaoNegativo_(
         publicoAgendasV1Valor_(valores[linha], indices.ordem)
       )
