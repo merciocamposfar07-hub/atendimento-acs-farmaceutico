@@ -577,10 +577,12 @@ function publicoAgendasV1Hora_(valor) {
 }
 
 function publicoAgendasV1EncerradoAgora_(data, horario) {
+  var hoje = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'yyyy-MM-dd');
+  var dataAgenda = publicoAgendasV1DataIso_(data);
+  if (dataAgenda && dataAgenda < hoje) return true;
+  if (!dataAgenda || dataAgenda > hoje) return false;
   horario = publicoAgendasV1Hora_(horario);
   if (!horario) return false;
-  var hoje = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'yyyy-MM-dd');
-  if (publicoAgendasV1DataIso_(data) !== hoje) return false;
   var agora = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'HH:mm');
   return agora >= horario;
 }
