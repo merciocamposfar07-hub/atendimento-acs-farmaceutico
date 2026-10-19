@@ -303,6 +303,35 @@ function agendasProfissionaisTerritoriaisV1Reservar_(p){
   }finally{lock.releaseLock();}
 }
 
+
+/* Datas de segunda a sexta acompanham automaticamente a semana no fuso de Recife.
+   Sabado e domingo antecipam a proxima segunda; nenhum outro campo e alterado. */
+function agendasProfissionaisTerritoriaisV1DataSemanal_(dia){
+  var nomes={SEGUNDA:0,TERCA:1,QUARTA:2,QUINTA:3,SEXTA:4};
+  var nome=agendasProfissionaisTerritoriaisV1Normalizar_(dia).split('_')[0];
+  if(!Object.prototype.hasOwnProperty.call(nomes,nome))return'';
+  var hoje=Utilities.formatDate(new Date(),'America/Recife','yyyy-MM-dd').split('-').map(Number);
+  var data=new Date(Date.UTC(hoje[0],hoje[1]-1,hoje[2]));
+  var semana=data.getUTCDay();
+  var deslocamento=semana===0?1:semana===6?2:1-semana;
+  data.setUTCDate(data.getUTCDate()+deslocamento+nomes[nome]);
+  return Utilities.formatDate(data,'UTC','yyyy-MM-dd');
+}
+
+function agendasProfissionaisTerritoriaisV1AtualizarApenasDatas_(sheet,headers){
+  var indiceDia=headers.indexOf('DIA'),indiceData=headers.indexOf('DATA');
+  if(indiceDia<0||indiceData<0||sheet.getLastRow()<2)return;
+  var total=sheet.getLastRow()-1;
+  var dias=sheet.getRange(2,indiceDia+1,total,1).getDisplayValues();
+  var datas=sheet.getRange(2,indiceData+1,total,1).getDisplayValues();
+  for(var i=0;i<total;i++){
+    var prevista=agendasProfissionaisTerritoriaisV1DataSemanal_(dias[i][0]);
+    if(!prevista)continue;
+    if(agendasProfissionaisTerritoriaisV1Data_(datas[i][0])===prevista)continue;
+    sheet.getRange(i+2,indiceData+1).setValue(prevista);
+  }
+}
+
 function agendasProfissionaisTerritoriaisV1Tabela_(ss,nome,obrigatorios,criar){
   var sheet=ss.getSheetByName(nome);
   if(!sheet&&!criar)return null;
@@ -312,6 +341,8 @@ function agendasProfissionaisTerritoriaisV1Tabela_(ss,nome,obrigatorios,criar){
   obrigatorios.forEach(function(h){if(headers.indexOf(h)===-1)throw new Error('A aba '+nome+' não possui a coluna obrigatória '+h+'.');});
   ['AREA_ID','ATUALIZADO_EM'].forEach(function(h){if(headers.indexOf(h)===-1){sheet.getRange(1,colunas+1).setValue(h);headers.push(h);colunas++;}});
   if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('ENCERRA_HORARIO')===-1){sheet.getRange(1,colunas+1).setValue('ENCERRA_HORARIO');headers.push('ENCERRA_HORARIO');colunas++;}
+  if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS)
+    agendasProfissionaisTerritoriaisV1AtualizarApenasDatas_(sheet,headers);
   var valores=sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,colunas).getValues():[];
   return{sheet:sheet,headers:headers,colunas:colunas,rows:valores.map(function(v,i){return{row:i+2,values:v};})};
 }
