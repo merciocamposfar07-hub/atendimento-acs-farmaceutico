@@ -2,7 +2,7 @@
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1',DEVICE_KEY='portalTacsDispositivoV1';
-var selecionado=null,ultimoEnvio=null,ativa=null,contador=0,timers=[];
+var selecionado=null,ultimoEnvio=null,ativa=null,contador=0,timers=[],statusAutoAtivo=false,statusAutoGeracao=0,statusConsultaEmCurso=false,statusAssinatura='';
 
 function txt(v){return String(v==null?'':v).trim()}
 function esc(v){return txt(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -137,7 +137,33 @@ document.getElementById('msgIndFechar').addEventListener('click',fechar);documen
 }
 
 function setStatus(msg,tipo){var n=document.getElementById('msgIndStatus');if(!n)return;n.textContent=msg;n.className='msg-ind-status'+(tipo?' '+tipo:'')}
-function limparTimers(){timers.forEach(clearTimeout);timers=[]}
+function limparTimers(){
+ statusAutoAtivo=false;
+ statusAutoGeracao++;
+ timers.forEach(clearTimeout);timers=[];
+}
+function painelMensagemAberto(){
+ var painel=document.getElementById('msgIndividualMoradorV1');
+ return Boolean(painel&&!painel.classList.contains('msg-ind-hide')&&ultimoEnvio&&selecionado);
+}
+function planejarStatus(ms){
+ if(!statusAutoAtivo||!painelMensagemAberto())return;
+ var geracao=statusAutoGeracao;
+ var id=setTimeout(function(){
+   timers=timers.filter(function(x){return x!==id});
+   if(geracao!==statusAutoGeracao||!painelMensagemAberto())return;
+   if(document.hidden){planejarStatus(6000);return}
+   atualizarStatus(true);
+ },ms);
+ timers.push(id);
+}
+function retomarStatus(){
+ if(!statusAutoAtivo||!painelMensagemAberto()||document.hidden)return;
+ timers.forEach(clearTimeout);timers=[];
+ if(!statusConsultaEmCurso)planejarStatus(150);
+}
+document.addEventListener('visibilitychange',function(){if(!document.hidden)retomarStatus()});
+window.addEventListener('focus',retomarStatus);
 function fechar(){limparTimers();var n=document.getElementById('msgIndividualMoradorV1');if(n)n.classList.add('msg-ind-hide')}
 function mascararData(v){var d=txt(v).replace(/\D/g,'').slice(0,8);if(d.length>4)return d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4);if(d.length>2)return d.slice(0,2)+'/'+d.slice(2);return d}
 function dataVisual(v){var d=txt(v);var iso=d.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(iso)return iso[3]+'/'+iso[2]+'/'+iso[1];return d}
@@ -145,7 +171,7 @@ function horarioVisual(v){var h=txt(v).replace(/\s+/g,' '),m=h.match(/^([01]\d|2
 function horarioValido(v){var h=txt(v);return !h||/^([01]\d|2[0-3]):[0-5]\d$/.test(h)||/^([01]\d|2[0-3]):[0-5]\d\s*(?:a|as|às|-)\s*([01]\d|2[0-3]):[0-5]\d\s*(?:h|hs)?$/i.test(h)}
 function preview(){var tipo=txt(document.getElementById('msgIndTipo').value),servico=txt(document.getElementById('msgIndServico').value),data=dataVisual(document.getElementById('msgIndData').value),hora=horarioVisual(document.getElementById('msgIndHora').value),nome=txt(selecionado&&selecionado.nome).split(' ')[0]||'Morador';if(tipo==='OUTRA_MENSAGEM')return'';if(!servico||!data)return'Informe o serviço e a data para montar a mensagem.';var quando=data+(hora?', '+hora:'');if(tipo==='CONFIRMAR_ATENDIMENTO')return nome+', seu atendimento de '+servico+' está confirmado para '+quando+'.';if(tipo==='ALTERAR_DATA')return nome+', a nova data do seu atendimento de '+servico+' é '+quando+'.';if(tipo==='LEMBRETE')return nome+', lembramos que seu atendimento de '+servico+' será em '+quando+'.';return nome+', seu atendimento de '+servico+', previsto para '+quando+', foi cancelado. Aguarde nova orientação do TACS.'}
 function atualizarFormulario(event){var tipo=document.getElementById('msgIndTipo').value,livre=tipo==='OUTRA_MENSAGEM',dados=document.getElementById('msgIndDadosAtendimento'),campo=document.getElementById('msgIndPreviewTexto');if(event&&event.target&&event.target.id==='msgIndData'){var mascarada=mascararData(event.target.value);if(event.target.value!==mascarada)event.target.value=mascarada}dados.classList.toggle('msg-ind-hide',livre);document.getElementById('msgIndLivre').classList.add('msg-ind-hide');if(livre){campo.placeholder='Digite aqui a mensagem que será enviada.';if(event&&event.target&&event.target.id==='msgIndTipo')campo.value=''}else{campo.placeholder='A mensagem será montada automaticamente.';campo.value=preview()}document.getElementById('msgIndMensagem').value=campo.value}
-function resetTrack(){['msgStepEnc','msgStepExib','msgStepAberta','msgStepConf'].forEach(function(id){marcar(id,false,'')});document.getElementById('msgIndTrack').classList.add('msg-ind-hide')}
+function resetTrack(){statusAssinatura='';['msgStepEnc','msgStepExib','msgStepAberta','msgStepConf'].forEach(function(id){marcar(id,false,'')});document.getElementById('msgIndTrack').classList.add('msg-ind-hide')}
 /* Hora do encaminhamento: instante imutável embutido no ID deste envio.
    Usa o fuso da área (Recife) sem alterar comprovantes nem horários de leitura. */
 function horarioEnvioRecifePeloEvento(evento){
@@ -209,7 +235,9 @@ function comprovanteOperador(info){
 }
 function renderStatus(r){
  if(!r||r.ok!==true||!ultimoEnvio||txt(r.eventoId)!==txt(ultimoEnvio.eventoId))return;
- var h=r.horarios||{};
+ var h=r.horarios||{},assinatura=JSON.stringify([r.eventoId,r.encaminhadas,r.exibidas,r.abertas,r.confirmadas,h.encaminhada,h.exibida,h.aberta,h.confirmada]);
+ if(statusAssinatura===assinatura)return;
+ statusAssinatura=assinatura;
  document.getElementById('msgIndTrack').classList.remove('msg-ind-hide');
  marcar('msgStepEnc',Number(r.encaminhadas)>0,h.encaminhada);
  marcar('msgStepExib',Number(r.exibidas)>0,h.exibida);
@@ -220,8 +248,29 @@ function renderStatus(r){
  else if(Number(r.exibidas)>0)setStatus('Notificação exibida no aparelho. Aguardando abertura pelo morador.','warn');
  else if(Number(r.encaminhadas)>0)setStatus('Encaminhada ao Push. Aguardando confirmação no aparelho.','warn');
 }
-function atualizarStatus(){if(!ultimoEnvio||!selecionado)return;var b=document.getElementById('msgIndAtualizar');b.disabled=true;post('admin_mensagem_individual_status',sessao({eventoId:ultimoEnvio.eventoId,origemAba:selecionado.origemAba,origemLinha:selecionado.origemLinha,moradorId:selecionado.moradorId||''}),function(r){b.disabled=false;if(!r||r.ok!==true){setStatus(txt(r&&r.message)||'Não foi possível atualizar a confirmação.','err');return}renderStatus(r)})}
-function agendarAtualizacoes(){limparTimers();[4000,12000,30000].forEach(function(ms){timers.push(setTimeout(function(){if(ultimoEnvio)atualizarStatus()},ms))})}
+function atualizarStatus(automatica){
+ if(!ultimoEnvio||!selecionado||!painelMensagemAberto())return;
+ if(statusConsultaEmCurso||ativa){if(automatica&&statusAutoAtivo)planejarStatus(1800);return}
+ var evento=ultimoEnvio.eventoId,geracao=statusAutoGeracao,b=document.getElementById('msgIndAtualizar');
+ statusConsultaEmCurso=true;b.disabled=true;
+ post('admin_mensagem_individual_status',sessao({
+   eventoId:evento,origemAba:selecionado.origemAba,origemLinha:selecionado.origemLinha,moradorId:selecionado.moradorId||''
+ }),function(r){
+   statusConsultaEmCurso=false;b.disabled=false;
+   if(geracao!==statusAutoGeracao||!painelMensagemAberto()||ultimoEnvio.eventoId!==evento)return;
+   if(!r||r.ok!==true){
+     if(!automatica)setStatus(txt(r&&r.message)||'Não foi possível consultar a confirmação.','err');
+     if(statusAutoAtivo)planejarStatus(8000);return;
+   }
+   renderStatus(r);
+   if(Number(r.confirmadas)>0){statusAutoAtivo=false;timers.forEach(clearTimeout);timers=[];return}
+   if(statusAutoAtivo)planejarStatus(Number(r.abertas)>0?4000:5500);
+ });
+}
+function agendarAtualizacoes(){
+ limparTimers();statusAutoAtivo=true;
+ if(painelMensagemAberto())planejarStatus(2200);
+}
 function enviar(){if(!selecionado)return;var tipo=document.getElementById('msgIndTipo').value,servico=txt(document.getElementById('msgIndServico').value),data=txt(document.getElementById('msgIndData').value),hora=txt(document.getElementById('msgIndHora').value),mensagem=txt(document.getElementById('msgIndPreviewTexto').value);document.getElementById('msgIndMensagem').value=mensagem;if(tipo!=='OUTRA_MENSAGEM'&&(!servico||!data)){setStatus('Informe o serviço e a data.','err');return}if(data&&!/^(?:\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2})$/.test(data)){setStatus('Informe a data no formato DD/MM/AAAA.','err');return}if(!horarioValido(hora)){setStatus('Informe um horário como 08:00 ou 08:00 às 11:00 hs.','err');return}if(mensagem.length<3||/^Informe o serviço/.test(mensagem)){setStatus('Confira a mensagem que será enviada.','err');return}var b=document.getElementById('msgIndEnviar');b.disabled=true;setStatus('Enviando somente para o cadastro familiar deste morador…','warn');post('admin_mensagem_individual_enviar',sessao({origemAba:selecionado.origemAba,origemLinha:selecionado.origemLinha,moradorId:selecionado.moradorId||'',tipo:tipo,servico:servico,data:data,hora:hora,mensagem:mensagem}),function(r){b.disabled=false;if(!r||r.ok!==true){setStatus(txt(r&&r.message)||'O envio foi recusado pelo servidor.','err');return}if(r.enviado!==true){ultimoEnvio=null;comprovanteOperador(null);resetTrack();setStatus(txt(r.message)||'Nenhum aparelho apto foi encontrado para este morador.','warn');return}ultimoEnvio={eventoId:r.eventoId};comprovanteOperador(r.comprovante||null);document.getElementById('msgIndTrack').classList.remove('msg-ind-hide');marcar('msgStepEnc',Number(r.encaminhadas)>0,'');setStatus('📤 Mensagem encaminhada para '+Number(r.encaminhadas||0)+' aparelho(s). Acompanhando a confirmação…','ok');agendarAtualizacoes()})}
 
 function abrir(item){instalar();selecionado=item||null;ultimoEnvio=null;limparTimers();resetTrack();comprovanteOperador(null);if(!selecionado)return;var familia=txt(item.familiaId)||familiaEndereco(item.endereco);document.getElementById('msgIndPessoa').innerHTML='<strong>'+esc(item.nome||'Morador')+'</strong><span>Cadastro familiar '+esc(familia||'não identificado')+'</span>';document.getElementById('msgIndTipo').value='CONFIRMAR_ATENDIMENTO';document.getElementById('msgIndServico').value='';document.getElementById('msgIndData').value='';document.getElementById('msgIndHora').value='';document.getElementById('msgIndMensagem').value='';document.getElementById('msgIndPreviewTexto').value='';document.getElementById('msgIndividualMoradorV1').classList.remove('msg-ind-hide');setStatus('Confira a mensagem antes de enviar.','');atualizarFormulario();setTimeout(function(){document.getElementById('msgIndServico').focus()},50)}
