@@ -3,7 +3,13 @@ if(!Promise.withResolvers)Promise.withResolvers=function(){var resolve,reject,pr
 const status=document.getElementById('status'),pages=document.getElementById('pages'),record=window.CSC_UBS_PDF;
 const root='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/';
 function notifyParent(type){
- try{if(window.parent&&window.parent!==window)window.parent.postMessage({type:type},'*')}catch(e){}
+ try{
+  let target=window.parent;
+  for(let i=0;i<3&&target&&target!==window;i++){
+   target.postMessage({type:type,nonce:String(record&&record.viewerNonce||'')},'*');
+   target=target.parent;
+  }
+ }catch(e){}
 }
 const controlsStyle=document.createElement('style');
 controlsStyle.textContent='#download,#showDocument,#showCard{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:100%;min-height:96px;padding:22px 20px;font-size:clamp(26px,4vw,36px);font-weight:800;line-height:1.3;text-align:center;border-radius:16px}';
