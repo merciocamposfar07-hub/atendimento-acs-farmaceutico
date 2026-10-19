@@ -2137,7 +2137,14 @@ var sessionTimer=0;
 
 function text(v){return String(v==null?'':v).trim()}
 function hasSession(){
-  try{return Boolean(text(sessionStorage.getItem(ADMIN_TOKEN)||'')||text(sessionStorage.getItem(TERRITORY_TOKEN)||'')||text(sessionStorage.getItem(UBS_TOKEN)||''))}catch(e){return false}
+  try{
+    return Boolean(
+      text(sessionStorage.getItem(ADMIN_TOKEN)||'')||
+      text(sessionStorage.getItem(TERRITORY_TOKEN)||'')||
+      text(sessionStorage.getItem(UBS_TOKEN)||'')||
+      (CENTRAL&&typeof window.ConectaCentralSessaoLocalAtiva==='function'&&window.ConectaCentralSessaoLocalAtiva())
+    );
+  }catch(e){return false}
 }
 function isTerritory(){try{return Boolean(text(sessionStorage.getItem(TERRITORY_TOKEN)||''))}catch(e){return false}}
 function isUbsSession(){try{return Boolean(text(sessionStorage.getItem(UBS_TOKEN)||''))}catch(e){return false}}
@@ -3016,7 +3023,7 @@ html body .viewer.csc-native-viewer>.viewer-platform-footer{
   },true);
 })();
 </script>
-<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20261019-historico-comprovantes-v5"></script>
+<script src="/atendimento-acs-farmaceutico/central-administrativa-tacs.js?v=20261019-sessao-local-retorno-v6"></script>
 <script src="/atendimento-acs-farmaceutico/central-tacs-login-rapido-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/central-suporte-moradores-v1.js?v=69a1f1ba696e"></script>
 <script src="/atendimento-acs-farmaceutico/conecta-acesso-unificado-v1.js?v=20260926-areas-diagnostico-trust-v3"></script>
