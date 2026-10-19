@@ -521,8 +521,32 @@ function ensureUbsSolicitacoesUi(){
 }
 function renderCachedUbsSolicitacoesBadge(){
   ensureUbsSolicitacoesUi();
-  var n=0;try{n=Math.max(0,Number(localStorage.getItem(ubsSolicitacoesCountKey(selectedAreaId))||0))}catch(e){}
-  var b=el('cscSolicitacoesBadge');if(!b)return;b.hidden=n<1;b.textContent=n>99?'99+':String(n)
+  var value=null;
+  try{value=localStorage.getItem(ubsSolicitacoesCountKey(selectedAreaId))}catch(e){}
+  var n=Math.max(0,Number(value)||0),b=el('cscSolicitacoesBadge');
+  if(!b)return;
+  b.hidden=n<1;b.textContent=n>99?'99+':String(n);
+  /* O Push mantém um contador persistente mesmo com a Central fechada.
+     Recupera-o se este navegador ainda não tiver uma contagem local. */
+  if(value!==null||!window.indexedDB)return;
+  var area=normArea(selectedAreaId);
+  try{
+    var request=indexedDB.open('csc-ubs-badges-v1',1);
+    request.onsuccess=function(){
+      var db=request.result;
+      if(!db.objectStoreNames.contains('areas')){db.close();return}
+      var tx=db.transaction('areas','readonly'),get=tx.objectStore('areas').get(area);
+      get.onsuccess=function(){
+        var count=Number(get.result);
+        if(mode!=='ubs'||normArea(selectedAreaId)!==area||!Number.isFinite(count)||count<0)return;
+        /* Não sobrescreve resposta remota que tenha chegado entre as leituras. */
+        try{if(localStorage.getItem(ubsSolicitacoesCountKey(area))!==null)return}catch(e){}
+        renderUbsSolicitacoesBadge({naoVistas:count});
+      };
+      tx.oncomplete=function(){db.close()};
+      tx.onerror=function(){db.close()};
+    };
+  }catch(ignore){}
 }
 function unlockUbsSolicitacoesAudio(){
   if(ubsSolicitacoesAudio)return;
@@ -564,7 +588,13 @@ window.addEventListener('message',function(event){
     else if(!Number(data.naoVistas))syncUbsAppBadge(0);
   }
 });
-if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',function(event){var data=event.data||{};if(data.type==='CSC_UBS_PUSH_RECEIVED'&&mode==='ubs'&&normArea(data.areaId)===normArea(selectedAreaId)){checkUbsSolicitacoes()}});
+if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',function(event){
+ var data=event.data||{};
+ if(data.type!=='CSC_UBS_PUSH_RECEIVED'||mode!=='ubs'||normArea(data.areaId)!==normArea(selectedAreaId))return;
+ /* O push atualiza primeiro a badge e recarrega a lista UMA vez na sessão autorizada. */
+ if(Number.isFinite(Number(data.count))&&data.count!=null)renderUbsSolicitacoesBadge({naoVistas:Math.max(0,Number(data.count))});
+ preloadUbsSolicitacoes(true);
+});
 function closeUbsPushNotifications(){
   try{
     if(!navigator.serviceWorker||typeof navigator.serviceWorker.getRegistrations!=='function')return;
@@ -610,6 +640,15 @@ function applyUbsSolicitacoesResult(r,checkingArea){
   var latest=r.latestNaoVista||null,latestKey=text(r.latestNaoVistaKey||'');
   ubsSolicitacoesLatestUnreadKey=latestKey;
   renderUbsSolicitacoesBadge(r);
+  /* Se o contador encontrou uma nova solicitacao, deixa a lista preparada
+     antes do toque. A propria leitura integral nao desencadeia outra leitura. */
+  if(!Array.isArray(r.solicitacoes)){
+    var cached=null;
+    try{cached=JSON.parse(sessionStorage.getItem('portalConectaUbsSolicitacoesPrefetchV1:'+checkingArea)||'null')}catch(ignore){}
+    if(latestKey&&(!cached||!cached.data||cached.data.latestNaoVistaKey!==latestKey)){
+      preloadUbsSolicitacoes(true);
+    }
+  }
   if(!latestKey||!latest||shellActiveModule==='solicitacoes')return;
   var markerKey=ubsSolicitacoesMarkerKey(checkingArea),previous='';
   try{previous=text(localStorage.getItem(markerKey)||'')}catch(e){}
@@ -627,11 +666,11 @@ function checkUbsSolicitacoes(){
 }
 /* Lê a lista integral uma vez na entrada, alimentando contador e painel
    com a mesma resposta autenticada, antes de o operador tocar no cartão. */
-function preloadUbsSolicitacoes(){
+function preloadUbsSolicitacoes(force){
   if(mode!=='ubs'||!ubsToken||!selectedAreaId)return;
   var area=selectedAreaId,now=Date.now();
   if(ubsSolicitacoesPreloadBusy&&ubsSolicitacoesPreloadArea===area)return;
-  if(ubsSolicitacoesPreloadArea===area&&now-ubsSolicitacoesPreloadAt<15000)return;
+  if(!force&&ubsSolicitacoesPreloadArea===area&&now-ubsSolicitacoesPreloadAt<15000)return;
   ubsSolicitacoesPreloadArea=area;ubsSolicitacoesPreloadBusy=true;ubsSolicitacoesPreloadAt=now;
   var key='portalConectaUbsSolicitacoesPrefetchV1:'+area;
   try{sessionStorage.setItem('portalConectaUbsSolicitacoesLoadingV1:'+area,JSON.stringify({startedAt:now}))}catch(e){}
