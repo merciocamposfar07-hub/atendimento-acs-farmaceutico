@@ -202,13 +202,15 @@ function startInlinePdf(item){
  var target=document.getElementById('cscPdfInlineFrame'),loading=document.getElementById('cscPdfLoading');
  if(!target||!loading||!item||!item.codigoSolicitacao)return;
  var attempt=++pdfAttempt;
+ var nonce='ubs_pdf_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+ target.dataset.viewerNonce=nonce;
  target.style.display='none';
  loading.hidden=false;loading.textContent='Aguarde… carregando o PDF da solicitação.';
  var payload=core&&core.session?core.session({codigoSolicitacao:item.codigoSolicitacao}):{areaId:area(),codigoSolicitacao:item.codigoSolicitacao};
  var form=document.createElement('form');form.method='POST';form.action=API;
  target.name='csc_ubs_pdf_inline_'+attempt;
  form.target=target.name;form.hidden=true;
- payload.action='admin_solicitacao_ubs_pdf';
+ payload.action='admin_solicitacao_ubs_pdf';payload.viewerNonce=nonce;
  Object.keys(payload).forEach(function(key){
    var input=document.createElement('input');input.type='hidden';input.name=key;
    input.value=String(payload[key]==null?'':payload[key]);form.appendChild(input);
@@ -224,7 +226,7 @@ function startInlinePdf(item){
 window.addEventListener('message',function(event){
  if(!event.data||(event.data.type!==PDF_VIEWER_READY&&event.data.type!==PDF_VIEWER_ERROR))return;
  var frame=document.getElementById('cscPdfInlineFrame');
- if(!frame||event.source!==frame.contentWindow||!/(^|\.)googleusercontent\.com$|(^|\.)google\.com$/.test((function(){try{return new URL(event.origin).hostname}catch(e){return''}})()))return;
+ if(!frame||event.data.nonce!==frame.dataset.viewerNonce||!/(^|\.)googleusercontent\.com$|(^|\.)google\.com$/.test((function(){try{return new URL(event.origin).hostname}catch(e){return''}})()))return;
  var loading=document.getElementById('cscPdfLoading');
  if(event.data.type===PDF_VIEWER_READY){
    if(loading)loading.hidden=true;
@@ -310,7 +312,7 @@ if(!loadCache()){items=[];renderList();setStatus('Aguarde… verificando solicit
    var started=Date.now();
    function wait(){
      try{value=JSON.parse(sessionStorage.getItem(key)||'null')}catch(e){}
-     if(value&&Number(value.savedAt||0)>Number(loading.startedAt||0)&&Array.isArray(value.data&&value.data.solicitacoes)){
+     if(value&&Number(value.savedAt||0)>=Number(loading.startedAt||0)&&Array.isArray(value.data&&value.data.solicitacoes)){
        items=value.data.solicitacoes;initialLoading=false;renderList();setStatus('Solicitações disponíveis.','ok');return;
      }
      if(Date.now()-started<9500){setTimeout(wait,400);return}
