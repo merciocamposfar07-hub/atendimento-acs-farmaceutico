@@ -190,7 +190,7 @@ function detailHtml(x){
  var meta=expiry?'<div class="detail-meta">Expiração automática: '+esc(expiry)+'</div>':'<div class="detail-meta">Sem expiração automática registrada para esta solicitação.</div>';
  var actions=!expired&&s!=='CONCLUIDA'?'<div class="detail-actions"><button class="attend" type="button" data-detail-action="EM_ATENDIMENTO" '+(s==='EM_ATENDIMENTO'?'disabled':'')+'>Em atendimento</button><button class="done" type="button" data-detail-action="CONCLUIDA">Concluir</button></div>':'';
  document.getElementById('detailStatus').innerHTML='<span class="pill '+s+'">'+esc(statusText(s))+'</span>';
- var attachment=x.anexo?'<div class="detail-meta"><strong>Documento do morador</strong><p>'+esc(x.anexo.disponivel?x.anexo.nome:'Documento em envio; atualize em instantes.')+'</p>'+(x.anexo.disponivel?'<section id="cscPdfInlineHost" style="min-height:170px;contain:layout"><p id="cscPdfLoading" role="status" aria-live="polite" style="padding:18px;background:#103850;color:#fff;border-radius:12px;font-weight:800">Aguarde… carregando o PDF da solicitação.</p><iframe id="cscPdfInlineFrame" title="PDF da solicitação do morador" name="csc_ubs_pdf_inline" style="display:none;width:100%;height:75vh;min-height:480px;border:1px solid #3b88a0;border-radius:12px;background:#062c46"></iframe><button type="button" class="done" data-ubs-pdf="1" style="margin-top:12px">↻ Recarregar documento</button></section>':'')+'</div>':'';
+ var attachment=x.anexo?'<div class="detail-meta"><strong>Documento do morador</strong><p>'+esc(x.anexo.disponivel?x.anexo.nome:'Documento em envio; atualize em instantes.')+'</p>'+(x.anexo.disponivel?'<section id="cscPdfInlineHost" style="position:relative;min-height:480px;contain:layout"><p id="cscPdfLoading" role="status" aria-live="polite" style="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:18px;text-align:center;background:#103850;color:#fff;border-radius:12px;font-weight:800">Aguarde… carregando o PDF da solicitação.</p><iframe id="cscPdfInlineFrame" title="PDF da solicitação do morador" name="csc_ubs_pdf_inline" style="display:block;visibility:hidden;width:100%;height:75vh;min-height:480px;border:1px solid #3b88a0;border-radius:12px;background:#062c46"></iframe><button type="button" class="done" data-ubs-pdf="1" style="margin-top:12px">↻ Recarregar documento</button></section>':'')+'</div>':'';
  return body+attachment+meta+actions;
 }
 function renderDetail(){
@@ -204,7 +204,7 @@ function startInlinePdf(item){
  var attempt=++pdfAttempt;
  var nonce='ubs_pdf_'+Date.now()+'_'+Math.random().toString(36).slice(2);
  target.dataset.viewerNonce=nonce;
- target.style.display='none';
+ target.style.visibility='hidden';
  loading.hidden=false;loading.textContent='Aguarde… carregando o PDF da solicitação.';
  var payload=core&&core.session?core.session({codigoSolicitacao:item.codigoSolicitacao}):{areaId:area(),codigoSolicitacao:item.codigoSolicitacao};
  var form=document.createElement('form');form.method='POST';form.action=API;
@@ -212,7 +212,7 @@ function startInlinePdf(item){
  target.addEventListener('load',function(){
    /* Contingência para WebKit/Google Apps Script: a ficha nunca depende
       exclusivamente do aviso enviado pelo visualizador incorporado. */
-   if(attempt===pdfAttempt)target.style.display='block';
+   if(attempt===pdfAttempt){target.style.visibility='visible';if(loading&&!loading.hidden)loading.textContent='Aguarde… preparando a visualização do documento.'}
  },{once:true});
  form.target=target.name;form.hidden=true;
  payload.action='admin_solicitacao_ubs_pdf';payload.viewerNonce=nonce;
@@ -237,7 +237,7 @@ window.addEventListener('message',function(event){
  var loading=document.getElementById('cscPdfLoading');
  if(event.data.type===PDF_VIEWER_READY){
    if(loading)loading.hidden=true;
-   frame.style.display='block';
+   frame.style.visibility='visible';
  }else{
    if(loading){loading.hidden=false;loading.textContent='Não foi possível carregar o documento. Toque em “Recarregar documento” para tentar novamente.'}
  }
