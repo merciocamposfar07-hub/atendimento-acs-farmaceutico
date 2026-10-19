@@ -1,14 +1,32 @@
 (function(){
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',DEVICE_KEY='portalTacsDispositivoV1';
+var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1',DEVICE_KEY='portalTacsDispositivoV1';
 var selecionado=null,ultimoEnvio=null,ativa=null,contador=0,timers=[];
 
 function txt(v){return String(v==null?'':v).trim()}
 function esc(v){return txt(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function familiaEndereco(v){var m=txt(v).toUpperCase().match(/(?:,|\b)(\d{1,4}[A-Z]?)(?=\s*[,.\-]|\s+ZONA\b|\s*$)/);if(!m)return'';var p=m[1].match(/^(\d+)([A-Z]?)$/);return p?(('000'+p[1]).slice(-Math.max(3,p[1].length))+p[2]):m[1]}
 function areaId(){var s=document.getElementById('areaSelect');if(s&&s.value)return txt(s.value);try{return txt(new URLSearchParams(location.search).get('area')||new URLSearchParams(location.search).get('areaId')||'JAPARANDUBA')}catch(e){return'JAPARANDUBA'}}
-function sessao(extra){var token='';var territorio='';try{token=sessionStorage.getItem(TOKEN_KEY)||'';territorio=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||''}catch(e){}var out={dispositivo:(function(){try{return localStorage.getItem(DEVICE_KEY)||''}catch(e){return''}})(),areaId:areaId()};if(territorio)out.territorioToken=territorio;else out.token=token;Object.keys(extra||{}).forEach(function(k){out[k]=extra[k]});return out}
+function sessao(extra){
+ var core=window.ConectaModuleCoreV1,oficial=null;
+ if(core&&typeof core.session==='function'){
+   try{oficial=core.session(extra||{})}catch(ignore){}
+   if(oficial&&oficial.dispositivo&&(oficial.token||oficial.territorioToken||oficial.ubsToken))return oficial;
+ }
+ var token='',territorio='',ubs='';
+ try{
+   token=sessionStorage.getItem(TOKEN_KEY)||'';
+   territorio=sessionStorage.getItem(TERRITORY_TOKEN_KEY)||'';
+   ubs=sessionStorage.getItem(UBS_TOKEN_KEY)||'';
+ }catch(e){}
+ var out={dispositivo:(function(){try{return localStorage.getItem(DEVICE_KEY)||''}catch(e){return''}})(),areaId:areaId()};
+ if(territorio)out.territorioToken=territorio;
+ else if(token)out.token=token;
+ else if(ubs)out.ubsToken=ubs;
+ Object.keys(extra||{}).forEach(function(k){out[k]=extra[k]});
+ return out;
+}
 function rid(prefix){return 'msgv1_'+prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
 
 function jsonp(action,params,cb){contador++;var nome='__msgind_'+Date.now()+'_'+contador,s=document.createElement('script'),fim=false,t=setTimeout(function(){finish({ok:false,temporario:true,message:'Consulta temporariamente indisponível.'})},12000);function finish(r){if(fim)return;fim=true;clearTimeout(t);try{delete window[nome]}catch(e){window[nome]=undefined}if(s.parentNode)s.remove();cb(r)}window[nome]=finish;s.onerror=function(){finish({ok:false,temporario:true,message:'Falha de rede ao consultar o servidor.'})};var q=['action='+encodeURIComponent(action),'callback='+encodeURIComponent(nome),'_='+Date.now()];Object.keys(params||{}).forEach(function(k){q.push(encodeURIComponent(k)+'='+encodeURIComponent(params[k]))});s.src=API+'?'+q.join('&');document.head.appendChild(s)}
