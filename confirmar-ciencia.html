@@ -4,33 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="theme-color" content="#073f57">
-  <title>Confirmar ciência — Portal TACS</title>
-  <style>
-    :root{color-scheme:light;--petroleo:#073f57;--petroleo2:#0b5878;--borda:#62cae6;--fundo:#e8f5f9;--verde:#12874a;--texto:#0a2e40}
-    *{box-sizing:border-box}html,body{min-height:100%;margin:0}
-    body{display:grid;place-items:center;padding:22px;background:var(--fundo);color:var(--texto);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-    main{width:min(100%,560px);padding:28px;border:3px solid var(--borda);border-radius:28px;background:#fff;box-shadow:0 18px 45px rgba(5,57,79,.16);text-align:center}
-    .icone{display:grid;place-items:center;width:72px;height:72px;margin:0 auto 18px;border-radius:50%;background:var(--petroleo);color:#fff;font-size:34px;font-weight:900}
-    h1{margin:0 0 12px;font-size:clamp(29px,8vw,42px);line-height:1.08;color:var(--petroleo)}
-    p{margin:0;color:#526d7b;font-size:18px;line-height:1.5}
-    #estado{margin-top:20px;padding:16px;border:2px solid #b6d3dd;border-radius:18px;background:#f5fafc;color:var(--petroleo);font-size:17px;font-weight:800;line-height:1.4}
-    #estado.ok{border-color:#82d5a5;background:#eaf8ef;color:#08723d}#estado.erro{border-color:#e3a4a4;background:#fff1f1;color:#922d2d}
-    #confirmar{width:100%;min-height:66px;margin-top:20px;border:3px solid var(--borda);border-radius:20px;background:linear-gradient(145deg,var(--petroleo),var(--petroleo2));color:#fff;font-size:20px;font-weight:900;padding:14px 18px}
-    #confirmar:disabled{opacity:.55}#fecharNotificacao{width:100%;min-height:62px;margin-top:16px;border:2px solid #15563b;border-radius:17px;background:#15563b;color:#fff;font-size:19px;font-weight:850;padding:12px 18px}a{display:inline-block;margin-top:18px;padding:14px 20px;border-radius:16px;background:#edf6f9;color:var(--petroleo);font-size:17px;font-weight:900;text-decoration:none}[hidden]{display:none!important}
-  </style>
+  <meta name="theme-color" content="#072c47">
+  <title>Mensagem individual — Portal CSC</title>
+  <link rel="stylesheet" href="./csc-notificacao-padrao-v1.css?v=20261019-v1">
+
 </head>
 <body>
   <main>
+    <div class="marca"><img src="./app-icons/conecta-saude-comunitaria-oficial-cplus-20260921-v5.png" alt="Ícone oficial do Portal CSC"><div><span>PORTAL CSC</span><strong>Conecta Saúde Comunitária</strong></div></div>
     <div class="icone" aria-hidden="true">🔔</div>
-    <h1>Você abriu o aviso</h1>
-    <p>Leia o conteúdo da notificação. Quando estiver ciente do recado, confirme abaixo.</p>
-    <div id="conteudoIndividual" hidden aria-label="Mensagem individual" style="margin-top:20px;padding:18px;border:2px solid #b6d3dd;border-radius:18px;background:#f5fafc;text-align:left;overflow-wrap:anywhere"><strong id="tituloIndividual" style="display:block;font-size:20px;margin-bottom:12px;color:#073f57"></strong><p id="textoIndividual" style="white-space:pre-wrap;color:#183d51;font-size:19px"></p></div>
-    <div id="estado" role="status" aria-live="polite">Registrando a abertura deste aviso…</div>
-    <button id="confirmar" type="button">✅ Li e estou ciente</button>
+    <h1>Notificação do Portal CSC</h1>
+    <p>Mensagem individual. Leia o conteúdo e confirme sua ciência abaixo.</p>
+    <div id="conteudoIndividual" class="aviso" hidden aria-label="Mensagem individual">
+      <strong id="tituloIndividual"></strong>
+      <p id="textoIndividual"></p>
+    </div>
+    <div id="estado" role="status" aria-live="polite">Registrando a abertura do aviso…</div>
+    <button id="confirmar" type="button">✓ Li e estou ciente</button>
     <button id="fecharNotificacao" type="button" hidden>✕ Fechar notificação</button>
-    <a id="portal" href="./">Abrir Portal TACS</a>
-    <div id="saida" hidden role="status" aria-live="polite" style="margin-top:22px;padding:22px;background:#eaf8ef;border:1px solid #82d5a5;border-radius:18px;color:#08723d;font-size:19px;font-weight:750">✅ Notificação encerrada. Sua confirmação foi registrada. Não é necessário acessar o portal. Você pode voltar ao aplicativo anterior.</div>
+    <a id="portal" href="./">Abrir Portal CSC</a>
+    <div id="fechamentoAjuda" hidden role="status" aria-live="polite">Sua confirmação já está registrada. O Safari do iPhone não permite fechar automaticamente esta aba aberta por uma notificação. Use o controle de abas do navegador para fechá-la ou volte ao aplicativo anterior.</div>
   </main>
   <script>
   (function(){
@@ -39,7 +32,7 @@
     var token=String(new URLSearchParams(location.search).get('t')||'').trim().toLowerCase();
     var estado=document.getElementById('estado'),botao=document.getElementById('confirmar'),fechar=document.getElementById('fecharNotificacao');
     var individual=false,ciente=false;
-    function mostrarFechar(){if(individual&&ciente)fechar.hidden=false}
+    function mostrarFechar(){if(ciente)fechar.hidden=false}
     try{history.replaceState(null,'',location.pathname)}catch(e){}
     function mostrar(msg,tipo){estado.textContent=msg;estado.className=tipo||''}
     function rid(prefix){return prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10)}
@@ -80,29 +73,25 @@
     botao.addEventListener('click',function(){
       botao.disabled=true;mostrar('Registrando sua ciência…','');
       executar('publico_mensagem_ciente_token',function(r){
-        if(r&&r.ok===true&&r.ciente===true){ciente=true;mostrar('✅ Ciência registrada. O TACS poderá verificar que este aviso foi confirmado.','ok');botao.textContent='✅ Ciência confirmada';mostrarFechar();return}
+        if(r&&r.ok===true&&r.ciente===true){ciente=true;mostrar('✅ Ciência registrada. O TACS poderá verificar que este aviso foi confirmado.','ok');botao.hidden=true;mostrarFechar();return}
         botao.disabled=false;mostrar((r&&r.message)||'Não foi possível registrar sua ciência. Tente novamente.','erro')
       })
     });
-    fechar.addEventListener('click',function(){
-      if(!ciente||!individual)return;
-      /* Exibir a conclusão ANTES de qualquer tentativa de fechar.
-         No Safari iOS, window.close() pode deixar uma aba inteiramente branca. */
-      var main=document.querySelector('main'),saida=document.getElementById('saida');
-      Array.prototype.forEach.call(main.children,function(node){
-        if(node!==saida)node.hidden=true;
-      });
-      saida.hidden=false;
-      document.title='Notificação encerrada — Portal CSC';
-      document.body.style.background='#e8f5f9';
-      var isIOS=/iPad|iPhone|iPod/i.test(navigator.userAgent||'')||
-        (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-      /* Apenas janelas criadas por script, em outros navegadores, podem
-         ser fechadas com segurança. A aba do Safari não é encerrável via JS. */
-      if(!isIOS&&window.opener&&window.opener!==window){
+    function fecharAviso(){
+      /* O próprio gesto no botão tenta voltar sem criar uma nova página.
+         O iOS não permite fechar abas abertas por uma notificação Push. */
+      if(window.opener&&window.opener!==window){
         try{window.close()}catch(e){}
       }
-    });
+      var sameOrigin=false;
+      try{sameOrigin=Boolean(document.referrer&&new URL(document.referrer).origin===location.origin)}catch(e){}
+      if(sameOrigin&&history.length>1){history.back();return}
+      var ajuda=document.getElementById('fechamentoAjuda');
+      if(ajuda)ajuda.hidden=false;
+      var botaoFechar=document.getElementById('fecharNotificacao');
+      if(botaoFechar){botaoFechar.disabled=true;botaoFechar.textContent='✓ Confirmação já registrada'}
+    }
+    fechar.addEventListener('click',function(){if(ciente)fecharAviso()});
   }());
   </script>
 </body>
