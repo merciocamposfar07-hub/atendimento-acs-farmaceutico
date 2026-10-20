@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#06396e">
+<meta name="theme-color" content="#05305f">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="apple-mobile-web-app-title" content="CSC Gestão">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2232,7 +2232,7 @@ function buildAppbar(){
       });
       var tempoDecorrido=splashAnim&&Number.isFinite(splashAnim.currentTime)?splashAnim.currentTime:0;
       var inicio=performance.now()-tempoDecorrido;
-      var corA=[6,57,110],corB=[7,24,39],ultimaCor='',aberturaConcluida=false;
+      var corA=[5,48,95],corB=[7,24,39],ultimaCor='',aberturaConcluida=false;
       var pintarCor=function(){
         if(aberturaConcluida)return;
         var ms=performance.now()-inicio;
@@ -2976,11 +2976,9 @@ html body .viewer.csc-native-viewer>.viewer-platform-footer{
 <link rel="preload" as="image" type="image/webp" href="/atendimento-acs-farmaceutico/assets/csc-opening/csc-abertura-central-iphone-full.webp">
 <style id="csc-opening-visual-style">
 /* CSC_SPLASH_VISUAL_V1: camada visual isolada, sem alterar PIN, login, dados ou funções. */
-#csc-opening-layer{position:fixed;inset:0;width:100%;height:100%;height:100dvh;z-index:2147483647;background:#06437a;pointer-events:none;isolation:isolate;overflow:hidden;animation:csc-opening-out 2.8s linear both}
+#csc-opening-layer{position:fixed;inset:0;width:100%;height:100%;height:100dvh;z-index:2147483647;background:#05305f;pointer-events:none;isolation:isolate;overflow:hidden;animation:csc-opening-out 2.8s linear both}
 #csc-opening-layer::before{content:"";position:absolute;inset:-22px;background-image:var(--csc-opening-url);background-position:center;background-size:cover;filter:blur(18px);opacity:.85}
 #csc-opening-layer>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;display:block}
-/* A continuidade da cor no topo integra a arte e desaparece junto com ela. */
-#csc-opening-layer::after{content:"";position:absolute;z-index:1;top:0;left:0;right:0;height:clamp(110px,15svh,190px);pointer-events:none;background:linear-gradient(to bottom,#06396e 0%,rgba(6,57,110,.92) 10%,rgba(6,57,110,.55) 38%,rgba(6,57,110,0) 100%)}
 
 
 @keyframes csc-opening-out{0%,62%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
