@@ -12,8 +12,8 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/atendimento-acs-farmaceutico/app-icons/csc-gestao-oficial-20260920.png",
-      "sizes": "512x512",
+      "src": "/atendimento-acs-farmaceutico/app-icons/csc-morador-oficial-180-20260920-v3.png",
+      "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     }
