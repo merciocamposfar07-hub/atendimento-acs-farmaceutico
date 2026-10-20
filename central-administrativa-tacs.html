@@ -2940,6 +2940,8 @@ html body .viewer.csc-native-viewer>.viewer-platform-footer{
 #csc-opening-layer{position:fixed;left:0;right:0;top:calc(0px - env(safe-area-inset-top, 0px));bottom:calc(0px - env(safe-area-inset-bottom, 0px));width:100vw;height:auto;z-index:2147483647;background:#06437a;pointer-events:none;isolation:isolate;overflow:hidden;animation:csc-opening-out 2.8s linear both}
 #csc-opening-layer::before{content:"";position:absolute;inset:-22px;background-image:var(--csc-opening-url);background-position:center;background-size:cover;filter:blur(18px);opacity:.85}
 #csc-opening-layer>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+/* CSC_SPLASH_SEAMLESS_IOS_V2: harmoniza o limite do topo com o céu sem alterar imagem nem enquadramento. */
+#csc-opening-layer::after{content:"";position:absolute;z-index:1;top:0;left:0;right:0;height:clamp(126px,15svh,180px);pointer-events:none;background:linear-gradient(to bottom,#06396e 0%,rgba(6,57,110,.56) 25%,rgba(6,57,110,.25) 50%,rgba(6,57,110,.06) 75%,rgba(6,57,110,0) 100%)}
 @keyframes csc-opening-out{0%,85.7%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
 @media(prefers-reduced-motion:reduce){#csc-opening-layer{animation-timing-function:steps(1,end)}}
 </style>
