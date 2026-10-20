@@ -2232,8 +2232,9 @@ function buildAppbar(){
       });
       var tempoDecorrido=splashAnim&&Number.isFinite(splashAnim.currentTime)?splashAnim.currentTime:0;
       var inicio=performance.now()-tempoDecorrido;
-      var corA=[6,57,110],corB=[7,24,39],ultimaCor='';
+      var corA=[6,57,110],corB=[7,24,39],ultimaCor='',aberturaConcluida=false;
       var pintarCor=function(){
+        if(aberturaConcluida)return;
         var ms=performance.now()-inicio;
         var progresso=Math.max(0,Math.min(1,(ms-1736)/1064));
         var rgb=corA.map(function(v,i){
@@ -2251,6 +2252,7 @@ function buildAppbar(){
       requestAnimationFrame(pintarCor);
       var concluirAbertura=function(event){
         if(event.target!==splash || event.animationName!=='csc-opening-out')return;
+        aberturaConcluida=true;
         meta.setAttribute('content','#071827');
         splash.removeEventListener('animationend',concluirAbertura);
       };
