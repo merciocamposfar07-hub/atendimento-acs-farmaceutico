@@ -12,8 +12,8 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/atendimento-acs-farmaceutico/app-icons/csc-morador-oficial-180-20260920-v3.png",
-      "sizes": "180x180",
+      "src": "/atendimento-acs-farmaceutico/app-icons/conecta-saude-comunitaria-oficial-cplus-20260921-v5.png",
+      "sizes": "144x144",
       "type": "image/png",
       "purpose": "any"
     }
