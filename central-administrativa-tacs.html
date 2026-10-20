@@ -2221,7 +2221,20 @@ function buildAppbar(){
   document.body.classList.add('csc-brand-enhanced');
   document.body.classList.toggle('csc-central',CENTRAL);
   var meta=document.querySelector('meta[name="theme-color"]');
-  if(meta)meta.setAttribute('content','#071827');
+  if(meta){
+    var splash=document.getElementById('csc-opening-layer');
+    if(splash && getComputedStyle(splash).visibility!=='hidden'){
+      /* A cor da barra superior só volta ao tema administrativo após o fade. */
+      var concluirAbertura=function(event){
+        if(event.target!==splash || event.animationName!=='csc-opening-out')return;
+        meta.setAttribute('content','#071827');
+        splash.removeEventListener('animationend',concluirAbertura);
+      };
+      splash.addEventListener('animationend',concluirAbertura);
+    }else{
+      meta.setAttribute('content','#071827');
+    }
+  }
 }
 
 function markAuthControls(){
@@ -2941,19 +2954,6 @@ html body .viewer.csc-native-viewer>.viewer-platform-footer{
 #csc-opening-layer::before{content:"";position:absolute;inset:-22px;background-image:var(--csc-opening-url);background-position:center;background-size:cover;filter:blur(18px);opacity:.85}
 #csc-opening-layer>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;display:block}
 
-/* CSC_ADMIN_SPLASH_SINCRONIZADO_V2: a borda superior usa a MESMA imagem,
-   no MESMO enquadramento da abertura, sem faixa de cor independente. */
-#csc-opening-status-surface{
-  position:fixed;inset:0 0 auto 0;width:100%;
-  height:max(64px,env(safe-area-inset-top,0px));
-  z-index:2147483647;pointer-events:none;overflow:hidden;
-  background:#071827;animation:csc-opening-out 2.8s linear both;
-}
-#csc-opening-status-surface>img{
-  position:absolute;inset:0;width:100%;height:100dvh;
-  max-width:none;max-height:none;display:block;
-  object-fit:cover;object-position:center center;
-}
 
 @keyframes csc-opening-out{0%,85.7%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
 @media(prefers-reduced-motion:reduce){#csc-opening-layer{animation-timing-function:steps(1,end)}}
@@ -2961,7 +2961,6 @@ html body .viewer.csc-native-viewer>.viewer-platform-footer{
 </head>
 <body class="csc-brand-enhanced csc-central">
 <div id="csc-opening-layer" aria-hidden="true" style="--csc-opening-url:url('/atendimento-acs-farmaceutico/assets/csc-opening/csc-abertura-central-iphone-full.webp')"><img src="/atendimento-acs-farmaceutico/assets/csc-opening/csc-abertura-central-iphone-full.webp" alt="PORTAL CSC – Central Administrativa – Conecta Saúde Comunitária" fetchpriority="high" decoding="async"></div>
-<div id="csc-opening-status-surface" aria-hidden="true"><img src="/atendimento-acs-farmaceutico/assets/csc-opening/csc-abertura-central-iphone-full.webp" alt="" decoding="async"></div>
 <div id="cscInstitutionalAppbar" class="csc-appbar" role="banner"><img class="csc-appbar-icon" src="/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=69a1f1ba696e" alt="Ícone oficial do Conecta Saúde Comunitária"><div class="csc-appbar-title"><small>CONECTA SAÚDE COMUNITÁRIA</small><strong>Central Administrativa</strong></div></div>
 <nav id="cscInstitutionalDock" class="csc-dock" aria-label="Navegação da Central"><button type="button" class="csc-navitem active" data-csc-dock="home"><i>⌂</i><span>Início</span></button><button type="button" class="csc-navitem" data-csc-dock="profile"><i>●</i><span>Perfil</span></button></nav>
 <header><span class="badge">CENTRAL ADMINISTRATIVA TACS</span><h1>Seus painéis em um só lugar</h1><p>Um único acesso para administrar a área, sem misturar a lógica interna dos módulos.</p></header>
