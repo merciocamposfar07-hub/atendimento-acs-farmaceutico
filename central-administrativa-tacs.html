@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#073a55">
+<meta name="theme-color" content="#06396e">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="apple-mobile-web-app-title" content="CSC Gestão">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2224,7 +2224,31 @@ function buildAppbar(){
   if(meta){
     var splash=document.getElementById('csc-opening-layer');
     if(splash && getComputedStyle(splash).visibility!=='hidden'){
-      /* A cor da barra superior só volta ao tema administrativo após o fade. */
+      /* Sincroniza a barra superior com os 2,8 s da camada visual;
+         o fade ocorre nos 38% finais, sem alterar os painéis. */
+      var animacoes=typeof splash.getAnimations==='function'?splash.getAnimations():[];
+      var splashAnim=animacoes.find(function(anim){
+        return anim.animationName==='csc-opening-out';
+      });
+      var tempoDecorrido=splashAnim&&Number.isFinite(splashAnim.currentTime)?splashAnim.currentTime:0;
+      var inicio=performance.now()-tempoDecorrido;
+      var corA=[6,57,110],corB=[7,24,39],ultimaCor='';
+      var pintarCor=function(){
+        var ms=performance.now()-inicio;
+        var progresso=Math.max(0,Math.min(1,(ms-1736)/1064));
+        var rgb=corA.map(function(v,i){
+          return Math.round(v+(corB[i]-v)*progresso);
+        });
+        var cor='#'+rgb.map(function(v){return v.toString(16).padStart(2,'0');}).join('');
+        if(cor!==ultimaCor){
+          meta.setAttribute('content',cor);
+          ultimaCor=cor;
+        }
+        if(progresso<1 && getComputedStyle(splash).visibility!=='hidden'){
+          requestAnimationFrame(pintarCor);
+        }
+      };
+      requestAnimationFrame(pintarCor);
       var concluirAbertura=function(event){
         if(event.target!==splash || event.animationName!=='csc-opening-out')return;
         meta.setAttribute('content','#071827');
@@ -2953,9 +2977,11 @@ html body .viewer.csc-native-viewer>.viewer-platform-footer{
 #csc-opening-layer{position:fixed;inset:0;width:100%;height:100%;height:100dvh;z-index:2147483647;background:#06437a;pointer-events:none;isolation:isolate;overflow:hidden;animation:csc-opening-out 2.8s linear both}
 #csc-opening-layer::before{content:"";position:absolute;inset:-22px;background-image:var(--csc-opening-url);background-position:center;background-size:cover;filter:blur(18px);opacity:.85}
 #csc-opening-layer>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;display:block}
+/* A continuidade da cor no topo integra a arte e desaparece junto com ela. */
+#csc-opening-layer::after{content:"";position:absolute;z-index:1;top:0;left:0;right:0;height:clamp(110px,15svh,190px);pointer-events:none;background:linear-gradient(to bottom,#06396e 0%,rgba(6,57,110,.92) 10%,rgba(6,57,110,.55) 38%,rgba(6,57,110,0) 100%)}
 
 
-@keyframes csc-opening-out{0%,85.7%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
+@keyframes csc-opening-out{0%,62%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
 @media(prefers-reduced-motion:reduce){#csc-opening-layer{animation-timing-function:steps(1,end)}}
 </style>
 </head>
