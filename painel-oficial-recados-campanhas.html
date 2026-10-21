@@ -2822,7 +2822,44 @@ function aplicarContextoVisualDoSnapshot(r){
   renderManutencao();
   atualizarBloqueioMutacoes();
 }
-function aplicar(r,doSnapshot){dados.recados=Array.isArray(r.recados)?r.recados:[];dados.campanhas=Array.isArray(r.campanhas)?r.campanhas:[];document.getElementById('conteudo').classList.remove('oculto');document.getElementById('resumo').classList.remove('oculto');sair.disabled=false;if(doSnapshot){var temContexto=Array.isArray(r&&r.areas)&&r.areas.length>0&&r&&r.manutencao&&typeof r.manutencao==='object';if(temContexto)aplicarContextoVisualDoSnapshot(r);else{contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;document.getElementById('areaEnvioBox').classList.add('oculto');document.getElementById('manutencaoBox').classList.add('oculto')}render();return}confirmarContextoSemRender(r);render();salvarSnapshot(r)}
+/* EDICAO_PUBLICACOES_PRESERVADA_20261021:
+   atualização de dados e verificação OneSignal não reconstroem formulários em uso. */
+function publicacoesEmEdicao(){
+  var foco=document.activeElement,conteudo=document.getElementById('conteudo');
+  var seletor='#listaRecados .item, #listaCampanhas .item, #formNovoRecado, #formNovaCampanha';
+  var focoEditavel=Boolean(foco&&foco.matches&&foco.matches('input,select,textarea')&&foco.closest(seletor));
+  return Boolean(conteudo&&conteudo.querySelector('[data-csc-rascunho="1"]'))||focoEditavel;
+}
+function acompanharRascunhosPublicacoes(evento){
+  var alvo=evento.target;
+  if(!alvo||!alvo.matches||!alvo.matches('input,select,textarea')||alvo.readOnly||alvo.disabled)return;
+  var cartao=alvo.closest('#listaRecados .item, #listaCampanhas .item, #formNovoRecado, #formNovaCampanha');
+  if(cartao)cartao.dataset.cscRascunho='1';
+}
+document.addEventListener('input',acompanharRascunhosPublicacoes,true);
+document.addEventListener('change',acompanharRascunhosPublicacoes,true);
+function encerrarRascunhoPublicacaoSalva(formulario){
+  if(formulario&&formulario.dataset)delete formulario.dataset.cscRascunho;
+  if(!publicacoesEmEdicao())render();
+}
+function aplicar(r,doSnapshot){
+  var preservarFormulario=publicacoesEmEdicao()&&!document.getElementById('conteudo').classList.contains('oculto');
+  dados.recados=Array.isArray(r.recados)?r.recados:[];
+  dados.campanhas=Array.isArray(r.campanhas)?r.campanhas:[];
+  document.getElementById('conteudo').classList.remove('oculto');
+  document.getElementById('resumo').classList.remove('oculto');
+  sair.disabled=false;
+  if(doSnapshot){
+    var temContexto=Array.isArray(r&&r.areas)&&r.areas.length>0&&r&&r.manutencao&&typeof r.manutencao==='object';
+    if(temContexto)aplicarContextoVisualDoSnapshot(r);
+    else{contextoPronto=false;manutencaoConhecida=false;podeAdministrar=false;document.getElementById('areaEnvioBox').classList.add('oculto');document.getElementById('manutencaoBox').classList.add('oculto')}
+    if(preservarFormulario){atualizarContagensPublicacoes();atualizarBloqueioMutacoes()}else render();
+    return;
+  }
+  confirmarContextoSemRender(r);
+  if(preservarFormulario){atualizarContagensPublicacoes();atualizarBloqueioMutacoes()}else render();
+  salvarSnapshot(r);
+}
 function confirmarContextoSemRender(r){areas=Array.isArray(r&&r.areas)?r.areas:[];areaId=txt(r&&r.areaId||areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'')||areaId;podeAdministrar=r&&r.podeAdministrar===true;accessMode=r&&r.perfil==='TACS'?'tacs':(r&&r.perfil==='UBS'?'ubs':accessMode==='ubs'?'ubs':'admin');var m=r&&r.manutencao||{};manutencaoAtiva=bool(m.ativa);manutencaoConhecida=true;contextoPronto=true;snapshotVisivel=false;snapshotReconexaoTentativas=0;cancelarReconexaoSnapshot();document.getElementById('manutencaoBox').classList.remove('oculto');renderAreas();renderManutencao();atualizarBloqueioMutacoes()}
 function renderAreas(){var box=document.getElementById('areaEnvioBox'),select=document.getElementById('areaEnvio');select.innerHTML=areas.map(function(a){return'<option value="'+esc(a.areaId)+'">'+esc(a.areaNome||a.areaId)+'</option>'}).join('');if(areas.some(function(a){return txt(a.areaId)===areaId}))select.value=areaId;else if(areas.length)areaId=txt(areas[0].areaId);select.value=areaId;var atual=areas.find(function(a){return txt(a.areaId)===areaId});document.getElementById('areaEnvioTexto').textContent='Envios e manutenção serão aplicados somente a '+txt(atual&&atual.areaNome||areaId)+'. O servidor confere esse escopo novamente.';box.classList.toggle('oculto',!areas.length);atualizarBloqueioMutacoes()}
 function carregarAreas(cb){post('admin_moradores_areas',sessao(),function(r){if(!r||r.ok!==true||!Array.isArray(r.areas)||!r.areas.length){areas=[];contextoPronto=false;renderAreas();manutencaoConhecida=false;status('statusOperacao','Não foi possível validar as áreas. Notificações e manutenção foram bloqueadas por segurança.','erro');if(cb)cb(false,r);return}areas=r.areas;areaId=txt(r.areaId||areaId).toUpperCase().replace(/[^A-Z0-9_-]/g,'')||areaId;renderAreas();if(cb)cb(true,r)},'admin_moradores_result')}
@@ -3087,7 +3124,25 @@ window.addEventListener('pageshow',retomarSaudeConferencia);
 window.addEventListener('pagehide',cancelarProximaSaudeConferencia);
 function solicitarReparoNotificacoesArea(){if(!(token||territorioToken)||ativa)return;var atual=areas.find(function(a){return txt(a.areaId)===areaId}),nome=txt(atual&&atual.areaNome||areaId);if(!confirm('Solicitar reparo das notificações para os aparelhos identificados de '+nome+'? Cada aparelho será orientado quando abrir o Portal TACS.'))return;status('saudeNotificacoesStatus','Registrando solicitação de reparo para '+nome+'…','aviso');post('admin_notificacoes_solicitar_reparo_area',sessao(),function(r){if(!r||r.ok!==true){status('saudeNotificacoesStatus',txt(r&&r.message||'Não foi possível solicitar o reparo.'),'erro');return}status('saudeNotificacoesStatus','Reparo solicitado. Os aparelhos serão orientados na próxima abertura do Portal.','ok');setTimeout(carregarSaudeNotificacoes,250)},'admin_notificacoes_saude_result')}
 
-function render(){document.getElementById('qRecados').textContent=dados.recados.length;document.getElementById('qRecadosAtivos').textContent=dados.recados.filter(function(x){return bool(x.ATIVO)}).length;document.getElementById('qCampanhas').textContent=dados.campanhas.length;document.getElementById('qCampanhasAtivas').textContent=dados.campanhas.filter(function(x){return bool(x.ATIVO)}).length;renderRecados();renderCampanhas();atualizarBloqueioMutacoes()}
+function atualizarContagensPublicacoes(){
+  document.getElementById('qRecados').textContent=dados.recados.length;
+  document.getElementById('qRecadosAtivos').textContent=dados.recados.filter(function(x){return bool(x.ATIVO)}).length;
+  document.getElementById('qCampanhas').textContent=dados.campanhas.length;
+  document.getElementById('qCampanhasAtivas').textContent=dados.campanhas.filter(function(x){return bool(x.ATIVO)}).length;
+}
+function render(){
+  var abertasRecados=Array.from(document.querySelectorAll('#listaRecados details.item[open]')).map(function(el){return {id:el.dataset.id,legado:el.dataset.refExclusaoLegado}});
+  var abertasCampanhas=Array.from(document.querySelectorAll('#listaCampanhas details.item[open]')).map(function(el){return el.dataset.id});
+  atualizarContagensPublicacoes();
+  renderRecados();renderCampanhas();
+  document.querySelectorAll('#listaRecados details.item').forEach(function(el){
+    if(abertasRecados.some(function(a){return a.id===el.dataset.id&&a.legado===el.dataset.refExclusaoLegado}))el.open=true;
+  });
+  document.querySelectorAll('#listaCampanhas details.item').forEach(function(el){
+    if(abertasCampanhas.indexOf(el.dataset.id)!==-1)el.open=true;
+  });
+  atualizarBloqueioMutacoes();
+}
 function renderRecados(){
   var e=document.getElementById('listaRecados');
   if(!dados.recados.length){e.innerHTML='<div class="vazio">Nenhum recado cadastrado.</div>';return}
@@ -3170,7 +3225,7 @@ tentarEnvio();
 }
 function enviarComunicadoManutencao(){var titulo='PORTAL EM MANUTENÇÃO',mensagem='O Portal TACS está temporariamente em manutenção. Aguarde a liberação para fazer novas solicitações.';status('statusOperacao','Modo manutenção ativado. Enviando o comunicado somente à área '+areaId+'…','aviso');post('admin_publicar_notificacao',Object.assign(sessao(),{tipo:'recado',id:'PORTAL_MANUTENCAO_'+Date.now(),titulo:titulo,mensagem:mensagem,ativo:'true',meta:'area='+areaId+';tipo=MANUTENCAO',comunicadoManutencao:'true',forcarRepublicacao:'true',eventoPublicacao:requestId('manutencao')}),function(r){if(r&&r.ok===true&&r.push===true){status('statusOperacao','Portal em manutenção. O comunicado foi encaminhado individualmente; o recebimento será comprovado no relatório da notificação.','ok');return}if(r&&r.zeroAudience===true){status('statusOperacao','Portal em manutenção, mas nenhum aparelho com inscrição ativa foi encontrado na área '+areaId+'.','erro');return}status('statusOperacao','Portal em manutenção, mas o comunicado não foi encaminhado: '+txt(r&&r.message||'serviço de notificação indisponível.'),'aviso')})}
 function alternarManutencao(){if(!podeAdministrar){status('statusOperacao','Somente o administrador geral pode alterar o modo manutenção.','aviso');return}if(!manutencaoConhecida)return;var ativar=!manutencaoAtiva;var pergunta=ativar?'Ativar o modo manutenção? O Portal TACS será bloqueado para novas solicitações, os testes não gerarão notificações e um comunicado será enviado aos moradores inscritos.':'Desativar o modo manutenção e liberar novamente o Portal TACS?';if(!confirm(pergunta))return;var botao=document.getElementById('alternarManutencao');botao.disabled=true;status('statusOperacao',ativar?'Ativando modo manutenção…':'Desativando modo manutenção…','aviso');post(ativar?'admin_portal_manutencao_ativar':'admin_portal_manutencao_desativar',sessao(),function(r){if(!r||r.ok!==true){botao.disabled=false;status('statusOperacao',txt(r&&r.message||'Não foi possível alterar o modo manutenção.'),'erro');return}manutencaoAtiva=bool(r.ativa);manutencaoConhecida=true;renderManutencao();invalidarCachePublico();if(manutencaoAtiva&&r.alterada!==false){enviarComunicadoManutencao();return}if(manutencaoAtiva){status('statusOperacao','O Portal TACS já estava em manutenção. Nenhum comunicado repetido foi enviado.','ok');return}status('statusOperacao','Manutenção desativada. O Portal TACS foi liberado novamente.','ok')})}
-function salvar(tipo,c,id){var p=tipo==='recado'?payloadRecado(c,id):payloadCampanha(c,id);if(!p.titulo||!p.mensagem){status('statusOperacao','Título e mensagem são obrigatórios.','erro');return}if(!contextoMutacaoDisponivel()){status('statusOperacao','Aguarde a validação da sessão e da área antes de salvar.','aviso');return}var anterior=id?achar(tipo,id):null,idsAntes=mapaIds(tipo),evento=requestId('publicacao');if(!confirm('Gravar '+(tipo==='recado'?'este recado':'esta campanha')+' na planilha real?'))return;status('statusOperacao','Salvando a publicação…','aviso');post(tipo==='recado'?'admin_publicacoes_salvar_recado':'admin_publicacoes_salvar_campanha',p,function(r){if(!r||r.ok!==true){status('statusOperacao',txt(r&&r.message||'Falha no salvamento.'),'erro');return}var idResposta=txt(r.id||id),referencia=idResposta||evento,mensagemBase=tipo==='recado'?'Recado gravado e confirmado pelo servidor.':'Campanha gravada e confirmada pelo servidor.';enviarPushConfirmado(tipo,referencia,p,anterior,mensagemBase,evento,function(resultadoPush){relerAteConfirmar(function(){return localizarSalvo(tipo,idResposta,p,idsAntes)},function(ok,atual){if(ok&&atual){setUndo({acao:'salvar',tipo:tipo,anterior:anterior,id:txt(atual.ID)});status('statusOperacao',resultadoPush.mensagem+' Lista atualizada e opção Desfazer preparada.',resultadoPush.tipo);return}if(idResposta){setUndo({acao:'salvar',tipo:tipo,anterior:anterior,id:idResposta})}else{clearUndo()}status('statusOperacao',resultadoPush.mensagem+' A lista ainda está sincronizando; a gravação e a notificação não serão repetidas. Atualize o painel para habilitar Desfazer.',resultadoPush.tipo==='erro'?'erro':'aviso')})})})}
+function salvar(tipo,c,id){var p=tipo==='recado'?payloadRecado(c,id):payloadCampanha(c,id);if(!p.titulo||!p.mensagem){status('statusOperacao','Título e mensagem são obrigatórios.','erro');return}if(!contextoMutacaoDisponivel()){status('statusOperacao','Aguarde a validação da sessão e da área antes de salvar.','aviso');return}var anterior=id?achar(tipo,id):null,idsAntes=mapaIds(tipo),evento=requestId('publicacao');if(!confirm('Gravar '+(tipo==='recado'?'este recado':'esta campanha')+' na planilha real?'))return;status('statusOperacao','Salvando a publicação…','aviso');post(tipo==='recado'?'admin_publicacoes_salvar_recado':'admin_publicacoes_salvar_campanha',p,function(r){if(!r||r.ok!==true){status('statusOperacao',txt(r&&r.message||'Falha no salvamento.'),'erro');return}var idResposta=txt(r.id||id),referencia=idResposta||evento,mensagemBase=tipo==='recado'?'Recado gravado e confirmado pelo servidor.':'Campanha gravada e confirmada pelo servidor.';enviarPushConfirmado(tipo,referencia,p,anterior,mensagemBase,evento,function(resultadoPush){relerAteConfirmar(function(){return localizarSalvo(tipo,idResposta,p,idsAntes)},function(ok,atual){if(ok&&atual){setUndo({acao:'salvar',tipo:tipo,anterior:anterior,id:txt(atual.ID)});encerrarRascunhoPublicacaoSalva(c);status('statusOperacao',resultadoPush.mensagem+' Lista atualizada e opção Desfazer preparada.',resultadoPush.tipo);return}if(idResposta){setUndo({acao:'salvar',tipo:tipo,anterior:anterior,id:idResposta})}else{clearUndo()}status('statusOperacao',resultadoPush.mensagem+' A lista ainda está sincronizando; a gravação e a notificação não serão repetidas. Atualize o painel para habilitar Desfazer.',resultadoPush.tipo==='erro'?'erro':'aviso')})})})}
 function remover(tipo,id,refExclusaoLegado){
   id=txt(id);refExclusaoLegado=tipo==='recado'?txt(refExclusaoLegado):'';
   var lista=listaDoTipo(tipo);
