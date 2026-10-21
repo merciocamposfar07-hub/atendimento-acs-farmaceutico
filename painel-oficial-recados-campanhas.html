@@ -3032,7 +3032,7 @@ function atualizarSaudeNotificacoesRemota(silencioso){
     try{
       var ultimo=JSON.parse(localStorage.getItem(saudeResumoCacheKey())||'null');
       var idade=ultimo?Date.now()-Number(ultimo.salvoEm||0):SAUDE_CONFERENCIA_INTERVALO_MS;
-      if(ultimo&&ultimo.confirmadoOneSignal===true&&idade>=0&&idade<SAUDE_CONFERENCIA_INTERVALO_MS){
+      if(saudeFalhasConsecutivas===0&&ultimo&&ultimo.confirmadoOneSignal===true&&idade>=0&&idade<SAUDE_CONFERENCIA_INTERVALO_MS){
         restaurarSaudeResumo();
         agendarProximaSaudeConferencia(SAUDE_CONFERENCIA_INTERVALO_MS-idade,areaId);
         return;
