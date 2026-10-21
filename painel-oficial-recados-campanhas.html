@@ -2966,19 +2966,55 @@ function carregarSaudeNotificacoes(){
      A consulta remota é independente da leitura de Recados e de outras operações. */
   atualizarSaudeNotificacoesRemota(true);
 }
-var saudeRemotaEmCurso=false,saudeAutoRepeticoes={};
-function postSaudeNotificacoesIsolado(payload,cb){
+/* ONESIGNAL_CONFERENCIA_RESILIENTE_20261021
+   O aviso de 25 segundos é apenas informativo. A resposta continua sendo
+   consultada até 75 segundos com o mesmo requestId; falhas são reagendadas
+   progressivamente, sem consultas simultâneas ou perda de dados confirmados.
+   O monitoramento ocorre enquanto o painel está aberto/visível e autenticado. */
+var saudeRemotaEmCurso=false,saudeConferenciaTimer=null,saudeFalhasConsecutivas=0,saudeFalhasArea='';
+var SAUDE_CONFERENCIA_INTERVALO_MS=120000,SAUDE_CONFERENCIA_LIMITE_MS=75000;
+var SAUDE_CONFERENCIA_RETRY_MS=[5000,12000,30000,60000,120000];
+function cancelarProximaSaudeConferencia(){
+  if(saudeConferenciaTimer){clearTimeout(saudeConferenciaTimer);saudeConferenciaTimer=null}
+}
+function saudeConferenciaDisponivel(){
+  if(document.visibilityState==='hidden')return false;
+  syncCoreSession();
+  var secao=document.getElementById('saudeNotificacoes');
+  return Boolean(token||territorioToken||ubsToken)&&Boolean(secao&&!secao.classList.contains('oculto'));
+}
+function agendarProximaSaudeConferencia(atraso,areaDaConsulta){
+  cancelarProximaSaudeConferencia();
+  if(document.visibilityState==='hidden')return;
+  saudeConferenciaTimer=setTimeout(function(){
+    saudeConferenciaTimer=null;
+    if(saudeConferenciaDisponivel())atualizarSaudeNotificacoesRemota(true);
+  },Math.max(1000,Math.round(Number(atraso)||1000)));
+}
+function postSaudeNotificacoesIsolado(payload,cb,avisarDemora){
   var id=requestId('admin_notificacoes_saude_remota'),body=new URLSearchParams(),inicio=Date.now(),concluido=false;
-  var prazo=setTimeout(function(){terminar({ok:false,temporario:true,message:'Conferência encerrada após 25 segundos. Últimos dados confirmados mantidos.'})},25000);
+  var aviso=setTimeout(function(){
+    if(!concluido&&typeof avisarDemora==='function')avisarDemora();
+  },25000);
+  var prazo=setTimeout(function(){
+    terminar({ok:false,temporario:true,message:'A conferência atual do OneSignal ainda não foi confirmada. Últimos dados preservados.'});
+  },SAUDE_CONFERENCIA_LIMITE_MS);
   Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k])});
   body.set('action','admin_notificacoes_saude_remota');body.set('requestId',id);
-  function terminar(r){if(concluido)return;concluido=true;clearTimeout(prazo);cb(r||{ok:false,message:'Resposta vazia da conferência das notificações.'})}
+  function terminar(r){
+    if(concluido)return;
+    concluido=true;clearTimeout(aviso);clearTimeout(prazo);
+    cb(r||{ok:false,message:'Resposta vazia da conferência das notificações.'});
+  }
   function consultarResultado(){
     if(concluido)return;
     jsonp('admin_notificacoes_saude_result',{requestId:id},function(r){
       if(concluido)return;
       if(r&&r.ok===true&&r.pendente===false){terminar(r.result);return}
-      if(Date.now()-inicio>=25000){terminar({ok:false,temporario:true,message:'A conferência do OneSignal ainda está processando. Os últimos dados permanecem na tela.'});return}
+      if(Date.now()-inicio>=SAUDE_CONFERENCIA_LIMITE_MS){
+        terminar({ok:false,temporario:true,message:'A conferência atual do OneSignal ainda não foi confirmada. Últimos dados preservados.'});
+        return;
+      }
       setTimeout(consultarResultado,850);
     });
   }
@@ -2989,36 +3025,66 @@ function atualizarSaudeNotificacoesRemota(silencioso){
   syncCoreSession();
   if(!(token||territorioToken||ubsToken)||saudeRemotaEmCurso)return;
   var oculto=silencioso===true,botao=document.getElementById('atualizarSaudeNotificacoes');
+  if(oculto&&document.visibilityState==='hidden')return;
   if(oculto){
-    /* Ao voltar ao painel, reutilizar por 2 minutos o último resultado verificado. */
-    try{var ultimo=JSON.parse(localStorage.getItem(saudeResumoCacheKey())||'null');
-      if(ultimo&&ultimo.confirmadoOneSignal===true&&Date.now()-Number(ultimo.salvoEm||0)<120000){
+    /* Reutiliza um resultado confirmado recentemente e agenda a próxima consulta,
+       em vez de simplesmente encerrar o ciclo ao encontrar o cache. */
+    try{
+      var ultimo=JSON.parse(localStorage.getItem(saudeResumoCacheKey())||'null');
+      var idade=ultimo?Date.now()-Number(ultimo.salvoEm||0):SAUDE_CONFERENCIA_INTERVALO_MS;
+      if(ultimo&&ultimo.confirmadoOneSignal===true&&idade>=0&&idade<SAUDE_CONFERENCIA_INTERVALO_MS){
         restaurarSaudeResumo();
+        agendarProximaSaudeConferencia(SAUDE_CONFERENCIA_INTERVALO_MS-idade,areaId);
         return;
       }
     }catch(e){}
   }
+  cancelarProximaSaudeConferencia();
   var areaDaConsulta=areaId;
-  saudeRemotaEmCurso=true;if(botao&&!oculto)botao.disabled=true;
+  if(saudeFalhasArea!==areaDaConsulta){saudeFalhasArea=areaDaConsulta;saudeFalhasConsecutivas=0}
+  saudeRemotaEmCurso=true;
+  if(botao&&!oculto)botao.disabled=true;
   document.getElementById('saudeNotificacoes').classList.remove('oculto');
   if(!oculto)status('saudeNotificacoesStatus','Conferindo o estado atual no OneSignal…','aviso');
   postSaudeNotificacoesIsolado(sessao(),function(remoto){
-    saudeRemotaEmCurso=false;if(botao)botao.disabled=false;
-    if(areaDaConsulta!==areaId)return;
-    if(remoto&&remoto.ok===true&&remoto.oneSignalConsultado===true){
-      saudeAutoRepeticoes[areaDaConsulta]=0;
-      renderSaudeNotificacoes(remoto);return;
-    }
-    /* Uma única segunda tentativa automática quando a primeira perde o prazo. */
-    if(oculto&&!saudeAutoRepeticoes[areaDaConsulta]){
-      saudeAutoRepeticoes[areaDaConsulta]=1;
-      status('saudeNotificacoesStatus','A consulta demorou. Nova tentativa automática em segundo plano; últimos dados confirmados preservados.','aviso');
-      setTimeout(function(){if(areaDaConsulta===areaId)atualizarSaudeNotificacoesRemota(true)},1500);
+    saudeRemotaEmCurso=false;
+    if(botao)botao.disabled=false;
+    if(areaDaConsulta!==areaId){
+      saudeFalhasConsecutivas=0;saudeFalhasArea=areaId;
+      agendarProximaSaudeConferencia(1000,areaId);
       return;
     }
-    status('saudeNotificacoesStatus',txt(remoto&&remoto.message||'Consulta encerrada sem nova confirmação. Últimos dados verificados mantidos.'),'aviso');
+    if(remoto&&remoto.ok===true&&remoto.oneSignalConsultado===true){
+      saudeFalhasConsecutivas=0;
+      renderSaudeNotificacoes(remoto);
+      agendarProximaSaudeConferencia(SAUDE_CONFERENCIA_INTERVALO_MS,areaDaConsulta);
+      return;
+    }
+    saudeFalhasConsecutivas++;
+    var indice=Math.min(saudeFalhasConsecutivas-1,SAUDE_CONFERENCIA_RETRY_MS.length-1);
+    var espera=SAUDE_CONFERENCIA_RETRY_MS[indice];
+    var detalhe=txt(remoto&&remoto.message||'A consulta não foi confirmada.');
+    status('saudeNotificacoesStatus',detalhe+' Nova tentativa automática em '+Math.round(espera/1000)+' segundos.','aviso');
+    agendarProximaSaudeConferencia(espera,areaDaConsulta);
+  },function(){
+    if(areaDaConsulta!==areaId)return;
+    status('saudeNotificacoesStatus','A consulta do OneSignal ultrapassou 25 segundos e continua em andamento. Últimos dados confirmados preservados.','aviso');
   });
 }
+/* Ao reabrir ou reconectar, retoma a conferência sem exigir toque manual.
+   Nenhuma consulta nova é iniciada enquanto o painel estiver em segundo plano. */
+function retomarSaudeConferencia(){
+  if(saudeRemotaEmCurso||!saudeConferenciaDisponivel())return;
+  cancelarProximaSaudeConferencia();
+  atualizarSaudeNotificacoesRemota(true);
+}
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='hidden')cancelarProximaSaudeConferencia();
+  else retomarSaudeConferencia();
+});
+window.addEventListener('online',retomarSaudeConferencia);
+window.addEventListener('pageshow',retomarSaudeConferencia);
+window.addEventListener('pagehide',cancelarProximaSaudeConferencia);
 function solicitarReparoNotificacoesArea(){if(!(token||territorioToken)||ativa)return;var atual=areas.find(function(a){return txt(a.areaId)===areaId}),nome=txt(atual&&atual.areaNome||areaId);if(!confirm('Solicitar reparo das notificações para os aparelhos identificados de '+nome+'? Cada aparelho será orientado quando abrir o Portal TACS.'))return;status('saudeNotificacoesStatus','Registrando solicitação de reparo para '+nome+'…','aviso');post('admin_notificacoes_solicitar_reparo_area',sessao(),function(r){if(!r||r.ok!==true){status('saudeNotificacoesStatus',txt(r&&r.message||'Não foi possível solicitar o reparo.'),'erro');return}status('saudeNotificacoesStatus','Reparo solicitado. Os aparelhos serão orientados na próxima abertura do Portal.','ok');setTimeout(carregarSaudeNotificacoes,250)},'admin_notificacoes_saude_result')}
 
 function render(){document.getElementById('qRecados').textContent=dados.recados.length;document.getElementById('qRecadosAtivos').textContent=dados.recados.filter(function(x){return bool(x.ATIVO)}).length;document.getElementById('qCampanhas').textContent=dados.campanhas.length;document.getElementById('qCampanhasAtivas').textContent=dados.campanhas.filter(function(x){return bool(x.ATIVO)}).length;renderRecados();renderCampanhas();atualizarBloqueioMutacoes()}
