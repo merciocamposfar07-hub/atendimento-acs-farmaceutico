@@ -774,7 +774,7 @@ function conectaAcessoV1RegistrosArea_(area){
   var range=fonte.sheet.getRange(fonte.headerRow+2,1,last-(fonte.headerRow+1),lastCol),raw=range.getValues(),display=range.getDisplayValues();
   for(var i=0;i<display.length;i++){
     var m=moradoresAdminV1MontarMorador_(display[i],raw[i],fonte.map),status=conectaAcessoV1Texto_(m.status||'ATIVO').toUpperCase();
-    if(!m.nome||['FORA_DA_AREA','TRANSFERIDO','FALECIDO','IMPORTACAO_DESFEITA','INATIVO'].indexOf(status)!==-1)continue;
+    if(!m.nome||['FORA_DA_AREA','TRANSFERIDO','FALECIDO','IMPORTACAO_DESFEITA','INATIVO','CONSOLIDADO'].indexOf(status)!==-1)continue;
     out.push({area:area,fonte:fonte,row:fonte.headerRow+2+i,morador:m,chave:moradoresAdminV1ChaveRegistro_(m)});
   }
   return out;
@@ -975,7 +975,7 @@ function conectaAcessoV1RegistrosFamiliaDiagnostico_(area,familia){
     var raw=faixa.getValues()[0],display=faixa.getDisplayValues()[0];
     var morador=moradoresAdminV1MontarMorador_(display,raw,fonte.map);
     var status=conectaAcessoV1Texto_(morador.status||'ATIVO').toUpperCase();
-    if(!morador.nome||['FORA_DA_AREA','TRANSFERIDO','FALECIDO','IMPORTACAO_DESFEITA','INATIVO'].indexOf(status)!==-1)return;
+    if(!morador.nome||['FORA_DA_AREA','TRANSFERIDO','FALECIDO','IMPORTACAO_DESFEITA','INATIVO','CONSOLIDADO'].indexOf(status)!==-1)return;
     var item={area:area,fonte:fonte,row:linha,morador:morador,chave:moradoresAdminV1ChaveRegistro_(morador)};
     if(conectaAcessoV1CodigoFamiliaItem_(item)===familia)out.push(item);
   });
