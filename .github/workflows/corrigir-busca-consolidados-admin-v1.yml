@@ -1,0 +1,125 @@
+name: Corrigir busca administrativa de consolidados v1
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/corrigir-busca-consolidados-admin-v1.yml'
+permissions:
+  contents: read
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar filtro no repositório
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('apps-script/ZZZZ_51_AcessoUnificadoConectaV1.gs').read_text()
+          term="['FORA_DA_AREA','TRANSFERIDO','FALECIDO','IMPORTACAO_DESFEITA','INATIVO','CONSOLIDADO']"
+          assert s.count(term+".indexOf(status)!==-1)continue;")==1
+          assert s.count(term+".indexOf(status)!==-1)return;")==1
+          PY
+      - name: Baixar projeto real sem alterar módulos
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+          LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),config=JSON.parse(process.env.CLASP_JSON);
+          if(!config.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId))throw Error('scriptId inválido');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+      - name: Aplicar patch exclusivamente nos dois filtros vivos
+        shell: bash
+        id: patch
+        run: |
+          set -euo pipefail
+          export LIVE_DIR="$RUNNER_TEMP/apps-script-live"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          live=Path(os.environ['LIVE_DIR'])
+          candidates=[p for p in live.rglob('*') if p.is_file() and p.suffix in {'.js','.gs'} and 'function conectaAcessoV1RegistrosArea_(' in p.read_text()]
+          if len(candidates)!=1:raise SystemExit('Busca administrativa não localizada de forma única; implantação bloqueada.')
+          target=candidates[0];before=target.read_text()
+          if 'function conectaAcessoV1RegistrosFamiliaDiagnostico_(' not in before:raise SystemExit('Busca familiar ausente; implantação bloqueada.')
+          old="['FORA_DA_AREA','TRANSFERIDO','FALECIDO','IMPORTACAO_DESFEITA','INATIVO']"
+          new="['FORA_DA_AREA','TRANSFERIDO','FALECIDO','IMPORTACAO_DESFEITA','INATIVO','CONSOLIDADO']"
+          after=before
+          for tail in ('.indexOf(status)!==-1)continue;','.indexOf(status)!==-1)return;'):
+              if after.count(new+tail)==1 and after.count(old+tail)==0:continue
+              if after.count(old+tail)!=1 or after.count(new+tail)!=0:raise SystemExit('Filtro vivo divergente. Nenhuma publicação.')
+              after=after.replace(old+tail,new+tail,1)
+          if after!=before:target.write_text(after)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('changed='+('true' if after!=before else 'false')+'\n')
+          print('Somente dois filtros revisados; demais funções preservadas. Alteração='+str(after!=before))
+          PY
+          TARGET=$(grep -rl 'function conectaAcessoV1RegistrosArea_(' "$LIVE_DIR" --include='*.js' --include='*.gs')
+          node --check --input-type=commonjs < "$TARGET"
+      - name: Publicar mesma implantação e validar rota pública
+        shell: bash
+        if: steps.patch.outputs.changed == 'true'
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/apps-script-live"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          npx --yes @google/clasp@3.3.0 push --force
+          VERSION_OUTPUT=$(npx --yes @google/clasp@3.3.0 version "Busca administrativa consolidados - ${GITHUB_SHA::7}")
+          NEW_VERSION=$(printf '%s\n' "$VERSION_OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$NEW_VERSION"
+          DEPLOYED=0
+          rollback() {
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback busca consolidados" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Busca administrativa sem registros consolidados" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          OK=0
+          for attempt in 1 2 3; do
+            RESULT=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=portal_manutencao_status&areaId=JAPARANDUBA") || true
+            if printf '%s' "$RESULT" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then OK=1; break; fi
+            sleep 6
+          done
+          test "$OK" = 1
+          trap - ERR
+          echo "Busca corrigida e publicada. Versão $NEW_VERSION."
+      - name: Limpar credenciais
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/apps-script-live/.clasp.json"
