@@ -2588,6 +2588,30 @@ try{visualObserver=new MutationObserver(function(){if(!window.__cscVisualGuardTi
 /* Evita que o Safari transforme esta página longa em uma camada recortada. */
 html{overflow-x:hidden!important;overflow-y:auto!important}body{overflow-x:hidden!important;overflow-y:visible!important}
 </style>
+<style id="cscSaudeIndicadoresLayoutEstavelV1">
+/* Correção exclusivamente visual: os quatro indicadores de Saúde das notificações
+   não podem esticar quando o Safari recalcula o tamanho da página durante a rolagem.
+   Não modifica leitura, filtros, eventos, sessão nem OneSignal. */
+#saudeNotificacoes .saude-resumo {
+  height:auto!important;
+  min-height:0!important;
+  grid-auto-rows:minmax(116px,max-content)!important;
+  align-content:start!important;
+  align-items:start!important;
+}
+#saudeNotificacoes .saude-resumo > button.saude-numero {
+  box-sizing:border-box!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  align-self:start!important;
+  width:100%!important;
+  height:116px!important;
+  min-height:116px!important;
+  max-height:116px!important;
+}
+</style>
 </head>
 <body>
 <header><span class="selo">PAINEL ADMINISTRATIVO OFICIAL</span><h1>Recados e campanhas</h1><p>Publicações administrativas do Portal TACS.</p></header>
