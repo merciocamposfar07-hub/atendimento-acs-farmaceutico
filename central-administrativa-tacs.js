@@ -5,6 +5,7 @@ var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorio
 var SHARED_WARM_KEY='portalTacsAppsScriptWarmAtV1';
 var HEALTH_REFRESH_TTL=30000,HEALTH_CACHE_TTL=300000,HEALTH_DISPLAY_CACHE_TTL=86400000,HEALTH_CACHE_PREFIX='portalTacsHealthConfirmedV1:',healthRefreshInFlight=false,lastHealthRefreshAt=0,lastHealthRefreshArea='',healthRefreshTimer=null;
 var NOTIFICATION_CONFIRMED_CACHE_PREFIX='portalTacsNotificationConfirmedV1:',notificationRemoteSeq=0,notificationRemoteArea='',notificationLatestStarted={};
+var notificationRecoveryTimer=null,notificationRecoveryArea='',notificationRecoveryFailures=0;
 var URL_PARAMS=new URLSearchParams(location.search);
 var ADMIN_TRUST_KEY='portalConectaRecoveryTrustV1:admin',ADMIN_LOCAL_VAULT_KEY='conectaPinLocalV3:admin';
 function adminDeviceRecognized(){
@@ -902,11 +903,13 @@ initUbsPush();
  * em paralelo, valida o estado atual no OneSignal.
  */
 function notificationCacheKey(areaId){return NOTIFICATION_CONFIRMED_CACHE_PREFIX+normArea(areaId)}
-function notificationCount(value){var n=Number(value);return Number.isFinite(n)&&n>=0?Math.floor(n):null}
+function notificationCount(value){if(value===null||value===undefined||value===''||typeof value==='boolean')return null;var n=Number(value);return Number.isFinite(n)&&n>=0&&Number.isInteger(n)?n:null}
 function normalizeConfirmedNotification(result,areaId){
   if(!result||result.ok!==true||result.oneSignalConsultado!==true)return null;
+  if(result.areaId&&normArea(result.areaId)!==normArea(areaId))return null;
   var c=result.contagens||{},ativos=notificationCount(c.ativos),inativos=notificationCount(c.inativos),reparo=notificationCount(c.reparo!=null?c.reparo:c.precisamReparo);
   if(ativos===null||inativos===null||reparo===null)return null;
+  if(result.confirmadoEm!=null&&(!Number.isFinite(Number(result.confirmadoEm))||Number(result.confirmadoEm)>Date.now()+120000))return null;
   return {
     ok:true,
     areaId:normArea(result.areaId||areaId),
@@ -922,7 +925,8 @@ function readConfirmedNotification(areaId){
   try{
     var raw=localStorage.getItem(notificationCacheKey(areaId));if(!raw)return null;
     var saved=JSON.parse(raw),confirmedAt=Number(saved&&saved.confirmadoEm||0),age=Date.now()-confirmedAt;
-    if(!saved||saved.oneSignalConsultado!==true||!confirmedAt||age<0||age>86400000)return null;
+    /* Último dado REAL não expira visualmente: exibir data para não sugerir medição atual. */
+    if(!saved||saved.oneSignalConsultado!==true||!confirmedAt||age<0)return null;
     return normalizeConfirmedNotification(saved,areaId);
   }catch(e){return null}
 }
@@ -936,15 +940,61 @@ function renderConfirmedNotification(result,areaId){
   var confirmed=normalizeConfirmedNotification(result,areaId);if(!confirmed||normArea(areaId)!==selectedAreaId)return false;
   var c=confirmed.contagens,label=c.ativos+' aptos • '+c.inativos+' inativos • '+c.reparo+' reparo';
   markHealth('healthNotifications',label,(c.inativos||c.reparo)?'warn':'ok');
+  notificationShowVerifiedAt(confirmed,'');
   updatePendingBadge(confirmed);
   return true;
 }
+/* Apenas contagens confirmadas pelo OneSignal; a etiqueta sempre informa quando
+   a conferência ocorreu. Nunca promove registro local ou consulta falha a 'atual'. */
+function notificationVerifiedTime(ms){
+  if(!Number.isFinite(Number(ms))||Number(ms)<=0)return '';
+  try{return new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',
+    day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(Number(ms)));}
+  catch(e){return ''}
+}
+function notificationShowVerifiedAt(snapshot,estado){
+  var card=el('healthNotifications');if(!card)return;
+  var detail=card.querySelector('[data-notification-verified-at]');
+  if(!detail){
+    detail=document.createElement('small');
+    detail.setAttribute('data-notification-verified-at','');
+    detail.style.cssText='display:block;margin-top:6px;color:#d8eef7;font-size:.72rem;font-weight:600;line-height:1.3;overflow-wrap:anywhere';
+    card.appendChild(detail);
+  }
+  var time=snapshot&&notificationVerifiedTime(snapshot.confirmadoEm);
+  detail.textContent=(time?'Última verificação OneSignal: '+time+' (Brasília)':'')+(estado?(time?' • ':'')+estado:'');
+}
+function notificationCancelRecovery(){
+  if(notificationRecoveryTimer){clearTimeout(notificationRecoveryTimer);notificationRecoveryTimer=null}
+  notificationRecoveryArea='';notificationRecoveryFailures=0;
+}
+function notificationScheduleRecovery(areaId){
+  if(normArea(areaId)!==selectedAreaId||!context||mode==='ubs')return;
+  if(notificationRecoveryTimer)clearTimeout(notificationRecoveryTimer);
+  notificationRecoveryArea=areaId;
+  var waits=[2500,6000,12000,30000,60000],delay=waits[Math.min(notificationRecoveryFailures,waits.length-1)];
+  notificationRecoveryFailures=Math.min(notificationRecoveryFailures+1,waits.length-1);
+  notificationRecoveryTimer=setTimeout(function(){
+    notificationRecoveryTimer=null;
+    if(notificationRecoveryArea!==areaId||selectedAreaId!==areaId||!context||mode==='ubs')return;
+    if(document.hidden||(typeof navigator!=='undefined'&&navigator.onLine===false))return;
+    refreshNotificationHealth(areaId,true);
+  },delay);
+}
+/* Retoma a consulta ao recuperar rede ou voltar ao aplicativo, sem recarregar
+   outros painéis e sem interferir no botão de confirmação do morador. */
+window.addEventListener('online',function(){
+  if(notificationRecoveryArea&&context&&mode!=='ubs')refreshNotificationHealth(notificationRecoveryArea,true);
+});
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&notificationRecoveryArea&&context&&mode!=='ubs')refreshNotificationHealth(notificationRecoveryArea,true);
+});
 function notificationPostIsolated(action,areaId,cb){
-  /* Consulta isolada: aguarda até 60s por tentativa e recupera falhas temporárias.
-     Cada tentativa usa um requestId próprio; respostas antigas não encerram a atual. */
-  var seq=++notificationRemoteSeq,finished=false,attempt=0,generation=0,maxAttempts=1,waitMs=18000;
+  /* Consulta isolada, sem bloquear a interface. Falhas de OneSignal são
+     recuperadas com novas consultas agendadas pelo painel, não por cliques. */
+  var seq=++notificationRemoteSeq,finished=false,attempt=0,generation=0,maxAttempts=1,waitMs=28000;
   /* Consulta OneSignal limitada: nao manter o usuario esperando por minutos. */
-  var deadline=setTimeout(function(){finish({ok:false,temporario:true,message:'Consulta OneSignal encerrada após 20 segundos. Última situação confirmada preservada.'})},20000);
+  var deadline=setTimeout(function(){finish({ok:false,temporario:true,message:'Consulta OneSignal encerrada após 30 segundos. Última situação confirmada preservada.'})},30000);
   if(action==='admin_notificacoes_saude_remota')notificationLatestStarted[normArea(areaId)]=seq;
   function current(run){return !finished&&run===generation}
   function finish(result){if(finished)return;finished=true;clearTimeout(deadline);generation++;cb(result||{ok:false,message:'Resposta vazia.'},seq)}
@@ -1054,36 +1104,42 @@ function renderHealthInstant(areaId){
 function refreshNotificationHealth(areaId,force){
   areaId=normArea(areaId);
   if(!permission('PUBLICACOES_GERENCIAR')){markHealth('healthNotifications','Sem permissão','warn');return}
-
-  /* NOTIFICACOES_FONTE_UNICA_ATUAL_V2:
-     A Central não apresenta mais snapshot do navegador nem cache rápido como número atual.
-     Em cada entrada/atualização, mostra "Confirmando…" e só publica contagens após
-     uma consulta remota concluída ao OneSignal. Isso elimina a troca visual entre
-     "última confirmação" e "confirmação atual". */
-  if(notificationRemoteArea===areaId&&!force)return;
-  notificationRemoteArea=areaId;
   var confirmadoAnterior=readConfirmedNotification(areaId);
-  if(confirmadoAnterior){
-    renderConfirmedNotification(confirmadoAnterior,areaId);
-    /* Ao voltar à Central, não repetir consulta recém-confirmada. O botão Atualizar continua forçando nova leitura. */
-    if(!force&&Date.now()-Number(confirmadoAnterior.confirmadoEm||0)<120000){notificationRemoteArea='';return}
-  }else{
-    markHealth('healthNotifications','Confirmando…','');
+  if(confirmadoAnterior)renderConfirmedNotification(confirmadoAnterior,areaId);
+  /* Não iniciar múltiplas exportações OneSignal, nem depois de toques repetidos. */
+  if(notificationRemoteArea===areaId){
+    if(confirmadoAnterior)notificationShowVerifiedAt(confirmadoAnterior,'Atualizando em segundo plano');
+    return;
   }
-
+  if(!force&&confirmadoAnterior&&Date.now()-Number(confirmadoAnterior.confirmadoEm)<120000){
+    notificationCancelRecovery();return;
+  }
+  /* Troca de área: descarta retentativa anterior e invalida sua apresentação. */
+  if(notificationRecoveryArea&&notificationRecoveryArea!==areaId)notificationCancelRecovery();
+  notificationRemoteArea=areaId;
+  if(confirmadoAnterior)notificationShowVerifiedAt(confirmadoAnterior,'Atualizando em segundo plano');
+  else{
+    markHealth('healthNotifications','Consultando aparelhos…','');
+    notificationShowVerifiedAt(null,'Aguardando primeira contagem verificada');
+  }
   notificationPostIsolated('admin_notificacoes_saude_remota',areaId,function(remote,seq){
     if(seq!==notificationLatestStarted[areaId])return;
     if(notificationRemoteArea===areaId)notificationRemoteArea='';
-    var confirmed=saveConfirmedNotification(remote,areaId);
-    if(confirmed){renderConfirmedNotification(confirmed,areaId);return}
-    if(areaId!==selectedAreaId)return;
-    if(confirmadoAnterior){renderConfirmedNotification(confirmadoAnterior,areaId);return}
-    markHealth('healthNotifications','Sem confirmação','warn');
+    var confirmado=saveConfirmedNotification(remote,areaId);
+    if(confirmado){
+      notificationCancelRecovery();
+      renderConfirmedNotification(confirmado,areaId);
+      return;
+    }
+    if(areaId!==selectedAreaId||mode==='ubs')return;
+    /* Não apagar números reais por timeout nem substituí-los por zeros. */
+    var anterior=readConfirmedNotification(areaId)||confirmadoAnterior;
+    if(anterior)renderConfirmedNotification(anterior,areaId);
+    else markHealth('healthNotifications','Consulta temporariamente indisponível','warn');
+    notificationShowVerifiedAt(anterior,'Nova tentativa automática');
+    notificationScheduleRecovery(areaId);
   });
 }
-/* CORRECAO_CIRURGICA_DESEMPENHO_PAINEIS_20260913_V1
-   A Central entrega primeiro o último estado válido e os painéis já preparados.
-   A validação remota continua em segundo plano e não ocupa o caminho crítico do toque. */
 function scheduleHealthRefresh(force,delay){
   if(healthRefreshTimer){clearTimeout(healthRefreshTimer);healthRefreshTimer=null}
   healthRefreshTimer=setTimeout(function(){
