@@ -10,7 +10,7 @@ assert.ok(script,'Página de confirmação precisa conter script');
 new Function(script[1]);
 
 function sheet(name,headers,lines){
-  const rows=[headers].concat(lines);
+  const rows=headers.length?[headers].concat(lines):[];
   return {
     getLastRow:()=>rows.length,
     getLastColumn:()=>rows[0].length,
@@ -33,7 +33,12 @@ const ss={
   sheets:{
     TACS_NOTIFICACOES_COMPROVANTES:sheet('comprovantes',receiptHeaders,[]),
     RECADOS_PORTAL:sheet('recados',['ID','AREA_ID','TITULO','MENSAGEM'],
-      [['RECADO_OLD','JAPARANDUBA','Recado já enviado','Segunda-feira não haverá atendimento na unidade']])
+      [['RECADO_OLD','JAPARANDUBA','Recado já enviado','Segunda-feira não haverá atendimento na unidade']]),
+    TACS_AUDIT_NOTIFICACOES:sheet('audit',[
+      'EVENTO_ID','AREA_ID','TIPO','REFERENCIA_ID','TITULO','OPERADOR_ID','ONESIGNAL_ID',
+      'DESTINATARIOS','RESULTADO','REGISTRADO_EM'
+    ],[['evt_geral_20261025_00','JAPARANDUBA','RECADO','RECADO_OLD','Recado já enviado','ADMIN',
+      '11111111-2222-4333-8444-555555555555',1,'ENCAMINHADA','']])
   },
   getSheetByName(name){return this.sheets[name]||null},
   insertSheet(name){const sh=sheet(name,[],[]);this.sheets[name]=sh;return sh}
@@ -125,7 +130,7 @@ const location={search:'?t='+token,pathname:'/confirmar-recebimento.html',origin
 function Params(q){const obj=new URLSearchParams(q);this.get=k=>obj.get(k);this.set=(k,v)=>obj.set(k,v);this.toString=()=>obj.toString()}
 new Function('document','window','location','history','URLSearchParams','navigator','fetch','setTimeout','clearTimeout',script[1])(
  mockDoc,win,location,history,Params,{userAgent:'iPhone'},
- ()=>{posts++;return Promise.resolve()},cb=>{cb();return ++timerId},()=>{});
+ ()=>{posts++;return {catch(){return {then(cb){cb()}}}}},(cb,delay)=>{if(delay===350)cb();return ++timerId},()=>{});
 assert.equal(provided,1);
 assert.equal(posts,0,'A página não registra ciência antes do clique');
 assert.equal(ids.textoGeral.textContent,'Texto exibido integralmente antes da ciência');
