@@ -96,8 +96,11 @@ function comprovacaoMensagensV1RegistrarEvento_(contexto,input){
       var ids=sheet.getRange(2,1,sheet.getLastRow()-1,1).getDisplayValues();
       for(var i=ids.length-1;i>=0;i--)if(comprovacaoMensagensV1Texto_(ids[i][0])===evento)return;
     }
-    sheet.appendRow([evento,comprovacaoMensagensV1Texto_(contexto.areaId).toUpperCase(),tipo,comprovacaoMensagensV1Texto_(input.referencia),comprovacaoMensagensV1Texto_(input.titulo).slice(0,220),comprovacaoMensagensV1Texto_(input.mensagem).slice(0,900),new Date()]);
-    sheet.getRange(sheet.getLastRow(),7).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+    var agora=new Date(),individual=tipo==='MENSAGEM_INDIVIDUAL';
+    sheet.appendRow([evento,comprovacaoMensagensV1Texto_(contexto.areaId).toUpperCase(),tipo,comprovacaoMensagensV1Texto_(input.referencia),comprovacaoMensagensV1Texto_(input.titulo).slice(0,220),comprovacaoMensagensV1Texto_(input.mensagem).slice(0,900),individual?'':agora]);
+    var celula=sheet.getRange(sheet.getLastRow(),7);
+    if(individual)celula.setNumberFormat('@').setValue(agora.toISOString());
+    else celula.setNumberFormat('dd/MM/yyyy HH:mm:ss');
   }finally{lock.releaseLock();}
 }
 
@@ -196,16 +199,24 @@ function comprovacaoMensagensV1Relatorio_(p,contexto){
 
 /* Horários civis de Brasília (DF): formatar o Date original de cada evento.
    O texto pré-formatado pela planilha pode estar deslocado por seu fuso. */
-function comprovacaoMensagensV1HorarioBrasilia_(valor){
+function comprovacaoMensagensV1HorarioBrasilia_(valor,evento){
   if(valor===null||typeof valor==='undefined'||valor==='')return '';
+  var instante=NaN,texto=comprovacaoMensagensV1Texto_(valor);
   if(Object.prototype.toString.call(valor)==='[object Date]'){
-    if(isNaN(valor.getTime()))return '';
-    return Utilities.formatDate(valor,'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss');
+    instante=isNaN(valor.getTime())?NaN:valor.getTime();
+  }else if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(texto)){
+    instante=Date.parse(texto);
+  }else if(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/.test(texto)){
+    var m=texto.match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
+    instante=Date.parse(m[3]+'-'+m[2]+'-'+m[1]+'T'+m[4]+':'+m[5]+':'+m[6]+'-03:00');
   }
-  var texto=comprovacaoMensagensV1Texto_(valor);
-  if(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/.test(texto))return texto;
-  var data=new Date(texto);
-  return texto&&!isNaN(data.getTime())?Utilities.formatDate(data,'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss'):texto;
+  if(!isFinite(instante))return '';
+  var id=comprovacaoMensagensV1Texto_(evento).match(/^msgv1_enviar_(\d{13})_[A-Za-z0-9]+$/);
+  /* Um comprovante legado pode carregar um valor antigo em outro fuso.
+     Nao converter deslocando horas nem apresentar uma hora sem prova. */
+  if(id&&instante<Number(id[1])-120000)return '';
+  if(instante>Date.now()+120000)return '';
+  return Utilities.formatDate(new Date(instante),'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss');
 }
 
 function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino){
@@ -224,7 +235,7 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
       if(comprovacaoMensagensV1Texto_(row[1]).toUpperCase()!==contexto.areaId)continue;
       if(comprovacaoMensagensV1Texto_(row[2]).toUpperCase()!==tipo)continue;
       if(comprovacaoMensagensV1Texto_(row[3])!==referencia)continue;
-      eventos.push({eventoId:comprovacaoMensagensV1Texto_(row[0]),titulo:comprovacaoMensagensV1Texto_(row[4]),mensagem:comprovacaoMensagensV1Texto_(row[5]),registradoEm:comprovacaoMensagensV1HorarioBrasilia_(row[6])});
+      eventos.push({eventoId:comprovacaoMensagensV1Texto_(row[0]),titulo:comprovacaoMensagensV1Texto_(row[4]),mensagem:comprovacaoMensagensV1Texto_(row[5]),registradoEm:comprovacaoMensagensV1HorarioBrasilia_(row[6],row[0])});
     }
   }
   if(!eventos.length)return {ok:true,encontrado:false,destino:destino,historico:[],message:'Ainda não existe mensagem com comprovação explícita enviada para este destino.'};
@@ -235,7 +246,7 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
   openRows.forEach(function(row){
     if(comprovacaoMensagensV1Texto_(row[1]).toUpperCase()!==contexto.areaId||comprovacaoMensagensV1Texto_(row[2]).toUpperCase()!==tipo||comprovacaoMensagensV1Texto_(row[3])!==referencia)return;
     var key=comprovacaoMensagensV1Texto_(row[0])+'|'+comprovacaoMensagensV1Texto_(row[5]).toLowerCase();
-    if(!abertura[key])abertura[key]=comprovacaoMensagensV1HorarioBrasilia_(row[7]);
+    if(!abertura[key])abertura[key]=comprovacaoMensagensV1HorarioBrasilia_(row[7],row[0]);
   });
 
   eventos.forEach(function(ev){
@@ -251,7 +262,7 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
       aparelhos.push({
         referenciaTecnica:sub.slice(-8),tipoAparelho:comprovacaoMensagensV1Texto_(row[8])||'Aparelho',
         navegador:comprovacaoMensagensV1Texto_(row[9]),sistema:comprovacaoMensagensV1Texto_(row[10]),estado:estado,
-        encaminhadoEm:enc?(comprovacaoMensagensV1HorarioBrasilia_(row[13])||encaminhadoAuditoria):'',exibidoEm:exib?comprovacaoMensagensV1HorarioBrasilia_(row[14]):'',abertoEm:abr,cienteEm:cie?comprovacaoMensagensV1HorarioBrasilia_(row[15]):'',
+        encaminhadoEm:enc?comprovacaoMensagensV1HorarioBrasilia_(row[13],ev.eventoId):'',exibidoEm:exib?comprovacaoMensagensV1HorarioBrasilia_(row[14],ev.eventoId):'',abertoEm:abr,cienteEm:cie?comprovacaoMensagensV1HorarioBrasilia_(row[15],ev.eventoId):'',
         origem:comprovacaoMensagensV1Texto_(row[16]),detalhe:comprovacaoMensagensV1Texto_(row[17])
       });
     });
