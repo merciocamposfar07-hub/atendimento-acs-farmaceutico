@@ -11,7 +11,7 @@ const msgSource = fs.readFileSync(path.join(ROOT, 'apps-script/ZZZZ_40_Mensagens
 const reportSource = fs.readFileSync(path.join(ROOT, 'apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs'), 'utf8');
 
 function formatDate(date, timeZone, pattern) {
-  assert.equal(timeZone, 'America/Recife', 'O backend deve formatar o horário em America/Recife.');
+  assert.equal(timeZone, 'America/Sao_Paulo', 'O backend deve formatar o horário em America/Sao_Paulo.');
   assert.equal(pattern, 'dd/MM/yyyy HH:mm:ss');
   const parts = new Intl.DateTimeFormat('pt-BR', {
     timeZone,
@@ -61,7 +61,7 @@ new vm.Script(source, { filename: 'ZZZZ_19_NotificacoesSegmentadasV1.gs' }).runI
 // Reproduz exatamente a diferença fotografada: o instante real de 14:10:05 UTC
 // corresponde a 11:10:05 em Pernambuco. A planilha, se consultada por texto,
 // pode mostrar 07:10:05 por causa do fuso configurado nela. O backend não pode
-// usar esse texto; precisa usar o Date bruto e formatar em America/Recife.
+// usar esse texto; precisa usar o Date bruto e formatar em America/Sao_Paulo.
 const instanteReal = new Date('2026-08-27T14:10:05.000Z');
 auditDataRow = [
   'evt-20260827-111005', 'JAPARANDUBA', 'MENSAGEM_INDIVIDUAL', 'MORADOR_TESTE',
@@ -72,7 +72,7 @@ auditDataRow = [
 assert.equal(
   sandbox.notificacoesAreaV1DataPainel_(instanteReal),
   '27/08/2026 11:10:05',
-  '14:10:05Z precisa aparecer como 11:10:05 em America/Recife.'
+  '14:10:05Z precisa aparecer como 11:10:05 em America/Sao_Paulo.'
 );
 
 const porEvento = sandbox.notificacoesAreaV1AuditoriaPorEvento_('JAPARANDUBA', 'evt-20260827-111005');
@@ -80,7 +80,7 @@ assert.ok(porEvento, 'A auditoria do evento deve ser localizada.');
 assert.equal(
   porEvento.registradoEm,
   '27/08/2026 11:10:05',
-  'A consulta por evento deve devolver o horário real de Recife, não o texto 07:10:05 da planilha.'
+  'A consulta por evento deve devolver o horário real de Brasília, não o texto 07:10:05 da planilha.'
 );
 
 const ultimo = sandbox.notificacoesAreaV1UltimoEnvio_('JAPARANDUBA', 'MENSAGEM_INDIVIDUAL', 'MORADOR_TESTE');
@@ -88,7 +88,7 @@ assert.ok(ultimo, 'O último envio deve ser localizado.');
 assert.equal(
   ultimo.registradoEm,
   '27/08/2026 11:10:05',
-  'O último envio deve devolver o horário real de Recife.'
+  'O último envio deve devolver o horário real de Brasília.'
 );
 
 assert.equal(
@@ -99,8 +99,8 @@ assert.equal(
 
 assert.match(
   msgSource,
-  /auditoriaEnvio&&auditoriaEnvio\.registradoEm/,
-  'O status individual deve usar o horário auditado do envio.'
+  /mensagemIndividualV1InstanteStatus_/,
+  'O status individual deve converter os instantes do envio.'
 );
 assert.match(
   reportSource,
@@ -108,4 +108,4 @@ assert.match(
   'O histórico persistente deve usar o horário auditado do envio.'
 );
 
-console.log('TESTE HORARIO RECIFE OK: 14:10:05Z => 11:10:05 America/Recife; 07:10:05 da planilha foi ignorado.');
+console.log('TESTE HORARIO BRASILIA OK: 14:10:05Z => 11:10:05 America/Sao_Paulo; 07:10:05 da planilha foi ignorado.');
