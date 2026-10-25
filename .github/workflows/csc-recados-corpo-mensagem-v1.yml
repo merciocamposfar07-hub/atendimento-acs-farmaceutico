@@ -1,0 +1,128 @@
+name: CSC - Exibir conteudo completo das notificacoes gerais
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-recados-corpo-mensagem-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  corrigir-somente-recados-gerais:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validar fluxo e seguranca do comunicado geral
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs
+          node scripts/test_notification_receipt_confirmation.js
+          node scripts/test_csc_conteudo_recados_push_v1.js
+
+      - name: Recuperar o servidor publicado
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON" && test -n "$CLASP_JSON" && test -n "$DEPLOYMENT_ID"
+          DIR="$RUNNER_TEMP/csc-recados-corpo-live"
+          mkdir -p "$DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" DIR="$DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),c=JSON.parse(process.env.CLASP_JSON);
+          if(!c.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(c.scriptId))throw Error('Projeto invalido');
+          c.rootDir='.';
+          fs.writeFileSync(path.join(process.env.DIR,'.clasp.json'),JSON.stringify(c,null,2)+'\n');
+          NODE
+          cd "$DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Aplicar apenas consulta e copia de recados gerais
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/csc-recados-corpo-live" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const dir=process.env.DIR,files=fs.readdirSync(dir).filter(f=>/\.(gs|js)$/.test(f));
+          const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const old=Object.fromEntries(files.map(f=>[f,sha(fs.readFileSync(path.join(dir,f),'utf8'))]));
+          const marker='var TACS_NOTIFICACOES_AREA_V1 = Object.freeze';
+          const targets=files.filter(f=>fs.readFileSync(path.join(dir,f),'utf8').includes(marker));
+          if(targets.length!==1)throw Error('Nao identificou um modulo unico de notificacoes');
+          const target=targets[0],p=path.join(dir,target),canon=fs.readFileSync('apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs','utf8');
+          let live=fs.readFileSync(p,'utf8');
+          function fn(s,name){
+            const re=new RegExp('^function '+name+'\\([^\\n]*\\)\\{[\\s\\S]*?^\\}','gm');
+            const m=s.match(re)||[];
+            if(m.length!==1)throw Error('Funcao ausente ou ambigua: '+name);
+            return m[0];
+          }
+          for(const name of ['notificacoesAreaV1GuardarConteudoGeral_','notificacoesAreaV1ConteudoPublicoToken_']){
+            if(live.includes('function '+name+'('))live=live.replace(fn(live,name),fn(canon,name));
+            else live+='\n\n'+fn(canon,name)+'\n';
+          }
+          for(const name of [
+            'notificacoesAreaV1TratarGet_',
+            'notificacoesAreaV1PrepararComprovantes_',
+            'notificacoesAreaV1PayloadIndividual_'
+          ])live=live.replace(fn(live,name),fn(canon,name));
+          if(!live.includes("action==='publico_notificacao_conteudo'")||!live.includes('notificacoesAreaV1GuardarConteudoGeral_(ss,contexto,input)'))
+            throw Error('A consulta ou armazenamento do corpo nao foi instalada');
+          if(!live.includes("if(geral)delete payload.web_buttons"))throw Error('Atalho de ciencia sem leitura nao foi removido para recados');
+          new Function(live);
+          fs.writeFileSync(p,live);
+          const changed=files.filter(f=>sha(fs.readFileSync(path.join(dir,f),'utf8'))!==old[f]);
+          if(changed.length!==1||changed[0]!==target)throw Error('Alteracao fora do escopo: '+changed.join(','));
+          console.log('CSC_AVISO_GERAL_BACKEND_PREPARADO: '+target);
+          NODE
+
+      - name: Publicar na mesma implantacao do Apps Script
+        shell: bash
+        env:
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/csc-recados-corpo-live"
+          BEFORE=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREV=$(printf '%s\n' "$BEFORE" | awk -v id="$DEPLOYMENT_ID" 'index($0,id){for(i=1;i<=NF;i++)if($i~/^@[0-9]+$/){gsub(/^@/,"",$i);print $i;exit}}')
+          test -n "$PREV"
+          DEPLOYED=0
+          rollback(){ code=$?;trap - ERR; if [ "$DEPLOYED" = 1 ];then npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREV" --description "Rollback comunicado geral" "$DEPLOYMENT_ID" || true;fi;exit "$code"; }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 push --force
+          OUT=$(npx --yes @google/clasp@3.3.0 version "CSC exibir texto completo de recados gerais")
+          VERSION=$(printf '%s\n' "$OUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description "CSC leitura integral de comunicados gerais" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          RESPONSE=$(curl -L --fail --silent --show-error --connect-timeout 7 --max-time 30 \
+            "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?action=portal_manutencao_status&areaId=JAPARANDUBA")
+          printf '%s' "$RESPONSE" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'
+          trap - ERR
+          printf 'CSC_AVISO_GERAL_PUBLICADO versao=%s\n' "$VERSION"
+
+      - name: Apagar credenciais temporarias
+        if: always()
+        shell: bash
+        run: rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/csc-recados-corpo-live/.clasp.json"
