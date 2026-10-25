@@ -55,7 +55,7 @@ jobs:
           npx --yes @google/clasp@3.3.0 pull
           test -f appsscript.json
 
-      - name: Corrigir somente duas funcoes e acrescentar conversor do relatorio
+      - name: Atualizar somente conversao e registros de horarios
         shell: bash
         run: |
           set -euo pipefail
@@ -148,3 +148,5 @@ jobs:
         shell: bash
         run: |
           rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/csc-brasilia/.clasp.json"
+
+# Validacao complementar: ciencia registrada com horario antigo incerto.
