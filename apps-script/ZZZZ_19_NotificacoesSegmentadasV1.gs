@@ -210,11 +210,14 @@ function notificacoesAreaV1RegistrarAbertura_(areaId,auditoria,subscriptionId){
       }
     }
     var idPortal=notificacoesAreaV1IdPortalSubscription_(ss,areaId,subscriptionId);
+    var agora=new Date(),individual=auditoria.tipo==='MENSAGEM_INDIVIDUAL';
     sheet.appendRow([
       auditoria.eventoId,areaId,auditoria.tipo,auditoria.referenciaId,auditoria.onesignalId,
-      subscriptionId,idPortal,new Date()
+      subscriptionId,idPortal,individual?'':agora
     ]);
-    sheet.getRange(sheet.getLastRow(),8).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+    var celula=sheet.getRange(sheet.getLastRow(),8);
+    if(individual)celula.setNumberFormat('@').setValue(agora.toISOString());
+    else celula.setNumberFormat('dd/MM/yyyy HH:mm:ss');
     return {ok:true,registrada:true,duplicada:false,vinculadoMorador:Boolean(idPortal)};
   }finally{lock.releaseLock();}
 }
@@ -275,7 +278,8 @@ function notificacoesAreaV1RegistrarComprovacao_(token,notificationId,estado,ori
       var idRegistrado=notificacoesAreaV1Texto_(row[4]).toLowerCase();
       if(notificationId&&idRegistrado&&notificationId!==idRegistrado)throw new Error('A notificação não confere com o comprovante registrado.');
       if(notificationId&&!idRegistrado)row[4]=notificationId;
-      var agora=new Date(),duplicada=false;
+      var individual=notificacoesAreaV1Texto_(row[2]).toUpperCase()==='MENSAGEM_INDIVIDUAL';
+       var instante=new Date(),agora=individual?instante.toISOString():instante,duplicada=false;
       if(estado==='CONFIRMADO'){
         duplicada=Boolean(row[15]);
         if(!row[15])row[15]=agora;
@@ -294,11 +298,11 @@ function notificacoesAreaV1RegistrarComprovacao_(token,notificationId,estado,ori
       if(notificationId&&!idRegistrado)sheet.getRange(i+2,5).setValues([[row[4]]]);
       sheet.getRange(i+2,12).setValues([[row[11]]]);
       if(estado==='CONFIRMADO'){
-        if(!duplicada)sheet.getRange(i+2,16).setValues([[row[15]]]).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+        if(!duplicada)sheet.getRange(i+2,16).setNumberFormat(individual?'@':'dd/MM/yyyy HH:mm:ss').setValues([[row[15]]]);
         sheet.getRange(i+2,17).setValues([[row[16]||'']]);
         sheet.getRange(i+2,18).setValues([[row[17]||'']]);
       }else if(!duplicada){
-        sheet.getRange(i+2,15).setValues([[row[14]]]).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+        sheet.getRange(i+2,15).setNumberFormat(individual?'@':'dd/MM/yyyy HH:mm:ss').setValues([[row[14]]]);
         if(row[11]!=='CONFIRMADO'){
           sheet.getRange(i+2,17).setValues([[row[16]||'']]);
           sheet.getRange(i+2,18).setValues([[row[17]||'']]);
@@ -480,17 +484,18 @@ function notificacoesAreaV1RegistrosDispositivos_(ss,areaId){
 
 function notificacoesAreaV1PrepararComprovantes_(contexto,input,alvos){
   var ss=tacsTerritorioV1Planilha_(),sheet=notificacoesAreaV1GarantirComprovantes_(ss);
-  var inicio=sheet.getLastRow()+1,agora=new Date(),linhas=[],preparados=[];
+  var inicio=sheet.getLastRow()+1,agora=new Date(),individual=input.tipo==='MENSAGEM_INDIVIDUAL',linhas=[],preparados=[];
   alvos.forEach(function(alvo,i){
     var token=notificacoesAreaV1NovoToken_(),hash=notificacoesAreaV1HashToken_(token);
     linhas.push([
       input.evento,contexto.areaId,input.tipo,input.referencia,'',alvo.subscriptionId,alvo.idPortal,hash,
-      alvo.tipoAparelho,alvo.navegador,alvo.sistema,'PREPARADO',agora,'','','','',''
+      alvo.tipoAparelho,alvo.navegador,alvo.sistema,'PREPARADO',individual?agora.toISOString():agora,'','','','',''
     ]);
     preparados.push({row:inicio+i,token:token,tokenHash:hash,alvo:alvo});
   });
+  /* UTC ISO como texto: evita aplicar o fuso configurado na planilha. */
+  sheet.getRange(inicio,13,linhas.length,4).setNumberFormat(individual?'@':'dd/MM/yyyy HH:mm:ss');
   sheet.getRange(inicio,1,linhas.length,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).setValues(linhas);
-  sheet.getRange(inicio,13,linhas.length,4).setNumberFormat('dd/MM/yyyy HH:mm:ss');
   return preparados;
 }
 
@@ -531,7 +536,7 @@ function notificacoesAreaV1AplicarRespostasEnvio_(preparados,respostas){
         linha[4]=id;
         var aguardava=linha[11]==='PREPARADO'||linha[11]==='ENCAMINHADO';
         if(linha[11]==='PREPARADO')linha[11]='ENCAMINHADO';
-        if(!linha[13])linha[13]=new Date();
+        if(!linha[13])linha[13]=notificacoesAreaV1Texto_(linha[2]).toUpperCase()==='MENSAGEM_INDIVIDUAL'?new Date().toISOString():new Date();
         if(aguardava)linha[17]='Encaminhamento individual aceito pelo serviço Push.';
         resumo.encaminhados++;
         if(!resumo.primeiroId)resumo.primeiroId=id;
@@ -545,7 +550,10 @@ function notificacoesAreaV1AplicarRespostasEnvio_(preparados,respostas){
       }
       if(linha[4])sheet.getRange(item.row,5).setValues([[linha[4]]]);
       sheet.getRange(item.row,12).setValues([[linha[11]]]);
-      if(linha[13]&&!sheet.getRange(item.row,14).getValues()[0][0])sheet.getRange(item.row,14).setValues([[linha[13]]]).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+      if(linha[13]&&!sheet.getRange(item.row,14).getValues()[0][0]){
+        var individual=notificacoesAreaV1Texto_(linha[2]).toUpperCase()==='MENSAGEM_INDIVIDUAL';
+        sheet.getRange(item.row,14).setNumberFormat(individual?'@':'dd/MM/yyyy HH:mm:ss').setValues([[linha[13]]]);
+      }
       sheet.getRange(item.row,18).setValues([[linha[17]||'']]);
     });
     return resumo;
@@ -810,9 +818,13 @@ function notificacoesAreaV1Auditar_(contexto,acesso,input,onesignalId,destinatar
   notificacoesAreaV1ValidarAuditoria_(sheet);
   sheet.appendRow([
     input.evento,contexto.areaId,input.tipo,input.referencia,input.titulo,
-    acesso.operadorId||'ADMIN_GERAL',onesignalId,destinatarios,resultado,new Date()
+    acesso.operadorId||'ADMIN_GERAL',onesignalId,destinatarios,resultado,
+    notificacoesAreaV1Texto_(input.tipo).toUpperCase()==='MENSAGEM_INDIVIDUAL'?'':new Date()
   ]);
-  sheet.getRange(sheet.getLastRow(),10).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+  var celula=sheet.getRange(sheet.getLastRow(),10);
+  if(notificacoesAreaV1Texto_(input.tipo).toUpperCase()==='MENSAGEM_INDIVIDUAL')
+    celula.setNumberFormat('@').setValue(new Date().toISOString());
+  else celula.setNumberFormat('dd/MM/yyyy HH:mm:ss');
 }
 
 function notificacoesAreaV1PrimeiraPropriedade_(props,nomes){
