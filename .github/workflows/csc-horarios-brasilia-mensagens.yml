@@ -23,10 +23,13 @@ jobs:
         run: |
           set -euo pipefail
           node --check --input-type=commonjs < apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs
           node --check --input-type=commonjs < apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs
           node --check teste-v1/mensagem-individual-morador-v1.js
           node scripts/test_horario_notificacao_recife_v1.js
           node scripts/test_horario_mensagens_brasilia_v1.js
+          node scripts/test_csc_brasilia_timestamp_canonico_v2.js
+          node scripts/test_mensagem_individual_morador_v1.js
 
       - name: Baixar implantacao atual
         shell: bash
@@ -78,10 +81,20 @@ jobs:
           }
           const nf=file('var TACS_NOTIFICACOES_AREA_V1 = Object.freeze');
           const rf=file('var TACS_COMPROVACAO_MENSAGENS_V1 = Object.freeze');
+          const mf=file('var TACS_MENSAGEM_INDIVIDUAL_V1=Object.freeze');
+          if(nf===rf||nf===mf||rf===mf)throw Error('Modulo repetido no servidor');
           const cn=fs.readFileSync('apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs','utf8');
           const cr=fs.readFileSync('apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs','utf8');
+          const cm=fs.readFileSync('apps-script/ZZZZ_40_MensagensIndividuaisMoradorV1.gs','utf8');
           let n=fs.readFileSync(path.join(dir,nf),'utf8');
-          n=apply('notificacoesAreaV1DataPainel_',n,cn);
+          for(const func of [
+            'notificacoesAreaV1DataPainel_',
+            'notificacoesAreaV1RegistrarAbertura_',
+            'notificacoesAreaV1RegistrarComprovacao_',
+            'notificacoesAreaV1PrepararComprovantes_',
+            'notificacoesAreaV1AplicarRespostasEnvio_',
+            'notificacoesAreaV1Auditar_'
+          ])n=apply(func,n,cn);
           if(!n.includes("Utilities.formatDate(data,'America/Sao_Paulo'"))throw Error('Fuso de Brasilia ausente');
           fs.writeFileSync(path.join(dir,nf),n);
           let r=fs.readFileSync(path.join(dir,rf),'utf8');
@@ -92,13 +105,17 @@ jobs:
             if(r.split(anchor).length!==2)throw Error('Ponto de insercao ambiguo');
             r=r.replace(anchor,fn(cr,helper)+'\n\n'+anchor);
           }
-          r=apply('comprovacaoMensagensV1MontarRelatorio_',r,cr);
+          for(const func of ['comprovacaoMensagensV1RegistrarEvento_', 'comprovacaoMensagensV1MontarRelatorio_'])r=apply(func,r,cr);
           const report=fn(r,'comprovacaoMensagensV1MontarRelatorio_');
           if((report.match(/getValues\(\)/g)||[]).length<3)throw Error('Relatorio ainda usa datas preformatadas');
           fs.writeFileSync(path.join(dir,rf),r);
+          let m=fs.readFileSync(path.join(dir,mf),'utf8');
+          m=apply('mensagemIndividualV1Status_',m,cm);
+          if(m.includes('ajuste=horas*3600000'))throw Error('A compensacao artificial ainda existe');
+          fs.writeFileSync(path.join(dir,mf),m);
           const changed=files.filter(f=>sha(fs.readFileSync(path.join(dir,f)))!==old[f]);
-          if(changed.some(f=>f!==nf&&f!==rf))throw Error('Alteracao indevida: '+changed);
-          for(const f of [nf,rf])new Function(fs.readFileSync(path.join(dir,f),'utf8'));
+          if(changed.some(f=>f!==nf&&f!==rf&&f!==mf))throw Error('Alteracao indevida: '+changed);
+          for(const f of [nf,rf,mf])new Function(fs.readFileSync(path.join(dir,f),'utf8'));
           console.log('Somente modulos de hora alterados: '+changed.join(','));
           NODE
 
