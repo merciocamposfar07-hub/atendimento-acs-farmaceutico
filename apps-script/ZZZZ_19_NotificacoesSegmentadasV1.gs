@@ -509,8 +509,9 @@ function notificacoesAreaV1PrepararComprovantes_(contexto,input,alvos){
 
 function notificacoesAreaV1PayloadIndividual_(appId,contexto,input,item){
   var pagina=TACS_NOTIFICACOES_AREA_V1.CONFIRM_PAGE+'?t='+encodeURIComponent(item.token);
-  var mensagem=input.mensagem.slice(0,850)+'\n\nConfirme o recebimento.';
-  return {
+  var geral=input.tipo!=='MENSAGEM_INDIVIDUAL'&&input.tipo!=='MENSAGEM_FAMILIA';
+  var mensagem=input.mensagem.slice(0,850)+(geral?'\n\nAbra o comunicado para ler e confirmar ciência.':'\n\nConfirme o recebimento.');
+  var payload={
     app_id:appId,
     target_channel:'push',
     headings:{pt:input.titulo,en:input.titulo},
@@ -527,6 +528,9 @@ function notificacoesAreaV1PayloadIndividual_(appId,contexto,input,item){
       confirmacaoToken:item.token
     }
   };
+  /* Recados e campanhas devem abrir o conteúdo antes da confirmação. */
+  if(geral)delete payload.web_buttons;
+  return payload;
 }
 
 function notificacoesAreaV1AplicarRespostasEnvio_(preparados,respostas){
