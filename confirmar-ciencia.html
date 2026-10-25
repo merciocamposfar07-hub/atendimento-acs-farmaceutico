@@ -19,8 +19,10 @@
       <strong id="tituloIndividual"></strong>
       <p id="textoIndividual"></p>
     </div>
+    <div id="estadoConteudo" class="aviso" role="status" aria-live="polite">Carregando o conteúdo da mensagem…</div>
+    <button id="repetirConteudo" type="button" hidden style="width:100%;min-height:50px;margin-top:12px;padding:12px;border:1px solid #7cc9df;border-radius:14px;background:#0c5476;color:white;font:inherit;font-weight:800">↻ Tentar carregar a mensagem</button>
     <div id="estado" role="status" aria-live="polite">Registrando a abertura do aviso…</div>
-    <button id="confirmar" type="button">✓ Li e estou ciente</button>
+    <button id="confirmar" type="button" disabled hidden>✓ Li e estou ciente</button>
     <button id="fecharNotificacao" type="button" hidden>✕ Fechar notificação</button>
     <a id="portal" href="./">Abrir Portal CSC</a>
     <div id="fechamentoAjuda" hidden role="status" aria-live="polite">Sua confirmação já está registrada. O Safari do iPhone não permite fechar automaticamente esta aba aberta por uma notificação. Use o controle de abas do navegador para fechá-la ou volte ao aplicativo anterior.</div>
@@ -32,6 +34,7 @@
     var token=String(new URLSearchParams(location.search).get('t')||'').trim().toLowerCase();
     var estado=document.getElementById('estado'),botao=document.getElementById('confirmar'),fechar=document.getElementById('fecharNotificacao');
     var individual=false,ciente=false;
+    var estadoConteudo=document.getElementById('estadoConteudo'),repetirConteudo=document.getElementById('repetirConteudo');
     function mostrarFechar(){if(ciente)fechar.hidden=false}
     try{history.replaceState(null,'',location.pathname)}catch(e){}
     function mostrar(msg,tipo){estado.textContent=msg;estado.className=tipo||''}
@@ -50,24 +53,50 @@
     /* Leitura exclusiva por token do comprovante individual: sem PIN e
        sem buscar o cadastro familiar no Portal do Morador. */
     (function carregarMensagemIndividual(){
-      var callback='__cscConteudoIndividual_'+Date.now()+'_'+Math.floor(Math.random()*99999),
-      script=document.createElement('script'),done=false;
-      function stop(v){
-        if(done)return;done=true;clearTimeout(timeout);
-        try{delete window[callback]}catch(e){window[callback]=undefined}
-        if(script.parentNode)script.remove();
-        if(!v||v.ok!==true||v.individual!==true)return;
-        document.getElementById('tituloIndividual').textContent=String(v.titulo||'Mensagem individual');
-        document.getElementById('textoIndividual').textContent=String(v.mensagem||'');
-        document.getElementById('conteudoIndividual').hidden=false;
-        individual=true;mostrarFechar();
+      var tentativas=0;
+      function tentarCarregar(){
+        tentativas++;
+        repetirConteudo.hidden=true;
+        estadoConteudo.hidden=false;
+        estadoConteudo.textContent='Carregando o conteúdo da mensagem…';
+        var callback='__cscConteudoIndividual_'+Date.now()+'_'+Math.floor(Math.random()*99999),
+        script=document.createElement('script'),done=false;
+        function stop(v){
+          if(done)return;done=true;clearTimeout(timeout);
+          try{delete window[callback]}catch(e){window[callback]=undefined}
+          if(script.parentNode)script.remove();
+          if(v&&v.ok===true&&v.individual===true&&String(v.mensagem||'').trim()){
+            document.getElementById('tituloIndividual').textContent=String(v.titulo||'Mensagem individual');
+            document.getElementById('textoIndividual').textContent=String(v.mensagem);
+            document.getElementById('conteudoIndividual').hidden=false;
+            estadoConteudo.hidden=true;
+            individual=true;
+            botao.disabled=false;
+            botao.hidden=false;
+            return;
+          }
+          if(v&&v.ok===true&&v.individual===false){
+            /* Preserva o fluxo de confirmação familiar já existente. */
+            estadoConteudo.hidden=true;
+            botao.disabled=false;
+            botao.hidden=false;
+            return;
+          }
+          if(tentativas<3){setTimeout(tentarCarregar,700*tentativas);return}
+          estadoConteudo.textContent='Não foi possível mostrar o conteúdo desta mensagem. Tente carregar novamente antes de confirmar ciência.';
+          repetirConteudo.hidden=false;
+          botao.disabled=true;
+          botao.hidden=true;
+        }
+        var timeout=setTimeout(function(){stop(null)},12000);
+        window[callback]=stop;
+        script.onerror=function(){stop(null)};
+        script.src=API+'?action=publico_mensagem_individual_conteudo&t='+encodeURIComponent(token)+
+          '&callback='+encodeURIComponent(callback)+'&_='+Date.now();
+        document.head.appendChild(script);
       }
-      var timeout=setTimeout(function(){stop(null)},15000);
-      window[callback]=stop;
-      script.onerror=function(){stop(null)};
-      script.src=API+'?action=publico_mensagem_individual_conteudo&t='+encodeURIComponent(token)+
-        '&callback='+encodeURIComponent(callback)+'&_='+Date.now();
-      document.head.appendChild(script);
+      repetirConteudo.addEventListener('click',function(){tentativas=0;tentarCarregar()});
+      tentarCarregar();
     })();
     executar('publico_mensagem_aberta_token',function(r){if(r&&r.ok===true)mostrar('Aviso aberto. Para registrar ciência, toque em “Li e estou ciente”.','');else mostrar((r&&r.message)||'A abertura não pôde ser registrada, mas você ainda pode confirmar sua ciência.','erro')});
     botao.addEventListener('click',function(){
