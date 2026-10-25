@@ -1,0 +1,31 @@
+name: CSC - Validar carregamento de notificacoes da Central
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'central-administrativa-tacs.js'
+      - 'central-administrativa-tacs.html'
+      - 'scripts/test_central_notification_verified_recovery_v1.js'
+      - '.github/workflows/csc-central-notificacoes-recovery-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar-notificacoes-central:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar sintaxe do JavaScript
+        run: node --check central-administrativa-tacs.js
+      - name: Testar contagem real, recuperacao e redes
+        run: node scripts/test_central_notification_verified_recovery_v1.js
+      - name: Conferir a versao de cache no HTML publicado
+        run: |
+          grep -F 'central-administrativa-tacs.js?v=20261025-notificacoes-ultima-confirmacao-auto-v1' central-administrativa-tacs.html
