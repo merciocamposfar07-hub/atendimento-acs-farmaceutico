@@ -173,15 +173,15 @@ function preview(){var tipo=txt(document.getElementById('msgIndTipo').value),ser
 function atualizarFormulario(event){var tipo=document.getElementById('msgIndTipo').value,livre=tipo==='OUTRA_MENSAGEM',dados=document.getElementById('msgIndDadosAtendimento'),campo=document.getElementById('msgIndPreviewTexto');if(event&&event.target&&event.target.id==='msgIndData'){var mascarada=mascararData(event.target.value);if(event.target.value!==mascarada)event.target.value=mascarada}dados.classList.toggle('msg-ind-hide',livre);document.getElementById('msgIndLivre').classList.add('msg-ind-hide');if(livre){campo.placeholder='Digite aqui a mensagem que será enviada.';if(event&&event.target&&event.target.id==='msgIndTipo')campo.value=''}else{campo.placeholder='A mensagem será montada automaticamente.';campo.value=preview()}document.getElementById('msgIndMensagem').value=campo.value}
 function resetTrack(){statusAssinatura='';['msgStepEnc','msgStepExib','msgStepAberta','msgStepConf'].forEach(function(id){marcar(id,false,'')});document.getElementById('msgIndTrack').classList.add('msg-ind-hide')}
 /* Hora do encaminhamento: instante imutável embutido no ID deste envio.
-   Usa o fuso da área (Recife) sem alterar comprovantes nem horários de leitura. */
-function horarioEnvioRecifePeloEvento(evento){
+   Usa o fuso oficial de Brasília (Distrito Federal) sem alterar comprovantes nem horários de leitura. */
+function horarioEnvioBrasiliaPeloEvento(evento){
   var match=txt(evento).match(/^msgv1_enviar_(\d{13})_[a-z0-9]+$/i);
   if(!match)return '';
   var data=new Date(Number(match[1]));
   if(!Number.isFinite(data.getTime()))return '';
   try{
     var partes=new Intl.DateTimeFormat('pt-BR',{
-      timeZone:'America/Recife',hourCycle:'h23',
+      timeZone:'America/Sao_Paulo',hourCycle:'h23',
       day:'2-digit',month:'2-digit',year:'numeric',
       hour:'2-digit',minute:'2-digit',second:'2-digit'
     }).formatToParts(data),campos={};
@@ -196,7 +196,7 @@ function marcar(id,ativo,quando){
  if(simbolo)simbolo.textContent=ativo?({msgStepEnc:'📤',msgStepExib:'🔔',msgStepAberta:'👆',msgStepConf:'✅'}[id]||'✓'):'◯';
  var small=n.querySelector('small');
  if(id==='msgStepEnc'&&ativo){
-   var horario=horarioEnvioRecifePeloEvento(ultimoEnvio&&ultimoEnvio.eventoId);
+   var horario=horarioEnvioBrasiliaPeloEvento(ultimoEnvio&&ultimoEnvio.eventoId);
    if(horario)quando=horario;
  }
  if(ativo&&quando)small.textContent='Confirmado em '+quando;
