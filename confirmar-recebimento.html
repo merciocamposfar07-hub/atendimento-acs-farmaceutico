@@ -5,72 +5,118 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#072c47">
-  <title>Confirmação de recebimento — Portal CSC</title>
+  <title>Leitura de comunicado — Portal CSC</title>
   <link rel="stylesheet" href="./csc-notificacao-padrao-v1.css?v=20261019-v1">
-
 </head>
 <body>
   <main>
     <div class="marca"><img src="./app-icons/conecta-saude-comunitaria-oficial-cplus-20260921-v5.png" alt="Ícone oficial do Portal CSC"><div><span>PORTAL CSC</span><strong>Conecta Saúde Comunitária</strong></div></div>
     <div class="icone" aria-hidden="true">🔔</div>
-    <h1>Notificação do Portal CSC</h1>
-    <p>Recado ou campanha da sua comunidade. O recebimento é confirmado neste aparelho.</p>
-    <div id="estado" role="status" aria-live="polite">Registrando o recebimento…</div>
+    <h1>Comunicado do Portal CSC</h1>
+    <p>Leia o comunicado completo antes de confirmar sua ciência.</p>
+    <section id="conteudoGeral" class="aviso" hidden aria-label="Conteúdo integral do comunicado">
+      <strong id="tituloGeral"></strong>
+      <p id="textoGeral"></p>
+      <p id="fonteAntiga" hidden style="margin-top:12px;font-size:13px;color:#546d7d">Esta publicação pode ter sido atualizada desde o envio da notificação.</p>
+    </section>
+    <div id="estado" role="status" aria-live="polite">Carregando a mensagem…</div>
+    <button id="recarregar" type="button" hidden style="width:100%;min-height:52px;margin-top:14px;border:1px solid #7cc9df;border-radius:14px;background:#0c5476;color:white;font:inherit;font-weight:800">↻ Tentar carregar o comunicado</button>
+    <button id="confirmar" type="button" hidden disabled>✓ Li e estou ciente</button>
     <button id="fecharNotificacao" type="button" hidden>✕ Fechar notificação</button>
     <a id="portal" href="./">Abrir Portal CSC</a>
-    <div id="fechamentoAjuda" hidden role="status" aria-live="polite">Sua confirmação já está registrada. O Safari do iPhone não permite fechar automaticamente esta aba aberta por uma notificação. Use o controle de abas do navegador para fechá-la ou volte ao aplicativo anterior.</div>
+    <div id="fechamentoAjuda" hidden role="status" aria-live="polite">Sua confirmação já está registrada. O iPhone pode exigir que você feche esta aba manualmente ou volte ao aplicativo anterior.</div>
   </main>
   <script>
   (function(){
     'use strict';
     var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-    var estado=document.getElementById('estado'),portal=document.getElementById('portal'),fechar=document.getElementById('fecharNotificacao');
+    var estado=document.getElementById('estado'),portal=document.getElementById('portal');
+    var fechar=document.getElementById('fecharNotificacao'),confirmar=document.getElementById('confirmar');
+    var recarregar=document.getElementById('recarregar'),conteudo=document.getElementById('conteudoGeral');
     var token=String(new URLSearchParams(location.search).get('t')||'').trim().toLowerCase();
+    var pronta=false,finalizada=false,enviando=false,numeroTentativas=0;
     try{history.replaceState(null,'',location.pathname)}catch(e){}
-    function mostrar(texto,tipo){estado.textContent=texto;estado.className=tipo||'';if(tipo==='ok'){fechar.hidden=false;portal.hidden=false}}
+    function mostrar(texto,tipo){estado.textContent=texto;estado.className=tipo||''}
     function fecharAviso(){
-      /* O próprio gesto no botão tenta voltar sem criar uma nova página.
-         O iOS não permite fechar abas abertas por uma notificação Push. */
-      if(window.opener&&window.opener!==window){
-        try{window.close()}catch(e){}
-      }
+      if(window.opener&&window.opener!==window){try{window.close()}catch(e){}}
       var sameOrigin=false;
       try{sameOrigin=Boolean(document.referrer&&new URL(document.referrer).origin===location.origin)}catch(e){}
       if(sameOrigin&&history.length>1){history.back();return}
-      var ajuda=document.getElementById('fechamentoAjuda');
-      if(ajuda)ajuda.hidden=false;
-      var botaoFechar=document.getElementById('fecharNotificacao');
-      if(botaoFechar){botaoFechar.disabled=true;botaoFechar.textContent='✓ Confirmação já registrada'}
+      document.getElementById('fechamentoAjuda').hidden=false;
+      fechar.disabled=true;fechar.textContent='✓ Confirmação já registrada';
     }
     fechar.addEventListener('click',fecharAviso);
-    if(!/^[0-9a-f]{64}$/.test(token)){mostrar('Este comprovante é inválido ou está incompleto.','erro');return}
-    var requestId='confirm_receipt_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);
-    var inicio=Date.now();
-    function consultar(){
-      var callback='__tacsReceipt_'+Date.now()+'_'+Math.floor(Math.random()*100000),script=document.createElement('script'),finalizado=false;
-      var timer=setTimeout(function(){concluir(null)},4500);
+    function sucesso(){
+      finalizada=true;enviando=false;
+      confirmar.hidden=true;confirmar.disabled=true;
+      mostrar('✓ Ciência registrada. Sua confirmação foi recebida pelo Portal CSC.','ok');
+      fechar.hidden=false;portal.hidden=false;
+    }
+    function consultarConteudo(){
+      if(finalizada||enviando)return;
+      numeroTentativas++;
+      recarregar.hidden=true;
+      mostrar('Carregando o conteúdo completo do comunicado…','');
+      var callback='__cscGeral_'+Date.now()+'_'+Math.floor(Math.random()*99999),script=document.createElement('script'),done=false;
+      var timer=setTimeout(function(){concluir(null)},12000);
       function concluir(data){
-        if(finalizado)return;finalizado=true;clearTimeout(timer);
+        if(done)return;done=true;clearTimeout(timer);
         try{delete window[callback]}catch(e){window[callback]=undefined}
         if(script.parentNode)script.remove();
-        if(data&&data.ok===true&&data.pendente===false&&data.result){
-          if(data.result.ok===true){mostrar('✓ Recebimento confirmado. Sua confirmação foi registrada.','ok');return}
-          mostrar(data.result.message||'Não foi possível confirmar este recebimento.','erro');return
+        if(data&&data.ok===true&&data.individual===false&&String(data.mensagem||'').trim()){
+          document.getElementById('tituloGeral').textContent=String(data.titulo||'Comunicado');
+          document.getElementById('textoGeral').textContent=String(data.mensagem);
+          document.getElementById('fonteAntiga').hidden=data.fonte!=='PUBLICACAO_ATUAL';
+          conteudo.hidden=false;pronta=true;
+          if(data.ciente===true){sucesso();return}
+          mostrar('Leia a mensagem acima. Para confirmar sua ciência, toque no botão abaixo.','');
+          confirmar.disabled=false;confirmar.hidden=false;
+          return;
         }
-        if(Date.now()-inicio>45000){mostrar('A confirmação demorou mais que o esperado. Toque novamente na notificação para repetir.','erro');return}
-        setTimeout(consultar,900)
+        if(numeroTentativas<3){setTimeout(consultarConteudo,750*numeroTentativas);return}
+        mostrar('Não foi possível mostrar o comunicado completo. Tente carregá-lo novamente.','erro');
+        recarregar.hidden=false;confirmar.disabled=true;confirmar.hidden=true;
       }
       window[callback]=concluir;script.onerror=function(){concluir(null)};
-      script.src=API+'?action=publico_confirmar_recebimento_result&requestId='+encodeURIComponent(requestId)+'&callback='+encodeURIComponent(callback)+'&_='+Date.now();
-      document.head.appendChild(script)
+      script.src=API+'?action=publico_notificacao_conteudo&t='+encodeURIComponent(token)+'&callback='+encodeURIComponent(callback)+'&_='+Date.now();
+      document.head.appendChild(script);
     }
-    var body=new URLSearchParams();
-    body.set('action','publico_confirmar_recebimento');body.set('requestId',requestId);body.set('token',token);
-    body.set('origem',/iPhone|iPad|iPod/i.test(navigator.userAgent||'')?'LINK_IPHONE_SAFARI':'LINK_NOTIFICACAO');
-    fetch(API+'?_='+Date.now(),{
-      method:'POST',mode:'no-cors',cache:'no-store',
-      headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString()
-    }).catch(function(){}).then(function(){setTimeout(consultar,650)})
+    recarregar.addEventListener('click',function(){numeroTentativas=0;consultarConteudo()});
+    function registrarCiencia(){
+      if(!pronta||enviando||finalizada)return;
+      enviando=true;confirmar.disabled=true;
+      mostrar('Registrando sua ciência de leitura…','');
+      var requestId='confirm_receipt_'+Date.now()+'_'+Math.random().toString(36).slice(2,10),inicio=Date.now(),concluido=false;
+      function falha(texto){if(concluido)return;concluido=true;enviando=false;confirmar.disabled=false;mostrar(texto||'Não foi possível concluir a confirmação. Tente novamente.','erro')}
+      function consultar(){
+        if(concluido||finalizada)return;
+        var callback='__cscReceipt_'+Date.now()+'_'+Math.floor(Math.random()*99999),script=document.createElement('script'),done=false;
+        var timer=setTimeout(function(){receber(null)},4500);
+        function receber(data){
+          if(done)return;done=true;clearTimeout(timer);
+          try{delete window[callback]}catch(e){window[callback]=undefined}
+          if(script.parentNode)script.remove();
+          if(data&&data.ok===true&&data.pendente===false&&data.result){
+            if(data.result.ok===true){concluido=true;sucesso();return}
+            falha(data.result.message);return;
+          }
+          if(Date.now()-inicio>45000){falha('O registro demorou mais que o esperado. Tente confirmar novamente.');return}
+          setTimeout(consultar,850);
+        }
+        window[callback]=receber;script.onerror=function(){receber(null)};
+        script.src=API+'?action=publico_confirmar_recebimento_result&requestId='+encodeURIComponent(requestId)+'&callback='+encodeURIComponent(callback)+'&_='+Date.now();
+        document.head.appendChild(script);
+      }
+      var dados=new URLSearchParams();
+      dados.set('action','publico_confirmar_recebimento');dados.set('requestId',requestId);dados.set('token',token);
+      dados.set('origem',/iPhone|iPad|iPod/i.test(navigator.userAgent||'')?'LINK_IPHONE_SAFARI':'LINK_NOTIFICACAO');
+      fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',cache:'no-store',
+        headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:dados.toString()
+      }).catch(function(){}).then(function(){setTimeout(consultar,350)});
+    }
+    confirmar.addEventListener('click',registrarCiencia);
+    if(!/^[0-9a-f]{64}$/.test(token)){mostrar('Esta notificação possui um identificador inválido.','erro');return}
+    consultarConteudo();
   }());
   </script>
 </body>
