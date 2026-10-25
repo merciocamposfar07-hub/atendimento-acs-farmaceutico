@@ -292,7 +292,42 @@ function abrirHistorico(){
      when.textContent='Registro: '+txt(item.registradoEm)+' — '+txt(item.estado);
      msg.textContent=txt(item.mensagem);
      button.type='button';button.dataset.historicoIndice=String(idx);button.textContent='Baixar comprovante e etapas';
-     card.appendChild(title);card.appendChild(when);card.appendChild(msg);card.appendChild(button);box.appendChild(card);
+     var etapasBox=document.createElement('section'),etapasTitulo=document.createElement('strong');
+     etapasBox.style.cssText='margin:12px 0;padding:12px;border:1px solid #42778a;border-radius:12px;overflow-wrap:anywhere';
+     etapasBox.setAttribute('aria-label','Checklist completo de confirmação da mensagem');
+     etapasTitulo.textContent='Checklist de entrega, abertura e ciência';
+     etapasBox.appendChild(etapasTitulo);
+     var aparelhos=Array.isArray(item.aparelhos)?item.aparelhos:[];
+     if(!aparelhos.length){
+       var indisponivel=document.createElement('p');
+       indisponivel.textContent='Nenhum registro técnico de aparelho disponível para esta mensagem.';
+       etapasBox.appendChild(indisponivel);
+     }
+     aparelhos.forEach(function(aparelho,numero){
+       var bloco=document.createElement('div'),nomeAparelho=document.createElement('strong');
+       bloco.style.cssText='margin-top:10px;padding:10px;border:1px solid #37677d;border-radius:10px';
+       nomeAparelho.textContent='Aparelho '+(numero+1)+(txt(aparelho.referenciaTecnica)?' • final '+txt(aparelho.referenciaTecnica):'');
+       bloco.appendChild(nomeAparelho);
+       [
+         ['Encaminhada ao serviço Push','encaminhadoEm'],
+         ['Exibida no aparelho','exibidoEm'],
+         ['Mensagem aberta','abertoEm'],
+         ['Li e estou ciente','cienteEm']
+       ].forEach(function(etapa){
+         var horario=txt(aparelho[etapa[1]]),linha=document.createElement('p');
+         linha.style.cssText='margin:5px 0;line-height:1.45';
+         linha.textContent=(horario?'✓ ':'○ ')+etapa[0]+': '+(horario||'Sem confirmação');
+         bloco.appendChild(linha);
+       });
+       if(txt(aparelho.estado)==='FALHA_ENVIO'){
+         var falha=document.createElement('p');
+         falha.textContent='Falha de envio registrada'+(txt(aparelho.detalhe)?': '+txt(aparelho.detalhe):'.');
+         bloco.appendChild(falha);
+       }
+       etapasBox.appendChild(bloco);
+     });
+     card.appendChild(title);card.appendChild(when);card.appendChild(msg);
+     card.appendChild(etapasBox);card.appendChild(button);box.appendChild(card);
    });
  });
 }
