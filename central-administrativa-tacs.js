@@ -1127,8 +1127,11 @@ function refreshNotificationHealth(areaId,force){
     if(notificationRemoteArea===areaId)notificationRemoteArea='';
     var confirmado=saveConfirmedNotification(remote,areaId);
     if(confirmado){
-      notificationCancelRecovery();
-      renderConfirmedNotification(confirmado,areaId);
+      /* Uma resposta da área anterior não deve cancelar a recuperação da área atual. */
+      if(areaId===selectedAreaId){
+        notificationCancelRecovery();
+        renderConfirmedNotification(confirmado,areaId);
+      }
       return;
     }
     if(areaId!==selectedAreaId||mode==='ubs')return;
