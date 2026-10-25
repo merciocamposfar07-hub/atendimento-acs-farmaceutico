@@ -767,7 +767,7 @@ function notificacoesAreaV1HashToken_(token){
 
 function notificacoesAreaV1DataPainel_(valor){
   var data=valor instanceof Date?valor:new Date(valor);
-  if(!isNaN(data.getTime()))return Utilities.formatDate(data,'America/Recife','dd/MM/yyyy HH:mm:ss');
+  if(!isNaN(data.getTime()))return Utilities.formatDate(data,'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss');
   return notificacoesAreaV1Texto_(valor);
 }
 
