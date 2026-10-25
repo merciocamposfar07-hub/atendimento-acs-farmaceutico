@@ -194,6 +194,20 @@ function comprovacaoMensagensV1Relatorio_(p,contexto){
   return comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino);
 }
 
+/* Horários civis de Brasília (DF): formatar o Date original de cada evento.
+   O texto pré-formatado pela planilha pode estar deslocado por seu fuso. */
+function comprovacaoMensagensV1HorarioBrasilia_(valor){
+  if(valor===null||typeof valor==='undefined'||valor==='')return '';
+  if(Object.prototype.toString.call(valor)==='[object Date]'){
+    if(isNaN(valor.getTime()))return '';
+    return Utilities.formatDate(valor,'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss');
+  }
+  var texto=comprovacaoMensagensV1Texto_(valor);
+  if(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/.test(texto))return texto;
+  var data=new Date(texto);
+  return texto&&!isNaN(data.getTime())?Utilities.formatDate(data,'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss'):texto;
+}
+
 function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino){
   var ss=tacsTerritorioV1Planilha_();
   var history=ss.getSheetByName(TACS_COMPROVACAO_MENSAGENS_V1.HISTORY_SHEET);
@@ -201,7 +215,7 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
   var open=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.OPEN_SHEET);
   var eventos=[];
   if(history&&history.getLastRow()>1){
-    var hr=history.getRange(2,1,history.getLastRow()-1,TACS_COMPROVACAO_MENSAGENS_V1.HISTORY_HEADERS.length).getDisplayValues();
+    var hr=history.getRange(2,1,history.getLastRow()-1,TACS_COMPROVACAO_MENSAGENS_V1.HISTORY_HEADERS.length).getValues();
     var maxEventos=tipo==='MENSAGEM_INDIVIDUAL'?200:TACS_COMPROVACAO_MENSAGENS_V1.MAX_EVENTOS;
     for(var i=hr.length-1;i>=0&&eventos.length<maxEventos;i--){
       var row=hr[i];
@@ -210,18 +224,18 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
       if(comprovacaoMensagensV1Texto_(row[1]).toUpperCase()!==contexto.areaId)continue;
       if(comprovacaoMensagensV1Texto_(row[2]).toUpperCase()!==tipo)continue;
       if(comprovacaoMensagensV1Texto_(row[3])!==referencia)continue;
-      eventos.push({eventoId:comprovacaoMensagensV1Texto_(row[0]),titulo:comprovacaoMensagensV1Texto_(row[4]),mensagem:comprovacaoMensagensV1Texto_(row[5]),registradoEm:comprovacaoMensagensV1Texto_(row[6])});
+      eventos.push({eventoId:comprovacaoMensagensV1Texto_(row[0]),titulo:comprovacaoMensagensV1Texto_(row[4]),mensagem:comprovacaoMensagensV1Texto_(row[5]),registradoEm:comprovacaoMensagensV1HorarioBrasilia_(row[6])});
     }
   }
   if(!eventos.length)return {ok:true,encontrado:false,destino:destino,historico:[],message:'Ainda não existe mensagem com comprovação explícita enviada para este destino.'};
 
-  var recRows=rec&&rec.getLastRow()>1?rec.getRange(2,1,rec.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).getDisplayValues():[];
-  var openRows=open&&open.getLastRow()>1?open.getRange(2,1,open.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.OPEN_HEADERS.length).getDisplayValues():[];
+  var recRows=rec&&rec.getLastRow()>1?rec.getRange(2,1,rec.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).getValues():[];
+  var openRows=open&&open.getLastRow()>1?open.getRange(2,1,open.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.OPEN_HEADERS.length).getValues():[];
   var abertura={};
   openRows.forEach(function(row){
     if(comprovacaoMensagensV1Texto_(row[1]).toUpperCase()!==contexto.areaId||comprovacaoMensagensV1Texto_(row[2]).toUpperCase()!==tipo||comprovacaoMensagensV1Texto_(row[3])!==referencia)return;
     var key=comprovacaoMensagensV1Texto_(row[0])+'|'+comprovacaoMensagensV1Texto_(row[5]).toLowerCase();
-    if(!abertura[key])abertura[key]=comprovacaoMensagensV1Texto_(row[7]);
+    if(!abertura[key])abertura[key]=comprovacaoMensagensV1HorarioBrasilia_(row[7]);
   });
 
   eventos.forEach(function(ev){
@@ -237,7 +251,7 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
       aparelhos.push({
         referenciaTecnica:sub.slice(-8),tipoAparelho:comprovacaoMensagensV1Texto_(row[8])||'Aparelho',
         navegador:comprovacaoMensagensV1Texto_(row[9]),sistema:comprovacaoMensagensV1Texto_(row[10]),estado:estado,
-        encaminhadoEm:enc?(encaminhadoAuditoria||enc):'',exibidoEm:exib,abertoEm:abr,cienteEm:cie,
+        encaminhadoEm:enc?(comprovacaoMensagensV1HorarioBrasilia_(row[13])||encaminhadoAuditoria):'',exibidoEm:exib?comprovacaoMensagensV1HorarioBrasilia_(row[14]):'',abertoEm:abr,cienteEm:cie?comprovacaoMensagensV1HorarioBrasilia_(row[15]):'',
         origem:comprovacaoMensagensV1Texto_(row[16]),detalhe:comprovacaoMensagensV1Texto_(row[17])
       });
     });
