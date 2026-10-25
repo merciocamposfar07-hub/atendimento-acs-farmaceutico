@@ -85,6 +85,12 @@ var notificacoesAreaV1PostAnterior_;
 function notificacoesAreaV1TratarGet_(e){
   var p=e&&e.parameter?e.parameter:{};
   var action=notificacoesAreaV1Texto_(p.action).toLowerCase();
+  if(action==='publico_notificacao_conteudo'){
+    var consulta;
+    try{consulta=notificacoesAreaV1ConteudoPublicoToken_(p.t||p.token);}
+    catch(erro){consulta={ok:false,message:'O conteúdo desta notificação não pôde ser recuperado.'};}
+    return notificacoesAreaV1ResponderJson_(consulta,p.callback);
+  }
   if(['admin_result','publico_notificacao_reparo_result','publico_confirmar_recebimento_result'].indexOf(action)===-1)return null;
   var requestId=notificacoesAreaV1Texto_(p.requestId);
   if(!/^[A-Za-z0-9_-]{8,160}$/.test(requestId))return null;
@@ -484,6 +490,8 @@ function notificacoesAreaV1RegistrosDispositivos_(ss,areaId){
 
 function notificacoesAreaV1PrepararComprovantes_(contexto,input,alvos){
   var ss=tacsTerritorioV1Planilha_(),sheet=notificacoesAreaV1GarantirComprovantes_(ss);
+  /* Guardar exatamente o comunicado enviado antes de criar os links Push. */
+  notificacoesAreaV1GuardarConteudoGeral_(ss,contexto,input);
   var inicio=sheet.getLastRow()+1,agora=new Date(),individual=input.tipo==='MENSAGEM_INDIVIDUAL',linhas=[],preparados=[];
   alvos.forEach(function(alvo,i){
     var token=notificacoesAreaV1NovoToken_(),hash=notificacoesAreaV1HashToken_(token);
@@ -762,6 +770,79 @@ function notificacoesAreaV1GarantirComprovantes_(ss){
 
 function notificacoesAreaV1NovoToken_(){
   return (Utilities.getUuid()+Utilities.getUuid()).replace(/-/g,'').toLowerCase();
+}
+
+/* A cópia do comunicado geral é vinculada ao EVENTO, não ao aparelho.
+   Somente o token secreto do comprovante permite ler seu conteúdo via GET. */
+function notificacoesAreaV1GuardarConteudoGeral_(ss,contexto,input){
+  var tipo=notificacoesAreaV1Texto_(input&&input.tipo).toUpperCase();
+  if(tipo==='MENSAGEM_INDIVIDUAL'||tipo==='MENSAGEM_FAMILIA')return;
+  var evento=notificacoesAreaV1Texto_(input&&input.evento);
+  if(!/^[A-Za-z0-9_-]{8,160}$/.test(evento))throw new Error('Protocolo do comunicado inválido.');
+  var nome='TACS_NOTIFICACOES_CONTEUDO_V1',cab=['EVENTO_ID','AREA_ID','TIPO','REFERENCIA_ID','TITULO','MENSAGEM','CRIADO_EM'];
+  var sheet=ss.getSheetByName(nome);
+  if(!sheet)sheet=ss.insertSheet(nome);
+  if(sheet.getLastRow()===0){sheet.getRange(1,1,1,cab.length).setValues([cab]);sheet.setFrozenRows(1);}
+  var headers=sheet.getRange(1,1,1,cab.length).getDisplayValues()[0];
+  if(cab.some(function(v,i){return headers[i]!==v}))throw new Error('O arquivo técnico dos comunicados possui colunas incompatíveis.');
+  if(sheet.getLastRow()>1){
+    var ids=sheet.getRange(2,1,sheet.getLastRow()-1,1).getDisplayValues();
+    if(ids.some(function(row){return notificacoesAreaV1Texto_(row[0])===evento}))return;
+  }
+  var titulo=notificacoesAreaV1Texto_(input.titulo).slice(0,120),mensagem=notificacoesAreaV1Texto_(input.mensagem).slice(0,1000);
+  if(!titulo||!mensagem)throw new Error('O conteúdo completo deve estar disponível antes do envio.');
+  sheet.appendRow([evento,notificacoesAreaV1Texto_(contexto.areaId).toUpperCase(),tipo,notificacoesAreaV1Texto_(input.referencia),titulo,mensagem,new Date().toISOString()]);
+}
+function notificacoesAreaV1ConteudoPublicoToken_(token){
+  token=notificacoesAreaV1Texto_(token).toLowerCase();
+  if(!/^[0-9a-f]{64}$/.test(token))return {ok:false,message:'Identificador da notificação inválido.'};
+  var ss=tacsTerritorioV1Planilha_(),rec=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.RECEIPT_SHEET);
+  if(!rec||rec.getLastRow()<2)return {ok:false,message:'Notificação não localizada.'};
+  var hash=notificacoesAreaV1HashToken_(token),encontrado=null;
+  var rows=rec.getRange(2,1,rec.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).getValues();
+  for(var i=rows.length-1;i>=0;i--){
+    if(notificacoesAreaV1Texto_(rows[i][7]).toLowerCase()===hash){encontrado=rows[i];break}
+  }
+  if(!encontrado)return {ok:false,message:'Notificação não localizada.'};
+  var tipo=notificacoesAreaV1Texto_(encontrado[2]).toUpperCase();
+  if(tipo==='MENSAGEM_INDIVIDUAL'||tipo==='MENSAGEM_FAMILIA')
+    return {ok:false,message:'Este comprovante pertence a outro tipo de mensagem.'};
+  var evento=notificacoesAreaV1Texto_(encontrado[0]),area=notificacoesAreaV1Texto_(encontrado[1]).toUpperCase(),referencia=notificacoesAreaV1Texto_(encontrado[3]);
+  var titulo='',mensagem='',fonte='',snapshot=ss.getSheetByName('TACS_NOTIFICACOES_CONTEUDO_V1');
+  if(snapshot&&snapshot.getLastRow()>1){
+    var historico=snapshot.getRange(2,1,snapshot.getLastRow()-1,7).getValues();
+    for(var j=historico.length-1;j>=0;j--){
+      var row=historico[j];
+      if(notificacoesAreaV1Texto_(row[0])!==evento||notificacoesAreaV1Texto_(row[1]).toUpperCase()!==area||
+         notificacoesAreaV1Texto_(row[2]).toUpperCase()!==tipo||notificacoesAreaV1Texto_(row[3])!==referencia)continue;
+      titulo=notificacoesAreaV1Texto_(row[4]);mensagem=notificacoesAreaV1Texto_(row[5]);fonte='ENVIO_ORIGINAL';break;
+    }
+  }
+  /* Compatibilidade com notificações anteriores à criação do arquivo.
+     Lê a publicação correspondente, sem dizer que é uma cópia histórica. */
+  if(!mensagem&&(tipo==='RECADO'||tipo==='CAMPANHA')){
+    var origem=ss.getSheetByName(tipo==='RECADO'?'RECADOS_PORTAL':'CAMPANHAS_PORTAL');
+    var audit=notificacoesAreaV1AuditoriaPorEvento_(area,evento),tituloEnviado=notificacoesAreaV1Texto_(audit&&audit.titulo);
+    if(origem&&origem.getLastRow()>1&&origem.getLastColumn()>1){
+      var registros=origem.getRange(1,1,origem.getLastRow(),origem.getLastColumn()).getDisplayValues();
+      var col={};registros[0].forEach(function(h,k){col[notificacoesAreaV1Texto_(h).toUpperCase()]=k});
+      if(col.ID!==undefined&&col.TITULO!==undefined&&col.MENSAGEM!==undefined){
+        for(var k=registros.length-1;k>=1;k--){
+          var linha=registros[k],areaRegistro=col.AREA_ID===undefined?'JAPARANDUBA':(notificacoesAreaV1Texto_(linha[col.AREA_ID]).toUpperCase()||'JAPARANDUBA');
+          if(notificacoesAreaV1Texto_(linha[col.ID])!==referencia||areaRegistro!==area)continue;
+          var tituloAtual=notificacoesAreaV1Texto_(linha[col.TITULO]);
+          if(!tituloEnviado||tituloAtual!==tituloEnviado)break;
+          titulo=tituloAtual;mensagem=notificacoesAreaV1Texto_(linha[col.MENSAGEM]);fonte='PUBLICACAO_ATUAL';break;
+        }
+      }
+    }
+  }
+  return {
+    ok:Boolean(mensagem),individual:false,titulo:titulo,mensagem:mensagem,
+    fonte:fonte,ciente:Boolean(encontrado[15])||notificacoesAreaV1Texto_(encontrado[11]).toUpperCase()==='CONFIRMADO',
+    confirmadoEm:encontrado[15]?notificacoesAreaV1DataPainel_(encontrado[15]):'',
+    message:mensagem?'':'O conteúdo original não está disponível para esta notificação.'
+  };
 }
 
 function notificacoesAreaV1HashToken_(token){
