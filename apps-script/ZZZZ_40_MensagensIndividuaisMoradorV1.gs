@@ -360,14 +360,18 @@ function mensagemIndividualV1Status_(p,contexto){
   var evento=mensagemIndividualV1Texto_(p.eventoId||p.evento),morador=mensagemIndividualV1ResolverMorador_(p,contexto);
   if(!/^[A-Za-z0-9_-]{8,160}$/.test(evento))throw new Error('O envio individual não pôde ser identificado.');
   var match=evento.match(/^msgv1_enviar_(\d{13})_[A-Za-z0-9]+$/);
-  var criadoEm=match?Number(match[1]):NaN,agora=Date.now();
-  var area=contexto.areaId,referencia=morador.referencia;
+  var criadoEm=match?Number(match[1]):NaN,agora=Date.now(),area=contexto.areaId,referencia=morador.referencia;
   var ss=tacsTerritorioV1Planilha_(),rec=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.RECEIPT_SHEET),open=ss.getSheetByName(TACS_NOTIFICACOES_AREA_V1.OPEN_SHEET);
   var total=0,encaminhadas=0,exibidas=0,confirmadas=0,abertas=0;
-  var ultimoEnc='',ultimoExib='',ultimoConf='',ultimoAberto='';
-  var inscritos={};
-  function hora(ms){return Utilities.formatDate(new Date(ms),'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss');}
-  function valido(ms,minimo){return isFinite(ms)&&ms>=minimo-20000&&ms<=agora+120000;}
+  var ultimoEnc='',ultimoExib='',ultimoConf='',ultimoAberto='',inscritos={};
+  function hora(val){
+    var ms=mensagemIndividualV1InstanteStatus_(val);
+    if(!isFinite(ms)||ms>agora+120000)return '';
+    /* Datas antigas com fuso distorcido não podem ser 'consertadas'
+       deslocando horas: registrar estado real, mas omitir hora não confiável. */
+    if(isFinite(criadoEm)&&ms<criadoEm-120000)return '';
+    return Utilities.formatDate(new Date(ms),'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss');
+  }
   if(rec&&rec.getLastRow()>1){
     rec.getRange(2,1,rec.getLastRow()-1,TACS_NOTIFICACOES_AREA_V1.RECEIPT_HEADERS.length).getValues().forEach(function(row){
       if(mensagemIndividualV1Texto_(row[0])!==evento||
@@ -375,30 +379,13 @@ function mensagemIndividualV1Status_(p,contexto){
          mensagemIndividualV1Texto_(row[3])!==referencia)return;
       total++;
       var sub=mensagemIndividualV1Texto_(row[5]).toLowerCase();
-      var brutoEnvio=mensagemIndividualV1InstanteStatus_(row[13]),ajuste=0;
-      if(isFinite(criadoEm)&&isFinite(brutoEnvio)){
-        var delta=criadoEm-brutoEnvio,horas=Math.round(delta/3600000);
-        if(Math.abs(horas)<=14&&Math.abs(delta-horas*3600000)<=600000)ajuste=horas*3600000;
-      }
-      var envio=brutoEnvio+ajuste;
-      var base=isFinite(criadoEm)?criadoEm:envio;
-      var encaminhada=Boolean(row[13])&&valido(envio,base);
-      if(encaminhada){
-        encaminhadas++;ultimoEnc=hora(envio);
-        if(sub)inscritos[sub]={base:Math.max(base,envio),ajuste:ajuste};
-      }
-      var registro=inscritos[sub];
-      if(!encaminhada||!registro)return;
-      var exib=mensagemIndividualV1InstanteStatus_(row[14])+ajuste;
-      if(row[14]&&valido(exib,registro.base)){
-        exibidas++;ultimoExib=hora(exib);
-      }
-      var origem=mensagemIndividualV1Texto_(row[16]).toUpperCase();
-      var conf=mensagemIndividualV1InstanteStatus_(row[15])+ajuste;
-      /* Ciência é exclusivamente o botão de confirmação, nunca envio,
-         exibição técnica nem um ícone fixo do painel. */
-      if(row[15]&&origem==='BOTAO_CIENCIA_MENSAGEM'&&valido(conf,registro.base)){
-        confirmadas++;ultimoConf=hora(conf);
+      if(!row[13])return;
+      encaminhadas++;ultimoEnc=hora(row[13])||ultimoEnc;
+      if(sub)inscritos[sub]=true;
+      if(row[14]){exibidas++;ultimoExib=hora(row[14])||ultimoExib;}
+      /* A ciência só ocorre pelo botão, jamais por exibição/abertura. */
+      if(row[15]&&mensagemIndividualV1Texto_(row[16]).toUpperCase()==='BOTAO_CIENCIA_MENSAGEM'){
+        confirmadas++;ultimoConf=hora(row[15])||ultimoConf;
       }
     });
   }
@@ -407,11 +394,9 @@ function mensagemIndividualV1Status_(p,contexto){
       if(mensagemIndividualV1Texto_(row[0])!==evento||
          mensagemIndividualV1Texto_(row[1]).toUpperCase()!==area||
          mensagemIndividualV1Texto_(row[3])!==referencia)return;
-      var sub=mensagemIndividualV1Texto_(row[5]).toLowerCase(),registro=inscritos[sub];
-      if(!registro)return;
-      var aberto=mensagemIndividualV1InstanteStatus_(row[7])+registro.ajuste;
-      if(!valido(aberto,registro.base))return;
-      abertas++;ultimoAberto=hora(aberto);
+      var sub=mensagemIndividualV1Texto_(row[5]).toLowerCase();
+      if(!inscritos[sub])return;
+      abertas++;ultimoAberto=hora(row[7])||ultimoAberto;
     });
   }
   var estado=confirmadas?'CONFIRMADA':(abertas?'ABERTA':(exibidas?'EXIBIDA':(encaminhadas?'ENCAMINHADA':'AGUARDANDO')));
@@ -419,7 +404,6 @@ function mensagemIndividualV1Status_(p,contexto){
     aparelhos:total,encaminhadas:encaminhadas,exibidas:exibidas,abertas:abertas,confirmadas:confirmadas,estado:estado,
     horarios:{encaminhada:ultimoEnc,exibida:ultimoExib,aberta:ultimoAberto,confirmada:ultimoConf}};
 }
-
 function mensagemIndividualV1ValidarRequestId_(v){var s=mensagemIndividualV1Texto_(v);if(!/^[A-Za-z0-9_-]{8,160}$/.test(s))throw new Error('Identificador da operação inválido.');return s;}
 function mensagemIndividualV1GuardarResultado_(id,r){try{CacheService.getScriptCache().put(TACS_MENSAGEM_INDIVIDUAL_V1.RESULT_PREFIX+id,JSON.stringify(r),TACS_MENSAGEM_INDIVIDUAL_V1.RESULT_SECONDS);}catch(e){}}
 function mensagemIndividualV1LerResultado_(id){try{var s=CacheService.getScriptCache().get(TACS_MENSAGEM_INDIVIDUAL_V1.RESULT_PREFIX+id);return s?JSON.parse(s):null;}catch(e){return null;}}
