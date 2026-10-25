@@ -235,7 +235,7 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
       if(comprovacaoMensagensV1Texto_(row[1]).toUpperCase()!==contexto.areaId)continue;
       if(comprovacaoMensagensV1Texto_(row[2]).toUpperCase()!==tipo)continue;
       if(comprovacaoMensagensV1Texto_(row[3])!==referencia)continue;
-      eventos.push({eventoId:comprovacaoMensagensV1Texto_(row[0]),titulo:comprovacaoMensagensV1Texto_(row[4]),mensagem:comprovacaoMensagensV1Texto_(row[5]),registradoEm:comprovacaoMensagensV1HorarioBrasilia_(row[6],row[0])});
+      eventos.push({eventoId:comprovacaoMensagensV1Texto_(row[0]),titulo:comprovacaoMensagensV1Texto_(row[4]),mensagem:comprovacaoMensagensV1Texto_(row[5]),registradoEm:comprovacaoMensagensV1HorarioBrasilia_(row[6],row[0])||'Horário histórico não verificável'});
     }
   }
   if(!eventos.length)return {ok:true,encontrado:false,destino:destino,historico:[],message:'Ainda não existe mensagem com comprovação explícita enviada para este destino.'};
@@ -246,7 +246,7 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
   openRows.forEach(function(row){
     if(comprovacaoMensagensV1Texto_(row[1]).toUpperCase()!==contexto.areaId||comprovacaoMensagensV1Texto_(row[2]).toUpperCase()!==tipo||comprovacaoMensagensV1Texto_(row[3])!==referencia)return;
     var key=comprovacaoMensagensV1Texto_(row[0])+'|'+comprovacaoMensagensV1Texto_(row[5]).toLowerCase();
-    if(!abertura[key])abertura[key]=comprovacaoMensagensV1HorarioBrasilia_(row[7],row[0]);
+    if(!abertura[key])abertura[key]=comprovacaoMensagensV1HorarioBrasilia_(row[7],row[0])||(row[7]?'Horário histórico não verificável':'');
   });
 
   eventos.forEach(function(ev){
@@ -262,7 +262,10 @@ function comprovacaoMensagensV1MontarRelatorio_(contexto,tipo,referencia,destino
       aparelhos.push({
         referenciaTecnica:sub.slice(-8),tipoAparelho:comprovacaoMensagensV1Texto_(row[8])||'Aparelho',
         navegador:comprovacaoMensagensV1Texto_(row[9]),sistema:comprovacaoMensagensV1Texto_(row[10]),estado:estado,
-        encaminhadoEm:enc?comprovacaoMensagensV1HorarioBrasilia_(row[13],ev.eventoId):'',exibidoEm:exib?comprovacaoMensagensV1HorarioBrasilia_(row[14],ev.eventoId):'',abertoEm:abr,cienteEm:cie?comprovacaoMensagensV1HorarioBrasilia_(row[15],ev.eventoId):'',
+        encaminhadoEm:enc?(comprovacaoMensagensV1HorarioBrasilia_(row[13],ev.eventoId)||'Horário histórico não verificável'):'',
+        exibidoEm:exib?(comprovacaoMensagensV1HorarioBrasilia_(row[14],ev.eventoId)||'Horário histórico não verificável'):'',
+        abertoEm:abr,
+        cienteEm:cie?(comprovacaoMensagensV1HorarioBrasilia_(row[15],ev.eventoId)||'Horário histórico não verificável'):'',
         origem:comprovacaoMensagensV1Texto_(row[16]),detalhe:comprovacaoMensagensV1Texto_(row[17])
       });
     });
