@@ -1,0 +1,133 @@
+name: CSC - Horario Brasilia nas mensagens
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-horarios-brasilia-mensagens.yml'
+permissions:
+  contents: read
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+jobs:
+  atualizar-somente-horarios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar os horarios sem alterar dados
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs
+          node --check teste-v1/mensagem-individual-morador-v1.js
+          node scripts/test_horario_notificacao_recife_v1.js
+          node scripts/test_horario_mensagens_brasilia_v1.js
+
+      - name: Baixar implantacao atual
+        shell: bash
+        env:
+          CLASPRC_JSON: '${{ secrets.CLASPRC_JSON }}'
+          CLASP_JSON: '${{ secrets.CLASP_JSON }}'
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON" && test -n "$CLASP_JSON" && test -n "$DEPLOYMENT_ID"
+          DIR="$RUNNER_TEMP/csc-brasilia"
+          mkdir -p "$DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" DIR="$DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const c=JSON.parse(process.env.CLASP_JSON);
+          if(!c.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(c.scriptId))throw Error('Script invalido.');
+          c.rootDir='.';
+          fs.writeFileSync(path.join(process.env.DIR,'.clasp.json'),JSON.stringify(c,null,2)+'\n');
+          NODE
+          cd "$DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Corrigir somente duas funcoes e acrescentar conversor do relatorio
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/csc-brasilia" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const dir=process.env.DIR,files=fs.readdirSync(dir).filter(x=>/\.(gs|js)$/.test(x));
+          const sha=x=>crypto.createHash('sha256').update(x).digest('hex');
+          const old=Object.fromEntries(files.map(n=>[n,sha(fs.readFileSync(path.join(dir,n)))]));
+          function file(marker){
+            const hits=files.filter(n=>fs.readFileSync(path.join(dir,n),'utf8').includes(marker));
+            if(hits.length!==1)throw Error('Modulo nao unico: '+marker);
+            return hits[0];
+          }
+          function fn(src,name){
+            const re=new RegExp('^function '+name+'\\([^\\n]*\\)\\{[\\s\\S]*?^\\}','gm');
+            const hits=src.match(re)||[];
+            if(hits.length!==1)throw Error('Funcao nao unica: '+name);
+            return hits[0];
+          }
+          function apply(name,live,canonical){
+            const before=fn(live,name),after=fn(canonical,name);
+            return live.replace(before,after);
+          }
+          const nf=file('var TACS_NOTIFICACOES_AREA_V1 = Object.freeze');
+          const rf=file('var TACS_COMPROVACAO_MENSAGENS_V1 = Object.freeze');
+          const cn=fs.readFileSync('apps-script/ZZZZ_19_NotificacoesSegmentadasV1.gs','utf8');
+          const cr=fs.readFileSync('apps-script/ZZZZ_42_ComprovacaoMensagensV1.gs','utf8');
+          let n=fs.readFileSync(path.join(dir,nf),'utf8');
+          n=apply('notificacoesAreaV1DataPainel_',n,cn);
+          if(!n.includes("Utilities.formatDate(data,'America/Sao_Paulo'"))throw Error('Fuso de Brasilia ausente');
+          fs.writeFileSync(path.join(dir,nf),n);
+          let r=fs.readFileSync(path.join(dir,rf),'utf8');
+          const helper='comprovacaoMensagensV1HorarioBrasilia_';
+          if(r.includes('function '+helper+'('))r=apply(helper,r,cr);
+          else {
+            const anchor='function comprovacaoMensagensV1MontarRelatorio_(';
+            if(r.split(anchor).length!==2)throw Error('Ponto de insercao ambiguo');
+            r=r.replace(anchor,fn(cr,helper)+'\n\n'+anchor);
+          }
+          r=apply('comprovacaoMensagensV1MontarRelatorio_',r,cr);
+          const report=fn(r,'comprovacaoMensagensV1MontarRelatorio_');
+          if((report.match(/getValues\(\)/g)||[]).length<3)throw Error('Relatorio ainda usa datas preformatadas');
+          fs.writeFileSync(path.join(dir,rf),r);
+          const changed=files.filter(f=>sha(fs.readFileSync(path.join(dir,f)))!==old[f]);
+          if(changed.some(f=>f!==nf&&f!==rf))throw Error('Alteracao indevida: '+changed);
+          for(const f of [nf,rf])new Function(fs.readFileSync(path.join(dir,f),'utf8'));
+          console.log('Somente modulos de hora alterados: '+changed.join(','));
+          NODE
+
+      - name: Publicar na mesma implantacao com rollback
+        shell: bash
+        env:
+          DEPLOYMENT_ID: '${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/csc-brasilia"
+          BEFORE=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREV=$(printf '%s\n' "$BEFORE" | awk -v id="$DEPLOYMENT_ID" 'index($0,id){for(i=1;i<=NF;i++)if($i~/^@[0-9]+$/){gsub(/^@/,"",$i);print $i;exit}}')
+          test -n "$PREV"
+          DEPLOYED=0
+          rollback(){ code=$?;trap - ERR; if [ "$DEPLOYED" = 1 ];then npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREV" --description "Rollback horario Brasilia" "$DEPLOYMENT_ID" || true;fi;exit "$code"; }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 push --force
+          OUT=$(npx --yes @google/clasp@3.3.0 version "Mensagens CSC no horario de Brasilia")
+          VERSION=$(printf '%s\n' "$OUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description "Hora Brasilia em mensagens e comprovantes" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          STATUS=$(curl -L --fail --silent --show-error --connect-timeout 6 --max-time 25 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?action=portal_manutencao_status&areaId=JAPARANDUBA")
+          printf '%s' "$STATUS" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'
+          trap - ERR
+          echo "HORARIO_BRASILIA_PUBLICADO versao=$VERSION"
+
+      - name: Remover credenciais temporarias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json" "$RUNNER_TEMP/csc-brasilia/.clasp.json"
