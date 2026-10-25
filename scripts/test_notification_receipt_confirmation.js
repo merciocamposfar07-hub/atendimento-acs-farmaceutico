@@ -62,8 +62,13 @@ const payload=context.notificacoesAreaV1PayloadIndividual_('app',{areaId:'JAPARA
   titulo:'Recado',mensagem:'Mensagem fiel',tipo:'RECADO',referencia:'RECADO_1',evento:'evento_receipt_123'
 },{token,alvo:{subscriptionId:'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'}});
 assert.deepEqual(Array.from(payload.include_subscription_ids),['aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee']);
-assert.equal(payload.web_buttons[0].id,'confirmar_recebimento');
-assert.equal(payload.web_buttons[0].url,'_osp=do_not_open');
+assert.equal(payload.web_buttons,undefined,'Comunicado geral não pode ter atalho de ciência sem leitura');
+const individualPayload=context.notificacoesAreaV1PayloadIndividual_('app',{areaId:'JAPARANDUBA'},{
+  titulo:'Mensagem individual',mensagem:'Texto particular',tipo:'MENSAGEM_INDIVIDUAL',
+  referencia:'MORADOR_1',evento:'msgv1_1234567890'
+},{token,alvo:{subscriptionId:'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'}});
+assert.equal(individualPayload.web_buttons[0].id,'confirmar_recebimento');
+assert.equal(individualPayload.web_buttons[0].url,'_osp=do_not_open');
 assert.match(payload.url,/confirmar-recebimento\.html\?t=/);
 assert.equal(payload.data.confirmacaoToken,token);
 
