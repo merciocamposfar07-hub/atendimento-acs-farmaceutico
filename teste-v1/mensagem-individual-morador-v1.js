@@ -2,7 +2,7 @@
 'use strict';
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var TOKEN_KEY='portalTacsAdminTokenV1',TERRITORY_TOKEN_KEY='portalTacsTerritorioTokenV1',UBS_TOKEN_KEY='portalConectaUbsTokenV1',DEVICE_KEY='portalTacsDispositivoV1';
-var selecionado=null,ultimoEnvio=null,ativa=null,contador=0,timers=[],statusAutoAtivo=false,statusAutoGeracao=0,statusConsultaEmCurso=false,statusAssinatura='',historicoDados=[],historicoCarregando=false;
+var selecionado=null,ultimoEnvio=null,ativa=null,contador=0,timers=[],statusAutoAtivo=false,statusAutoGeracao=0,statusConsultaEmCurso=false,statusAssinatura='',historicoDados=[],historicoCarregando=false,historicoTimer=null,historicoGeracao=0;
 
 function txt(v){return String(v==null?'':v).trim()}
 function esc(v){return txt(v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -114,7 +114,7 @@ function instalar(){if(document.getElementById('msgIndividualMoradorV1'))return;
 .msg-ind-recibo{padding:14px;margin-top:14px;background:#0b344b;border:1px solid #83efa9;border-radius:15px;color:#fff;white-space:pre-wrap;overflow-wrap:anywhere}.msg-ind-recibo b{display:block;color:#83efa9;margin-bottom:8px}.msg-ind-recibo button{display:block;margin-top:10px;width:100%;min-height:46px;background:#176a48;border:0;border-radius:12px;color:white;font-weight:900;font:inherit}\
 .msg-ind-note{margin-top:12px;color:#d8eef7;font-size:.9rem;font-weight:700}.msg-ind-hide{display:none!important}#msgIndLivre{display:none!important}\
 .msg-ind-card-button{width:100%;min-height:52px;margin-top:10px;border:0;border-radius:16px;background:#135272;color:#fff;font-weight:900;font-size:1rem;box-shadow:none}\
-@media(min-width:560px){.msg-ind-actions.two{grid-template-columns:1fr 1fr}}';document.head.appendChild(style);
+@media(min-width:560px){.msg-ind-actions.two{grid-template-columns:1fr 1fr}}';style.textContent+='\n.msg-ind-hist-action{display:block;width:100%;min-height:56px;margin-top:11px;padding:12px 14px;border:2px solid transparent;border-radius:16px;color:#fff;font-size:1.05rem;font-weight:900;line-height:1.3;text-align:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.22)}.msg-ind-hist-action:disabled{opacity:.55;cursor:wait}.msg-ind-hist-resend{background:linear-gradient(135deg,#ab4800,#e97813);border-color:#ffd18e}.msg-ind-hist-refresh{background:linear-gradient(135deg,#006e85,#128fa6);border-color:#93f5ff}.msg-ind-hist-download{display:block;width:100%;min-height:52px;margin-top:12px;padding:10px 12px;border:1px solid #5eabc3;border-radius:15px;background:#135272;color:#fff;font-weight:900;font-size:1rem}.msg-ind-hist-feedback{font-size:.89rem;color:#e3f8ff;margin:6px 0 0;min-height:0}.msg-ind-hist-feedback:empty{display:none}';document.head.appendChild(style);
 var overlay=document.createElement('div');overlay.id='msgIndividualMoradorV1';overlay.className='msg-ind-overlay msg-ind-hide';overlay.innerHTML=''
 +'<section class="msg-ind-box" role="dialog" aria-modal="true" aria-labelledby="msgIndTitulo">'
 +'<div class="msg-ind-head"><div><h2 id="msgIndTitulo">Enviar mensagem</h2><div class="msg-ind-note">Mensagem individual para o cadastro selecionado.</div></div><button id="msgIndFechar" class="msg-ind-close" type="button" aria-label="Fechar">×</button></div>'
@@ -133,7 +133,7 @@ var overlay=document.createElement('div');overlay.id='msgIndividualMoradorV1';ov
 +'<button id="msgIndAtualizar" class="msg-ind-refresh" type="button">↻ Atualizar confirmação</button></div>'
 +'</section>';document.body.appendChild(overlay);
 ['msgIndTipo','msgIndServico','msgIndData','msgIndHora'].forEach(function(id){var n=document.getElementById(id);if(n){n.addEventListener('input',atualizarFormulario);n.addEventListener('change',atualizarFormulario)}});document.getElementById('msgIndPreviewTexto').addEventListener('input',function(){document.getElementById('msgIndMensagem').value=this.value});
-document.getElementById('msgIndFechar').addEventListener('click',fechar);document.getElementById('msgIndEnviar').addEventListener('click',enviar);document.getElementById('msgIndAtualizar').addEventListener('click',atualizarStatus);document.getElementById('msgIndHistoricoBotao').addEventListener('click',abrirHistorico);document.getElementById('msgIndHistoricoLista').addEventListener('click',baixarHistorico);document.getElementById('msgIndCopiar').addEventListener('click',function(){var text=document.getElementById('msgIndReciboTexto').textContent;if(!text)return;try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).catch(function(){})}catch(e){}});overlay.addEventListener('click',function(e){if(e.target===overlay)fechar()});
+document.getElementById('msgIndFechar').addEventListener('click',fechar);document.getElementById('msgIndEnviar').addEventListener('click',enviar);document.getElementById('msgIndAtualizar').addEventListener('click',atualizarStatus);document.getElementById('msgIndHistoricoBotao').addEventListener('click',abrirHistorico);document.getElementById('msgIndHistoricoLista').addEventListener('click',acoesHistorico);document.getElementById('msgIndCopiar').addEventListener('click',function(){var text=document.getElementById('msgIndReciboTexto').textContent;if(!text)return;try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).catch(function(){})}catch(e){}});overlay.addEventListener('click',function(e){if(e.target===overlay)fechar()});
 }
 
 function setStatus(msg,tipo){var n=document.getElementById('msgIndStatus');if(!n)return;n.textContent=msg;n.className='msg-ind-status'+(tipo?' '+tipo:'')}
@@ -164,7 +164,7 @@ function retomarStatus(){
 }
 document.addEventListener('visibilitychange',function(){if(!document.hidden)retomarStatus()});
 window.addEventListener('focus',retomarStatus);
-function fechar(){limparTimers();var n=document.getElementById('msgIndividualMoradorV1');if(n)n.classList.add('msg-ind-hide')}
+function fechar(){limparTimers();pararHistoricoAuto();var n=document.getElementById('msgIndividualMoradorV1');if(n)n.classList.add('msg-ind-hide')}
 function mascararData(v){var d=txt(v).replace(/\D/g,'').slice(0,8);if(d.length>4)return d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4);if(d.length>2)return d.slice(0,2)+'/'+d.slice(2);return d}
 function dataVisual(v){var d=txt(v);var iso=d.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(iso)return iso[3]+'/'+iso[2]+'/'+iso[1];return d}
 function horarioVisual(v){var h=txt(v).replace(/\s+/g,' '),m=h.match(/^([01]\d|2[0-3]):([0-5]\d)\s*(?:a|as|às|-)\s*([01]\d|2[0-3]):([0-5]\d)\s*(?:h|hs)?$/i);if(m)return'das '+m[1]+':'+m[2]+' às '+m[3]+':'+m[4]+' hs';if(/^([01]\d|2[0-3]):[0-5]\d$/.test(h))return'às '+h;return h}
@@ -272,64 +272,150 @@ function agendarAtualizacoes(){
  if(painelMensagemAberto())planejarStatus(2200);
 }
 
-function abrirHistorico(){
- if(historicoCarregando||!selecionado)return;
- var box=document.getElementById('msgIndHistoricoLista'),pessoa=selecionado;
- box.classList.remove('msg-ind-hide');
- box.textContent='Aguarde… recuperando mensagens e comprovantes anteriores.';
+function pararHistoricoAuto(){
+ if(historicoTimer){clearTimeout(historicoTimer);historicoTimer=null}
+ historicoGeracao++;
+}
+function historicoVisivel(){
+ var janela=document.getElementById('msgIndividualMoradorV1'),lista=document.getElementById('msgIndHistoricoLista');
+ return Boolean(selecionado&&janela&&!janela.classList.contains('msg-ind-hide')&&lista&&!lista.classList.contains('msg-ind-hide'));
+}
+function programarHistoricoAuto(){
+ if(historicoTimer){clearTimeout(historicoTimer);historicoTimer=null}
+ if(!historicoVisivel())return;
+ var geracao=historicoGeracao;
+ historicoTimer=setTimeout(function(){
+  historicoTimer=null;
+  if(geracao!==historicoGeracao||!historicoVisivel())return;
+  if(document.hidden||ativa||historicoCarregando){programarHistoricoAuto();return}
+  carregarHistorico(true);
+ },9000);
+}
+function abrirHistorico(){carregarHistorico(false)}
+function carregarHistorico(silencioso,botao){
+ if(historicoCarregando||!selecionado||!document.getElementById('msgIndividualMoradorV1'))return;
+ if(silencioso&&(document.hidden||!historicoVisivel()||ativa)){
+  if(botao){var aviso=botao.parentNode.querySelector('.msg-ind-hist-feedback');if(aviso)aviso.textContent='Aguarde a conclusão da operação atual para atualizar.'}
+  programarHistoricoAuto();return;
+ }
+ var box=document.getElementById('msgIndHistoricoLista'),pessoa=selecionado,geracao=historicoGeracao;
+ if(!silencioso){box.classList.remove('msg-ind-hide');box.textContent='Aguarde… recuperando mensagens e comprovantes anteriores.'}
+ if(botao){botao.disabled=true;botao.textContent='↻ Atualizando etapas…'}
  historicoCarregando=true;
  post('admin_mensagem_relatorio',sessao({escopo:'INDIVIDUAL',origemAba:pessoa.origemAba,origemLinha:pessoa.origemLinha,moradorId:pessoa.moradorId||''}),function(r){
-   historicoCarregando=false;
-   if(selecionado!==pessoa)return;
-   if(!r||r.ok!==true){box.textContent='Falha ao consultar o histórico. Toque novamente para tentar.';return}
-   historicoDados=Array.isArray(r.historico)?r.historico:[];
-   box.replaceChildren();
-   if(!historicoDados.length){box.textContent='Nenhuma mensagem anterior encontrada para este cadastro.';return}
-   historicoDados.forEach(function(item,idx){
-     var card=document.createElement('article'),title=document.createElement('strong'),when=document.createElement('p'),msg=document.createElement('p'),button=document.createElement('button');
-     card.style.cssText='padding:12px;margin-top:12px;border:1px solid #42778a;border-radius:12px;white-space:pre-wrap';
-     title.textContent=txt(item.titulo)||'Mensagem individual';
-     when.textContent='Registro: '+txt(item.registradoEm)+' — '+txt(item.estado);
-     msg.textContent=txt(item.mensagem);
-     button.type='button';button.dataset.historicoIndice=String(idx);button.textContent='Baixar comprovante e etapas';
-     var etapasBox=document.createElement('section'),etapasTitulo=document.createElement('strong');
-     etapasBox.style.cssText='margin:12px 0;padding:12px;border:1px solid #42778a;border-radius:12px;overflow-wrap:anywhere';
-     etapasBox.setAttribute('aria-label','Checklist completo de confirmação da mensagem');
-     etapasTitulo.textContent='Checklist de entrega, abertura e ciência';
-     etapasBox.appendChild(etapasTitulo);
-     var aparelhos=Array.isArray(item.aparelhos)?item.aparelhos:[];
-     if(!aparelhos.length){
-       var indisponivel=document.createElement('p');
-       indisponivel.textContent='Nenhum registro técnico de aparelho disponível para esta mensagem.';
-       etapasBox.appendChild(indisponivel);
-     }
-     aparelhos.forEach(function(aparelho,numero){
-       var bloco=document.createElement('div'),nomeAparelho=document.createElement('strong');
-       bloco.style.cssText='margin-top:10px;padding:10px;border:1px solid #37677d;border-radius:10px';
-       nomeAparelho.textContent='Aparelho '+(numero+1)+(txt(aparelho.referenciaTecnica)?' • final '+txt(aparelho.referenciaTecnica):'');
-       bloco.appendChild(nomeAparelho);
-       [
-         ['Encaminhada ao serviço Push','encaminhadoEm'],
-         ['Exibida no aparelho','exibidoEm'],
-         ['Mensagem aberta','abertoEm'],
-         ['Li e estou ciente','cienteEm']
-       ].forEach(function(etapa){
-         var horario=txt(aparelho[etapa[1]]),linha=document.createElement('p');
-         linha.style.cssText='margin:5px 0;line-height:1.45';
-         linha.textContent=(horario?'✓ ':'○ ')+etapa[0]+': '+(horario||'Sem confirmação');
-         bloco.appendChild(linha);
-       });
-       if(txt(aparelho.estado)==='FALHA_ENVIO'){
-         var falha=document.createElement('p');
-         falha.textContent='Falha de envio registrada'+(txt(aparelho.detalhe)?': '+txt(aparelho.detalhe):'.');
-         bloco.appendChild(falha);
-       }
-       etapasBox.appendChild(bloco);
-     });
-     card.appendChild(title);card.appendChild(when);card.appendChild(msg);
-     card.appendChild(etapasBox);card.appendChild(button);box.appendChild(card);
+  historicoCarregando=false;
+  if(botao&&botao.isConnected){botao.disabled=false;botao.textContent='↻ Atualizar etapas de envio e ciência'}
+  if(selecionado!==pessoa||geracao!==historicoGeracao||!historicoVisivel())return;
+  if(!r||r.ok!==true){
+   if(!silencioso)box.textContent='Falha ao consultar o histórico. Toque novamente para tentar.';
+   else if(botao){var nota=botao.parentNode.querySelector('.msg-ind-hist-feedback');if(nota)nota.textContent='Não foi possível atualizar agora. Tente novamente.'}
+   programarHistoricoAuto();return;
+  }
+  var novos=Array.isArray(r.historico)?r.historico:[];
+  if(silencioso&&JSON.stringify(historicoDados)===JSON.stringify(novos)){
+   if(botao&&botao.isConnected){var ok=botao.parentNode.querySelector('.msg-ind-hist-feedback');if(ok)ok.textContent='Etapas verificadas. Nenhuma alteração desde a última consulta.'}
+   programarHistoricoAuto();return;
+  }
+  historicoDados=novos;
+  var painel=box.closest('.msg-ind-box'),rolagem=painel?painel.scrollTop:0;
+  box.replaceChildren();
+  if(!historicoDados.length){
+   box.textContent='Nenhuma mensagem anterior encontrada para este cadastro.';
+   if(painel&&silencioso)painel.scrollTop=rolagem;
+   programarHistoricoAuto();return;
+  }
+  historicoDados.forEach(function(item,idx){
+   var card=document.createElement('article'),title=document.createElement('strong'),when=document.createElement('p'),msg=document.createElement('p'),
+       reenviar=document.createElement('button'),button=document.createElement('button'),atualizar=document.createElement('button'),feedback=document.createElement('p');
+   card.style.cssText='padding:12px;margin-top:12px;border:1px solid #42778a;border-radius:12px;white-space:pre-wrap';
+   title.textContent=txt(item.titulo)||'Mensagem individual';
+   when.textContent='Registro: '+txt(item.registradoEm)+' — '+txt(item.estado);
+   msg.textContent=txt(item.mensagem);
+   reenviar.type='button';reenviar.className='msg-ind-hist-action msg-ind-hist-resend';
+   reenviar.dataset.historicoReenviar=String(idx);reenviar.textContent='↗ Enviar novamente';
+   reenviar.setAttribute('aria-label','Enviar novamente esta mensagem ao mesmo morador');
+   button.type='button';button.className='msg-ind-hist-download';button.dataset.historicoIndice=String(idx);
+   button.textContent='Baixar comprovante e etapas';
+   atualizar.type='button';atualizar.className='msg-ind-hist-action msg-ind-hist-refresh';
+   atualizar.dataset.historicoAtualizar=String(idx);atualizar.textContent='↻ Atualizar etapas de envio e ciência';
+   feedback.className='msg-ind-hist-feedback';feedback.setAttribute('role','status');
+   var etapasBox=document.createElement('section'),etapasTitulo=document.createElement('strong');
+   etapasBox.style.cssText='margin:12px 0;padding:12px;border:1px solid #42778a;border-radius:12px;overflow-wrap:anywhere';
+   etapasBox.setAttribute('aria-label','Checklist completo de confirmação da mensagem');
+   etapasTitulo.textContent='Checklist de entrega, abertura e ciência';
+   etapasBox.appendChild(etapasTitulo);
+   var aparelhos=Array.isArray(item.aparelhos)?item.aparelhos:[];
+   if(!aparelhos.length){
+    var indisponivel=document.createElement('p');
+    indisponivel.textContent='Nenhum registro técnico de aparelho disponível para esta mensagem.';
+    etapasBox.appendChild(indisponivel);
+   }
+   aparelhos.forEach(function(aparelho,numero){
+    var bloco=document.createElement('div'),nomeAparelho=document.createElement('strong');
+    bloco.style.cssText='margin-top:10px;padding:10px;border:1px solid #37677d;border-radius:10px';
+    nomeAparelho.textContent='Aparelho '+(numero+1)+(txt(aparelho.referenciaTecnica)?' • final '+txt(aparelho.referenciaTecnica):'');
+    bloco.appendChild(nomeAparelho);
+    [
+      ['Encaminhada ao serviço Push','encaminhadoEm'],
+      ['Exibida no aparelho','exibidoEm'],
+      ['Mensagem aberta','abertoEm'],
+      ['Li e estou ciente','cienteEm']
+    ].forEach(function(etapa){
+     var horario=txt(aparelho[etapa[1]]),linha=document.createElement('p');
+     linha.style.cssText='margin:5px 0;line-height:1.45';
+     linha.textContent=(horario?'✓ ':'○ ')+etapa[0]+': '+(horario||'Sem confirmação');
+     bloco.appendChild(linha);
+    });
+    if(txt(aparelho.estado)==='FALHA_ENVIO'){
+     var falha=document.createElement('p');
+     falha.textContent='Falha de envio registrada'+(txt(aparelho.detalhe)?': '+txt(aparelho.detalhe):'.');
+     bloco.appendChild(falha);
+    }
+    etapasBox.appendChild(bloco);
    });
+   card.appendChild(title);card.appendChild(when);card.appendChild(msg);card.appendChild(reenviar);
+   card.appendChild(etapasBox);card.appendChild(button);card.appendChild(atualizar);card.appendChild(feedback);box.appendChild(card);
+  });
+  if(painel&&silencioso)painel.scrollTop=rolagem;
+  programarHistoricoAuto();
  });
+}
+function tipoOriginalHistorico(item){
+ var titulo=txt(item&&item.titulo).toUpperCase();
+ if(titulo.indexOf('ATENDIMENTO CONFIRMADO')>=0)return 'CONFIRMAR_ATENDIMENTO';
+ if(titulo.indexOf('NOVA DATA')>=0)return 'ALTERAR_DATA';
+ if(titulo.indexOf('LEMBRETE')>=0)return 'LEMBRETE';
+ if(titulo.indexOf('ATENDIMENTO CANCELADO')>=0)return 'CANCELAMENTO';
+ return 'OUTRA_MENSAGEM';
+}
+function reenviarHistorico(btn){
+ var indice=Number(btn.dataset.historicoReenviar),item=historicoDados[indice],pessoa=selecionado;
+ if(!item||!pessoa)return;
+ var mensagem=txt(item.mensagem),feedback=btn.parentNode.querySelector('.msg-ind-hist-feedback');
+ if(mensagem.length<3||mensagem.length>700){if(feedback)feedback.textContent='A mensagem original não pode ser reenviada neste formato.';return}
+ if(ativa||historicoCarregando){if(feedback)feedback.textContent='Há outra operação em andamento. Tente novamente ao concluir.';return}
+ btn.disabled=true;btn.textContent='↗ Reenviando…';
+ if(feedback)feedback.textContent='Enviando o mesmo texto ao cadastro selecionado…';
+ post('admin_mensagem_individual_enviar',sessao({
+   origemAba:pessoa.origemAba,origemLinha:pessoa.origemLinha,moradorId:pessoa.moradorId||'',
+   tipo:tipoOriginalHistorico(item),servico:'',data:'',hora:'',mensagem:mensagem
+ }),function(r){
+  if(btn.isConnected){btn.disabled=false;btn.textContent='↗ Enviar novamente'}
+  if(selecionado!==pessoa)return;
+  if(!r||r.ok!==true||r.enviado!==true){
+   if(feedback&&feedback.isConnected)feedback.textContent=txt(r&&r.message)||'Não foi possível confirmar o reenvio.';
+   return;
+  }
+  setStatus('Mensagem reenviada. Novo protocolo: '+txt(r.eventoId)+'. O comprovante anterior foi preservado.','ok');
+  if(feedback&&feedback.isConnected)feedback.textContent='Reenvio confirmado. Consulte o novo registro no histórico.';
+  carregarHistorico(true);
+ });
+}
+function acoesHistorico(e){
+ var alvo=e.target&&e.target.closest&&e.target.closest('button');if(!alvo)return;
+ if(alvo.hasAttribute('data-historico-reenviar')){reenviarHistorico(alvo);return}
+ if(alvo.hasAttribute('data-historico-atualizar')){carregarHistorico(true,alvo);return}
+ baixarHistorico(e);
 }
 function baixarHistorico(e){
  var btn=e.target&&e.target.closest&&e.target.closest('[data-historico-indice]');
@@ -353,7 +439,7 @@ function baixarHistorico(e){
 }
 function enviar(){if(!selecionado)return;var tipo=document.getElementById('msgIndTipo').value,servico=txt(document.getElementById('msgIndServico').value),data=txt(document.getElementById('msgIndData').value),hora=txt(document.getElementById('msgIndHora').value),mensagem=txt(document.getElementById('msgIndPreviewTexto').value);document.getElementById('msgIndMensagem').value=mensagem;if(tipo!=='OUTRA_MENSAGEM'&&(!servico||!data)){setStatus('Informe o serviço e a data.','err');return}if(data&&!/^(?:\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2})$/.test(data)){setStatus('Informe a data no formato DD/MM/AAAA.','err');return}if(!horarioValido(hora)){setStatus('Informe um horário como 08:00 ou 08:00 às 11:00 hs.','err');return}if(mensagem.length<3||/^Informe o serviço/.test(mensagem)){setStatus('Confira a mensagem que será enviada.','err');return}var b=document.getElementById('msgIndEnviar');b.disabled=true;setStatus('Enviando somente para o cadastro familiar deste morador…','warn');post('admin_mensagem_individual_enviar',sessao({origemAba:selecionado.origemAba,origemLinha:selecionado.origemLinha,moradorId:selecionado.moradorId||'',tipo:tipo,servico:servico,data:data,hora:hora,mensagem:mensagem}),function(r){b.disabled=false;if(!r||r.ok!==true){setStatus(txt(r&&r.message)||'O envio foi recusado pelo servidor.','err');return}if(r.enviado!==true){ultimoEnvio=null;comprovanteOperador(null);resetTrack();setStatus(txt(r.message)||'Nenhum aparelho apto foi encontrado para este morador.','warn');return}ultimoEnvio={eventoId:r.eventoId};comprovanteOperador(r.comprovante||null);document.getElementById('msgIndTrack').classList.remove('msg-ind-hide');marcar('msgStepEnc',Number(r.encaminhadas)>0,'');setStatus('📤 Mensagem encaminhada para '+Number(r.encaminhadas||0)+' aparelho(s). Acompanhando a confirmação…','ok');agendarAtualizacoes()})}
 
-function abrir(item){instalar();selecionado=item||null;ultimoEnvio=null;historicoDados=[];historicoCarregando=false;var caixaHistorico=document.getElementById('msgIndHistoricoLista');if(caixaHistorico){caixaHistorico.replaceChildren();caixaHistorico.classList.add('msg-ind-hide')}limparTimers();resetTrack();comprovanteOperador(null);if(!selecionado)return;var familia=txt(item.familiaId)||familiaEndereco(item.endereco);document.getElementById('msgIndPessoa').innerHTML='<strong>'+esc(item.nome||'Morador')+'</strong><span>Cadastro familiar '+esc(familia||'não identificado')+'</span>';document.getElementById('msgIndTipo').value='CONFIRMAR_ATENDIMENTO';document.getElementById('msgIndServico').value='';document.getElementById('msgIndData').value='';document.getElementById('msgIndHora').value='';document.getElementById('msgIndMensagem').value='';document.getElementById('msgIndPreviewTexto').value='';document.getElementById('msgIndividualMoradorV1').classList.remove('msg-ind-hide');setStatus('Confira a mensagem antes de enviar.','');atualizarFormulario();setTimeout(function(){document.getElementById('msgIndServico').focus()},50)}
+function abrir(item){instalar();pararHistoricoAuto();selecionado=item||null;ultimoEnvio=null;historicoDados=[];historicoCarregando=false;var caixaHistorico=document.getElementById('msgIndHistoricoLista');if(caixaHistorico){caixaHistorico.replaceChildren();caixaHistorico.classList.add('msg-ind-hide')}limparTimers();resetTrack();comprovanteOperador(null);if(!selecionado)return;var familia=txt(item.familiaId)||familiaEndereco(item.endereco);document.getElementById('msgIndPessoa').innerHTML='<strong>'+esc(item.nome||'Morador')+'</strong><span>Cadastro familiar '+esc(familia||'não identificado')+'</span>';document.getElementById('msgIndTipo').value='CONFIRMAR_ATENDIMENTO';document.getElementById('msgIndServico').value='';document.getElementById('msgIndData').value='';document.getElementById('msgIndHora').value='';document.getElementById('msgIndMensagem').value='';document.getElementById('msgIndPreviewTexto').value='';document.getElementById('msgIndividualMoradorV1').classList.remove('msg-ind-hide');setStatus('Confira a mensagem antes de enviar.','');atualizarFormulario();setTimeout(function(){document.getElementById('msgIndServico').focus()},50)}
 window.PortalTacsMensagemIndividual={abrir:abrir};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',instalar);else instalar();
 })();
