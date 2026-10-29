@@ -25,6 +25,8 @@ var duplicateEditMode=false;
 var lastSearchQuery='';
 /* Requisições antigas não podem alterar o estado visual de uma busca nova. */
 var searchGeneration=0;
+var cancelCurrentSearch=null;
+var searchSessionTimer=null;
 var selectedAreaId=nativeConfig&&nativeConfig.areaId?String(nativeConfig.areaId):'';
 var availableAreas=[];
 var statusActivationAttempted=false;
@@ -367,25 +369,73 @@ function post(action,payload,resultAction,cb){
    Leituras de status e busca não usam a trava global `active` das gravações.
    Assim, a conferência da base pode continuar em segundo plano sem impedir a busca.
    Escritas/autenticação continuam no post() serial já existente. */
-function readPost(action,payload,resultAction,cb){
+/* BUSCA_CONTINUA_MORADORES_20261029_V1
+   A consulta de moradores é somente leitura e não possui prazo de desistência.
+   Enquanto a busca for atual, continua consultando seu resultado; se a
+   requisição for perdida/expirar, reabre APENAS essa leitura, com backoff.
+   Gravações continuam usando post() e seus limites de confirmação próprios. */
+function readPost(action,payload,resultAction,cb,options){
   noteRequestAction(action);
-  var rid=requestId(action),body=new URLSearchParams(),started=Date.now(),finished=false,wait=240;
-  Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});
-  body.set('action',action);body.set('requestId',rid);
-  function finishRead(result){if(finished)return;finished=true;cb(result||{ok:false,message:'Resposta vazia do servidor.'})}
-  function pollRead(){
-    if(finished)return;
-    jsonp(resultAction,{requestId:rid},function(r){
-      if(finished)return;
-      if(r&&r.ok===true&&r.pendente===false){finishRead(r.result);return}
-      if(Date.now()-started>=18000){finishRead({ok:false,temporario:true,codigo:'LEITURA_PENDENTE'});return}
-      wait=Math.min(850,wait+90);setTimeout(pollRead,wait);
-    });
+  options=options&&typeof options==='object'?options:{};
+  var persistent=options.persistent===true;
+  var isCurrent=typeof options.isCurrent==='function'?options.isCurrent:null;
+  var finished=false,attempts=0,pollTimer=null,retryTimer=null;
+  function cancel(){
+    finished=true;
+    clearTimeout(pollTimer);clearTimeout(retryTimer);
   }
-  try{
-    fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});
-    setTimeout(pollRead,120);
-  }catch(e){finishRead({ok:false,temporario:true,message:'Não foi possível iniciar a leitura agora.'})}
+  function current(){
+    if(finished)return false;
+    if(isCurrent&&!isCurrent()){cancel();return false}
+    return true;
+  }
+  function finishRead(result){
+    if(!current())return;
+    cancel();
+    cb(result||{ok:false,message:'Resposta vazia do servidor.'});
+  }
+  function restart(){
+    if(!current())return;
+    /* Backoff limitado para evitar sobrecarga do Apps Script em indisponibilidade. */
+    var delay=Math.min(12000,2000+attempts*1000);
+    clearTimeout(retryTimer);
+    retryTimer=setTimeout(startAttempt,delay);
+  }
+  function startAttempt(){
+    if(!current())return;
+    attempts++;
+    var attempt=attempts,rid=requestId(action),body=new URLSearchParams();
+    var started=Date.now(),wait=240;
+    Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});
+    body.set('action',action);body.set('requestId',rid);
+    function pollRead(){
+      if(!current()||attempt!==attempts)return;
+      jsonp(resultAction,{requestId:rid},function(r){
+        if(!current()||attempt!==attempts)return;
+        if(r&&r.ok===true&&r.pendente===false){
+          if(persistent&&(!r.result||r.result.temporario===true)){restart();return}
+          finishRead(r.result);return;
+        }
+        if(!persistent&&Date.now()-started>=18000){
+          finishRead({ok:false,temporario:true,codigo:'LEITURA_PENDENTE'});return;
+        }
+        /* A cada 45 s sem confirmação, renova a requisição SOMENTE de leitura.
+           Os 18 s antigos não finalizam a busca de moradores. */
+        if(persistent&&Date.now()-started>=45000){restart();return}
+        wait=Math.min(persistent?2500:850,wait+(persistent?180:90));
+        pollTimer=setTimeout(pollRead,wait);
+      });
+    }
+    try{
+      fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){});
+      pollTimer=setTimeout(pollRead,120);
+    }catch(e){
+      if(persistent)restart();
+      else finishRead({ok:false,temporario:true,message:'Não foi possível iniciar a leitura agora.'});
+    }
+  }
+  startAttempt();
+  return cancel;
 }
 
 /* MORADORES_BUSCA_LOCAL_APP_LIKE_20260918
@@ -549,6 +599,8 @@ function changeArea(areaId){
     return;
   }
   searchGeneration++;
+  if(cancelCurrentSearch){cancelCurrentSearch();cancelCurrentSearch=null}
+  clearTimeout(searchSessionTimer);
   selectedAreaId=next;
   baseConfirmed=false;
   invalidateResidentIndex();
@@ -886,6 +938,9 @@ function loginWithTacs(pin){
 
 function logoutCurrent(){
   if(!(token||territoryToken))return;
+  searchGeneration++;
+  if(cancelCurrentSearch){cancelCurrentSearch();cancelCurrentSearch=null}
+  clearTimeout(searchSessionTimer);
   var action=accessMode==='tacs'?'admin_territorio_encerrar_sessao':'admin_logout';
   var resultAction=accessMode==='tacs'?'admin_territorio_result':'admin_result';
   post(action,session(),resultAction,function(){
@@ -1024,6 +1079,8 @@ function editDuplicateResident(item){
 
 function showSearch(){
   searchGeneration++;
+  if(cancelCurrentSearch){cancelCurrentSearch();cancelCurrentSearch=null}
+  clearTimeout(searchSessionTimer);
   duplicateLock=false;
   duplicateEditMode=false;
   if(el('tabSearch'))el('tabSearch').classList.add('active');
@@ -1036,6 +1093,8 @@ function showSearch(){
 
 function prepareNewResident(){
   searchGeneration++;
+  if(cancelCurrentSearch){cancelCurrentSearch();cancelCurrentSearch=null}
+  clearTimeout(searchSessionTimer);
   duplicateLock=false;
   duplicateEditMode=false;
   if(el('residentId'))el('residentId').value='';
@@ -1271,6 +1330,8 @@ function doSearch(query,options){
   options=options&&typeof options==='object'?options:{};
   var q=text(query!=null?query:(el('query')&&el('query').value));
   var searchId=++searchGeneration,areaAtSearch=selectedAreaId;
+  if(cancelCurrentSearch){cancelCurrentSearch();cancelCurrentSearch=null}
+  clearTimeout(searchSessionTimer);
   if(q.length<2){setStatus('operationStatus','Digite pelo menos 2 caracteres.','err');return}
   lastSearchQuery=q;
   duplicateLock=false;
@@ -1290,28 +1351,50 @@ function doSearch(query,options){
     }
   }
 
-  if(!refreshRemoteCredentials()){
-    return waitForRemoteSession('Aguarde enquanto a sessão é sincronizada para consultar a base…',function(){if(searchId===searchGeneration&&selectedAreaId===areaAtSearch)doSearch(q,options)});
-  }
-  warmResidentIndex(false);
-  /* Limpa cartões antigos sem mostrar detalhes técnicos da rede no painel. */
-  if(el('results'))el('results').innerHTML='';
+  /* Exibe atividade enquanto aguarda confirmação efetiva, não um aviso técnico. */
+  if(el('results'))el('results').innerHTML='<div class="card"><strong>Buscando morador…</strong></div>';
   hideStatus('operationStatus');
-  readPost('admin_moradores_buscar',cloneSession({q:q,areaId:areaAtSearch}),'admin_moradores_result',function(r){
-    if(searchId!==searchGeneration||areaAtSearch!==selectedAreaId)return;
-    if(!r||r.ok!==true){
-      if(r&&r.temporario===true){
-        var results=el('results');
-        if(results)results.innerHTML='<div class="card"><strong>Busca não concluída. Toque em Buscar para tentar novamente.</strong></div>';
-        hideStatus('operationStatus');
-      }else setStatus('operationStatus',text(r&&r.message||'Busca recusada.'),'err');
+  function currentSearch(){
+    var area=el('searchArea');
+    return searchId===searchGeneration&&areaAtSearch===selectedAreaId&&
+      Boolean(area&&!area.classList.contains('hidden'));
+  }
+  function startRemoteSearch(){
+    if(!currentSearch())return;
+    if(!refreshRemoteCredentials()){
+      /* A sessão da Central pode chegar depois da abertura do painel;
+         não desiste da busca após 12 segundos. */
+      searchSessionTimer=setTimeout(startRemoteSearch,1200);
       return;
     }
-    var lista=Array.isArray(r.resultados)?r.resultados:[];
-    lista.forEach(function(item){item._areaId=selectedAreaId;var a=availableAreas.filter(function(x){return text(x.areaId)===selectedAreaId})[0];item._areaNome=text(a&&a.areaNome||selectedAreaId)});
-    renderSearchResults(lista);
-    if(options.successMessage)setStatus('operationStatus',options.successMessage,'ok');
-  });
+    warmResidentIndex(false);
+    cancelCurrentSearch=readPost(
+      'admin_moradores_buscar',cloneSession({q:q,areaId:areaAtSearch}),
+      'admin_moradores_result',function(r){
+        if(!currentSearch())return;
+        cancelCurrentSearch=null;
+        if(!r||r.ok!==true){
+          if(r&&r.temporario===true){
+            /* Erro temporário no transporte: repetir sem encerrar a busca. */
+            searchSessionTimer=setTimeout(startRemoteSearch,2500);
+          }else{
+            if(el('results'))el('results').innerHTML='';
+            setStatus('operationStatus',text(r&&r.message||'Busca recusada pelo servidor.'),'err');
+          }
+          return;
+        }
+        var lista=Array.isArray(r.resultados)?r.resultados:[];
+        lista.forEach(function(item){
+          item._areaId=areaAtSearch;
+          var a=availableAreas.filter(function(x){return text(x.areaId)===areaAtSearch})[0];
+          item._areaNome=text(a&&a.areaNome||areaAtSearch);
+        });
+        renderSearchResults(lista);
+        if(options.successMessage)setStatus('operationStatus',options.successMessage,'ok');
+      },{persistent:true,isCurrent:currentSearch}
+    );
+  }
+  startRemoteSearch();
 }
 
 function collectResidentPayload(){
