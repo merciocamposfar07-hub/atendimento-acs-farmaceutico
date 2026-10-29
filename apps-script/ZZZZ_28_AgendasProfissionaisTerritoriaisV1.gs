@@ -349,7 +349,7 @@ function agendasProfissionaisTerritoriaisV1AtualizarApenasDatas_(sheet,headers){
     if(idxModulo>=0&&agendasProfissionaisTerritoriaisV1Modulo_(modulos[i][0])==='odontologia'){
       var existente=agendasProfissionaisTerritoriaisV1Data_(datas[i][0]);
       var hora=idxHora>=0?agendasProfissionaisTerritoriaisV1Texto_(horas[i][0]):'';
-      var m=hora.match(/^([01]\\d|2[0-3]):([0-5]\\d)/);
+      var m=hora.match(/^([01]\d|2[0-3]):([0-5]\d)/);
       hora=m?m[1]+':'+m[2]:'';
       if(!hora&&idx12h>=0&&agendasProfissionaisTerritoriaisV1Booleano_(horas12[i][0]))hora='12:00';
       if(existente>hoje||(existente===hoje&&(!hora||horaAgora<hora)))continue;
