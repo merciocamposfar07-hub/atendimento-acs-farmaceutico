@@ -33,7 +33,24 @@ function semanaData(dia){
   d.setUTCDate(d.getUTCDate()+deslocamento+dias[nome]);
   return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
 }
-function dataAutomatica(a){return semanaData(a&&a.DIA)||dataInput(a&&a.DATA)}
+/* Na odontologia, a data futura confirmada pelo servidor prevalece.
+   Se a data estiver vencida, calcula o próximo atendimento válido em Recife. */
+function proximaDataOdontologica(a){
+  var salva=dataInput(a&&a.DATA),d=normalDia(a&&a.DIA),week={SEGUNDA:1,TERCA:2,QUARTA:3,QUINTA:4,SEXTA:5};
+  if(!Object.prototype.hasOwnProperty.call(week,d))return salva;
+  var partes={};
+  new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).forEach(function(p){partes[p.type]=p.value});
+  var hoje=partes.year+'-'+partes.month+'-'+partes.day,agora=partes.hour+':'+partes.minute;
+  var expira=text(a&&a.ENCERRA_HORARIO||((bool(a&&a.ENCERRA_12H))?'12:00':'')).trim();
+  var m=expira.match(/^([01]\\d|2[0-3]):([0-5]\\d)/);expira=m?m[1]+':'+m[2]:'';
+  if(salva>hoje||(salva===hoje&&(!expira||agora<expira)))return salva;
+  var data=new Date(Date.UTC(Number(partes.year),Number(partes.month)-1,Number(partes.day)));
+  var dias=(week[d]-data.getUTCDay()+7)%7;
+  if(dias===0&&expira&&agora>=expira)dias=7;
+  data.setUTCDate(data.getUTCDate()+dias);
+  return data.getUTCFullYear()+'-'+String(data.getUTCMonth()+1).padStart(2,'0')+'-'+String(data.getUTCDate()).padStart(2,'0');
+}
+function dataAutomatica(a){return normalId(a&&a.MODULO)==='ODONTOLOGIA'?proximaDataOdontologica(a):(semanaData(a&&a.DIA)||dataInput(a&&a.DATA))}
 function clone(v){try{return JSON.parse(JSON.stringify(v))}catch(e){return v}}
 function objectRows(v){return Array.isArray(v)?v.filter(function(x){return x&&typeof x==='object'}):[]}
 
@@ -286,7 +303,7 @@ function create(host){
   function field(card,name){var n=card.querySelector('[name="'+name+'"]');return n?n.value:''}
   function checked(card,name){var n=card.querySelector('[name="'+name+'"]');return n&&n.checked?'true':'false'}
   function payload(card){return Object.assign(session(),{
-    modulo:field(card,'modulo'),dia:field(card,'dia'),data:semanaData(field(card,'dia'))||field(card,'data'),horario:field(card,'horario').trim(),
+    modulo:field(card,'modulo'),dia:field(card,'dia'),data:normalId(field(card,'modulo'))==='ODONTOLOGIA'?(dataInput(field(card,'data'))||semanaData(field(card,'dia'))):(semanaData(field(card,'dia'))||field(card,'data')),horario:field(card,'horario').trim(),
     situacao:normalSituacao(field(card,'situacao')),mensagem:field(card,'mensagem').trim(),encerraHorario:field(card,'encerraHorario'),
     encerra12h:field(card,'encerraHorario')==='12:00'?'true':'false',vagasComuns:field(card,'vagasComuns'),
     vagasEmergenciais:field(card,'vagasEmergenciais'),diaExtra:checked(card,'diaExtra'),ativo:checked(card,'ativo')
