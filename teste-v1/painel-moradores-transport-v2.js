@@ -23,6 +23,8 @@ var currentSituation='ATIVO';
 var duplicateLock=false;
 var duplicateEditMode=false;
 var lastSearchQuery='';
+/* Requisições antigas não podem alterar o estado visual de uma busca nova. */
+var searchGeneration=0;
 var selectedAreaId=nativeConfig&&nativeConfig.areaId?String(nativeConfig.areaId):'';
 var availableAreas=[];
 var statusActivationAttempted=false;
@@ -376,7 +378,7 @@ function readPost(action,payload,resultAction,cb){
     jsonp(resultAction,{requestId:rid},function(r){
       if(finished)return;
       if(r&&r.ok===true&&r.pendente===false){finishRead(r.result);return}
-      if(Date.now()-started>=18000){finishRead({ok:false,temporario:true,message:'A leitura atual ainda não foi confirmada pelo servidor.'});return}
+      if(Date.now()-started>=18000){finishRead({ok:false,temporario:true,codigo:'LEITURA_PENDENTE'});return}
       wait=Math.min(850,wait+90);setTimeout(pollRead,wait);
     });
   }
@@ -546,6 +548,7 @@ function changeArea(areaId){
     setStatus('operationStatus','Aguarde a operação atual terminar antes de trocar de área.','warn');
     return;
   }
+  searchGeneration++;
   selectedAreaId=next;
   baseConfirmed=false;
   invalidateResidentIndex();
@@ -649,7 +652,8 @@ function showAuthenticatedShell(message){
     note.style.color='#073a55';
   }
   setStatus('loginStatus',message||'Aguarde enquanto os dados carregam…','warn');
-  setStatus('operationStatus','Aguarde enquanto os dados carregam…','warn');
+  /* A verificação da base não interrompe nem cobre a busca de moradores. */
+  hideLoadingStatus('operationStatus');
 }
 
 function ensureSituationUi(){
@@ -812,7 +816,7 @@ function loadBase(message,done){
   }
   if(!cached){
     setStatus('loginStatus','Aguarde enquanto os dados carregam…','warn');
-    setStatus('operationStatus','Aguarde enquanto os dados carregam…','warn');
+    hideLoadingStatus('operationStatus');
   }
   if(!moradoresRemoteReady()){
     if(cached)settleLoadingStatuses();
@@ -820,7 +824,15 @@ function loadBase(message,done){
     return;
   }
   var leituraPayload=session();coreRead('admin_moradores_status',leituraPayload,function(next){readPost('admin_moradores_status',leituraPayload,'admin_moradores_result',next)},function(r){
-    if(!r||r.ok!==true){var ok=renderBase(r,message,true);if(typeof done==='function')done(r,ok);return}
+    if(!r||r.ok!==true){
+      if(r&&r.temporario===true){
+        /* Falha transitória da leitura de fundo: não altera a busca nem libera gravações. */
+        setBaseLoading(false);syncControls();hideStatus('loginStatus');clearBackgroundSyncStatus();
+        if(typeof done==='function')done(r,false);
+        return;
+      }
+      var ok=renderBase(r,message,true);if(typeof done==='function')done(r,ok);return;
+    }
     var payload=basePerformancePayload(r),diff=modulePerf&&typeof modulePerf.commit==='function'?modulePerf.commit('moradores-base',payload):{changed:true};
     var ok=true;
     if(diff.changed||!cached)ok=renderBase(payload,message,true);
@@ -1011,6 +1023,7 @@ function editDuplicateResident(item){
 }
 
 function showSearch(){
+  searchGeneration++;
   duplicateLock=false;
   duplicateEditMode=false;
   if(el('tabSearch'))el('tabSearch').classList.add('active');
@@ -1022,6 +1035,7 @@ function showSearch(){
 }
 
 function prepareNewResident(){
+  searchGeneration++;
   duplicateLock=false;
   duplicateEditMode=false;
   if(el('residentId'))el('residentId').value='';
@@ -1256,6 +1270,7 @@ function searchProntuariosTodasAreas(q,options){
 function doSearch(query,options){
   options=options&&typeof options==='object'?options:{};
   var q=text(query!=null?query:(el('query')&&el('query').value));
+  var searchId=++searchGeneration,areaAtSearch=selectedAreaId;
   if(q.length<2){setStatus('operationStatus','Digite pelo menos 2 caracteres.','err');return}
   lastSearchQuery=q;
   duplicateLock=false;
@@ -1276,12 +1291,22 @@ function doSearch(query,options){
   }
 
   if(!refreshRemoteCredentials()){
-    return waitForRemoteSession('Aguarde enquanto a sessão é sincronizada para consultar a base…',function(){doSearch(q,options)});
+    return waitForRemoteSession('Aguarde enquanto a sessão é sincronizada para consultar a base…',function(){if(searchId===searchGeneration&&selectedAreaId===areaAtSearch)doSearch(q,options)});
   }
   warmResidentIndex(false);
-  setStatus('operationStatus','Aguarde, buscando na base real…','warn');
-  readPost('admin_moradores_buscar',cloneSession({q:q,areaId:selectedAreaId}),'admin_moradores_result',function(r){
-    if(!r||r.ok!==true){setStatus('operationStatus',text(r&&r.message||'Busca recusada.'),'err');return}
+  /* Limpa cartões antigos sem mostrar detalhes técnicos da rede no painel. */
+  if(el('results'))el('results').innerHTML='';
+  hideStatus('operationStatus');
+  readPost('admin_moradores_buscar',cloneSession({q:q,areaId:areaAtSearch}),'admin_moradores_result',function(r){
+    if(searchId!==searchGeneration||areaAtSearch!==selectedAreaId)return;
+    if(!r||r.ok!==true){
+      if(r&&r.temporario===true){
+        var results=el('results');
+        if(results)results.innerHTML='<div class="card"><strong>Busca não concluída. Toque em Buscar para tentar novamente.</strong></div>';
+        hideStatus('operationStatus');
+      }else setStatus('operationStatus',text(r&&r.message||'Busca recusada.'),'err');
+      return;
+    }
     var lista=Array.isArray(r.resultados)?r.resultados:[];
     lista.forEach(function(item){item._areaId=selectedAreaId;var a=availableAreas.filter(function(x){return text(x.areaId)===selectedAreaId})[0];item._areaNome=text(a&&a.areaNome||selectedAreaId)});
     renderSearchResults(lista);
