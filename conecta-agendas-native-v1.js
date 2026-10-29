@@ -42,7 +42,7 @@ function proximaDataOdontologica(a){
   new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).forEach(function(p){partes[p.type]=p.value});
   var hoje=partes.year+'-'+partes.month+'-'+partes.day,agora=partes.hour+':'+partes.minute;
   var expira=text(a&&a.ENCERRA_HORARIO||((bool(a&&a.ENCERRA_12H))?'12:00':'')).trim();
-  var m=expira.match(/^([01]\\d|2[0-3]):([0-5]\\d)/);expira=m?m[1]+':'+m[2]:'';
+  var m=expira.match(/^([01]\d|2[0-3]):([0-5]\d)/);expira=m?m[1]+':'+m[2]:'';
   if(salva>hoje||(salva===hoje&&(!expira||agora<expira)))return salva;
   var data=new Date(Date.UTC(Number(partes.year),Number(partes.month)-1,Number(partes.day)));
   var dias=(week[d]-data.getUTCDay()+7)%7;
