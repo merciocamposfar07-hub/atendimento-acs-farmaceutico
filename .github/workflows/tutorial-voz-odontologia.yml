@@ -1,0 +1,59 @@
+name: Tutorial CSC - voz feminina gratuita
+on:
+  push:
+    branches: [material-educativo-voz-csc]
+    paths: ['.github/workflows/tutorial-voz-odontologia.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar sintetizador gratuito
+        run: python -m pip install --quiet edge-tts
+      - name: Gerar narracao feminina neural em portugues
+        shell: bash
+        run: |
+          python - <<'PY'
+          import asyncio
+          from pathlib import Path
+          import edge_tts
+          roteiro = "Olá! Veja como agendar atendimento com a dentista pelo Portal CSC, Conecta Saúde Comunitária.\n\nAbra o Portal CSC no celular e acesse a área da comunidade onde você mora.\n\nSe for seu primeiro acesso, informe o CPF e a data de nascimento solicitados. Depois, crie um PIN de quatro números e guarde esse código.\n\nSe você já tem cadastro, basta digitar seu PIN e tocar em entrar.\n\nAgora, selecione o nome do integrante da família que precisa de atendimento odontológico.\n\nEm serviços disponíveis, toque em atendimento odontológico.\n\nNa agenda da dentista, confira os dias e as vagas disponíveis. As datas exibidas neste vídeo são apenas exemplos fictícios.\n\nEscolha o dia desejado e toque em uma vaga disponível. Confira o tipo de vaga indicado na tela.\n\nPronto! Ao selecionar a vaga, o agendamento é concluído automaticamente. A vaga já está garantida, sem necessidade de confirmação posterior da unidade de saúde ou do TACS.\n\nSe houver alguma alteração no atendimento, a unidade de saúde ou o agente comunitário poderá enviar uma notificação individual ao morador daquela vaga.\n\nQuando a informação for destinada a toda a comunidade de Japaranduba, a Central Administrativa do Portal CSC enviará uma notificação geral para toda a área.\n\nPortal CSC, Conecta Saúde Comunitária. Uma iniciativa do doutor Mércio Campos."
+          Path("materiais/odontologia").mkdir(parents=True,exist_ok=True)
+          async def gerar():
+              voz = edge_tts.Communicate(roteiro, "pt-BR-ThalitaMultilingualNeural", rate="+7%", pitch="+12Hz")
+              await voz.save("materiais/odontologia/PORTAL_CSC_DENTISTA_VOZ_FEMININA.mp3")
+          asyncio.run(gerar())
+          print("Narração neural criada")
+          PY
+      - name: Obter vídeo-base corrigido
+        env:
+          VIDEO_SOURCE_URL: "https://media.descriptusercontent.com/v3/proxy/remux?url=https%3A%2F%2Fapi.descript.com%2Fv2%2Fpublished_projects%2F4461ea61-fad9-49d9-a2a9-32e7dec5e52d%2Fhls%3Fexpiration%3D1793817813552%26signature%3De1275924bfdd2be2d1b24731aaaab48af2dc593b9c6fa5eb1a85a24af29a778a&filename=Video+correto+-+aguardando+voz+feminina+natural.mp4&mediaCacheBucketName=production-273614-media-cache&expiration=1793814214&signature=05b612d7e24fa3318d1f4c475272e90175f5aa1fa3eb2b991ca1adc536005210"
+        run: |
+          curl --fail --location --retry 2 --max-time 120 "$VIDEO_SOURCE_URL" -o video_base.mp4
+          ffprobe -v error -show_entries format=duration -of default=nw=1 video_base.mp4
+      - name: Sincronizar voz e vídeo
+        shell: bash
+        run: |
+          VOZ="materiais/odontologia/PORTAL_CSC_DENTISTA_VOZ_FEMININA.mp3"
+          VIDEO="materiais/odontologia/PORTAL_CSC_DENTISTA_VOZ_FEMININA.mp4"
+          VDUR=$(ffprobe -v error -show_entries format=duration -of default=nokey=1:noprint_wrappers=1 video_base.mp4)
+          ADUR=$(ffprobe -v error -show_entries format=duration -of default=nokey=1:noprint_wrappers=1 "$VOZ")
+          FACTOR=$(python -c "print(float('$ADUR') / float('$VDUR'))")
+          ffmpeg -y -loglevel error -i video_base.mp4 -i "$VOZ" -filter:v "setpts=$FACTOR*PTS" -map 0:v:0 -map 1:a:0 -c:v libx264 -preset veryfast -crf 25 -pix_fmt yuv420p -c:a aac -b:a 144k -movflags +faststart -shortest "$VIDEO"
+          ffprobe -v error -show_entries format=duration -of default=nw=1 "$VIDEO"
+      - name: Disponibilizar vídeo e narração
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add materiais/odontologia/PORTAL_CSC_DENTISTA_VOZ_FEMININA.mp3 materiais/odontologia/PORTAL_CSC_DENTISTA_VOZ_FEMININA.mp4
+          git commit -m "Adicionar tutorial de odontologia narrado com voz neural feminina" || true
+          git push origin HEAD:material-educativo-voz-csc
+      - name: Arquivar versão final
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-csc-tutorial-dentista-feminino
+          path: materiais/odontologia/
+          if-no-files-found: error
