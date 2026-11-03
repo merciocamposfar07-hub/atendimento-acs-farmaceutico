@@ -5,6 +5,8 @@ on:
       - material-educativo-voz-csc
     paths:
       - .github/workflows/tutorial-voz-odontologia.yml
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
