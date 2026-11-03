@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: material-educativo-voz-csc
       - name: Instalar sintetizador gratuito
         run: python -m pip install --quiet edge-tts
       - name: Gerar narracao feminina neural em portugues
@@ -30,6 +32,13 @@ jobs:
           asyncio.run(gerar())
           print("Narração neural criada")
           PY
+      - name: Guardar áudio neural gratuito
+        uses: actions/upload-artifact@v4
+        with:
+          name: csc-voz-feminina-neural
+          path: materiais/odontologia/PORTAL_CSC_DENTISTA_VOZ_FEMININA.mp3
+      - name: Instalar ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Obter vídeo-base corrigido
         env:
           VIDEO_SOURCE_URL: "https://media.descriptusercontent.com/v3/proxy/remux?url=https%3A%2F%2Fapi.descript.com%2Fv2%2Fpublished_projects%2F4461ea61-fad9-49d9-a2a9-32e7dec5e52d%2Fhls%3Fexpiration%3D1793817813552%26signature%3De1275924bfdd2be2d1b24731aaaab48af2dc593b9c6fa5eb1a85a24af29a778a&filename=Video+correto+-+aguardando+voz+feminina+natural.mp4&mediaCacheBucketName=production-273614-media-cache&expiration=1793814214&signature=05b612d7e24fa3318d1f4c475272e90175f5aa1fa3eb2b991ca1adc536005210"
