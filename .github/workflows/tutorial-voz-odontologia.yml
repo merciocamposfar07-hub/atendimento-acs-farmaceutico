@@ -1,32 +1,36 @@
-name: Exportar arquivos do tutorial CSC
+name: Narracoes naturais CSC - sem custo
 on:
-  push:
-    branches:
-      - material-educativo-voz-csc
-    paths:
-      - .github/workflows/tutorial-voz-odontologia.yml
   pull_request:
     branches: [main]
+    paths: ['.github/workflows/tutorial-voz-odontologia.yml']
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  exportar:
+  vozes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: material-educativo-voz-csc
-      - name: Conferir arquivos
+      - name: Instalar sintetizador gratuito
+        run: python -m pip install --quiet edge-tts
+      - name: Gerar duas vozes femininas naturais sem efeitos de pitch
         run: |
-          ls -lah materiais/odontologia/
-          file materiais/odontologia/PORTAL_CSC_DENTISTA_VOZ_FEMININA.mp4
-          file materiais/odontologia/PORTAL_CSC_DENTISTA_VOZ_FEMININA.mp3
-      - name: Publicar anexos para download
-        uses: actions/upload-artifact@v4
+          python - <<'PY'
+          import asyncio, json
+          from pathlib import Path
+          import edge_tts
+          frases = json.loads("[\"Olá! Veja como agendar atendimento com a dentista no Portal Cê Ésse Cê, Conecta Saúde Comunitária.\",\"No seu celular, abra o Portal CSC e escolha a área da comunidade onde você mora.\",\"No primeiro acesso, informe o CPF e a data de nascimento solicitados na tela.\",\"Crie um PIN de quatro números. Guarde esse código para entrar no portal nas próximas vezes.\",\"Se você já tem cadastro, digite seu PIN e toque em entrar.\",\"Agora, escolha o nome do integrante da sua família que precisa do atendimento odontológico.\",\"Na lista de serviços disponíveis, selecione atendimento odontológico, ou seja, consulta com a dentista.\",\"Na agenda, confira os dias e as vagas disponíveis para atendimento. Os exemplos mostrados aqui são fictícios.\",\"Escolha o dia desejado e toque na vaga que estiver disponível. Confira o tipo de vaga indicado na tela.\",\"Pronto! A vaga foi garantida automaticamente pelo portal. Você não precisa esperar confirmação da UBS nem do agente comunitário de saúde.\",\"Se houver alguma alteração no atendimento, a unidade de saúde ou o TACS poderá enviar uma notificação individual para o morador daquela vaga.\",\"Quando a informação for para toda a comunidade de Japaranduba, a Central Administrativa do portal enviará uma notificação geral para toda a área.\",\"Portal Cê Ésse Cê, Conecta Saúde Comunitária. Uma iniciativa do doutor Mércio Campos.\"]")
+          vozes = {"francisca":"pt-BR-FranciscaNeural","thalita":"pt-BR-ThalitaNeural"}
+          async def gerar():
+              for nome, voz in vozes.items():
+                  destino = Path("narração") / nome
+                  destino.mkdir(parents=True, exist_ok=True)
+                  for i, frase in enumerate(frases):
+                      await edge_tts.Communicate(frase, voz, rate="+3%", pitch="+0Hz").save(str(destino / f"cena_{i:02}.mp3"))
+                  print(f"Gerada voz {nome} em {len(frases)} cenas")
+          asyncio.run(gerar())
+          PY
+      - uses: actions/upload-artifact@v4
         with:
-          name: tutorial-csc-dentista-mp4-mp3
-          path: |
-            materiais/odontologia/PORTAL_CSC_DENTISTA_VOZ_FEMININA.mp4
-            materiais/odontologia/PORTAL_CSC_DENTISTA_VOZ_FEMININA.mp3
+          name: csc-vozes-femininas-naturais
+          path: narração/
           if-no-files-found: error
