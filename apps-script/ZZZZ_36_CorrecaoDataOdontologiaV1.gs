@@ -86,7 +86,7 @@ function correcaoDataOdontologiaV1AgendaCompleta_(areaId){
       var situacaoAberta=correcaoDataOdontologiaV1SituacaoAberta_(situacao);
       var comuns=agendasProfissionaisTerritoriaisV1NaoNegativo_(item.VAGAS_COMUNS);
       var emergenciais=agendasProfissionaisTerritoriaisV1NaoNegativo_(item.VAGAS_EMERGENCIAIS);
-      var aberta=ativo&&situacaoAberta&&!expirada&&!!data;
+      var aberta=ativo&&situacaoAberta&&!expirada&&!!data&&agendasProfissionaisTerritoriaisV1OdontoPublicada_(item);
       porDia[dia]={
         id:'DENTISTA-'+areaId+'-'+linha.row+'-'+(data||dia),
         dia:dia,
@@ -201,6 +201,7 @@ function correcaoDataOdontologiaV1Reservar_(p){
       return false;
     });
     if(!alvo)return{ok:false,code:'DATE_NOT_FOUND',message:'Essa data não está mais disponível na agenda desta área.'};
+    if(!agendasProfissionaisTerritoriaisV1OdontoPublicada_(alvoItem))return{ok:false,code:'CLOSED',message:'Esta data odontológica ainda não foi publicada manualmente pelo agente de saúde.'};
     if(!correcaoDataOdontologiaV1SituacaoAberta_(alvoItem.SITUACAO))return{ok:false,code:'CLOSED',message:'Essa agenda está sem atendimento.'};
     if(correcaoDataOdontologiaV1Expirada_(agenda,alvo,alvoItem))return{ok:false,code:'EXPIRED',message:'O horário de solicitação dessa agenda já encerrou.'};
 

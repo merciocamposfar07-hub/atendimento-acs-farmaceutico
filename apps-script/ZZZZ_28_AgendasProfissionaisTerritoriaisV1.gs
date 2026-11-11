@@ -228,7 +228,28 @@ function agendasProfissionaisTerritoriaisV1SalvarAgenda_(contexto,p){
     var tabela=agendasProfissionaisTerritoriaisV1Tabela_(agendasProfissionaisTerritoriaisV1Planilha_(),TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.AGENDA_HEADERS,true);
     var linha=agendasProfissionaisTerritoriaisV1EncontrarAgenda_(tabela,p.modulo,p.dia,contexto.areaId);
     if(!linha)throw new Error('Agenda não encontrada nesta área.');
-    agendasProfissionaisTerritoriaisV1Atualizar_(tabela,linha,{DATA:agendasProfissionaisTerritoriaisV1DataOpcional_(p.data),HORARIO:agendasProfissionaisTerritoriaisV1Texto_(p.horario),SITUACAO:agendasProfissionaisTerritoriaisV1Texto_(p.situacao),MENSAGEM:agendasProfissionaisTerritoriaisV1Texto_(p.mensagem),ENCERRA_HORARIO:agendasProfissionaisTerritoriaisV1HoraOpcional_(p.encerraHorario),ENCERRA_12H:agendasProfissionaisTerritoriaisV1HoraOpcional_(p.encerraHorario)==='12:00',VAGAS_COMUNS:agendasProfissionaisTerritoriaisV1NaoNegativo_(p.vagasComuns),VAGAS_EMERGENCIAIS:agendasProfissionaisTerritoriaisV1NaoNegativo_(p.vagasEmergenciais),DIA_EXTRA:agendasProfissionaisTerritoriaisV1Booleano_(p.diaExtra),ATIVO:agendasProfissionaisTerritoriaisV1Booleano_(p.ativo),AREA_ID:contexto.areaId,ATUALIZADO_EM:new Date()});
+    /* ODONTO_MANUAL_PUBLICACAO_V1: data, vagas e expiração só são publicadas pelo agente. */
+    var odontologia=agendasProfissionaisTerritoriaisV1Modulo_(p.modulo)==='odontologia';
+    var dataOdonto=agendasProfissionaisTerritoriaisV1DataOpcional_(p.data);
+    var horaOdonto=agendasProfissionaisTerritoriaisV1HoraOpcional_(p.encerraHorario);
+    var vagasOdonto=agendasProfissionaisTerritoriaisV1NaoNegativo_(p.vagasComuns)+agendasProfissionaisTerritoriaisV1NaoNegativo_(p.vagasEmergenciais);
+    var publicarOdonto=odontologia&&agendasProfissionaisTerritoriaisV1Booleano_(p.ativo)&&vagasOdonto>0;
+    if(publicarOdonto){
+      if(!dataOdonto||!horaOdonto)throw new Error('Na odontologia, informe a data manual e a hora de expiração antes de publicar as vagas.');
+      if(dataOdonto<Utilities.formatDate(new Date(),'America/Recife','yyyy-MM-dd'))throw new Error('Não é possível publicar uma agenda odontológica com data vencida.');
+      var diaOdonto=agendasProfissionaisTerritoriaisV1Normalizar_(p.dia).split('_')[0];
+      var semanaOdonto={SEGUNDA:1,TERCA:2,QUARTA:3,QUINTA:4,SEXTA:5};
+      if(!semanaOdonto[diaOdonto]||new Date(dataOdonto+'T12:00:00Z').getUTCDay()!==semanaOdonto[diaOdonto])throw new Error('A data informada não corresponde ao dia da semana odontológica.');
+    }
+    if(odontologia){
+      ['ENCERRA_HORARIO','ODONTO_PUBLICADA_DATA'].forEach(function(campo){
+        var coluna=agendasProfissionaisTerritoriaisV1Indice_(tabela,campo,false);
+        if(coluna>=0)tabela.sheet.getRange(linha.row,coluna+1).setNumberFormat('@');
+      });
+    }
+    var camposAgenda={DATA:agendasProfissionaisTerritoriaisV1DataOpcional_(p.data),HORARIO:agendasProfissionaisTerritoriaisV1Texto_(p.horario),SITUACAO:agendasProfissionaisTerritoriaisV1Texto_(p.situacao),MENSAGEM:agendasProfissionaisTerritoriaisV1Texto_(p.mensagem),ENCERRA_HORARIO:agendasProfissionaisTerritoriaisV1HoraOpcional_(p.encerraHorario),ENCERRA_12H:agendasProfissionaisTerritoriaisV1HoraOpcional_(p.encerraHorario)==='12:00',VAGAS_COMUNS:agendasProfissionaisTerritoriaisV1NaoNegativo_(p.vagasComuns),VAGAS_EMERGENCIAIS:agendasProfissionaisTerritoriaisV1NaoNegativo_(p.vagasEmergenciais),DIA_EXTRA:agendasProfissionaisTerritoriaisV1Booleano_(p.diaExtra),ATIVO:agendasProfissionaisTerritoriaisV1Booleano_(p.ativo),AREA_ID:contexto.areaId,ATUALIZADO_EM:new Date()};
+    if(odontologia)camposAgenda.ODONTO_PUBLICADA_DATA=publicarOdonto?dataOdonto:'';
+    agendasProfissionaisTerritoriaisV1Atualizar_(tabela,linha,camposAgenda);
     SpreadsheetApp.flush();
     /* CONFIRMACAO_CANONICA_AGENDA_20260923_V1:
        após gravar, relê a própria linha no servidor e devolve o registro confirmado.
@@ -270,8 +291,11 @@ function agendasProfissionaisTerritoriaisV1AgendaOdontologica_(areaId){
   var dias=[];
   if(tabela)agendasProfissionaisTerritoriaisV1LinhasArea_(tabela,areaId).forEach(function(linha){
     var item=agendasProfissionaisTerritoriaisV1Objeto_(tabela.headers,linha.values);
-    if(agendasProfissionaisTerritoriaisV1Modulo_(item.MODULO)!=='odontologia'||!agendasProfissionaisTerritoriaisV1Booleano_(item.ATIVO))return;
+    if(agendasProfissionaisTerritoriaisV1Modulo_(item.MODULO)!=='odontologia'||!agendasProfissionaisTerritoriaisV1Booleano_(item.ATIVO)||!agendasProfissionaisTerritoriaisV1OdontoPublicada_(item))return;
     var data=agendasProfissionaisTerritoriaisV1Data_(item.DATA);if(!data)return;
+    var hoje=Utilities.formatDate(new Date(),'America/Recife','yyyy-MM-dd');
+    var agora=Utilities.formatDate(new Date(),'America/Recife','HH:mm');
+    if(data<hoje||(data===hoje&&agora>=item.ENCERRA_HORARIO))return;
     dias.push({id:'DENTISTA-'+areaId+'-'+linha.row+'-'+data,dia:agendasProfissionaisTerritoriaisV1Texto_(item.DIA),data:data,vagasComuns:agendasProfissionaisTerritoriaisV1NaoNegativo_(item.VAGAS_COMUNS),vagasEmergenciais:agendasProfissionaisTerritoriaisV1NaoNegativo_(item.VAGAS_EMERGENCIAIS),diaExtra:agendasProfissionaisTerritoriaisV1Booleano_(item.DIA_EXTRA)});
   });
   dias.sort(function(a,b){return a.data.localeCompare(b.data);});
@@ -294,6 +318,10 @@ function agendasProfissionaisTerritoriaisV1Reservar_(p){
     var agenda=agendasProfissionaisTerritoriaisV1Tabela_(ss,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS,TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.AGENDA_HEADERS,true),alvo=null;
     agendasProfissionaisTerritoriaisV1LinhasArea_(agenda,areaId).some(function(linha){var item=agendasProfissionaisTerritoriaisV1Objeto_(agenda.headers,linha.values);if(agendasProfissionaisTerritoriaisV1Modulo_(item.MODULO)==='odontologia'&&agendasProfissionaisTerritoriaisV1Data_(item.DATA)===data&&agendasProfissionaisTerritoriaisV1Booleano_(item.ATIVO)){alvo=linha;return true;}return false;});
     if(!alvo)return{ok:false,code:'DATE_NOT_FOUND',message:'Essa data não está mais disponível na agenda desta área.'};
+    var itemAlvo=agendasProfissionaisTerritoriaisV1Objeto_(agenda.headers,alvo.values);
+    if(!agendasProfissionaisTerritoriaisV1OdontoPublicada_(itemAlvo))return{ok:false,code:'CLOSED',message:'A agenda odontológica ainda não foi publicada manualmente pelo agente.'};
+    var agoraReserva=Utilities.formatDate(new Date(),'America/Recife','HH:mm');
+    if(data===hoje&&agoraReserva>=itemAlvo.ENCERRA_HORARIO)return{ok:false,code:'EXPIRED',message:'O horário dessa agenda odontológica encerrou.'};
     var campo=tipo==='comum'?'VAGAS_COMUNS':'VAGAS_EMERGENCIAIS',indice=agendasProfissionaisTerritoriaisV1Indice_(agenda,campo),disponiveis=Number(alvo.values[indice]);
     if(!Number.isInteger(disponiveis)||disponiveis<=0)return{ok:false,code:'NO_SLOTS',message:tipo==='emergencial'?'A vaga emergencial desse dia acabou.':'As vagas comuns desse dia acabaram.'};
     var restantes=disponiveis-1;agenda.sheet.getRange(alvo.row,indice+1).setValue(restantes);
@@ -341,20 +369,11 @@ function agendasProfissionaisTerritoriaisV1AtualizarApenasDatas_(sheet,headers){
   var modulos=idxModulo>=0?sheet.getRange(2,idxModulo+1,total,1).getDisplayValues():[];
   var horas=idxHora>=0?sheet.getRange(2,idxHora+1,total,1).getDisplayValues():[];
   var horas12=idx12h>=0?sheet.getRange(2,idx12h+1,total,1).getDisplayValues():[];
-  var hoje=Utilities.formatDate(new Date(),'America/Recife','yyyy-MM-dd');
-  var horaAgora=Utilities.formatDate(new Date(),'America/Recife','HH:mm');
+  /* Odontologia é exclusivamente manual; o cálculo semanal continua só nas outras agendas. */
   for(var i=0;i<total;i++){
+    if(idxModulo>=0&&agendasProfissionaisTerritoriaisV1Modulo_(modulos[i][0])==='odontologia')continue;
     var prevista=agendasProfissionaisTerritoriaisV1DataSemanal_(dias[i][0]);
     if(!prevista)continue;
-    if(idxModulo>=0&&agendasProfissionaisTerritoriaisV1Modulo_(modulos[i][0])==='odontologia'){
-      var existente=agendasProfissionaisTerritoriaisV1Data_(datas[i][0]);
-      var hora=idxHora>=0?agendasProfissionaisTerritoriaisV1Texto_(horas[i][0]):'';
-      var m=hora.match(/^([01]\d|2[0-3]):([0-5]\d)/);
-      hora=m?m[1]+':'+m[2]:'';
-      if(!hora&&idx12h>=0&&agendasProfissionaisTerritoriaisV1Booleano_(horas12[i][0]))hora='12:00';
-      if(existente>hoje||(existente===hoje&&(!hora||horaAgora<hora)))continue;
-      prevista=agendasProfissionaisTerritoriaisV1ProximaOdonto_(dias[i][0],hoje,horaAgora,hora);
-    }
     if(agendasProfissionaisTerritoriaisV1Data_(datas[i][0])===prevista)continue;
     sheet.getRange(i+2,indiceData+1).setValue(prevista);
   }
@@ -368,9 +387,24 @@ function agendasProfissionaisTerritoriaisV1Tabela_(ss,nome,obrigatorios,criar){
   obrigatorios.forEach(function(h){if(headers.indexOf(h)===-1)throw new Error('A aba '+nome+' não possui a coluna obrigatória '+h+'.');});
   ['AREA_ID','ATUALIZADO_EM'].forEach(function(h){if(headers.indexOf(h)===-1){sheet.getRange(1,colunas+1).setValue(h);headers.push(h);colunas++;}});
   if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('ENCERRA_HORARIO')===-1){sheet.getRange(1,colunas+1).setValue('ENCERRA_HORARIO');headers.push('ENCERRA_HORARIO');colunas++;}
+  if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('ODONTO_PUBLICADA_DATA')===-1){
+    sheet.getRange(1,colunas+1).setValue('ODONTO_PUBLICADA_DATA');headers.push('ODONTO_PUBLICADA_DATA');colunas++;
+  }
   if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS)
     agendasProfissionaisTerritoriaisV1AtualizarApenasDatas_(sheet,headers);
   var valores=sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,colunas).getValues():[];
+  /* Normalização exclusiva do ENCERRA_HORARIO odontológico para HH:mm. */
+  if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&valores.length){
+    var idxModuloHora=headers.indexOf('MODULO'),idxHoraOdonto=headers.indexOf('ENCERRA_HORARIO');
+    if(idxModuloHora>=0&&idxHoraOdonto>=0){
+      var horasExibidas=sheet.getRange(2,idxHoraOdonto+1,valores.length,1).getDisplayValues();
+      valores.forEach(function(linha,i){
+        if(agendasProfissionaisTerritoriaisV1Modulo_(linha[idxModuloHora])!=='odontologia')return;
+        var m=String(horasExibidas[i][0]||'').match(/([01][0-9]|2[0-3]):([0-5][0-9])/);
+        linha[idxHoraOdonto]=m?m[1]+':'+m[2]:'';
+      });
+    }
+  }
   return{sheet:sheet,headers:headers,colunas:colunas,rows:valores.map(function(v,i){return{row:i+2,values:v};})};
 }
 function agendasProfissionaisTerritoriaisV1LinhasArea_(tabela,areaId){return tabela.rows.filter(function(linha){return agendasProfissionaisTerritoriaisV1AreaRegistro_(tabela,linha)===areaId;});}
@@ -383,6 +417,13 @@ function agendasProfissionaisTerritoriaisV1Atualizar_(tabela,linha,campos){var v
 function agendasProfissionaisTerritoriaisV1Indice_(tabela,campo,obrigatorio){var idx=tabela.headers.indexOf(agendasProfissionaisTerritoriaisV1Normalizar_(campo));if(idx<0&&obrigatorio!==false)throw new Error('A coluna '+campo+' não foi encontrada na aba '+tabela.sheet.getName()+'.');return idx;}
 function agendasProfissionaisTerritoriaisV1Objeto_(headers,values){var out={};headers.forEach(function(h,i){if(h)out[h]=values[i]==null?'':values[i];});return out;}
 function agendasProfissionaisTerritoriaisV1Planilha_(){if(typeof tacsTerritorioV1Planilha_==='function')return tacsTerritorioV1Planilha_();if(typeof profissionaisDinamicosV1Planilha_==='function')return profissionaisDinamicosV1Planilha_();if(typeof getPlanilha==='function')return getPlanilha();var ss=SpreadsheetApp.getActiveSpreadsheet();if(!ss)throw new Error('A planilha administrativa não está disponível.');return ss;}
+function agendasProfissionaisTerritoriaisV1OdontoPublicada_(item){
+  if(!item)return false;
+  var data=agendasProfissionaisTerritoriaisV1Data_(item.DATA);
+  var autorizada=agendasProfissionaisTerritoriaisV1Data_(item.ODONTO_PUBLICADA_DATA);
+  var hora=agendasProfissionaisTerritoriaisV1Texto_(item.ENCERRA_HORARIO);
+  return Boolean(data&&autorizada===data&&/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(hora));
+}
 function agendasProfissionaisTerritoriaisV1Modulo_(v){var n=agendasProfissionaisTerritoriaisV1Normalizar_(v).toLowerCase();if(n.indexOf('odont')!==-1||n.indexOf('dentist')!==-1)return'odontologia';if(n.indexOf('medic')!==-1)return'medica';if(n.indexOf('enferm')!==-1)return'enfermeira';if(n.indexOf('nutric')!==-1)return'nutricionista';return n;}
 function agendasProfissionaisTerritoriaisV1HoraOpcional_(v){v=agendasProfissionaisTerritoriaisV1Texto_(v);if(!v)return'';var m=v.match(/^([01]\d|2[0-3]):([0-5]\d)$/);if(!m)throw new Error('Horário de encerramento inválido.');return m[1]+':'+m[2];}
 function agendasProfissionaisTerritoriaisV1DataOpcional_(v){v=agendasProfissionaisTerritoriaisV1Texto_(v);if(!v)return'';var d=agendasProfissionaisTerritoriaisV1Data_(v);if(!d)throw new Error('Data inválida.');return d;}

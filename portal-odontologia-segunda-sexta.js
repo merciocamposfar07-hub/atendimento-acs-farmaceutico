@@ -17,9 +17,9 @@
   var internalCategoryChange = false;
   var verifyTimer = null;
   var expiryTimer = null; // PORTAL_TACS_ODONTO_EXPIRACAO_HORARIO_V1
-  var CACHE_PREFIX = 'portalTacsDentalAgendaV103FullWeek:';
+  var CACHE_PREFIX = 'portalTacsDentalAgendaManualV1:';
   var CACHE_FRESH_MS = 90 * 1000;
-  var CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+  var CACHE_MAX_AGE_MS = 90 * 1000;
   var cacheVisible = false;
   var cacheFresh = false;
 
@@ -142,7 +142,7 @@
   function normalizeSlot(raw, index) {
     var day = clean(raw && (raw.dia || raw.day));
     var date = normalizeDate(raw && (raw.data || raw.date));
-    if (ALLOWED_DAYS.indexOf(day) === -1 || !date || !currentDate(date) || closedOrExpiredSlot(raw, date)) return null;
+    if (ALLOWED_DAYS.indexOf(day) === -1 || !date || !configuredExpiry(raw) || !currentDate(date) || closedOrExpiredSlot(raw, date)) return null;
     return {
       id: clean(raw.id || raw.codigo || raw.row || '') || day + '-' + date + '-' + index,
       day: day,
@@ -235,7 +235,7 @@
 
   function startExpiryWatch() {
     if (expiryTimer) return;
-    expiryTimer = setInterval(pruneExpiredSlots, 10000);
+    expiryTimer = setInterval(pruneExpiredSlots, 1000);
   }
 
   function setSubject(value) {

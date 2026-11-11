@@ -93,7 +93,7 @@ function publicoAgendasV1Montar_(areaId) {
     // DATA da agenda é civil: usar exatamente o valor exibido na planilha.
     // Isso impede que 11/09/2026 seja publicado como 10/09/2026 por conversão de fuso.
     var dataBruta = publicoAgendasV1Valor_(exibidos[linha], indices.data);
-    var dataSemanal = typeof agendasProfissionaisTerritoriaisV1DataSemanal_ === 'function'
+    var dataSemanal = modulo !== 'odontologia' && typeof agendasProfissionaisTerritoriaisV1DataSemanal_ === 'function'
       ? agendasProfissionaisTerritoriaisV1DataSemanal_(dia) : '';
     var dataPublicada = dataSemanal || publicoAgendasV1DataIso_(dataBruta);
     var encerra12h = publicoAgendasV1Booleano_(
@@ -102,10 +102,14 @@ function publicoAgendasV1Montar_(areaId) {
     var encerraHorario = publicoAgendasV1Hora_(
       publicoAgendasV1Valor_(exibidos[linha], indices.encerraHorario)
     ) || (encerra12h ? '12:00' : '');
+    var odontologiaAutorizada = modulo !== 'odontologia' || (
+      !!dataPublicada && !!encerraHorario &&
+      publicoAgendasV1DataIso_(publicoAgendasV1Valor_(exibidos[linha], indices.odontoPublicadaData)) === dataPublicada
+    );
 
     modulos[modulo].push({
       day: dia,
-      active: publicoAgendasV1Booleano_(
+      active: odontologiaAutorizada && publicoAgendasV1Booleano_(
         publicoAgendasV1Valor_(valores[linha], indices.ativo)
       ),
       date: dataPublicada,
@@ -123,16 +127,16 @@ function publicoAgendasV1Montar_(areaId) {
       ),
       closeAtNoon: encerraHorario==='12:00',
       closeAt: encerraHorario,
-      common: publicoAgendasV1NaoNegativo_(
+      common: odontologiaAutorizada ? publicoAgendasV1NaoNegativo_(
         publicoAgendasV1Valor_(valores[linha], indices.vagasComuns)
-      ),
-      emergency: publicoAgendasV1NaoNegativo_(
+      ) : 0,
+      emergency: odontologiaAutorizada ? publicoAgendasV1NaoNegativo_(
         publicoAgendasV1Valor_(valores[linha], indices.vagasEmergenciais)
-      ),
+      ) : 0,
       extra: publicoAgendasV1Booleano_(
         publicoAgendasV1Valor_(valores[linha], indices.diaExtra)
       ),
-      closedNow: publicoAgendasV1EncerradoAgora_(dataPublicada, encerraHorario, modulo),
+      closedNow: !odontologiaAutorizada || publicoAgendasV1EncerradoAgora_(dataPublicada, encerraHorario, modulo),
       order: publicoAgendasV1NaoNegativo_(
         publicoAgendasV1Valor_(valores[linha], indices.ordem)
       )
@@ -508,6 +512,7 @@ function publicoAgendasV1Indices_(cabecalhos, permitirAusentes) {
     mensagem: indice(['MENSAGEM', 'SERVICO', 'ATENDIMENTO'], false),
     encerra12h: indice(['ENCERRA_12H', 'ENCERRAR_AS_12H'], false),
     encerraHorario: indice(['ENCERRA_HORARIO', 'HORARIO_ENCERRAMENTO'], false),
+    odontoPublicadaData: indice(['ODONTO_PUBLICADA_DATA'], false),
     vagasComuns: indice(['VAGAS_COMUNS'], false),
     vagasEmergenciais: indice(['VAGAS_EMERGENCIAIS'], false),
     diaExtra: indice(['DIA_EXTRA'], false)
@@ -582,7 +587,7 @@ function publicoAgendasV1Hora_(valor) {
 function publicoAgendasV1EncerradoAgora_(data, horario, modulo) {
   var hoje = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'yyyy-MM-dd');
   var dataAgenda = publicoAgendasV1DataIso_(data);
-  if (modulo === 'medica' && dataAgenda && dataAgenda < hoje) return true;
+  if ((modulo === 'medica' || modulo === 'odontologia') && dataAgenda && dataAgenda < hoje) return true;
   horario = publicoAgendasV1Hora_(horario);
   if (!horario) return false;
   if (dataAgenda !== hoje) return false;

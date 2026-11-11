@@ -33,24 +33,9 @@ function semanaData(dia){
   d.setUTCDate(d.getUTCDate()+deslocamento+dias[nome]);
   return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
 }
-/* Na odontologia, a data futura confirmada pelo servidor prevalece.
-   Se a data estiver vencida, calcula o próximo atendimento válido em Recife. */
-function proximaDataOdontologica(a){
-  var salva=dataInput(a&&a.DATA),d=normalDia(a&&a.DIA),week={SEGUNDA:1,TERCA:2,QUARTA:3,QUINTA:4,SEXTA:5};
-  if(!Object.prototype.hasOwnProperty.call(week,d))return salva;
-  var partes={};
-  new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).forEach(function(p){partes[p.type]=p.value});
-  var hoje=partes.year+'-'+partes.month+'-'+partes.day,agora=partes.hour+':'+partes.minute;
-  var expira=text(a&&a.ENCERRA_HORARIO||((bool(a&&a.ENCERRA_12H))?'12:00':'')).trim();
-  var m=expira.match(/^([01]\d|2[0-3]):([0-5]\d)/);expira=m?m[1]+':'+m[2]:'';
-  if(salva>hoje||(salva===hoje&&(!expira||agora<expira)))return salva;
-  var data=new Date(Date.UTC(Number(partes.year),Number(partes.month)-1,Number(partes.day)));
-  var dias=(week[d]-data.getUTCDay()+7)%7;
-  if(dias===0&&expira&&agora>=expira)dias=7;
-  data.setUTCDate(data.getUTCDate()+dias);
-  return data.getUTCFullYear()+'-'+String(data.getUTCMonth()+1).padStart(2,'0')+'-'+String(data.getUTCDate()).padStart(2,'0');
-}
-function dataAutomatica(a){return normalId(a&&a.MODULO)==='ODONTOLOGIA'?proximaDataOdontologica(a):(semanaData(a&&a.DIA)||dataInput(a&&a.DATA))}
+/* Odontologia usa exclusivamente a data do atendimento salva pelo agente. */
+function ehOdontologia(v){var n=normalId(v&&v.MODULO?v.MODULO:v);return n.indexOf('ODONT')!==-1||n.indexOf('DENTIST')!==-1}
+function dataAutomatica(a){return ehOdontologia(a)?dataInput(a&&a.DATA):(semanaData(a&&a.DIA)||dataInput(a&&a.DATA))}
 function clone(v){try{return JSON.parse(JSON.stringify(v))}catch(e){return v}}
 function objectRows(v){return Array.isArray(v)?v.filter(function(x){return x&&typeof x==='object'}):[]}
 
@@ -261,7 +246,7 @@ function create(host){
     return '<details class="card" data-key="'+esc(chave(a))+'"><summary><div><h3>'+esc(a.DIA)+' • '+esc(a.HORARIO||'Sem horário')+'</h3><div class="sub">'+vagas+' vaga(s)</div></div><span class="signal '+(active?'ativo':'inativo')+'">'+(active?'Ativa':'Inativa')+'</span></summary><div class="card-body">'+
       '<label>Profissional<input name="modulo" value="'+esc(a.MODULO)+'" readonly></label>'+
       '<label>Dia<input name="dia" value="'+esc(a.DIA)+'" readonly></label>'+
-      '<label>Data automática<input name="data" type="date" readonly aria-readonly="true" style="pointer-events:none" value="'+esc(dataAutomatica(a))+'"></label>'+
+      '<label>'+(ehOdontologia(a)?'Data do atendimento (manual)':'Data automática')+'<input name="data" type="date" '+(ehOdontologia(a)?'':'readonly aria-readonly="true" style="pointer-events:none" ')+'value="'+esc(dataAutomatica(a))+'"></label>'+
       '<label>Horário<input name="horario" value="'+esc(a.HORARIO)+'" placeholder="Ex.: 08:00 às 12:00"></label>'+
       '<label>Situação<select name="situacao"><option value="">SEM SITUAÇÃO DEFINIDA</option><option value="ATENDIMENTO">ATENDIMENTO</option><option value="SEM ATENDIMENTO">SEM ATENDIMENTO</option><option value="FERIADO">FERIADO</option><option value="CANCELADO">CANCELADO</option></select></label>'+
       '<label>Mensagem<textarea name="mensagem">'+esc(a.MENSAGEM)+'</textarea></label>'+
@@ -303,7 +288,7 @@ function create(host){
   function field(card,name){var n=card.querySelector('[name="'+name+'"]');return n?n.value:''}
   function checked(card,name){var n=card.querySelector('[name="'+name+'"]');return n&&n.checked?'true':'false'}
   function payload(card){return Object.assign(session(),{
-    modulo:field(card,'modulo'),dia:field(card,'dia'),data:normalId(field(card,'modulo'))==='ODONTOLOGIA'?(dataInput(field(card,'data'))||semanaData(field(card,'dia'))):(semanaData(field(card,'dia'))||field(card,'data')),horario:field(card,'horario').trim(),
+    modulo:field(card,'modulo'),dia:field(card,'dia'),data:ehOdontologia(field(card,'modulo'))?dataInput(field(card,'data')):(semanaData(field(card,'dia'))||field(card,'data')),horario:field(card,'horario').trim(),
     situacao:normalSituacao(field(card,'situacao')),mensagem:field(card,'mensagem').trim(),encerraHorario:field(card,'encerraHorario'),
     encerra12h:field(card,'encerraHorario')==='12:00'?'true':'false',vagasComuns:field(card,'vagasComuns'),
     vagasEmergenciais:field(card,'vagasEmergenciais'),diaExtra:checked(card,'diaExtra'),ativo:checked(card,'ativo')
@@ -394,6 +379,9 @@ function create(host){
     if(!confirmed){setStatus('Aguarde a confirmação dos dados atuais antes de salvar.','aviso');return}
     var p=payload(card),before=clone(achar(p.modulo,p.dia));
     if(!before){setStatus('Agenda não encontrada na leitura atual.','erro');return}
+    if(ehOdontologia(p.modulo)&&bool(p.ativo)&&(num(p.vagasComuns)+num(p.vagasEmergenciais))>0&&(!p.data||!p.encerraHorario)){
+      setStatus('Informe a data manual e a hora de expiração da dentista antes de publicar as vagas.','erro');return;
+    }
     if(!window.confirm('Gravar esta agenda na planilha real?'))return;
     setUndo(before);setStatus('Salvando agenda e aguardando confirmação real…','aviso');
     transport.post('admin_salvar_agenda',p,function(r){
@@ -407,7 +395,11 @@ function create(host){
     if(!confirmed){setStatus('Aguarde a confirmação atual antes de restaurar.','aviso');return}
     var u=readUndo();if(!u||!u.registro)return;
     if(!window.confirm('Restaurar exatamente os valores anteriores da última agenda alterada?'))return;
-    var r=u.registro,p=Object.assign(session(),{
+    var r=u.registro;
+    if(ehOdontologia(r)&&dataInput(r.ODONTO_PUBLICADA_DATA)!==dataInput(r.DATA)){
+      setStatus('Agenda antiga sem autorização manual: não será republicada automaticamente pelo Desfazer. Publique-a manualmente.','aviso');return;
+    }
+    var p=Object.assign(session(),{
       modulo:r.MODULO,dia:r.DIA,data:dataAutomatica(r),horario:text(r.HORARIO),situacao:normalSituacao(r.SITUACAO),mensagem:text(r.MENSAGEM),
       encerraHorario:text(r.ENCERRA_HORARIO)||((bool(r.ENCERRA_12H))?'12:00':''),
       encerra12h:(text(r.ENCERRA_HORARIO)||((bool(r.ENCERRA_12H))?'12:00':''))==='12:00'?'true':'false',
