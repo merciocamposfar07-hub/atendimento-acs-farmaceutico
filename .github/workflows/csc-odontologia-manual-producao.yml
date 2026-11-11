@@ -1,0 +1,155 @@
+name: CSC - Corrigir somente agenda odontologica manual
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-odontologia-manual-producao.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-producao
+  cancel-in-progress: false
+
+jobs:
+  publicar-odontologia-manual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Ler repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validacao isolada
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check --input-type=commonjs < apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs
+          node --check --input-type=commonjs < apps-script/ZZ_12_PublicoAgendasPortalV1.gs
+          node --check conecta-agendas-native-v1.js
+          node --check portal-odontologia-segunda-sexta.js
+          node scripts/test_odonto_publicacao_manual_v1.js
+
+      - name: Verificar conexao Apps Script
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON"
+          test -n "$DEPLOYMENT_ID"
+
+      - name: Baixar projeto publicado sem sobrescrever modulos externos
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/csc-odonto-manual"
+          mkdir -p "$LIVE_DIR"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          CLASP_JSON="$CLASP_JSON" LIVE_DIR="$LIVE_DIR" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),config=JSON.parse(process.env.CLASP_JSON);
+          if(!config.scriptId||!/^[A-Za-z0-9_-]{20,200}$/.test(config.scriptId))throw Error('Script ID invalido');
+          config.rootDir='.';
+          fs.writeFileSync(path.join(process.env.LIVE_DIR,'.clasp.json'),JSON.stringify(config,null,2)+'\n');
+          NODE
+          cd "$LIVE_DIR"
+          npx --yes @google/clasp@3.3.0 pull
+          test -f appsscript.json
+
+      - name: Substituir estritamente os tres modulos que aplicam a regra odontologica
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/csc-odonto-manual" node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const dir=process.env.LIVE_DIR;
+          const files=fs.readdirSync(dir).filter(x=>/\.(js|gs)$/.test(x));
+          const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const before=Object.fromEntries(files.map(x=>[x,hash(fs.readFileSync(path.join(dir,x)))]));
+          const modules=[
+            ['TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1','apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs'],
+            ['TACS_CORRECAO_DATA_ODONTOLOGIA_V1','apps-script/ZZZZ_36_CorrecaoDataOdontologiaV1.gs'],
+            ['PUBLICO_AGENDAS_PORTAL_V1','apps-script/ZZ_12_PublicoAgendasPortalV1.gs']
+          ];
+          const allowed=new Set();
+          for(const [marker,src] of modules){
+            const re=new RegExp('\\bvar\\s+'+marker+'\\s*=\\s*Object\\.freeze\\s*\\(');
+            const found=files.filter(name=>re.test(fs.readFileSync(path.join(dir,name),'utf8')));
+            if(found.length!==1)throw Error('Modulo nao encontrado de forma unica: '+marker);
+            const name=found[0];
+            fs.writeFileSync(path.join(dir,name),fs.readFileSync(src,'utf8'),'utf8');
+            allowed.add(name);
+          }
+          const changes=files.filter(n=>hash(fs.readFileSync(path.join(dir,n)))!==before[n]);
+          if(changes.some(n=>!allowed.has(n)))throw Error('Modulo externo alterado');
+          for(const name of files) {
+            const text=fs.readFileSync(path.join(dir,name),'utf8');
+            new Function(text);
+          }
+          console.log('APENAS_ODONTOLOGIA_PRESERVANDO_OUTROS_MODULOS',JSON.stringify(changes));
+          NODE
+
+      - name: Criar versao e atualizar apenas a implantacao existente
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/csc-odonto-manual"
+          DEPLOYMENTS=$(npx --yes @google/clasp@3.3.0 deployments)
+          PREVIOUS_VERSION=$(printf '%s\n' "$DEPLOYMENTS" | awk -v id="$DEPLOYMENT_ID" 'index($0,id) {for(i=1;i<=NF;i++) if($i ~ /^@[0-9]+$/) {gsub(/^@/,"",$i); print $i; exit}}')
+          test -n "$PREVIOUS_VERSION"
+          DEPLOYED=0
+          rollback() {
+            code=$?
+            trap - ERR
+            if [ "$DEPLOYED" = '1' ]; then
+              npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$PREVIOUS_VERSION" --description "Rollback odontologia manual" "$DEPLOYMENT_ID" || true
+            fi
+            exit "$code"
+          }
+          trap rollback ERR
+          npx --yes @google/clasp@3.3.0 push --force
+          OUTPUT=$(npx --yes @google/clasp@3.3.0 version "CSC odontologia manual com encerramento definitivo")
+          VERSION=$(printf '%s\n' "$OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
+          test -n "$VERSION"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$VERSION" --description "Odontologia manual sem renovacao semanal" "$DEPLOYMENT_ID"
+          DEPLOYED=1
+          BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          OK=0
+          for attempt in 1 2 3; do
+            RESPONSE=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=agenda&areaId=JAPARANDUBA") || true
+            RESPONSE2=$(curl -L --fail --silent --show-error --connect-timeout 5 --max-time 20 "$BASE?action=agenda&areaId=SITIO_MATIAS") || true
+            if RESPONSE="$RESPONSE" RESPONSE2="$RESPONSE2" node - <<'NODE'
+          const assert=require('node:assert/strict');
+          for(const json of [process.env.RESPONSE,process.env.RESPONSE2]){
+            const r=JSON.parse(json);assert.equal(r.ok,true);assert.equal(r.versao,'2.4.0');assert.ok(Array.isArray(r.dias));
+            for(const d of r.dias)if(d.encerrada){assert.equal(Number(d.vagasComuns),0);assert.equal(Number(d.vagasEmergenciais),0);}
+          }
+          NODE
+            then OK=1;break;fi
+            sleep 7
+          done
+          test "$OK" = 1
+          trap - ERR
+          echo "ODONTOLOGIA_MANUAL_PRODUCAO_OK versao=$VERSION"
+
+      - name: Remover credenciais temporarias
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.clasprc.json"

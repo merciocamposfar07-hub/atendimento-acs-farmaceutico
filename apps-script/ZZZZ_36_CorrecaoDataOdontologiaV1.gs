@@ -10,7 +10,7 @@
  * - não altera moradores, profissionais, campanhas, recados ou outros módulos.
  */
 var TACS_CORRECAO_DATA_ODONTOLOGIA_V1=Object.freeze({
-  VERSAO:'2.3.0',
+  VERSAO:'2.4.0',
   TZ:'America/Recife',
   DIAS:Object.freeze(['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira'])
 });
