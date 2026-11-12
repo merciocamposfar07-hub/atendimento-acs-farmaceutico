@@ -1581,6 +1581,8 @@
     if (category) category.addEventListener('change', function () {
       clearMedicalSelection(medicalCategorySelected());
     });
+    /* Também elimina uma descrição médica antiga restaurada ao reabrir a página. */
+    if (medicalCategorySelected()) clearMedicalSelection(true);
     renderAgendas();
     setInterval(refreshExpiredAgendas, 15000);
     window.addEventListener('pageshow', refreshExpiredAgendas);
