@@ -40,6 +40,7 @@
     syncError: ''
   };
   var publicListenerInstalled = false;
+  var selectedMedicalDay = null;
   var notificationSdkReady = false;
   var notificationPinPromptPending = false;
 
@@ -453,10 +454,53 @@
   function availableDay(module, item) {
     return item && item.active === true && item.closedNow !== true &&
       !unavailableStatus(item.status) &&
-      (module !== 'medica' || !expiredByAgendaDate(item));
+      (module !== 'medica' || (/^\d{4}-\d{2}-\d{2}$/.test(clean(item.date)) && !expiredByAgendaDate(item)));
   }
 
+
+  /* A consulta médica somente é solicitável após o toque em um dia vigente.
+     O campo de descrição e o envio não podem ser liberados pela escolha do serviço. */
+  function medicalCategorySelected() {
+    var select = id('category');
+    if (!select) return false;
+    var option = select.options[select.selectedIndex];
+    if (option && option.dataset.professionalModule === 'medica') return true;
+    var value = clean(select.value).toLowerCase();
+    if (value.normalize) value = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return ['solicitar consulta medica','solicitar atendimento com a medica',
+      'atendimento com a medica'].indexOf(value) !== -1;
+  }
+
+  function currentMedicalSelection() {
+    if (!selectedMedicalDay || !medicalCategorySelected()) return null;
+    var matching = (state.modules.medica || []).find(function (day) {
+      return clean(day.day) === selectedMedicalDay.day &&
+        clean(day.date) === selectedMedicalDay.date &&
+        availableDay('medica', day);
+    });
+    return matching ? selectedMedicalDay : null;
+  }
+
+  function clearMedicalSelection(forceClear) {
+    var previous = selectedMedicalDay;
+    selectedMedicalDay = null;
+    var subject = id('subject');
+    if (subject && (forceClear || (previous && clean(subject.value) === previous.description))) {
+      if (subject.value) {
+        subject.value = '';
+        subject.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  }
+
+  window.PortalTacsAgendaMedicaV1 = Object.freeze({
+    hasValidSelection: function () { return Boolean(currentMedicalSelection()); }
+  });
+
   function renderModule(module) {
+    if (module === 'medica' && selectedMedicalDay && !currentMedicalSelection()) {
+      clearMedicalSelection(medicalCategorySelected());
+    }
     var container = ensureAgendasContainer();
     if (!container) return;
     var section = id('agenda-' + module);
@@ -543,39 +587,62 @@
       (hasPublished
         ? hasAvailable
           ? 'Programação vigente publicada pela Unidade de Saúde.'
-          : 'A programação foi publicada, mas não há atendimento disponível neste dia.'
-        : 'Nenhum dia ativo foi publicado para este atendimento.') +
+          : (module === 'medica' ? 'Não há dia disponível para solicitar consulta médica no momento.' : 'A programação foi publicada, mas não há atendimento disponível neste dia.')
+        : (module === 'medica' ? 'Nenhum dia de consulta médica disponível. Aguarde a publicação da agenda.' : 'Nenhum dia ativo foi publicado para este atendimento.')) +
       '</p>';
 
     section.innerHTML = html;
+    if (module === 'medica' && currentMedicalSelection()) {
+      section.querySelectorAll('.agenda-day:not(:disabled)').forEach(function (button) {
+        var item = visibleDays(module)[Number(button.dataset.index)];
+        if (item && clean(item.day) === selectedMedicalDay.day && clean(item.date) === selectedMedicalDay.date) {
+          button.classList.add('selected');
+        }
+      });
+    }
 
     section.querySelectorAll('.agenda-day:not(:disabled)').forEach(function (button) {
       button.addEventListener('click', function () {
+        var item = visibleDays(module)[Number(button.dataset.index)] || {};
+        if (module === 'medica' && !availableDay('medica', item)) {
+          clearMedicalSelection(medicalCategorySelected());
+          renderModule('medica');
+          return;
+        }
         section.querySelectorAll('.agenda-day').forEach(function (other) {
           other.classList.remove('selected');
         });
         button.classList.add('selected');
 
-        var item =
-          visibleDays(module)[Number(button.dataset.index)] || {};
         var category = id('category');
         var subject = id('subject');
         var subjectField = id('subjectField');
-
+        var categoryValue = moduleCategory(module);
+        if (module === 'medica' && category) {
+          var option = Array.prototype.find.call(category.options, function (entry) {
+            return entry.dataset.professionalModule === 'medica' ||
+              entry.value === 'Solicitar consulta Médica';
+          });
+          if (option) categoryValue = option.value;
+        }
         if (category) {
-          category.value = moduleCategory(module);
+          category.value = categoryValue;
           category.dispatchEvent(new Event('change', { bubbles: true }));
         }
-
         if (subject) {
           var text =
-            moduleCategory(module) +
+            categoryValue +
             ' - ' +
             clean(item.day) +
             (item.date ? ' - ' + formatDate(item.date) : '') +
             (item.time ? ' às ' + clean(item.time) : '') +
             ': ' +
             clean(item.service || item.message || 'Atendimento publicado');
+          if (module === 'medica') {
+            selectedMedicalDay = {
+              day: clean(item.day), date: clean(item.date), description: clean(text)
+            };
+          }
           subject.value = text;
           subject.dispatchEvent(new Event('input', { bubbles: true }));
         }
@@ -1510,6 +1577,10 @@
     installCardButton();
     installNotifications();
     loadAutofill();
+    var category = id('category');
+    if (category) category.addEventListener('change', function () {
+      clearMedicalSelection(medicalCategorySelected());
+    });
     renderAgendas();
     setInterval(refreshExpiredAgendas, 15000);
     window.addEventListener('pageshow', refreshExpiredAgendas);

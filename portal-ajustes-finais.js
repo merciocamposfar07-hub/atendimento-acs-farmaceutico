@@ -352,6 +352,8 @@
     document.addEventListener('click', function (event) {
       var professional = event.target.closest('.agenda-day:not(:disabled)');
       if (professional) {
+        /* A agenda médica já valida a data selecionada antes de preencher o campo. */
+        if (clean(professional.dataset.module) === 'medica') return;
         setTimeout(function () { fillProfessionalDescription(professional); }, 0);
         return;
       }
