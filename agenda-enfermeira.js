@@ -41,6 +41,7 @@
   };
   var publicListenerInstalled = false;
   var selectedMedicalDay = null;
+  var selectedNutritionDay = null;
   var notificationSdkReady = false;
   var notificationPinPromptPending = false;
 
@@ -454,7 +455,7 @@
   function availableDay(module, item) {
     return item && item.active === true && item.closedNow !== true &&
       !unavailableStatus(item.status) &&
-      (module !== 'medica' || (/^\d{4}-\d{2}-\d{2}$/.test(clean(item.date)) && !expiredByAgendaDate(item)));
+      (['medica', 'nutricionista'].indexOf(module) === -1 || (/^\d{4}-\d{2}-\d{2}$/.test(clean(item.date)) && !expiredByAgendaDate(item)));
   }
 
 
@@ -497,9 +498,51 @@
     hasValidSelection: function () { return Boolean(currentMedicalSelection()); }
   });
 
+
+  /* Nutricionista: a escolha do serviço não equivale à seleção de um dia. */
+  function nutritionCategorySelected() {
+    var select = id('category');
+    if (!select) return false;
+    var option = select.options[select.selectedIndex];
+    if (option && option.dataset.professionalModule === 'nutricionista') return true;
+    var value = clean(select.value).toLowerCase();
+    if (value.normalize) value = value.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
+    return ['solicitar atendimento com nutricionista',
+      'atendimento com a nutricionista'].indexOf(value) !== -1;
+  }
+
+  function currentNutritionSelection() {
+    if (!selectedNutritionDay || !nutritionCategorySelected()) return null;
+    var matching = (state.modules.nutricionista || []).find(function(day) {
+      return clean(day.day) === selectedNutritionDay.day &&
+        clean(day.date) === selectedNutritionDay.date &&
+        availableDay('nutricionista', day);
+    });
+    return matching ? selectedNutritionDay : null;
+  }
+
+  function clearNutritionSelection(forceClear) {
+    var previous = selectedNutritionDay;
+    selectedNutritionDay = null;
+    var subject = id('subject');
+    if (subject && (forceClear || (previous && clean(subject.value) === previous.description))) {
+      if (subject.value) {
+        subject.value = '';
+        subject.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  }
+
+  window.PortalTacsAgendaNutricionistaV1 = Object.freeze({
+    hasValidSelection: function() { return Boolean(currentNutritionSelection()); }
+  });
+
   function renderModule(module) {
     if (module === 'medica' && selectedMedicalDay && !currentMedicalSelection()) {
       clearMedicalSelection(medicalCategorySelected());
+    }
+    if (module === 'nutricionista' && selectedNutritionDay && !currentNutritionSelection()) {
+      clearNutritionSelection(nutritionCategorySelected());
     }
     var container = ensureAgendasContainer();
     if (!container) return;
@@ -587,8 +630,8 @@
       (hasPublished
         ? hasAvailable
           ? 'Programação vigente publicada pela Unidade de Saúde.'
-          : (module === 'medica' ? 'Não há dia disponível para solicitar consulta médica no momento.' : 'A programação foi publicada, mas não há atendimento disponível neste dia.')
-        : (module === 'medica' ? 'Nenhum dia de consulta médica disponível. Aguarde a publicação da agenda.' : 'Nenhum dia ativo foi publicado para este atendimento.')) +
+          : (module === 'medica' ? 'Não há dia disponível para solicitar consulta médica no momento.' : module === 'nutricionista' ? 'Não há dia disponível para solicitar atendimento com a nutricionista no momento.' : 'A programação foi publicada, mas não há atendimento disponível neste dia.')
+        : (module === 'medica' ? 'Nenhum dia de consulta médica disponível. Aguarde a publicação da agenda.' : module === 'nutricionista' ? 'Nenhum dia disponível para a nutricionista. Aguarde a publicação da agenda.' : 'Nenhum dia ativo foi publicado para este atendimento.')) +
       '</p>';
 
     section.innerHTML = html;
@@ -600,6 +643,14 @@
         }
       });
     }
+    if (module === 'nutricionista' && currentNutritionSelection()) {
+      section.querySelectorAll('.agenda-day:not(:disabled)').forEach(function (button) {
+        var item = visibleDays(module)[Number(button.dataset.index)];
+        if (item && clean(item.day) === selectedNutritionDay.day && clean(item.date) === selectedNutritionDay.date) {
+          button.classList.add('selected');
+        }
+      });
+    }
 
     section.querySelectorAll('.agenda-day:not(:disabled)').forEach(function (button) {
       button.addEventListener('click', function () {
@@ -607,6 +658,11 @@
         if (module === 'medica' && !availableDay('medica', item)) {
           clearMedicalSelection(medicalCategorySelected());
           renderModule('medica');
+          return;
+        }
+        if (module === 'nutricionista' && !availableDay('nutricionista', item)) {
+          clearNutritionSelection(nutritionCategorySelected());
+          renderModule('nutricionista');
           return;
         }
         section.querySelectorAll('.agenda-day').forEach(function (other) {
@@ -640,6 +696,11 @@
             clean(item.service || item.message || 'Atendimento publicado');
           if (module === 'medica') {
             selectedMedicalDay = {
+              day: clean(item.day), date: clean(item.date), description: clean(text)
+            };
+          }
+          if (module === 'nutricionista') {
+            selectedNutritionDay = {
               day: clean(item.day), date: clean(item.date), description: clean(text)
             };
           }
@@ -1558,15 +1619,16 @@
   }
 
   function refreshExpiredAgendas() {
-    var module = 'medica';
-    var section = id('agenda-' + module);
-    if (!section) return;
-    var availableButtons = section.querySelectorAll('.agenda-day:not(:disabled)');
-    var changed = Array.prototype.some.call(availableButtons, function (button) {
-      var item = visibleDays(module)[Number(button.dataset.index)];
-      return !availableDay(module, item);
+    ['medica', 'nutricionista'].forEach(function (module) {
+      var section = id('agenda-' + module);
+      if (!section) return;
+      var availableButtons = section.querySelectorAll('.agenda-day:not(:disabled)');
+      var changed = Array.prototype.some.call(availableButtons, function (button) {
+        var item = visibleDays(module)[Number(button.dataset.index)];
+        return !availableDay(module, item);
+      });
+      if (changed) renderModule(module);
     });
-    if (changed) renderModule(module);
   }
 
   function install() {
@@ -1580,9 +1642,15 @@
     var category = id('category');
     if (category) category.addEventListener('change', function () {
       clearMedicalSelection(medicalCategorySelected());
+      clearNutritionSelection(nutritionCategorySelected());
+      /* O preenchimento automático de outros módulos pode acontecer após change. */
+      setTimeout(function () {
+        if (nutritionCategorySelected() && !currentNutritionSelection()) clearNutritionSelection(true);
+      }, 0);
     });
-    /* Também elimina uma descrição médica antiga restaurada ao reabrir a página. */
+    /* Não reutilizar descrições de serviços anteriores, inclusive em sessões restauradas. */
     if (medicalCategorySelected()) clearMedicalSelection(true);
+    if (nutritionCategorySelected()) clearNutritionSelection(true);
     renderAgendas();
     setInterval(refreshExpiredAgendas, 15000);
     window.addEventListener('pageshow', refreshExpiredAgendas);
