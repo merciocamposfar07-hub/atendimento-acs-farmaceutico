@@ -72,7 +72,8 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  await until(()=>shares.length===1);
  assert.equal(shares[0].name,'Pedro Silva');
  assert.equal(shares[0].category,'Solicitar consulta Médica');
- assert.match(shares[0].recipient,/Solange Oliveira/);
+ assert.equal(shares[0].requester,'Solange Oliveira');
+ assert.equal(shares[0].recipient,'');
  $('cscTerceirosFinish').click();
  assert.equal($('cpf').value,'111.444.777-35');
  assert.equal($('name').value,'Solange Oliveira');
