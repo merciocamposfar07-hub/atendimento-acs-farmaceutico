@@ -10,6 +10,7 @@ on:
       - 'apps-script/ZZZZ_56_SolicitacaoTerceirosMoradorV1.gs'
       - 'scripts/build_apps_script_release.js'
       - 'scripts/test_csc_terceiros_v1.js'
+      - 'scripts/test_csc_terceiros_dom_v2.js'
       - '.github/workflows/csc-solicitacao-terceiros-v1.yml'
   workflow_dispatch:
 
@@ -34,3 +35,7 @@ jobs:
           node --check scripts/build_apps_script_release.js
       - name: Regressão isolada sem escrita no cadastro atual
         run: node scripts/test_csc_terceiros_v1.js
+      - name: Instalar dependências para testar a interface sem pacientes reais
+        run: npm ci --ignore-scripts
+      - name: Fluxo DOM: família, formulário existente e imagem oficial
+        run: node scripts/test_csc_terceiros_dom_v2.js
