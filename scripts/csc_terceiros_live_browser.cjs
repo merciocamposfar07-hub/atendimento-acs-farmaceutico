@@ -44,7 +44,7 @@ const PAGE_URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceu
      ]
    };
    await page.route('https://script.google.com/macros/s/**/exec?*',async route=>{
-     const req=route.request(),url=new URL(req.url()),a=url.searchParams.get('action')||'';
+     const req=route.request(),url=new URL(req.url()),params=new URLSearchParams(req.postData()||''),a=url.searchParams.get('action')||params.get('action')||'';
      if(!a.startsWith('csc_terceiros_')){await route.continue();return;}
      if(a==='csc_terceiros_result'){
        const id=url.searchParams.get('requestId'),cb=url.searchParams.get('callback');
@@ -53,7 +53,7 @@ const PAGE_URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceu
        await route.fulfill({status:200,contentType:'application/javascript',
          body:cb+'('+JSON.stringify(output)+');'});return;
      }
-     const params=new URLSearchParams(req.postData()||''),id=params.get('requestId');
+     const id=params.get('requestId');
      let result;
      if(a==='csc_terceiros_buscar')result=beneficiary;
      else if(a==='csc_terceiros_membro')result={
