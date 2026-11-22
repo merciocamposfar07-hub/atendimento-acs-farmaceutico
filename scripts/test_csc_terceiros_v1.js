@@ -81,6 +81,8 @@ const ctx={
  solicitacoesUbsV1Codigo_:v=>String(v),
  solicitacoesUbsV1Data_:v=>/^\d{4}-\d{2}-\d{2}$/.test(v)?v:'',
  solicitacoesUbsV1Hora_:v=>/^\d\d:\d\d$/.test(v)?v:'',
+ solicitacoesUbsV1AgendaCard_:v=>{const m=String(v).match(/(\d\d)\/(\d\d)\/(\d{4})/);return {data:m?m[3]+'-'+m[2]+'-'+m[1]:'',horaFinal:''};},
+ solicitacoesUbsV1ExpiraEm_:(d,h)=>d?new Date(d+'T'+(h||'00:00')+':00'):null,
  solicitacoesUbsV1Sheet_:()=>reqSheet,
  solicitacoesUbsV1LocalizarCodigo_:(sh,area,code)=>reqRows.find(r=>r[1]===area&&r[4]===code)||null,
  solicitacoesUbsV1Id_:()=>('REQ-'+(reqRows.length+1)),
