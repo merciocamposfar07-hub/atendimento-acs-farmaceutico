@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +41,7 @@ jobs:
       - name: Preparar navegadores reais
         shell: bash
         run: |
-          npm install --no-save --ignore-scripts playwright@1.58.2
+          npm install --no-save --ignore-scripts playwright@1.62.1
           npx playwright install --with-deps chromium webkit
       - name: Testar Chrome e Safari/WebKit com formulário original preservado
         run: node scripts/csc_terceiros_live_browser.cjs
