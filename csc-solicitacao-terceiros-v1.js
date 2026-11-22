@@ -3,7 +3,7 @@
 'use strict';
 if(window.CscSolicitacaoTerceirosV1)return;
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-var AREA='JAPARANDUBA',WHATSAPP='5581989613130',chosen=null,busy=false,opened=false,watch=null;
+var AREA='JAPARANDUBA',WHATSAPP='5581989613130',chosen=null,busy=false,opened=false,watch=null,pendingCode='';
 var SERVICES=[
 'Solicitar consulta Médica','Solicitar atendimento com a Enfermeira Chefe',
 'Solicitar atendimento com nutricionista','Solicitar atendimento odontológico (dentista)',
@@ -78,7 +78,7 @@ function html(){
  '<a id="cscTerceirosWhatsapp" class="csc-terceiros-whatsapp" hidden rel="noopener noreferrer" target="_blank">ENVIAR AO TACS PELO WHATSAPP</a></div>';
 }
 function clear(){
- chosen=null;
+ chosen=null;pendingCode='';
  ['cscTerceirosDoc','cscTerceirosBirth','cscTerceirosName','cscTerceirosDescription'].forEach(function(id){el(id).value='';});
  ['cscTerceirosBirthRow','cscTerceirosNameRow','cscTerceirosPerson','cscTerceirosService','cscTerceirosWhatsapp'].forEach(function(id){el(id).hidden=true;});
  el('cscTerceirosCategory').value='';el('cscTerceirosConsent').checked=false;
@@ -90,18 +90,19 @@ function toggle(){
  el('cscTerceirosToggle').textContent=opened?'FECHAR SOLICITAÇÃO ▴':'SOLICITAR SERVIÇO PARA OUTRA PESSOA ▾';
  if(!opened)clear();
 }
+function age(d){var p=String(d||'').split('/');if(p.length!==3)return '';var y=+p[2],m=+p[1],day=+p[0],now=new Date(),years=now.getFullYear()-y;if(now.getMonth()+1<m||(now.getMonth()+1===m&&now.getDate()<day))years--;return years>=0&&years<130?String(years):'';}
 function populate(r){
- var b=r.beneficiario;chosen=r.selecaoToken;
+ var b=r.beneficiario;chosen=r.selecaoToken;pendingCode='';
  var box=el('cscTerceirosPerson');box.hidden=false;
  box.innerHTML='<strong>'+esc(b.nome)+'</strong><p>Data de nascimento: '+esc(b.nascimento)+'</p><p>Localidade: '+esc(b.localidade)+'</p><p>Cadastro familiar: '+esc(b.familiaId)+'</p>'+
- '<p>Documento: '+esc(b.documento||'não informado')+(b.documentoPendente?' (pendente de conferência na UBS)':'')+'</p>';
+ '<p>Idade: '+esc(age(b.nascimento)||'não informada')+' anos</p><p>Documento: '+esc(b.documento||'não informado')+(b.documentoPendente?' (pendente de conferência na UBS)':'')+'</p>';
  el('cscTerceirosService').hidden=false;notice('Morador identificado. Confira os dados antes de solicitar. Não será criado PIN.','ok');
 }
 function find(){
  if(busy)return;
  var doc=digits(el('cscTerceirosDoc').value);
  if(doc.length!==11&&doc.length!==15){notice('Informe CPF com 11 dígitos ou Cartão SUS com 15 dígitos.','err');return;}
- busy=true;chosen=null;
+ busy=true;chosen=null;pendingCode='';
  el('cscTerceirosLookup').disabled=true;el('cscTerceirosPerson').hidden=true;
  el('cscTerceirosService').hidden=true;el('cscTerceirosWhatsapp').hidden=true;
  notice('Aguarde… localizando o morador.','progress');
@@ -119,8 +120,9 @@ function send(){
  if(!description){notice('Descreva o que a pessoa precisa.','err');return;}
  if(!el('cscTerceirosConsent').checked){notice('Confirme que o pedido é feito com conhecimento ou autorização da pessoa.','err');return;}
  busy=true;el('cscTerceirosSubmit').disabled=true;notice('Aguarde… registrando a solicitação na UBS.','progress');
+ pendingCode=pendingCode||newCode();
  action('csc_terceiros_enviar',{
-  selecaoToken:chosen,codigoSolicitacao:newCode(),categoria:cat,descricao:description,autorizado:'SIM',
+  selecaoToken:chosen,codigoSolicitacao:pendingCode,categoria:cat,descricao:description,autorizado:'SIM',
   tacsResponsavel:'Mércio José Campos dos Santos',unidadeNome:'Unidade de Saúde Posto Matias'
  }).then(function(r){
   var message='*PORTAL CSC - PEDIDO PARA OUTRO MORADOR*\nCódigo: '+r.codigoSolicitacao+
