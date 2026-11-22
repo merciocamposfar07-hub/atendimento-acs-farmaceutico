@@ -5,6 +5,12 @@ if(window.PortalCscSolicitacaoCardOficialV1)return;
 var CSC_CARD_ICON='/atendimento-acs-farmaceutico/conecta-saude-homologacao/v15/assets/conecta-saude-central-canonico-2026-09-09.png?v=20260920-solicitacao-card-icon-v1';
 
 function clean(value){return String(value==null?'':value).trim()}
+function formatDocument(value){
+ var raw=clean(value),d=raw.replace(/\D/g,'');
+ if(d.length===11)return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);
+ if(d.length===15)return d.slice(0,3)+' '+d.slice(3,7)+' '+d.slice(7,11)+' '+d.slice(11);
+ return raw;
+}
 function normalizeArea(value){
   var text=clean(value).toUpperCase();
   if(text.normalize)text=text.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -129,7 +135,7 @@ function create(data){
     block('Nome completo',clean(data.name)||'Não informado',2,17,38);
     block('Data e horário do envio',clean(data.sentAt)||'Não informado',1,16,35);
     block('Nascimento e idade',(clean(data.birth)||'Não informada')+' • '+(clean(data.age)||detailedAge(data.birth)),2,16,35);
-    block('CPF ou CNS',clean(data.document)||'Não informado',1,16,35);
+    block('CPF ou CNS',formatDocument(data.document)||'Não informado',1,16,35);
     block('Localidade / comunidade',clean(data.locality)||'Não informada',3,18,34);
     if(clean(data.recipient))block('Solicitação para',clean(data.recipient),1,16,34);
     block('Descrição da solicitação',summary.description,4,13,34);

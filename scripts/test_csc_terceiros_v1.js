@@ -84,7 +84,7 @@ const ctx={
  solicitacoesUbsV1AgendaCard_:v=>{const m=String(v).match(/(\d\d)\/(\d\d)\/(\d{4})/);return {data:m?m[3]+'-'+m[2]+'-'+m[1]:'',horaFinal:''};},
  solicitacoesUbsV1ExpiraEm_:(d,h)=>d?new Date(d+'T'+(h||'00:00')+':00'):null,
  solicitacoesUbsV1Sheet_:()=>reqSheet,
- solicitacoesUbsV1LocalizarCodigo_:(sh,area,code)=>reqRows.find(r=>r[1]===area&&r[4]===code)||null,
+ solicitacoesUbsV1LocalizarCodigo_:(sh,area,code)=>{const row=reqRows.find(r=>r[1]===area&&r[4]===code);return row?{data:row}:null;},
  solicitacoesUbsV1Id_:()=>('REQ-'+(reqRows.length+1)),
  solicitacoesUbsV1EnviarPush_:()=>{pushes++;return {push:true,id:'PUSH-1'};},
  identificacaoFamiliarPublicaV1Contexto_:area=>({areaId:area}),
@@ -140,4 +140,8 @@ assert.equal(pushes,1);
 const again=ctx.cscTerceirosV1Enviar_(request,actor);
 assert.equal(again.duplicada,true);
 assert.equal(reqRows.length,1);
-console.log('CSC terceiros: CPF persistido, retorno sem nascimento, família completa, escolha de integrante, agenda, UBS, idempotência e privacidade: OK');
+const collision={...request,selecaoToken:lookup.selecaoToken,documento:'52998224725'};
+assert.throws(()=>ctx.cscTerceirosV1Enviar_(collision,actor),/outra solicitação/);
+assert.equal(reqRows.length,1,'Código de um morador não pode ser usado para outro');
+assert.match(official,/block\('CPF ou CNS',formatDocument\(data.document\)/);
+console.log('CSC terceiros: proteção de identidade por solicitação, CPF/CNS e UBS: OK');

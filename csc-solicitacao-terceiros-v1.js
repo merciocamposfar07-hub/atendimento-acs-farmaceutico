@@ -64,7 +64,7 @@ function html(){
  '<button id="cscTerceirosToggle" class="csc-terceiros-main" type="button" aria-expanded="false" aria-controls="cscTerceirosFields">SOLICITAR SERVIÇO PARA OUTRA PESSOA ▾</button>'+
  '<div id="cscTerceirosFields" class="csc-terceiros-fields" hidden>'+
  '<p class="csc-terceiros-help">Informe o CPF ou Cartão SUS de quem precisa do atendimento. Nenhum PIN será criado para essa pessoa.</p>'+
- '<label class="csc-terceiros-field">CPF ou Cartão SUS (CNS)<input id="cscTerceirosDoc" inputmode="numeric" autocomplete="off" maxlength="15" placeholder="CPF ou Cartão SUS"></label>'+
+ '<label class="csc-terceiros-field">CPF ou Cartão SUS (CNS)<input id="cscTerceirosDoc" inputmode="numeric" autocomplete="off" maxlength="18" placeholder="CPF ou Cartão SUS"></label>'+
  '<div id="cscTerceirosBirthRow" hidden><label class="csc-terceiros-field">Data de nascimento (somente na primeira identificação)<input id="cscTerceirosBirth" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="DD/MM/AAAA"></label></div>'+
  '<div id="cscTerceirosNameRow" hidden><label class="csc-terceiros-field">Nome completo para confirmação<input id="cscTerceirosName" autocomplete="off" maxlength="120" placeholder="Nome completo"></label></div>'+
  '<label class="csc-terceiros-consent"><input id="cscTerceirosConsent" type="checkbox"><span>Confirmo que estou ajudando esta pessoa a solicitar o atendimento, a pedido ou com o conhecimento dela.</span></label>'+
@@ -80,7 +80,7 @@ function html(){
 }
 var delegate=null,confirmToken='',familyList=[],shareData=null,originalFields=null,activeDoc='';
 function closePending(){
- confirmToken='';familyList=[];shareData=null;delegate=null;activeDoc='';
+ confirmToken='';familyList=[];shareData=null;delegate=null;activeDoc='';pendingCode='';
  ['cscTerceirosConfirm','cscTerceirosFamily','cscTerceirosPerson','cscTerceirosLegacyHelp','cscTerceirosShare','cscTerceirosFinish'].forEach(function(id){var e=el(id);if(e)e.hidden=true;});
  var b=el('cscTerceirosShare');if(b)b.disabled=false;
 }
@@ -127,7 +127,7 @@ function family(items,selectedName){
  box.hidden=false;
 }
 function chosenPerson(result){
- var b=result.beneficiario;delegate={
+ var b=result.beneficiario;if(delegate&&(delegate.document!==digits(b.documento)||delegate.name!==b.nome))pendingCode='';delegate={
   token:result.selecaoToken,name:b.nome,birth:b.nascimento,locality:b.localidade,
   document:digits(b.documento),family:b.familiaId
  };
@@ -250,7 +250,7 @@ function nativeClick(event){
   if(document.hidden)return;
   data.code=r.codigoSolicitacao;data.requester=txt(r.solicitante.nome);data.recipient='';
   shareData=data;el('cscTerceirosShare').hidden=false;el('cscTerceirosFinish').hidden=false;
-  notice('Solicitação registrada na UBS. Agora toque no botão verde para enviar o mesmo cartão oficial ao WhatsApp do TACS.','ok');
+  notice(r.duplicada?'Pedido já registrado. Nenhuma nova notificação foi disparada; confira o painel da UBS.':r.pushUbs===true?'Pedido registrado na UBS. O serviço Push aceitou o aviso automático; a entrega ao aparelho precisa ser confirmada.':'Pedido registrado na fila da UBS, mas o aviso Push não foi confirmado. Confira o painel da UBS.',r.pushUbs===true?'ok':'progress');
   el('cscTerceirosShare').scrollIntoView({behavior:'smooth',block:'center'});
  }).catch(function(e){notice(e.message,'err');})
  .finally(function(){busy=false;target.disabled=false;});
@@ -293,7 +293,7 @@ function mount(){
  el('cscTerceirosShare').addEventListener('click',shareCard);
  el('cscTerceirosFinish').addEventListener('click',function(){cancel();opened=false;el('cscTerceirosFields').hidden=true;el('cscTerceirosToggle').setAttribute('aria-expanded','false');el('cscTerceirosToggle').textContent='SOLICITAR SERVIÇO PARA OUTRA PESSOA ▾';});
  el('cscTerceirosBirth').addEventListener('input',function(){if(delegate||confirmToken||familyList.length)invalidateSelection();var d=digits(this.value).slice(0,8);this.value=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;});
- el('cscTerceirosDoc').addEventListener('input',function(){invalidateSelection();var d=digits(this.value).slice(0,15);this.value=d.length>11?d:d.length>9?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9):d;});
+ el('cscTerceirosDoc').addEventListener('input',function(){invalidateSelection();var d=digits(this.value).slice(0,15);this.value=d.length>11?d.slice(0,3)+' '+d.slice(3,7)+' '+d.slice(7,11)+' '+d.slice(11):d.length>9?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9):d;});
  el('cscTerceirosName').addEventListener('input',invalidateSelection);
  document.addEventListener('click',nativeClick,true);
  function show(){var a=creds();root.hidden=!(a.token.indexOf('cms1.')===0&&a.dispositivo);return !root.hidden;}

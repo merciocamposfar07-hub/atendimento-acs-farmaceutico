@@ -9,7 +9,7 @@ w.CSC_TERCEIROS_ENABLED=true;
 w.localStorage.setItem('portalTacsDispositivoV1','device-1');
 w.sessionStorage.setItem('portalConectaMoradorTokenV1','cms1.simulado');
 w.Element.prototype.scrollIntoView=function(){};
-let thirdPartyReads=0,shares=[],sentActions=[];
+let thirdPartyReads=0,shares=[],sentActions=[],sentCodes=[];
 const people={
  ana:{ok:true,encontrado:true,selecaoToken:'select-ana',beneficiario:{nome:'Ana Silva',nascimento:'29/03/1960',localidade:'Japaranduba',documento:'52998224725',familiaId:'002'},familia:[
   {membroToken:'member-ana',nome:'Ana Silva',nascimento:'29/03/1960',temDocumento:true},
@@ -25,8 +25,9 @@ w.fetch=async (url,opts)=>{
  if(act==='csc_terceiros_buscar')result=people.ana;
  else if(act==='csc_terceiros_membro')result=people.pedro;
  else if(act==='csc_terceiros_enviar'){
+  sentCodes.push(p.get('codigoSolicitacao'));
   assert.equal(p.get('categoria'),'Solicitar consulta Médica');
-  assert.equal(p.get('documento'),'123456789012345');
+  assert(['123456789012345','52998224725'].includes(p.get('documento')));
   result={ok:true,codigoSolicitacao:p.get('codigoSolicitacao'),solicitante:{nome:'Solange Oliveira',cpfFinal:'7735'},beneficiario:{nome:'Pedro Silva',documento:'123456789012345'}};
  }else throw Error('Unexpected action '+act);
  responses.set(p.get('requestId'),result);
@@ -76,6 +77,21 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  assert.equal(shares[0].recipient,'');
  $('cscTerceirosFinish').click();
  assert.equal($('cpf').value,'111.444.777-35');
+ assert.equal($('name').value,'Solange Oliveira');
+ // Outro beneficiário na mesma sessão deve produzir identificador novo.
+ $('cscTerceirosToggle').click();
+ $('cscTerceirosConsent').checked=true;
+ $('cscTerceirosDoc').value='52998224725';
+ $('cscTerceirosLookup').click();
+ await until(()=>$('cscTerceirosFamily').hidden===false);
+ $('cscTerceirosFamily').querySelectorAll('button')[0].click();
+ await until(()=>$('cscTerceirosLegacyHelp').hidden===false);
+ $('category').value='Solicitar consulta Médica';
+ $('subject').value='Consulta médica de Ana';
+ $('sendPetroleumCard').click();
+ await until(()=>sentCodes.length===2);
+ assert.notEqual(sentCodes[0],sentCodes[1],'Dois beneficiários precisam de códigos diferentes');
+ $('cscTerceirosFinish').click();
  assert.equal($('name').value,'Solange Oliveira');
  assert.equal(w.localStorage.getItem('portalTacsDispositivoV1'),'device-1');
  assert(!JSON.stringify(w.localStorage).includes('Pedro Silva'));
