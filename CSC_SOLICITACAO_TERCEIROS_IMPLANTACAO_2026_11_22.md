@@ -1,7 +1,12 @@
 # CSC — Solicitação para outro morador (2026-11-22)
 
-## Situação
-Implementado **somente** na ramificação `feature/csc-solicitacao-terceiros-v1`, PR #197. Não publicado aos moradores. `window.CSC_TERCEIROS_ENABLED=false` por padrão.
+## Situação em produção — verificada em 22/11/2026
+- **Backend:** Apps Script publicado como versão **286** (versão anterior preservada: 285). Workflow de implantação seletiva #45035780158 concluiu com sucesso.
+- **Frontend:** `window.CSC_TERCEIROS_ENABLED=true` na `main`; GitHub Pages publicou a página ativa.
+- **Rede real:** rota de resultado `csc_terceiros_result` e `portal_manutencao_status` responderam corretamente.
+- **Navegador publicado:** workflow #45036085178 concluiu com sucesso em Chromium e WebKit; abertura local do formulário em 0,6 ms e 1,0 ms, respectivamente, em testes automatizados de dispositivo móvel.
+- **Pendência:** envio autenticado de pedido verdadeiro por morador autorizado, conferência do registro na fila da UBS e da abertura do WhatsApp. Os testes no navegador usaram credenciais simuladas apenas para visualizar o botão, sem pedidos reais.
+- A matriz geral de qualidade do repositório possui falha anterior de auditoria da dependência `source-map-js`; o teste específico CSC foi aprovado.
 
 ## Garantias de isolamento
 - O HTML atual recebe apenas um link para o CSS, um indicador de ativação e uma inclusão JavaScript. As funções antigas continuam intactas.
@@ -17,7 +22,7 @@ Implementado **somente** na ramificação `feature/csc-solicitacao-terceiros-v1`
 - O módulo executa uma leitura territorial por operação, compartilhada entre identificação do titular e beneficiário, sem criar cache persistente de terceiros.
 - Requisições são assíncronas, com feedback imediato, anti-duplo-clique e consulta por código; a latência real depende do Apps Script/planilha e precisa ser medida no iPhone.
 
-## Homologação necessária ANTES de ativar
+## Homologação e acompanhamento após ativação
 1. Confirmar que a versão corrente do portal e da implantação Apps Script é a esperada; registrar os identificadores e manter forma de reversão.
 2. Implantar a rota backend isolada em ambiente de teste, sem executar o workflow de substituição total de módulos.
 3. Validar, com cadastros de teste autorizados, CPF existente, CPF sem registro, confirmação por nascimento, nomes coincidentes e pessoas fora da área.
@@ -26,7 +31,7 @@ Implementado **somente** na ramificação `feature/csc-solicitacao-terceiros-v1`
 6. Confirmar entrega na UBS, identificação de solicitante/beneficiário e eventual Push, sem leitura indevida de dados de terceiros.
 7. Validar no Safari/iPhone e no PWA, com fontes grandes e contraste legível; conferir abertura do botão, campos, teclado numérico e desempenho.
 8. Verificar que o fluxo regular do morador, listas familiares, agenda médica, nutricionista, odontologia, notificações, PIN e Central administrativa não sofrem mudanças.
-9. Publicar primeiro o backend homologado, e **somente depois** definir `CSC_TERCEIROS_ENABLED=true` em uma alteração controlada do `index.html`, com revisão e rollback pronto.
+9. **Executado:** backend v286 publicado antes da ativação; `CSC_TERCEIROS_ENABLED=true` publicado depois. Manter rollback pronto.
 
 ## Testes automatizados
 `node scripts/test_csc_terceiros_v1.js`
