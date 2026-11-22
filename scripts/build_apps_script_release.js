@@ -168,6 +168,10 @@ const MODULES = [
   {
     source: 'apps-script/ZZZZ_53_SolicitacaoAssistidaV1.gs',
     marker: 'TACS_SOLICITACAO_ASSISTIDA_V1'
+  },
+  {
+    source: 'apps-script/ZZZZ_56_SolicitacaoTerceirosMoradorV1.gs',
+    marker: 'TACS_CSC_TERCEIROS_V1'
   }
 ];
 
