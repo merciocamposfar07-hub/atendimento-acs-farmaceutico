@@ -120,5 +120,7 @@ assert.match(rows[0][12],/SEM RESERVA AUTOMÁTICA/);
 assert.equal(pushes,1);
 const repeated=context.cscTerceirosV1Enviar_(request,actor);
 assert.equal(repeated.duplicada,true);
+assert.equal(repeated.beneficiario.nome,'Maria Souza');
+assert.equal(repeated.solicitante.nome,'Solange Oliveira');
 assert.equal(rows.length,1);
 console.log('CSC terceiros: sintaxe, login, família distinta, CPF existente/ausente, nascimento, ambiguidade, consentimento, UBS e idempotência: OK');
