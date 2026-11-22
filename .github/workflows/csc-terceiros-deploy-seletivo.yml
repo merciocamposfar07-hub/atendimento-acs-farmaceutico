@@ -57,8 +57,15 @@ jobs:
           cd "$RUNNER_TEMP/csc-terceiros-live"
           npx --yes @google/clasp@3.3.0 pull
           test -f appsscript.json
-          test ! -f ZZZZ_56_SolicitacaoTerceirosMoradorV1.gs || cmp -s ZZZZ_56_SolicitacaoTerceirosMoradorV1.gs "$GITHUB_WORKSPACE/apps-script/ZZZZ_56_SolicitacaoTerceirosMoradorV1.gs"
-          test ! -f ZZZZ_56_SolicitacaoTerceirosMoradorV1.js || cmp -s ZZZZ_56_SolicitacaoTerceirosMoradorV1.js "$GITHUB_WORKSPACE/apps-script/ZZZZ_56_SolicitacaoTerceirosMoradorV1.gs"
+          # Update only this named module. Existing production v1 is allowed,
+          # but refuse unexpected content to avoid overwriting an unrelated script.
+          for file in ZZZZ_56_SolicitacaoTerceirosMoradorV1.gs ZZZZ_56_SolicitacaoTerceirosMoradorV1.js; do
+            if [ -f "$file" ]; then
+              grep -Fq 'TACS_CSC_TERCEIROS_V1' "$file"
+              grep -Fq 'csc_terceiros_buscar' "$file"
+              grep -Fq 'csc_terceiros_enviar' "$file"
+            fi
+          done
       - name: Acrescentar exclusivamente a nova rota, criar versão e implantar com rollback
         env:
           DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
