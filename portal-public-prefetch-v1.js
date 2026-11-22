@@ -5,7 +5,7 @@
  if(window.CscPublicBootV1)return;
  function area(v){
   var s=String(v||'').trim().toUpperCase();
-  if(s.normalize)s=s.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'');
+  if(s.normalize)s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   s=s.replace(/[^A-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,64);
   return /^[A-Z0-9][A-Z0-9_-]{1,63}$/.test(s)?s:'';
  }
