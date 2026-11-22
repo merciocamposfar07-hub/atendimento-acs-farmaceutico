@@ -7,6 +7,7 @@ on:
       - '.github/workflows/csc-terceiros-live-browser.yml'
       - 'scripts/csc_terceiros_live_browser.cjs'
       - 'index.html'
+      - 'central-administrativa-tacs.html'
       - 'csc-solicitacao-terceiros-v1.js'
       - 'portal-solicitacao-card-oficial-v1.js'
       - 'portal-public-prefetch-v1.js'

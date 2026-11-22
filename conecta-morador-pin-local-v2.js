@@ -67,7 +67,11 @@ function registrar(pin,r,snapshot){
     snapshot:snap,salvoRemotoEm:Date.now()
   })).catch(function(){return false});
 }
-function remover(){var v=vault();if(v&&typeof v.remover==='function')v.remover('morador')}
+function remover(){
+ try{sessionStorage.removeItem('cscMoradorPinVerificadoLocalV1')}catch(e){}
+ try{document.dispatchEvent(new CustomEvent('csc:morador-sessao-revogada'))}catch(e){}
+ var v=vault();if(v&&typeof v.remover==='function')v.remover('morador');
+}
 
 document.addEventListener('click',function(event){
   var target=event.target&&event.target.closest?event.target.closest('#cscResidentLogin'):null;

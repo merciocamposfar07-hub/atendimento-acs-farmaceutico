@@ -50,9 +50,22 @@ w.eval(fs.readFileSync(path.join(root,'csc-solicitacao-terceiros-v1.js'),'utf8')
 assert(w.document.getElementById('cscTerceiros'),'Montar a função assim que o formulário existe, sem aguardar DOMContentLoaded');
 assert.equal(w.document.getElementById('cscTerceiros').hidden,true,'Sem PIN o módulo é oculto');
 w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+const UI_KEY='cscMoradorPinVerificadoLocalV1';
+w.sessionStorage.setItem(UI_KEY,JSON.stringify({dispositivo:'outro aparelho',areaId:'JAPARANDUBA',at:Date.now()}));
+w.document.dispatchEvent(new w.CustomEvent('csc:morador-pin-verificado-local'));
+assert.equal(w.document.getElementById('cscTerceiros').hidden,true,'Não aceitar PIN local de outro aparelho');
+w.sessionStorage.setItem(UI_KEY,JSON.stringify({dispositivo:'device-1',areaId:'MUNTUNS',at:Date.now()}));
+w.document.dispatchEvent(new w.CustomEvent('csc:morador-pin-verificado-local'));
+assert.equal(w.document.getElementById('cscTerceiros').hidden,true,'Não aceitar PIN local de outra área');
+w.sessionStorage.setItem(UI_KEY,JSON.stringify({dispositivo:'device-1',areaId:'JAPARANDUBA',at:Date.now()-400000}));
+w.document.dispatchEvent(new w.CustomEvent('csc:morador-pin-verificado-local'));
+assert.equal(w.document.getElementById('cscTerceiros').hidden,true,'PIN local expirado não libera interface');
+w.sessionStorage.setItem(UI_KEY,JSON.stringify({dispositivo:'device-1',areaId:'JAPARANDUBA',at:Date.now()}));
+w.document.dispatchEvent(new w.CustomEvent('csc:morador-pin-verificado-local'));
+assert.equal(w.sessionStorage.getItem('portalConectaMoradorTokenV1'),null,'O token remoto ainda não chegou');
+assert.equal(w.document.getElementById('cscTerceiros').hidden,false,'Mostrar a função no mesmo evento de validação local');
 w.sessionStorage.setItem('portalConectaMoradorTokenV1','cms1.simulado');
 w.document.dispatchEvent(new w.CustomEvent('tacs:morador',{detail:{nome:'Solange Oliveira'}}));
-assert.equal(w.document.getElementById('cscTerceiros').hidden,false,'Evento de sessão abre a função imediatamente após PIN');
 const $=id=>w.document.getElementById(id),wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.now()-start>limit)throw Error('Timeout');await wait(25);}}
 (async()=>{
@@ -104,6 +117,10 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  assert.equal(w.localStorage.getItem('portalTacsDispositivoV1'),'device-1');
  assert(!JSON.stringify(w.localStorage).includes('Pedro Silva'));
  assert(!JSON.stringify(w.localStorage).includes('123456789012345'));
+ w.sessionStorage.removeItem('portalConectaMoradorTokenV1');
+ w.sessionStorage.removeItem(UI_KEY);
+ w.document.dispatchEvent(new w.CustomEvent('csc:morador-sessao-revogada'));
+ assert.equal($('cscTerceiros').hidden,true,'Ao encerrar sessão a função deve ocultar');
  w.close();
- console.log('CSC DOM: módulo imediato após PIN, envio único, família e privacidade: OK');
+ console.log('CSC DOM: visibilidade imediata por PIN local validado, isolamento territorial, envio único, revogação e privacidade: OK');
 })().catch(e=>{console.error(e);process.exitCode=1;w.close();});

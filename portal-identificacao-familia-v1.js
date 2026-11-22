@@ -379,6 +379,10 @@
   function resetResidentPinAttempts(){try{sessionStorage.removeItem(residentPinAttemptsKey())}catch(e){}}
   function handleResidentPinFailure(error){
     var message=text(error&&error.message)||'PIN não confirmado.';
+    if(/PIN incorreto|acesso recusado|sess[aã]o inv[aá]lida|n[aã]o autorizado/i.test(message)){
+      try{sessionStorage.removeItem('cscMoradorPinVerificadoLocalV1')}catch(ignoreUi){}
+      document.dispatchEvent(new CustomEvent('csc:morador-sessao-revogada'));
+    }
     if(!/PIN incorreto/i.test(message)){renderResidentPinLogin(message);return}
     var count=0;try{count=Number(sessionStorage.getItem(residentPinAttemptsKey())||0);count=Math.min(3,count+1);sessionStorage.setItem(residentPinAttemptsKey(),String(count))}catch(e){count=1}
     if(count>=3){renderResidentRecoveryCpf('PIN incorreto na 3ª tentativa. Recupere o acesso e crie um novo PIN.');return}

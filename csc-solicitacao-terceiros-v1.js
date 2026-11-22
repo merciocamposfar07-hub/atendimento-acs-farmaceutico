@@ -38,7 +38,7 @@ function readResult(id){
 }
 function action(name,data){
  var a=creds();
- if(!a.token||!a.dispositivo)return Promise.reject(new Error('Entre no Portal do Morador com seu PIN antes de utilizar esta opção.'));
+ if(!a.token||!a.dispositivo)return Promise.reject(new Error(pinLocalUiConfirmed()?'PIN confirmado. O servidor ainda está validando a sessão para consultar dados de terceiros; tente novamente após a confirmação.':'Entre no Portal do Morador com seu PIN antes de utilizar esta opção.'));
  var id=randId(),p=new URLSearchParams();
  p.set('action',name);p.set('requestId',id);p.set('token',a.token);p.set('dispositivo',a.dispositivo);p.set('areaId',AREA);
  Object.keys(data||{}).forEach(function(k){p.set(k,data[k]==null?'':String(data[k]));});

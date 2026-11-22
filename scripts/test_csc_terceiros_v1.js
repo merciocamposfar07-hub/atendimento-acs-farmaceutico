@@ -19,6 +19,14 @@ assert.match(html,/window\.CSC_TERCEIROS_ENABLED=true/);
 assert.equal((html.match(/src="csc-solicitacao-terceiros-v1\.js\?/g)||[]).length,1,'Somente um carregamento do módulo');
 assert(html.indexOf('csc-solicitacao-terceiros-v1.js?')<html.indexOf('agenda-config.js?'),'O módulo precisa iniciar antes da pilha legada');
 assert.match(frontend,/document\.addEventListener\('tacs:morador',show\)/,'Após PIN, sem esperar polling');
+assert.match(frontend,/csc:morador-pin-verificado-local/,'A interface deve abrir assim que o PIN local for validado');
+assert.match(frontend,/proof\.dispositivo===creds\(\)\.dispositivo/,'PIN local precisa pertencer ao mesmo aparelho');
+assert.match(frontend,/proof\.areaId===area\(\)/,'PIN local precisa pertencer à área atual');
+assert.match(frontend,/if\(!a\.token\|\|!a\.dispositivo\)/,'Operações com terceiros continuam exigindo token remoto');
+assert.match(read('conecta-morador-pin-local-v2.js'),/cscMoradorPinVerificadoLocalV1/,'PIN local via Central deve emitir comprovante de interface');
+assert.match(read('portal-identificacao-familia-v1.js'),/csc:morador-pin-verificado-local/,'PIN validado na própria interface deve ativar o módulo');
+assert.match(read('conecta-morador-session-v1.js'),/csc:morador-sessao-revogada/,'Revogação deve ocultar a função');
+
 assert.doesNotMatch(frontend,/\},900\)/,'Remover intervalo antigo de 900ms');
 assert.match(frontend,/PortalCscSolicitacaoCardOficialV1/);
 assert.match(frontend,/document\.addEventListener\('click',nativeClick,true\)/);

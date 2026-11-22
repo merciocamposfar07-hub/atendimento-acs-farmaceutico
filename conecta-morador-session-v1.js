@@ -29,7 +29,14 @@ function requestId(prefix){return 'conecta_portal_'+prefix+'_'+Date.now()+'_'+Ma
 function jsonp(params){return new Promise(function(resolve,reject){var cb='__conectaPortal_'+Date.now()+'_'+Math.floor(Math.random()*99999),s=document.createElement('script'),done=false,t=setTimeout(function(){finish(null,new Error('A confirmação demorou demais.'))},14000);function finish(data,err){if(done)return;done=true;clearTimeout(t);try{delete window[cb]}catch(e){window[cb]=undefined}if(s.parentNode)s.remove();err?reject(err):resolve(data)}window[cb]=function(d){finish(d,null)};s.onerror=function(){finish(null,new Error('Falha de comunicação.'))};params.callback=cb;params._=Date.now();s.src=API+'?'+Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k])}).join('&');document.head.appendChild(s)})}
 function post(action,payload){if(busy)return Promise.reject(remoteError('Aguarde a operação em andamento.',{temporario:true}));busy=true;var id=requestId(action),body=new URLSearchParams();body.set('action',action);body.set('requestId',id);Object.keys(payload||{}).forEach(function(k){body.set(k,payload[k]==null?'':String(payload[k]))});if(/^conecta_morador_/.test(action)&&testMode()){body.set('modoTacsTeste','SIM');body.set('areaId',body.get('areaId')||areaId());body.set('dispositivo',body.get('dispositivo')||device());body.set('chaveTacsTeste',technicalToken());body.set('fluxoMoradorExplicito','SIM')}var started=Date.now();return fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),cache:'no-store'}).catch(function(){}).then(function poll(){return jsonp({action:'conecta_result',requestId:id}).then(function(r){if(r&&r.ok===true&&r.pendente===false&&r.result){if(r.result.ok===true)return r.result;throw remoteError(r.result.message||'Não foi possível concluir a operação.',r.result)}if(Date.now()-started>30000)throw remoteError('A operação demorou demais.',{temporario:true});return new Promise(function(resolve){setTimeout(resolve,650)}).then(poll)}).catch(function(e){if(e&&typeof e.refused==='boolean')throw e;throw remoteError(e&&e.message||'Falha de comunicação.',{temporario:true})})}).finally(function(){busy=false})}
 function getSession(){return post('conecta_morador_sessao',{token:token,dispositivo:device()})}
-function clearSession(){try{sessionStorage.removeItem(activeTokenKey())}catch(e){}token=''}
+function clearSession(){
+ try{
+  sessionStorage.removeItem(activeTokenKey());
+  sessionStorage.removeItem('cscMoradorPinVerificadoLocalV1');
+ }catch(e){}
+ token='';
+ try{document.dispatchEvent(new CustomEvent('csc:morador-sessao-revogada'))}catch(ignore){}
+}
 
 function readBootstrap(){try{var r=JSON.parse(sessionStorage.getItem(activeBootstrapKey())||'null');return r&&typeof r==='object'?r:null}catch(e){return null}}
 function residentProfileCpf(){try{var key=testMode()?TEST_PROFILE_KEY:PROFILE_KEY,p=JSON.parse(localStorage.getItem(key)||'null'),d=digits(p&&p.cpf);return d.length===11||d.length===15?d:''}catch(e){return''}}
