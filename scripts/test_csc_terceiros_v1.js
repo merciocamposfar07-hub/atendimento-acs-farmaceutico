@@ -16,6 +16,8 @@ assert.match(html,/CSC_TERCEIROS_ENABLED=(?:true|false)/);
 assert.match(html,/portal-solicitacao-card-oficial-v1\.js/);
 assert.match(frontend,/PortalCscSolicitacaoCardOficialV1/);
 assert.match(frontend,/document\.addEventListener\('click',nativeClick,true\)/);
+assert.doesNotMatch(frontend,/id="cscTerceirosShare"/,'Não deve criar segundo botão de WhatsApp');
+assert.match(frontend,/shareCard\(data\)/,'Compartilhamento começa no próprio envio');
 assert.match(frontend,/csc_terceiros_confirmar_cpf/);
 assert.match(frontend,/csc_terceiros_membro/);
 assert.match(frontend,/restoreOriginal\(\)/);

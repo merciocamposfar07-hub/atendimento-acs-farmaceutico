@@ -74,15 +74,15 @@ function html(){
  '<div id="cscTerceirosPerson" class="csc-terceiros-person" hidden></div>'+
  '<div id="cscTerceirosLegacyHelp" class="csc-terceiros-person" hidden><strong>Agora escolha o serviço normalmente</strong><p>Utilize o quadro “Faça sua solicitação” logo abaixo. Os dias, horários e vagas são os mesmos do Portal CSC. Ao finalizar, o pedido será feito para a pessoa selecionada.</p></div>'+
  '<div id="cscTerceirosStatus" class="csc-terceiros-status" role="status" aria-live="polite"></div>'+
- '<button id="cscTerceirosShare" type="button" class="csc-terceiros-whatsapp" hidden>📲 ENVIAR CARTÃO OFICIAL PELO WHATSAPP</button>'+
+ '<p class="csc-terceiros-help">Use somente o botão “Enviar solicitação” do formulário oficial abaixo. O envio à UBS e o compartilhamento pelo WhatsApp começam no mesmo toque.</p>'+
  '<button id="cscTerceirosFinish" type="button" class="csc-terceiros-lookup" hidden>ENCERRAR PEDIDO PARA OUTRA PESSOA</button>'+
  '</div>';
 }
-var delegate=null,confirmToken='',familyList=[],shareData=null,originalFields=null,activeDoc='';
+var delegate=null,confirmToken='',familyList=[],originalFields=null,activeDoc='',cardDraft=null,cardTimer=null,cardSerial=0;
 function closePending(){
- confirmToken='';familyList=[];shareData=null;delegate=null;activeDoc='';pendingCode='';
- ['cscTerceirosConfirm','cscTerceirosFamily','cscTerceirosPerson','cscTerceirosLegacyHelp','cscTerceirosShare','cscTerceirosFinish'].forEach(function(id){var e=el(id);if(e)e.hidden=true;});
- var b=el('cscTerceirosShare');if(b)b.disabled=false;
+ confirmToken='';familyList=[];delegate=null;activeDoc='';pendingCode='';cardDraft=null;cardSerial++;if(cardTimer){clearTimeout(cardTimer);cardTimer=null;}
+ ['cscTerceirosConfirm','cscTerceirosFamily','cscTerceirosPerson','cscTerceirosLegacyHelp','cscTerceirosFinish'].forEach(function(id){var e=el(id);if(e)e.hidden=true;});
+
 }
 function setMainValue(id,value,fire){
  var e=el(id);if(!e)return;
@@ -145,7 +145,7 @@ function chosenPerson(result){
   '<p>Nascimento: '+esc(b.nascimento)+' • Cadastro familiar: '+esc(b.familiaId)+'</p>'+
   '<p>O formulário de serviços abaixo já está preparado para esta pessoa.</p>';
  el('cscTerceirosLegacyHelp').hidden=false;el('cscTerceirosFinish').hidden=false;
- el('cscTerceirosShare').hidden=true;
+ scheduleCardDraft();
  notice('Agora escolha o serviço, o dia e a vaga no formulário habitual logo abaixo.','ok');
  var native=document.querySelector('.form-panel');if(native)native.scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -228,60 +228,96 @@ function scheduleDetails(data){
  var d=(data.description||'').match(/(\d{2})\/(\d{2})\/(\d{4})/);
  return {tipoVaga:'',dataServico:d?d[3]+'-'+d[2]+'-'+d[1]:'',horarioExpiracao:''};
 }
+function cardDraftKey(d){
+ return [d.code,d.category,d.description,d.name,d.birth,d.document,d.locality,d.areaName,d.unitName,d.tacsName].join('\\u001f');
+}
+function scheduleCardDraft(){
+ if(!delegate)return;
+ if(cardTimer)clearTimeout(cardTimer);
+ var serial=++cardSerial;
+ cardDraft=null;
+ cardTimer=setTimeout(function(){
+  cardTimer=null;
+  var api=window.PortalCscSolicitacaoCardOficialV1,d=originalData();
+  if(!api||typeof api.create!=='function'||!d.category||!d.name)return;
+  var key=cardDraftKey(d);
+  api.create(d).then(function(blob){
+   if(serial===cardSerial&&delegate&&cardDraftKey(originalData())===key)cardDraft={blob:blob,data:d,key:key};
+  }).catch(function(){});
+ },180);
+}
+function sharePreparedCard(d){
+ var api=window.PortalCscSolicitacaoCardOficialV1;
+ if(!api||typeof api.share!=='function')return Promise.reject(new Error('Gerador do cartão oficial indisponível. Recarregue o portal.'));
+ var draft=cardDraft;
+ if(draft&&draft.key===cardDraftKey(d)&&draft.blob&&typeof File!=='undefined'){
+  // O arquivo é montado antes do gesto; o iPhone recebe navigator.share imediatamente.
+  var file=new File([draft.blob],'solicitacao-japaranduba-portal-csc.png',{type:'image/png'});
+  if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){
+   try{return Promise.resolve(navigator.share({title:'Solicitação do morador',text:'Solicitação do Portal CSC — '+d.areaName+' — TACS '+d.tacsName+'.',files:[file]}))}
+   catch(error){return Promise.reject(error)}
+  }
+ }
+ return api.share(d);
+}
 function nativeClick(event){
  var target=event.target&&event.target.closest&&event.target.closest('#sendPetroleumCard,#send');
  if(!target||!delegate)return;
- event.preventDefault();
- if(!el('cscTerceirosConsent').checked){notice('Confirme a autorização para fazer a solicitação.','err');event.stopPropagation();event.stopImmediatePropagation();return;}event.stopPropagation();event.stopImmediatePropagation();
+ event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
  if(target.disabled||busy)return;
+ if(!el('cscTerceirosConsent').checked){notice('Confirme a autorização para fazer a solicitação.','err');return;}
  var data=originalData();
- if(!data.category||data.document!==delegate.document||data.name!==delegate.name||data.birth!==delegate.birth)
-  {notice('Confirme o integrante selecionado e preencha o formulário normalmente.','err');return;}
- try{validateAgenda(data.category)}catch(e){notice(e.message,'err');return;}
+ if(!data.category||data.document!==delegate.document||data.name!==delegate.name||data.birth!==delegate.birth){
+  notice('Selecione o integrante e conclua o formulário habitual antes de enviar.','err');return;
+ }
+ try{validateAgenda(data.category)}catch(error){notice(error.message,'err');return;}
  if(!data.description&&data.category!=='Implanon')data.description=data.category;
+ var api=window.PortalCscSolicitacaoCardOficialV1;
+ if(!api||typeof api.share!=='function'){notice('Gerador do cartão indisponível. Recarregue o Portal CSC.','err');return;}
+ var scheduled=scheduleDetails(data),code=data.code,shareStart;
  busy=true;target.disabled=true;
- notice('Registrando a solicitação de '+delegate.name+' na UBS…','progress');
- var scheduled=scheduleDetails(data);
- action('csc_terceiros_enviar',{
-  selecaoToken:delegate.token,codigoSolicitacao:data.code,categoria:data.category,descricao:data.description,documento:data.document,
+ // Abrir o compartilhamento no MESMO toque. O Apps Script grava em paralelo,
+ // sem atrasar a abertura do WhatsApp. A entrega real depende do usuário confirmar.
+ notice('Abrindo o cartão oficial. A solicitação também está sendo registrada na UBS…','progress');
+ try{shareStart=shareCard(data)}catch(error){shareStart=Promise.reject(error)}
+ var sent=action('csc_terceiros_enviar',{
+  selecaoToken:delegate.token,codigoSolicitacao:code,categoria:data.category,descricao:data.description,documento:data.document,
   autorizado:'SIM',dataServico:scheduled.dataServico,tipoVaga:scheduled.tipoVaga,horarioExpiracao:scheduled.horarioExpiracao,
   tacsResponsavel:data.tacsName,unidadeNome:data.unitName
- }).then(function(r){
-  if(document.hidden)return;
-  data.code=r.codigoSolicitacao;data.requester=txt(r.solicitante.nome);data.recipient='';
-  shareData=data;el('cscTerceirosShare').hidden=false;el('cscTerceirosFinish').hidden=false;
-  notice(r.duplicada?'Pedido já registrado. Nenhuma nova notificação foi disparada; confira o painel da UBS.':r.pushUbs===true?'Pedido registrado na UBS. O serviço Push aceitou o aviso automático; a entrega ao aparelho precisa ser confirmada.':'Pedido registrado na fila da UBS, mas o aviso Push não foi confirmado. Confira o painel da UBS.',r.pushUbs===true?'ok':'progress');
-  el('cscTerceirosShare').scrollIntoView({behavior:'smooth',block:'center'});
- }).catch(function(e){notice(e.message,'err');})
- .finally(function(){busy=false;target.disabled=false;});
+ });
+ Promise.resolve(shareStart).then(function(){
+  if(!document.hidden)notice('Cartão compartilhado ou preparado. Confira o envio ao TACS. A UBS será confirmada separadamente.','progress');
+ }).catch(function(error){
+  if(!document.hidden)notice(error&&error.name==='AbortError'?'Compartilhamento cancelado. A solicitação à UBS continua em processamento.':'Não foi possível compartilhar o cartão. '+(error.message||'Tente novamente pelo mesmo botão.'),'err');
+ });
+ sent.then(function(r){
+  if(!document.hidden)notice(r.duplicada?'Solicitação já registrada na UBS; nenhum novo aviso foi disparado.':r.pushUbs===true?'Solicitação registrada na UBS. O serviço Push aceitou o aviso; confira a chegada no aparelho.':'Solicitação registrada na UBS, mas o aviso Push não foi confirmado. Confira a Central.',r.pushUbs===true?'ok':'progress');
+ }).catch(function(error){
+  if(!document.hidden)notice('Registro na UBS não confirmado: '+(error.message||'Confira a Central antes de tentar novamente.'),'err');
+ }).finally(function(){
+  busy=false;target.disabled=false;
+  if(!document.hidden)scheduleCardDraft();
+ });
 }
-function shareCard(){
- if(!shareData||document.hidden)return;
+function shareCard(data){
  var api=window.PortalCscSolicitacaoCardOficialV1;
- if(!api||typeof api.share!=='function'){notice('Gerador oficial indisponível. Recarregue o Portal CSC.','err');return;}
- var btn=el('cscTerceirosShare');btn.disabled=true;notice('Preparando o cartão oficial da solicitação…','progress');
  var annex=window.PortalCscAnexosV2,needPdf=Boolean(annex&&annex.required());
- var operation;
- if(needPdf){
-  if(!annex.snapshot()||typeof annex.prepareRequest!=='function'){
-   notice('Aguarde o anexo ser preparado antes de compartilhar.','err');btn.disabled=false;return;
-  }
-  operation=api.create(shareData).then(function(blob){return annex.prepareRequest(blob,shareData,annex.snapshot());})
-  .then(function(file){
-   var ubs=window.PortalSolicitacoesUbsV1;
-   if(!ubs||typeof ubs.registrarArquivo!=='function')throw Error('Envio do PDF à UBS não está disponível.');
-   return ubs.registrarArquivo(file,shareData).then(function(){return file;});
-  })
-  .then(function(file){
-   if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]})))
-    return navigator.share({title:'Solicitação CSC com documento',text:'Solicitação do Portal CSC — '+shareData.areaName+' — TACS '+shareData.tacsName+'.',files:[file]});
-   var u=URL.createObjectURL(file),a=document.createElement('a');a.href=u;a.download=file.name;a.click();setTimeout(function(){URL.revokeObjectURL(u)},120000);
-   notice('Documento recebido pela UBS. O PDF foi aberto para compartilhar com o TACS.','ok');
-  });
- }else operation=api.share(shareData);
- operation.then(function(){notice('Cartão oficial preparado. Selecione o WhatsApp e confira o envio ao TACS.','ok');})
- .catch(function(e){notice(e.name==='AbortError'?'Compartilhamento cancelado.':e.message,'err');})
- .finally(function(){btn.disabled=false;});
+ if(!needPdf)return sharePreparedCard(data);
+ if(!annex.snapshot()||typeof annex.prepareRequest!=='function')
+  return Promise.reject(new Error('Prepare o documento anexado antes de enviar.'));
+ // Documentos seguem a rotina pré-existente de PDF e são enviados à UBS.
+ return api.create(data).then(function(blob){return annex.prepareRequest(blob,data,annex.snapshot());})
+ .then(function(file){
+  var ubs=window.PortalSolicitacoesUbsV1;
+  if(!ubs||typeof ubs.registrarArquivo!=='function')throw Error('Envio do PDF à UBS indisponível.');
+  return ubs.registrarArquivo(file,data).then(function(){return file;});
+ })
+ .then(function(file){
+  if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]})))
+   return navigator.share({title:'Solicitação CSC com documento',text:'Solicitação do Portal CSC — '+data.areaName+' — TACS '+data.tacsName+'.',files:[file]});
+  var u=URL.createObjectURL(file),a=document.createElement('a');a.href=u;a.download=file.name;a.click();
+  setTimeout(function(){URL.revokeObjectURL(u)},120000);
+ });
 }
 function mount(){
  if(area()!==AREA||el('cscTerceiros'))return;
@@ -290,7 +326,9 @@ function mount(){
  root.setAttribute('aria-label','Solicitar serviço para outra pessoa');root.innerHTML=html();ref.parentNode.insertBefore(root,ref);
  el('cscTerceirosToggle').addEventListener('click',toggle);
  el('cscTerceirosLookup').addEventListener('click',find);
- el('cscTerceirosShare').addEventListener('click',shareCard);
+ document.addEventListener('input',function(e){if(delegate&&e.target&&['category','subject','name','birth','locality','implanonChoice'].indexOf(e.target.id)!==-1)scheduleCardDraft();});
+ el('category').addEventListener('change',scheduleCardDraft);
+ document.addEventListener('change',function(e){if(delegate&&e.target&&['category','subject','name','birth','locality','implanonChoice'].indexOf(e.target.id)!==-1)scheduleCardDraft();});
  el('cscTerceirosFinish').addEventListener('click',function(){cancel();opened=false;el('cscTerceirosFields').hidden=true;el('cscTerceirosToggle').setAttribute('aria-expanded','false');el('cscTerceirosToggle').textContent='SOLICITAR SERVIÇO PARA OUTRA PESSOA ▾';});
  el('cscTerceirosBirth').addEventListener('input',function(){if(delegate||confirmToken||familyList.length)invalidateSelection();var d=digits(this.value).slice(0,8);this.value=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;});
  el('cscTerceirosDoc').addEventListener('input',function(){invalidateSelection();var d=digits(this.value).slice(0,15);this.value=d.length>11?d.slice(0,3)+' '+d.slice(3,7)+' '+d.slice(7,11)+' '+d.slice(11):d.length>9?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9):d;});
@@ -301,7 +339,7 @@ function mount(){
  window.addEventListener('pageshow',show);
  window.addEventListener('pagehide',function(){restoreOriginal();closePending();});
  document.addEventListener('visibilitychange',function(){if(document.hidden){restoreOriginal();closePending();}});
- window.CscSolicitacaoTerceirosV1=Object.freeze({version:'2.0.0',enabled:true,close:cancel,active:function(){return !!delegate;}});
+ window.CscSolicitacaoTerceirosV1=Object.freeze({version:'3.0.0',enabled:true,close:cancel,active:function(){return !!delegate;}});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();

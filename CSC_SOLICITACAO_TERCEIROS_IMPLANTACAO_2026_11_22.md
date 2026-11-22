@@ -41,3 +41,10 @@ Os testes usam registros simulados: não produzem operações reais e não subst
 ## Rollback
 - Voltar `CSC_TERCEIROS_ENABLED=false` no `index.html` para ocultar imediatamente a nova função, sem modificar PIN/cadastros do portal.
 - Se necessário, restaurar versão anterior do Apps Script após conferir as rotas e logs.
+
+## Correção de UX — envio único (22/11/2026)
+- O botão padrão `Enviar solicitação` do formulário original é o único controle de envio, inclusive para terceiros.
+- Removido o segundo botão `ENVIAR CARTÃO OFICIAL PELO WHATSAPP` do fluxo de terceiros.
+- O compartilhamento do cartão original CSC e o registro do pedido na UBS iniciam em paralelo, sem esperar pela leitura síncrona da planilha antes de abrir o WhatsApp.
+- O cartão é pré-gerado após a escolha do serviço para permitir a chamada do compartilhamento no próprio gesto do iPhone, quando disponível.
+- Registro da UBS e entrega do WhatsApp são estados independentes; testes não autorizam afirmar que o usuário efetivamente concluiu o compartilhamento.

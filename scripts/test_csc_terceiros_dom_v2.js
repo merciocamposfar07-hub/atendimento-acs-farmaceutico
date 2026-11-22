@@ -53,6 +53,7 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
 (async()=>{
  await until(()=>$('cscTerceiros')!==null);
  assert.equal($('cscTerceiros').hidden,false);
+ assert.equal($('cscTerceirosShare'),null,'Não criar segundo botão para envio');
  $('cscTerceirosToggle').click();
  $('cscTerceirosConsent').checked=true;
  $('cscTerceirosDoc').value='52998224725';
@@ -67,14 +68,13 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  $('category').value='Solicitar consulta Médica';
  $('subject').value='Solicitar consulta Médica - Sexta-feira - 04/12/2026 às 14:00';
  $('sendPetroleumCard').click();
- await until(()=>$('cscTerceirosShare').hidden===false);
- assert(sentActions.includes('csc_terceiros_enviar'));
- $('cscTerceirosShare').click();
  await until(()=>shares.length===1);
+ assert(sentActions.includes('csc_terceiros_enviar'));
+ assert.equal($('cscTerceirosShare'),null,'Compartilhamento deve ocorrer no mesmo toque');
  assert.equal(shares[0].name,'Pedro Silva');
  assert.equal(shares[0].category,'Solicitar consulta Médica');
- assert.equal(shares[0].requester,'Solange Oliveira');
- assert.equal(shares[0].recipient,'');
+ assert.equal(shares[0].document,'123456789012345');
+ assert.equal(shares[0].code,sentCodes[0]);
  $('cscTerceirosFinish').click();
  assert.equal($('cpf').value,'111.444.777-35');
  assert.equal($('name').value,'Solange Oliveira');
@@ -90,7 +90,7 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  $('subject').value='Consulta médica de Ana';
  $('sendPetroleumCard').click();
  await until(()=>sentCodes.length===2);
- await until(()=>$('cscTerceirosShare').hidden===false);
+ await until(()=>shares.length===2);
  assert.notEqual(sentCodes[0],sentCodes[1],'Dois beneficiários precisam de códigos diferentes');
  $('cscTerceirosFinish').click();
  assert.equal($('name').value,'Solange Oliveira');
@@ -98,5 +98,5 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  assert(!JSON.stringify(w.localStorage).includes('Pedro Silva'));
  assert(!JSON.stringify(w.localStorage).includes('123456789012345'));
  w.close();
- console.log('CSC DOM: família por toque, formulário e agenda original, cartão oficial, restauração e sem cache local: OK');
+ console.log('CSC DOM: um único botão, WhatsApp iniciado sem esperar UBS, família, original e privacidade: OK');
 })().catch(e=>{console.error(e);process.exitCode=1;w.close();});
