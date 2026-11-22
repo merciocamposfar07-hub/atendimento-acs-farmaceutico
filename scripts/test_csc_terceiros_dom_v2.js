@@ -90,6 +90,7 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  $('subject').value='Consulta médica de Ana';
  $('sendPetroleumCard').click();
  await until(()=>sentCodes.length===2);
+ await until(()=>$('cscTerceirosShare').hidden===false);
  assert.notEqual(sentCodes[0],sentCodes[1],'Dois beneficiários precisam de códigos diferentes');
  $('cscTerceirosFinish').click();
  assert.equal($('name').value,'Solange Oliveira');

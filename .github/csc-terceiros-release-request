@@ -6,3 +6,4 @@ Versão anterior do deployment deve permanecer disponível para rollback.
 Revalidação da integração da família, gravação CPF e cartão oficial — 2026-11-22.
 Testes backend e DOM obrigatórios; não liberar frontend antes do sucesso.
 Correção 22/11: código novo para outro morador, guarda de colisões, CPF/CNS formatado e estado Push visível.
+Reexecução de homologação: aguardar confirmação do segundo envio antes de encerrar o formulário no teste.
