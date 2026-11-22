@@ -6,6 +6,9 @@ on:
     paths:
       - '.github/workflows/csc-terceiros-live-browser.yml'
       - 'scripts/csc_terceiros_live_browser.cjs'
+      - 'index.html'
+      - 'csc-solicitacao-terceiros-v1.js'
+      - 'portal-solicitacao-card-oficial-v1.js'
   workflow_dispatch:
 
 permissions:
