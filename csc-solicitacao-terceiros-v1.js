@@ -204,7 +204,7 @@ function originalData(){
  name:txt(el('name')&&el('name').value),birth:txt(el('birth')&&el('birth').value),
  document:digits(el('cpf')&&el('cpf').value),locality:txt(el('locality')&&el('locality').value),
  description:txt(el('subject')&&el('subject').value),
- recipient:'Solicitado por '+txt((JSON.parse(sessionStorage.getItem('portalConectaMoradorBootstrapV2')||'null')||{}).nome||'outro morador'),
+ recipient:'',
  areaId:AREA,areaName:txt(identity.areaNome)||'Sítio Japaranduba',unitName:txt(identity.unidadeNome)||'Unidade de Saúde Posto Matias',
  tacsName:txt(identity.tacsNome)||'Mércio José Campos dos Santos'};
 }
@@ -255,7 +255,26 @@ function shareCard(){
  var api=window.PortalCscSolicitacaoCardOficialV1;
  if(!api||typeof api.share!=='function'){notice('Gerador oficial indisponível. Recarregue o Portal CSC.','err');return;}
  var btn=el('cscTerceirosShare');btn.disabled=true;notice('Preparando o cartão oficial da solicitação…','progress');
- api.share(shareData).then(function(){notice('Cartão oficial preparado. Selecione o WhatsApp e confira o envio ao TACS.','ok');})
+ var annex=window.PortalCscAnexosV2,needPdf=Boolean(annex&&annex.required());
+ var operation;
+ if(needPdf){
+  if(!annex.snapshot()||typeof annex.prepareRequest!=='function'){
+   notice('Aguarde o anexo ser preparado antes de compartilhar.','err');btn.disabled=false;return;
+  }
+  operation=api.create(shareData).then(function(blob){return annex.prepareRequest(blob,shareData,annex.snapshot());})
+  .then(function(file){
+   var ubs=window.PortalSolicitacoesUbsV1;
+   if(!ubs||typeof ubs.registrarArquivo!=='function')throw Error('Envio do PDF à UBS não está disponível.');
+   return ubs.registrarArquivo(file,shareData).then(function(){return file;});
+  })
+  .then(function(file){
+   if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]})))
+    return navigator.share({title:'Solicitação CSC com documento',text:'Solicitação do Portal CSC — '+shareData.areaName+' — TACS '+shareData.tacsName+'.',files:[file]});
+   var u=URL.createObjectURL(file),a=document.createElement('a');a.href=u;a.download=file.name;a.click();setTimeout(function(){URL.revokeObjectURL(u)},120000);
+   notice('Documento recebido pela UBS. O PDF foi aberto para compartilhar com o TACS.','ok');
+  });
+ }else operation=api.share(shareData);
+ operation.then(function(){notice('Cartão oficial preparado. Selecione o WhatsApp e confira o envio ao TACS.','ok');})
  .catch(function(e){notice(e.name==='AbortError'?'Compartilhamento cancelado.':e.message,'err');})
  .finally(function(){btn.disabled=false;});
 }
@@ -268,8 +287,9 @@ function mount(){
  el('cscTerceirosLookup').addEventListener('click',find);
  el('cscTerceirosShare').addEventListener('click',shareCard);
  el('cscTerceirosFinish').addEventListener('click',function(){cancel();opened=false;el('cscTerceirosFields').hidden=true;el('cscTerceirosToggle').setAttribute('aria-expanded','false');el('cscTerceirosToggle').textContent='SOLICITAR SERVIÇO PARA OUTRA PESSOA ▾';});
- el('cscTerceirosBirth').addEventListener('input',function(){var d=digits(this.value).slice(0,8);this.value=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;});
+ el('cscTerceirosBirth').addEventListener('input',function(){if(delegate||confirmToken||familyList.length)invalidateSelection();var d=digits(this.value).slice(0,8);this.value=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;});
  el('cscTerceirosDoc').addEventListener('input',function(){invalidateSelection();var d=digits(this.value).slice(0,15);this.value=d.length>11?d:d.length>9?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9):d;});
+ el('cscTerceirosName').addEventListener('input',invalidateSelection);
  document.addEventListener('click',nativeClick,true);
  function show(){var a=creds();root.hidden=!(a.token.indexOf('cms1.')===0&&a.dispositivo);return !root.hidden;}
  if(!show())watch=setInterval(function(){if(show()){clearInterval(watch);watch=null;}},900);
