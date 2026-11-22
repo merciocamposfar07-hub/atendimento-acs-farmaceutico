@@ -96,7 +96,7 @@ function populate(r){
  var b=r.beneficiario;chosen=r.selecaoToken;pendingCode='';
  var box=el('cscTerceirosPerson');box.hidden=false;
  box.innerHTML='<strong>'+esc(b.nome)+'</strong><p>Data de nascimento: '+esc(b.nascimento)+'</p><p>Localidade: '+esc(b.localidade)+'</p><p>Cadastro familiar: '+esc(b.familiaId)+'</p>'+
- '<p>Idade: '+esc(age(b.nascimento)||'não informada')+' anos</p><p>Documento: '+esc(b.documento||'não informado')+(b.documentoPendente?' (pendente de conferência na UBS)':'')+'</p>';
+ '<p>Idade: '+esc(age(b.nascimento)?age(b.nascimento)+' anos':'não informada')+'</p><p>Documento: '+esc(b.documento||'não informado')+(b.documentoPendente?' (pendente de conferência na UBS)':'')+'</p>';
  el('cscTerceirosService').hidden=false;notice('Morador identificado. Confira os dados antes de solicitar. Não será criado PIN.','ok');
 }
 function find(){
