@@ -59,8 +59,14 @@ function cscTerceirosV1Ator_(p){
   if(conectaAcessoV1Id_(registro.values[1])!==area||cscTerceirosV1Texto_(registro.values[3])!==cscTerceirosV1Texto_(session.cpf))throw new Error('Identidade do solicitante não confere.');
   var cfg=conectaAcessoV1Areas_().filter(function(a){return a.areaId===area;})[0];
   if(!cfg)throw new Error('Área territorial indisponível.');
-  var family=conectaAcessoV1NucleoFamiliar_(registro.values);
-  return {session:session,registro:registro,area:cfg,familiaId:family.familiaId||''};
+  // Uma única leitura territorial por operação: mesmo snapshot para titular e beneficiário.
+  var registros=conectaAcessoV1RegistrosArea_(cfg),chave=cscTerceirosV1Texto_(registro.values[2]),cpf=cscTerceirosV1Digitos_(registro.values[3]);
+  var titular=chave?registros.filter(function(x){return cscTerceirosV1Texto_(x.chave)===chave;}):[];
+  if(!titular.length)titular=registros.filter(function(x){return cscTerceirosV1Digitos_(x.morador.cpf)===cpf;});
+  if(titular.length!==1)throw new Error('Não foi possível confirmar seu cadastro territorial. Procure o TACS.');
+  var familyId=conectaAcessoV1CodigoFamiliaItem_(titular[0]);
+  if(!familyId)throw new Error('Seu vínculo familiar precisa ser conferido pelo TACS.');
+  return {session:session,registro:registro,area:cfg,familiaId:familyId,registros:registros};
 }
 function cscTerceirosV1Nascimento_(v){
   var s=cscTerceirosV1Texto_(v);
@@ -68,7 +74,7 @@ function cscTerceirosV1Nascimento_(v){
   return conectaAcessoV1Nascimento_(s);
 }
 function cscTerceirosV1Candidatos_(actor){
-  return conectaAcessoV1RegistrosArea_(actor.area);
+  return actor.registros||[];
 }
 function cscTerceirosV1Selecionar_(item,docInformado,actor){
   var morador=item.morador||{},familia=conectaAcessoV1CodigoFamiliaItem_(item);
