@@ -37,14 +37,14 @@ function cscTerceirosV1Get_(e){
 }
 function cscTerceirosV1Post_(e){
   var p=e&&e.parameter||{},action=cscTerceirosV1Texto_(p.action).toLowerCase();
-  if(action!=='csc_terceiros_buscar'&&action!=='csc_terceiros_enviar')return null;
+  if(['csc_terceiros_buscar','csc_terceiros_enviar','csc_terceiros_confirmar_cpf','csc_terceiros_membro'].indexOf(action)<0)return null;
   var id='',result;
   try{
     id=cscTerceirosV1Id_(p.requestId);
     if(cscTerceirosV1Texto_(p.modoTacsTeste).toUpperCase()==='SIM')throw new Error('Esta função não realiza solicitações reais no modo teste.');
     var actor=cscTerceirosV1Ator_(p);
     conectaAcessoV1Limitar_('terceiros|'+actor.session.accessId+'|'+action);
-    result=action==='csc_terceiros_buscar'?cscTerceirosV1Buscar_(p,actor):cscTerceirosV1Enviar_(p,actor);
+    result=action==='csc_terceiros_buscar'?cscTerceirosV1Buscar_(p,actor):action==='csc_terceiros_confirmar_cpf'?cscTerceirosV1ConfirmarCpf_(p,actor):action==='csc_terceiros_membro'?cscTerceirosV1EscolherMembro_(p,actor):cscTerceirosV1Enviar_(p,actor);
   }catch(err){result={ok:false,message:cscTerceirosV1Texto_(err&&err.message)||'Operação não concluída.'};}
   if(id)cscTerceirosV1Cache_().put(TACS_CSC_TERCEIROS_V1.RESULT_PREFIX+cscTerceirosV1Hash_(id),JSON.stringify(result),TACS_CSC_TERCEIROS_V1.RESULT_TTL);
   return conectaAcessoV1ResponderPost_(id,result);
@@ -76,6 +76,71 @@ function cscTerceirosV1Nascimento_(v){
 function cscTerceirosV1Candidatos_(actor){
   return actor.registros||[];
 }
+
+/* Sem cache no celular: família e confirmação do CPF vinculadas à sessão do solicitante. */
+function cscTerceirosV1Familia_(item,actor){
+ var fid=conectaAcessoV1CodigoFamiliaItem_(item),members=actor.registros.filter(function(r){return conectaAcessoV1CodigoFamiliaItem_(r)===fid;});
+ if(!fid||!members.length||members.length>40)throw new Error('Família não localizada com segurança.');
+ return members.map(function(r){return {
+   membroToken:conectaAcessoV1TokenCache_('ctm1',TACS_CSC_TERCEIROS_V1.SELECT_PREFIX,
+    {accessId:actor.session.accessId,areaId:actor.area.areaId,familiaId:fid,chave:r.chave},TACS_CSC_TERCEIROS_V1.SELECT_TTL),
+   nome:r.morador.nome,nascimento:r.morador.nascimento,
+   temDocumento:Boolean(cscTerceirosV1Digitos_(r.morador.cpf||r.morador.cns))
+ };});
+}
+function cscTerceirosV1PrepararCpf_(item,cpf,actor){
+ var token=conectaAcessoV1TokenCache_('ctp1',TACS_CSC_TERCEIROS_V1.SELECT_PREFIX,{
+   accessId:actor.session.accessId,areaId:actor.area.areaId,chave:item.chave,
+   nome:item.morador.nome,nascimento:item.morador.nascimento,cpf:cpf,
+   familiaId:conectaAcessoV1CodigoFamiliaItem_(item)
+ },TACS_CSC_TERCEIROS_V1.SELECT_TTL);
+ return {ok:true,confirmaCpf:true,confirmacaoToken:token,nome:item.morador.nome,nascimento:item.morador.nascimento,
+ message:'Confira o nome antes de salvar este CPF no cadastro da pessoa.'};
+}
+function cscTerceirosV1SalvarCpf_(item,cpf,actor){
+ if(!moradoresAdminV1CpfValido_(cpf))throw new Error('CPF inválido.');
+ var lock=LockService.getScriptLock();
+ if(!lock.tryLock(10000))throw new Error('Cadastro ocupado. Tente novamente.');
+ try{
+  var current=cscTerceirosV1Digitos_(item.fonte.sheet.getRange(item.row,Number(item.fonte.map.cpf)+1).getDisplayValue());
+  if(current&&current!==cpf)throw new Error('Cadastro já possui outro CPF. Procure o TACS.');
+  if(current===cpf)return;
+  if(conectaAcessoV1BuscarCpf_(cpf).length)throw new Error('CPF já vinculado a outro morador.');
+  moradoresAdminV1SetCell_(item.fonte.sheet,item.row,item.fonte.map.cpf,cpf,'@');
+  moradoresAdminV1SetCell_(item.fonte.sheet,item.row,item.fonte.map.ultimaAtualizacao,new Date(),'dd/MM/yyyy HH:mm:ss');
+  var contexto={perfil:'PUBLICO',operadorId:'TERCEIROS:'+actor.session.accessId,agenteId:actor.area.agenteId||'',
+    areaId:actor.area.areaId,areaNome:actor.area.areaNome||actor.area.areaId,unidadeId:actor.area.unidadeId||'',
+    planilhaId:actor.area.planilhaId,permissoes:[]};
+  moradoresAdminV1Auditar_(item.fonte.ss,{moradorId:item.morador.idPortal||item.morador.id||item.chave,
+    acao:'VINCULAR_CPF_SOLICITACAO_TERCEIROS',campos:'CPF_PREENCHIDO_EM_CAMPO_VAZIO'},contexto);
+  SpreadsheetApp.flush();
+  if(typeof moradoresAdminV1InvalidarResumo_==='function')moradoresAdminV1InvalidarResumo_(contexto);
+ }finally{lock.releaseLock();}
+}
+function cscTerceirosV1ConfirmarCpf_(p,actor){
+ if(cscTerceirosV1Texto_(p.confirmado)!=='SIM')throw new Error('Confirme o nome antes de salvar o CPF.');
+ var v=conectaAcessoV1LerTokenCache_(p.confirmacaoToken,TACS_CSC_TERCEIROS_V1.SELECT_PREFIX,'ctp1');
+ if(v.accessId!==actor.session.accessId||v.areaId!==actor.area.areaId)throw new Error('Confirmação inválida.');
+ var found=actor.registros.filter(function(r){return r.chave===v.chave&&r.morador.nome===v.nome&&r.morador.nascimento===v.nascimento;});
+ if(found.length!==1||conectaAcessoV1CodigoFamiliaItem_(found[0])!==v.familiaId||v.familiaId===actor.familiaId)
+   throw new Error('Cadastro familiar mudou. Procure o TACS.');
+ var cpf=cscTerceirosV1Digitos_(found[0].morador.cpf);
+ if(cpf&&cpf!==v.cpf)throw new Error('O cadastro possui CPF diferente. Procure o TACS.');
+ if(!cpf)cscTerceirosV1SalvarCpf_(found[0],v.cpf,actor);
+ found[0].morador.cpf=v.cpf;
+ var out=cscTerceirosV1Selecionar_(found[0],v.cpf,actor);out.cpfSalvo=true;return out;
+}
+function cscTerceirosV1EscolherMembro_(p,actor){
+ var v=conectaAcessoV1LerTokenCache_(p.membroToken,TACS_CSC_TERCEIROS_V1.SELECT_PREFIX,'ctm1');
+ if(v.accessId!==actor.session.accessId||v.areaId!==actor.area.areaId||v.familiaId===actor.familiaId)
+  throw new Error('Escolha de integrante inválida.');
+ var a=actor.registros.filter(function(r){return r.chave===v.chave&&conectaAcessoV1CodigoFamiliaItem_(r)===v.familiaId;});
+ if(a.length!==1)throw new Error('Integrante não identificado.');
+ var doc=cscTerceirosV1Digitos_(a[0].morador.cpf||a[0].morador.cns);
+ if(!doc)throw new Error('Integrante sem CPF/CNS. O TACS precisa completar o cadastro.');
+ return cscTerceirosV1Selecionar_(a[0],doc,actor);
+}
+
 function cscTerceirosV1Selecionar_(item,docInformado,actor){
   var morador=item.morador||{},familia=conectaAcessoV1CodigoFamiliaItem_(item);
   if(!familia)throw new Error('O cadastro familiar do beneficiário precisa de conferência pelo TACS.');
@@ -93,7 +158,7 @@ function cscTerceirosV1Selecionar_(item,docInformado,actor){
     localidade:morador.endereco||morador.localidade||'',
     familiaId:familia,documento:oficial||informado,
     documentoPendente:!oficial&&!!informado
-  }};
+  },familia:cscTerceirosV1Familia_(item,actor)};
 }
 function cscTerceirosV1Buscar_(p,actor){
   var doc=cscTerceirosV1Digitos_(p.documento);
@@ -114,11 +179,12 @@ function cscTerceirosV1Buscar_(p,actor){
   if(porData.length!==1)return {ok:false,message:'Não foi possível identificar com segurança. Confira os dados ou procure o TACS.'};
   var existingDoc=cscTerceirosV1Digitos_(doc.length===11?porData[0].morador.cpf:porData[0].morador.cns);
   if(existingDoc&&existingDoc!==doc)throw new Error('O cadastro já possui outro documento do mesmo tipo. Procure o TACS, sem alterar o cadastro.');
+  if(doc.length===11&&!cscTerceirosV1Digitos_(porData[0].morador.cpf))return cscTerceirosV1PrepararCpf_(porData[0],doc,actor);
   return cscTerceirosV1Selecionar_(porData[0],doc,actor);
 }
 function cscTerceirosV1Categoria_(v){
   var allowed=[
-    'Solicitar consulta Médica','Solicitar atendimento com a Enfermeira Chefe',
+    'Implanon','Solicitar consulta Médica','Solicitar atendimento com a Enfermeira Chefe',
     'Solicitar atendimento com nutricionista','Solicitar atendimento odontológico (dentista)',
     'Implanon — informações ou solicitação do implante',
     'Solicitar renovação de receita médica','Solicitar marcação de exames — Ultrassom / Fisioterapeuta',
@@ -127,7 +193,7 @@ function cscTerceirosV1Categoria_(v){
     'Cadastro ou atualização da família','Solicitar ficha de cadastro para Aposentadoria',
     'Encaminhamento ou orientação para outro serviço da rede pública',
     'Informações sobre dias, horários e funcionamento da Unidade de Saúde',
-    'Outro assunto comunitário relacionado à Unidade de Saúde'
+    'Outro assunto comunitário relacionado à Unidade de Saúde','Outro assunto comunitário relacionado à Unidade de Saúde Posto Matias'
   ];
   var s=cscTerceirosV1Texto_(v);if(allowed.indexOf(s)<0)throw new Error('Escolha um serviço disponível.');return s;
 }
@@ -152,6 +218,8 @@ function cscTerceirosV1Enviar_(p,actor){
   if(candidates.length!==1)throw new Error('Dados cadastrais alterados. Faça a identificação novamente.');
   var item=candidates[0],m=item.morador,cat=cscTerceirosV1Categoria_(p.categoria);
   if(conectaAcessoV1CodigoFamiliaItem_(item)!==selected.familiaId||selected.familiaId===actor.familiaId)throw new Error('Vínculo familiar mudou. Confira novamente.');
+  var provided=cscTerceirosV1Digitos_(p.documento);
+  if(provided&&provided!==cscTerceirosV1Digitos_(m.cpf||m.cns))throw new Error('Beneficiário mudou. Selecione novamente.');
   var code=solicitacoesUbsV1Codigo_(p.codigoSolicitacao),sheet=solicitacoesUbsV1Sheet_(),existing=solicitacoesUbsV1LocalizarCodigo_(sheet,actor.area.areaId,code);
   if(existing)return cscTerceirosV1Duplicado_(code,m,actor,cat,p,selected.documento);
   var detalhes=cscTerceirosV1Texto_(p.descricao).slice(0,900);
@@ -162,12 +230,14 @@ function cscTerceirosV1Enviar_(p,actor){
   if(agenda)nota+=' | Pedido de agendamento: SEM RESERVA AUTOMÁTICA DE VAGA';
   var desc=(nota+(detalhes?' | Descrição: '+detalhes:'')).slice(0,1800);
   var now=new Date(),doc=cscTerceirosV1Digitos_(m.cpf||m.cns)||selected.documento;
+  var agendaCard=solicitacoesUbsV1AgendaCard_(detalhes),date=solicitacoesUbsV1Data_(p.dataServico||agendaCard.data),
+    type=cscTerceirosV1Texto_(p.tipoVaga||'').slice(0,70),expiry=solicitacoesUbsV1Hora_(p.horarioExpiracao||agendaCard.horaFinal);
   var row=[
     solicitacoesUbsV1Id_(),actor.area.areaId,actor.area.areaNome,actor.area.unidadeId||'',
     code,cscTerceirosV1Texto_(m.idPortal||m.id||item.chave),
     cscTerceirosV1Texto_(m.nome),doc,cscTerceirosV1Texto_(m.nascimento),
     cscTerceirosV1Texto_(m.endereco||m.localidade),selected.familiaId,cat,desc,
-    '','','','','NOVA',Utilities.formatDate(now,TACS_SOLICITACOES_UBS_V1.FUSO,'dd/MM/yyyy HH:mm'),now,
+    type,date,expiry,solicitacoesUbsV1ExpiraEm_(date,expiry),'NOVA',Utilities.formatDate(now,TACS_SOLICITACOES_UBS_V1.FUSO,'dd/MM/yyyy HH:mm'),now,
     'PORTAL_CSC_TERCEIROS',cscTerceirosV1Texto_(p.tacsResponsavel).slice(0,150),
     cscTerceirosV1Texto_(p.unidadeNome||actor.area.unidadeId).slice(0,150),'','',''
   ];

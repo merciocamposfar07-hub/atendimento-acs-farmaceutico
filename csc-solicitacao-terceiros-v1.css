@@ -27,3 +27,15 @@
 #cscTerceiros .csc-terceiros-whatsapp{display:block;margin-top:13px;background:#0d7e46;color:#fff;padding:15px;text-align:center;font-size:19px;font-weight:900;border:2px solid #b1fad0;border-radius:12px;text-decoration:none}
 #cscTerceiros [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){#cscTerceiros *{transition:none!important;animation:none!important}}
+
+/* Seleção por toque dos integrantes; não altera o formulário original. */
+#cscTerceiros .csc-terceiros-member{
+  display:block;width:100%;text-align:left;min-height:56px;margin-top:9px;padding:13px 15px;
+  border:2px solid #b3edff;border-radius:13px;background:#155c71;color:#fff;
+  font-size:18px!important;font-weight:800;line-height:1.3;
+}
+#cscTerceiros .csc-terceiros-member:disabled{border-color:#91a6b0;background:#375264;opacity:.8}
+#cscTerceiros .csc-terceiros-person{margin-top:13px}
+#cscTerceiros .csc-terceiros-whatsapp{width:100%;cursor:pointer}
+#cscTerceiros .csc-terceiros-whatsapp:disabled{opacity:.6}
+#cscTerceiros #cscTerceirosConfirm button{margin-top:12px}
