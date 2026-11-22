@@ -96,8 +96,7 @@ function cscTerceirosV1Buscar_(p,actor){
   var achados=registros.filter(function(i){return cscTerceirosV1Digitos_(i.morador.cpf)===doc||cscTerceirosV1Digitos_(i.morador.cns)===doc;});
   if(achados.length>1)throw new Error('Há cadastros duplicados. Procure o TACS.');
   if(achados.length===1)return cscTerceirosV1Selecionar_(achados[0],doc,actor);
-  if(doc.length!==11)return {ok:true,precisaNascimento:true,message:'Cartão SUS não localizado. Informe a data de nascimento.'};
-  if(!cscTerceirosV1Texto_(p.nascimento))return {ok:true,precisaNascimento:true,message:'CPF ainda não está na planilha. Informe a data de nascimento.'};
+  if(!cscTerceirosV1Texto_(p.nascimento))return {ok:true,precisaNascimento:true,message:(doc.length===11?'CPF ainda não está na planilha.':'Cartão SUS não localizado.')+' Informe a data de nascimento.'};
   var nascimento=cscTerceirosV1Nascimento_(p.nascimento);
   var porData=registros.filter(function(i){return cscTerceirosV1Texto_(i.morador.nascimento)===nascimento;});
   var nome=cscTerceirosV1Texto_(p.nome);
@@ -107,7 +106,8 @@ function cscTerceirosV1Buscar_(p,actor){
     porData=porData.filter(function(i){return conectaAcessoV1Nome_(i.morador.nome)===norm;});
   }
   if(porData.length!==1)return {ok:false,message:'Não foi possível identificar com segurança. Confira os dados ou procure o TACS.'};
-  if(cscTerceirosV1Digitos_(porData[0].morador.cpf)&&cscTerceirosV1Digitos_(porData[0].morador.cpf)!==doc)throw new Error('O cadastro já possui outro CPF. Procure o TACS, sem alterar o documento.');
+  var existingDoc=cscTerceirosV1Digitos_(doc.length===11?porData[0].morador.cpf:porData[0].morador.cns);
+  if(existingDoc&&existingDoc!==doc)throw new Error('O cadastro já possui outro documento do mesmo tipo. Procure o TACS, sem alterar o cadastro.');
   return cscTerceirosV1Selecionar_(porData[0],doc,actor);
 }
 function cscTerceirosV1Categoria_(v){
