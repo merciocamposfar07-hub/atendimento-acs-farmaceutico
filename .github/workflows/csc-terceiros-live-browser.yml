@@ -41,7 +41,7 @@ jobs:
           set -euo pipefail
           URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/?area=JAPARANDUBA'
           for i in $(seq 1 18); do
-            if curl -LsSf --max-time 20 "$URL" | grep -Fq 'window.CSC_TERCEIROS_ENABLED=true'; then exit 0; fi
+            if curl -LsSf --max-time 20 "$URL" -o "$RUNNER_TEMP/csc-index-publicado.html" && grep -Fq 'window.CSC_TERCEIROS_ENABLED=true' "$RUNNER_TEMP/csc-index-publicado.html"; then exit 0; fi
             sleep 5
           done
           echo 'Versão publicada não contém a ativação esperada' >&2
