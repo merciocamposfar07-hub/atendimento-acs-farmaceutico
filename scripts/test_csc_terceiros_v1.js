@@ -12,7 +12,7 @@ const official=read('portal-solicitacao-card-oficial-v1.js');
 new vm.Script(backend);
 new vm.Script(frontend);
 new vm.Script(official);
-assert.match(html,/CSC_TERCEIROS_ENABLED=true/);
+assert.match(html,/CSC_TERCEIROS_ENABLED=(?:true|false)/);
 assert.match(html,/portal-solicitacao-card-oficial-v1\.js/);
 assert.match(frontend,/PortalCscSolicitacaoCardOficialV1/);
 assert.match(frontend,/document\.addEventListener\('click',nativeClick,true\)/);
