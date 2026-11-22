@@ -43,7 +43,7 @@ const PAGE_URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceu
        {nome:'PEDRO TESTE',nascimento:'20/03/1964',membroToken:'ctm1.pedro',temDocumento:true}
      ]
    };
-   await page.route('https://script.google.com/macros/s/**/exec?*',async route=>{
+   await page.route(/https:\/\/script\.google\.com\/macros\/s\/.*\/exec(?:\?|$)/,async route=>{
      const req=route.request(),url=new URL(req.url()),params=new URLSearchParams(req.postData()||''),a=url.searchParams.get('action')||params.get('action')||'';
      if(!a.startsWith('csc_terceiros_')){await route.continue();return;}
      if(a==='csc_terceiros_result'){
@@ -66,9 +66,21 @@ const PAGE_URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceu
      await route.fulfill({status:200,contentType:'text/plain',body:'ok'});
    });
    await page.locator('#cscTerceirosConsent').check();
+   page.on('console',message=>{if(message.type()==='error')console.error('PAGINA:',message.text())});
    await page.locator('#cscTerceirosDoc').fill('52998224725');
    await page.locator('#cscTerceirosLookup').click();
-   await page.locator('#cscTerceirosFamily button').first().waitFor({state:'visible',timeout:10000});
+   try{
+     await page.locator('#cscTerceirosFamily button').first().waitFor({state:'visible',timeout:10000});
+   }catch(error){
+     console.error('DIAGNOSTICO CSC '+browserType.name(),JSON.stringify({
+       status:await page.locator('#cscTerceirosStatus').textContent(),
+       family:await page.locator('#cscTerceirosFamily').innerHTML(),
+       birthHidden:await page.locator('#cscTerceirosBirthRow').evaluate(e=>e.hidden),
+       consent:await page.locator('#cscTerceirosConsent').isChecked(),
+       actions:[...fixtures.keys()]
+     }));
+     throw error;
+   }
    assert.equal(await page.locator('#cscTerceirosFamily button').count(),2);
    await page.locator('#cscTerceirosFamily button').nth(1).click();
    await page.locator('#cscTerceirosLegacyHelp').waitFor({state:'visible',timeout:10000});
