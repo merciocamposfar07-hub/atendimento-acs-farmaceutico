@@ -82,6 +82,7 @@ function clear(){
  chosen=null;pendingCode='';
  ['cscTerceirosDoc','cscTerceirosBirth','cscTerceirosName','cscTerceirosDescription'].forEach(function(id){el(id).value='';});
  ['cscTerceirosBirthRow','cscTerceirosNameRow','cscTerceirosPerson','cscTerceirosService','cscTerceirosWhatsapp'].forEach(function(id){el(id).hidden=true;});
+ el('cscTerceirosPerson').textContent='';el('cscTerceirosWhatsapp').removeAttribute('href');
  el('cscTerceirosCategory').value='';el('cscTerceirosConsent').checked=false;
  el('cscTerceirosLookup').disabled=false;el('cscTerceirosSubmit').disabled=false;notice('');
 }
