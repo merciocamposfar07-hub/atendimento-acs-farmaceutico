@@ -54,6 +54,7 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  await until(()=>$('cscTerceiros')!==null);
  assert.equal($('cscTerceiros').hidden,false);
  $('cscTerceirosToggle').click();
+ $('cscTerceirosConsent').checked=true;
  $('cscTerceirosDoc').value='52998224725';
  $('cscTerceirosLookup').click();
  await until(()=>$('cscTerceirosFamily').hidden===false);
