@@ -33,6 +33,8 @@ jobs:
           node --check csc-solicitacao-terceiros-v1.js
           node --check --input-type=commonjs < apps-script/ZZZZ_56_SolicitacaoTerceirosMoradorV1.gs
           node scripts/test_csc_terceiros_v1.js
+          npm ci --ignore-scripts
+          node scripts/test_csc_terceiros_dom_v2.js
       - name: Exigir credenciais e obter projeto Apps Script atual
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
