@@ -243,7 +243,7 @@ function nativeClick(event){
   autorizado:'SIM',dataServico:scheduled.dataServico,tipoVaga:scheduled.tipoVaga,horarioExpiracao:scheduled.horarioExpiracao,
   tacsResponsavel:data.tacsName,unidadeNome:data.unitName
  }).then(function(r){
-  data.code=r.codigoSolicitacao;data.recipient='Pedido realizado por '+txt(r.solicitante.nome);
+  data.code=r.codigoSolicitacao;data.requester=txt(r.solicitante.nome);data.recipient='';
   shareData=data;el('cscTerceirosShare').hidden=false;el('cscTerceirosFinish').hidden=false;
   notice('Solicitação registrada na UBS. Agora toque no botão verde para enviar o mesmo cartão oficial ao WhatsApp do TACS.','ok');
   el('cscTerceirosShare').scrollIntoView({behavior:'smooth',block:'center'});
