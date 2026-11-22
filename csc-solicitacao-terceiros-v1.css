@@ -1,0 +1,29 @@
+/* CSC — Apenas o novo componente; sem estilos globais. */
+#cscTerceiros{margin:18px 0;padding:17px;border:2px solid #2b7894;border-radius:18px;background:#062b46;color:#fff;font:inherit;box-shadow:0 6px 20px rgba(0,0,0,.17)}
+#cscTerceiros *{box-sizing:border-box}
+#cscTerceiros h2{font-size:clamp(20px,5vw,25px)!important;line-height:1.3;color:#fff!important;margin:0 0 12px}
+#cscTerceiros p,#cscTerceiros label{font-size:18px!important;line-height:1.42;color:#fff!important}
+#cscTerceiros .csc-terceiros-area{font-weight:850;color:#a8f0c4!important}
+#cscTerceiros button,#cscTerceiros select,#cscTerceiros input,#cscTerceiros textarea{min-height:52px;font-size:18px!important}
+#cscTerceiros .csc-terceiros-main,#cscTerceiros .csc-terceiros-submit,#cscTerceiros .csc-terceiros-lookup{display:block;width:100%;border-radius:14px;padding:14px 12px;border:2px solid #d1f9ff;background:#0a638a;color:white;font-weight:850;text-align:center;cursor:pointer}
+#cscTerceiros button:focus-visible,#cscTerceiros a:focus-visible{outline:3px solid #b2ffde;outline-offset:3px}
+#cscTerceiros .csc-terceiros-main{background:#147551;border-color:#a8f0c4;margin-top:10px}
+#cscTerceiros button:disabled{opacity:.65;cursor:wait}
+#cscTerceiros .csc-terceiros-fields{margin-top:15px;padding:15px;border-radius:13px;border:1px solid #71aac0;background:#103f5b}
+#cscTerceiros .csc-terceiros-field{display:block;margin:10px 0 14px;font-weight:700}
+#cscTerceiros input:not([type="checkbox"]),#cscTerceiros select,#cscTerceiros textarea{display:block;width:100%;padding:11px 12px;margin-top:7px;border-radius:12px;border:2px solid #8cbfce;background:#fff;color:#102d40;font-weight:650}
+#cscTerceiros textarea{min-height:90px;resize:vertical}
+#cscTerceiros .csc-terceiros-person{border:2px solid #65cd9f;padding:12px;border-radius:12px;background:#174d55}
+#cscTerceiros .csc-terceiros-person strong{display:block;font-size:20px}
+#cscTerceiros .csc-terceiros-person p{margin:5px 0;font-size:16px!important}
+#cscTerceiros .csc-terceiros-status{margin:9px 0;min-height:20px;font-size:16px!important;font-weight:750}
+#cscTerceiros .csc-terceiros-status.err{color:#ffd1d1!important}
+#cscTerceiros .csc-terceiros-status.ok{color:#b9ffcf!important}
+#cscTerceiros .csc-terceiros-status.progress{color:#e1f7ff!important}
+#cscTerceiros .csc-terceiros-consent{display:flex;gap:12px;align-items:flex-start;margin:12px 0}
+#cscTerceiros .csc-terceiros-consent input{width:24px;height:24px;flex:none;margin-top:5px;accent-color:#198f63}
+#cscTerceiros .csc-terceiros-consent span{font-size:17px;line-height:1.4}
+#cscTerceiros .csc-terceiros-help{font-size:16px!important;color:#e4f6ff!important}
+#cscTerceiros .csc-terceiros-whatsapp{display:block;margin-top:13px;background:#0d7e46;color:#fff;padding:15px;text-align:center;font-size:19px;font-weight:900;border:2px solid #b1fad0;border-radius:12px;text-decoration:none}
+#cscTerceiros [hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){#cscTerceiros *{transition:none!important;animation:none!important}}

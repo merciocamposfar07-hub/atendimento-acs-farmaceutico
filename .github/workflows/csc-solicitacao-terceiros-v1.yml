@@ -1,0 +1,36 @@
+name: CSC — regressão de solicitações para terceiros
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'csc-solicitacao-terceiros-v1.js'
+      - 'csc-solicitacao-terceiros-v1.css'
+      - 'apps-script/ZZZZ_56_SolicitacaoTerceirosMoradorV1.gs'
+      - 'scripts/build_apps_script_release.js'
+      - 'scripts/test_csc_terceiros_v1.js'
+      - '.github/workflows/csc-solicitacao-terceiros-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regressao-terceiros:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Sintaxe do novo frontend e do Apps Script
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check csc-solicitacao-terceiros-v1.js
+          node --check --input-type=commonjs < apps-script/ZZZZ_56_SolicitacaoTerceirosMoradorV1.gs
+          node --check scripts/build_apps_script_release.js
+      - name: Regressão isolada sem escrita no cadastro atual
+        run: node scripts/test_csc_terceiros_v1.js

@@ -861,6 +861,7 @@
 @keyframes csc-opening-out{0%,85.7%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
 @media(prefers-reduced-motion:reduce){#csc-opening-layer{animation-timing-function:steps(1,end)}}
 </style>
+<link rel="stylesheet" href="csc-solicitacao-terceiros-v1.css?v=20261122-v1">
 </head>
 <body class="tema-petroleo">
 <div id="csc-opening-layer" aria-hidden="true" style="--csc-opening-url:url('/atendimento-acs-farmaceutico/assets/csc-opening/csc-abertura-morador-iphone-full.webp')"><img src="/atendimento-acs-farmaceutico/assets/csc-opening/csc-abertura-morador-iphone-full.webp" alt="PORTAL CSC – Conecta Saúde Comunitária" fetchpriority="high" decoding="async"></div><main class="shell">
@@ -1185,5 +1186,7 @@ html body main.shell section.panel .content .form-panel{
     },{once:true});
   }());
   </script>
+<script>window.CSC_TERCEIROS_ENABLED=false; /* Liberar somente após deploy e homologação do Apps Script. */</script>
+<script defer src="csc-solicitacao-terceiros-v1.js?v=20261122-v1"></script>
 </body>
 </html>
