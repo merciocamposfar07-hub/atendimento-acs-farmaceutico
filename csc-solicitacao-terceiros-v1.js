@@ -335,11 +335,19 @@ function mount(){
  el('cscTerceirosName').addEventListener('input',invalidateSelection);
  document.addEventListener('click',nativeClick,true);
  function show(){var a=creds();root.hidden=!(a.token.indexOf('cms1.')===0&&a.dispositivo);return !root.hidden;}
- if(!show())watch=setInterval(function(){if(show()){clearInterval(watch);watch=null;}},900);
+ // Sessão confirmada: aparecer imediatamente. O evento da sessão evita polling após PIN.
+ document.addEventListener('tacs:morador',show);
  window.addEventListener('pageshow',show);
+ window.addEventListener('focus',show);
+ if(!show()){
+  var attempts=0;
+  watch=setInterval(function(){
+   if(show()||++attempts>=100){clearInterval(watch);watch=null;}
+  },100);
+ }
  window.addEventListener('pagehide',function(){restoreOriginal();closePending();});
  document.addEventListener('visibilitychange',function(){if(document.hidden){restoreOriginal();closePending();}});
- window.CscSolicitacaoTerceirosV1=Object.freeze({version:'3.0.0',enabled:true,close:cancel,active:function(){return !!delegate;}});
+ window.CscSolicitacaoTerceirosV1=Object.freeze({version:'3.1.0',enabled:true,close:cancel,active:function(){return !!delegate;}});
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+if(document.querySelector('.form-panel'))mount();else if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();

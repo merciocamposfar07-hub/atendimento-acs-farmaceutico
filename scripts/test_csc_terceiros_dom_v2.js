@@ -7,7 +7,7 @@ const dom=new JSDOM(html,{url:'https://merciocamposfar07-hub.github.io/atendimen
 const w=dom.window;
 w.CSC_TERCEIROS_ENABLED=true;
 w.localStorage.setItem('portalTacsDispositivoV1','device-1');
-w.sessionStorage.setItem('portalConectaMoradorTokenV1','cms1.simulado');
+// Sem sessão no carregamento: a função ficará oculta até o PIN ser confirmado.
 w.Element.prototype.scrollIntoView=function(){};
 let thirdPartyReads=0,shares=[],sentActions=[],sentCodes=[];
 const people={
@@ -47,7 +47,12 @@ w.PortalTacsAgendaMedicaV1={hasValidSelection:()=>true};
 w.PortalTacsTerritoryIdentity={areaNome:'Sítio Japaranduba',tacsNome:'TACS Responsável',unidadeNome:'Unidade Posto Matias'};
 w.document.getElementById('cpf').addEventListener('input',()=>thirdPartyReads++);
 w.eval(fs.readFileSync(path.join(root,'csc-solicitacao-terceiros-v1.js'),'utf8'));
+assert(w.document.getElementById('cscTerceiros'),'Montar a função assim que o formulário existe, sem aguardar DOMContentLoaded');
+assert.equal(w.document.getElementById('cscTerceiros').hidden,true,'Sem PIN o módulo é oculto');
 w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+w.sessionStorage.setItem('portalConectaMoradorTokenV1','cms1.simulado');
+w.document.dispatchEvent(new w.CustomEvent('tacs:morador',{detail:{nome:'Solange Oliveira'}}));
+assert.equal(w.document.getElementById('cscTerceiros').hidden,false,'Evento de sessão abre a função imediatamente após PIN');
 const $=id=>w.document.getElementById(id),wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.now()-start>limit)throw Error('Timeout');await wait(25);}}
 (async()=>{
@@ -100,5 +105,5 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  assert(!JSON.stringify(w.localStorage).includes('Pedro Silva'));
  assert(!JSON.stringify(w.localStorage).includes('123456789012345'));
  w.close();
- console.log('CSC DOM: um único botão, WhatsApp iniciado sem esperar UBS, família, original e privacidade: OK');
+ console.log('CSC DOM: módulo imediato após PIN, envio único, família e privacidade: OK');
 })().catch(e=>{console.error(e);process.exitCode=1;w.close();});

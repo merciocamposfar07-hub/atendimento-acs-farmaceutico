@@ -48,3 +48,11 @@ Os testes usam registros simulados: não produzem operações reais e não subst
 - O compartilhamento do cartão original CSC e o registro do pedido na UBS iniciam em paralelo, sem esperar pela leitura síncrona da planilha antes de abrir o WhatsApp.
 - O cartão é pré-gerado após a escolha do serviço para permitir a chamada do compartilhamento no próprio gesto do iPhone, quando disponível.
 - Registro da UBS e entrega do WhatsApp são estados independentes; testes não autorizam afirmar que o usuário efetivamente concluiu o compartilhamento.
+
+## Agilidade após PIN — 22/11/2026
+- Diagnóstico: o recarregamento após o PIN repetia um splash fixo de 2,8 s; a função de terceiros só era montada após a cadeia de scripts, e ainda verificava credenciais a cada 900 ms.
+- Ajuste localizado: se já existe sessão `cms1` vinculada ao dispositivo, a abertura animada é omitida no retorno autenticado; permanece intacta no primeiro acesso.
+- O módulo de terceiros é carregado sem bloquear os scripts do portal, assim que o formulário já existe, antes das integrações legadas.
+- O evento `tacs:morador` exibe o módulo imediatamente após a sessão; fallback limitado a 100 ms por até 10 s apenas durante inicialização.
+- PIN, servidor, proteção dos dados, formulário, agenda, card e envio único mantidos sem alteração.
+- Homologação: testes de carga do módulo antes do evento DOMContentLoaded, desbloqueio após o evento de sessão e comportamento do splash após autenticação.

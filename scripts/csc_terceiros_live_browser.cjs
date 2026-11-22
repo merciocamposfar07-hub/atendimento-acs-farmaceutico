@@ -12,6 +12,15 @@ const PAGE_URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceu
    await page.waitForSelector('#cscTerceiros',{state:'attached',timeout:18000});
    assert.equal(await page.evaluate(()=>window.CSC_TERCEIROS_ENABLED),true,'flag publicada');
    assert.equal(await page.locator('#cscTerceiros').isVisible(),false,'o formulário de terceiros deve exigir login');
+   const skipSplash=await page.evaluate(()=>{
+      const layer=document.getElementById('csc-opening-layer');
+      if(!layer)return false;
+      document.documentElement.classList.add('csc-resident-return');
+      const hidden=getComputedStyle(layer).display==='none';
+      document.documentElement.classList.remove('csc-resident-return');
+      return hidden;
+   });
+   assert(skipSplash,'retorno autenticado precisa omitir animação inicial de 2,8 segundos');
    const mainBefore=await page.locator('#cpf').inputValue();
    await page.evaluate(()=>{
       sessionStorage.setItem('portalConectaMoradorTokenV1','cms1.smoke-sem-autenticacao');
