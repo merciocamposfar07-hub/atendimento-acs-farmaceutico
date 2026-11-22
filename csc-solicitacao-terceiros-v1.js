@@ -160,13 +160,13 @@ function confirmCpf(){
  if(busy||!confirmToken)return;
  busy=true;var b=el('cscTerceirosConfirm').querySelector('button');if(b)b.disabled=true;
  notice('Salvando CPF confirmado na planilha territorial…','progress');
- action('csc_terceiros_confirmar_cpf',{confirmacaoToken:confirmToken,confirmado:'SIM'}).then(function(r){populate(r,false);})
+ action('csc_terceiros_confirmar_cpf',{confirmacaoToken:confirmToken,confirmado:'SIM'}).then(function(r){if(!document.hidden)populate(r,false);})
  .catch(function(e){notice(e.message,'err');if(b)b.disabled=false;})
  .finally(function(){busy=false});
 }
 function selectMember(token){
  if(busy)return;busy=true;notice('Preparando atendimento para este integrante…','progress');
- action('csc_terceiros_membro',{membroToken:token}).then(function(r){populate(r,true);})
+ action('csc_terceiros_membro',{membroToken:token}).then(function(r){if(!document.hidden)populate(r,true);})
  .catch(function(e){notice(e.message,'err');}).finally(function(){busy=false;});
 }
 function invalidateSelection(){
@@ -183,6 +183,7 @@ function find(){
  busy=true;el('cscTerceirosLookup').disabled=true;
  notice('Consultando o cadastro territorial…','progress');
  action('csc_terceiros_buscar',{documento:doc,nascimento:el('cscTerceirosBirth').value,nome:el('cscTerceirosName').value}).then(function(r){
+  if(document.hidden)return;
   if(r.precisaNascimento){el('cscTerceirosBirthRow').hidden=false;el('cscTerceirosBirth').focus();notice(r.message,'progress');return;}
   if(r.precisaNome){el('cscTerceirosBirthRow').hidden=false;el('cscTerceirosNameRow').hidden=false;el('cscTerceirosName').focus();notice(r.message,'progress');return;}
   if(r.confirmaCpf){
@@ -205,8 +206,8 @@ function originalData(){
  return {code:pendingCode||(pendingCode=newCode()),sentAt:recifeTime(),category:txt(el('category')&&el('category').value),
  name:txt(el('name')&&el('name').value),birth:txt(el('birth')&&el('birth').value),
  document:digits(el('cpf')&&el('cpf').value),locality:txt(el('locality')&&el('locality').value),
- description:txt(el('subject')&&el('subject').value),
- recipient:'',
+ description:txt(el('category')&&el('category').value)==='Implanon'?txt(el('implanonChoice')&&el('implanonChoice').value):txt(el('subject')&&el('subject').value),
+ recipient:txt(el('category')&&el('category').value)==='Solicitar ficha de cadastro para Aposentadoria'?txt(el('retirementRecipientValue')&&el('retirementRecipientValue').value):'',
  areaId:AREA,areaName:txt(identity.areaNome)||'Sítio Japaranduba',unitName:txt(identity.unidadeNome)||'Unidade de Saúde Posto Matias',
  tacsName:txt(identity.tacsNome)||'Mércio José Campos dos Santos'};
 }
@@ -246,6 +247,7 @@ function nativeClick(event){
   autorizado:'SIM',dataServico:scheduled.dataServico,tipoVaga:scheduled.tipoVaga,horarioExpiracao:scheduled.horarioExpiracao,
   tacsResponsavel:data.tacsName,unidadeNome:data.unitName
  }).then(function(r){
+  if(document.hidden)return;
   data.code=r.codigoSolicitacao;data.requester=txt(r.solicitante.nome);data.recipient='';
   shareData=data;el('cscTerceirosShare').hidden=false;el('cscTerceirosFinish').hidden=false;
   notice('Solicitação registrada na UBS. Agora toque no botão verde para enviar o mesmo cartão oficial ao WhatsApp do TACS.','ok');
@@ -254,7 +256,7 @@ function nativeClick(event){
  .finally(function(){busy=false;target.disabled=false;});
 }
 function shareCard(){
- if(!shareData)return;
+ if(!shareData||document.hidden)return;
  var api=window.PortalCscSolicitacaoCardOficialV1;
  if(!api||typeof api.share!=='function'){notice('Gerador oficial indisponível. Recarregue o Portal CSC.','err');return;}
  var btn=el('cscTerceirosShare');btn.disabled=true;notice('Preparando o cartão oficial da solicitação…','progress');
