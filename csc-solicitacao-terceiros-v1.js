@@ -67,6 +67,7 @@ function html(){
  '<label class="csc-terceiros-field">CPF ou Cartão SUS (CNS)<input id="cscTerceirosDoc" inputmode="numeric" autocomplete="off" maxlength="15" placeholder="CPF ou Cartão SUS"></label>'+
  '<div id="cscTerceirosBirthRow" hidden><label class="csc-terceiros-field">Data de nascimento (somente na primeira identificação)<input id="cscTerceirosBirth" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="DD/MM/AAAA"></label></div>'+
  '<div id="cscTerceirosNameRow" hidden><label class="csc-terceiros-field">Nome completo para confirmação<input id="cscTerceirosName" autocomplete="off" maxlength="120" placeholder="Nome completo"></label></div>'+
+ '<label class="csc-terceiros-consent"><input id="cscTerceirosConsent" type="checkbox"><span>Confirmo que estou ajudando esta pessoa a solicitar o atendimento, a pedido ou com o conhecimento dela.</span></label>'+
  '<button id="cscTerceirosLookup" class="csc-terceiros-lookup" type="button">BUSCAR MORADOR E SUA FAMÍLIA</button>'+
  '<div id="cscTerceirosConfirm" class="csc-terceiros-person" hidden></div>'+
  '<div id="cscTerceirosFamily" class="csc-terceiros-person" hidden></div>'+
@@ -103,7 +104,7 @@ function restoreOriginal(){
 function cancel(){
  if(busy)return;
  restoreOriginal();closePending();notice('');
- el('cscTerceirosDoc').value='';el('cscTerceirosBirth').value='';el('cscTerceirosName').value='';
+ el('cscTerceirosDoc').value='';el('cscTerceirosBirth').value='';el('cscTerceirosName').value='';el('cscTerceirosConsent').checked=false;
  el('cscTerceirosBirthRow').hidden=true;el('cscTerceirosNameRow').hidden=true;
 }
 function toggle(){
@@ -175,6 +176,7 @@ function invalidateSelection(){
 }
 function find(){
  if(busy)return;
+ if(!el('cscTerceirosConsent').checked){notice('Confirme que está ajudando esta pessoa a pedido ou com o conhecimento dela.','err');return;}
  var doc=digits(el('cscTerceirosDoc').value);
  if(doc.length!==11&&doc.length!==15){notice('Informe CPF com 11 dígitos ou Cartão SUS com 15 dígitos.','err');return;}
  restoreOriginal();closePending();
@@ -228,7 +230,8 @@ function scheduleDetails(data){
 function nativeClick(event){
  var target=event.target&&event.target.closest&&event.target.closest('#sendPetroleumCard,#send');
  if(!target||!delegate)return;
- event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+ event.preventDefault();
+ if(!el('cscTerceirosConsent').checked){notice('Confirme a autorização para fazer a solicitação.','err');event.stopPropagation();event.stopImmediatePropagation();return;}event.stopPropagation();event.stopImmediatePropagation();
  if(target.disabled||busy)return;
  var data=originalData();
  if(!data.category||data.document!==delegate.document||data.name!==delegate.name||data.birth!==delegate.birth)
