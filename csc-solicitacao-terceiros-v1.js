@@ -63,105 +63,220 @@ function html(){
  '<p class="csc-terceiros-area">EXCLUSIVO PARA MORADORES DA ZONA RURAL DE JAPARANDUBA.</p>'+
  '<button id="cscTerceirosToggle" class="csc-terceiros-main" type="button" aria-expanded="false" aria-controls="cscTerceirosFields">SOLICITAR SERVIÇO PARA OUTRA PESSOA ▾</button>'+
  '<div id="cscTerceirosFields" class="csc-terceiros-fields" hidden>'+
- '<p class="csc-terceiros-help">Informe o CPF ou o Cartão SUS da pessoa. Você continua usando o seu próprio acesso.</p>'+
+ '<p class="csc-terceiros-help">Informe o CPF ou Cartão SUS de quem precisa do atendimento. Nenhum PIN será criado para essa pessoa.</p>'+
  '<label class="csc-terceiros-field">CPF ou Cartão SUS (CNS)<input id="cscTerceirosDoc" inputmode="numeric" autocomplete="off" maxlength="15" placeholder="CPF ou Cartão SUS"></label>'+
- '<div id="cscTerceirosBirthRow" hidden><label class="csc-terceiros-field">Data de nascimento do beneficiário<input id="cscTerceirosBirth" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="DD/MM/AAAA"></label></div>'+
- '<div id="cscTerceirosNameRow" hidden><label class="csc-terceiros-field">Nome completo do beneficiário<input id="cscTerceirosName" autocomplete="off" maxlength="120" placeholder="Nome para confirmar o cadastro"></label></div>'+
- '<button id="cscTerceirosLookup" class="csc-terceiros-lookup" type="button">LOCALIZAR MORADOR</button>'+
+ '<div id="cscTerceirosBirthRow" hidden><label class="csc-terceiros-field">Data de nascimento (somente na primeira identificação)<input id="cscTerceirosBirth" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="DD/MM/AAAA"></label></div>'+
+ '<div id="cscTerceirosNameRow" hidden><label class="csc-terceiros-field">Nome completo para confirmação<input id="cscTerceirosName" autocomplete="off" maxlength="120" placeholder="Nome completo"></label></div>'+
+ '<button id="cscTerceirosLookup" class="csc-terceiros-lookup" type="button">BUSCAR MORADOR E SUA FAMÍLIA</button>'+
+ '<div id="cscTerceirosConfirm" class="csc-terceiros-person" hidden></div>'+
+ '<div id="cscTerceirosFamily" class="csc-terceiros-person" hidden></div>'+
  '<div id="cscTerceirosPerson" class="csc-terceiros-person" hidden></div>'+
- '<div id="cscTerceirosService" hidden>'+
- '<label class="csc-terceiros-field">Qual serviço a pessoa precisa?<select id="cscTerceirosCategory"><option value="">Escolha o serviço</option></select></label>'+
- '<p id="cscTerceirosScheduleHelp" class="csc-terceiros-help" hidden>Este pedido não reserva vaga automaticamente. A UBS deverá confirmar a data e a disponibilidade do atendimento.</p>'+
- '<label class="csc-terceiros-field">Descrição do pedido<textarea id="cscTerceirosDescription" maxlength="900" placeholder="Informe o que a pessoa está precisando"></textarea></label>'+
- '<label class="csc-terceiros-consent"><input id="cscTerceirosConsent" type="checkbox"><span>Confirmo que estou fazendo este pedido a pedido ou com o conhecimento da pessoa que precisa do atendimento.</span></label>'+
- '<button id="cscTerceirosSubmit" class="csc-terceiros-submit" type="button">REGISTRAR SOLICITAÇÃO NA UBS</button></div>'+
+ '<div id="cscTerceirosLegacyHelp" class="csc-terceiros-person" hidden><strong>Agora escolha o serviço normalmente</strong><p>Utilize o quadro “Faça sua solicitação” logo abaixo. Os dias, horários e vagas são os mesmos do Portal CSC. Ao finalizar, o pedido será feito para a pessoa selecionada.</p></div>'+
  '<div id="cscTerceirosStatus" class="csc-terceiros-status" role="status" aria-live="polite"></div>'+
- '<a id="cscTerceirosWhatsapp" class="csc-terceiros-whatsapp" hidden rel="noopener noreferrer" target="_blank">ENVIAR AO TACS PELO WHATSAPP</a></div>';
+ '<button id="cscTerceirosShare" type="button" class="csc-terceiros-whatsapp" hidden>📲 ENVIAR CARTÃO OFICIAL PELO WHATSAPP</button>'+
+ '<button id="cscTerceirosFinish" type="button" class="csc-terceiros-lookup" hidden>ENCERRAR PEDIDO PARA OUTRA PESSOA</button>'+
+ '</div>';
 }
-function clear(){
- chosen=null;pendingCode='';
- ['cscTerceirosDoc','cscTerceirosBirth','cscTerceirosName','cscTerceirosDescription'].forEach(function(id){el(id).value='';});
- ['cscTerceirosBirthRow','cscTerceirosNameRow','cscTerceirosPerson','cscTerceirosService','cscTerceirosWhatsapp'].forEach(function(id){el(id).hidden=true;});
- el('cscTerceirosPerson').textContent='';el('cscTerceirosWhatsapp').removeAttribute('href');
- el('cscTerceirosCategory').value='';el('cscTerceirosConsent').checked=false;
- el('cscTerceirosLookup').disabled=false;el('cscTerceirosSubmit').disabled=false;notice('');
+var delegate=null,confirmToken='',familyList=[],shareData=null,originalFields=null,activeDoc='';
+function closePending(){
+ confirmToken='';familyList=[];shareData=null;delegate=null;activeDoc='';
+ ['cscTerceirosConfirm','cscTerceirosFamily','cscTerceirosPerson','cscTerceirosLegacyHelp','cscTerceirosShare','cscTerceirosFinish'].forEach(function(id){var e=el(id);if(e)e.hidden=true;});
+ var b=el('cscTerceirosShare');if(b)b.disabled=false;
+}
+function setMainValue(id,value,fire){
+ var e=el(id);if(!e)return;
+ e.value=txt(value);
+ if(fire){e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));}
+}
+function saveOriginal(){
+ if(originalFields)return;
+ originalFields={};
+ ['cpf','name','birth','locality','category','subject'].forEach(function(id){originalFields[id]=txt(el(id)&&el(id).value);});
+}
+function restoreOriginal(){
+ if(!originalFields)return;
+ var original=originalFields;originalFields=null;
+ // Não gerar evento input no CPF de terceiro: o autofill legado faria cache em localStorage.
+ setMainValue('cpf',original.cpf,false);
+ ['name','birth','locality','category','subject'].forEach(function(id){setMainValue(id,original[id],true);});
+}
+function cancel(){
+ if(busy)return;
+ restoreOriginal();closePending();notice('');
+ el('cscTerceirosDoc').value='';el('cscTerceirosBirth').value='';el('cscTerceirosName').value='';
+ el('cscTerceirosBirthRow').hidden=true;el('cscTerceirosNameRow').hidden=true;
 }
 function toggle(){
- if(busy)return;opened=!opened;el('cscTerceirosFields').hidden=!opened;
+ if(busy)return;
+ opened=!opened;
+ el('cscTerceirosFields').hidden=!opened;
  el('cscTerceirosToggle').setAttribute('aria-expanded',opened?'true':'false');
  el('cscTerceirosToggle').textContent=opened?'FECHAR SOLICITAÇÃO ▴':'SOLICITAR SERVIÇO PARA OUTRA PESSOA ▾';
- if(!opened)clear();
+ if(!opened)cancel();
 }
-function age(d){var p=String(d||'').split('/');if(p.length!==3)return '';var y=+p[2],m=+p[1],day=+p[0],now=new Date(),years=now.getFullYear()-y;if(now.getMonth()+1<m||(now.getMonth()+1===m&&now.getDate()<day))years--;return years>=0&&years<130?String(years):'';}
-function populate(r){
- var b=r.beneficiario;chosen=r.selecaoToken;pendingCode='';
- var box=el('cscTerceirosPerson');box.hidden=false;
- box.innerHTML='<strong>'+esc(b.nome)+'</strong><p>Data de nascimento: '+esc(b.nascimento)+'</p><p>Localidade: '+esc(b.localidade)+'</p><p>Cadastro familiar: '+esc(b.familiaId)+'</p>'+
- '<p>Idade: '+esc(age(b.nascimento)?age(b.nascimento)+' anos':'não informada')+'</p><p>Documento: '+esc(b.documento||'não informado')+(b.documentoPendente?' (pendente de conferência na UBS)':'')+'</p>';
- el('cscTerceirosService').hidden=false;notice('Morador identificado. Confira os dados antes de solicitar. Não será criado PIN.','ok');
+function family(items,selectedName){
+ familyList=Array.isArray(items)?items:[];var box=el('cscTerceirosFamily');
+ box.innerHTML='<strong>Quem precisa do atendimento nesta família?</strong><p>Escolha uma pessoa da lista. Nenhum dado da família ficará salvo neste aparelho.</p>';
+ familyList.forEach(function(member){
+  var b=document.createElement('button');b.type='button';b.className='csc-terceiros-member';b.textContent=txt(member.nome)+(member.nascimento?' • '+member.nascimento:'');
+  b.disabled=!member.temDocumento;b.title=member.temDocumento?'Toque para selecionar':'Cadastro sem CPF/CNS; procure o TACS';
+  b.addEventListener('click',function(){selectMember(member.membroToken);});
+  box.appendChild(b);
+ });
+ box.hidden=false;
+}
+function chosenPerson(result){
+ var b=result.beneficiario;delegate={
+  token:result.selecaoToken,name:b.nome,birth:b.nascimento,locality:b.localidade,
+  document:digits(b.documento),family:b.familiaId
+ };
+ saveOriginal();
+ // Campos do formulário original são usados apenas nesta solicitação, sem consultar
+ // o autofill por input do CPF (o autofill antigo persistiria dados de terceiros).
+ setMainValue('cpf',delegate.document,false);
+ setMainValue('name',delegate.name,true);
+ setMainValue('birth',delegate.birth,true);
+ setMainValue('locality',delegate.locality,true);
+ setMainValue('category','',true);
+ setMainValue('subject','',true);
+ var out=el('cscTerceirosPerson');out.hidden=false;
+ out.innerHTML='<strong>Selecionado: '+esc(b.nome)+'</strong>'+
+  '<p>Nascimento: '+esc(b.nascimento)+' • Cadastro familiar: '+esc(b.familiaId)+'</p>'+
+  '<p>O formulário de serviços abaixo já está preparado para esta pessoa.</p>';
+ el('cscTerceirosLegacyHelp').hidden=false;el('cscTerceirosFinish').hidden=false;
+ el('cscTerceirosShare').hidden=true;
+ notice('Agora escolha o serviço, o dia e a vaga no formulário habitual logo abaixo.','ok');
+ var native=document.querySelector('.form-panel');if(native)native.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function populate(r,selectNow){
+ confirmToken='';el('cscTerceirosConfirm').hidden=true;
+ family(r.familia,r.beneficiario&&r.beneficiario.nome);
+ el('cscTerceirosBirthRow').hidden=true;el('cscTerceirosNameRow').hidden=true;
+ notice(r.cpfSalvo?'CPF gravado na planilha. Na próxima consulta será necessário somente o CPF.':'Família localizada. Escolha quem precisa do atendimento.','ok');
+ if(selectNow&&r.selecaoToken&&r.beneficiario)chosenPerson(r);
+}
+function confirmCpf(){
+ if(busy||!confirmToken)return;
+ busy=true;var b=el('cscTerceirosConfirm').querySelector('button');if(b)b.disabled=true;
+ notice('Salvando CPF confirmado na planilha territorial…','progress');
+ action('csc_terceiros_confirmar_cpf',{confirmacaoToken:confirmToken,confirmado:'SIM'}).then(function(r){populate(r,false);})
+ .catch(function(e){notice(e.message,'err');if(b)b.disabled=false;})
+ .finally(function(){busy=false});
+}
+function selectMember(token){
+ if(busy)return;busy=true;notice('Preparando atendimento para este integrante…','progress');
+ action('csc_terceiros_membro',{membroToken:token}).then(function(r){populate(r,true);})
+ .catch(function(e){notice(e.message,'err');}).finally(function(){busy=false;});
 }
 function invalidateSelection(){
- if(!chosen)return;
- chosen=null;pendingCode='';
- el('cscTerceirosPerson').hidden=true;el('cscTerceirosService').hidden=true;
- el('cscTerceirosWhatsapp').hidden=true;el('cscTerceirosWhatsapp').removeAttribute('href');
- notice('Os dados foram alterados. Toque em LOCALIZAR MORADOR novamente.','progress');
+ if(!delegate&&!confirmToken&&!familyList.length)return;
+ restoreOriginal();closePending();
+ notice('Os dados foram modificados. Busque novamente a família.','progress');
 }
 function find(){
  if(busy)return;
  var doc=digits(el('cscTerceirosDoc').value);
  if(doc.length!==11&&doc.length!==15){notice('Informe CPF com 11 dígitos ou Cartão SUS com 15 dígitos.','err');return;}
- busy=true;chosen=null;pendingCode='';
- el('cscTerceirosLookup').disabled=true;el('cscTerceirosPerson').hidden=true;
- el('cscTerceirosService').hidden=true;el('cscTerceirosWhatsapp').hidden=true;
- notice('Aguarde… localizando o morador.','progress');
+ restoreOriginal();closePending();
+ busy=true;el('cscTerceirosLookup').disabled=true;
+ notice('Consultando o cadastro territorial…','progress');
  action('csc_terceiros_buscar',{documento:doc,nascimento:el('cscTerceirosBirth').value,nome:el('cscTerceirosName').value}).then(function(r){
   if(r.precisaNascimento){el('cscTerceirosBirthRow').hidden=false;el('cscTerceirosBirth').focus();notice(r.message,'progress');return;}
   if(r.precisaNome){el('cscTerceirosBirthRow').hidden=false;el('cscTerceirosNameRow').hidden=false;el('cscTerceirosName').focus();notice(r.message,'progress');return;}
-  if(r.encontrado)populate(r);else notice(r.message||'Morador não localizado.','err');
- }).catch(function(e){notice(e.message,'err');}).finally(function(){busy=false;el('cscTerceirosLookup').disabled=false;});
+  if(r.confirmaCpf){
+   confirmToken=r.confirmacaoToken;
+   var c=el('cscTerceirosConfirm');c.innerHTML='<strong>Confira a pessoa identificada</strong><p>'+esc(r.nome)+' • '+esc(r.nascimento)+'</p>'+
+    '<button type="button" class="csc-terceiros-lookup">CONFIRMAR IDENTIDADE E SALVAR CPF NA PLANILHA</button>';
+   c.hidden=false;c.querySelector('button').addEventListener('click',confirmCpf);
+   notice('Após confirmar, o CPF ficará salvo na planilha. Não será criado PIN nem cache no celular.','progress');return;
+  }
+  if(r.encontrado)populate(r,false);else notice(r.message||'Cadastro não localizado.','err');
+ }).catch(function(e){notice(e.message,'err');})
+ .finally(function(){busy=false;el('cscTerceirosLookup').disabled=false;});
 }
-function schedule(v){return /consulta|nutricionista|odontol[oó]gico|enfermeira|marca[cç][aã]o de exames/i.test(v);}
-function send(){
- if(busy||!chosen)return;
- var cat=el('cscTerceirosCategory').value,description=txt(el('cscTerceirosDescription').value);
- if(!cat){notice('Selecione o serviço necessário.','err');return;}
- if(!description){notice('Descreva o que a pessoa precisa.','err');return;}
- if(!el('cscTerceirosConsent').checked){notice('Confirme que o pedido é feito com conhecimento ou autorização da pessoa.','err');return;}
- busy=true;el('cscTerceirosSubmit').disabled=true;notice('Aguarde… registrando a solicitação na UBS.','progress');
- pendingCode=pendingCode||newCode();
+function recifeTime(){
+ try{return new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Recife',dateStyle:'short',timeStyle:'short'}).format(new Date());}
+ catch(e){return new Date().toLocaleString('pt-BR');}
+}
+function originalData(){
+ var identity=window.PortalTacsTerritoryIdentity||{};
+ return {code:pendingCode||(pendingCode=newCode()),sentAt:recifeTime(),category:txt(el('category')&&el('category').value),
+ name:txt(el('name')&&el('name').value),birth:txt(el('birth')&&el('birth').value),
+ document:digits(el('cpf')&&el('cpf').value),locality:txt(el('locality')&&el('locality').value),
+ description:txt(el('subject')&&el('subject').value),
+ recipient:'Solicitado por '+txt((JSON.parse(sessionStorage.getItem('portalConectaMoradorBootstrapV2')||'null')||{}).nome||'outro morador'),
+ areaId:AREA,areaName:txt(identity.areaNome)||'Sítio Japaranduba',unitName:txt(identity.unidadeNome)||'Unidade de Saúde Posto Matias',
+ tacsName:txt(identity.tacsNome)||'Mércio José Campos dos Santos'};
+}
+function validateAgenda(cat){
+ var med=/consulta M[eé]dica|atendimento com a M[eé]dica/i.test(cat),nut=/nutricionista/i.test(cat),dent=/odontol[oó]gico/i.test(cat);
+ if(med&&(!window.PortalTacsAgendaMedicaV1||!window.PortalTacsAgendaMedicaV1.hasValidSelection()))throw Error('Selecione um dia disponível da médica no calendário habitual.');
+ if(nut&&(!window.PortalTacsAgendaNutricionistaV1||!window.PortalTacsAgendaNutricionistaV1.hasValidSelection()))throw Error('Selecione um dia disponível da nutricionista no calendário habitual.');
+ if(dent){
+  var api=window.PortalTacsOdontologiaV98,slot=api&&api.selecao&&api.selecao();
+  if(!slot||!slot.date||!slot.type)throw Error('Selecione uma vaga odontológica no calendário.');
+ }
+}
+function scheduleDetails(data){
+ var sel=window.PortalTacsOdontologiaV98&&window.PortalTacsOdontologiaV98.selecao();
+ if(sel&&/odontol[oó]gico/i.test(data.category)){
+  return {tipoVaga:txt(sel.type),dataServico:txt(sel.date),horarioExpiracao:txt(sel.expiresAt)};
+ }
+ var d=(data.description||'').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+ return {tipoVaga:'',dataServico:d?d[3]+'-'+d[2]+'-'+d[1]:'',horarioExpiracao:''};
+}
+function nativeClick(event){
+ var target=event.target&&event.target.closest&&event.target.closest('#sendPetroleumCard,#send');
+ if(!target||!delegate)return;
+ event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+ if(target.disabled||busy)return;
+ var data=originalData();
+ if(!data.category||data.document!==delegate.document||data.name!==delegate.name||data.birth!==delegate.birth)
+  {notice('Confirme o integrante selecionado e preencha o formulário normalmente.','err');return;}
+ try{validateAgenda(data.category)}catch(e){notice(e.message,'err');return;}
+ if(!data.description&&data.category!=='Implanon')data.description=data.category;
+ busy=true;target.disabled=true;
+ notice('Registrando a solicitação de '+delegate.name+' na UBS…','progress');
+ var scheduled=scheduleDetails(data);
  action('csc_terceiros_enviar',{
-  selecaoToken:chosen,codigoSolicitacao:pendingCode,categoria:cat,descricao:description,autorizado:'SIM',
-  tacsResponsavel:'Mércio José Campos dos Santos',unidadeNome:'Unidade de Saúde Posto Matias'
+  selecaoToken:delegate.token,codigoSolicitacao:data.code,categoria:data.category,descricao:data.description,documento:data.document,
+  autorizado:'SIM',dataServico:scheduled.dataServico,tipoVaga:scheduled.tipoVaga,horarioExpiracao:scheduled.horarioExpiracao,
+  tacsResponsavel:data.tacsName,unidadeNome:data.unitName
  }).then(function(r){
-  var message='*PORTAL CSC - PEDIDO PARA OUTRO MORADOR*\nCódigo: '+r.codigoSolicitacao+
-   '\nBeneficiário: '+r.beneficiario.nome+'\nDocumento: '+r.beneficiario.documento+
-   '\nSolicitante: '+r.solicitante.nome+' (CPF final '+r.solicitante.cpfFinal+')'+
-   '\nServiço: '+r.categoria+'\nDescrição: '+r.descricao+
-   '\nRegistro da UBS: confirmado.'+(r.reservaConfirmada?'':'\nNão há reserva automática de vaga neste pedido.');
-  var a=el('cscTerceirosWhatsapp');a.href='https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(message);a.hidden=false;
-  el('cscTerceirosService').hidden=true;el('cscTerceirosLookup').disabled=true;
-  notice('Solicitação registrada na UBS. Agora toque no botão verde para enviar ao TACS pelo WhatsApp. Código: '+r.codigoSolicitacao,'ok');
- }).catch(function(e){notice(e.message,'err');el('cscTerceirosSubmit').disabled=false;}).finally(function(){busy=false;});
+  data.code=r.codigoSolicitacao;data.recipient='Pedido realizado por '+txt(r.solicitante.nome);
+  shareData=data;el('cscTerceirosShare').hidden=false;el('cscTerceirosFinish').hidden=false;
+  notice('Solicitação registrada na UBS. Agora toque no botão verde para enviar o mesmo cartão oficial ao WhatsApp do TACS.','ok');
+  el('cscTerceirosShare').scrollIntoView({behavior:'smooth',block:'center'});
+ }).catch(function(e){notice(e.message,'err');})
+ .finally(function(){busy=false;target.disabled=false;});
+}
+function shareCard(){
+ if(!shareData)return;
+ var api=window.PortalCscSolicitacaoCardOficialV1;
+ if(!api||typeof api.share!=='function'){notice('Gerador oficial indisponível. Recarregue o Portal CSC.','err');return;}
+ var btn=el('cscTerceirosShare');btn.disabled=true;notice('Preparando o cartão oficial da solicitação…','progress');
+ api.share(shareData).then(function(){notice('Cartão oficial preparado. Selecione o WhatsApp e confira o envio ao TACS.','ok');})
+ .catch(function(e){notice(e.name==='AbortError'?'Compartilhamento cancelado.':e.message,'err');})
+ .finally(function(){btn.disabled=false;});
 }
 function mount(){
  if(area()!==AREA||el('cscTerceiros'))return;
  var ref=document.querySelector('.form-panel');if(!ref||!ref.parentNode)return;
  var root=document.createElement('section');root.id='cscTerceiros';root.hidden=true;
- root.setAttribute('aria-label','Solicitar serviço para outra pessoa');
- root.innerHTML=html();ref.parentNode.insertBefore(root,ref);
- SERVICES.forEach(function(s){var op=document.createElement('option');op.value=s;op.textContent=s;el('cscTerceirosCategory').appendChild(op);});
+ root.setAttribute('aria-label','Solicitar serviço para outra pessoa');root.innerHTML=html();ref.parentNode.insertBefore(root,ref);
  el('cscTerceirosToggle').addEventListener('click',toggle);
  el('cscTerceirosLookup').addEventListener('click',find);
- el('cscTerceirosSubmit').addEventListener('click',send);
- el('cscTerceirosCategory').addEventListener('change',function(){el('cscTerceirosScheduleHelp').hidden=!schedule(this.value);});
- el('cscTerceirosBirth').addEventListener('input',function(){invalidateSelection();var d=digits(this.value).slice(0,8);this.value=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;});
+ el('cscTerceirosShare').addEventListener('click',shareCard);
+ el('cscTerceirosFinish').addEventListener('click',function(){cancel();opened=false;el('cscTerceirosFields').hidden=true;el('cscTerceirosToggle').setAttribute('aria-expanded','false');el('cscTerceirosToggle').textContent='SOLICITAR SERVIÇO PARA OUTRA PESSOA ▾';});
+ el('cscTerceirosBirth').addEventListener('input',function(){var d=digits(this.value).slice(0,8);this.value=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;});
  el('cscTerceirosDoc').addEventListener('input',function(){invalidateSelection();var d=digits(this.value).slice(0,15);this.value=d.length>11?d:d.length>9?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9):d;});
- el('cscTerceirosName').addEventListener('input',invalidateSelection);
+ document.addEventListener('click',nativeClick,true);
  function show(){var a=creds();root.hidden=!(a.token.indexOf('cms1.')===0&&a.dispositivo);return !root.hidden;}
  if(!show())watch=setInterval(function(){if(show()){clearInterval(watch);watch=null;}},900);
  window.addEventListener('pageshow',show);
- window.CscSolicitacaoTerceirosV1=Object.freeze({version:'1.0.0',enabled:true,close:function(){if(opened&&!busy)toggle();}});
+ window.addEventListener('pagehide',function(){restoreOriginal();closePending();});
+ document.addEventListener('visibilitychange',function(){if(document.hidden){restoreOriginal();closePending();}});
+ window.CscSolicitacaoTerceirosV1=Object.freeze({version:'2.0.0',enabled:true,close:cancel,active:function(){return !!delegate;}});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
