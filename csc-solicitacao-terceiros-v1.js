@@ -100,6 +100,13 @@ function populate(r){
  '<p>Idade: '+esc(age(b.nascimento)?age(b.nascimento)+' anos':'não informada')+'</p><p>Documento: '+esc(b.documento||'não informado')+(b.documentoPendente?' (pendente de conferência na UBS)':'')+'</p>';
  el('cscTerceirosService').hidden=false;notice('Morador identificado. Confira os dados antes de solicitar. Não será criado PIN.','ok');
 }
+function invalidateSelection(){
+ if(!chosen)return;
+ chosen=null;pendingCode='';
+ el('cscTerceirosPerson').hidden=true;el('cscTerceirosService').hidden=true;
+ el('cscTerceirosWhatsapp').hidden=true;el('cscTerceirosWhatsapp').removeAttribute('href');
+ notice('Os dados foram alterados. Toque em LOCALIZAR MORADOR novamente.','progress');
+}
 function find(){
  if(busy)return;
  var doc=digits(el('cscTerceirosDoc').value);
@@ -148,8 +155,9 @@ function mount(){
  el('cscTerceirosLookup').addEventListener('click',find);
  el('cscTerceirosSubmit').addEventListener('click',send);
  el('cscTerceirosCategory').addEventListener('change',function(){el('cscTerceirosScheduleHelp').hidden=!schedule(this.value);});
- el('cscTerceirosBirth').addEventListener('input',function(){var d=digits(this.value).slice(0,8);this.value=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;});
- el('cscTerceirosDoc').addEventListener('input',function(){var d=digits(this.value).slice(0,15);this.value=d.length>11?d:d.length>9?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9):d;});
+ el('cscTerceirosBirth').addEventListener('input',function(){invalidateSelection();var d=digits(this.value).slice(0,8);this.value=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;});
+ el('cscTerceirosDoc').addEventListener('input',function(){invalidateSelection();var d=digits(this.value).slice(0,15);this.value=d.length>11?d:d.length>9?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9):d;});
+ el('cscTerceirosName').addEventListener('input',invalidateSelection);
  function show(){var a=creds();root.hidden=!(a.token.indexOf('cms1.')===0&&a.dispositivo);return !root.hidden;}
  if(!show())watch=setInterval(function(){if(show()){clearInterval(watch);watch=null;}},900);
  window.addEventListener('pageshow',show);
