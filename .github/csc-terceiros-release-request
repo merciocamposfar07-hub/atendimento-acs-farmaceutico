@@ -2,3 +2,6 @@ Homologação CSC terceiros — revisão de 22/11/2026
 Atualização seletiva do módulo ZZZZ_56_SolicitacaoTerceirosMoradorV1.js em produção.
 Autorizações: CPF confirmado gravado em Sheets, família completa e cartão visual oficial.
 Versão anterior do deployment deve permanecer disponível para rollback.
+
+Revalidação da integração da família, gravação CPF e cartão oficial — 2026-11-22.
+Testes backend e DOM obrigatórios; não liberar frontend antes do sucesso.
