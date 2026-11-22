@@ -42,7 +42,7 @@ function action(name,data){
  var id=randId(),p=new URLSearchParams();
  p.set('action',name);p.set('requestId',id);p.set('token',a.token);p.set('dispositivo',a.dispositivo);p.set('areaId',AREA);
  Object.keys(data||{}).forEach(function(k){p.set(k,data[k]==null?'':String(data[k]));});
- try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',cache:'no-store',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:p.toString()}).catch(function(){});}catch(e){}
+ try{fetch(API+'?_='+Date.now(),{method:'POST',mode:'no-cors',cache:'no-store',keepalive:true,headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:p.toString()}).catch(function(){});}catch(e){}
  return new Promise(function(resolve,reject){
   var start=Date.now();
   function poll(){

@@ -70,6 +70,7 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  $('sendPetroleumCard').click();
  await until(()=>shares.length===1);
  assert(sentActions.includes('csc_terceiros_enviar'));
+ await until(()=>$('sendPetroleumCard').disabled===false);
  assert.equal($('cscTerceirosShare'),null,'Compartilhamento deve ocorrer no mesmo toque');
  assert.equal(shares[0].name,'Pedro Silva');
  assert.equal(shares[0].category,'Solicitar consulta Médica');
@@ -91,6 +92,7 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  $('sendPetroleumCard').click();
  await until(()=>sentCodes.length===2);
  await until(()=>shares.length===2);
+ await until(()=>$('sendPetroleumCard').disabled===false);
  assert.notEqual(sentCodes[0],sentCodes[1],'Dois beneficiários precisam de códigos diferentes');
  $('cscTerceirosFinish').click();
  assert.equal($('name').value,'Solange Oliveira');

@@ -41,6 +41,14 @@ jobs:
           done
           echo 'Versão publicada não contém a ativação esperada' >&2
           exit 1
+      - name: Validar fluxo de envio único e identidade familiar
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check csc-solicitacao-terceiros-v1.js
+          node scripts/test_csc_terceiros_v1.js
+          npm ci --ignore-scripts
+          node scripts/test_csc_terceiros_dom_v2.js
       - name: Preparar navegadores reais
         shell: bash
         run: |
