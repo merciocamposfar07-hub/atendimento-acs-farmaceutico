@@ -2,7 +2,7 @@ name: CSC — regressão de solicitações para terceiros
 
 on:
   push:
-    branches: [fix/csc-terceiros-familia-agendas-card-20261122]
+    branches: [main, fix/csc-terceiros-familia-agendas-card-20261122]
   pull_request:
     branches: [main]
     paths:
