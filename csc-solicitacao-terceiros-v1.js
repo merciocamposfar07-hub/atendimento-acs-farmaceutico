@@ -1,6 +1,7 @@
 /* CSC: módulo aditivo. Não modifica sessão, PIN, família, agenda nem formulário original. */
 (function(){
 'use strict';
+if(window.CSC_TERCEIROS_ENABLED!==true)return;
 if(window.CscSolicitacaoTerceirosV1)return;
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
 var AREA='JAPARANDUBA',WHATSAPP='5581989613130',chosen=null,busy=false,opened=false,watch=null,pendingCode='';
