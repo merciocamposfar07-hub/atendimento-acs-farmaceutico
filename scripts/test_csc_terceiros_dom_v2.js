@@ -1,0 +1,84 @@
+'use strict';
+const {JSDOM}=require('jsdom');
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..');
+const html='<!doctype html><html><head></head><body><div class="form-panel"><input id="cpf" value="111.444.777-35"><input id="name" value="Solange Oliveira"><input id="birth" value="28/12/1984"><input id="locality" value="Japaranduba"><select id="category"><option value="">Escolha</option><option value="Solicitar consulta Médica">Solicitar consulta Médica</option></select><textarea id="subject"></textarea><button id="sendPetroleumCard">Enviar solicitação</button><button id="send">Enviar pelo WhatsApp</button></div></body></html>';
+const dom=new JSDOM(html,{url:'https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/?area=JAPARANDUBA',runScripts:'outside-only',pretendToBeVisual:true});
+const w=dom.window;
+w.CSC_TERCEIROS_ENABLED=true;
+w.localStorage.setItem('portalTacsDispositivoV1','device-1');
+w.sessionStorage.setItem('portalConectaMoradorTokenV1','cms1.simulado');
+w.crypto.getRandomValues=a=>{for(let i=0;i<a.length;i++)a[i]=(i+37)%256;return a;};
+w.Element.prototype.scrollIntoView=function(){};
+let thirdPartyReads=0,shares=[],sentActions=[];
+const people={
+ ana:{ok:true,encontrado:true,selecaoToken:'select-ana',beneficiario:{nome:'Ana Silva',nascimento:'29/03/1960',localidade:'Japaranduba',documento:'52998224725',familiaId:'002'},familia:[
+  {membroToken:'member-ana',nome:'Ana Silva',nascimento:'29/03/1960',temDocumento:true},
+  {membroToken:'member-pedro',nome:'Pedro Silva',nascimento:'20/03/1964',temDocumento:true}]},
+ pedro:{ok:true,encontrado:true,selecaoToken:'select-pedro',beneficiario:{nome:'Pedro Silva',nascimento:'20/03/1964',localidade:'Japaranduba',documento:'123456789012345',familiaId:'002'},familia:[
+  {membroToken:'member-ana',nome:'Ana Silva',nascimento:'29/03/1960',temDocumento:true},
+  {membroToken:'member-pedro',nome:'Pedro Silva',nascimento:'20/03/1964',temDocumento:true}]}
+};
+const responses=new Map();
+w.fetch=async (url,opts)=>{
+ const p=new URLSearchParams(opts.body),act=p.get('action');sentActions.push(act);
+ let result;
+ if(act==='csc_terceiros_buscar')result=people.ana;
+ else if(act==='csc_terceiros_membro')result=people.pedro;
+ else if(act==='csc_terceiros_enviar'){
+  assert.equal(p.get('categoria'),'Solicitar consulta Médica');
+  assert.equal(p.get('documento'),'123456789012345');
+  result={ok:true,codigoSolicitacao:p.get('codigoSolicitacao'),solicitante:{nome:'Solange Oliveira',cpfFinal:'7735'},beneficiario:{nome:'Pedro Silva',documento:'123456789012345'}};
+ }else throw Error('Unexpected action '+act);
+ responses.set(p.get('requestId'),result);
+ return {ok:true};
+};
+const origAppend=w.document.head.appendChild.bind(w.document.head);
+w.document.head.appendChild=function(el){
+ if(el.tagName==='SCRIPT'&&el.src.includes('csc_terceiros_result')){
+  const p=new URL(el.src).searchParams,r=responses.get(p.get('requestId'));
+  setTimeout(()=>{if(r&&typeof w[p.get('callback')]==='function')w[p.get('callback')]({ok:true,pendente:false,result:r});},1);
+  return el;
+ }
+ return origAppend(el);
+};
+w.PortalCscSolicitacaoCardOficialV1={share:async data=>{shares.push(data);return {ok:true};}};
+w.PortalTacsAgendaMedicaV1={hasValidSelection:()=>true};
+w.PortalTacsTerritoryIdentity={areaNome:'Sítio Japaranduba',tacsNome:'TACS Responsável',unidadeNome:'Unidade Posto Matias'};
+w.document.getElementById('cpf').addEventListener('input',()=>thirdPartyReads++);
+w.eval(fs.readFileSync(path.join(root,'csc-solicitacao-terceiros-v1.js'),'utf8'));
+w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+const $=id=>w.document.getElementById(id),wait=ms=>new Promise(r=>setTimeout(r,ms));
+async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.now()-start>limit)throw Error('Timeout');await wait(25);}}
+(async()=>{
+ await until(()=>$('cscTerceiros')!==null);
+ assert.equal($('cscTerceiros').hidden,false);
+ $('cscTerceirosToggle').click();
+ $('cscTerceirosDoc').value='52998224725';
+ $('cscTerceirosLookup').click();
+ await until(()=>$('cscTerceirosFamily').hidden===false);
+ assert.equal($('cscTerceirosFamily').querySelectorAll('button').length,2);
+ $('cscTerceirosFamily').querySelectorAll('button')[1].click();
+ await until(()=>$('cscTerceirosLegacyHelp').hidden===false);
+ assert.equal($('cpf').value,'123456789012345');
+ assert.equal($('name').value,'Pedro Silva');
+ assert.equal(thirdPartyReads,0,'Autofill original não deve ser invocado nem armazenar documento de terceiro');
+ $('category').value='Solicitar consulta Médica';
+ $('subject').value='Solicitar consulta Médica - Sexta-feira - 04/12/2026 às 14:00';
+ $('sendPetroleumCard').click();
+ await until(()=>$('cscTerceirosShare').hidden===false);
+ assert(sentActions.includes('csc_terceiros_enviar'));
+ $('cscTerceirosShare').click();
+ await until(()=>shares.length===1);
+ assert.equal(shares[0].name,'Pedro Silva');
+ assert.equal(shares[0].category,'Solicitar consulta Médica');
+ assert.match(shares[0].recipient,/Solange Oliveira/);
+ $('cscTerceirosFinish').click();
+ assert.equal($('cpf').value,'111.444.777-35');
+ assert.equal($('name').value,'Solange Oliveira');
+ assert.equal(w.localStorage.getItem('portalTacsDispositivoV1'),'device-1');
+ assert(!JSON.stringify(w.localStorage).includes('Pedro Silva'));
+ assert(!JSON.stringify(w.localStorage).includes('123456789012345'));
+ w.close();
+ console.log('CSC DOM: família por toque, formulário e agenda original, cartão oficial, restauração e sem cache local: OK');
+})().catch(e=>{console.error(e);process.exitCode=1;w.close();});
