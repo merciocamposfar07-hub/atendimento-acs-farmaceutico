@@ -125,6 +125,17 @@ function cscTerceirosV1Categoria_(v){
   ];
   var s=cscTerceirosV1Texto_(v);if(allowed.indexOf(s)<0)throw new Error('Escolha um serviço disponível.');return s;
 }
+function cscTerceirosV1Duplicado_(code,m,actor,cat,p,docSelecionado){
+  var cpf=cscTerceirosV1Digitos_(actor.registro.values[3]);
+  return {
+    ok:true,duplicada:true,codigoSolicitacao:code,
+    beneficiario:{nome:m.nome,documento:cscTerceirosV1Digitos_(m.cpf||m.cns)||docSelecionado},
+    solicitante:{nome:cscTerceirosV1Texto_(actor.registro.values[4]),cpfFinal:cpf.slice(-4)},
+    categoria:cat,descricao:cscTerceirosV1Texto_(p.descricao).slice(0,900),
+    reservaConfirmada:false,
+    message:'Solicitação já registrada na UBS. Utilize o botão do WhatsApp para avisar ao TACS.'
+  };
+}
 function cscTerceirosV1Enviar_(p,actor){
   if(cscTerceirosV1Texto_(p.autorizado)!=='SIM')throw new Error('Confirme que a solicitação está sendo feita a pedido ou com o conhecimento da pessoa.');
   var selected=conectaAcessoV1LerTokenCache_(p.selecaoToken,TACS_CSC_TERCEIROS_V1.SELECT_PREFIX,'ctv1');
@@ -136,7 +147,7 @@ function cscTerceirosV1Enviar_(p,actor){
   var item=candidates[0],m=item.morador,cat=cscTerceirosV1Categoria_(p.categoria);
   if(conectaAcessoV1CodigoFamiliaItem_(item)!==selected.familiaId||selected.familiaId===actor.familiaId)throw new Error('Vínculo familiar mudou. Confira novamente.');
   var code=solicitacoesUbsV1Codigo_(p.codigoSolicitacao),sheet=solicitacoesUbsV1Sheet_(),existing=solicitacoesUbsV1LocalizarCodigo_(sheet,actor.area.areaId,code);
-  if(existing)return {ok:true,duplicada:true,codigoSolicitacao:code,message:'Solicitação já registrada na UBS.'};
+  if(existing)return cscTerceirosV1Duplicado_(code,m,actor,cat,p,selected.documento);
   var detalhes=cscTerceirosV1Texto_(p.descricao).slice(0,900);
   var actorName=cscTerceirosV1Texto_(actor.registro.values[4]),actorCpf=cscTerceirosV1Digitos_(actor.registro.values[3]);
   var nota='PEDIDO POR OUTRO MORADOR | Solicitante: '+actorName+' (CPF final '+actorCpf.slice(-4)+', acesso '+actor.session.accessId+') | Autorização declarada: SIM';
@@ -158,7 +169,7 @@ function cscTerceirosV1Enviar_(p,actor){
   var line=0;
   try{
     existing=solicitacoesUbsV1LocalizarCodigo_(sheet,actor.area.areaId,code);
-    if(existing)return {ok:true,duplicada:true,codigoSolicitacao:code,message:'Solicitação já registrada na UBS.'};
+    if(existing)return cscTerceirosV1Duplicado_(code,m,actor,cat,p,selected.documento);
     line=sheet.getLastRow()+1;
     sheet.getRange(line,1,1,row.length).setValues([row]);
     sheet.getRange(line,8).setNumberFormat('@');
