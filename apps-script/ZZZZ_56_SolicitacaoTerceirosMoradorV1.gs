@@ -230,13 +230,14 @@ function cscTerceirosV1Enviar_(p,actor){
   if(agenda)nota+=' | Pedido de agendamento: SEM RESERVA AUTOMÁTICA DE VAGA';
   var desc=(nota+(detalhes?' | Descrição: '+detalhes:'')).slice(0,1800);
   var now=new Date(),doc=cscTerceirosV1Digitos_(m.cpf||m.cns)||selected.documento;
-  var date=solicitacoesUbsV1Data_(p.dataServico||''),type=cscTerceirosV1Texto_(p.tipoVaga||'').slice(0,70),expiry=solicitacoesUbsV1Hora_(p.horarioExpiracao||'');
+  var agendaCard=solicitacoesUbsV1AgendaCard_(detalhes),date=solicitacoesUbsV1Data_(p.dataServico||agendaCard.data),
+    type=cscTerceirosV1Texto_(p.tipoVaga||'').slice(0,70),expiry=solicitacoesUbsV1Hora_(p.horarioExpiracao||agendaCard.horaFinal);
   var row=[
     solicitacoesUbsV1Id_(),actor.area.areaId,actor.area.areaNome,actor.area.unidadeId||'',
     code,cscTerceirosV1Texto_(m.idPortal||m.id||item.chave),
     cscTerceirosV1Texto_(m.nome),doc,cscTerceirosV1Texto_(m.nascimento),
     cscTerceirosV1Texto_(m.endereco||m.localidade),selected.familiaId,cat,desc,
-    type,date,expiry,date?new Date(date+'T23:59:00'):null,'NOVA',Utilities.formatDate(now,TACS_SOLICITACOES_UBS_V1.FUSO,'dd/MM/yyyy HH:mm'),now,
+    type,date,expiry,solicitacoesUbsV1ExpiraEm_(date,expiry),'NOVA',Utilities.formatDate(now,TACS_SOLICITACOES_UBS_V1.FUSO,'dd/MM/yyyy HH:mm'),now,
     'PORTAL_CSC_TERCEIROS',cscTerceirosV1Texto_(p.tacsResponsavel).slice(0,150),
     cscTerceirosV1Texto_(p.unidadeNome||actor.area.unidadeId).slice(0,150),'','',''
   ];
