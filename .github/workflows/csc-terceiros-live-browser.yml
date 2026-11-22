@@ -1,0 +1,47 @@
+name: CSC — navegador real e rede de produção
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/csc-terceiros-live-browser.yml'
+      - 'scripts/csc_terceiros_live_browser.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Confirmar endpoints reais sem dados de pacientes
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec'
+          curl -LsSf --max-time 30 "$BASE?action=csc_terceiros_result&requestId=cscProductionCheck01234567890123456" | grep -Eq '"pendente"[[:space:]]*:[[:space:]]*true'
+          curl -LsSf --max-time 30 "$BASE?action=portal_manutencao_status&areaId=JAPARANDUBA" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'
+      - name: Esperar a página publicada com a nova ativação
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/?area=JAPARANDUBA'
+          for i in $(seq 1 18); do
+            if curl -LsSf --max-time 20 "$URL" | grep -Fq 'window.CSC_TERCEIROS_ENABLED=true'; then exit 0; fi
+            sleep 5
+          done
+          echo 'Versão publicada não contém a ativação esperada' >&2
+          exit 1
+      - name: Preparar navegadores reais
+        shell: bash
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.58.2
+          npx playwright install --with-deps chromium webkit
+      - name: Testar Chrome e Safari/WebKit com formulário original preservado
+        run: node scripts/csc_terceiros_live_browser.cjs
