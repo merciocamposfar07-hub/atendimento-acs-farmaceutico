@@ -153,7 +153,7 @@ function share(data){
     if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){
       return navigator.share({
         title:'Solicitação do morador',
-        text:'Solicitação do Portal CSC — Conecta Saúde Comunitária • '+clean(data.areaName)+' • TACS '+clean(data.tacsName)+'.',
+        text:'Solicitação do Portal CSC — Conecta Saúde Comunitária • '+clean(data.areaName)+' • TACS '+clean(data.tacsName)+'.'+(clean(data.requester)?'\nPedido realizado por: '+clean(data.requester):''),
         files:[file]
       }).then(function(){return{ok:true,shared:true}});
     }
