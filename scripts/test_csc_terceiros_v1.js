@@ -14,6 +14,11 @@ new vm.Script(frontend,{filename:'csc-solicitacao-terceiros-v1.js'});
 assert.match(html,/csc-solicitacao-terceiros-v1\.js/);
 assert.match(html,/csc-solicitacao-terceiros-v1\.css/);
 assert.match(build,/ZZZZ_56_SolicitacaoTerceirosMoradorV1\.gs/);
+assert.match(html,/CSC_TERCEIROS_ENABLED=false/);
+assert.match(frontend,/CSC_TERCEIROS_ENABLED!==true/);
+for (const script of ['moradores-autofill.js','portal-identificacao-familia-v1.js','portal-solicitacoes-ubs-v1.js','conecta-morador-session-v1.js']) {
+ assert.ok ? assert.ok(html.includes(script)) : assert.match(html,new RegExp(script.replace(/[.*+?^${}()|[\]\\]/g,'\\assert.match(build,/ZZZZ_56_SolicitacaoTerceirosMoradorV1\.gs/);')));
+}
 assert.doesNotMatch(backend,/conecta_morador_criar_pin|renderResidentPinCreate/);
 assert.doesNotMatch(frontend,/localStorage\.setItem|sessionStorage\.setItem/);
 const cache=new Map(),rows=[],issued=new Map();
