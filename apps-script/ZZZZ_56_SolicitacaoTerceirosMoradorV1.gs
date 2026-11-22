@@ -139,7 +139,7 @@ function cscTerceirosV1Enviar_(p,actor){
   if(existing)return {ok:true,duplicada:true,codigoSolicitacao:code,message:'Solicitação já registrada na UBS.'};
   var detalhes=cscTerceirosV1Texto_(p.descricao).slice(0,900);
   var actorName=cscTerceirosV1Texto_(actor.registro.values[4]),actorCpf=cscTerceirosV1Digitos_(actor.registro.values[3]);
-  var nota='PEDIDO POR OUTRO MORADOR | Solicitante: '+actorName+' (CPF final '+actorCpf.slice(-4)+') | Autorização declarada: SIM';
+  var nota='PEDIDO POR OUTRO MORADOR | Solicitante: '+actorName+' (CPF final '+actorCpf.slice(-4)+', acesso '+actor.session.accessId+') | Autorização declarada: SIM';
   if(selected.informadoNaoCadastrado)nota+=' | CPF do beneficiário informado, ainda não cadastrado; conferir na UBS';
   var agenda=/consulta|nutricionista|odontol[oó]gico|enfermeira|marca[cç][aã]o de exames/i.test(cat);
   if(agenda)nota+=' | Pedido de agendamento: SEM RESERVA AUTOMÁTICA DE VAGA';
