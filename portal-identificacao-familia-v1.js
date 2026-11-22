@@ -471,7 +471,17 @@ function loginResidentPinFromPortal(){
     renderAccessFamily(snap);
     placePinDefault();
     localOpened=openResidentInline(snap,false);
-    if(localOpened){residentLocalLoginVisible=true;resetResidentPinAttempts();finishResidentPinOpen(true)}
+    if(localOpened){
+      // O PIN do cofre foi confirmado; sinal apenas para a interface, não para operações com terceiros.
+      try{
+        var confirmedArea=text(snap.areaId||areaId()).toUpperCase();
+        if(confirmedArea===areaId()){
+          sessionStorage.setItem('cscMoradorPinVerificadoLocalV1',JSON.stringify({dispositivo:deviceId(true),areaId:confirmedArea,at:Date.now()}));
+          document.dispatchEvent(new CustomEvent('csc:morador-pin-verificado-local'));
+        }
+      }catch(ignoreUi){}
+      residentLocalLoginVisible=true;resetResidentPinAttempts();finishResidentPinOpen(true);
+    }
    }
   }
   if(!localOpened)residentWait('AGUARDE… carregando seus dados e sua família.');

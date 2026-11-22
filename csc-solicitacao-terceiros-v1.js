@@ -22,6 +22,14 @@ function txt(v){return String(v==null?'':v).trim();}
 function digits(v){return txt(v).replace(/\D/g,'');}
 function esc(v){return txt(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function creds(){try{return {token:txt(sessionStorage.getItem('portalConectaMoradorTokenV1')),dispositivo:txt(localStorage.getItem('portalTacsDispositivoV1'))};}catch(e){return {token:'',dispositivo:''};}}
+function pinLocalUiConfirmed(){
+ // Somente a interface é mostrada; dados de terceiros continuam exigindo token remoto.
+ try{
+  var proof=JSON.parse(sessionStorage.getItem('cscMoradorPinVerificadoLocalV1')||'null'),now=Date.now();
+  return Boolean(proof&&proof.dispositivo===creds().dispositivo&&proof.dispositivo&&
+    proof.areaId===area()&&Number(proof.at)>0&&Number(proof.at)<=now&&now-Number(proof.at)<=300000);
+ }catch(e){return false}
+}
 function area(){try{var p=new URLSearchParams(location.search);return txt(p.get('area')||p.get('areaId')||window.TACS_AREA_ID||AREA).toUpperCase().replace(/[^A-Z0-9_-]/g,'');}catch(e){return AREA;}}
 function randId(){var a=new Uint8Array(20);crypto.getRandomValues(a);return 'csc_terceiros_'+Array.prototype.map.call(a,function(b){return ('0'+b.toString(16)).slice(-2);}).join('');}
 function newCode(){var a=new Uint8Array(6);crypto.getRandomValues(a);return 'CSC-T-'+Date.now().toString(36).toUpperCase()+'-'+Array.prototype.map.call(a,function(b){return ('0'+b.toString(16)).slice(-2);}).join('').toUpperCase();}
@@ -334,15 +342,17 @@ function mount(){
  el('cscTerceirosDoc').addEventListener('input',function(){invalidateSelection();var d=digits(this.value).slice(0,15);this.value=d.length>11?d.slice(0,3)+' '+d.slice(3,7)+' '+d.slice(7,11)+' '+d.slice(11):d.length>9?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9):d;});
  el('cscTerceirosName').addEventListener('input',invalidateSelection);
  document.addEventListener('click',nativeClick,true);
- function show(){var a=creds();root.hidden=!(a.token.indexOf('cms1.')===0&&a.dispositivo);return !root.hidden;}
+ function show(){var a=creds();root.hidden=!(a.dispositivo&&(a.token.indexOf('cms1.')===0||pinLocalUiConfirmed()));return !root.hidden;}
  // Sessão confirmada: aparecer imediatamente. O evento da sessão evita polling após PIN.
  document.addEventListener('tacs:morador',show);
+ document.addEventListener('csc:morador-pin-verificado-local',show);
+ document.addEventListener('csc:morador-sessao-revogada',show);
  window.addEventListener('pageshow',show);
  window.addEventListener('focus',show);
  show();
  window.addEventListener('pagehide',function(){restoreOriginal();closePending();});
  document.addEventListener('visibilitychange',function(){if(document.hidden){restoreOriginal();closePending();}});
- window.CscSolicitacaoTerceirosV1=Object.freeze({version:'3.2.0',enabled:true,close:cancel,active:function(){return !!delegate;}});
+ window.CscSolicitacaoTerceirosV1=Object.freeze({version:'3.3.0',enabled:true,close:cancel,active:function(){return !!delegate;}});
 }
 if(document.querySelector('.form-panel'))mount();else if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();

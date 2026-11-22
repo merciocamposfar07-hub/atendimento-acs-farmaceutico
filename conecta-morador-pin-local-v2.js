@@ -86,6 +86,11 @@ document.addEventListener('click',function(event){
     }
     try{sessionStorage.removeItem(TOKEN_KEY);if(saved.areaId)localStorage.setItem(AREA_KEY,saved.areaId)}catch(e){}
     bootstrap(saved.snapshot||snapshotFrom(saved));
+    // Marca somente a interface como liberada após verificação local do PIN.
+    try{
+      var localSnap=saved.snapshot||snapshotFrom(saved),confirmedArea=text(localSnap.areaId||saved.areaId||p.areaId).toUpperCase();
+      sessionStorage.setItem('cscMoradorPinVerificadoLocalV1',JSON.stringify({dispositivo:device(),areaId:confirmedArea,at:Date.now()}));
+    }catch(ignoreUi){}
     backgroundLogin(p,pin);
     if(input)input.value='';
     openPortal(saved.snapshot||saved);
