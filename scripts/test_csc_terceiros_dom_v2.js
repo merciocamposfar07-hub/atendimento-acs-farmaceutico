@@ -8,7 +8,6 @@ const w=dom.window;
 w.CSC_TERCEIROS_ENABLED=true;
 w.localStorage.setItem('portalTacsDispositivoV1','device-1');
 w.sessionStorage.setItem('portalConectaMoradorTokenV1','cms1.simulado');
-w.crypto.getRandomValues=a=>{for(let i=0;i<a.length;i++)a[i]=(i+37)%256;return a;};
 w.Element.prototype.scrollIntoView=function(){};
 let thirdPartyReads=0,shares=[],sentActions=[];
 const people={
