@@ -83,3 +83,5 @@ async function until(fn,limit=5000){let start=Date.now();while(!fn()){if(Date.no
  w.close();
  console.log('CSC DOM: família por toque, formulário e agenda original, cartão oficial, restauração e sem cache local: OK');
 })().catch(e=>{console.error(e);process.exitCode=1;w.close();});
+
+// Exercita exclusivamente casos simulados; nenhuma requisição de paciente real.
