@@ -846,6 +846,8 @@ function loginResident(){
 function openResidentPortal(r,onboarding){
  var area=encodeURIComponent(r.areaId||profile()&&profile().areaId||'JAPARANDUBA');
  var url='/atendimento-acs-farmaceutico/?area='+area+'&conecta=1'+(onboarding?'&onboarding=1':'');
+ // Após o PIN, não repetir a animação de abertura do aplicativo.
+ try{sessionStorage.setItem('cscSkipOpeningAfterPinV1','1')}catch(ignore){}
  setTimeout(function(){location.assign(url)},0);
 }
 

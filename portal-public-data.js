@@ -17,7 +17,7 @@
   var LEGACY_CACHE_KEY=AREA_ID===DEFAULT_AREA_ID?'portalTacsPublicDataV3':'';
   var INVALIDATE_KEY='portalTacsPublicInvalidateAtV1';
   var WARM_KEY='portalTacsAppsScriptWarmAtV1';
-  var CACHE_MAX_MS=15*60*1000;
+  var CACHE_MAX_MS=24*60*60*1000; // snapshot público utilizável apenas no mesmo dia em Recife
   var REFRESH_MIN_MS=30*1000;
   var TIMEOUT_MS=25000;
   var memoria=lerCache();
@@ -25,9 +25,19 @@
   var atualizacaoAgendada=false;
   var ultimaTentativa=0;
 
+  function recifeDay(timestamp){
+    var p=new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(timestamp)),o={};
+    p.forEach(function(x){o[x.type]=x.value});
+    return o.year+'-'+o.month+'-'+o.day;
+  }
   function itemValido(item){
     if(!item||!item.data||item.data.ok===false)return false;
     var salvoEm=Number(item.salvoEm||0),invalidadoEm=0;
+    // Não reutilizar recados ou campanhas de ontem, ou conteúdo de outra área.
+    if(!Number.isFinite(salvoEm)||salvoEm<=0||salvoEm>Date.now()+60000)return false;
+    if(recifeDay(salvoEm)!==recifeDay(Date.now()))return false;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(String(item.data.hoje||''))&&String(item.data.hoje)!==recifeDay(Date.now()))return false;
+    if(item.data.areaId&&normalizeArea(item.data.areaId)!==AREA_ID)return false;
     try{invalidadoEm=Number(localStorage.getItem(INVALIDATE_KEY)||0)}catch(e){}
     if(invalidadoEm&&salvoEm<invalidadoEm)return false;
     return Date.now()-salvoEm<=CACHE_MAX_MS;
@@ -91,6 +101,21 @@
     if(emCurso)return emCurso;
     if(!API)return Promise.reject(new Error('Serviço público não configurado.'));
     ultimaTentativa=Date.now();
+    // A mesma consulta iniciada durante o splash é reutilizada neste módulo.
+    var early=window.CscPublicBootV1;
+    if(early&&early.areaId===AREA_ID&&early.promise&&!early.used){
+      early.used=true;
+      emCurso=early.promise.then(function(data){
+        validarAreaResposta(data);
+        salvar(data);emitir(data);
+        emCurso=null;
+        return data;
+      },function(){
+        emCurso=null;
+        return consultar();
+      });
+      return emCurso;
+    }
     emCurso=new Promise(function(resolve,reject){
       var nome='__portalTacsPublicData_'+Date.now()+'_'+Math.random().toString(36).slice(2);
       var script=document.createElement('script');

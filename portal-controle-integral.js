@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 var API=String(window.TACS_ADMIN_API_URL||'https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec').trim();
-var lastData=null;
+var lastData=null,lastAlertsSignature='';
 
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]})}
 function dateBr(x){var m=String(x||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:String(x||'')}
@@ -106,7 +106,16 @@ function renderLegacy(m,days){
   });
   box.appendChild(list);
 }
-function render(data){if(!data||data.ok===false)return;lastData=data;renderAlerts(data)}
+function render(data){
+  if(!data||data.ok===false)return;
+  lastData=data;
+  // Evita apagar e recriar os cartões a cada consulta pública sem mudanças.
+  var signature='';
+  try{signature=JSON.stringify([data.areaId||'',data.recados||[],data.campanhas||[]])}catch(e){}
+  if(signature&&signature===lastAlertsSignature)return;
+  renderAlerts(data);
+  lastAlertsSignature=signature;
+}
 function load(forcar){
   var api=window.PortalTacsPublicData;
   if(api){

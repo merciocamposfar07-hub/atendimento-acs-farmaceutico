@@ -9,6 +9,11 @@ on:
       - 'index.html'
       - 'csc-solicitacao-terceiros-v1.js'
       - 'portal-solicitacao-card-oficial-v1.js'
+      - 'portal-public-prefetch-v1.js'
+      - 'portal-public-data.js'
+      - 'portal-controle-integral.js'
+      - 'conecta-acesso-unificado-v1.js'
+      - 'scripts/test_csc_public_home_boot_v1.js'
   workflow_dispatch:
 
 permissions:
@@ -49,6 +54,7 @@ jobs:
           node scripts/test_csc_terceiros_v1.js
           npm ci --ignore-scripts
           node scripts/test_csc_terceiros_dom_v2.js
+          node scripts/test_csc_public_home_boot_v1.js
       - name: Preparar navegadores reais
         shell: bash
         run: |

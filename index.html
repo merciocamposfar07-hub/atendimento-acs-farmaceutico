@@ -33,11 +33,15 @@
       try{
         var residentToken=sessionStorage.getItem('portalConectaMoradorTokenV1')||'';
         var residentDevice=localStorage.getItem('portalTacsDispositivoV1')||'';
-        if(/^cms1\./.test(residentToken)&&residentDevice)document.documentElement.classList.add('csc-resident-return');
+        var skipAfterPin=sessionStorage.getItem('cscSkipOpeningAfterPinV1')==='1';
+        if(skipAfterPin)sessionStorage.removeItem('cscSkipOpeningAfterPinV1');
+        if(skipAfterPin||p.get('conecta')==='1'||(/^cms1\./.test(residentToken)&&residentDevice))document.documentElement.classList.add('csc-resident-return');
       }catch(ignoreSession){}
     }catch(e){}
   }());
   </script>
+  <!-- Começa a buscar recados e campanhas durante a abertura, antes do formulário carregar. -->
+  <script src="portal-public-prefetch-v1.js?v=20261122-public-home-v1"></script>
   <style>
     :root{
       color-scheme:only light;
@@ -978,10 +982,11 @@
   </main>
 
   <script>window.CSC_TERCEIROS_ENABLED=true; /* reconhecimento imediato do morador autenticado */</script>
-  <script async src="csc-solicitacao-terceiros-v1.js?v=20261122-abertura-rapida-v5"></script>
+  <script async src="csc-solicitacao-terceiros-v1.js?v=20261122-public-home-v6"></script>
   <script src="agenda-config.js?v=20260923-csc-unificado-pin-v1"></script>
   <script src="portal-area-resolver.js?v=20260923-csc-unificado-pin-v1"></script>
-  <script src="portal-public-data.js?v=20260923-csc-unificado-pin-v1"></script>
+  <script src="portal-public-data.js?v=20261122-public-home-v1"></script>
+  <script src="portal-controle-integral.js?v=20261122-public-home-v1"></script>
   <script src="portal-manutencao.js?v=20260923-csc-unificado-pin-v1"></script>
   <script src="agenda-enfermeira.js?v=20261111-nutricionista-dia-obrigatorio-v1"></script>
   <script src="portal-notification-health.js?v=20260923-csc-unificado-pin-v1"></script>
@@ -1074,7 +1079,6 @@
   <script src="moradores-autofill.js?v=20260923-csc-unificado-pin-v1"></script>
 <script id="portalTacsIdentificacaoFamiliaScriptV1" src="portal-identificacao-familia-v1.js?v=20261015-pin-aguarde-imediato-v5"></script>
   <script src="portal-auto-update.js?v=20260923-csc-unificado-pin-v2"></script>
-  <script src="portal-controle-integral.js?v=20260923-csc-unificado-pin-v1"></script>
   <script src="portal-ajustes-finais.js?v=20261111-nutricionista-dia-obrigatorio-v1"></script>
   <script src="portal-solicitacoes-ubs-v1.js?v=20261015-envio-direto-v3"></script>
   <script src="portal-odontologia-segunda-sexta.js?v=20261111-odontologia-manual-expiracao-v1"></script>

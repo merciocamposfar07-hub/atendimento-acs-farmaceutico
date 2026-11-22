@@ -4,7 +4,7 @@
 if(window.CSC_TERCEIROS_ENABLED!==true)return;
 if(window.CscSolicitacaoTerceirosV1)return;
 var API='https://script.google.com/macros/s/AKfycbwOyG9yZqYly736ZsGta1q6Jd4Irkc-iRWURfypKcpBkyCCmO3hMNE4oOsXECTMCpSxYw/exec';
-var AREA='JAPARANDUBA',WHATSAPP='5581989613130',chosen=null,busy=false,opened=false,watch=null,pendingCode='';
+var AREA='JAPARANDUBA',WHATSAPP='5581989613130',chosen=null,busy=false,opened=false,pendingCode='';
 var SERVICES=[
 'Solicitar consulta Médica','Solicitar atendimento com a Enfermeira Chefe',
 'Solicitar atendimento com nutricionista','Solicitar atendimento odontológico (dentista)',
@@ -339,15 +339,10 @@ function mount(){
  document.addEventListener('tacs:morador',show);
  window.addEventListener('pageshow',show);
  window.addEventListener('focus',show);
- if(!show()){
-  var attempts=0;
-  watch=setInterval(function(){
-   if(show()||++attempts>=100){clearInterval(watch);watch=null;}
-  },100);
- }
+ show();
  window.addEventListener('pagehide',function(){restoreOriginal();closePending();});
  document.addEventListener('visibilitychange',function(){if(document.hidden){restoreOriginal();closePending();}});
- window.CscSolicitacaoTerceirosV1=Object.freeze({version:'3.1.0',enabled:true,close:cancel,active:function(){return !!delegate;}});
+ window.CscSolicitacaoTerceirosV1=Object.freeze({version:'3.2.0',enabled:true,close:cancel,active:function(){return !!delegate;}});
 }
 if(document.querySelector('.form-panel'))mount();else if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();

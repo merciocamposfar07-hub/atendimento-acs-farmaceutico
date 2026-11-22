@@ -19,6 +19,8 @@ function bootstrap(snapshot){try{sessionStorage.setItem(BOOTSTRAP_KEY,JSON.strin
 function openPortal(data){
   var area=encodeURIComponent(text(data&&data.areaId)||text(profile()&&profile().areaId)||'JAPARANDUBA');
   var onboarding=data&&data.notificacoesAtivas===true?'':'&onboarding=1';
+  // Mesmo quando o PIN local abre antes da confirmação remota, não repetir o splash.
+  try{sessionStorage.setItem('cscSkipOpeningAfterPinV1','1')}catch(ignore){}
   location.assign('/atendimento-acs-farmaceutico/?area='+area+'&conecta=1'+onboarding);
 }
 function backgroundLogin(p,pin){
