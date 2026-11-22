@@ -1,13 +1,13 @@
 // CSC: smoke test da página publicada, sem alterar dados reais.
 const {chromium,webkit}=require('playwright');
 const assert=require('node:assert/strict');
-const URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/?area=JAPARANDUBA';
+const PAGE_URL='https://merciocamposfar07-hub.github.io/atendimento-acs-farmaceutico/?area=JAPARANDUBA';
 (async()=>{
  for(const browserType of [chromium,webkit]){
    const browser=await browserType.launch({headless:true});
    const context=await browser.newContext({viewport:{width:393,height:852},isMobile:true,deviceScaleFactor:3});
    const page=await context.newPage();
-   const response=await page.goto(URL,{waitUntil:'domcontentloaded',timeout:45000});
+   const response=await page.goto(PAGE_URL,{waitUntil:'domcontentloaded',timeout:45000});
    assert(response&&response.ok(),`${browserType.name()}: página indisponível`);
    await page.waitForSelector('#cscTerceiros',{state:'attached',timeout:18000});
    assert.equal(await page.evaluate(()=>window.CSC_TERCEIROS_ENABLED),true,'flag publicada');
