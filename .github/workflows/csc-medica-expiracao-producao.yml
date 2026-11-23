@@ -26,23 +26,16 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Validar codigo da agenda
+      - name: Validar expiração pontual e republicação manual da médica
         shell: bash
         run: |
           set -euo pipefail
           node --check --input-type=commonjs < apps-script/ZZ_12_PublicoAgendasPortalV1.gs
+          node --check --input-type=commonjs < apps-script/ZZZZ_28_AgendasProfissionaisTerritoriaisV1.gs
           node --check agenda-enfermeira.js
-          node - <<'NODE'
-          const fs = require('fs');
-          const src = fs.readFileSync('apps-script/ZZ_12_PublicoAgendasPortalV1.gs', 'utf8');
-          const match = src.match(/function publicoAgendasV1EncerradoAgora_\(data, horario, modulo\) \{[\s\S]*?\n\}/);
-          if (!match || !src.includes('closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerraHorario, modulo),')) throw Error('Escopo medico nao confirmado');
-          const fn = new Function('Utilities','PUBLICO_AGENDAS_PORTAL_V1','publicoAgendasV1DataIso_','publicoAgendasV1Hora_',match[0]+';return publicoAgendasV1EncerradoAgora_;')({formatDate: (_d,_tz,format) => format==='yyyy-MM-dd'?'2026-10-18':'22:33'},{FUSO:'America/Recife'},x=>x,x=>/^\d{2}:\d{2}$/.test(x)?x:'');
-          for (const [dia,hora,modulo,esperado] of [['2026-10-16','11:30','medica',true],['2026-10-18','11:30','medica',true],['2026-10-18','23:30','medica',false],['2026-10-19','11:30','medica',false],['2026-10-16','11:30','enfermeira',false],['2026-10-16','11:30','odontologia',false]]) {
-            if (fn(dia,hora,modulo) !== esperado) throw Error('Teste de expiracao falhou: '+modulo+' '+dia);
-          }
-          console.log('TESTES_EXPIRACAO_MEDICA_OK');
-          NODE
+          node --check conecta-agendas-native-v1.js
+          node scripts/test_medica_expiracao_manual_v2.js
+          node scripts/test_public_agendas_apps_script.js
 
       - name: Conferir credenciais privadas
         shell: bash
@@ -78,45 +71,11 @@ jobs:
           npx --yes @google/clasp@3.3.0 pull
           test -f appsscript.json
 
-      - name: Alterar somente o fechamento da agenda medica na copia real
+      - name: Aplicar exclusivamente correções da médica nos dois módulos reais
         shell: bash
         run: |
           set -euo pipefail
-          LIVE_DIR="$RUNNER_TEMP/csc-medica-live" node - <<'NODE'
-          const fs=require('fs'),path=require('path'),crypto=require('crypto');
-          const dir=process.env.LIVE_DIR;
-          const source=fs.readFileSync('apps-script/ZZ_12_PublicoAgendasPortalV1.gs','utf8');
-          const files=fs.readdirSync(dir).filter(n=>/\.(gs|js)$/.test(n));
-          const marker=/\bvar\s+PUBLICO_AGENDAS_PORTAL_V1\s*=\s*Object\.freeze\s*\(/;
-          const found=files.filter(n=>marker.test(fs.readFileSync(path.join(dir,n),'utf8')));
-          if(found.length!==1) throw Error('Modulo de agendas publicas nao encontrado exatamente uma vez');
-          const dest=path.join(dir,found[0]);
-          const before=fs.readFileSync(dest,'utf8');
-          const sourceFn=source.match(/function publicoAgendasV1EncerradoAgora_\(data, horario, modulo\) \{[\s\S]*?\n\}/g);
-          const currentFn=before.match(/function publicoAgendasV1EncerradoAgora_\(data, horario(?:, modulo)?\) \{[\s\S]*?\n\}/g);
-          if(!sourceFn||sourceFn.length!==1||!currentFn||currentFn.length!==1)throw Error('Funcao de expiracao ambigua no servidor');
-          const oldFn=`function publicoAgendasV1EncerradoAgora_(data, horario) {
-            horario = publicoAgendasV1Hora_(horario);
-            if (!horario) return false;
-            var hoje = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'yyyy-MM-dd');
-            if (publicoAgendasV1DataIso_(data) !== hoje) return false;
-            var agora = Utilities.formatDate(new Date(), PUBLICO_AGENDAS_PORTAL_V1.FUSO, 'HH:mm');
-            return agora >= horario;
-          }`;
-          const trimLines=s=>s.split('\n').map(x=>x.trim()).join('\n');
-          if(trimLines(currentFn[0])!==trimLines(oldFn)&&currentFn[0]!==sourceFn[0])throw Error('Funcao em producao difere do esperado: publicacao interrompida para nao alterar outro comportamento');
-          const currentCall='closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerraHorario),';
-          const desiredCall='closedNow: publicoAgendasV1EncerradoAgora_(dataBruta, encerraHorario, modulo),';
-          if((before.split(currentCall).length-1)!==1 && (before.split(desiredCall).length-1)!==1)throw Error('Chamada da funcao nao encontrada exatamente uma vez');
-          let after=before.replace(currentFn[0],sourceFn[0]).replace(currentCall,desiredCall);
-          if((after.split(desiredCall).length-1)!==1)throw Error('Falha ao limitar mudanca a agenda medica');
-          const others=files.filter(n=>n!==found[0]);
-          const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
-          const hashes=others.map(n=>[n,hash(fs.readFileSync(path.join(dir,n)))]);
-          fs.writeFileSync(dest,after,'utf8');
-          for(const [name,digest] of hashes)if(hash(fs.readFileSync(path.join(dir,name)))!==digest)throw Error('Outro modulo modificado: '+name);
-          console.log('SOMENTE_EXPIRACAO_MEDICA_ALTERADA arquivo='+found[0]);
-          NODE
+          LIVE_DIR="$RUNNER_TEMP/csc-medica-live" node scripts/patch_medica_expiracao_live_v2.js
           while IFS= read -r -d '' file; do
             node --check --input-type=commonjs < "$file" >/dev/null
           done < <(find "$RUNNER_TEMP/csc-medica-live" -type f \( -name '*.js' -o -name '*.gs' \) -print0)
@@ -142,10 +101,10 @@ jobs:
           }
           trap rollback ERR
           npx --yes @google/clasp@3.3.0 push --force
-          OUTPUT=$(npx --yes @google/clasp@3.3.0 version "CSC expiracao agenda medica 2026-10-18")
+          OUTPUT=$(npx --yes @google/clasp@3.3.0 version "CSC medica manual por data e expiracao 2026-11-22")
           NEW_VERSION=$(printf '%s\n' "$OUTPUT" | grep -Eo '[0-9]+' | tail -n 1)
           test -n "$NEW_VERSION"
-          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Correcao somente expiracao agenda medica" "$DEPLOYMENT_ID"
+          npx --yes @google/clasp@3.3.0 redeploy --versionNumber "$NEW_VERSION" --description "Somente agenda medica: data manual e expiracao" "$DEPLOYMENT_ID"
           DEPLOYED=1
           BASE="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
           OK=0
@@ -159,8 +118,10 @@ jobs:
           new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).forEach(p=>v[p.type]=p.value);
           const today=v.year+'-'+v.month+'-'+v.day;
           const dates=response.modules.medica.filter(x=>x.date && x.date<today);
-          if(dates.some(x=>x.closedNow!==true))throw Error('Agenda medica vencida permanece aberta');
-          console.log('PRODUCAO_MEDICA_VALIDADA',JSON.stringify({medica:response.modules.medica.length,expiradas:dates.length,producao:true}));
+          if(dates.some(x=>x.closedNow!==true))throw Error('Agenda médica vencida permanece aberta');
+          if(response.modules.medica.some(x=>x.active===true&&x.manualPublished!==true))throw Error('Agenda médica ativa sem publicação manual da data');
+          if(response.modules.medica.some(x=>x.active===true&&x.closedNow===true&&x.date>=today))throw Error('Agenda médica ativa após expirar');
+          console.log('PRODUCAO_MEDICA_VALIDADA',JSON.stringify({medica:response.modules.medica.length,expiradas:dates.length,publicacaoManual:true,producao:true}));
           NODE
             then
               OK=1

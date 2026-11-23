@@ -453,7 +453,7 @@
   }
 
   function availableDay(module, item) {
-    return item && item.active === true && item.closedNow !== true &&
+    return item && item.active === true && (module !== 'medica' || item.manualPublished === true) && item.closedNow !== true &&
       !unavailableStatus(item.status) &&
       (['medica', 'nutricionista'].indexOf(module) === -1 || (/^\d{4}-\d{2}-\d{2}$/.test(clean(item.date)) && !expiredByAgendaDate(item)));
   }
@@ -588,8 +588,8 @@
     } else {
       days.forEach(function (item, index) {
         var active = availableDay(module, item);
-        var expired = module === 'medica' && item.active === true &&
-          !unavailableStatus(item.status) && expiredByAgendaDate(item);
+        var expired = module === 'medica' && (item.manualPublished !== true ||
+          (item.active === true && !unavailableStatus(item.status) && expiredByAgendaDate(item)));
         var service = clean(item.service || item.message);
         var date = formatDate(item.date);
         var time = clean(item.time);
@@ -1618,8 +1618,8 @@
     document.head.appendChild(script);
   }
 
-  function refreshExpiredAgendas() {
-    ['medica', 'nutricionista'].forEach(function (module) {
+  function refreshExpiredAgendas(selectedModule) {
+    (selectedModule ? [selectedModule] : ['medica','nutricionista']).forEach(function (module) {
       var section = id('agenda-' + module);
       if (!section) return;
       var availableButtons = section.querySelectorAll('.agenda-day:not(:disabled)');
@@ -1652,7 +1652,8 @@
     if (medicalCategorySelected()) clearMedicalSelection(true);
     if (nutritionCategorySelected()) clearNutritionSelection(true);
     renderAgendas();
-    setInterval(refreshExpiredAgendas, 15000);
+    setInterval(function(){refreshExpiredAgendas('medica');},1000);
+    setInterval(function(){refreshExpiredAgendas('nutricionista');},15000);
     window.addEventListener('pageshow', refreshExpiredAgendas);
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) refreshExpiredAgendas();

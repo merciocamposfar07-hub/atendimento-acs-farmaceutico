@@ -23,17 +23,17 @@ const rows = [
   [
     'MODULO', 'ORDEM', 'DIA', 'ATIVO', 'DATA', 'HORARIO', 'SITUACAO',
     'MENSAGEM', 'ENCERRA_12H', 'VAGAS_COMUNS', 'VAGAS_EMERGENCIAIS',
-    'DIA_EXTRA', 'ATUALIZADO_EM', 'AREA_ID'
+    'DIA_EXTRA', 'ATUALIZADO_EM', 'AREA_ID', 'MEDICA_PUBLICADA_DATA', 'ENCERRA_HORARIO'
   ],
   [
     'MEDICA', 5, 'Sexta-feira', true, new Date(Date.UTC(2099, 7, 7)),
     '08:00 as 12:00', 'CANCELADO', 'Atendimento médico', false, 15, 0,
-    false, new Date(Date.UTC(2026, 7, 5)), ''
+    false, new Date(Date.UTC(2026, 7, 5)), '', '2099-08-07', '12:00'
   ],
   [
     'MEDICA', 6, 'Segunda-feira', true, new Date(Date.UTC(2099, 7, 10)),
     '08:00 as 12:00', 'Atendimento', 'Atendimento Muntuns', false, 8, 0,
-    false, new Date(Date.UTC(2026, 7, 5)), 'MUNTUNS'
+    false, new Date(Date.UTC(2026, 7, 5)), 'MUNTUNS', '2099-08-10', '12:00'
   ]
 ];
 
@@ -149,6 +149,7 @@ assert.equal(result.somenteLeitura, true);
 assert.equal(result.origem, 'AGENDAS');
 assert.equal(result.modules.medica.length, 1);
 assert.equal(result.modules.medica[0].active, true);
+assert.equal(result.modules.medica[0].manualPublished, true);
 assert.equal(result.modules.medica[0].status, 'CANCELADO');
 assert.equal(result.modules.medica[0].date, '2099-08-07');
 assert.equal(result.modules.medica[0].common, 15);

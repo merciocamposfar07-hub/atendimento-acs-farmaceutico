@@ -35,6 +35,15 @@ function semanaData(dia){
 }
 /* Odontologia usa exclusivamente a data do atendimento salva pelo agente. */
 function ehOdontologia(v){var n=normalId(v&&v.MODULO?v.MODULO:v);return n.indexOf('ODONT')!==-1||n.indexOf('DENTIST')!==-1}
+function ehMedica(v){var n=normalId(v&&v.MODULO?v.MODULO:v);return n==='MEDICA'||n==='MEDICO'}
+function medicaVigente(a){
+ if(!a||!bool(a.ATIVO)||dataInput(a.MEDICA_PUBLICADA_DATA)!==dataInput(a.DATA))return false;
+ var date=dataInput(a.DATA),cut=text(a.ENCERRA_HORARIO||(bool(a.ENCERRA_12H)?'12:00':''));
+ if(!date||!/^([01]\d|2[0-3]):[0-5]\d$/.test(cut))return false;
+ var p={};new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).forEach(function(x){p[x.type]=x.value});
+ var today=p.year+'-'+p.month+'-'+p.day;
+ return date>today||(date===today&&(p.hour+':'+p.minute)<cut);
+}
 function dataAutomatica(a){return ehOdontologia(a)?dataInput(a&&a.DATA):(semanaData(a&&a.DIA)||dataInput(a&&a.DATA))}
 function clone(v){try{return JSON.parse(JSON.stringify(v))}catch(e){return v}}
 function objectRows(v){return Array.isArray(v)?v.filter(function(x){return x&&typeof x==='object'}):[]}
@@ -242,11 +251,11 @@ function create(host){
     f.value=current;
   }
   function cardHtml(a){
-    var active=bool(a.ATIVO),vagas=num(a.VAGAS_COMUNS)+num(a.VAGAS_EMERGENCIAIS);
-    return '<details class="card" data-key="'+esc(chave(a))+'"><summary><div><h3>'+esc(a.DIA)+' • '+esc(a.HORARIO||'Sem horário')+'</h3><div class="sub">'+vagas+' vaga(s)</div></div><span class="signal '+(active?'ativo':'inativo')+'">'+(active?'Ativa':'Inativa')+'</span></summary><div class="card-body">'+
+    var active=ehMedica(a)?medicaVigente(a):bool(a.ATIVO),vagas=num(a.VAGAS_COMUNS)+num(a.VAGAS_EMERGENCIAIS);
+    return '<details class="card" data-key="'+esc(chave(a))+'"><summary><div><h3>'+esc(a.DIA)+' • '+esc(a.HORARIO||'Sem horário')+'</h3><div class="sub">'+vagas+' vaga(s)</div></div><span class="signal '+(active?'ativo':'inativo')+'">'+(active?'Ativa':ehMedica(a)&&bool(a.ATIVO)?'Expirada — requer nova publicação':'Inativa')+'</span></summary><div class="card-body">'+
       '<label>Profissional<input name="modulo" value="'+esc(a.MODULO)+'" readonly></label>'+
       '<label>Dia<input name="dia" value="'+esc(a.DIA)+'" readonly></label>'+
-      '<label>'+(ehOdontologia(a)?'Data do atendimento (manual)':'Data automática')+'<input name="data" type="date" '+(ehOdontologia(a)?'':'readonly aria-readonly="true" style="pointer-events:none" ')+'value="'+esc(dataAutomatica(a))+'"></label>'+
+      '<label>'+(ehOdontologia(a)?'Data do atendimento (manual)':ehMedica(a)?'Data da médica — confirmar ao salvar':'Data automática')+'<input name="data" type="date" '+(ehOdontologia(a)?'':'readonly aria-readonly="true" style="pointer-events:none" ')+'value="'+esc(dataAutomatica(a))+'"></label>'+
       '<label>Horário<input name="horario" value="'+esc(a.HORARIO)+'" placeholder="Ex.: 08:00 às 12:00"></label>'+
       '<label>Situação<select name="situacao"><option value="">SEM SITUAÇÃO DEFINIDA</option><option value="ATENDIMENTO">ATENDIMENTO</option><option value="SEM ATENDIMENTO">SEM ATENDIMENTO</option><option value="FERIADO">FERIADO</option><option value="CANCELADO">CANCELADO</option></select></label>'+
       '<label>Mensagem<textarea name="mensagem">'+esc(a.MENSAGEM)+'</textarea></label>'+
@@ -268,7 +277,7 @@ function create(host){
     list.forEach(function(a){var m=normalId(a.MODULO);if(!groups[m]){groups[m]={p:prof(a.MODULO)||{},items:[]};order.push(m)}groups[m].items.push(a)});
     var html='';
     order.forEach(function(m){
-      var g=groups[m],p=g.p,total=g.items.reduce(function(t,a){return t+num(a.VAGAS_COMUNS)+num(a.VAGAS_EMERGENCIAIS)},0),activeCount=g.items.filter(function(a){return bool(a.ATIVO)}).length;
+      var g=groups[m],p=g.p,total=g.items.reduce(function(t,a){return t+num(a.VAGAS_COMUNS)+num(a.VAGAS_EMERGENCIAIS)},0),activeCount=g.items.filter(function(a){return ehMedica(a)?medicaVigente(a):bool(a.ATIVO)}).length;
       html+='<details class="group"><summary><div class="group-name"><span>'+esc(p.ICONE||'📅')+'</span><div><strong>'+esc(p.TITULO_PUBLICO||p.NOME||g.items[0].MODULO)+'</strong><span class="group-meta">'+g.items.length+' dia(s) • '+activeCount+' ativo(s) • '+total+' vaga(s)</span></div></div><span>▾</span></summary><div class="group-body"><button type="button" class="share csc-ag-share-group" data-module="'+esc(m)+'">📲 Postar agenda completa no Status do WhatsApp</button>';
       g.items.forEach(function(a){html+=cardHtml(a)});html+='</div></details>';
     });
@@ -279,7 +288,7 @@ function create(host){
       if(card){var s=card.querySelector('[name="situacao"]');if(s)s.value=normalSituacao(a.SITUACAO)}
     });
     q('qAgendas').textContent=state.agendas.length;
-    q('qAtivas').textContent=state.agendas.filter(function(a){return bool(a.ATIVO)}).length;
+    q('qAtivas').textContent=state.agendas.filter(function(a){return ehMedica(a)?medicaVigente(a):bool(a.ATIVO)}).length;
     q('qProf').textContent=state.profissionais.length;
     q('qVagas').textContent=state.agendas.reduce(function(t,a){return t+num(a.VAGAS_COMUNS)+num(a.VAGAS_EMERGENCIAIS)},0);
     updateUndo();lockWrites();
@@ -290,7 +299,7 @@ function create(host){
   function payload(card){return Object.assign(session(),{
     modulo:field(card,'modulo'),dia:field(card,'dia'),data:ehOdontologia(field(card,'modulo'))?dataInput(field(card,'data')):(semanaData(field(card,'dia'))||field(card,'data')),horario:field(card,'horario').trim(),
     situacao:normalSituacao(field(card,'situacao')),mensagem:field(card,'mensagem').trim(),encerraHorario:field(card,'encerraHorario'),
-    encerra12h:field(card,'encerraHorario')==='12:00'?'true':'false',vagasComuns:field(card,'vagasComuns'),
+    encerra12h:field(card,'encerraHorario')==='12:00'?'true':'false',publicacaoMedica:ehMedica(field(card,'modulo'))&&checked(card,'ativo')==='true'?'SIM':'',vagasComuns:field(card,'vagasComuns'),
     vagasEmergenciais:field(card,'vagasEmergenciais'),diaExtra:checked(card,'diaExtra'),ativo:checked(card,'ativo')
   })}
   function recordValue(r,n){if(!r)return null;if(n==='data')return dataAutomatica(r);if(n==='horario')return text(r.HORARIO).trim();if(n==='situacao')return normalSituacao(r.SITUACAO);if(n==='mensagem')return text(r.MENSAGEM).trim();if(n==='encerraHorario')return text(r.ENCERRA_HORARIO||((bool(r.ENCERRA_12H))?'12:00':'')).trim();if(n==='vagasComuns')return num(r.VAGAS_COMUNS);if(n==='vagasEmergenciais')return num(r.VAGAS_EMERGENCIAIS);if(n==='diaExtra')return bool(r.DIA_EXTRA);if(n==='ativo')return bool(r.ATIVO);return''}
