@@ -44,8 +44,15 @@ function applyAdmin(live,source){
  "if(idxModulo>=0&&agendasProfissionaisTerritoriaisV1Modulo_(modulos[i][0])==='odontologia')continue;",
  "if(idxModulo>=0&&['odontologia','medica'].indexOf(agendasProfissionaisTerritoriaisV1Modulo_(modulos[i][0]))!==-1)continue;",'sem repetição semanal da médica');
  const schema=block(source,"  if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('MEDICA_PUBLICADA_DATA')","   if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('ODONTO_PUBLICADA_DATA')",'coluna de publicação médica');
- live=once(live,"   if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('ODONTO_PUBLICADA_DATA')===-1){",
- schema+"   if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('ODONTO_PUBLICADA_DATA')===-1){",'marcador no banco');
+ const startTable=live.indexOf('function agendasProfissionaisTerritoriaisV1Tabela_(');
+ const endTable=live.indexOf('\n}',startTable);
+ const valuePos=live.indexOf('var valores=',startTable);
+ if(startTable<0||endTable<0||valuePos<=startTable||valuePos>=endTable)throw Error('Tabela de agendas incompatível na produção');
+ const tableSection=live.slice(startTable,endTable);
+ if(!tableSection.includes("headers.indexOf('MEDICA_PUBLICADA_DATA')")){
+  const lineStart=live.lastIndexOf('\n',valuePos)+1;
+  live=live.slice(0,lineStart)+schema+live.slice(lineStart);
+ }
  const saveOld="    var odontologia=agendasProfissionaisTerritoriaisV1Modulo_(p.modulo)==='odontologia';\n    var dataOdonto=";
  const doctorBlock=block(source,
  "    var odontologia=agendasProfissionaisTerritoriaisV1Modulo_(p.modulo)==='odontologia';",
