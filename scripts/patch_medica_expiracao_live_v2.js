@@ -43,7 +43,7 @@ function applyAdmin(live,source){
  live=once(live,
  "if(idxModulo>=0&&agendasProfissionaisTerritoriaisV1Modulo_(modulos[i][0])==='odontologia')continue;",
  "if(idxModulo>=0&&['odontologia','medica'].indexOf(agendasProfissionaisTerritoriaisV1Modulo_(modulos[i][0]))!==-1)continue;",'sem repetição semanal da médica');
- const schema=block(source,"   if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('MEDICA_PUBLICADA_DATA')","   if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('ODONTO_PUBLICADA_DATA')",'coluna de publicação médica');
+ const schema=block(source,"  if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('MEDICA_PUBLICADA_DATA')","   if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('ODONTO_PUBLICADA_DATA')",'coluna de publicação médica');
  live=once(live,"   if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('ODONTO_PUBLICADA_DATA')===-1){",
  schema+"   if(nome===TACS_AGENDAS_PROFISSIONAIS_TERRITORIAIS_V1.ABA_AGENDAS&&headers.indexOf('ODONTO_PUBLICADA_DATA')===-1){",'marcador no banco');
  const saveOld="    var odontologia=agendasProfissionaisTerritoriaisV1Modulo_(p.modulo)==='odontologia';\n    var dataOdonto=";

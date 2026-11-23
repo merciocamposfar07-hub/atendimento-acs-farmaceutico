@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/csc-medica-expiracao-producao.yml'
+      - 'scripts/patch_medica_expiracao_live_v2.js'
 
 permissions:
   contents: read
